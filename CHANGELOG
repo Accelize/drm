@@ -1,0 +1,4 @@
+* Wed Sep 12 2018 Accelize v1.0.0
+- NEW: MeteringSessionManager to manage DRM metering sessions
+- NEW: C-wrapper API
+- NEW: Doxygen documentation
