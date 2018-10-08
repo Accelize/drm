@@ -16,6 +16,16 @@ cmake_minimum_required (VERSION 2.8.12)
 
 project(accelize/drmlib)
 
+# Build Type
+set(default_build_type "RelWithDebInfo")
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
+  set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
+  # Set the possible values of build type for cmake-gui
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+    "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+endif()
+
 # Get version
 execute_process(COMMAND git describe --tag --dirty=-d
                 COMMAND sed s/^v//
@@ -30,7 +40,13 @@ set(ABI_VERSION ${VERSION_MAJOR})
 message(STATUS "ABI library version from Git : ${ABI_VERSION}")
 
 add_compile_options(-std=c++11)
+add_compile_options(-fvisibility=hidden)
 add_compile_options(-Wall -Wextra -Wnon-virtual-dtor -pedantic)
+add_compile_options("$<$<CONFIG:DEBUG>:-Og>")
+add_compile_options(-fdebug-prefix-map=${CMAKE_SOURCE_DIR}=.)
+string(LENGTH "${CMAKE_SOURCE_DIR}/" SOURCE_PATH_SIZE)
+add_definitions("-DSOURCE_PATH_SIZE=${SOURCE_PATH_SIZE}")
+add_definitions(-DBUILDING_DRMLIB)
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined")
 set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 
@@ -49,6 +65,7 @@ set(API_HEADERS
   include/accelize/drm/error.h
   include/accelize/drm/metering.h
   include/accelize/drm.h
+  include/accelize/drmc/common.h
   include/accelize/drmc/errorcode.h
   include/accelize/drmc/metering.h
   include/accelize/drmc/version.h
@@ -116,7 +133,8 @@ include(GNUInstallDirs)
 install(TARGETS accelize_drm LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT libraries)
 install(TARGETS accelize_drmc LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT libraries)
 install(DIRECTORY ${CMAKE_BINARY_DIR}/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} COMPONENT headers)
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/licenses/ DESTINATION  ${CMAKE_INSTALL_DOCDIR}/licenses/ COMPONENT licenses)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE DESTINATION  ${CMAKE_INSTALL_DOCDIR}/licenses COMPONENT licenses)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third-party-licenses/ DESTINATION  ${CMAKE_INSTALL_DOCDIR}/licenses/third-party-licenses/ COMPONENT licenses)
 
 # Documentation
 option(DOC "Produce documentation" OFF)

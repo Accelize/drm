@@ -21,6 +21,8 @@ limitations under the License.
 
 #include "accelize/drmc/errorcode.h" // enum with error codes
 
+#include "accelize/drmc/common.h"
+
 namespace Accelize {
 namespace DRMLib {
 
@@ -28,7 +30,7 @@ namespace DRMLib {
 
     This class is an exception that may be thrown by the DRMLib in case of synchronous error
 */
-class Exception : public std::runtime_error {
+class DRMLIB_EXPORT Exception : public std::runtime_error {
 protected:
     DRMLibErrorCode errCode; /**< error code from the DRMLibErrorCode enum */
     mutable std::string errWhat; /**< internal error message to be accessed from what() */
@@ -36,6 +38,7 @@ protected:
 public:
     template <class S>
     Exception(DRMLibErrorCode errCode, S&& errMsg) : std::runtime_error(std::forward<S>(errMsg)), errCode(errCode) {}
+    virtual ~Exception() {};
     DRMLibErrorCode getErrCode() const;
     virtual const char* what() const noexcept;
 };

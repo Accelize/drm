@@ -28,6 +28,7 @@ limitations under the License.
 #include <fstream>
 
 #include "accelize/drm/session_manager.h"
+#include "accelize/drm/version.h"
 #include "ws_client.h"
 #include "log.h"
 #include "utils.h"
@@ -40,26 +41,35 @@ limitations under the License.
 namespace Accelize {
 namespace DRMLib {
 
-class MeteringSessionManager::Impl {
+class DRMLIB_LOCAL MeteringSessionManager::Impl {
 protected:
+    //helper typedef
+    typedef std::chrono::steady_clock Clock; // use steady clock to be monotonic (were are not affected by clock adjustements)
+
     //compisition
     std::unique_ptr<MeteringWSClient> mWsClient;
     std::unique_ptr<DrmControllerLibrary::DrmControllerOperations> mDrmController;
+    std::mutex mDrmControllerMutex;
 
-    //params
+    //function callbacks
     MeteringSessionManager::ReadReg32ByOffsetHandler f_read32_offset;
     MeteringSessionManager::WriteReg32ByOffsetHandler f_write32_offset;
     MeteringSessionManager::ReadReg32ByNameHandler f_read32_name;
     MeteringSessionManager::WriteReg32ByNameHandler f_write32_name;
     MeteringSessionManager::ErrorCallBackHandler f_error_cb;
 
+    //params
+    std::chrono::seconds minimum_license_duration;
+
     //state
-    // queue with licenses deadlines
-    // use steady clock to be monotonic (were are not affected by clock adjustements)
-    // Front is end of current license, Back is last license timepoint (after this point, no license are in use = session is dead)
-    typedef std::chrono::steady_clock Clock;
-    std::deque<std::chrono::time_point<Clock>> license_end_timepoint;
-    const unsigned int max_number_licenses = 2;
+    // of licenses on DRM controller
+
+    Clock::duration next_license_duration = Clock::duration::zero();
+    bool next_license_duration_exact=false;
+    Clock::duration current_license_duration = Clock::duration::zero();
+    bool current_license_duration_exact=false;
+    Clock::time_point sync_license_timepoint;
+    bool sync_license_timepoint_exact=false;
 
     //session state
     bool sessionStarted{false};
@@ -88,6 +98,7 @@ protected:
         if(!reader.parse(conf_fd, conf_json))
             Throw(DRMBadFormat, "Cannot parse ", conf_file_path, " : ", reader.getFormattedErrorMessages());
         Json::Value conf_server_json = JVgetRequired(conf_json, "webservice", Json::objectValue);
+        minimum_license_duration = std::chrono::seconds( JVgetOptional(conf_server_json, "minimum_license_duration", Json::uintValue, 300).asUInt() );
 
         Json::Value conf_design = JVgetOptional(conf_json, "design", Json::objectValue);
         if(!conf_design.isNull()) {
@@ -134,6 +145,7 @@ protected:
             Error("Error in read register callback, errcode = ", ret);
             return -1;
         } else {
+            Debug2("Read DRM register @", regName, " = 0x", std::hex, value);
             return 0;
         }
     }
@@ -151,6 +163,7 @@ protected:
             Error("Error in write register callback, errcode = ", ret);
             return -1;
         } else {
+            Debug2("Write DRM register @", regName, " = 0x", std::hex, value);
             return 0;
         }
     }
@@ -161,6 +174,7 @@ protected:
     }
 
     void getMeteringHead(Json::Value& json_output) {
+        std::lock_guard<std::mutex> lk(mDrmControllerMutex);
         unsigned int             nbOfDetectedIps;
         std::string              drmVersion, dna;
         std::vector<std::string> vlnvFile;
@@ -171,6 +185,7 @@ protected:
         checkDRMCtlrRet( getDrmController().extractVlnvFile( nbOfDetectedIps, vlnvFile ) );
 
         // Put it in Json output val
+        json_output["drmlibVersion"] = getVersion();
         json_output["lgdnVersion"] = drmVersion;
         json_output["dna"]         = dna;
         for(unsigned int i=0; i<vlnvFile.size(); i++) {
@@ -191,6 +206,7 @@ protected:
     }
 
     void getMeteringStart(Json::Value& json_output) {
+        std::lock_guard<std::mutex> lk(mDrmControllerMutex);
         unsigned int             numberOfDetectedIps;
         std::string              saasChallenge;
         std::vector<std::string> meteringFile;
@@ -201,6 +217,7 @@ protected:
     }
 
     void getMeteringStop(Json::Value& json_output) {
+        std::lock_guard<std::mutex> lk(mDrmControllerMutex);
         unsigned int             numberOfDetectedIps;
         std::string              saasChallenge;
         std::vector<std::string> meteringFile;
@@ -211,6 +228,7 @@ protected:
     }
 
     void getMeteringWait(unsigned int timeOut, Json::Value& json_output) {
+        std::lock_guard<std::mutex> lk(mDrmControllerMutex);
         unsigned int             numberOfDetectedIps;
         std::string              saasChallenge;
         std::vector<std::string> meteringFile;
@@ -220,7 +238,12 @@ protected:
         json_output["request"] = "running";
     }
 
-    bool isReadyForNewLicense() {
+    #define DO_WITH_LOCK(expr) [this](){ \
+                std::lock_guard<std::mutex> lk(mDrmControllerMutex); \
+                return expr; \
+            }()
+
+    bool isReadyForNewLicense_no_lock() {
         bool ret;
         checkDRMCtlrRet( getDrmController().writeRegistersPageRegister() );
         checkDRMCtlrRet( getDrmController().readStatusRegister(DrmControllerLibrary::mDrmStatusLicenseTimerInitLoaded,
@@ -231,6 +254,7 @@ protected:
 
     void setLicense(const Json::Value& json_license) {
         Debug("Installing next license on DRM controller");
+        std::lock_guard<std::mutex> lk(mDrmControllerMutex);
 
         // get DNA
         std::string dna;
@@ -260,22 +284,22 @@ protected:
             Throw(DRMCtlrError, "Failed to load license timer on DRM controller, licenseTimerEnabled: 0x", std::hex, licenseTimerEnabled);
         }
 
-        if(license_end_timepoint.empty())
-            license_end_timepoint.push_back(Clock::now() + std::chrono::seconds(json_license["metering"]["timeoutSecond"].asUInt()));
-        else
-            license_end_timepoint.push_back(license_end_timepoint.back() + std::chrono::seconds(json_license["metering"]["timeoutSecond"].asUInt()));
+        WarningAssertGreaterEqual(json_license["metering"]["timeoutSecond"].asUInt(), minimum_license_duration.count());
+        next_license_duration = std::chrono::seconds(json_license["metering"]["timeoutSecond"].asUInt());
+        next_license_duration_exact = true;
 
-        dump_drm_hw_report();
+        debug_print_drm_hw_report();
     }
 
     void clearLicense() {
+        std::lock_guard<std::mutex> lk(mDrmControllerMutex);
         static const std::string nullLicense(352, '0');
         checkDRMCtlrRet( getDrmController().writeLicenseFilePageRegister() );
         checkDRMCtlrRet( getDrmController().writeLicenseFileRegister(nullLicense) );
-        Assert(!isLicense());
+        Assert(!isLicense_no_lock());
     }
 
-    bool isLicense() {
+    bool isLicense_no_lock() {
         checkDRMCtlrRet( getDrmController().writeRegistersPageRegister() );
         unsigned char err;
         checkDRMCtlrRet( getDrmController().readErrorRegister( DrmControllerLibrary::mDrmActivationErrorPosition,
@@ -284,7 +308,9 @@ protected:
         return (err == DrmControllerLibrary::mDrmErrorNoError);
     }
 
-    void dump_drm_hw_report() {
+    void debug_print_drm_hw_report() { /* This function must be used with mDrmControllerMutex locked */
+        if(!isDebug())
+            return;
         std::stringstream ss;
         getDrmController().printHwReport(ss);
         Debug("Dump DRM controller : ", ss.str());
@@ -314,27 +340,47 @@ protected:
         threadKeepAlive = std::async(std::launch::async, [this](){
             try{
                 while(1) {
-                    bool wrong_board_type_detection = false;
+                    bool wbtd_expected_time_exact = false; // wbtd = wrong board type detection
+                    Clock::time_point wbtd_expected_time;
+                    bool waited_readiness = false;
+                    Clock::time_point time_of_synchro;
 
-                    while(!isReadyForNewLicense()) {
-                        wrong_board_type_detection = true; //if we wait, we know when license expire, if we dont wait, the license might be expired from long time ago
+                    if(next_license_duration_exact && sync_license_timepoint_exact) {
+                        wbtd_expected_time = sync_license_timepoint + next_license_duration;
+                        wbtd_expected_time_exact = true;
+                    }
+
+                    while(!DO_WITH_LOCK(isReadyForNewLicense_no_lock())) {
+                        waited_readiness = true;
                         if(thread_wait_for_is_stop(std::chrono::seconds(1)))
                             return;
+                    }
+                    if(waited_readiness)
+                        time_of_synchro = Clock::now();
+
+                    // Step the license model
+                    {
+                        if(waited_readiness) {
+                            sync_license_timepoint = time_of_synchro;
+                            sync_license_timepoint_exact = true;
+                        } else {
+                            sync_license_timepoint += current_license_duration;
+                            sync_license_timepoint_exact = sync_license_timepoint_exact && current_license_duration_exact;
+                        }
+                        current_license_duration = next_license_duration;
+                        current_license_duration_exact = next_license_duration_exact;
+                    }
+
+                    // Wrong board type detection
+                    if(waited_readiness && wbtd_expected_time_exact) {
+                        auto diff = wbtd_expected_time - time_of_synchro;
+                        auto diff_abs = diff >= diff.zero() ? diff : -diff;
+                        if( diff_abs > std::chrono::seconds(2) )
+                            Warning("Wrong board type detection, please check your configuration");
                     }
 
                     if(thread_notwait_is_stop())
                         return;
-
-                    Assert(license_end_timepoint.size()<=max_number_licenses);
-                    if(license_end_timepoint.size()==max_number_licenses) {
-                        if(wrong_board_type_detection) {
-                            auto diff = license_end_timepoint.front()-Clock::now();
-                            auto diff_abs = diff >= diff.zero() ? diff : -diff;
-                            if( diff_abs > std::chrono::seconds(2) )
-                                Warning("Wrong board type detection, please check your configuration");
-                        }
-                        license_end_timepoint.pop_front();
-                    }
 
                     Json::Value json_req;
                     Debug("Get metering from session on DRM controller");
@@ -342,11 +388,53 @@ protected:
                     try{
                         getMeteringWait(1, json_req);
                     } catch(const DrmControllerLibrary::DrmControllerTimeOutException& e) {
-                        Unreachable(); //we have checked isReadyForNewLicense, should not block
+                        Unreachable(); //we have checked isReadyForNewLicense_no_lock, should not block
                     }
 
                     json_req["sessionId"] = sessionID;
-                    Json::Value json_license = getMeteringWSClient().getLicense(json_req);
+
+                    Json::Value json_license;
+
+                    Clock::time_point min_polling_deadline = sync_license_timepoint + current_license_duration; /* we can try polling until this deadline */
+                    unsigned int retry_index = 0;
+                    Clock::time_point start_of_retry = Clock::now();
+                    while(1) { /* Retry WS request */
+                        if(min_polling_deadline <= Clock::now()) {
+                            Throw(DRMWSError, "Failed to obtain license from WS on time, the protected IP may have been locked");
+                        }
+
+                        if(thread_notwait_is_stop())
+                            return;
+
+                        std::string retry_msg;
+                        try {
+                            json_license = getMeteringWSClient().getLicense(json_req, min_polling_deadline);
+                            break;
+                        }catch(const Exception& e) {
+                            if(e.getErrCode() != DRMWSMayRetry)
+                                throw;
+                            else {
+                                retry_msg = e.what();
+                            }
+                        }
+
+                        retry_index++;
+                        Clock::duration retry_wait_duration;
+                        if((Clock::now() - start_of_retry) <= std::chrono::seconds(60))
+                            retry_wait_duration = std::chrono::seconds(2);
+                        else
+                            retry_wait_duration = std::chrono::seconds(30);
+                        if((Clock::now() + retry_wait_duration + std::chrono::seconds(2)) >= min_polling_deadline)
+                            retry_wait_duration = min_polling_deadline - Clock::now() - std::chrono::seconds(2);
+                        if(retry_wait_duration <= decltype(retry_wait_duration)::zero())
+                            retry_wait_duration = std::chrono::seconds(0);
+
+                        Warning("Failed to obtain license from WS (", retry_msg, "), will retry in ", std::chrono::duration_cast<std::chrono::seconds>(retry_wait_duration).count(), " seconds");
+
+                        if(thread_wait_for_is_stop(retry_wait_duration))
+                            return;
+                    }
+
                     setLicense(json_license);
 
                     if(!sessionID.empty() && sessionID!=json_license["metering"]["sessionId"].asString()) {
@@ -435,7 +523,7 @@ public:
 
     void auto_start_session() {
         // Detect if session was previously stopped
-        if(!isLicense())
+        if(!DO_WITH_LOCK(isLicense_no_lock()))
             start_session();
         else
             resume_session();
@@ -453,6 +541,12 @@ public:
         Json::Value json_license = getMeteringWSClient().getLicense(json_req);
         setLicense(json_license);
         sessionID = json_license["metering"]["sessionId"].asString();
+
+        //init license model
+        sync_license_timepoint = Clock::now();
+        sync_license_timepoint_exact = true;
+        current_license_duration = decltype(current_license_duration)::zero();
+        current_license_duration_exact = true;
 
         unsigned int licenseTimeout = json_license["metering"]["timeoutSecond"].asUInt();
         Info("Started new metering session with sessionId ", sessionID, " and set first license with duration of ", std::dec, licenseTimeout, " seconds");
@@ -481,7 +575,7 @@ public:
     void resume_session() {
         Info("Resuming metering session...");
 
-        if(isReadyForNewLicense()) {
+        if(DO_WITH_LOCK(isReadyForNewLicense_no_lock())) {
             Json::Value json_req;
 
             getMeteringHead(json_req);
@@ -494,10 +588,20 @@ public:
             json_req["sessionId"] = sessionID;
             Json::Value json_license = getMeteringWSClient().getLicense(json_req);
             setLicense(json_license);
-
             sessionID = json_license["metering"]["sessionId"].asString();
+
+            sync_license_timepoint = Clock::now();
+            sync_license_timepoint_exact = false;
+            current_license_duration_exact = false;
+
             unsigned int licenseTimeout = json_license["metering"]["timeoutSecond"].asUInt();
             Info("Resumed metering session with sessionId ", sessionID, " and set first license with duration of ", std::dec, licenseTimeout, " seconds");
+        } else {
+            next_license_duration = minimum_license_duration;
+            next_license_duration_exact = false;
+            sync_license_timepoint = Clock::now();
+            sync_license_timepoint_exact = false;
+            current_license_duration_exact = false;
         }
 
         sessionStarted = true;
@@ -512,6 +616,7 @@ public:
     }
 
     void dump_drm_hw_report(std::ostream& os) {
+        std::lock_guard<std::mutex> lk(mDrmControllerMutex);
         getDrmController().printHwReport(os);
     }
 };

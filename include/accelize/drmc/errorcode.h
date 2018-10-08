@@ -38,6 +38,7 @@ typedef enum {
     DRMWSRespError         = 10001, /**< A malformed response has been received from Accelize WebService */
     DRMWSReqError          = 10002, /**< Failed during HTTP request to Accelize WebService */
     DRMWSError             = 10003, /**< Error returned from Accelize WebService */
+    DRMWSMayRetry          = 10004, /**< Error with request to Accelize Webservice, retry advised */
 
     DRMCtlrError           = 20001, /**< An error happened on a command on the DRM controller */
 

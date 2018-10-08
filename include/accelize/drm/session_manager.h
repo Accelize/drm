@@ -20,6 +20,8 @@ limitations under the License.
 #include <string>
 #include <functional>
 
+#include "accelize/drmc/common.h"
+
 namespace Accelize {
 namespace DRMLib {
 
@@ -39,7 +41,7 @@ The session of metering life-cycle is:
   After stop the session is correctly ended on the Accelize Webservice.
 
 */
-class MeteringSessionManager {
+class DRMLIB_EXPORT MeteringSessionManager {
 private:
     class Impl; //!< Internal representation
     Impl* pImpl; //!< Internal representation

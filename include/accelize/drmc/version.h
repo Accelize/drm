@@ -20,12 +20,14 @@ limitations under the License.
     \note This C API is wrapping C++ API, please refer to C++ API
 */
 
+#include "accelize/drmc/common.h"
+
 #ifdef  __cplusplus
     extern "C" {
 #endif
 
 /** \brief Return version of the library as text */
-const char * DRMLib_get_version();
+const char * DRMLib_get_version() DRMLIB_EXPORT;
 
 #ifdef  __cplusplus
 }

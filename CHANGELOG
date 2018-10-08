@@ -1,3 +1,6 @@
+* Mon Oct 08 2018 Accelize v1.1.0
+- NEW: MeteringSessionManager robustness to network disconnections
+
 * Wed Sep 12 2018 Accelize v1.0.0
 - NEW: MeteringSessionManager to manage DRM metering sessions
 - NEW: C-wrapper API

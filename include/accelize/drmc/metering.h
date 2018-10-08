@@ -24,6 +24,7 @@ limitations under the License.
 #define _H_ACCELIZE_METERING_CWRAPPER
 
 #include "accelize/drmc/errorcode.h"
+#include "accelize/drmc/common.h"
 
 #ifdef  __cplusplus
     extern "C" {
@@ -58,49 +59,49 @@ typedef void           (*ErrorCallBackHandler     )(const char* /*error message*
     \param[in] conf_file_path, cred_file_path, f_drm_read32, f_drm_write32, f_error_cb : see C++ API documentation
     \param[in] user_p : user pointer that will be passed to the callback functions
 */
-DRMLibErrorCode MeteringSessionManager_alloc(MeteringSessionManager **p_m, const char* conf_file_path, const char* cred_file_path, ReadReg32ByOffsetHandler f_drm_read32, WriteReg32ByOffsetHandler f_drm_write32, ErrorCallBackHandler f_error_cb, void* user_p);
+DRMLibErrorCode MeteringSessionManager_alloc(MeteringSessionManager **p_m, const char* conf_file_path, const char* cred_file_path, ReadReg32ByOffsetHandler f_drm_read32, WriteReg32ByOffsetHandler f_drm_write32, ErrorCallBackHandler f_error_cb, void* user_p) DRMLIB_EXPORT;
 
 /** \brief Wrapper typedef around C++ Accelize::DRMLib::MeteringSessionManager::~MeteringSessionManager destructor
 
     \param[in] **p_m : pointer to a MeteringSessionManager pointer that will be freed. After *p_m == NULL.
 */
-DRMLibErrorCode MeteringSessionManager_free(MeteringSessionManager **p_m);
+DRMLibErrorCode MeteringSessionManager_free(MeteringSessionManager **p_m) DRMLIB_EXPORT;
 
 /** \brief Wrapper typedef around C++ Accelize::DRMLib::MeteringSessionManager::start_session
 
     \param[in] *m : pointer to a MeteringSessionManager object
 */
-DRMLibErrorCode MeteringSessionManager_start_session(MeteringSessionManager *m);
+DRMLibErrorCode MeteringSessionManager_start_session(MeteringSessionManager *m) DRMLIB_EXPORT;
 
 /** \brief Wrapper typedef around C++ Accelize::DRMLib::MeteringSessionManager::stop_session
 
     \param[in] *m : pointer to a MeteringSessionManager object
 */
-DRMLibErrorCode MeteringSessionManager_stop_session(MeteringSessionManager *m);
+DRMLibErrorCode MeteringSessionManager_stop_session(MeteringSessionManager *m) DRMLIB_EXPORT;
 
 /** \brief Wrapper typedef around C++ Accelize::DRMLib::MeteringSessionManager::pause_session
 
     \param[in] *m : pointer to a MeteringSessionManager object
 */
-DRMLibErrorCode MeteringSessionManager_pause_session(MeteringSessionManager *m);
+DRMLibErrorCode MeteringSessionManager_pause_session(MeteringSessionManager *m) DRMLIB_EXPORT;
 
 /** \brief Wrapper typedef around C++ Accelize::DRMLib::MeteringSessionManager::resume_session
 
     \param[in] *m : pointer to a MeteringSessionManager object
 */
-DRMLibErrorCode MeteringSessionManager_resume_session(MeteringSessionManager *m);
+DRMLibErrorCode MeteringSessionManager_resume_session(MeteringSessionManager *m) DRMLIB_EXPORT;
 
 /** \brief Wrapper typedef around C++ Accelize::DRMLib::MeteringSessionManager::auto_start_session
 
     \param[in] *m : pointer to a MeteringSessionManager object
 */
-DRMLibErrorCode MeteringSessionManager_auto_start_session(MeteringSessionManager *m);
+DRMLibErrorCode MeteringSessionManager_auto_start_session(MeteringSessionManager *m) DRMLIB_EXPORT;
 
 /** \brief Wrapper typedef around C++ Accelize::DRMLib::MeteringSessionManager::dump_drm_hw_report
 
     \param[in] *m : pointer to a MeteringSessionManager object
 */
-DRMLibErrorCode MeteringSessionManager_dump_drm_hw_report(MeteringSessionManager *m);
+DRMLibErrorCode MeteringSessionManager_dump_drm_hw_report(MeteringSessionManager *m) DRMLIB_EXPORT;
 
 #ifdef  __cplusplus
 }

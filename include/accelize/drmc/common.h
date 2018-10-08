@@ -14,21 +14,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef _H_ACCELIZE_METERING_VERSION
-#define _H_ACCELIZE_METERING_VERSION
+#ifndef _H_ACCELIZE_COMMON_LIBEXPORT
+#define _H_ACCELIZE_COMMON_LIBEXPORT
 
-#define METERINGLIB_VERSION "@GIT_VERSION@"
+#ifdef  __cplusplus
+#ifdef BUILDING_DRMLIB
+    #define DRMLIB_EXPORT __attribute__((visibility("default")))
+    #define DRMLIB_LOCAL __attribute__((visibility("hidden")))
+#else
+    #define DRMLIB_EXPORT
+    #define DRMLIB_LOCAL
+#endif /* BUILDING_DRMLIB */
+#else
+    #define DRMLIB_EXPORT
+    #define DRMLIB_LOCAL
+#endif /* __cplusplus */
 
-#include "accelize/drmc/common.h"
-
-namespace Accelize {
-namespace DRMLib {
-
-/** \brief Get DRMLib version
-*/
-const char* getVersion() DRMLIB_EXPORT;
-
-}
-}
-
-#endif //_H_ACCELIZE_METERING_VERSION
+#endif /* _H_ACCELIZE_COMMON_LIBEXPORT */

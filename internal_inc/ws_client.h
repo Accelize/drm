@@ -19,6 +19,7 @@ limitations under the License.
 
 #include <string>
 #include <jsoncpp/json/json.h>
+#include <chrono>
 
 namespace Accelize {
 namespace DRMLib {
@@ -31,15 +32,17 @@ protected:
     std::string client_id;
     std::string client_secret;
     std::string metering_url;
+    std::chrono::seconds default_request_timeout;
 
 public:
     MeteringWSClient(const Json::Value& config_server, const Json::Value& credentials);
     ~MeteringWSClient() = default;
 
     Json::Value getLicense(const Json::Value& json_req);
+    Json::Value getLicense(const Json::Value& json_req, std::chrono::steady_clock::time_point deadline);
 
 protected:
-    std::string getOAuth2token();
+    std::string getOAuth2token(std::chrono::steady_clock::time_point deadline);
 
 };
 

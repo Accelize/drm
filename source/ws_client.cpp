@@ -18,6 +18,7 @@ limitations under the License.
 #include <sstream>
 #include <list>
 #include <curl/curl.h>
+#include <chrono>
 
 #include "log.h"
 #include "utils.h"
@@ -78,7 +79,7 @@ public:
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.back().c_str());
     }
 
-    long perform(std::string* resp) {
+    long perform(std::string* resp, std::chrono::steady_clock::time_point deadline) {
         CURLcode res;
         long resp_code;
         if(headers)
@@ -86,9 +87,25 @@ public:
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &CurlEasyPost::write_callback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)resp);
         curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuff.data());
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+
+        {//compute timeout
+            std::chrono::milliseconds timeout = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - std::chrono::steady_clock::now());
+            if(timeout <= std::chrono::milliseconds(0))
+                Throw(DRMWSMayRetry, "Did not performe HTTP request to Accelize webservice because deadline is already reached.");
+            curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, timeout.count());
+        }
+
         res = curl_easy_perform(curl);
         if(res != CURLE_OK) {
-            Throw(DRMExternFail, "Failed performing HTTP request to Accelize webservice (", curl_easy_strerror(res), ") : ", errbuff.data());
+            if(   res == CURLE_COULDNT_RESOLVE_PROXY
+               || res == CURLE_COULDNT_RESOLVE_HOST
+               || res == CURLE_COULDNT_CONNECT
+               || res == CURLE_OPERATION_TIMEDOUT ) {
+                Throw(DRMWSMayRetry, "Failed performing HTTP request to Accelize webservice (", curl_easy_strerror(res), ") : ", errbuff.data());
+            } else {
+                Throw(DRMExternFail, "Failed performing HTTP request to Accelize webservice (", curl_easy_strerror(res), ") : ", errbuff.data());
+            }
         }
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &resp_code);
         return resp_code;
@@ -100,6 +117,26 @@ public:
             return ret;
         else
             return 0;
+    }
+
+    static bool is_error_retriable(long resp_code) {
+        return     resp_code == 408 /* Request Timeout */
+                || resp_code == 500 /* Internal Server Error */
+                || resp_code == 502 /* Bad Gateway */
+                || resp_code == 503 /* Service Unavailable */
+                || resp_code == 504 /* Gateway timeout */
+                || resp_code == 505 /* HTTP version not supported */
+                || resp_code == 507 /* Insufficient strorage */
+                || resp_code == 429 /* Too Many Requests  */
+                || resp_code == 520 /* Unknown Error */
+                || resp_code == 521 /* Web Server is Down */
+                || resp_code == 522 /* Connection Timed Out */
+                || resp_code == 524 /* A Timeout Occured */
+                || resp_code == 525 /* SSL Handshake Failed */
+                || resp_code == 527 /* Railgun Error */
+                || resp_code == 530 /* Origin DNS Error */
+                || resp_code == 404 /* Not Found Error */
+                ;
     }
 
 protected:
@@ -154,12 +191,17 @@ MeteringWSClient::MeteringWSClient(const Json::Value& config_server, const Json:
     getConfig(config_server, "metering_url", &metering_url);
     getConfig(credentials, "client_id", &client_id);
     getConfig(credentials, "client_secret", &client_secret);
+    default_request_timeout = std::chrono::seconds( JVgetOptional(config_server, "default_ws_request_timeout", Json::uintValue, 20).asUInt() );
 
     CurlSingleton::Init();
 }
 
 Json::Value MeteringWSClient::getLicense(const Json::Value& json_req) {
-    std::string token = getOAuth2token();
+    return getLicense(json_req, std::chrono::steady_clock::now() + default_request_timeout);
+}
+
+Json::Value MeteringWSClient::getLicense(const Json::Value& json_req, std::chrono::steady_clock::time_point deadline) {
+    std::string token = getOAuth2token(deadline);
 
     CurlEasyPost req;
 
@@ -173,11 +215,19 @@ Json::Value MeteringWSClient::getLicense(const Json::Value& json_req) {
     Json::FastWriter json_writer;
     req.setPostFields(json_writer.write(json_req));
 
+    Debug2("Starting License request");
+
     // Perform
     std::string resp;
-    long resp_code = req.perform(&resp);
-    if(resp_code != 200 && resp_code != 400)
-        Throw(DRMWSReqError, "WS HTTP response code : ", resp_code, "(", resp, ")");
+    long resp_code = req.perform(&resp, deadline);
+    Debug("Received code = ", resp_code);
+    if(resp_code != 200 && resp_code != 560 && resp_code != 400) {
+        if(CurlEasyPost::is_error_retriable(resp_code)) {
+            Throw(DRMWSMayRetry, "WS HTTP response code : ", resp_code, "(", resp, ")");
+        } else {
+            Throw(DRMWSReqError, "WS HTTP response code : ", resp_code, "(", resp, ")");
+        }
+    }
 
     Debug("License response obtained in ", req.getTotalTime()*1000, "ms");
 
@@ -186,15 +236,19 @@ Json::Value MeteringWSClient::getLicense(const Json::Value& json_req) {
     Json::Value json_resp;
     reader.parse(resp, json_resp);
 
-    // Check for error
-    if(json_resp.get("error", "true").asBool() || resp_code==400) {
-        Throw(DRMWSError, "Error from WS with details : ", json_resp.get("detail", "Unknown error"));
+    // Check for error with details
+    if(resp_code == 560) { /*560 : Custom License generation temporary issue*/
+       Assert(json_resp.get("error", "true").asBool());
+       Throw(DRMWSMayRetry, "Error from WS with details : ", json_resp.get("detail", "Unknown error"));
+    } else if(resp_code == 400) { /*400 : Bad request */
+       Assert(json_resp.get("error", "true").asBool());
+       Throw(DRMWSError, "Error from WS with details : ", json_resp.get("detail", "Unknown error"));
     }
 
     return json_resp;
 }
 
-std::string MeteringWSClient::getOAuth2token() {
+std::string MeteringWSClient::getOAuth2token(std::chrono::steady_clock::time_point deadline) {
     //Request token OAuth2
     CurlEasyPost req;
     req.setURL(oauth2_url);
@@ -202,10 +256,17 @@ std::string MeteringWSClient::getOAuth2token() {
     ss << "client_id=" << client_id << "&client_secret=" << client_secret << "&grant_type=client_credentials";
     req.setPostFields(ss.str());
 
+    Debug2("Starting OAuth2 token request");
+
     std::string resp;
-    long resp_code = req.perform(&resp);
-    if(resp_code != 200)
-        Throw(DRMWSReqError, "WSOAuth HTTP response code : ", resp_code, "(", resp, ")");
+    long resp_code = req.perform(&resp, deadline);
+    if(resp_code != 200) {
+        if(CurlEasyPost::is_error_retriable(resp_code)) {
+            Throw(DRMWSMayRetry, "WSOAuth HTTP response code : ", resp_code, "(", resp, ")");
+        } else {
+            Throw(DRMWSReqError, "WSOAuth HTTP response code : ", resp_code, "(", resp, ")");
+        }
+    }
 
     //Parse response
     Json::Reader reader;
