@@ -1,3 +1,7 @@
+* Wed Nov 07 2018 Accelize v1.1.1
+- DOC: Documentation for ReadTheDoc
+- FIX: Stop session issue on retry
+
 * Mon Oct 08 2018 Accelize v1.1.0
 - NEW: MeteringSessionManager robustness to network disconnections
 

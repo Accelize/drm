@@ -30,7 +30,7 @@ limitations under the License.
     extern "C" {
 #endif
 
-#include "stdint.h"
+#include <stdint.h>
 
 struct MeteringSessionManager_s;
 

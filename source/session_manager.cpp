@@ -76,6 +76,9 @@ protected:
     std::string sessionID;
     std::string udid;
     std::string boardType;
+    Json::Value last_stop_session_json_req;
+    Json::Value last_start_session_json_req;
+    Json::Value last_resume_session_json_req;
 
     // thread to maintain alive
     std::future<void> threadKeepAlive;
@@ -221,7 +224,7 @@ protected:
         unsigned int             numberOfDetectedIps;
         std::string              saasChallenge;
         std::vector<std::string> meteringFile;
-		checkDRMCtlrRet( getDrmController().endSessionAndExtractMeteringFile( numberOfDetectedIps, saasChallenge, meteringFile ) );
+    checkDRMCtlrRet( getDrmController().endSessionAndExtractMeteringFile( numberOfDetectedIps, saasChallenge, meteringFile ) );
         json_output["saasChallenge"] = saasChallenge;
         json_output["meteringFile"]  = std::accumulate(meteringFile.begin(), meteringFile.end(), std::string(""));
         json_output["request"] = "close";
@@ -288,6 +291,8 @@ protected:
         next_license_duration = std::chrono::seconds(json_license["metering"]["timeoutSecond"].asUInt());
         next_license_duration_exact = true;
 
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
         debug_print_drm_hw_report();
     }
 
@@ -296,6 +301,7 @@ protected:
         static const std::string nullLicense(352, '0');
         checkDRMCtlrRet( getDrmController().writeLicenseFilePageRegister() );
         checkDRMCtlrRet( getDrmController().writeLicenseFileRegister(nullLicense) );
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
         Assert(!isLicense_no_lock());
     }
 
@@ -306,6 +312,10 @@ protected:
                                                          DrmControllerLibrary::mDrmActivationErrorMask,
                                                          err));
         return (err == DrmControllerLibrary::mDrmErrorNoError);
+    }
+
+    bool isSession_no_lock() {
+        return isLicense_no_lock();
     }
 
     void debug_print_drm_hw_report() { /* This function must be used with mDrmControllerMutex locked */
@@ -395,7 +405,7 @@ protected:
 
                     Json::Value json_license;
 
-                    Clock::time_point min_polling_deadline = sync_license_timepoint + current_license_duration; /* we can try polling until this deadline */
+                    Clock::time_point min_polling_deadline = sync_license_timepoint + current_license_duration - std::chrono::milliseconds(200); /* we can try polling until this deadline */
                     unsigned int retry_index = 0;
                     Clock::time_point start_of_retry = Clock::now();
                     while(1) { /* Retry WS request */
@@ -523,7 +533,7 @@ public:
 
     void auto_start_session() {
         // Detect if session was previously stopped
-        if(!DO_WITH_LOCK(isLicense_no_lock()))
+        if(!DO_WITH_LOCK(isSession_no_lock()))
             start_session();
         else
             resume_session();
@@ -533,12 +543,14 @@ public:
         if(sessionStarted)
             Throw(DRMBadArg, "Error : session already started");
 
-        Json::Value json_req;
-        Info("Starting metering session...");
-        getMeteringHead(json_req);
-        getMeteringStart(json_req);
+        if( last_start_session_json_req.isNull() ) {
+            Info("Starting metering session...");
+            getMeteringHead(last_start_session_json_req);
+            getMeteringStart(last_start_session_json_req);
+        }
 
-        Json::Value json_license = getMeteringWSClient().getLicense(json_req);
+        Json::Value json_license = getMeteringWSClient().getLicense(last_start_session_json_req);
+        last_start_session_json_req = Json::Value();
         setLicense(json_license);
         sessionID = json_license["metering"]["sessionId"].asString();
 
@@ -560,13 +572,16 @@ public:
         Info("Stopping metering session...");
         thread_stop();
 
-        Json::Value json_req;
-        Debug("Get last metering data from session on DRM controller");
-        getMeteringHead(json_req);
-        getMeteringStop(json_req);
-        json_req["sessionId"] = sessionID;
-        getMeteringWSClient().getLicense(json_req);
-        clearLicense();
+        if( last_stop_session_json_req.isNull() ) {
+            Debug("Get last metering data from session on DRM controller");
+            getMeteringHead(last_stop_session_json_req);
+            getMeteringStop(last_stop_session_json_req);
+            clearLicense();
+            last_stop_session_json_req["sessionId"] = sessionID;
+        }
+        Json::Value json_license = getMeteringWSClient().getLicense(last_stop_session_json_req);
+        last_stop_session_json_req = Json::Value();
+        sessionID = json_license["metering"]["sessionId"].asString();
         Info("Stopped metering session with sessionId ", sessionID, " and uploaded last metering data");
 
         sessionStarted = false;
@@ -578,15 +593,18 @@ public:
         if(DO_WITH_LOCK(isReadyForNewLicense_no_lock())) {
             Json::Value json_req;
 
-            getMeteringHead(json_req);
-            try{
-                getMeteringWait(1, json_req);
-            } catch(const DrmControllerLibrary::DrmControllerTimeOutException& e) {
-                Unreachable(); //we have checked isReadyForNewLicense, should not block
+            if(last_resume_session_json_req.isNull()) {
+                getMeteringHead(last_resume_session_json_req);
+                try{
+                    getMeteringWait(1, last_resume_session_json_req);
+                } catch(const DrmControllerLibrary::DrmControllerTimeOutException& e) {
+                    Unreachable(); //we have checked isReadyForNewLicense, should not block
+                }
             }
 
-            json_req["sessionId"] = sessionID;
-            Json::Value json_license = getMeteringWSClient().getLicense(json_req);
+            last_resume_session_json_req["sessionId"] = sessionID;
+            Json::Value json_license = getMeteringWSClient().getLicense(last_resume_session_json_req);
+            last_resume_session_json_req = Json::Value();
             setLicense(json_license);
             sessionID = json_license["metering"]["sessionId"].asString();
 

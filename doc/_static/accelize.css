@@ -1,0 +1,16 @@
+.wy-side-nav-search {
+    background-image: url("background.png");
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-position: top;
+    background-color: #ea7222
+}
+
+.wy-side-nav-search input[type="text"] {
+    border-color: #ea7222
+}
+
+.wy-side-nav-search > a, .wy-side-nav-search .wy-dropdown > a {
+    color: #ea7222
+}
+
