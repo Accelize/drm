@@ -14,7 +14,7 @@
 
 PROJECT_NAME   = "Accelize DRMLib C++ and C API"
 PROJECT_NUMBER = @GIT_VERSION@
-INPUT          = @API_PUBLIC_HEADERS_DOC@
+INPUT          = @API_PUBLIC_HEADERS_DOC@ ../include/accelize/drm/  ../include/accelize/drmc/
 FILE_PATTERNS  = *.h
 RECURSIVE      = YES
 EXTRACT_ALL    = YES
