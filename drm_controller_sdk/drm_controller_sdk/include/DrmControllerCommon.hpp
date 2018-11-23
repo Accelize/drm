@@ -21,7 +21,7 @@
 
 // version value
 #define DRM_CONTROLLER_VERSION "3.0.0"
-#define DRM_CONTROLLER_SDK_VERSION "3.0.0.1"
+#define DRM_CONTROLLER_SDK_VERSION "3.0.0.2"
 
 // IP component name
 #define DRM_CONTROLLER_COMPONENT_NAME "DRM_CONTROLLER_WITH_DNA"      /**<Definition of the drm controller component name.**/

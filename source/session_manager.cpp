@@ -473,7 +473,7 @@ protected:
             threadKeepAlive_stop = true;
         }
         threadKeepAlive_cv.notify_all();
-        threadKeepAlive.wait();
+        threadKeepAlive.get();
     }
 
 public:

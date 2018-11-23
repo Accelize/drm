@@ -184,7 +184,7 @@ namespace DrmControllerLibrary {
                                   std::vector<std::string> &meteringFile,
                                   bool &meteringEnabled,
                                   bool &saasChallengeReady,
-                                  bool &meteringReady) const;
+                                  bool &meteringReady);
 
       /** initialization
       *   \brief Make the initialization step.
@@ -200,7 +200,7 @@ namespace DrmControllerLibrary {
       **/
       unsigned int initialization(unsigned int &numberOfDetectedIps,
                                   std::string &saasChallenge,
-                                  std::vector<std::string> &meteringFile) const;
+                                  std::vector<std::string> &meteringFile);
 
       /** loadLicenseTimerInit
       **  \brief Load the license timer value
@@ -215,7 +215,7 @@ namespace DrmControllerLibrary {
       *          should be called to get the exception description.
       **/
       unsigned int loadLicenseTimerInit(const std::string &licenseTimerInit,
-                                        bool &licenseTimerEnabled) const;
+                                        bool &licenseTimerEnabled);
 
       /** loadLicenseTimerInit
       **  \brief Load the license timer value
@@ -228,7 +228,7 @@ namespace DrmControllerLibrary {
       *   \throw DrmControllerFunctionalityDisabledException whenever the license timer is disabled. DrmControllerFunctionalityDisabledException::what()
       *          should be called to get the exception description.
       **/
-      unsigned int loadLicenseTimerInit(const std::string &licenseTimerInit) const;
+      unsigned int loadLicenseTimerInit(const std::string &licenseTimerInit);
 
       /** activate
       *   \brief Launch the activation procedure.
@@ -585,6 +585,8 @@ namespace DrmControllerLibrary {
       bool mHeartBeatModeEnabled; /**<Tell wether the heart beat mode is enabled on hardware**/
       // we suppose the heart beat mode to be disabled by default
       // it will be set if it is not the case during the wait auto controller function
+
+      bool mLicenseTimerWasLoaded; /**<Tell wether the license timer was loaded at least one time.**/
 
       /** checkVersion
       *   \brief Check hardware version matches the software version.

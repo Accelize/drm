@@ -26,7 +26,8 @@ DrmControllerLibrary::DrmControllerOperations::DrmControllerOperations(t_drmRead
                                                                        t_drmWriteRegisterFunction f_write_reg32)
   : DrmControllerRegisters::DrmControllerRegisters(f_read_reg32,
                                                    f_write_reg32),
-    mHeartBeatModeEnabled(false)
+    mHeartBeatModeEnabled(false),
+    mLicenseTimerWasLoaded(false)
 {
   // check version
   DrmControllerOperations::checkVersion();
@@ -390,7 +391,9 @@ unsigned int DrmControllerLibrary::DrmControllerOperations::initialization(unsig
                                                                       std::vector<std::string> &meteringFile,
                                                                       bool &meteringEnabled,
                                                                       bool &saasChallengeReady,
-                                                                      bool &meteringReady) const {
+                                                                      bool &meteringReady) {
+  // the license timer is not loaded
+  mLicenseTimerWasLoaded = false;
   // call extract metering file and saas challenge
   return DrmControllerOperations::extractMeteringFileAndSaasChallenge(numberOfDetectedIps,
                                                                           saasChallenge,
@@ -414,7 +417,7 @@ unsigned int DrmControllerLibrary::DrmControllerOperations::initialization(unsig
 **/
 unsigned int DrmControllerLibrary::DrmControllerOperations::initialization(unsigned int &numberOfDetectedIps,
                                                                       std::string &saasChallenge,
-                                                                      std::vector<std::string> &meteringFile) const {
+                                                                      std::vector<std::string> &meteringFile) {
   // status bits
   bool meteringEnabled(false), saasChallengeReady(false), meteringReady(false);
   // extract metering file
@@ -439,9 +442,7 @@ unsigned int DrmControllerLibrary::DrmControllerOperations::initialization(unsig
 *          should be called to get the exception description.
 **/
 unsigned int DrmControllerLibrary::DrmControllerOperations::loadLicenseTimerInit(const std::string &licenseTimerInit,
-                                                                            bool &licenseTimerEnabled) const {
-  // remember if the license timer was loaded at least one time
-  static bool licenseTimerWasLoaded = false;
+                                                                            bool &licenseTimerEnabled) {
   // set page to register
   unsigned int errorCode = DrmControllerRegisters::writeRegistersPageRegister();
   // check no error
@@ -466,12 +467,12 @@ unsigned int DrmControllerLibrary::DrmControllerOperations::loadLicenseTimerInit
     return mDrmApi_LICENSE_TIMER_DISABLED_ERROR;
   }
   // check license timer if it was loaded the previous call
-  if (licenseTimerWasLoaded == true) {
+  if (mLicenseTimerWasLoaded == true) {
     errorCode = DrmControllerOperations::checkLicenseTimerInitLoaded();
     // check no error
     if (errorCode != mDrmApi_NO_ERROR) {
       // license timer was reseted
-      licenseTimerWasLoaded = false;
+      mLicenseTimerWasLoaded = false;
       // return error result
       return errorCode;
     }
@@ -483,7 +484,7 @@ unsigned int DrmControllerLibrary::DrmControllerOperations::loadLicenseTimerInit
     // return error result
     return errorCode;
   // everything was fine, the license timer has been loaded
-  licenseTimerWasLoaded = true;
+  mLicenseTimerWasLoaded = true;
   // return error result
   return errorCode;
 }
@@ -499,7 +500,7 @@ unsigned int DrmControllerLibrary::DrmControllerOperations::loadLicenseTimerInit
 *   \throw DrmControllerFunctionalityDisabledException whenever the license timer is disabled. DrmControllerFunctionalityDisabledException::what()
 *          should be called to get the exception description.
 **/
-unsigned int DrmControllerLibrary::DrmControllerOperations::loadLicenseTimerInit(const std::string &licenseTimerInit) const {
+unsigned int DrmControllerLibrary::DrmControllerOperations::loadLicenseTimerInit(const std::string &licenseTimerInit) {
   // status
   bool licenseTimerEnabled(false);
   // load license timer
