@@ -1,3 +1,6 @@
+* Fri Nov 30 2018 Accelize v1.2.0
+- NEW: Nodelock mode support
+
 * Fri Nov 23 2018 Accelize v1.1.3
 - FIX: Metering, multiboard issue in same process
 - FIX: Metering, re-start session issue

@@ -1,6 +1,10 @@
+[![Documentation Status](https://readthedocs.org/projects/drmlib/badge/?version=latest)](https://drmlib.readthedocs.io/en/latest/?badge=latest)
+ 
 # Accelize metering library
 
 Accelize metering library is provided to manage metering sessions between an embedded DRM controller on a FPGA and the AccelStore. It can be used in the QuickPlay accelerator framework or in a custom accelerator framework.
+
+See [Documentation](https://drmlib.readthedocs.io/).
 
 ## Licenses
 
@@ -20,6 +24,7 @@ Please consult [CHANGELOG](CHANGELOG)
     * cmake (tested with cmake 2.8.12)
     * libcurl-devel (tested with libcurl-devel 7.29.0)
     * jsoncpp-devel (tested with jsoncpp-devel 1.8.5)
+    * boost (test with boost-deval 1.53.0)
 * packages to build packages :
     * rpm-build (tested with rpm-build 4.11.3)
 * packages to build documentation :
@@ -60,11 +65,13 @@ $sudo make install
 
 ### Usage
 
-Please refer to the doxygen generated documentation that document both C and C++ APIs.
+Please refer to the doxygen generated documentation that document both C and C++
+APIs.
 
 ### Create the configuration file
 
-The configuration files is a format used in the library to set various options of about the design and the environment
+The configuration files is a format used in the library to set various options
+of about the design and the environment
 
 ```json
 {
@@ -79,6 +86,25 @@ The configuration files is a format used in the library to set various options o
 }
 
 ```
+
+#### DRM mode selection
+
+By default, the DRM work in "metering" mode, but it is possible to set another
+mode by editing the configuration file and adding the ``drm`` section with the
+``mode`` key.
+
+*Example with nodelock mode:*
+
+```json
+{
+  "drm": {
+    "mode": "nodelock",
+    "license_dir": "path/to/local/license/storage/directory"
+  }
+}
+```
+
+In case of nodelock mode, the ``license_dir`` must be provided to define were to save license locally.
 
 ### Create the credential file
 Create your credential json file as below
