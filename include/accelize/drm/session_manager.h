@@ -61,13 +61,11 @@ public:
     typedef std::function<int/*errcode*/ (uint32_t /*register offset*/, uint32_t /*data to write*/)> WriteReg32ByOffsetHandler;
     /** \brief Read callback function by register name
 
-        \note This function is intended to be used with QuickPlayLib that manages registers by names
         \warning This function must be thread-safe in case of concurrency on the register bus
     */
     typedef std::function<int/*errcode*/ (const std::string& /*register name*/, uint32_t* /*returned data*/)> ReadReg32ByNameHandler;
     /** \brief Write callback function by register name
 
-        \note This function is intended to be used with QuickPlayLib that manages registers by names
         \warning This function must be thread-safe in case of concurrency on the register bus
     */
     typedef std::function<int/*errcode*/ (const std::string& /*register name*/, uint32_t /*data to write*/)> WriteReg32ByNameHandler;
@@ -85,7 +83,7 @@ public:
        Constructs a MeteringSessionManager with ByOffset callback functions. \see ReadReg32ByOffsetHandler WriteReg32ByOffsetHandler
 
        \param[in] conf_file_path : Path to json configuration file with configuration of the manager (Accelize WebService URL, Board type, Udid, ...)
-       \param[in] cred_file_path : Path to json file containing your accelstore.accelize.com Account credentials (client_id, client_private)
+       \param[in] cred_file_path : Path to json file containing your accelize.com Account credentials (client_id, client_private)
        \param[in] f_drm_read32 : Callback function for reading DRM 32bit registers by offset
        \param[in] f_drm_write32 : Callback function for writing DRM 32bit registers by offset
        \param[in] f_error_cb : Callback function in case of asynchronous error
@@ -109,12 +107,11 @@ public:
        Constructs a MeteringSessionManager with ByName callback functions. \see ReadReg32ByNameHandler WriteReg32ByNameHandler
 
        \param[in] conf_file_path : Path to json configuration file with configuration of the manager (Accelize WebService URL, Board type, Udid, ...)
-       \param[in] cred_file_path : Path to json file containing your accelstore.accelize.com Account credentials (client_id, client_private)
+       \param[in] cred_file_path : Path to json file containing your accelize.com Account credentials (client_id, client_private)
        \param[in] f_drm_read32 : Callback function for reading DRM 32bit registers by name
        \param[in] f_drm_write32 : Callback function for writing DRM 32bit registers by name
        \param[in] f_error_cb : Callback function in case of asynchronous error
 
-       \note This function is intended to be used with QuickPlayLib that manages IP registers by names
     */
     MeteringSessionManager(const std::string& conf_file_path, const std::string& cred_file_path, ReadReg32ByNameHandler f_drm_read32, WriteReg32ByNameHandler f_drm_write32, ErrorCallBackHandler f_error_cb);
 
@@ -126,7 +123,6 @@ public:
        \param[in] f_drm_write32 : Callback function for writing DRM 32bit registers by name
        \param[in] f_error_cb : Callback function in case of asynchronous error
 
-       \note This function is intended to be used with QuickPlayLib that manages IP registers by names
        \warning Only used for Debug purposes
     */
     MeteringSessionManager(ReadReg32ByNameHandler f_drm_read32, WriteReg32ByNameHandler f_drm_write32, ErrorCallBackHandler f_error_cb);

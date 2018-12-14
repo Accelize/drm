@@ -6,7 +6,7 @@
 
 # Build generated files
 docs/_build/
-build*/
+build_*/
 build/
 dist/
 .eggs/

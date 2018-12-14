@@ -1,9 +1,9 @@
+![Build Status](https://codebuild.eu-west-1.amazonaws.com/badges?uuid=eyJlbmNyeXB0ZWREYXRhIjoiNS9XVFh6SXBsa1hNcTV2amhybTFNZUlBdEJ1N0dCYUVGSUtmYzNaMG1sVTlkUVBBTXVyTXZoRkhuU0M1d0drd1VTU0VZUzlONlJQZlB3OEh2UXREcENNPSIsIml2UGFyYW1ldGVyU3BlYyI6ImdJL29WM2YvdFhnQ1NNRSsiLCJtYXRlcmlhbFNldFNlcmlhbCI6MX0%3D&branch=master)
 [![Documentation Status](https://readthedocs.org/projects/drmlib/badge/?version=latest)](https://drmlib.readthedocs.io/en/latest/?badge=latest)
  
 # Accelize metering library
 
-Accelize metering library is provided to manage metering sessions between an embedded DRM controller on a FPGA and the AccelStore. It can be used in the QuickPlay accelerator framework or in a custom accelerator framework.
-
+Accelize metering library is provided to manage metering sessions between an embedded DRM controller on a FPGA and the Accelize web-service.
 See [Documentation](https://drmlib.readthedocs.io/).
 
 ## Licenses

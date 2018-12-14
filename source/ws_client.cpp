@@ -136,6 +136,7 @@ public:
                 || resp_code == 527 /* Railgun Error */
                 || resp_code == 530 /* Origin DNS Error */
                 || resp_code == 404 /* Not Found Error */
+                || resp_code == 470 /* Floating License: no token available */
                 ;
     }
 
@@ -201,6 +202,7 @@ Json::Value MeteringWSClient::getLicense(const Json::Value& json_req) {
 }
 
 Json::Value MeteringWSClient::getLicense(const Json::Value& json_req, std::chrono::steady_clock::time_point deadline) {
+
     std::string token = getOAuth2token(deadline);
 
     CurlEasyPost req;
@@ -221,7 +223,7 @@ Json::Value MeteringWSClient::getLicense(const Json::Value& json_req, std::chron
     std::string resp;
     long resp_code = req.perform(&resp, deadline);
     Debug("Received code = ", resp_code);
-    if(resp_code != 200 && resp_code != 560 && resp_code != 400) {
+    if ( resp_code != 200 && resp_code != 560 && resp_code != 400) {
         if(CurlEasyPost::is_error_retriable(resp_code)) {
             Throw(DRMWSMayRetry, "WS HTTP response code : ", resp_code, "(", resp, ")");
         } else {
@@ -235,6 +237,7 @@ Json::Value MeteringWSClient::getLicense(const Json::Value& json_req, std::chron
     Json::Reader reader;
     Json::Value json_resp;
     reader.parse(resp, json_resp);
+    Debug2("json_resp=", json_resp.toStyledString());
 
     // Check for error with details
     if(resp_code == 560) { /*560 : Custom License generation temporary issue*/

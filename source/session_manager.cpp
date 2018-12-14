@@ -138,6 +138,7 @@ protected:
     }
 
     void initialize_web_client(const std::string &cred_file_path, Json::Reader &reader, const Json::Value &conf_json) {
+        Debug2("initialize_web_client ws answer: ", conf_json.toStyledString());
         Json::Value conf_server_json = JVgetRequired(conf_json, "webservice", Json::objectValue);
         minimum_license_duration = std::chrono::seconds( JVgetOptional(conf_server_json, "minimum_license_duration", Json::uintValue, 300).asUInt() );
 
@@ -180,7 +181,7 @@ protected:
             Error("Error in read register callback, errcode = ", ret);
             return -1;
         } else {
-            Debug2("Read DRM register @", regName, " = 0x", std::hex, value);
+            Debug2("Read DRM register @", regName, " = 0x", std::hex, value, std::dec);
             return 0;
         }
     }
@@ -198,7 +199,7 @@ protected:
             Error("Error in write register callback, errcode = ", ret);
             return -1;
         } else {
-            Debug2("Write DRM register @", regName, " = 0x", std::hex, value);
+            Debug2("Write DRM register @", regName, " = 0x", std::hex, value, std::dec);
             return 0;
         }
     }
@@ -261,7 +262,7 @@ protected:
         unsigned int             numberOfDetectedIps;
         std::string              saasChallenge;
         std::vector<std::string> meteringFile;
-    checkDRMCtlrRet( getDrmController().endSessionAndExtractMeteringFile( numberOfDetectedIps, saasChallenge, meteringFile ) );
+        checkDRMCtlrRet( getDrmController().endSessionAndExtractMeteringFile( numberOfDetectedIps, saasChallenge, meteringFile ) );
         json_output["saasChallenge"] = saasChallenge;
         json_output["meteringFile"]  = std::accumulate(meteringFile.begin(), meteringFile.end(), std::string(""));
         json_output["request"] = "close";
@@ -314,7 +315,7 @@ protected:
         unsigned char activationErrorCode;
         checkDRMCtlrRet( getDrmController().activate( license, activationDone, activationErrorCode ) );
         if( activationErrorCode ) {
-            Throw(DRMCtlrError, "Failed to activate license on DRM controller, activationErr: 0x", std::hex, activationErrorCode);
+            Throw(DRMCtlrError, "Failed to activate license on DRM controller, activationErr: 0x", std::hex, activationErrorCode, std::dec);
         }
 
         // Load license timer
@@ -326,10 +327,10 @@ protected:
             if (!licenseTimerEnabled) {
                 Throw(DRMCtlrError,
                       "Failed to load license timer on DRM controller, licenseTimerEnabled: 0x",
-                      std::hex, licenseTimerEnabled);
+                      std::hex, licenseTimerEnabled, std::dec);
             }
 
-            WarningAssertGreaterEqual(json_license["metering"]["timeoutSecond"].asUInt(), minimum_license_duration.count());
+//            WarningAssertGreaterEqual(json_license["metering"]["timeoutSecond"].asUInt(), minimum_license_duration.count());
             next_license_duration = std::chrono::seconds(json_license["metering"]["timeoutSecond"].asUInt());
             next_license_duration_exact = true;
 
@@ -429,11 +430,12 @@ protected:
                         auto diff = wbtd_expected_time - time_of_synchro;
                         auto diff_abs = diff >= diff.zero() ? diff : -diff;
                         if( diff_abs > std::chrono::seconds(2) )
-                            Warning("Wrong board type detection, please check your configuration");
+                            Debug2("Wrong board type detection, please check your configuration");
                     }
-
-                    if(thread_notwait_is_stop())
+                    if(thread_notwait_is_stop()) {
+                        Debug2("It is actually stopped: exit thread");
                         return;
+                    }
 
                     Json::Value json_req;
                     Debug("Get metering from session on DRM controller");
@@ -448,10 +450,13 @@ protected:
 
                     Json::Value json_license;
 
-                    Clock::time_point min_polling_deadline = sync_license_timepoint + current_license_duration - std::chrono::milliseconds(200); /* we can try polling until this deadline */
+                    //Clock::time_point min_polling_deadline = sync_license_timepoint + current_license_duration - std::chrono::milliseconds(200); /* we can try polling until this deadline */
+                    Clock::time_point min_polling_deadline = Clock::now()+std::chrono::seconds(180); /* temporary wrokaround required for floating mode */
                     unsigned int retry_index = 0;
                     Clock::time_point start_of_retry = Clock::now();
                     while(1) { /* Retry WS request */
+                        Json::Value retrytime_json;
+
                         if(min_polling_deadline <= Clock::now()) {
                             Throw(DRMWSError, "Failed to obtain license from WS on time, the protected IP may have been locked");
                         }
@@ -463,20 +468,26 @@ protected:
                         try {
                             json_license = getMeteringWSClient().getLicense(json_req, min_polling_deadline);
                             break;
-                        }catch(const Exception& e) {
+                        } catch(const Exception& e) {
                             if(e.getErrCode() != DRMWSMayRetry)
                                 throw;
                             else {
+                                retrytime_json = Json::Value(10);
                                 retry_msg = e.what();
                             }
                         }
 
                         retry_index++;
                         Clock::duration retry_wait_duration;
-                        if((Clock::now() - start_of_retry) <= std::chrono::seconds(60))
-                            retry_wait_duration = std::chrono::seconds(2);
-                        else
-                            retry_wait_duration = std::chrono::seconds(30);
+                        if ( !retrytime_json.isNull() ) {
+                            retry_wait_duration = std::chrono::seconds( retrytime_json.asUInt() );
+                            min_polling_deadline += 2*retry_wait_duration;
+                        } else {
+                            if((Clock::now() - start_of_retry) <= std::chrono::seconds(60))
+                                retry_wait_duration = std::chrono::seconds(2);
+                            else
+                                retry_wait_duration = std::chrono::seconds(30);
+                        }
                         if((Clock::now() + retry_wait_duration + std::chrono::seconds(2)) >= min_polling_deadline)
                             retry_wait_duration = min_polling_deadline - Clock::now() - std::chrono::seconds(2);
                         if(retry_wait_duration <= decltype(retry_wait_duration)::zero())
@@ -642,65 +653,71 @@ public:
         Info("Started new metering session with sessionId ", sessionID, " and set first license with duration of ", std::dec, licenseTimeout, " seconds");
 
         sessionStarted = true;
-
+        threadKeepAlive_stop = false;
         thread_start();
     }
 
-        void install_license() {
+    void install_license() {
 #ifdef _WIN32
-            const char path_sep = '\\';
+        const char path_sep = '\\';
 # else
-            const char path_sep = '/';
+        const char path_sep = '/';
 #endif
 
-            std::string licence_file_path = licensePathDir + path_sep + hashDesignInfo();
+        std::string licence_file_path = licensePathDir + path_sep + hashDesignInfo();
 
-            Json::Value json_license;
-            std::ifstream licence_ifd(licence_file_path.c_str());
-            if (licence_ifd.good()) {
-                    Json::Reader reader;
-                    if(!reader.parse(licence_ifd, json_license))
-                        Throw(DRMBadFormat, "Cannot parse licence file ",
-                              licence_file_path, " : ",
-                              reader.getFormattedErrorMessages());
+        Json::Value json_license;
+        std::ifstream licence_ifd(licence_file_path.c_str());
+        if (licence_ifd.good()) {
+                Json::Reader reader;
+                if(!reader.parse(licence_ifd, json_license))
+                    Throw(DRMBadFormat, "Cannot parse licence file ",
+                          licence_file_path, " : ",
+                          reader.getFormattedErrorMessages());
 
-                    Debug("license loaded from file: ", licence_file_path);
+                Debug("license loaded from file: ", licence_file_path);
 
-                } else {
-                    // Get license from server
-                    licence_ifd.close();
+            } else {
+                // Get license from server
+                licence_ifd.close();
 
-                    Json::Reader reader;
-                    Json::Value conf_json;
-                    parse_configuration(confFilePath, reader, conf_json);
-                    initialize_web_client(credFilePath, reader, conf_json);
+                Json::Reader reader;
+                Json::Value conf_json;
+                parse_configuration(confFilePath, reader, conf_json);
+                initialize_web_client(credFilePath, reader, conf_json);
 
-                    Json::Value json_output;
-                    json_output["drmlibVersion"] = getVersion();
-                    json_output["udid"]      = udid;
-                    json_output["boardType"] = boardType;
-                    getMeteringHead(json_output);
-                    getMeteringStart(json_output);
+                Json::Value json_output;
+                json_output["drmlibVersion"] = getVersion();
+                json_output["udid"]      = udid;
+                json_output["boardType"] = boardType;
+                getMeteringHead(json_output);
+                getMeteringStart(json_output);
 
-                    json_license = getMeteringWSClient().getLicense(json_output);
+                json_license = getMeteringWSClient().getLicense(json_output);
 
-                    // Save license in file
-                    Json::FastWriter writer;
-                    std::ofstream licence_ofd(licence_file_path);
-                    std::string license_content = writer.write(json_license);
-                    licence_ofd.write(license_content.c_str(), license_content.size());
+                // Save license in file
+                Json::FastWriter writer;
+                std::ofstream licence_ofd(licence_file_path);
+                std::string license_content = writer.write(json_license);
+                licence_ofd.write(license_content.c_str(), license_content.size());
 
-                    if (licence_ofd.fail())
-                        Throw(DRMBadUsage, "Unable to write license file: ", licence_file_path);
+                if (licence_ofd.fail())
+                    Throw(DRMBadUsage, "Unable to write license file: ", licence_file_path);
 
-                    Debug("License saved to file: ", licence_file_path);
-                }
+                Debug("License saved to file: ", licence_file_path);
+            }
 
-            setLicense(json_license);
-            Info("Installed license successfully");
+        setLicense(json_license);
+        Info("Installed license successfully");
+    }
+
+    void stop_session() {
+
+        if (!DO_WITH_LOCK(isSession_no_lock())) {
+            Debug("No session is currently running");
+            return;
         }
 
-        void stop_session() {
         if (drm_mode == 1){
             return;
         }
@@ -715,12 +732,11 @@ public:
             clearLicense();
             last_stop_session_json_req["sessionId"] = sessionID;
         }
+        sessionStarted = false;
         Json::Value json_license = getMeteringWSClient().getLicense(last_stop_session_json_req);
         last_stop_session_json_req = Json::Value();
         sessionID = json_license["metering"]["sessionId"].asString();
         Info("Stopped metering session with sessionId ", sessionID, " and uploaded last metering data");
-
-        sessionStarted = false;
     }
 
     void resume_session() {
@@ -764,6 +780,7 @@ public:
         }
 
         sessionStarted = true;
+        threadKeepAlive_stop = false;
         thread_start();
     }
 
