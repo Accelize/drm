@@ -37,12 +37,12 @@ std::ostream& operator<<(std::ostream& os, const Json::ValueType& type) {
 
 const Json::Value& JVgetRequired(const Json::Value& jval, const char* key, const Json::ValueType& type) {
     if(!jval.isMember(key))
-        Throw(DRMBadFormat, "Missing parameter ", key, " of type ", type);
+        Throw(DRMBadFormat, "Missing parameter '", key, "' of type ", type);
 
     const Json::Value& jvalmember = jval[key];
 
     if(jvalmember.type()!=type && !jvalmember.isConvertibleTo(type))
-        Throw(DRMBadFormat, "Wrong parameter type for ", key, " = ", jvalmember, ", expecting ", type, ", parsed as ", jvalmember.type());
+        Throw(DRMBadFormat, "Wrong parameter type for '", key, "' = ", jvalmember, ", expecting ", type, ", parsed as ", jvalmember.type());
 
     return jvalmember;
 }
@@ -52,7 +52,7 @@ const Json::Value& JVgetOptional(const Json::Value& jval, const char* key, const
     const Json::Value& jvalmember = exists ? jval[key] : defaultValue;
     if(exists || !jvalmember.isNull())
         if(jvalmember.type()!=type && !jvalmember.isConvertibleTo(type))
-            Throw(DRMBadFormat, "Wrong parameter type for ", key, " = ", jvalmember, ", expecting ", type, ", parsed as ", jvalmember.type());
+            Throw(DRMBadFormat, "Wrong parameter type for '", key, "' = ", jvalmember, ", expecting ", type, ", parsed as ", jvalmember.type());
 
     return jvalmember;
 }

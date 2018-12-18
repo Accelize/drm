@@ -47,6 +47,12 @@ protected:
     //helper typedef
     typedef std::chrono::steady_clock Clock; // use steady clock to be monotonic (were are not affected by clock adjustements)
 
+#ifdef _WIN32
+    const char path_sep = '\\';
+# else
+    const char path_sep = '/';
+#endif
+
     //compisition
     std::unique_ptr<MeteringWSClient> mWsClient;
     std::unique_ptr<DrmControllerLibrary::DrmControllerOperations> mDrmController;
@@ -60,10 +66,14 @@ protected:
     MeteringSessionManager::ErrorCallBackHandler f_error_cb;
 
     //params
+    std::string mConfFilePath;
+    std::string mCredFilePath;
     std::chrono::seconds minimum_license_duration;
-    std::string licensePathDir;
-    std::string confFilePath;
-    std::string credFilePath;
+
+    // Node-Locked parameters
+    std::string mNodeLockLicenseDirPath;
+    Json::Value mNodeLockLicenseJson;
+
     unsigned char drm_mode = 0;
 
     //state
@@ -101,53 +111,57 @@ protected:
     {
         Json::Reader reader;
         Json::Value conf_json;
+
+        mConfFilePath = conf_file_path;
+        mCredFilePath = cred_file_path;
+
         parse_configuration(conf_file_path, reader, conf_json);
 
         // Design configuration
         Json::Value conf_design = JVgetOptional(conf_json, "design", Json::objectValue);
-        if(!conf_design.isNull()) {
+        if (!conf_design.empty()) {
             udid = JVgetOptional(conf_design, "udid", Json::stringValue, "").asString();
             boardType = JVgetOptional(conf_design, "boardType", Json::stringValue, "").asString();
         }
 
         // DRM configuration
         Json::Value conf_drm = JVgetOptional(conf_json, "drm", Json::objectValue);
-        if(!conf_drm.isNull()) {
+        if (!conf_drm.empty()) {
             Json::Value drm_mode_json = JVgetOptional(conf_drm, "mode", Json::stringValue);
 
-            if (!drm_mode_json.isNull() and drm_mode_json.asString() == "nodelock"){
-                licensePathDir = JVgetRequired(conf_drm, "license_dir", Json::stringValue).asString();
-                if(licensePathDir.empty())
-                    Throw(DRMBadUsage, "drm license_dir not set in the configuration file");
-
+            if (!drm_mode_json.empty() && drm_mode_json.asString() == "nodelocked"){
+                Json::Value license_dir_json = JVgetOptional(conf_drm, "license_dir", Json::stringValue);
+                if (license_dir_json.empty())
+                    Throw(DRMBadFormat, "Missing parameter 'license_dir' in crendential file ", cred_file_path);
+                mNodeLockLicenseDirPath = license_dir_json.asString();
                 drm_mode = 1;
-                confFilePath = conf_file_path;
-                credFilePath = cred_file_path;
                 return;
             }
         }
 
         // Web Server
-        initialize_web_client(cred_file_path, reader, conf_json);
+        initialize_web_client(conf_file_path, cred_file_path);
     }
 
-    void parse_configuration(const std::string &conf_file_path, Json::Reader &reader, Json::Value &conf_json){
-        std::ifstream conf_fd(conf_file_path);
-        if(!reader.parse(conf_fd, conf_json))
-            Throw(DRMBadFormat, "Cannot parse ", conf_file_path, " : ", reader.getFormattedErrorMessages());
+    void parse_configuration(const std::string &file_path, Json::Reader &reader, Json::Value &json_value) {
+        std::ifstream conf_fd(file_path);
+        if(!reader.parse(conf_fd, json_value))
+            Throw(DRMBadFormat, "Cannot parse ", file_path, " : ", reader.getFormattedErrorMessages());
     }
 
-    void initialize_web_client(const std::string &cred_file_path, Json::Reader &reader, const Json::Value &conf_json) {
-        Debug2("initialize_web_client ws answer: ", conf_json.toStyledString());
-        Json::Value conf_server_json = JVgetRequired(conf_json, "webservice", Json::objectValue);
-        minimum_license_duration = std::chrono::seconds( JVgetOptional(conf_server_json, "minimum_license_duration", Json::uintValue, 300).asUInt() );
+    void initialize_web_client(const std::string &conf_file_path, const std::string &cred_file_path) {
 
-        Json::Value credentials;
-        std::ifstream cred_fd(cred_file_path);
-        if(!reader.parse(cred_fd, credentials))
-            Throw(DRMBadFormat, "Cannot parse ", cred_file_path, " : ", reader.getFormattedErrorMessages());
+        Json::Reader reader;
+        Json::Value conf_json;
 
-        mWsClient.reset(new MeteringWSClient(conf_server_json, credentials));
+        parse_configuration(conf_file_path, reader, conf_json);
+
+        Json::Value conf_server_json = JVgetOptional(conf_json, "webservice", Json::objectValue);
+        if (!conf_server_json.empty()) {
+            minimum_license_duration = std::chrono::seconds( JVgetOptional(conf_server_json, "minimum_license_duration", Json::uintValue, 300).asUInt() );
+        }
+
+        mWsClient.reset(new MeteringWSClient(conf_file_path, cred_file_path));
     }
 
     DrmControllerLibrary::DrmControllerOperations& getDrmController() {
@@ -362,6 +376,76 @@ protected:
         return isLicense_no_lock();
     }
 
+    std::string hashDesignInfo() {
+        std::string drmVersion;
+        std::string dna;
+        std::vector<std::string> vlnvFile;
+        getDesignInfo(drmVersion, dna, vlnvFile);
+
+        std::stringstream ss;
+        ss << dna;
+        ss << drmVersion;
+        for(unsigned int i=0; i<vlnvFile.size(); i++)
+            ss << vlnvFile[i];
+        std::string serializedReq(ss.str());
+
+        boost::uuids::detail::sha1 sha1;
+        sha1.process_bytes(serializedReq.data(), serializedReq.length());
+        unsigned int digest[5];
+        sha1.get_digest(digest);
+        std::stringstream ss_hash;
+        ss_hash << std::hex << std::setfill('0');
+        for (unsigned int i : digest)
+            ss_hash << std::setw(8) << i;
+
+        return ss_hash.str();
+    }
+
+    void install_license() {
+
+        if (mNodeLockLicenseJson.empty()) {
+
+            Json::Reader reader;
+            std::string license_file_path = mNodeLockLicenseDirPath + path_sep + hashDesignInfo();
+            std::ifstream licence_ifd(license_file_path.c_str());
+
+            if (licence_ifd.good()) {
+                bool res = reader.parse(licence_ifd, mNodeLockLicenseJson);
+                licence_ifd.close();
+                if (!res)
+                    Throw(DRMBadFormat, "Cannot parse licence file ",
+                          license_file_path, " : ",
+                          reader.getFormattedErrorMessages());
+                Debug("Node-locked license loaded from file: ", license_file_path);
+
+            } else {
+                // Get license from server
+                initialize_web_client(mConfFilePath, mCredFilePath);
+
+                Json::Value json_request;
+                json_request["drmlibVersion"] = getVersion();
+                json_request["udid"] = udid;
+                json_request["boardType"] = boardType;
+                getMeteringHead(json_request);
+                getMeteringStart(json_request);
+
+                mNodeLockLicenseJson = getMeteringWSClient().getLicense(json_request);
+
+                // Save license in file
+                Json::FastWriter writer;
+                std::ofstream licence_ofd(license_file_path);
+                std::string license_content = writer.write(mNodeLockLicenseJson);
+                licence_ofd.write(license_content.c_str(), license_content.size());
+                if (licence_ofd.fail())
+                    Throw(DRMBadUsage, "Unable to write node-locked license to file: ", license_file_path);
+
+                Debug("Node-locked license saved to file: ", license_file_path);
+            }
+        }
+        setLicense(mNodeLockLicenseJson);
+        Info("Installed node-locked license successfully");
+    }
+
     void debug_print_drm_hw_report() { /* This function must be used with mDrmControllerMutex locked */
         if(!isDebug())
             return;
@@ -479,7 +563,7 @@ protected:
 
                         retry_index++;
                         Clock::duration retry_wait_duration;
-                        if ( !retrytime_json.isNull() ) {
+                        if ( !retrytime_json.empty() ) {
                             retry_wait_duration = std::chrono::seconds( retrytime_json.asUInt() );
                             min_polling_deadline += 2*retry_wait_duration;
                         } else {
@@ -598,31 +682,6 @@ public:
             resume_session();
     }
 
-    std::string hashDesignInfo() {
-        std::string drmVersion;
-        std::string dna;
-        std::vector<std::string> vlnvFile;
-        getDesignInfo(drmVersion, dna, vlnvFile);
-
-        std::stringstream ss;
-        ss << dna;
-        ss << drmVersion;
-        for(unsigned int i=0; i<vlnvFile.size(); i++)
-            ss << vlnvFile[i];
-        std::string serializedReq(ss.str());
-
-        boost::uuids::detail::sha1 sha1;
-        sha1.process_bytes(serializedReq.data(), serializedReq.length());
-        unsigned int digest[5];
-        sha1.get_digest(digest);
-        std::stringstream ss_hash;
-        ss_hash << std::hex << std::setfill('0');
-        for (unsigned int i : digest)
-            ss_hash << std::setw(8) << i;
-
-        return ss_hash.str();
-    }
-
     void start_session() {
         if (drm_mode == 1) {
             install_license();
@@ -632,7 +691,7 @@ public:
         if(sessionStarted)
             Throw(DRMBadArg, "Error : session already started");
 
-        if( last_start_session_json_req.isNull() ) {
+        if( last_start_session_json_req.empty() ) {
             Info("Starting metering session...");
             getMeteringHead(last_start_session_json_req);
             getMeteringStart(last_start_session_json_req);
@@ -657,60 +716,6 @@ public:
         thread_start();
     }
 
-    void install_license() {
-#ifdef _WIN32
-        const char path_sep = '\\';
-# else
-        const char path_sep = '/';
-#endif
-
-        std::string licence_file_path = licensePathDir + path_sep + hashDesignInfo();
-
-        Json::Value json_license;
-        std::ifstream licence_ifd(licence_file_path.c_str());
-        if (licence_ifd.good()) {
-                Json::Reader reader;
-                if(!reader.parse(licence_ifd, json_license))
-                    Throw(DRMBadFormat, "Cannot parse licence file ",
-                          licence_file_path, " : ",
-                          reader.getFormattedErrorMessages());
-
-                Debug("license loaded from file: ", licence_file_path);
-
-            } else {
-                // Get license from server
-                licence_ifd.close();
-
-                Json::Reader reader;
-                Json::Value conf_json;
-                parse_configuration(confFilePath, reader, conf_json);
-                initialize_web_client(credFilePath, reader, conf_json);
-
-                Json::Value json_output;
-                json_output["drmlibVersion"] = getVersion();
-                json_output["udid"]      = udid;
-                json_output["boardType"] = boardType;
-                getMeteringHead(json_output);
-                getMeteringStart(json_output);
-
-                json_license = getMeteringWSClient().getLicense(json_output);
-
-                // Save license in file
-                Json::FastWriter writer;
-                std::ofstream licence_ofd(licence_file_path);
-                std::string license_content = writer.write(json_license);
-                licence_ofd.write(license_content.c_str(), license_content.size());
-
-                if (licence_ofd.fail())
-                    Throw(DRMBadUsage, "Unable to write license file: ", licence_file_path);
-
-                Debug("License saved to file: ", licence_file_path);
-            }
-
-        setLicense(json_license);
-        Info("Installed license successfully");
-    }
-
     void stop_session() {
 
         if (!DO_WITH_LOCK(isSession_no_lock())) {
@@ -725,7 +730,7 @@ public:
         Info("Stopping metering session...");
         thread_stop();
 
-        if( last_stop_session_json_req.isNull() ) {
+        if( last_stop_session_json_req.empty() ) {
             Debug("Get last metering data from session on DRM controller");
             getMeteringHead(last_stop_session_json_req);
             getMeteringStop(last_stop_session_json_req);
@@ -750,7 +755,7 @@ public:
         if(DO_WITH_LOCK(isReadyForNewLicense_no_lock())) {
             Json::Value json_req;
 
-            if(last_resume_session_json_req.isNull()) {
+            if(last_resume_session_json_req.empty()) {
                 getMeteringHead(last_resume_session_json_req);
                 try{
                     getMeteringWait(1, last_resume_session_json_req);

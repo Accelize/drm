@@ -19,6 +19,7 @@ limitations under the License.
 #include <list>
 #include <curl/curl.h>
 #include <chrono>
+#include <fstream>
 
 #include "log.h"
 #include "utils.h"
@@ -184,17 +185,66 @@ protected:
     }
 };
 
-MeteringWSClient::MeteringWSClient(const Json::Value& config_server, const Json::Value& credentials) {
-    auto getConfig = [](const Json::Value& json, const char * key, std::string* dest) {
-        *dest = JVgetRequired(json, key, Json::stringValue).asString();
-    };
-    getConfig(config_server, "oauth2_url", &oauth2_url);
-    getConfig(config_server, "metering_url", &metering_url);
-    getConfig(credentials, "client_id", &client_id);
-    getConfig(credentials, "client_secret", &client_secret);
-    default_request_timeout = std::chrono::seconds( JVgetOptional(config_server, "default_ws_request_timeout", Json::uintValue, 20).asUInt() );
+MeteringWSClient::MeteringWSClient(const std::string &conf_file_path, const std::string &cred_file_path) {
+
+    Json::Reader reader;
+    Json::Value conf_json;
+    Json::Value cred_json;
+
+    parse_configuration(conf_file_path, reader, conf_json);
+    parse_configuration(cred_file_path, reader, cred_json);
+
+    try {
+        Json::Value webservice_json = JVgetRequired(conf_json, "webservice", Json::objectValue);
+        if (webservice_json.empty() || webservice_json.empty())
+            Throw(DRMBadFormat, "Missing parameter 'webservice' in service configuration file ", conf_file_path);
+        Debug2("Web service configuration: ", webservice_json.toStyledString());
+
+        Json::Value oauth2_json = JVgetRequired(webservice_json, "oauth2_url", Json::stringValue);
+        oauth2_url = oauth2_json.asString();
+        if (oauth2_url.size() == 0)
+            Throw(DRMBadFormat, "Parameter 'oauth2_url' is empty");
+        Debug2("oauth2_url=", oauth2_url);
+
+        Json::Value metering_json = JVgetRequired(webservice_json, "metering_url", Json::stringValue);
+        metering_url = metering_json.asString();
+        if (metering_url.size() == 0)
+            Throw(DRMBadFormat, "Parameter 'metering_url' is empty");
+        Debug2("metering_url=", metering_url);
+
+        default_request_timeout = std::chrono::seconds( JVgetOptional(webservice_json, "default_ws_request_timeout", Json::uintValue, 20).asUInt() );
+        Debug2("default_request_timeout=", default_request_timeout.count());
+
+    } catch(Exception &e) {
+        if (e.getErrCode() != DRMBadFormat)
+            throw;
+        Throw(DRMBadFormat, "Error in service configuration file '", conf_file_path, "': ", e.what());
+    }
+
+    try {
+        Json::Value client_id_json = JVgetRequired(cred_json, "client_id", Json::stringValue);
+        client_id = client_id_json.asString();
+        if (client_id.size() == 0)
+            Throw(DRMBadFormat, "Parameter 'client_id' is empty");
+
+        Json::Value client_secret_json = JVgetRequired(cred_json, "client_secret", Json::stringValue);
+        client_secret = client_secret_json.asString();
+        if (client_secret.size() == 0)
+            Throw(DRMBadFormat, "Parameter 'client_secret' is empty");
+
+    } catch(Exception &e) {
+        if (e.getErrCode() != DRMBadFormat)
+            throw;
+        Throw(DRMBadFormat, "Error in credential file '", cred_file_path, "': ", e.what());
+    }
 
     CurlSingleton::Init();
+}
+
+void MeteringWSClient::parse_configuration(const std::string &conf_file_path, Json::Reader &reader, Json::Value &conf_json) {
+    std::ifstream conf_fd(conf_file_path);
+    if (!reader.parse(conf_fd, conf_json))
+        Throw(DRMBadFormat, "Cannot parse ", conf_file_path, " : ", reader.getFormattedErrorMessages());
 }
 
 Json::Value MeteringWSClient::getLicense(const Json::Value& json_req) {

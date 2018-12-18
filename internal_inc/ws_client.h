@@ -35,7 +35,7 @@ protected:
     std::chrono::seconds default_request_timeout;
 
 public:
-    MeteringWSClient(const Json::Value& config_server, const Json::Value& credentials);
+    MeteringWSClient(const std::string &conf_file_path, const std::string &cred_file_path);
     ~MeteringWSClient() = default;
 
     Json::Value getLicense(const Json::Value& json_req);
@@ -43,6 +43,7 @@ public:
 
 protected:
     std::string getOAuth2token(std::chrono::steady_clock::time_point deadline);
+    void parse_configuration(const std::string &conf_file_path, Json::Reader &reader, Json::Value &conf_json);
 
 };
 
