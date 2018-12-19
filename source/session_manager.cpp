@@ -135,9 +135,11 @@ protected:
                     Throw(DRMBadFormat, "Missing parameter 'license_dir' in crendential file ", cred_file_path);
                 mNodeLockLicenseDirPath = license_dir_json.asString();
                 drm_mode = 1;
+                Debug("Detected Node-locked license");
                 return;
             }
         }
+        Debug("Detected floating/metered license");
 
         // Web Server
         initialize_web_client(conf_file_path, cred_file_path);
@@ -145,8 +147,12 @@ protected:
 
     void parse_configuration(const std::string &file_path, Json::Reader &reader, Json::Value &json_value) {
         std::ifstream conf_fd(file_path);
+        if (!conf_fd.good()) {
+            Throw(DRMBadUsage, "Cannot find JSON file: ", file_path);
+        }
         if(!reader.parse(conf_fd, json_value))
             Throw(DRMBadFormat, "Cannot parse ", file_path, " : ", reader.getFormattedErrorMessages());
+        conf_fd.close();
     }
 
     void initialize_web_client(const std::string &conf_file_path, const std::string &cred_file_path) {
@@ -159,6 +165,8 @@ protected:
         Json::Value conf_server_json = JVgetOptional(conf_json, "webservice", Json::objectValue);
         if (!conf_server_json.empty()) {
             minimum_license_duration = std::chrono::seconds( JVgetOptional(conf_server_json, "minimum_license_duration", Json::uintValue, 300).asUInt() );
+        } else if (drm_mode == 1) { // Node-locked mode
+            Throw(DRMBadUsage, "Could not find node-locked license file in directory: ", mNodeLockLicenseDirPath);
         }
 
         mWsClient.reset(new MeteringWSClient(conf_file_path, cred_file_path));
@@ -407,6 +415,7 @@ protected:
 
             Json::Reader reader;
             std::string license_file_path = mNodeLockLicenseDirPath + path_sep + hashDesignInfo();
+            Debug("Looking for node-locked license  file: ", license_file_path);
             std::ifstream licence_ifd(license_file_path.c_str());
 
             if (licence_ifd.good()) {
