@@ -16,8 +16,8 @@ limitations under the License.
 
 /** \file accelize/drm.h
 
-    \brief Header to use the C++ API of the DRMLib
-    This file includes all the available features/classes of the DRMLib
+    \brief Header to use the C++ API of the DRM
+    This file includes all the available features/classes of the DRM
 */
 
 #include "accelize/drm/metering.h"

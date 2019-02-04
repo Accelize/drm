@@ -1,5 +1,8 @@
-* Fri Dec xx 2018 Accelize v1.3.0
-- NEW(beta): Floating mode support
+* Fri Jan 24 2019 Accelize v2.0.0
+- NEW: API v2.0: Break retro-compatibility!
+
+* Fri Dec 1 2018 Accelize v1.3.0
+- NEW: Floating mode support
 - FIX: Infinite loop in Stop session when token limit is reached
 
 * Fri Nov 30 2018 Accelize v1.2.0

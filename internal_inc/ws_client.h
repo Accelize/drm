@@ -14,19 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef _H_ACCELIZE_METERING_WS_CLIENT
-#define _H_ACCELIZE_METERING_WS_CLIENT
+#ifndef _H_ACCELIZE_DRM_WS_CLIENT
+#define _H_ACCELIZE_DRM_WS_CLIENT
 
 #include <string>
 #include <jsoncpp/json/json.h>
 #include <chrono>
 
 namespace Accelize {
-namespace DRMLib {
+namespace DRM {
 
-/*Metering Web Service client : communcates with Accelize metering web server to
+/*DRM Web Service client : communcates with Accelize DRM web server to
  get license and send metering data*/
-class MeteringWSClient {
+class DrmWSClient {
 protected:
     std::string oauth2_url;
     std::string client_id;
@@ -35,8 +35,8 @@ protected:
     std::chrono::seconds default_request_timeout;
 
 public:
-    MeteringWSClient(const std::string &conf_file_path, const std::string &cred_file_path);
-    ~MeteringWSClient() = default;
+    DrmWSClient(const std::string &conf_file_path, const std::string &cred_file_path);
+    ~DrmWSClient() = default;
 
     Json::Value getLicense(const Json::Value& json_req);
     Json::Value getLicense(const Json::Value& json_req, std::chrono::steady_clock::time_point deadline);
@@ -50,4 +50,4 @@ protected:
 }
 }
 
-#endif // _H_ACCELIZE_METERING_WS_CLIENT
+#endif // _H_ACCELIZE_DRM_WS_CLIENT

@@ -1,0 +1,7 @@
+# Configure Python Coverage
+[run]
+plugins = Cython.Coverage
+branch = True
+
+[report]
+show_missing = true

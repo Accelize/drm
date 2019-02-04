@@ -1,0 +1,22 @@
+# AWS CodeBuild
+version: 0.2
+
+env:
+  parameter-store:
+    # Toolbox: Retrieve encryption key
+    XLZCRYPT_KEY: "xlzcrypt_key"
+
+phases:
+  install:
+    commands:
+      # Toolbox: Initialize
+      - sudo $CODEBUILD_SRC_DIR_toolbox/install.py
+
+  build:
+    commands:
+      # Run remote test (C and C++ in parallel on dual FPGA instance)
+      - xlz run aws_fpga_sdk drmlib_build_deps drmlib_unittests_deps -p f1.4xlarge -n Accelize_DRM_test -z coverage coverage.tar.gz -r "tox -p all -c tests/tox.ini -- --cred=/dev/shm/cred.json"
+
+artifacts:
+  files:
+    - coverage.tar.gz

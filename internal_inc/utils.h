@@ -21,7 +21,10 @@ limitations under the License.
 #include <jsoncpp/json/json.h>
 
 namespace Accelize {
-namespace DRMLib {
+namespace DRM {
+
+#define RETROCOMPATIBLITY_LIMIT_MAJOR     3
+#define RETROCOMPATIBLITY_LIMIT_MINOR     1
 
 static const Json::Value nullJSValue = Json::Value{};
 

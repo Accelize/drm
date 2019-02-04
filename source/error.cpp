@@ -19,9 +19,9 @@ limitations under the License.
 #include "accelize/drm/error.h"
 
 namespace Accelize {
-namespace DRMLib {
+namespace DRM {
 
-DRMLibErrorCode Exception::getErrCode() const {
+DRM_ErrorCode Exception::getErrCode() const {
     return errCode;
 }
 

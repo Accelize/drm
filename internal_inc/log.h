@@ -14,17 +14,30 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef _H_ACCELIZE_METERING_LOG
-#define _H_ACCELIZE_METERING_LOG
+#ifndef _H_ACCELIZE_DRM_LOG
+#define _H_ACCELIZE_DRM_LOG
 
 #include <iostream>
 #include <sstream>
 #include <cstdlib>
+#include <stdio.h>
+#include <string.h>
 
 #include "accelize/drm/error.h"
 
 namespace Accelize {
-namespace DRMLib {
+namespace DRM {
+
+// Remove path from filename
+#ifdef _WIN32
+#define __SHORT_FILE__ (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
+#else
+#define __SHORT_FILE__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
+#endif
+
+
+static const char* s_ShortLogFormat = "%-7s: ";
+static const char* s_LongLogFormat  = "%-7s [DRM-Lib]: %s, %s:%u - ";
 
 static std::ostream& gLog() {
     return std::cout;
@@ -40,27 +53,40 @@ enum class eLogLevel {
     __SIZE
 };
 
-static eLogLevel getLogLevel() {
-    static eLogLevel logLevel = [](){
-        eLogLevel ret = eLogLevel::INFO;
+enum class eLogFormat {
+    SHORT = 0,
+    LONG = 1,
+    __SIZE
+};
 
-        const char* verbose_env = std::getenv("ACCELIZE_DRMLIB_VERBOSE");
-        if(verbose_env) {
-            try{
-                unsigned long uint_verbose_env = std::stoul(verbose_env);
-                if(uint_verbose_env < static_cast<unsigned long>(eLogLevel::__SIZE))
-                    ret = static_cast<eLogLevel>(uint_verbose_env);
-            }catch(...){
-                //fall back to default
-            }
-        }
+__attribute__((unused)) static eLogLevel getLogLevel() {
+    eLogLevel ret = eLogLevel::INFO;
+    const char* verbose_env = std::getenv("ACCELIZE_DRM_VERBOSE");
+    if (verbose_env) {
+        try {
+            unsigned long uint_verbose_env = std::stoul(verbose_env);
+            if (uint_verbose_env < static_cast<unsigned long>(eLogLevel::__SIZE))
+                ret = static_cast<eLogLevel>(uint_verbose_env);
+        } catch(...) {} //fall back to default
+    }
+    return ret;
+}
 
-        return ret;
-    }();
-    return logLevel;
+static const char* getLogFormat() {
+    std::string ret = s_ShortLogFormat;
+    const char* logformat_env = std::getenv("ACCELIZE_DRM_LOG_FORMAT");
+    if (logformat_env) {
+        try {
+            unsigned long uint_logformat_env = std::stoul(logformat_env);
+            if (uint_logformat_env == static_cast<unsigned long>(eLogFormat::LONG))
+                ret = s_LongLogFormat;
+        } catch(...) {} //fall back to default
+    }
+    return ret.c_str();
 }
 
 static void ssAddToStream(std::ostream& a_stream) {(void)a_stream;}
+
 template<typename T, typename... Args>
 static void ssAddToStream(std::ostream& a_stream, T&& a_value, Args&&... a_args)
 {
@@ -76,48 +102,52 @@ static std::string stringConcat(Args&&... a_args)
     return ss.str();
 }
 
-static bool isDebug() {
-    if(getLogLevel() < eLogLevel::DEBUG) return false;
-    return true;
+static char* getFormattedTime(void) {
+
+    time_t rawtime;
+    struct tm* timeinfo;
+
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+
+    // Must be static, otherwise won't work
+    static char _retval[20];
+    strftime(_retval, sizeof(_retval), "%Y-%m-%d/%H:%M:%S", timeinfo);
+
+    return _retval;
 }
 
 template <typename... Args>
-void Debug( Args&&... args ) {
-    if(!isDebug()) return;
-    ssAddToStream(gLog(), "[DEBUG] ", std::forward<Args>( args )...);
+void logTrace(const char* level, const char* file, const unsigned long noline, Args&&... args) {
+    char logPrefix [128];
+    sprintf(logPrefix, getLogFormat(), level, getFormattedTime(), file, noline);
+    ssAddToStream(gLog(), logPrefix, std::forward<Args>( args )...);
     gLog() << std::endl;
 }
 
-template <typename... Args>
-void Debug2( Args&&... args ) {
-    if(getLogLevel() < eLogLevel::DEBUG2) return;
-    ssAddToStream(gLog(), "[DEBUG2] ", std::forward<Args>( args )...);
-    gLog() << std::endl;
-}
+#define Debug2(...) \
+    do { if (getLogLevel() >= eLogLevel::DEBUG2) \
+        logTrace("DEBUG2", __SHORT_FILE__, __LINE__, ##__VA_ARGS__); } while(0)
+
+#define Debug(...) \
+    do { if (getLogLevel() >= eLogLevel::DEBUG) \
+        logTrace("DEBUG", __SHORT_FILE__, __LINE__, ##__VA_ARGS__); } while(0)
+
+#define Info(...) \
+    do { if (getLogLevel() >= eLogLevel::INFO) \
+        logTrace("INFO", __SHORT_FILE__, __LINE__, ##__VA_ARGS__); } while(0)
+
+#define Warning(...) \
+    do { if (getLogLevel() >= eLogLevel::WARNING) \
+        logTrace("WARNING", __SHORT_FILE__, __LINE__, ##__VA_ARGS__); } while(0)
+
+#define Error(...) \
+    do { if (getLogLevel() >= eLogLevel::ERROR) \
+        logTrace("ERROR", __SHORT_FILE__, __LINE__, ##__VA_ARGS__); } while(0)
+
 
 template <typename... Args>
-void Info( Args&&... args ) {
-    if(getLogLevel() < eLogLevel::INFO) return;
-    ssAddToStream(gLog(), "[INFO] ", std::forward<Args>( args )...);
-    gLog() << std::endl;
-}
-
-template <typename... Args>
-void Warning( Args&&... args ) {
-    if(getLogLevel() < eLogLevel::ERROR) return;
-    ssAddToStream(gLog(), "[WARNING] ", std::forward<Args>( args )...);
-    gLog() << std::endl;
-}
-
-template <typename... Args>
-void Error( Args&&... args ) {
-    if(getLogLevel() < eLogLevel::ERROR) return;
-    ssAddToStream(gLog(), "[ERROR] ", std::forward<Args>( args )...);
-    gLog() << std::endl;
-}
-
-template <typename... Args>
-[[noreturn]] void Throw(DRMLibErrorCode errcode, Args&&... args ) {
+[[noreturn]] void Throw(DRM_ErrorCode errcode, Args&&... args ) {
     throw Exception(errcode, stringConcat(std::forward<Args>( args )...));
 }
 
@@ -127,9 +157,9 @@ template <typename... Args>
 #define __FILENAME__ (__FILE__ + SOURCE_PATH_SIZE)
 
 #define _WarningAssert(expr, ...) \
-    if(expr) {} else {Warning("An assertion in DRMLib was not verified in ", __FILENAME__, ":", __LINE__, " (", __func__, ") : ", __VA_ARGS__, ". Please contact support, the library may not work as expected.");}
+    if(expr) {} else {Warning("An assertion in DRM was not verified in ", __FILENAME__, ":", __LINE__, " (", __func__, ") : ", __VA_ARGS__, ". Please contact support, the library may not work as expected.");}
 #define _Assert(expr, ...) \
-    if(expr) {} else {Throw(DRMLibAssert, "An assertion failed in DRMLib in ", __FILENAME__, ":", __LINE__, " (", __func__, ") : ", __VA_ARGS__, ". Please contact support.");}
+    if(expr) {} else {Throw(DRM_Assert, "An assertion failed in DRM Library in ", __FILENAME__, ":", __LINE__, " (", __func__, ") : ", __VA_ARGS__, ". Please contact support.");}
 
 #define __Assert(F, expr) F(expr, #expr)
 #define __Assert2op(F, a, b, _op_) \
@@ -151,7 +181,7 @@ template <typename... Args>
 #define AssertLessEqual(a, b)           __Assert2op(_Assert, a, b, <=)
 
 #define Unreachable() \
-    Throw(DRMLibAssert, "An unreachable part of code has be reached in DRMLib in ", __FILENAME__, ":", __LINE__, " (", __func__, ") : Please contact support.")
+    Throw(DRM_Assert, "An unreachable part of code has be reached in DRM Library in ", __FILENAME__, ":", __LINE__, " (", __func__, ") : Please contact support.")
 
 
-#endif // _H_ACCELIZE_METERING_LOG
+#endif // _H_ACCELIZE_DRM_LOG

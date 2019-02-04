@@ -14,20 +14,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef _H_ACCELIZE_COMMON_LIBEXPORT
-#define _H_ACCELIZE_COMMON_LIBEXPORT
+#ifndef _H_ACCELIZE_COMMON_EXPORT
+#define _H_ACCELIZE_COMMON_EXPORT
 
 #ifdef  __cplusplus
 #ifdef BUILDING_DRMLIB
-    #define DRMLIB_EXPORT __attribute__((visibility("default")))
-    #define DRMLIB_LOCAL __attribute__((visibility("hidden")))
+    #define DRM_EXPORT __attribute__((visibility("default")))
+    #define DRM_LOCAL __attribute__((visibility("hidden")))
 #else
-    #define DRMLIB_EXPORT
-    #define DRMLIB_LOCAL
+    #define DRM_EXPORT
+    #define DRM_LOCAL
 #endif /* BUILDING_DRMLIB */
 #else
-    #define DRMLIB_EXPORT
-    #define DRMLIB_LOCAL
+    #define DRM_EXPORT
+    #define DRM_LOCAL
 #endif /* __cplusplus */
 
-#endif /* _H_ACCELIZE_COMMON_LIBEXPORT */
+#endif /* _H_ACCELIZE_COMMON_EXPORT */
