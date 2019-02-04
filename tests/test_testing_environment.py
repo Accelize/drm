@@ -36,16 +36,12 @@ def test_fpga_driver(accelize_drm, cred_json, conf_json):
     """
     Test the driver used to perform tests.
     """
-    driver_cls = accelize_drm.pytest_fpga_driver
-
-    # Test driver instantiation and FPGA initialisation
-    driver = driver_cls()
+    driver = accelize_drm.pytest_fpga_driver
 
     # Test DRM manager instantiation with driver
     drm_manager = accelize_drm.DrmManager(
         conf_json.path, cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback)
+        driver.read_register_callback, driver.write_register_callback)
 
     # Tests driver callbacks by writing/reading random values in a register
     for i in range(10):

@@ -7,6 +7,7 @@ from tests.fpga_drivers import FpgaDriverBase as _FpgaDriverBase
 from ctypes import (
     cdll as _cdll, POINTER as _POINTER, byref as _byref, c_uint32 as _c_uint32,
     c_uint64 as _c_uint64, c_int as _c_int)
+from subprocess import run as _run, PIPE as _PIPE, STDOUT as _STDOUT
 
 
 class FpgaDriver(_FpgaDriverBase):
@@ -17,6 +18,9 @@ class FpgaDriver(_FpgaDriverBase):
         drm_ctrl_base_addr (int): DRM Controller base address.
         slot_id (int): FPGA slot ID.
     """
+
+    #: Accelize AGFI to use for test
+    FPGA_IMAGE = 'agfi-03be02f29cd7e466e'
 
     def _init_fpga(self):
         """
@@ -30,6 +34,13 @@ class FpgaDriver(_FpgaDriverBase):
         fpga_pci_init.restype = _c_int  # return code
         if fpga_pci_init():
             raise RuntimeError('Unable to initialize the "fpga_pci" library')
+
+        # Load FPGA image
+        load_image = _run(['fpga-load-local-image', f'-S {self.SLOT_ID}', '-I',
+                           self.FPGA_IMAGE], stderr=_STDOUT, stdout=_PIPE,
+                          universal_newlines=True)
+        if load_image.returncode:
+            raise RuntimeError(load_image.stdout)
 
         # Attach FPGA
         fpga_pci_attach = self._fpga_library.fpga_pci_attach

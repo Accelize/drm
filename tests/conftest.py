@@ -90,16 +90,19 @@ def accelize_drm(pytestconfig):
 
     # Get FPGA driver
     from tests.fpga_drivers import get_driver
-    fpga_driver = get_driver(pytestconfig.getoption("fpga_driver"))
-    fpga_driver.DRM_CONTROLLER_BASE_ADDR = pytestconfig.getoption(
+    fpga_driver_cls = get_driver(pytestconfig.getoption("fpga_driver"))
+    fpga_driver_cls.DRM_CONTROLLER_BASE_ADDR = pytestconfig.getoption(
         "drm_controller_base_address")
 
     if environ.get('TOX_PARALLEL_ENV'):
         # Define FPGA slot for Tox parallel execution
-        fpga_driver.SLOT_ID = 0 if backend == 'c' else 1
+        fpga_driver_cls.SLOT_ID = 0 if backend == 'c' else 1
     else:
         # Use user defined slot
-        fpga_driver.SLOT_ID = pytestconfig.getoption("fpga_slot_id")
+        fpga_driver_cls.SLOT_ID = pytestconfig.getoption("fpga_slot_id")
+
+    # Initialize FPGA
+    fpga_driver = fpga_driver_cls()
 
     # Store some values for access in tests
     _accelize_drm.pytest_build_environment = build_environment

@@ -42,9 +42,14 @@ class FpgaDriverBase:
         drm_ctrl_base_addr (int): DRM Controller base address.
         slot_id (int): FPGA slot ID.
     """
-
+    #: FPGA slot
     SLOT_ID = 0
+
+    #: Acelize DRM Controller base address
     DRM_CONTROLLER_BASE_ADDR = 0
+
+    #: Accelize FPGA image/bitstream to use for test
+    FPGA_IMAGE = None
 
     def __init__(self):
         # Device and library handles
