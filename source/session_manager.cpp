@@ -977,37 +977,37 @@ public:
             for (const std::string& key_str : json_value.getMemberNames()) {
                 const ParameterKey key_id = findParameterKey( key_str );
                 switch(key_id) {
-                    case ParameterKey::LICENSE_TYPE: {
+                    case ParameterKey::license_type: {
                         std::string license_type_str = mLicenseTypeString[ mLicenseType ];
                         Debug("Get value of parameter '", key_str, "' (ID=", key_id, "): ", license_type_str);
                         json_value[key_str] = license_type_str;
                         break;
                     }
-                    case ParameterKey::NUM_ACTIVATORS: {
+                    case ParameterKey::num_activators: {
                         uint32_t nbActivators = 0;
                         getNumActivator(nbActivators);
                         Debug("Get value of parameter '", key_str, "' (ID=", key_id, "): ", nbActivators);
                         json_value[key_str] = nbActivators;
                         break;
                     }
-                    case ParameterKey::SESSION_ID: {
+                    case ParameterKey::session_id: {
                         Debug("Get value of parameter '", key_str, "' (ID=", key_id, "): ", mSessionID);
                         json_value[key_str] = mSessionID;
                         break;
                     }
-                    case ParameterKey::METERING_DATA: {
+                    case ParameterKey::metering_data: {
                         unsigned long long metering_data = getMeteringData();
                         Debug("Get value of parameter '", key_str, "' (ID=", key_id, "): ", metering_data);
                         json_value[key_str] = metering_data;
                         break;
                     }
-                    case ParameterKey::STRERROR: {
+                    case ParameterKey::strerror: {
                         Debug("Get value of parameter '", key_str, "' (ID=", key_id, "): ", mLastErrorMsg);
                         json_value[key_str] = mLastErrorMsg;
                         mLastErrorMsg.clear();
                         break;
                     }
-                    case ParameterKey::NODELOCKED_REQUEST_FILE: {
+                    case ParameterKey::nodelocked_request_file: {
                         if ( mLicenseType != LicenseType::NODE_LOCKED ) {
                             Warning("Parameter only available with Node-Locked licensing");
                             json_value[key_str] = std::string("Not applicable");
@@ -1018,26 +1018,26 @@ public:
                         }
                         break;
                     }
-                    case ParameterKey::PAGE_CTRLREG:
-                    case ParameterKey::PAGE_VLNVFILE:
-                    case ParameterKey::PAGE_LICFILE:
-                    case ParameterKey::PAGE_TRACEFILE:
-                    case ParameterKey::PAGE_METERINGFILE:
-                    case ParameterKey::PAGE_MAILBOX: {
+                    case ParameterKey::page_ctrlreg:
+                    case ParameterKey::page_vlnvfile:
+                    case ParameterKey::page_licfile:
+                    case ParameterKey::page_tracefile:
+                    case ParameterKey::page_meteringfile:
+                    case ParameterKey::page_mailbox: {
                         Debug("Get value of parameter '", key_str, "' (ID=", key_id, ")");
-                        std::string str = get_drm_page(key_id - ParameterKey::PAGE_CTRLREG);
+                        std::string str = get_drm_page(key_id - ParameterKey::page_ctrlreg);
                         json_value[key_str] = str;
                         Info(str);
                         break;
                     }
-                    case ParameterKey::HW_REPORT: {
+                    case ParameterKey::hw_report: {
                         Debug("Get value of parameter '", key_str, "' (ID=", key_id, ")");
                         std::string str = get_drm_report();
                         json_value[key_str] = str;
                         Info("Print HW report:\n", str);
                         break;
                     }
-                    case ParameterKey::CUSTOM_FIELD: {
+                    case ParameterKey::custom_field: {
                         uint32_t customField = get_custom_field();
                         Debug("Get value of parameter '", key_str, "' (ID=", key_id, "): ", customField);
                         json_value[key_str] = customField;
@@ -1074,7 +1074,7 @@ public:
                 std::string key_str = it.key().asString();
                 const ParameterKey key_id = findParameterKey( key_str );
                 switch( key_id ) {
-                    case CUSTOM_FIELD: {
+                    case custom_field: {
                         uint32_t customField = (*it).asUInt();
                         set_custom_field( customField );
                         Debug("Set parameter '", key_str, "' (ID=", key_id, ") to value: ", customField);

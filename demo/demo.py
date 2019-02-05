@@ -20,10 +20,10 @@ drm_manager = accelize_drm.DrmManager(
    driver.write_register_callback)
 
 val = 987654321
-drm_manager.set(CUSTOM_FIELD=val)
+drm_manager.set(custom_field=val)
 print("Wrote custom field: ", val)
 
-val_back = drm_manager.get('CUSTOM_FIELD')
+val_back = drm_manager.get('custom_field')
 print("Read back custom field: ", val_back)
 
 if val_back != val:

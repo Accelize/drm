@@ -1,14 +1,14 @@
-PARAMETERKEY_ITEM( LICENSE_TYPE )               ///< Read-only: returning string with the license type: node-locked, floating/metering
-PARAMETERKEY_ITEM( NUM_ACTIVATORS )             ///< Read-only: returning uint32_t/string with the number of activators detected by the DRM controller
-PARAMETERKEY_ITEM( SESSION_ID )                 ///< Read-only: returning string with the current session ID
-PARAMETERKEY_ITEM( METERING_DATA )              ///< Read-only: returning uint64_t or string with the current value of the metering data counter
-PARAMETERKEY_ITEM( STRERROR )                   ///< Read-only: returning string with the last raised error
-PARAMETERKEY_ITEM( NODELOCKED_REQUEST_FILE )    ///< Read-only: returning string with the path to the node-locked license request JSON file.
-PARAMETERKEY_ITEM( PAGE_CTRLREG )               ///< Read-only: returning nothing, print all registers in the DRM Controller Registry page
-PARAMETERKEY_ITEM( PAGE_VLNVFILE )              ///< Read-only: returning nothing, print all registers in the VLNV File page
-PARAMETERKEY_ITEM( PAGE_LICFILE )               ///< Read-only: returning nothing, print all registers in the License File page
-PARAMETERKEY_ITEM( PAGE_TRACEFILE )             ///< Read-only: returning nothing, print all registers in the Trace File page
-PARAMETERKEY_ITEM( PAGE_METERINGFILE )          ///< Read-only: returning nothing, print all registers in the Metering File page
-PARAMETERKEY_ITEM( PAGE_MAILBOX )               ///< Read-only: returning nothing, print all registers in the Mailbox page
-PARAMETERKEY_ITEM( HW_REPORT )                  ///< Read-only: returning nothing, print the Algodone HW report
-PARAMETERKEY_ITEM( CUSTOM_FIELD )               ///< Read-write: any uint32_t register accessible to the user for any purpose; Accelize uses it for testing.
+PARAMETERKEY_ITEM( license_type )               ///< Read-only: returning string with the license type: node-locked, floating/metering
+PARAMETERKEY_ITEM( num_activators )             ///< Read-only: returning uint32_t/string with the number of activators detected by the DRM controller
+PARAMETERKEY_ITEM( session_id )                 ///< Read-only: returning string with the current session ID
+PARAMETERKEY_ITEM( metering_data )              ///< Read-only: returning uint64_t or string with the current value of the metering data counter
+PARAMETERKEY_ITEM( strerror )                   ///< Read-only: returning string with the last raised error
+PARAMETERKEY_ITEM( nodelocked_request_file )    ///< Read-only: returning string with the path to the node-locked license request JSON file.
+PARAMETERKEY_ITEM( page_ctrlreg )               ///< Read-only: returning nothing, print all registers in the DRM Controller Registry page
+PARAMETERKEY_ITEM( page_vlnvfile )              ///< Read-only: returning nothing, print all registers in the VLNV File page
+PARAMETERKEY_ITEM( page_licfile )               ///< Read-only: returning nothing, print all registers in the License File page
+PARAMETERKEY_ITEM( page_tracefile )             ///< Read-only: returning nothing, print all registers in the Trace File page
+PARAMETERKEY_ITEM( page_meteringfile )          ///< Read-only: returning nothing, print all registers in the Metering File page
+PARAMETERKEY_ITEM( page_mailbox )               ///< Read-only: returning nothing, print all registers in the Mailbox page
+PARAMETERKEY_ITEM( hw_report )                  ///< Read-only: returning nothing, print the Algodone HW report
+PARAMETERKEY_ITEM( custom_field )               ///< Read-write: any uint32_t register accessible to the user for any purpose; Accelize uses it for testing.
