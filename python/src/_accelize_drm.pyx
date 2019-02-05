@@ -56,23 +56,25 @@ cdef class DrmManager:
     The DrmManager require callback functions to access FPGA register.
 
     Args:
-        conf_file_path (path-like object): Path to configuration JSON file.
-        cred_file_path (path-like object): Path to credential JSON file.
-        read_register (function): FPGA read register function. The function
-            needs to return an int and accept following arguments:
+        conf_file_path (path-like object):
+            Path to the DRM configuration JSON file.
+        cred_file_path (path-like object):
+            Path to the user Accelize credential JSON file.
+        read_register (function): FPGA read register callback function.
+            The function needs to return an int and accept following arguments:
             register_offset (int), returned_data (int).
             The function can't be a non static method.
             register_offset is relative to first register of DRM controller
             This function must be thread-safe in case of concurrency on the
-            register bus
-        write_register (function): FPGA write register function. The function
-            needs to return an int and accept following arguments:
+            register bus.
+        write_register (function): FPGA write register callback function.
+            The function needs to return an int and accept following arguments:
             register_offset (int), data_to_write (int).
             The function can't be a non static method.
             register_offset is relative to first register of DRM controller
             This function must be thread-safe in case of concurrency on the
-            register bus
-        async_error (function): Asynchronous error handling function.
+            register bus.
+        async_error (function): Asynchronous error handling callback function.
             This function is called in case of asynchronous error during
             operation.
             The function needs to return None and accept following argument:
@@ -133,7 +135,7 @@ cdef class DrmManager:
 
     def activate(self, const bool resume_session_request=False):
         """
-        Activate DRM session
+        Activate DRM session.
 
         This function activate/unlocks the hardware by unlocking the protected
         IPs in the FPGA and opening a DRM session.
@@ -153,7 +155,7 @@ cdef class DrmManager:
 
         Args:
             resume_session_request (bool): If True, the pending session is
-                resused. If no pending session is found, create a new one. If
+                reused. If no pending session is found, create a new one. If
                 False and a pending session is found, close it and create a new
                 one. Default to False.
         """
@@ -165,7 +167,8 @@ cdef class DrmManager:
 
     def deactivate(self, const bool pause_session_request=False):
         """
-        Deactivate DRM session
+        Deactivate DRM session.
+
         This function deactivates/locks the hardware back and close the session
         unless the "pause_session_request" argument is True. In this case,
         the session is kept opened for later use.
@@ -175,7 +178,7 @@ cdef class DrmManager:
         When the function returns, the hardware are guaranteed to be locked.
 
         Args:
-            pause_session_request (bool): If true, the current session is kept
+            pause_session_request (bool): If True, the current session is kept
                 open for later usage. Otherwise, the current session is closed.
                 Default to False.
         """
@@ -188,6 +191,8 @@ cdef class DrmManager:
     def set(self, **values):
         """
         Set information of the DRM system.
+
+        This function overwrites an internal parameter of the DRM system.
 
         Args:
             values: Parameters to set as keyword arguments

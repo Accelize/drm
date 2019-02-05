@@ -310,7 +310,7 @@ Run following command to install requirements:
 Building
 ~~~~~~~~
 
-Clone Accelize DRMlib repository:
+Clone Accelize DRM library repository:
 
 .. code-block:: bash
 
@@ -380,16 +380,23 @@ Tests support following options:
 * ``--backend``: Select library API to use as backend
   (Supported from pytest only). Possibles values ``c`` or ``c++``.
   Default: ``c++``.
+
 * ``--fpga_driver``: Select FPGA driver to use. Default: ``aws_f1``.
   Possibles values:
-     * ``aws_f1``: Amazon Web Service FPGA instances (f1.2xlarge, f1.4xlarge).
+
+  * ``aws_f1``: Amazon Web Service FPGA instances (f1.2xlarge, f1.4xlarge).
+
 * ``--fpga_slot_id``: Set FPGA slot. Default: ``0``.
+
 * ``--drm_controller_base_address``: Set DRM Controller IP base address.
   Default: ``0``.
+
 * ``--cred``: Specify the path to a ``cred.json`` file containing valid
   Accelize credentials to use as base to run tests. Default: ``./cred.json``.
+
 * ``--server``: Specify metering server URL.
   Default: ``https://master.metering.accelize.com``
+
 * ``--library_verbosity``: Specify Accelize DRM library verbosity.
   Possibles values: ``0`` to ``5``. Default: ``4``.
 

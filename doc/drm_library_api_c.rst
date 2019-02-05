@@ -1,23 +1,17 @@
 C API
 =====
 
-Files
------
+Headers
+-------
 
-common.h
-~~~~~~~~
-
-.. doxygenfile:: drmc/common.h
-   :project: accelize_drm
-
-errorcode.h
-~~~~~~~~~~~
-
-.. doxygenfile:: drmc/errorcode.h
-   :project: accelize_drm
-
-metering.h
-~~~~~~~~~~
+drmc.h
+~~~~~~
 
 .. doxygenfile:: drmc/metering.h
+   :project: accelize_drm
+
+drmc/errorcode.h
+~~~~~~~~~~~~~~~~
+
+.. doxygenfile:: drmc/errorcode.h
    :project: accelize_drm

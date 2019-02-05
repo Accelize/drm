@@ -78,24 +78,32 @@ coins per D MB processed):
 * Stimulate the design so as to process an amount of data corresponding to an
   expected amount of coins as defined by your business rule (say, 10xD MB
   corresponding to 10xC coins)
+
 * Check the coins consumption on `Accelize account metering section`_.
 
 Floating
 ^^^^^^^^
 
 * Contact Accelize and request 2 floating licenses.
+
 * Run 2 instances of the FPGA design in parallel to use the 2 floating licenses:
-    * The 2 instances must work fine.
+
+  * The 2 instances must work fine.
+
 * Run 3 instances of the FPGA design in parallel:
-    * Only 2 instances must work.
+
+  * Only 2 instances must work.
 
 Node locked
 ^^^^^^^^^^^
 
 * Contact Accelize and request 1 node locked license.
+
 * Start the FPGA design and use the node locked license.
+
 * Kill the application that run the DRM library:
-    * The design must still run.
+
+  * The design must still run.
 
 Troubleshooting
 ---------------
@@ -110,6 +118,7 @@ This can be done using the read/write callback functions :
 
 * Write value 0x0 to register at offset 0x0 : this will set the register page
   number to the Page 0 of registers
+
 * Read value from register at offset 0x68 : this correspond to the version
   register, it will contain the version of the HDK used to integrate the DRM
   controller. For version 3.2.0 of the HDK this register will contain value
@@ -123,11 +132,14 @@ your design:
 
 * Launch your FPGA application (Using ``DrmManager.activate`` from the Accelize
   DRM library).
+
 * Just after, disconnect the network. By consequence, the next license will not
   be provided to the Hardware.
+
 * Check that the FPGA application is locked after 2x the license duration (at
   the session begin, 2 licenses are applied, so the first license duration is
   2x the license duration)
+
 * If the duration is not correct, please check the frequency applied to the DRM
   Controller clock (DRM_aCLK)
 

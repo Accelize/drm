@@ -1212,10 +1212,10 @@ template<> void DrmManager::Impl::set( const ParameterKey key_id, const double& 
 
 DrmManager::DrmManager( const std::string& conf_file_path,
                     const std::string& cred_file_path,
-                    ReadRegisterCallback f_read_register,
-                    WriteRegisterCallback f_write_register,
-                    AsynchErrorCallback f_asynch_error )
-    : pImpl(new Impl(conf_file_path, cred_file_path, f_read_register, f_write_register, f_asynch_error)) {
+                    ReadRegisterCallback read_register,
+                    WriteRegisterCallback write_register,
+                    AsynchErrorCallback async_error )
+    : pImpl(new Impl(conf_file_path, cred_file_path, read_register, write_register, async_error)) {
 }
 
 DrmManager::~DrmManager() {

@@ -4,7 +4,7 @@ Accelize DRM
 Overview
 --------
 
-The DRM platform is based on a licensing mechanism, where license keys including
+The Accelize DRM is based on a licensing mechanism, where license keys including
 activation codes are delivered to the FPGA to control the behavior of IP cores,
 and where metering information is retrieved from the FPGA and stored in a
 database to measure the usage of all IP cores. The metering information is
@@ -14,7 +14,7 @@ then used to invoice end users.
    :target: _static/platform-overview.png
    :alt: alt_text
 
-The DRM platform is built upon 3 main entities:
+The Accelize DRM is built upon 3 main entities:
 
 * The DRM HDK: a set of dedicated hardware IPs used to instrument the
   targeted HW
@@ -23,12 +23,12 @@ The DRM platform is built upon 3 main entities:
 * The DRM Web service: a Web Service application with a database
   (cloud hosted or on premise)
 
-When you select the DRM platform, Accelize operates the licensing/metering
+Accelize operates the licensing/metering
 service for your FPGA solution deployed in your public Cloud, private Cloud,
 on-premise or hybrid multi-Cloud infrastructure. This allows you to implement
 any business model securely. You then bill your customers according to their
 usage reported to you by Accelize. The following table gives an overview of
-business models supported by the DRM platform.
+business models supported by Accelize.
 
 Licensing Modes
 ---------------

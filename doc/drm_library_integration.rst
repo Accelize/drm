@@ -185,12 +185,15 @@ for more information about configuration files.
 Activate the DRM
 ----------------
 
-Once the ``DrmManager`` is allocated, it is possible to activate the DRM and
+Once the ``DrmManager`` is allocated, it is needed to activate the DRM and
 start using the protected IPs. This is performed with the ``activate`` method
 Once this function returns successfully, your IPs are unlocked and usable.
 
-In case of metering and floating licensing, this function also spawns a thread
-that keep the DRM session alive and periodically send metering information
+When this function returns and the license is valid, the protected IPs are
+guaranteed to be unlocked.
+
+In case of metering and floating licensing, this function spawns a thread
+to keep the design unlocked and periodically send metering information
 to the Accelize Web Service.
 
 .. warning:: The activate method call may take some seconds.
@@ -220,15 +223,15 @@ to the Accelize Web Service.
 Deactivate the DRM
 ------------------
 
-At the end of the application execution, the DRM must be deactivated.
+At the end of the application execution, when the protected IP is no longer
+required, the DRM must be deactivated.
 
-In case of metering or floating licensing, deactivating, deactivate the IP
-licensing and also close and join the web service communication thread.
+When this function returns, the protected IPs are guaranteed to be locked
+(Except with the node locked licensing mode where the IP is kept unlocked).
 
-In case of Node locked licensing, deactivating don't deactivate the IP
-licensing, but only free some resources in the ``DrmManager`` object.
-Implementing deactivate at the end of the application allow to switch
-between licensing mode without have to recompile the application
+.. note:: Implementing this function at the application end allow to use the
+          application with all licensing modes without the need of
+          recompilation.
 
 .. warning:: The deactivate method call may take some seconds.
 
@@ -325,6 +328,8 @@ service to keep the DRM activated.
 
 Pausing/resuming a DRM session
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Below codes examples show how to implement pause/resume DRM session.
 
 .. code-block:: c++
     :caption: C++

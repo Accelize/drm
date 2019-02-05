@@ -57,17 +57,17 @@ void checkPointer(void *p) {
 DRM_ErrorCode DrmManager_alloc(DrmManager **p_m,
         const char* conf_file_path,
         const char* cred_file_path,
-        ReadRegisterCallback f_drm_read32,
-        WriteRegisterCallback f_drm_write32,
-        AsynchErrorCallback f_error_cb,
+        ReadRegisterCallback read_register,
+        WriteRegisterCallback write_register,
+        AsynchErrorCallback async_error,
         void* user_p) {
     TRY
         DrmManager *m;
         m = (decltype(m))malloc(sizeof(*m));
         m->obj = new cpp::DrmManager(conf_file_path, cred_file_path,
-                                [user_p, f_drm_read32](uint32_t offset, uint32_t* value) {return f_drm_read32(offset, value, user_p);},
-                                [user_p, f_drm_write32](uint32_t offset, uint32_t value) {return f_drm_write32(offset, value, user_p);},
-                                [user_p, f_error_cb](const std::string& msg) {f_error_cb(msg.c_str(), user_p);}
+                                [user_p, read_register](uint32_t offset, uint32_t* value) {return read_register(offset, value, user_p);},
+                                [user_p, write_register](uint32_t offset, uint32_t value) {return write_register(offset, value, user_p);},
+                                [user_p, async_error](const std::string& msg) {async_error(msg.c_str(), user_p);}
                             );
         *p_m = m;
     CATCH_RETURN
