@@ -291,20 +291,20 @@ int generate_coin(pci_bar_handle_t* pci_bar_handle, uint32_t ip_index, uint32_t 
 
 int print_all_information( DrmManager* pDrmManager ) {
     std::string info_str = "{\
-        \"LICENSE_TYPE\": null,\
-        \"NUM_ACTIVATORS\": null,\
-        \"SESSION_ID\": null,\
-        \"METERING_DATA\": null,\
-        \"NODELOCKED_REQUEST_FILE\": null,\
-        \"PAGE_CTRLREG\": null,\
-        \"PAGE_VLNVFILE\": null,\
-        \"PAGE_LICFILE\": null,\
-        \"PAGE_TRACEFILE\": null,\
-        \"PAGE_METERINGFILE\": null,\
-        \"PAGE_MAILBOX\": null,\
-        \"HW_REPORT\": null,\
-        \"CUSTOM_FIELD\": null,\
-        \"STRERROR\": null }";
+        \"license_type\": null,\
+        \"num_activators\": null,\
+        \"session_id\": null,\
+        \"metering_data\": null,\
+        \"nodelocked_request_file\": null,\
+        \"page_ctrlreg\": null,\
+        \"page_vlnvfile\": null,\
+        \"page_licfile\": null,\
+        \"page_tracefile\": null,\
+        \"page_meteringfile\": null,\
+        \"page_mailbox\": null,\
+        \"hw_report\": null,\
+        \"custom_field\": null,\
+        \"strerror\": null }";
 
     TRY
         pDrmManager->get( info_str );
@@ -316,7 +316,7 @@ int print_all_information( DrmManager* pDrmManager ) {
 
 int get_num_activators( DrmManager* pDrmManager, uint32_t* p_numActivator ) {
     TRY
-        *p_numActivator = pDrmManager->get<uint32_t>( ParameterKey::NUM_ACTIVATORS );
+        *p_numActivator = pDrmManager->get<uint32_t>( ParameterKey::num_activators );
         return 0;
     CATCH_EXIT( "Failed to get the number of activators in FPGA design", 1 )
 }
@@ -356,7 +356,7 @@ int get_activators_status( DrmManager* pDrmManager, pci_bar_handle_t* pci_bar_ha
 
 void print_license_type( DrmManager* pDrmManager ) {
     TRY
-        std::string license_type = pDrmManager->get<std::string>( ParameterKey::LICENSE_TYPE );
+        std::string license_type = pDrmManager->get<std::string>( ParameterKey::license_type );
         INFO(COLOR_GREEN "License type: %s", license_type.c_str());
     CATCH("Failed to get the license type")
 }
@@ -377,7 +377,7 @@ void print_activators_status( DrmManager* pDrmManager, pci_bar_handle_t* pci_bar
 
 void print_session_id( DrmManager* pDrmManager ) {
     TRY
-        std::string sessionID = pDrmManager->get<std::string>( ParameterKey::SESSION_ID);
+        std::string sessionID = pDrmManager->get<std::string>( ParameterKey::session_id);
         INFO(COLOR_GREEN "Current session ID in FPGA design: %s", sessionID.c_str());
     CATCH("Failed to get the current session ID in FPGA design")
 }
@@ -385,7 +385,7 @@ void print_session_id( DrmManager* pDrmManager ) {
 
 void print_metering_data( DrmManager* pDrmManager ) {
     TRY
-        uint64_t metering_data = pDrmManager->get<uint64_t>( ParameterKey::METERING_DATA );
+        uint64_t metering_data = pDrmManager->get<uint64_t>( ParameterKey::metering_data );
         INFO(COLOR_GREEN "Current metering data fromFPGA design: %llu", metering_data);
     CATCH("Failed to get the current metering data from FPGA design")
 }
@@ -393,14 +393,14 @@ void print_metering_data( DrmManager* pDrmManager ) {
 int test_custom_field( DrmManager* pDrmManager, uint32_t value ) {
     // Write value
     TRY
-        pDrmManager->set( ParameterKey::CUSTOM_FIELD, value);
+        pDrmManager->set( ParameterKey::custom_field, value);
         INFO(COLOR_GREEN "Wrote '%u' custom field in FPGA design with", value);
     CATCH_EXIT("Failed to set the custom field in FPGA design", 1)
 
     // Read value back
     uint32_t rd_value = 0;
     TRY
-        rd_value = pDrmManager->get<uint32_t>( ParameterKey::CUSTOM_FIELD );
+        rd_value = pDrmManager->get<uint32_t>( ParameterKey::custom_field );
         INFO(COLOR_GREEN "Read custom field in FPGA design: %u", rd_value);
     CATCH_EXIT("Failed to get the custom field in FPGA design", 2)
 
@@ -414,7 +414,7 @@ int test_custom_field( DrmManager* pDrmManager, uint32_t value ) {
 
 void print_last_error( DrmManager* pDrmManager ) {
     TRY
-        std::string errMsg = pDrmManager->get<std::string>( STRERROR );
+        std::string errMsg = pDrmManager->get<std::string>( ParameterKey::strerror );
         if ( errMsg.size() == 0)
             INFO(COLOR_GREEN "No error message so far.");
         else
@@ -495,14 +495,14 @@ int check_afi_ready(int slot_id)
 
 int print_drm_page(DrmManager* pDrmManager, uint32_t page)
 {
-    uint32_t nbPageMax = ParameterKey::PAGE_MAILBOX - ParameterKey::PAGE_CTRLREG + 1;
+    uint32_t nbPageMax = ParameterKey::page_mailbox - ParameterKey::page_ctrlreg + 1;
     if (page > nbPageMax) {
         ERROR("Page index overflow: must be less or equal to %d", nbPageMax-1);
         return 1;
     }
     TRY
         /* Print registers in page */
-        pDrmManager->get<std::string>( (ParameterKey)(ParameterKey::PAGE_CTRLREG + page));
+        pDrmManager->get<std::string>( (ParameterKey)(ParameterKey::page_ctrlreg + page));
         return 0;
     CATCH_EXIT("Failed to print HW registry", 1)
 }
@@ -513,7 +513,7 @@ int print_drm_report(DrmManager* pDrmManager)
     TRY
         std::string report;
         /* Print hw report */
-        report = pDrmManager->get<std::string>( ParameterKey::HW_REPORT );
+        report = pDrmManager->get<std::string>( ParameterKey::hw_report );
         return 0;
     CATCH_EXIT("Failed to print HW report", 1)
 }

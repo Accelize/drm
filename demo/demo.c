@@ -274,20 +274,20 @@ int generate_coin(pci_bar_handle_t* pci_bar_handle, uint32_t ip_index, uint32_t 
 int print_all_information( DrmManager* pDrmManager ) {
     char* info_out = NULL;
     char* info_in = "{\
-        \"LICENSE_TYPE\": null,\
-        \"NUM_ACTIVATORS\": null,\
-        \"SESSION_ID\": null,\
-        \"METERING_DATA\": null,\
-        \"NODELOCKED_REQUEST_FILE\": null,\
-        \"PAGE_CTRLREG\": null,\
-        \"PAGE_VLNVFILE\": null,\
-        \"PAGE_LICFILE\": null,\
-        \"PAGE_TRACEFILE\": null,\
-        \"PAGE_METERINGFILE\": null,\
-        \"PAGE_MAILBOX\": null,\
-        \"HW_REPORT\": null,\
-        \"CUSTOM_FIELD\": null,\
-        \"STRERROR\": null }";
+        \"license_type\": null,\
+        \"num_activators\": null,\
+        \"session_id\": null,\
+        \"metering_data\": null,\
+        \"nodelocked_request_file\": null,\
+        \"page_ctrlreg\": null,\
+        \"page_vlnvfile\": null,\
+        \"page_licfile\": null,\
+        \"page_tracefile\": null,\
+        \"page_meteringfile\": null,\
+        \"page_mailbox\": null,\
+        \"hw_report\": null,\
+        \"custom_field\": null,\
+        \"strerror\": null }";
 
     if (DrmManager_get_json_string(pDrmManager, info_in, &info_out )) {
         ERROR("Failed to get all DRM information");
@@ -300,7 +300,7 @@ int print_all_information( DrmManager* pDrmManager ) {
 
 
 int get_num_activators( DrmManager* pDrmManager, uint32_t* p_numActivator ) {
-    if (DrmManager_get_uint(pDrmManager, DRM__NUM_ACTIVATORS, p_numActivator )) {
+    if (DrmManager_get_uint(pDrmManager, DRM__num_activators, p_numActivator )) {
         ERROR("Failed to get the number of activators in FPGA design");
         return 1;
     }
@@ -342,7 +342,7 @@ int get_activators_status( DrmManager* pDrmManager, pci_bar_handle_t* pci_bar_ha
 
 void print_license_type( DrmManager* pDrmManager ) {
     char* license_type;
-    if ( DrmManager_get_string(pDrmManager, DRM__LICENSE_TYPE, &license_type) ) {
+    if ( DrmManager_get_string(pDrmManager, DRM__license_type, &license_type) ) {
         ERROR("Failed to get the license type");
         return;
     }
@@ -366,7 +366,7 @@ void print_activators_status( DrmManager* pDrmManager, pci_bar_handle_t* pci_bar
 
 void print_session_id( DrmManager* pDrmManager ) {
     char* sessionID;
-    if ( DrmManager_get_string(pDrmManager, DRM__SESSION_ID, &sessionID) ) {
+    if ( DrmManager_get_string(pDrmManager, DRM__session_id, &sessionID) ) {
         ERROR("Failed to get the current session ID in FPGA design");
         return;
     }
@@ -377,7 +377,7 @@ void print_session_id( DrmManager* pDrmManager ) {
 
 void print_metering_data( DrmManager* pDrmManager ) {
     uint64_t metering_data;
-    if ( DrmManager_get_uint64(pDrmManager, DRM__METERING_DATA, &metering_data) )
+    if ( DrmManager_get_uint64(pDrmManager, DRM__metering_data, &metering_data) )
         ERROR("Failed to get the current metering data from FPGA design");
     else
         INFO(COLOR_GREEN "Current metering data fromFPGA design: %llu", metering_data);
@@ -386,13 +386,13 @@ void print_metering_data( DrmManager* pDrmManager ) {
 int test_custom_field( DrmManager* pDrmManager, uint32_t value ) {
     uint32_t rd_value = 0;
     // Write value
-    if ( DrmManager_set_uint(pDrmManager, DRM__CUSTOM_FIELD, value) ) {
+    if ( DrmManager_set_uint(pDrmManager, DRM__custom_field, value) ) {
         ERROR("Failed to set the custom field in FPGA design");
         return 1;
     }
     INFO(COLOR_GREEN "Wrote '%u' custom field in FPGA design with", value);
     // Read value back
-    if ( DrmManager_get_uint(pDrmManager, DRM__CUSTOM_FIELD, &rd_value) ) {
+    if ( DrmManager_get_uint(pDrmManager, DRM__custom_field, &rd_value) ) {
         ERROR("Failed to get the custom field in FPGA design");
         return 2;
     }
@@ -407,7 +407,7 @@ int test_custom_field( DrmManager* pDrmManager, uint32_t value ) {
 
 void print_last_error( DrmManager* pDrmManager ) {
     char* errMsg = NULL;
-    if (DrmManager_get_string(pDrmManager, DRM__STRERROR, &errMsg) )
+    if (DrmManager_get_string(pDrmManager, DRM__strerror, &errMsg) )
         ERROR("Failed to get the last error message (if any)");
     else if (strlen(errMsg) == 0)
         INFO(COLOR_GREEN "No error message so far.");
@@ -489,13 +489,13 @@ int check_afi_ready(int slot_id)
 int print_drm_page(DrmManager* pDrmManager, uint32_t page)
 {
     char* dump;
-    uint32_t nbPageMax = DRM__PAGE_MAILBOX - DRM__PAGE_CTRLREG + 1;
+    uint32_t nbPageMax = DRM__PAGE_MAILBOX - DRM__page_ctrlreg + 1;
     if (page > nbPageMax) {
         ERROR("Page index overflow: must be less or equal to %d", nbPageMax-1);
         return 1;
     }
     /* Print registers in page */
-    if (DrmManager_get_string(pDrmManager, DRM__PAGE_CTRLREG+page, &dump))
+    if (DrmManager_get_string(pDrmManager, DRM__page_ctrlreg+page, &dump))
         ERROR("Failed to print HW page %u registry", page);
     free(dump);
     return 0;
@@ -506,7 +506,7 @@ int print_drm_report(DrmManager* pDrmManager)
 {
     char* dump;
     /* Print hw report */
-    if (DrmManager_get_string(pDrmManager, DRM__HW_REPORT, &dump))
+    if (DrmManager_get_string(pDrmManager, DRM__hw_report, &dump))
         ERROR("Failed to print HW report");
     free(dump);
     return 0;
