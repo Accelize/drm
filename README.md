@@ -1,5 +1,6 @@
-![Build Status](https://codebuild.eu-west-1.amazonaws.com/badges?uuid=eyJlbmNyeXB0ZWREYXRhIjoiNS9XVFh6SXBsa1hNcTV2amhybTFNZUlBdEJ1N0dCYUVGSUtmYzNaMG1sVTlkUVBBTXVyTXZoRkhuU0M1d0drd1VTU0VZUzlONlJQZlB3OEh2UXREcENNPSIsIml2UGFyYW1ldGVyU3BlYyI6ImdJL29WM2YvdFhnQ1NNRSsiLCJtYXRlcmlhbFNldFNlcmlhbCI6MX0%3D&branch=master)
- 
+![Build Status](https://codebuild.eu-west-1.amazonaws.com/badges?uuid=eyJlbmNyeXB0ZWREYXRhIjoiQ2daNkEvSG5WWXFZbkdiN2M3NytVeFVrZmtqaTJJV0tRankrTVdEZE5mc1pzZ1RFZDZzYWhNd2dBZS9WdzVUS214Y0dvQkRENDZEZjU1NE5HN0VEbGI0PSIsIml2UGFyYW1ldGVyU3BlYyI6ImQrcjFsUGNkbFNoYVU4dmUiLCJtYXRlcmlhbFNldFNlcmlhbCI6MX0%3D&branch=master)
+[![codecov](https://codecov.io/gh/Accelize/drmlib/branch/master/graph/badge.svg)](https://codecov.io/gh/Accelize/drmlib)
+
 # Accelize DRM library
 
 The Accelize DRM protects FPGA applications.

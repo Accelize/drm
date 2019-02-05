@@ -2,7 +2,6 @@
 """
 Check testing environment.
 """
-from random import randint
 import pytest
 
 
@@ -30,24 +29,6 @@ def test_python_backend_library(accelize_drm, pytestconfig):
         assert backend == 'libaccelize_drmc'
     else:
         assert backend == 'libaccelize_drm'
-
-
-def test_fpga_driver(accelize_drm, cred_json, conf_json):
-    """
-    Test the driver used to perform tests.
-    """
-    driver = accelize_drm.pytest_fpga_driver
-
-    # Test DRM manager instantiation with driver
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path, cred_json.path,
-        driver.read_register_callback, driver.write_register_callback)
-
-    # Tests driver callbacks by writing/reading random values in a register
-    for i in range(10):
-        new_value = randint(0, 2**32 - 1)
-        drm_manager.set(CUSTOM_FIELD=new_value)
-        assert drm_manager.get('CUSTOM_FIELD') == new_value
 
 
 def test_credentials(cred_json, conf_json):

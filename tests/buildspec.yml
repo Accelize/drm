@@ -14,9 +14,10 @@ phases:
 
   build:
     commands:
-      # Run remote test (C and C++ in parallel on dual FPGA instance)
-      - xlz run aws_fpga_sdk drmlib_build_deps drmlib_unittests_deps drmlib_cred_json -n Accelize_DRM_test -z ./.tox/debug/build/report report.tar.gz -r "sudo tox -- --cred=/dev/shm/cred.json"
+      # Run remote test
+      - xlz run drmlib_dev=$CODEBUILD_SOURCE_VERSION aws_fpga_sdk drmlib_build_deps drmlib_unittests_deps drmlib_cred_json drmlib_codecov_token -n DRM_Library_Test -z /dev/shm/drmlib_dev/.tox/debug/build/report report.tar.gz -r "cd /dev/shm/drmlib_dev && sudo -E tox -- --cred=/dev/shm/cred.json"
 
 artifacts:
   files:
+    # Retrieve Reports (Coverage, Cython annotation)
     - report.tar.gz

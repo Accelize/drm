@@ -372,9 +372,8 @@ Running tests
 
 This chapter explain how to run Accelize DRM library tests.
 
-.. warning:: Tests requires a real FPGA board with the Accelize reference design
-             bitstream and supported test driver (See ``--fpga_driver`` option
-             below).
+.. warning:: Tests requires a real FPGA board and supported test driver
+             (See ``--fpga_driver`` option below).
 
 Tests support following options:
 
@@ -479,6 +478,9 @@ It is possible to reduce the scenario scope with the ``-e`` tox argument:
     :caption: Running Debug scenario only (with coverage)
 
     tox -e build-debug,cpp-debug,c-debug,coverage-debug -- --cred=~/my_application/cred.json
+
+Coverage reports can be found in the ``report`` directory in the tox debug build
+environment (By default: ``./.ini/debug/build/report``)
 
 .. code-block:: bash
     :caption: Running Release scenario only
