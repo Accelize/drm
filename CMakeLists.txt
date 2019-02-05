@@ -33,6 +33,7 @@ set(CPACK_COMPONENT_PYTHON3_DESCRIPTION "Accelize DRM Python Library")
 set(CMAKE_PROJECT_HOMEPAGE_URL https://github.com/Accelize/drmlib)
 set(PROJECT_DOCUMENTATION_URL https://drmlib.readthedocs.io)
 set(ACCELIZE_HOMEPAGE https://www.accelize.com)
+set(ACCELIZE_EMAIL info@accelize.com)
 
 ## Find package CommitID
 set(PACKAGE_LONG_VERSION ${CPACK_PACKAGE_VERSION})
@@ -85,12 +86,24 @@ set(CMAKE_CXX_STANDARD 11)
 add_compile_options(-fvisibility=hidden)
 if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     # Enable warnings
-    add_compile_options(-Wall -Wextra -Wnon-virtual-dtor -Wpedantic)
+    add_compile_options(-O0 -Wall -Wextra -Wnon-virtual-dtor -Wpedantic)
 
     # Optimize for Debugging
     if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-        add_compile_options(-Og -fdebug-prefix-map=${CMAKE_SOURCE_DIR}=.)
+        add_compile_options(-fdebug-prefix-map=${CMAKE_SOURCE_DIR}=.)
     endif()
+
+    # Code coverage
+    option(COVERAGE "Activate code coverage" OFF)
+    if(COVERAGE)
+        # Add coverage compile and link options
+        add_compile_options(--coverage)
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --coverage")
+        if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+            link_libraries(gcov)
+        endif()
+    endif(COVERAGE)
+
 else()
     # Optimize for runtime
     add_compile_options(-O3)
@@ -214,13 +227,19 @@ if (PYTHON3)
     configure_file(${PYTHON_SOURCE}/accelize_drm/__init__.py
                    ${PYTHON_SOURCE}/accelize_drm/__init__.py)
     configure_file(${PYTHON_SETUP} ${PYTHON_SETUP})
+    configure_file(${PYTHON_SOURCE}/README.md ${PYTHON_SOURCE}/README.md)
 
     ## Build and generate Wheel distribution + Source distribution
+    if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+        # Required for coverage (See "setup.py")
+        set(BUILD_EXT_EXTRA --inplace)
+    endif()
+
     add_custom_target(
             python3 ALL
             COMMAND
             ${Python3_EXECUTABLE} ${PYTHON_SETUP} bdist_wheel -b ${PYTHON3_BDIST} -d ${PACKAGE_OUTPUT} -k
-                                                  build_ext -I ${CMAKE_INCLUDE_DIR} -L ${CMAKE_BINARY_DIR} -j ${CPU_COUNT} &&
+                                                  build_ext -I ${CMAKE_INCLUDE_DIR} -L ${CMAKE_BINARY_DIR} ${BUILD_EXT_EXTRA} -j ${CPU_COUNT} &&
             ${Python3_EXECUTABLE} ${PYTHON_SETUP} sdist -d ${PACKAGE_OUTPUT}
             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
             COMMENT "Building accelize_drm Python 3 Package"
@@ -295,7 +314,7 @@ if (DOC)
     configure_file(${DOC_SOUCES}/Doxyfile ${DOC_SOUCES}/Doxyfile)
 
     # Install documentation
-    install(DIRECTORY ${DOC_HTML_DIR}/ DESTINATION ${CMAKE_INSTALL_DOCDIR}/html/ COMPONENT doc)
+    install(DIRECTORY ${DOC_HTML_DIR}/ DESTINATION ${CMAKE_INSTALL_DOCDIR}/html COMPONENT doc)
 
 endif ()
 
@@ -306,137 +325,133 @@ set(CPACK_COMPONENT_RUN_DESCRIPTION ${CPACK_DESCRIPTION_SUMMARY})
 
 ## libaccelize_drm package
 
-if (CMAKE_SYSTEM_NAME MATCHES Linux)
+# Get Linux distribution information
+find_program(LSB_RELEASE lsb_release)
+if (LSB_RELEASE)
+    execute_process(COMMAND lsb_release -is
+            OUTPUT_VARIABLE DIST_ID
+            OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+    string(TOLOWER ${DIST_ID} DIST_ID)
 
-    # Get Linux distribution information
-    find_program(LSB_RELEASE lsb_release)
-    if (LSB_RELEASE)
-        execute_process(COMMAND lsb_release -is
-                OUTPUT_VARIABLE DIST_ID
-                OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-        string(TOLOWER ${DIST_ID} DIST_ID)
+    execute_process(COMMAND lsb_release -cs
+            OUTPUT_VARIABLE DIST_CODENAME
+            OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+    string(TOLOWER ${DIST_CODENAME} DIST_CODENAME)
 
-        execute_process(COMMAND lsb_release -cs
-                OUTPUT_VARIABLE DIST_CODENAME
-                OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-        string(TOLOWER ${DIST_CODENAME} DIST_CODENAME)
-
-        execute_process(COMMAND lsb_release -rs
-                OUTPUT_VARIABLE DIST_RELEASE
-                OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-        string(TOLOWER ${DIST_RELEASE} DIST_RELEASE)
-    endif ()
+    execute_process(COMMAND lsb_release -rs
+            OUTPUT_VARIABLE DIST_RELEASE
+            OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+    string(TOLOWER ${DIST_RELEASE} DIST_RELEASE)
+endif ()
 
 # RPM Packages
-    find_program(PACKAGE_MANAGER_YUM yum)
-    find_program(PACKAGE_MANAGER_DNF dnf)
-    if (PACKAGE_MANAGER_YUM OR PACKAGE_MANAGER_DNF)
-        set(CPACK_GENERATOR "RPM")
-        set(CPACK_RPM_COMPONENT_INSTALL ON)
+find_program(PACKAGE_MANAGER_YUM yum)
+find_program(PACKAGE_MANAGER_DNF dnf)
+if (PACKAGE_MANAGER_YUM OR PACKAGE_MANAGER_DNF)
+    set(CPACK_GENERATOR "RPM")
+    set(CPACK_RPM_COMPONENT_INSTALL ON)
 
-        # Get dist RPM Release dist value (ex: "el7")
-        string(REPLACE "." ";" CPACK_RPM_PACKAGE_RELEASE_DIST ${CMAKE_SYSTEM})
-        list(REVERSE CPACK_RPM_PACKAGE_RELEASE_DIST)
-        list(GET CPACK_RPM_PACKAGE_RELEASE_DIST 1 CPACK_RPM_PACKAGE_RELEASE_DIST)
+    # Get dist RPM Release dist value (ex: "el7")
+    string(REPLACE "." ";" CPACK_RPM_PACKAGE_RELEASE_DIST ${CMAKE_SYSTEM})
+    list(REVERSE CPACK_RPM_PACKAGE_RELEASE_DIST)
+    list(GET CPACK_RPM_PACKAGE_RELEASE_DIST 1 CPACK_RPM_PACKAGE_RELEASE_DIST)
 
-        # Runtime package
-        set(CPACK_RPM_RUN_PACKAGE_NAME "${CPACK_PACKAGE_NAME}")
-        set(CPACK_RPM_RUN_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}.${CPACK_RPM_PACKAGE_RELEASE_DIST}.${CMAKE_SYSTEM_PROCESSOR}.rpm")
+    # Runtime package
+    set(CPACK_RPM_RUN_PACKAGE_NAME "${CPACK_PACKAGE_NAME}")
+    set(CPACK_RPM_RUN_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}.${CPACK_RPM_PACKAGE_RELEASE_DIST}.${CMAKE_SYSTEM_PROCESSOR}.rpm")
 
-        # Dev package
-        set(CPACK_RPM_DEV_PACKAGE_NAME "${CPACK_PACKAGE_NAME}-devel")
-        set(CPACK_RPM_DEV_FILE_NAME "${CPACK_RPM_DEV_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}.${CPACK_RPM_PACKAGE_RELEASE_DIST}.${CMAKE_SYSTEM_PROCESSOR}.rpm")
-        set(CPACK_RPM_DEV_PACKAGE_SUMMARY ${CPACK_COMPONENT_DEV_DESCRIPTION})
-        set(CPACK_RPM_DEV_PACKAGE_REQUIRES "${CPACK_PACKAGE_NAME}, libcurl-devel, jsoncpp-devel")
+    # Dev package
+    set(CPACK_RPM_DEV_PACKAGE_NAME "${CPACK_PACKAGE_NAME}-devel")
+    set(CPACK_RPM_DEV_FILE_NAME "${CPACK_RPM_DEV_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}.${CPACK_RPM_PACKAGE_RELEASE_DIST}.${CMAKE_SYSTEM_PROCESSOR}.rpm")
+    set(CPACK_RPM_DEV_PACKAGE_SUMMARY ${CPACK_COMPONENT_DEV_DESCRIPTION})
+    set(CPACK_RPM_DEV_PACKAGE_REQUIRES "${CPACK_PACKAGE_NAME}, libcurl-devel, jsoncpp-devel")
 
-        # Python Package
-        if (PYTHON3)
-            # Package Dependencies (Without Python)
-            set(CPACK_RPM_PYTHON3_PACKAGE_REQUIRES "${CPACK_PACKAGE_NAME} >= ${VERSION_MAJOR}.${VERSION_MINOR}")
+    # Python Package
+    if (PYTHON3)
+        # Package Dependencies (Without Python)
+        set(CPACK_RPM_PYTHON3_PACKAGE_REQUIRES "${CPACK_PACKAGE_NAME} >= ${VERSION_MAJOR}.${VERSION_MINOR}")
 
-            # Find Python3 base package
-            execute_process(COMMAND rpm -qf ${Python3_EXECUTABLE} --queryformat '%{NAME}'
-                    OUTPUT_VARIABLE PYTHON3_PACKAGE
-                    OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-
-            if (PYTHON3_PACKAGE MATCHES "is not owned by any package" OR NOT PYTHON3_PACKAGE)
-                # Python3 is not from a Package, define package name
-                set(PYTHON3_PACKAGE "python${Python3_VERSION_MAJOR}${Python3_VERSION_MINOR}")
-            else()
-                # Python3 is from a package, add it as dependency
-                set(CPACK_RPM_PYTHON3_PACKAGE_REQUIRES "${CPACK_RPM_PYTHON3_PACKAGE_REQUIRES}, ${PYTHON3_PACKAGE}")
-            endif ()
-
-            # Configure package
-            set(CPACK_RPM_PYTHON3_PACKAGE_NAME "${PYTHON3_PACKAGE}-accelize-drm")
-            set(CPACK_RPM_PYTHON3_FILE_NAME "${CPACK_RPM_PYTHON3_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}.${CPACK_RPM_PACKAGE_RELEASE_DIST}.${CMAKE_SYSTEM_PROCESSOR}.rpm")
-            set(CPACK_RPM_PYTHON3_PACKAGE_SUMMARY ${CPACK_COMPONENT_PYTHON3_DESCRIPTION})
-            set(CPACK_RPM_PYTHON3_PACKAGE_GROUP "Development/Libraries/Python")
-
-        endif ()
-
-        # Other information
-        set(CPACK_RPM_CHANGELOG_FILE ${CMAKE_CURRENT_SOURCE_DIR}/CHANGELOG)
-        set(CPACK_RPM_PACKAGE_LICENSE "Apache v2.0")
-        set(CPACK_RPM_PACKAGE_GROUP "Development/Libraries/C and C++")
-
-        message(STATUS "Packaging : RPM for ${DIST_ID} ${DIST_RELEASE}")
-    endif ()
-
-    # DEB Packages
-    find_program(PACKAGE_MANAGER_APT apt-get)
-    if (PACKAGE_MANAGER_APT)
-        set(CPACK_GENERATOR "DEB")
-        set(CPACK_DEB_COMPONENT_INSTALL ON)
-        set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
-
-        # Get Architecture Debian name
-        execute_process(COMMAND dpkg --print-architecture
-                OUTPUT_VARIABLE CPACK_DEBIAN_PACKAGE_ARCHITECTURE
+        # Find Python3 base package
+        execute_process(COMMAND rpm -qf ${Python3_EXECUTABLE} --queryformat '%{NAME}'
+                OUTPUT_VARIABLE PYTHON3_PACKAGE
                 OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
 
-        # Runtime package
-        set(CPACK_DEBIAN_RUN_PACKAGE_NAME ${CPACK_PACKAGE_NAME})
-        set(CPACK_DEBIAN_RUN_FILE_NAME "${CPACK_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}.deb")
-        set(CPACK_DEBIAN_RUN_PACKAGE_SECTION libs)
-
-        # Dev package
-        set(CPACK_DEBIAN_DEV_PACKAGE_NAME "${CPACK_PACKAGE_NAME}-dev")
-        set(CPACK_DEBIAN_DEV_FILE_NAME "${CPACK_DEBIAN_DEV_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}.deb")
-        set(CPACK_DEBIAN_DEV_PACKAGE_SECTION libdevel)
-        set(CPACK_DEBIAN_DEV_PACKAGE_DEPENDS "${CPACK_PACKAGE_NAME}, libcurl4-openssl-dev, libjsoncpp-dev")
-
-        # Python Package
-        if (PYTHON3)
-            # Configure package
-            set(CPACK_DEBIAN_PYTHON3_PACKAGE_NAME "python3-accelize-drm")
-            set(CPACK_DEBIAN_PYTHON3_FILE_NAME "${CPACK_DEBIAN_PYTHON3_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}.deb")
-            set(CPACK_DEBIAN_PYTHON3_PACKAGE_SECTION libs)
-            set(CPACK_DEBIAN_PYTHON3_PACKAGE_DEPENDS "${CPACK_PACKAGE_NAME} (>= ${VERSION_MAJOR}.${VERSION_MINOR}), python3:any (>= 3.4)")
+        if (PYTHON3_PACKAGE MATCHES "is not owned by any package" OR NOT PYTHON3_PACKAGE)
+            # Python3 is not from a Package, define package name
+            set(PYTHON3_PACKAGE "python${Python3_VERSION_MAJOR}${Python3_VERSION_MINOR}")
+        else()
+            # Python3 is from a package, add it as dependency
+            set(CPACK_RPM_PYTHON3_PACKAGE_REQUIRES "${CPACK_RPM_PYTHON3_PACKAGE_REQUIRES}, ${PYTHON3_PACKAGE}")
         endif ()
 
-        # Other information
-        message(STATUS "Packaging : DEB for ${DIST_ID} ${DIST_CODENAME}")
+        # Configure package
+        set(CPACK_RPM_PYTHON3_PACKAGE_NAME "${PYTHON3_PACKAGE}-accelize-drm")
+        set(CPACK_RPM_PYTHON3_FILE_NAME "${CPACK_RPM_PYTHON3_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}.${CPACK_RPM_PACKAGE_RELEASE_DIST}.${CMAKE_SYSTEM_PROCESSOR}.rpm")
+        set(CPACK_RPM_PYTHON3_PACKAGE_SUMMARY ${CPACK_COMPONENT_PYTHON3_DESCRIPTION})
+        set(CPACK_RPM_PYTHON3_PACKAGE_GROUP "Development/Libraries/Python")
+
     endif ()
+
+    # Other information
+    set(CPACK_RPM_CHANGELOG_FILE ${CMAKE_CURRENT_SOURCE_DIR}/CHANGELOG)
+    set(CPACK_RPM_PACKAGE_LICENSE "Apache v2.0")
+    set(CPACK_RPM_PACKAGE_GROUP "Development/Libraries/C and C++")
+
+    message(STATUS "Packaging : RPM for ${DIST_ID} ${DIST_RELEASE}")
+endif ()
+
+# DEB Packages
+find_program(PACKAGE_MANAGER_APT apt-get)
+if (PACKAGE_MANAGER_APT)
+    set(CPACK_GENERATOR "DEB")
+    set(CPACK_DEB_COMPONENT_INSTALL ON)
+    set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+
+    # Get Architecture Debian name
+    execute_process(COMMAND dpkg --print-architecture
+            OUTPUT_VARIABLE CPACK_DEBIAN_PACKAGE_ARCHITECTURE
+            OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+
+    # Runtime package
+    set(CPACK_DEBIAN_RUN_PACKAGE_NAME ${CPACK_PACKAGE_NAME})
+    set(CPACK_DEBIAN_RUN_FILE_NAME "${CPACK_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}.deb")
+    set(CPACK_DEBIAN_RUN_PACKAGE_SECTION libs)
+
+    # Dev package
+    set(CPACK_DEBIAN_DEV_PACKAGE_NAME "${CPACK_PACKAGE_NAME}-dev")
+    set(CPACK_DEBIAN_DEV_FILE_NAME "${CPACK_DEBIAN_DEV_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}.deb")
+    set(CPACK_DEBIAN_DEV_PACKAGE_SECTION libdevel)
+    set(CPACK_DEBIAN_DEV_PACKAGE_DEPENDS "${CPACK_PACKAGE_NAME}, libcurl4-openssl-dev, libjsoncpp-dev")
+
+    # Python Package
+    if (PYTHON3)
+        # Configure package
+        set(CPACK_DEBIAN_PYTHON3_PACKAGE_NAME "python3-accelize-drm")
+        set(CPACK_DEBIAN_PYTHON3_FILE_NAME "${CPACK_DEBIAN_PYTHON3_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}.deb")
+        set(CPACK_DEBIAN_PYTHON3_PACKAGE_SECTION libs)
+        set(CPACK_DEBIAN_PYTHON3_PACKAGE_DEPENDS "${CPACK_PACKAGE_NAME} (>= ${VERSION_MAJOR}.${VERSION_MINOR}), python3:any (>= 3.4)")
+    endif ()
+
+    # Other information
+    message(STATUS "Packaging : DEB for ${DIST_ID} ${DIST_CODENAME}")
+endif ()
 
 include(CPack)
 
-    # Runtime libraries package
-    cpack_add_component_group(RUN)
-    cpack_add_component(libraries GROUP RUN)
-    cpack_add_component(licenses GROUP RUN)
+# Runtime libraries package
+cpack_add_component_group(RUN)
+cpack_add_component(libraries GROUP RUN)
+cpack_add_component(licenses GROUP RUN)
 
-    # Dev/Devel package
-    cpack_add_component_group(DEV)
-    cpack_add_component(headers GROUP DEV)
-    cpack_add_component(doc GROUP DEV)
+# Dev/Devel package
+cpack_add_component_group(DEV)
+cpack_add_component(headers GROUP DEV)
+cpack_add_component(doc GROUP DEV)
 
-    # Python package
-    if (PYTHON3)
-        cpack_add_component_group(PYTHON3)
-        cpack_add_component(python3 GROUP PYTHON3)
-    endif ()
-
+# Python package
+if (PYTHON3)
+    cpack_add_component_group(PYTHON3)
+    cpack_add_component(python3 GROUP PYTHON3)
 endif ()
 
 # Tests
@@ -446,16 +461,4 @@ if(TESTS)
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tests/ DESTINATION ${CMAKE_BINARY_DIR}/tests
             FILES_MATCHING PATTERN "*.py")
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tests/.coveragerc DESTINATION ${CMAKE_BINARY_DIR})
-
-    # Code coverage
-    option(COVERAGE "Activate code coverage" OFF)
-    if(COVERAGE)
-        # Add coverage compile and link options
-        add_compile_options(--coverage )
-        if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
-            set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lgcov")
-        else()
-            set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --coverage")
-        endif()
-    endif(COVERAGE)
 endif()

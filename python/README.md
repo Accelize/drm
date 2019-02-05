@@ -10,4 +10,4 @@ Accelize web service and managing metering sessions.
 
 This library provide C/C++/Python API.
 
-For more information see [Documentation](https://drmlib.readthedocs.io/).
+For more information see [Documentation](@PROJECT_DOCUMENTATION_URL@).

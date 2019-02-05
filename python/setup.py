@@ -52,7 +52,7 @@ with open(join(SETUP_DIR, 'README.md')) as source_file:
 
 # Run setup
 if __name__ == '__main__':
-    from os import chdir
+    from os import chdir, makedirs
     chdir(SETUP_DIR)
 
     # Check environment.
@@ -61,8 +61,60 @@ if __name__ == '__main__':
             "Please, build using projects's CMake instead of directly setup.py")
 
     # Sources files
-    src_files = [join('src', src) for src in (
-        '_accelize_drm.cpp', '_accelize_drmc.c')]
+    src_names = ('_accelize_drm.cpp', '_accelize_drmc.c')
+
+    # Debug Configuration
+    if '@CMAKE_BUILD_TYPE@'.lower() == 'debug':  # From CMAKE_BUILD_TYPE
+
+        # Inplace build required for Coverage
+        # Require call "build_ext" with "--inplace" from CMake
+        from shutil import copy
+
+        src_files = []
+        for src in src_names:
+            dst = join('accelize_drm', src)
+            copy(splitext(join('src', src))[0] + '.pyx',
+                 splitext(dst)[0] + '.pyx')
+            src_files.append(dst)
+
+        PACKAGE_INFO['package_data'] = {'accelize_drm': '*'}
+
+        # Debug compiler options
+        compile_args = ["-g3", "-O0"]
+
+        # Show source code in generated files
+        cython_options = dict(emit_code_comments=True)
+
+        # Generate annotation files
+        get_report = True
+        cythonize_kwargs = dict(annotate=True,
+
+                                # Enable C/C++ debugging
+                                gdb_debug=True,
+
+                                # Allow coverage and profiling
+                                compiler_directives={
+                                    'linetrace': True,
+
+                                    # Allow sphinx auto doc
+                                    'embedsignature': True})
+
+        # Allow coverage and profiling
+        extension_kwargs = dict(define_macros=[
+            ('CYTHON_TRACE', '1'), ('CYTHON_TRACE_NOGIL', '1')])
+
+    # Release Configuration
+    else:
+        src_files = [join('src', src) for src in src_names]
+        compile_args = ["-g0"]
+        cython_options = dict(emit_code_comments=False)
+        cythonize_kwargs = dict(compiler_directives={})
+        extension_kwargs = {}
+        get_report = False
+
+        # Allow Sphinx to retrieve Cython modules docstrings
+        if '@DOC@'.lower() != 'off':  # From CMake DOC Option
+            cythonize_kwargs['compiler_directives']['embedsignature'] = True
 
     # Check if Cython if available
     try:
@@ -79,29 +131,6 @@ if __name__ == '__main__':
     # Update "setup_requires" with Cython
     if USE_CYTHON:
         PACKAGE_INFO['setup_requires'].append('cython>=0.28')
-
-    # Debug Configuration
-    if '@CMAKE_BUILD_TYPE@'.lower() == 'debug':  # From CMAKE_BUILD_TYPE
-        compile_args = ["-g3", "-O0"]
-        cython_options = dict(emit_code_comments=True,
-                              embed_pos_in_docstring=True)
-        cythonize_kwargs = dict(annotate=True, gdb_debug=True,
-                                compiler_directives={
-                                    'linetrace': True,
-                                    'embedsignature': True})
-        extension_kwargs = dict(define_macros=[
-            ('CYTHON_TRACE', '1'), ('CYTHON_TRACE_NOGIL', '1')])
-
-    # Release Configuration
-    else:
-        compile_args = ["-g0"]
-        cython_options = dict(emit_code_comments=False)
-        cythonize_kwargs = dict(compiler_directives={})
-        extension_kwargs = {}
-
-        # Allow Sphinx to retrieve Cython modules docstrings
-        if '@DOC@'.lower() != 'off':  # From CMake DOC Option
-            cythonize_kwargs['compiler_directives']['embedsignature'] = True
 
     # Configure build
     library_dirs = ['/usr/local/lib64', '/usr/local/lib']
@@ -136,3 +165,12 @@ if __name__ == '__main__':
 
     # Run Setup
     setup(ext_modules=ext_modules, **PACKAGE_INFO)
+
+    # Copy HTML report
+    if get_report:
+        report_dir = '../report/cython_annotate'
+        makedirs(report_dir, exist_ok=True)
+        for src in src_names:
+            file_name = splitext(src)[0] + '.html'
+            copy(join('accelize_drm', file_name),
+                 join(report_dir, file_name))

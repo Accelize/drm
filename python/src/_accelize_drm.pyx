@@ -181,7 +181,7 @@ cdef class DrmManager:
         """
         try:
             with nogil:
-                    self.c_drm_manager.deactivate(pause_session_request)
+                self.c_drm_manager.deactivate(pause_session_request)
         except RuntimeError as exception:
             _handle_exceptions(exception)
 
