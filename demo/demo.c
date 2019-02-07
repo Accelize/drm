@@ -175,7 +175,7 @@ int tokenize(char str[], t_BatchCmd tokens[], uint32_t* tokens_len)
 {
     char *str1, *token, *subtoken;
     char *saveptr1, *saveptr2;
-    char delim1[] = ",;";
+    char delim1[] = ",";
     char delim2[] = "=";
     char cmd[32];
     int i;
@@ -642,7 +642,7 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, con
     DEBUG("credential file is %s", credentialFile);
     DEBUG("configuration file is %s", configurationFile);
     DEBUG("no-retry = %d", no_retry_flag);
-    for(i=0; i<batch; i++) {
+    for(i=0; i<batchSize; i++) {
         DEBUG("command #%u: name='%s', id=%u, value=%u", i, batch[i].name, batch[i].id, batch[i].value);
     }
 
@@ -846,13 +846,6 @@ int main(int argc, char **argv) {
         }
     }
 
-    if (batch_str != NULL) {
-        if (tokenize(batch_str, batch_cmd, &batch_cmd_len)) {
-            print_usage();
-            return -1;
-        }
-    }
-
     INFO("Using DRM Lib API version: %s", DrmManager_getApiVersion());
 
     /* initialize the fpga_pci library so we could have access to FPGA PCIe from this applications */
@@ -876,7 +869,16 @@ int main(int argc, char **argv) {
     }
 
     else {
-        ret = batch_mode(&pci_bar_handle, credentialFile, configurationFile, noretry_flag, batch_cmd, batch_cmd_len);
+        if (batch_str == NULL) {
+            ERROR("In batch mode, the -b option shall be defined with a set of commands.");
+            print_usage();
+            return -1;
+        }
+        if ( tokenize(batch_str, batch_cmd, &batch_cmd_len) ) {
+            print_usage();
+            return -1;
+        }
+        ret = batch_mode( &pci_bar_handle, credentialFile, configurationFile, noretry_flag, batch_cmd, batch_cmd_len );
     }
 
     return ret;
