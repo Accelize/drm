@@ -528,7 +528,6 @@ protected:
 
     void create_nodelocked_license_request_file() {
         Json::StyledWriter json_writer;
-        Json::FastWriter json_writer2;
         // Build request for node-locked license
         Json::Value request_json = getMeteringStart();
         Debug("License request JSON: ", request_json.toStyledString());
@@ -543,9 +542,6 @@ protected:
         ofs.close();
         if (!ofs.good())
             Throw(DRM_ExternFail, "Unable to write node-locked license request to file: ", mNodeLockRequestFilePath);
-        ofs.open( mNodeLockRequestFilePath + ".fastwriter.req" );
-        ofs << json_writer2.write( request_json );
-        ofs.close();
         Debug("License request file saved on: ", mNodeLockRequestFilePath);
     }
 
@@ -576,7 +572,7 @@ protected:
             }
             ifs >> request_json;
             ifs.close();
-            if ( ifs.good() ) {
+            if ( !ifs.good() ) {
                 Throw( DRM_ExternFail, "Failed to parse license request file ", mNodeLockRequestFilePath );
             }
             // - Send request to web service and receive the new license
