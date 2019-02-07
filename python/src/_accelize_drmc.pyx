@@ -239,7 +239,7 @@ cdef class DrmManager:
             with gil:
                 try:
                     # Get error message
-                    error_message = self.get('STRERROR')
+                    error_message = self.get('strerror')
                 except RuntimeError:
                     error_message = ''
                 _raise_from_error(error_message, error_code=return_code)
