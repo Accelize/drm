@@ -211,7 +211,7 @@ to the Accelize Web Service.
         // "DrmManager_get" is used to retrieve the error message linked to
         // the return code in case of error
         char* message = NULL;
-        DrmManager_get_string(drm_manager, DRM__STRERROR, &message);
+        DrmManager_get_string(drm_manager, DRM__strerror, &message);
         fprintf(stderr, error_message);
     }
 
@@ -245,7 +245,7 @@ When this function returns, the protected IPs are guaranteed to be locked
 
     if DrmManager_deactivate(drm_manager, false) {
         char* message = NULL;
-        DrmManager_get_string(drm_manager, DRM__STRERROR, &message);
+        DrmManager_get_string(drm_manager, DRM__strerror, &message);
         fprintf(stderr, error_message);
     }
 
@@ -253,7 +253,7 @@ When this function returns, the protected IPs are guaranteed to be locked
     // associated resources.
     if DrmManager_free(drm_manager) {
         char* message = NULL;
-        DrmManager_get_string(drm_manager, DRM__STRERROR, &message);
+        DrmManager_get_string(drm_manager, DRM__strerror, &message);
         fprintf(stderr, error_message);
     }
 
@@ -348,7 +348,7 @@ Below codes examples show how to implement pause/resume DRM session.
     // Activate the DRM and resume the existing session if any
     if DrmManager_activate(drm_manager, true) {
         char* message = NULL;
-        DrmManager_get_string(drm_manager, DRM__STRERROR, &message);
+        DrmManager_get_string(drm_manager, DRM__strerror, &message);
         fprintf(stderr, error_message);
     }
 
@@ -357,7 +357,7 @@ Below codes examples show how to implement pause/resume DRM session.
     // Deactivate the DRM, but pause the session instead of closing it
     if DrmManager_deactivate(drm_manager, true) {
         char* message = NULL;
-        DrmManager_get_string(drm_manager, DRM__STRERROR, &message);
+        DrmManager_get_string(drm_manager, DRM__strerror, &message);
         fprintf(stderr, error_message);
     }
 
