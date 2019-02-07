@@ -489,7 +489,7 @@ int check_afi_ready(int slot_id)
 int print_drm_page(DrmManager* pDrmManager, uint32_t page)
 {
     char* dump;
-    uint32_t nbPageMax = DRM__PAGE_MAILBOX - DRM__page_ctrlreg + 1;
+    uint32_t nbPageMax = DRM__page_mailbox - DRM__page_ctrlreg + 1;
     if (page > nbPageMax) {
         ERROR("Page index overflow: must be less or equal to %d", nbPageMax-1);
         return 1;

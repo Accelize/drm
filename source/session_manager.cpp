@@ -562,7 +562,7 @@ protected:
             ifs.close();
             ifs.close();
             if ( !ifs.good() )
-                Throw( DRM_ExternFail, "Cannot parse licence file ", mNodeLockLicenseFilePath );
+                Throw( DRM_ExternFail, "Cannot parse license file ", mNodeLockLicenseFilePath );
             Debug("Found and loaded local node-locked license file: ", mNodeLockLicenseFilePath);
         } else {
             // No license has been found locally, request one:
@@ -571,10 +571,13 @@ protected:
             // - Read request file
             Json::Value request_json;
             ifs.open( mNodeLockRequestFilePath );
+            if ( !ifs.is_open() ) {
+                Throw( DRM_ExternFail, "Failed to access license request file ", mNodeLockRequestFilePath );
+            }
             ifs >> request_json;
             ifs.close();
             if ( ifs.good() ) {
-                Throw( DRM_ExternFail, "Failed to parse licence request file ", mNodeLockRequestFilePath );
+                Throw( DRM_ExternFail, "Failed to parse license request file ", mNodeLockRequestFilePath );
             }
             // - Send request to web service and receive the new license
             license_json = getDrmWSClient().getLicense( request_json );
