@@ -556,7 +556,6 @@ protected:
             // A license file has already been installed locally; read its content
             ifs >> license_json;
             ifs.close();
-            ifs.close();
             if ( !ifs.good() )
                 Throw( DRM_ExternFail, "Cannot parse license file ", mNodeLockLicenseFilePath );
             Debug("Found and loaded local node-locked license file: ", mNodeLockLicenseFilePath);
