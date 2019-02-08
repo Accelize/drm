@@ -70,16 +70,6 @@ protected:
     //helper typedef
     typedef std::chrono::steady_clock TClock; /// Shortcut type def to steady clock which is monotonic (so unaffected by clock adjustments)
 
-    /** Define type of structure registering the timing information of a license */
-    typedef struct SLicenseDates {
-        SLicenseDates(): index(0), start_date(TClock::now()), end_date(TClock::now()) {};
-        SLicenseDates( uint32_t idx, TClock::time_point start, TClock::time_point end ):
-                index(idx), start_date(start), end_date(end) {};
-        uint32_t           index;
-        TClock::time_point start_date;
-        TClock::time_point end_date;
-    } TLicenseDates;
-
     enum class LicenseType: uint8_t {OTHERS=0, NODE_LOCKED};
 
     std::map<LicenseType, std::string> mLicenseTypeString = {
@@ -410,8 +400,8 @@ protected:
     }
 
     // Get common info
-    void getDesignInfo( std::string &drmVersion,
-                        std::string &dna,
+    void getDesignInfo(std::string &drmVersion,
+                       std::string &dna,
                         std::vector<std::string> &vlnvFile,
                         std::string &mailboxReadOnly ) {
         uint32_t nbOfDetectedIps;
@@ -419,9 +409,9 @@ protected:
         std::vector<uint32_t> readOnlyMailboxData, readWriteMailboxData;
 
         std::lock_guard<std::mutex> lk(mDrmControllerMutex);
-        checkDRMCtlrRet( getDrmController().extractDrmVersion( drmVersion ) );
-        checkDRMCtlrRet( getDrmController().extractDna( dna ) );
-        checkDRMCtlrRet( getDrmController().extractVlnvFile( nbOfDetectedIps, vlnvFile ) );
+        checkDRMCtlrRet(getDrmController().extractDrmVersion( drmVersion ) );
+        checkDRMCtlrRet(getDrmController().extractDna( dna ) );
+        checkDRMCtlrRet(getDrmController().extractVlnvFile( nbOfDetectedIps, vlnvFile ) );
         checkDRMCtlrRet( getDrmController().readMailboxFileRegister( readOnlyMailboxSize, readWriteMailboxSize,
                                                                      readOnlyMailboxData, readWriteMailboxData ) );
         Debug( "Mailbox sizes: read-only=", readOnlyMailboxSize, ", read-write=", readWriteMailboxSize );
@@ -439,14 +429,14 @@ protected:
         std::string mailboxReadOnly;
 
         // Application section
-        if ( mUDID.empty() )
+        if(mUDID.empty())
             Throw(DRM_BadUsage, "Please set udid in configuration");
 
-        if ( mBoardType.empty() )
+        if(mBoardType.empty())
             Throw(DRM_BadUsage, "Please set boardType in configuration");
 
         if ( mUDID.size() )
-            json_output["udid"] = mUDID;
+        json_output["udid"] = mUDID;
 
         json_output["boardType"] = mBoardType;
         json_output["mode"] = (uint8_t)mLicenseType;
@@ -501,7 +491,7 @@ protected:
         std::string saasChallenge;
         std::vector<std::string> meteringFile;
 
-        Debug( "Build web request to maintain current session" );
+        Debug("Build web request to maintain current session");
 
         std::lock_guard<std::mutex> lk(mDrmControllerMutex);
         //DEPRECATED => checkDRMCtlrRet( getDrmController().extractMeteringFile( timeOut, numberOfDetectedIps, saasChallenge, meteringFile ) );
@@ -591,41 +581,26 @@ protected:
         bool activationDone = false;
         uint8_t activationErrorCode;
         checkDRMCtlrRet( getDrmController().activate( licenseKey, activationDone, activationErrorCode ) );
-        if ( activationErrorCode ) {
+        if( activationErrorCode ) {
             Throw(DRM_CtlrError, "Failed to activate license on DRM controller, activationErr: 0x", std::hex, activationErrorCode, std::dec);
         }
 
         // Load license timer
         if (mLicenseType != LicenseType::NODE_LOCKED) {
             bool licenseTimerEnabled = false;
-            checkDRMCtlrRet( getDrmController().loadLicenseTimerInit( licenseTimer, licenseTimerEnabled ) );
+            checkDRMCtlrRet( getDrmController().loadLicenseTimerInit(licenseTimer, licenseTimerEnabled));
             if ( !licenseTimerEnabled ) {
                 Throw(DRM_CtlrError, "Failed to load license timer on DRM controller, licenseTimerEnabled: 0x",
                       std::hex, licenseTimerEnabled, std::dec);
             }
 
-            /*TClock::time_point license_start;
-            if ( mLicenseDatesQueue.empty() ) {
-                license_start = TClock::now();
-            } else {
-                license_start = mLicenseDatesQueue.back().end_date;
-            }*/
             mLicenseCounter ++;
-
-            /*if ( mLicenseStartDate == TClock::time_point::min() ) {
-                mLicenseStartDate = TClock::now();
-                mLicenseExpirationDate = mLicenseStartDate;
-            }*/
 
             uint32_t license_duration_sec = license_json["metering"]["timeoutSecond"].asUInt();
             mLicenseDuration = std::chrono::seconds( license_duration_sec );
             //mLicenseExpirationDate += license_duration;
 
             Info("Set the license #", mLicenseCounter, " of session ID ", mSessionID, " for a duration of ", license_duration_sec, " seconds");
-
-            //Debug( "New estimated expiration date is ", mLicenseExpirationDate.time_since_epoch().count() );
-            //Debug("License #", mLicenseCounter, " starts at ", license_start.time_since_epoch().count(), " and ends at ",
-            //        license_end.time_since_epoch().count(), " (duration of ", license_duration_sec, " seconds)" );
         }
 
         if (getLogLevel() >= eLogLevel::DEBUG2) {
@@ -636,14 +611,14 @@ protected:
     static const size_t InitialFNV = 2166136261U;
     static const size_t FNVMultiple = 16777619;
 
-    /* Fowler / Noll / Vo (FNV) Hash */
+    /// Fowler / Noll / Vo (FNV) Hash
     std::string computeHash( const std::string &s ) {
         uint64_t hash = InitialFNV;
 
         for(size_t i = 0; i < s.length(); i++)
         {
-            hash = hash ^ (s[i]);       /* xor  the low 8 bits */
-            hash = hash * FNVMultiple;  /* multiply by the magic number */
+            hash = hash ^ (s[i]);
+            hash = hash * FNVMultiple;
         }
         std::stringstream ss;
         ss << std::hex << hash;
@@ -791,45 +766,29 @@ protected:
     void startThread() {
 
         if(mThreadKeepAlive.valid()) {
-            Warning( "Thread already started" );
+            Warning("Thread already started");
             return;
         }
 
         Debug( "Starting background thread which maintains licensing" );
 
         mThreadKeepAlive = std::async(std::launch::async, [this](){
-            try {
+            try{
                 /// Detecting DRM controller frequency
                 detectDrmFrequency();
 
                 /// Starting license request loop
                 while(1) {
 
-                    //TLicenseDates licDates = mLicenseDatesQueue.front();
-                    /*Debug("Now it is: ", TClock::now().time_since_epoch().count(),"; Current license is #", licDates.index,
-                            ", started at ", licDates.start_date.time_since_epoch().count(),
-                            ", ending at ", licDates.end_date.time_since_epoch().count() );
-*/
                     if ( !isReadyForNewLicense() ) {
 
-                        /*uint64_t counterCurr = getTimerCounterValue();
-                        uint32_t secondLeft = (uint32_t)ceil((double)counterCurr / mFrequencyCurr / 1000000);
-                        std::chrono::seconds sleep_sec( secondLeft );*/
                         TClock::duration wait_duration = getCurrentLicenseExpirationDate() - TClock::now() + std::chrono::seconds(1);
                         uint32_t wait_seconds = std::chrono::duration_cast<std::chrono::seconds>( wait_duration ).count();
                         Debug( "Sleeping for ", wait_seconds, " seconds before checking if DRM Controller is ready to received a new license");
 
                         if ( isStopRequested( wait_duration ) )
                             return;
-
-                        //mLicenseExpirationDate = TClock::now();
-                        //Debug( "Corrected expiration date of license #", mLicenseCounter, " to ", mLicenseExpirationDate.time_since_epoch().count() );
-
-                        //Error("DRM Controller is not ready to receive a new license but it should: DRM frequency might be wrong");
-                        //Unreachable();
-                        /*TLicenseDates backLicense = mLicenseDatesQueue.back();
-                        backLicense.end_date = TClock::now();
-                        Debug ("Correct end date of license #", backLicense.index, " to ", backLicense.end_date.time_since_epoch().count() );*/
+                        
                         continue;
                     }
 
@@ -839,7 +798,7 @@ protected:
                     Json::Value license_json;
                     std::string retry_msg;
                     uint32_t retry_counter = 0;
-                    //TClock::time_point polling_deadline = getCurrentLicenseExpirationDate() - mDeadlinePeriod;
+
                     if ( mLicenseDuration == TClock::duration::zero() ) {
                         Unreachable( "mLicenseDuration is 0" );
                     }
@@ -860,15 +819,15 @@ protected:
                         try {
                             license_json = getDrmWSClient().getLicense( request_json, polling_deadline );
                             break;
-                        } catch ( const Exception &e ) {
+                        } catch(const Exception& e) {
                             if ( e.getErrCode() == DRM_WSMayRetry ) throw;
-                            retry_msg = e.what();
-                        }
+                                retry_msg = e.what();
+                            }
                         /// Attempt failed, computing the sleep period before next retry. It depends on the time left.
                         TClock::duration wait_before_retry;
                         if ( polling_deadline - TClock::now() <= std::chrono::seconds(60) )
                             wait_before_retry = std::chrono::seconds(2);
-                        else
+                            else
                             wait_before_retry = std::chrono::seconds(30);
                         uint32_t wait_time = std::chrono::duration_cast<std::chrono::seconds>(wait_before_retry).count();
                         Warning( "Attempt #", retry_counter, " to obtain new license from Web Service failed with message: ", retry_msg,
@@ -884,15 +843,7 @@ protected:
                         return;
 
                     /// New license has been received: now send it to the DRM Controller
-                    setLicense( license_json );
-/*
-                    /// Compute the sleep period before requesting the next license
-                    TClock::time_point next_retry_date = mLicenseDatesQueue.front().end_date + std::chrono::seconds(1);
-                    mLicenseDatesQueue.pop();
-                    Debug( "Sleeping until date is ", next_retry_date.time_since_epoch().count(), " to request a new license");
-                    if (isStopRequested(next_retry_date) )
-                        return;
-                        */
+                    setLicense(license_json);
                 }
             } catch(const std::exception& e) {
                 Error(e.what());
@@ -935,17 +886,8 @@ protected:
 
         Info("Resuming DRM session...");
 
-        /*if ( !isLicenseActive() ) {
-            /// Clear license queue
-            std::queue<TLicenseDates> emptyQueue;
-            std::swap( mLicenseDatesQueue, emptyQueue );
-        }*/
-
         if ( isReadyForNewLicense() ) {
 
-           /* if ( mLicenseDatesQueue.empty() )
-                mLicenseDatesQueue.pop();
-*/
             // Create JSON license request
             Json::Value request_json = getMeteringWait(1);
 
