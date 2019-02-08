@@ -563,7 +563,7 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const std::string& creden
 
         else if (cmd == 'z') {
             if (print_drm_report(pDrmManager) == 0)
-                INFO(COLOR_GREEN "HW report printed");
+                INFO(COLOR_CYAN "HW report printed");
         }
 
         else if (cmd == 'v') {
@@ -572,27 +572,27 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const std::string& creden
                 continue;
             }
             if (print_drm_page(pDrmManager, val) == 0)
-                INFO(COLOR_GREEN "Registers on page %u printed", val);
+                INFO(COLOR_CYAN "Registers on page %u printed", val);
         }
 
         else if (cmd == 'a') {
             DRM_RETRY( pDrmManager->activate(false), no_retry_flag )
-            INFO(COLOR_GREEN "Session started");
+            INFO(COLOR_CYAN "Session started");
         }
 
         else if (cmd == 'r') {
             DRM_RETRY( pDrmManager->activate(true), no_retry_flag )
-            INFO(COLOR_GREEN "Session resumed");
+            INFO(COLOR_CYAN "Session resumed");
         }
 
         else if (cmd == 'p') {
             DRM_RETRY( pDrmManager->deactivate(true), no_retry_flag )
-            INFO(COLOR_GREEN "Session paused");
+            INFO(COLOR_CYAN "Session paused");
         }
 
         else if (cmd == 'd') {
             DRM_RETRY( pDrmManager->deactivate(false), no_retry_flag )
-            INFO(COLOR_GREEN "Session stopped");
+            INFO(COLOR_CYAN "Session stopped");
         }
 
         else if (cmd == 'g') {
@@ -601,7 +601,7 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const std::string& creden
                 continue;
             }
             if (!generate_coin(pci_bar_handle, 0, val))
-                INFO(COLOR_GREEN "%u coins generated", val);
+                INFO(COLOR_CYAN "%u coins generated", val);
         }
 
         else if (cmd == 'i') {
@@ -623,7 +623,7 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const std::string& creden
 
         else if (cmd == 'q') {
             DRM_RETRY(pDrmManager->deactivate(false), no_retry_flag)
-            INFO(COLOR_GREEN "Stopped session if running and exit application");
+            INFO(COLOR_CYAN "Stopped session if running and exit application");
         }
 
         else

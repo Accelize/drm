@@ -27,10 +27,9 @@ DRM_ErrorCode Exception::getErrCode() const {
 
 const char* Exception::what() const noexcept {
     std::stringstream ss;
-    ss << std::runtime_error::what();
-    ss << " [errCode=" << static_cast<unsigned int>(getErrCode()) << "]\n";
-    errWhat = ss.str();
-    return errWhat.c_str();
+    ss << "[errCode=" << static_cast<unsigned int>(getErrCode()) << "] ";
+    ss << std::runtime_error::what() << "\n";
+    return ss.str().c_str();
 }
 
 }

@@ -68,7 +68,7 @@ Received packet of size 1048576 bytes with xor=0xFF9C
 
 Last run (closing session):
 ```console
-$./demo --stop_session
+$./demo --stopSession
 Found device: AWS FPGA Slot #0
 [INFO] Resuming metering session...
 [INFO] Resumed metering session with sessionId A876FD1EDE47765B and set first license with duration of 15 seconds

@@ -20,7 +20,6 @@ limitations under the License.
 #include <stdexcept>
 
 #include "accelize/drmc/errorcode.h" // enum with error codes
-
 #include "accelize/drmc/common.h"
 
 namespace Accelize {

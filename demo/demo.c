@@ -546,7 +546,7 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFil
 
         else if (answer[0] == 'z') {
             if (print_drm_report(pDrmManager) == 0)
-                INFO(COLOR_GREEN "HW report printed");
+                INFO(COLOR_CYAN "HW report printed");
         }
 
         else if (answer[0] == 'v') {
@@ -557,27 +557,27 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFil
             ptr = NULL;
             val = strtol(answer+1, &ptr, 10);
             if (print_drm_page(pDrmManager, val) == 0)
-                INFO(COLOR_GREEN "Registers on page %u printed", val);
+                INFO(COLOR_CYAN "Registers on page %u printed", val);
         }
 
         else if (answer[0] == 'a') {
             if (!DRM_RETRY( DrmManager_activate(pDrmManager, false), no_retry_flag ))
-                INFO(COLOR_GREEN "Session started");
+                INFO(COLOR_CYAN "Session started");
         }
 
         else if (answer[0] == 'r') {
             if (!DRM_RETRY( DrmManager_activate(pDrmManager, true), no_retry_flag ))
-                INFO(COLOR_GREEN "Session resumed");
+                INFO(COLOR_CYAN "Session resumed");
         }
 
         else if (answer[0] == 'p') {
             if (!DrmManager_deactivate(pDrmManager, true))
-                INFO(COLOR_GREEN "Session paused");
+                INFO(COLOR_CYAN "Session paused");
         }
 
         else if (answer[0] == 'd') {
             if (!DrmManager_deactivate(pDrmManager, false))
-                INFO(COLOR_GREEN "Session stopped");
+                INFO(COLOR_CYAN "Session stopped");
         }
 
         else if (answer[0] == 'g') {
@@ -588,7 +588,7 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFil
             ptr = NULL;
             val = strtol(answer+1, &ptr, 10);
             if (!generate_coin(pci_bar_handle, 0, val))
-                INFO(COLOR_GREEN "%u coins generated", val);
+                INFO(COLOR_CYAN "%u coins generated", val);
         }
 
         else if (answer[0] == 'i') {
@@ -610,7 +610,7 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFil
 
         else if (answer[0] == 'q') {
             if (!DrmManager_deactivate( pDrmManager, false ))
-                INFO(COLOR_GREEN "Stopped session if running and exit application");
+                INFO(COLOR_CYAN "Stopped session if running and exit application");
         }
 
         else

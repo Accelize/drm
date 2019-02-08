@@ -180,8 +180,8 @@ template <typename... Args>
 #define AssertLess(a, b)                __Assert2op(_Assert, a, b, <)
 #define AssertLessEqual(a, b)           __Assert2op(_Assert, a, b, <=)
 
-#define Unreachable() \
-    Throw(DRM_Assert, "An unreachable part of code has be reached in DRM Library in ", __FILENAME__, ":", __LINE__, " (", __func__, ") : Please contact support.")
+#define Unreachable( msg ) \
+    Throw(DRM_Assert, "Reached an unexpected part of code in ", __FILENAME__, ":", __LINE__, " (", __func__, ") because ", msg, ": Please contact support.")
 
 
 #endif // _H_ACCELIZE_DRM_LOG

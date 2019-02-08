@@ -93,7 +93,7 @@ public:
         {//compute timeout
             std::chrono::milliseconds timeout = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - std::chrono::steady_clock::now());
             if(timeout <= std::chrono::milliseconds(0))
-                Throw(DRM_WSMayRetry, "Did not performe HTTP request to Accelize webservice because deadline is already reached.");
+                Throw(DRM_WSMayRetry, "Did not perform HTTP request to Accelize webservice because deadline is already reached.");
             curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, timeout.count());
         }
 
@@ -120,7 +120,7 @@ public:
             return 0.0;
     }
 
-    static bool is_error_retriable(long resp_code) {
+    static bool is_error_retryable(long resp_code) {
         return     resp_code == 408 /* Request Timeout */
                 || resp_code == 500 /* Internal Server Error */
                 || resp_code == 502 /* Bad Gateway */
@@ -196,8 +196,8 @@ DrmWSClient::DrmWSClient(const std::string &conf_file_path, const std::string &c
 
     try {
         Json::Value webservice_json = JVgetRequired(conf_json, "webservice", Json::objectValue);
-        if (webservice_json.empty() || webservice_json.empty())
-            Throw(DRM_BadFormat, "Missing parameter 'webservice' in service configuration file ", conf_file_path);
+        if (webservice_json.empty())
+            Throw(DRM_BadFormat, "Parameter 'webservice' is empty");
         Debug2("Web service configuration: ", webservice_json.toStyledString());
 
         Json::Value oauth2_json = JVgetRequired(webservice_json, "oauth2_url", Json::stringValue);
@@ -277,7 +277,7 @@ Json::Value DrmWSClient::getLicense(const Json::Value& json_req, std::chrono::st
     Debug("Received code = ", resp_code);
 
     if ( (resp_code != 200) && (resp_code != 560) && (resp_code != 400) ) {
-         if(CurlEasyPost::is_error_retriable(resp_code)) {
+         if(CurlEasyPost::is_error_retryable(resp_code)) {
             Throw(DRM_WSMayRetry, "WS HTTP response code : ", resp_code, "(", resp, ")");
         } else {
             Throw(DRM_WSReqError, "WS HTTP response code : ", resp_code, "(", resp, ")");
@@ -317,7 +317,7 @@ std::string DrmWSClient::getOAuth2token(std::chrono::steady_clock::time_point de
     std::string resp;
     long resp_code = req.perform(&resp, deadline);
     if(resp_code != 200) {
-        if(CurlEasyPost::is_error_retriable(resp_code)) {
+        if(CurlEasyPost::is_error_retryable(resp_code)) {
             Throw(DRM_WSMayRetry, "WSOAuth HTTP response code : ", resp_code, "(", resp, ")");
         } else {
             Throw(DRM_WSReqError, "WSOAuth HTTP response code : ", resp_code, "(", resp, ")");

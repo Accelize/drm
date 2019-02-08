@@ -15,19 +15,19 @@ limitations under the License.
 */
 
 #ifndef _H_ACCELIZE_COMMON_EXPORT
-#define _H_ACCELIZE_COMMON_EXPORT
+    #define _H_ACCELIZE_COMMON_EXPORT
 
-#ifdef  __cplusplus
-#ifdef BUILDING_DRMLIB
-    #define DRM_EXPORT __attribute__((visibility("default")))
-    #define DRM_LOCAL __attribute__((visibility("hidden")))
-#else
-    #define DRM_EXPORT
-    #define DRM_LOCAL
-#endif /* BUILDING_DRMLIB */
-#else
-    #define DRM_EXPORT
-    #define DRM_LOCAL
-#endif /* __cplusplus */
+    #ifdef  __cplusplus
+        #ifdef BUILDING_DRMLIB
+            #define DRM_EXPORT __attribute__((visibility("default")))
+            #define DRM_LOCAL __attribute__((visibility("hidden")))
+        #else
+            #define DRM_EXPORT
+            #define DRM_LOCAL
+        #endif /* BUILDING_DRMLIB */
+    #else
+        #define DRM_EXPORT
+        #define DRM_LOCAL
+    #endif /* __cplusplus */
 
 #endif /* _H_ACCELIZE_COMMON_EXPORT */

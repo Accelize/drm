@@ -35,10 +35,11 @@ namespace Accelize {
 //! DRM specific interface and implementation
 namespace DRM {
 
-/// Enum class listing the parameters accessible from User code.
-/// Some have ready only access while others have read and write access.
+/** Enum class listing the parameters accessible from User code.
+ Some have ready only access while others have read and write access.
+*/
 enum ParameterKey {
-    /** Include the Parameter ID*/
+    /// Include the Parameter ID
 #   define PARAMETERKEY_ITEM(id) id,
 #   include "accelize/drm/ParameterKey.def"
 #   undef PARAMETERKEY_ITEM
