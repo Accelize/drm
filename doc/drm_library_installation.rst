@@ -3,6 +3,28 @@ Installation
 
 This section explain how to install and build Accelize DRM library.
 
+Supported OS
+------------
+
+Software requirements:
+
+* The Accelize DRM library requires a compiler with full C++11 support.
+* The Accelize DRM Python library requires Python >= 3.5.
+
+Following OS are tested and supported by Accelize:
+
+* Centos 7 [#f1]_
+* Debian 9 Stretch
+* Ubuntu 16.04 LTS Xenial
+* Ubuntu 18.04 LTS Bionic
+
+.. [#f1] With Python 3.6 from EPEL repository for Accelize DRM Python library.
+
+Following OS are tested by not officially supported by Accelize:
+
+* Debian Testing
+* Fedora (Last stable version)
+
 Installation from packages
 --------------------------
 
@@ -146,7 +168,7 @@ You need to first install Python3, Pip and then CMake.
 To build Python Library
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-Python 3.4 or more
+Python 3.5 or more
 
 Python packages:
 
@@ -377,27 +399,27 @@ This chapter explain how to run Accelize DRM library tests.
 
 Tests support following options:
 
-* ``--backend``: Select library API to use as backend
+* **--backend**: Select library API to use as backend
   (Supported from pytest only). Possibles values ``c`` or ``c++``.
   Default: ``c++``.
 
-* ``--fpga_driver``: Select FPGA driver to use. Default: ``aws_f1``.
+* **--fpga_driver**: Select FPGA driver to use. Default: ``aws_f1``.
   Possibles values:
 
-  * ``aws_f1``: Amazon Web Service FPGA instances (f1.2xlarge, f1.4xlarge).
+  * *aws_f1*: Amazon Web Service FPGA instances (f1.2xlarge, f1.4xlarge).
 
-* ``--fpga_slot_id``: Set FPGA slot. Default: ``0``.
+* **--fpga_slot_id**: Set FPGA slot. Default: ``0``.
 
-* ``--drm_controller_base_address``: Set DRM Controller IP base address.
+* **--drm_controller_base_address**: Set DRM Controller IP base address.
   Default: ``0``.
 
-* ``--cred``: Specify the path to a ``cred.json`` file containing valid
+* **--cred**: Specify the path to a ``cred.json`` file containing valid
   Accelize credentials to use as base to run tests. Default: ``./cred.json``.
 
-* ``--server``: Specify metering server URL.
+* **--server**: Specify metering server URL.
   Default: ``https://master.metering.accelize.com``
 
-* ``--library_verbosity``: Specify Accelize DRM library verbosity.
+* **--library_verbosity**: Specify Accelize DRM library verbosity.
   Possibles values: ``0`` to ``5``. Default: ``4``.
 
 Running test on previously build environment
@@ -479,6 +501,9 @@ The ``--backend`` option si not supported because managed by tox.
 
     tox -- --cred=~/my_application/cred.json
 
+.. warning:: Running Tox with `sudo` may be required to run `build-install`
+             scenario and accessing FPGA in `c` and `cpp` scenarios.
+
 It is possible to reduce the scenario scope with the ``-e`` tox argument:
 
 .. code-block:: bash
@@ -497,7 +522,7 @@ environment (By default: ``./.ini/debug/build/report``)
 .. code-block:: bash
     :caption: Running Install scenario only
 
-    tox -e build-install,cpp-install,c-install -- --cred=~/my_application/cred.json
+    sudo tox -e build-install,cpp-install,c-install -- --cred=~/my_application/cred.json
 
 Tox can performs some tests in parallel with the ``-p all`` option:
 
