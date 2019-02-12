@@ -242,7 +242,7 @@ if (PYTHON3)
             python3 ALL
             COMMAND
             ${Python3_EXECUTABLE} ${PYTHON_SETUP} bdist_wheel -b ${PYTHON3_BDIST} -d ${PACKAGE_OUTPUT} -k
-                                                  build_ext -I ${CMAKE_INCLUDE_DIR} -L ${CMAKE_BINARY_DIR} ${BUILD_EXT_EXTRA} -j ${CPU_COUNT} &&
+                                                  build_ext -I ${CMAKE_INCLUDE_DIR}:${JSONCPP_INCLUDEDIR} -L ${CMAKE_BINARY_DIR} ${BUILD_EXT_EXTRA} -j ${CPU_COUNT} &&
             ${Python3_EXECUTABLE} ${PYTHON_SETUP} sdist -d ${PACKAGE_OUTPUT}
             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
             COMMENT "Building accelize_drm Python 3 Package"
