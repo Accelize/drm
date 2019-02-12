@@ -16,8 +16,10 @@ limitations under the License.
 
 #include <iostream>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
-#include <jsoncpp/json/json.h>
+#include <json/json.h>
+#include <json/version.h>
 #include <thread>
 #include <chrono>
 #include <numeric>
@@ -29,7 +31,7 @@ limitations under the License.
 #include <typeinfo>
 #include <sys/types.h>
 #include <sys/stat.h>
-
+#include <cmath>
 
 #include "accelize/drm/session_manager.h"
 #include "accelize/drm/version.h"
@@ -722,7 +724,7 @@ protected:
         Debug("Duration = ", seconds, " s   /   ticks = ", ticks);
 
         // Estimate DRM frequency
-        uint32_t measuredFrequency = (uint32_t)(ceil((double)ticks / seconds / 1000000));
+        uint32_t measuredFrequency = (uint32_t)(std::ceil((double)ticks / seconds / 1000000));
         double precisionError = 100.0 * abs(measuredFrequency  - mFrequencyInit) / mFrequencyCurr ;
         if ( precisionError >= mFrequencyPrecisionThreshold ) {
             mFrequencyCurr = measuredFrequency;
@@ -754,7 +756,7 @@ protected:
     TClock::time_point getCurrentLicenseExpirationDate() {
         TClock::time_point now = TClock::now();
         uint64_t counterCurr = getTimerCounterValue();
-        uint32_t secondLeft = (uint32_t)ceil((double)counterCurr / mFrequencyCurr / 1000000);
+        uint32_t secondLeft = (uint32_t)std::ceil((double)counterCurr / mFrequencyCurr / 1000000);
         return now + std::chrono::seconds( secondLeft );
 
     }
@@ -1037,7 +1039,12 @@ public:
                         break;
                     }
                     case ParameterKey::metering_data: {
+#if ((JSONCPP_VERSION_MAJOR ) >= 1 and ((JSONCPP_VERSION_MINOR) > 7 or ((JSONCPP_VERSION_MINOR) == 7 and JSONCPP_VERSION_PATCH >= 5)))
+                        uint64_t metering_data = getMeteringData();
+#else
+                        // No "int64_t" support with JsonCpp < 1.7.5
                         unsigned long long metering_data = getMeteringData();
+#endif
                         Debug("Get value of parameter '", key_str, "' (ID=", key_id, "): ", metering_data);
                         json_value[key_str] = metering_data;
                         break;

@@ -18,7 +18,7 @@ limitations under the License.
 #define _H_ACCELIZE_DRM_WS_CLIENT
 
 #include <string>
-#include <jsoncpp/json/json.h>
+#include <json/json.h>
 #include <chrono>
 
 namespace Accelize {

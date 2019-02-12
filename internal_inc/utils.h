@@ -18,7 +18,7 @@ limitations under the License.
 #define _H_ACCELIZE_METERING_UTILS
 
 #include <iostream>
-#include <jsoncpp/json/json.h>
+#include <json/json.h>
 
 namespace Accelize {
 namespace DRM {

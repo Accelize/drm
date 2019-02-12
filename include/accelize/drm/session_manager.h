@@ -22,7 +22,7 @@ limitations under the License.
 
 #include <string>
 #include <functional>
-#include <jsoncpp/json/json.h>
+#include <json/json.h>
 #include <cstring>
 
 
