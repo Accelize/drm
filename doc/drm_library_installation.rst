@@ -141,34 +141,20 @@ Run following commands to install requirements:
 We recommend to install CMake as Python package to get a recent version
 (Some version packaged on some OS are too old to build the Accelize DRM library)
 
-You need to first install Python3, Pip and then CMake.
+Run following command to install CMake as Python package:
 
 .. code-block:: bash
-    :caption: On Debian, Ubuntu
 
-    sudo apt install -y python3 python3-dev python3-pip
     pip3 install -U cmake
 
-.. code-block:: bash
-    :caption: On Centos7
-
-    # Install EPEL repository to get a recent Python version
-    sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-
-    # Install Python3.6
-    sudo yum install -y python36 python36-devel
-
-    # Install Pip
-    sudo python36 -m ensurepip
-    sudo ln -s /usr/local/bin/pip3 /usr/bin/pip3
-
-    # Install Cmake
-    pip3 install cmake
+.. note:: See next section for information on how to install Python3 and Pip3.
 
 To build Python Library
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-Python 3.5 or more
+Packages:
+
+* Python 3 with development package
 
 Python packages:
 
@@ -179,7 +165,25 @@ Python packages:
 Run following command to install requirements:
 
 .. code-block:: bash
+    :caption: On Debian, Ubuntu
 
+    sudo apt install -y python3 python3-dev python3-pip
+    pip3 install -U setuptools wheel cython
+
+.. code-block:: bash
+    :caption: On Centos7
+
+    # Install EPEL repository to get a recent Python version
+    sudo yum install -y epel-release
+
+    # Install Python3.6
+    sudo yum install -y python36 python36-devel
+
+    # Install Pip
+    sudo python36 -m ensurepip
+    sudo ln -s /usr/local/bin/pip3 /usr/bin/pip3
+
+    # Install Python Packages
     pip3 install -U setuptools wheel cython
 
 To build documentation
@@ -228,6 +232,7 @@ DEB Packages (For Debian, Ubuntu)
 
 * pkg-config
 * dpkg-dev
+* file
 
 Run following command to install requirements:
 
@@ -486,7 +491,8 @@ This scenario performs following actions:
 * Build the library in ``debug``, ``release`` and/or ``install`` mode.
 * Run Both C and C++ backend tests.
 * Install libraries (``install`` mode only).
-* Generated package and documentation (``install`` mode only).
+* Generate documentation (except in ``debug`` mode).
+* Generade packages (``release`` mode only)
 * Combine all tests coverage and generate Python/C/C++ coverage report
   (``debug`` mode only).
 
