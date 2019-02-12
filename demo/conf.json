@@ -5,7 +5,7 @@
   },
   "webservice": {
     "oauth2_url": "https://master.metering.accelize.com/o/token/",
-    "metering_url": "https://master.metering.accelize.com/auth/metering/genlicense/",
+    "metering_url": "https://master.metering.accelize.com/auth/metering/genlicense/"
   },
   "drm": {
     "frequency_mhz": 125
