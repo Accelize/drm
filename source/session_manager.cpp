@@ -374,6 +374,14 @@ protected:
         return ss.str();
     }
 
+    Json::Value getJsonFromString( const std::string json_string ) {
+        Json::Value json_object;
+        Json::Reader reader;
+        if ( !reader.parse( json_string, json_object ) )
+            Throw(DRM_BadFormat, "Cannot parse JSON string: ", reader.getFormattedErrorMessages());
+        return json_object;
+    }
+
     uint64_t getMeteringData() {
         uint32_t numberOfDetectedIps;
         std::string saasChallenge;
@@ -382,14 +390,10 @@ protected:
         bool licenseTimerEnabled, licenseTimerInitLoaded;
         uint8_t licenseTimerLoadErrorCode;
         uint64_t meteringData = 0;
+
         Debug2("Get metering data from session on DRM controller");
+
         std::lock_guard<std::mutex> lk(mDrmControllerMutex);
-        //checkDRMCtlrRet( getDrmController().initialization( numberOfDetectedIps, saasChallenge, meteringFile ) );
-        //checkDRMCtlrRet( getDrmController().asynchronousExtractMeteringFile( numberOfDetectedIps, saasChallenge, meteringFile ) );
-        //checkDRMCtlrRet( getDrmController().extractMeteringFile( 1, numberOfDetectedIps, saasChallenge, meteringFile ) );
-        //checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 1, licenseTimerEnabled, licenseTimerInitLoaded, licenseTimerLoadErrorCode ) );
-        //printf("licenseTimerEnabled=%u, licenseTimerInitLoaded=%u, licenseTimerLoadErrorCode=%u\n", licenseTimerEnabled, licenseTimerInitLoaded, licenseTimerLoadErrorCode);
-        //checkDRMCtlrRet( getDrmController().asynchronousExtractMeteringFile( numberOfDetectedIps, saasChallenge, meteringFile ) );
         checkDRMCtlrRet( getDrmController().asynchronousExtractMeteringFile( numberOfDetectedIps, saasChallenge, meteringFile ) );
         std::string meteringDataStr = meteringFile[2].substr(16, 16);
         errno = 0;
@@ -402,8 +406,8 @@ protected:
     // Get common info
     void getDesignInfo(std::string &drmVersion,
                        std::string &dna,
-                        std::vector<std::string> &vlnvFile,
-                        std::string &mailboxReadOnly ) {
+                       std::vector<std::string> &vlnvFile,
+                       std::string &mailboxReadOnly ) {
         uint32_t nbOfDetectedIps;
         uint32_t readOnlyMailboxSize, readWriteMailboxSize;
         std::vector<uint32_t> readOnlyMailboxData, readWriteMailboxData;
@@ -415,8 +419,10 @@ protected:
         checkDRMCtlrRet( getDrmController().readMailboxFileRegister( readOnlyMailboxSize, readWriteMailboxSize,
                                                                      readOnlyMailboxData, readWriteMailboxData ) );
         Debug( "Mailbox sizes: read-only=", readOnlyMailboxSize, ", read-write=", readWriteMailboxSize );
-        if ( readOnlyMailboxSize )
-            mailboxReadOnly = std::string((char*)readOnlyMailboxData.data());
+        if ( readOnlyMailboxSize ) {
+            readOnlyMailboxData.push_back(0);
+            mailboxReadOnly = std::string( (char*)readOnlyMailboxData.data() );
+        }
         else
             mailboxReadOnly = std::string("");
     }
@@ -428,27 +434,18 @@ protected:
         std::vector<std::string> vlnvFile;
         std::string mailboxReadOnly;
 
-        // Application section
-        if(mUDID.empty())
-            Throw(DRM_BadUsage, "Please set udid in configuration");
-
-        if(mBoardType.empty())
-            Throw(DRM_BadUsage, "Please set boardType in configuration");
-
+        // Fulfill application section
         if ( mUDID.size() )
-        json_output["udid"] = mUDID;
-
-        json_output["boardType"] = mBoardType;
+            json_output["udid"] = mUDID;
+        if ( mBoardType.size() )
+            json_output["boardType"] = mBoardType;
         json_output["mode"] = (uint8_t)mLicenseType;
         json_output["drm_frequency_init"] = mFrequencyInit;
 
         // Get information from DRM Controller
         getDesignInfo(drmVersion, dna, vlnvFile, mailboxReadOnly);
 
-        std::cout << "mailboxReadOnly size = " << mailboxReadOnly.size() << std::endl;
-        std::cout << "mailboxReadOnly = " << mailboxReadOnly << std::endl;
-
-        // Put it in Json output val
+        // Fulfill DRM section
         json_output["drmlibVersion"] = getApiVersion();
         json_output["lgdnVersion"] = drmVersion;
         json_output["dna"] = dna;
@@ -460,7 +457,7 @@ protected:
             json_output["vlnvFile"][i_str]["version"] = std::string("x") + vlnvFile[i].substr(12,4);
         }
         if ( mailboxReadOnly.size() )
-            json_output["product"] = mailboxReadOnly;
+            json_output["product"] = getJsonFromString(mailboxReadOnly);
         return json_output;
     }
 
@@ -598,9 +595,8 @@ protected:
 
             uint32_t license_duration_sec = license_json["metering"]["timeoutSecond"].asUInt();
             mLicenseDuration = std::chrono::seconds( license_duration_sec );
-            //mLicenseExpirationDate += license_duration;
 
-            Info("Set the license #", mLicenseCounter, " of session ID ", mSessionID, " for a duration of ", license_duration_sec, " seconds");
+            Debug( "Set license #", mLicenseCounter, " of session ID ", mSessionID, " for a duration of ", license_duration_sec, " seconds" );
         }
 
         if (getLogLevel() >= eLogLevel::DEBUG2) {
@@ -788,7 +784,7 @@ protected:
 
                         if ( isStopRequested( wait_duration ) )
                             return;
-                        
+
                         continue;
                     }
 

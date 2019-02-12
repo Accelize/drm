@@ -32,6 +32,9 @@ def pytest_addoption(parser):
     parser.addoption(
         "--library_verbosity", action="store", default='4',
         help='Specify "libaccelize_drm" verbosity level')
+    parser.addoption(
+        "--library_log_format", action="store", default='0',
+        help='Specify "libaccelize_drm" log format')
 
 
 @pytest.fixture(scope='session')
@@ -61,6 +64,10 @@ def accelize_drm(pytestconfig):
     # Set verbosity level
     verbosity = pytestconfig.getoption("library_verbosity")
     environ['ACCELIZE_DRM_VERBOSE'] = verbosity
+
+    # Set log format
+    log_format = pytestconfig.getoption("library_log_format")
+    environ['ACCELIZE_DRM_LOG_FORMAT'] = log_format
 
     # Check cred.json
     if not isfile(realpath(expanduser(pytestconfig.getoption("cred")))):
@@ -120,6 +127,7 @@ class _Json:
     def __init__(self, tmpdir, name, content):
         self._path = str(tmpdir.join(name))
         self._content = content
+        self._initial_content = content
 
     def __setitem__(self, key, value):
         self._content[key] = value
@@ -143,6 +151,13 @@ class _Json:
         """
         with open(self._path, 'wt') as json_file:
             dump(self._content, json_file)
+
+    def reset(self):
+        """
+        Reset configuration to initial content.
+        """
+        self._content = self._initial_content
+        self.save()
 
 
 class ConfJson(_Json):

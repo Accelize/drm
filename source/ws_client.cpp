@@ -196,20 +196,14 @@ DrmWSClient::DrmWSClient(const std::string &conf_file_path, const std::string &c
 
     try {
         Json::Value webservice_json = JVgetRequired(conf_json, "webservice", Json::objectValue);
-        if (webservice_json.empty())
-            Throw(DRM_BadFormat, "Parameter 'webservice' is empty");
         Debug2("Web service configuration: ", webservice_json.toStyledString());
 
         Json::Value oauth2_json = JVgetRequired(webservice_json, "oauth2_url", Json::stringValue);
         oauth2_url = oauth2_json.asString();
-        if (oauth2_url.size() == 0)
-            Throw(DRM_BadFormat, "Parameter 'oauth2_url' is empty");
         Debug2("oauth2_url=", oauth2_url);
 
         Json::Value metering_json = JVgetRequired(webservice_json, "metering_url", Json::stringValue);
         metering_url = metering_json.asString();
-        if (metering_url.size() == 0)
-            Throw(DRM_BadFormat, "Parameter 'metering_url' is empty");
         Debug2("metering_url=", metering_url);
 
         default_request_timeout = std::chrono::seconds( JVgetOptional(webservice_json, "default_ws_request_timeout", Json::uintValue, 20).asUInt() );
@@ -224,13 +218,9 @@ DrmWSClient::DrmWSClient(const std::string &conf_file_path, const std::string &c
     try {
         Json::Value client_id_json = JVgetRequired(cred_json, "client_id", Json::stringValue);
         client_id = client_id_json.asString();
-        if (client_id.size() == 0)
-            Throw(DRM_BadFormat, "Parameter 'client_id' is empty");
 
         Json::Value client_secret_json = JVgetRequired(cred_json, "client_secret", Json::stringValue);
         client_secret = client_secret_json.asString();
-        if (client_secret.size() == 0)
-            Throw(DRM_BadFormat, "Parameter 'client_secret' is empty");
 
     } catch(Exception &e) {
         if (e.getErrCode() != DRM_BadFormat)
