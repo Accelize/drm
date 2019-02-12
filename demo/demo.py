@@ -1,5 +1,11 @@
-# Usage on AWS F1: sudo LD_LIBRARY_PATH=/path/to/drmlib/so python3 demo.py
-# If make install has been done: sudo python3 demo.py
+#! /usr/bin/env python3
+# coding=utf-8
+"""
+Python Accelze DRM library demo
+
+Usage on AWS F1: sudo LD_LIBRARY_PATH=/path/to/drmlib/so ./demo.py
+If make install has been done: sudo ./demo.py
+"""
 
 import sys
 
