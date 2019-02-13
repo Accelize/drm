@@ -128,16 +128,22 @@ cdef class DrmManager:
             self._async_error_c))[0]
 
         # Instantiate object
+        cdef int return_code
         with nogil:
-            self._check_return_code(DrmManager_alloc(
+            return_code = DrmManager_alloc(
                 &self._drm_manager,
                 self._conf_file_path_c, self._cred_file_path_c,
                 self._read_register_p, self._write_register_p,
-                self._async_error_p, <void*>self))
+                self._async_error_p, <void*>self)
+        if return_code:
+            self._raise_exception(return_code)
 
     def __dealloc__(self):
+        cdef int return_code
         with nogil:
-            self._check_return_code(DrmManager_free(&self._drm_manager))
+            return_code = DrmManager_free(&self._drm_manager)
+        if return_code:
+            self._raise_exception(return_code)
 
     def activate(self, const bint resume_session_request=False):
         """
@@ -165,9 +171,12 @@ cdef class DrmManager:
                 False and a pending session is found, close it and create a new
                 one. Default to False.
         """
+        cdef int return_code
         with nogil:
-            self._check_return_code(DrmManager_activate(
-                self._drm_manager, resume_session_request))
+            return_code = DrmManager_activate(
+                self._drm_manager, resume_session_request)
+        if return_code:
+            self._raise_exception(return_code)
 
     def deactivate(self, const bint pause_session_request=False):
         """
@@ -186,9 +195,12 @@ cdef class DrmManager:
                 open for later usage. Otherwise, the current session is closed.
                 Default to False.
         """
+        cdef int return_code
         with nogil:
-            self._check_return_code(DrmManager_deactivate(
-                self._drm_manager, pause_session_request))
+            return_code = DrmManager_deactivate(
+                self._drm_manager, pause_session_request)
+        if return_code:
+            self._raise_exception(return_code)
 
     def set(self, **values):
         """
@@ -201,9 +213,12 @@ cdef class DrmManager:
         """
         values_json = _dumps(values).encode()
         cdef char* json_in = values_json
+
+        cdef int return_code
         with nogil:
-            self._check_return_code(DrmManager_set_json_string(
-                self._drm_manager, json_in))
+            return_code = DrmManager_set_json_string(self._drm_manager, json_in)
+        if return_code:
+            self._raise_exception(return_code)
 
     def get(self, *keys):
         """
@@ -219,15 +234,20 @@ cdef class DrmManager:
         keys_json = _dumps({key: None for key in keys}).encode()
         cdef char* json_in = keys_json
         cdef char* json_out
+
+        cdef int return_code
         with nogil:
-             self._check_return_code(DrmManager_get_json_string(
-                 self._drm_manager, json_in, &json_out))
+             return_code = DrmManager_get_json_string(
+                 self._drm_manager, json_in, &json_out)
+        if return_code:
+            self._raise_exception(return_code)
+
         items = _loads(json_out)
         if len(keys) > 1:
             return items
         return items[keys[0]]
 
-    cdef inline void _check_return_code(self, const int return_code) nogil:
+    def _raise_exception(self, return_code):
         """
         Raise exception based on return code (if not equal 0)
 
@@ -237,11 +257,9 @@ cdef class DrmManager:
         Raises:
             accelize_drm.exceptions.DrmException subclass: DRM Exception.
         """
-        if return_code:
-            with gil:
-                try:
-                    # Get error message
-                    error_message = self.get('strerror')
-                except RuntimeError:
-                    error_message = ''
-                _raise_from_error(error_message, error_code=return_code)
+        try:
+            # Get error message
+            error_message = self.get('strerror')
+        except RuntimeError:
+            error_message = ''
+        _raise_from_error(error_message, error_code=return_code)

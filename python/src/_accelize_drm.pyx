@@ -23,7 +23,7 @@ _ASYNC_ERROR_CFUNCTYPE = _CFUNCTYPE(_c_void_p, _c_char_p)
 _READ_REGISTER_CFUNCTYPE = _CFUNCTYPE(_c_int, _c_uint32, _POINTER(_c_uint32))
 _WRITE_REGISTER_CFUNCTYPE = _CFUNCTYPE(_c_int, _c_uint32, _c_uint32)
 
-cdef inline void _handle_exceptions(exception):
+def _handle_exceptions(exception):
     """
     Raise exception based on Cython converted C++ exception.
 
