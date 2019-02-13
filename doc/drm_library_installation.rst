@@ -427,6 +427,10 @@ Tests support following options:
 * **--library_verbosity**: Specify Accelize DRM library verbosity.
   Possibles values: ``0`` to ``5``. Default: ``4``.
 
+* **--disable_fpga_initialization**: Disable FPGA initialization.
+  Useful for Debugging with no hardware, but will make a majority of tests
+  fail.
+
 Running test on previously build environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

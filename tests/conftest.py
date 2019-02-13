@@ -35,6 +35,10 @@ def pytest_addoption(parser):
     parser.addoption(
         "--library_log_format", action="store", default='0',
         help='Specify "libaccelize_drm" log format')
+    parser.addoption(
+        "--disable_fpga_initialization", action="store_false",
+        help='Disable FPGA initialization. Useful for Debugging with no'
+             'hardware, but will make a majority of tests fail.')
 
 
 @pytest.fixture(scope='session')
@@ -109,7 +113,8 @@ def accelize_drm(pytestconfig):
         fpga_driver_cls.SLOT_ID = pytestconfig.getoption("fpga_slot_id")
 
     # Initialize FPGA
-    fpga_driver = fpga_driver_cls()
+    fpga_driver = fpga_driver_cls(
+        init_fpga=pytestconfig.getoption("disable_fpga_initialization"))
 
     # Store some values for access in tests
     _accelize_drm.pytest_build_environment = build_environment
