@@ -38,6 +38,9 @@ class FpgaDriver(_FpgaDriverBase):
         if fpga_pci_init():
             raise RuntimeError('Unable to initialize the "fpga_pci" library')
 
+        # Default FPGA handle
+        self._fpga_handle = _c_int(-1)  # PCI_BAR_HANDLE_INIT
+
         return fpga_library
 
     def _init_fpga(self):
@@ -51,6 +54,9 @@ class FpgaDriver(_FpgaDriverBase):
         if load_image.returncode:
             raise RuntimeError(load_image.stdout)
 
+        # Reset FPGA handle
+        self._fpga_handle = _c_int(-1)  # PCI_BAR_HANDLE_INIT
+
         # Attach FPGA
         fpga_pci_attach = self._fpga_library.fpga_pci_attach
         fpga_pci_attach.restype = _c_int  # return code
@@ -61,8 +67,6 @@ class FpgaDriver(_FpgaDriverBase):
             _c_uint32,  # flags
             _POINTER(_c_int)  # handle
         )
-
-        self._fpga_handle = _c_int(-1)  # PCI_BAR_HANDLE_INIT
 
         if fpga_pci_attach(self.SLOT_ID,
                            0,  # FPGA_APP_PF
