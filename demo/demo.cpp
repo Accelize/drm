@@ -548,7 +548,7 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const std::string& creden
     while (answer.compare("q") != 0) {
         ret = 0;
 
-        std::cout << "\nEnter your command ('h' or '?' for help)" << std::endl;
+        std::cout << "\nEnter your command ('h' or '?' for help): " << std::endl;
         getline(std::cin, answer);
 
         std::stringstream ss;

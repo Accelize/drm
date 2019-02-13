@@ -956,6 +956,12 @@ public:
           AsynchErrorCallback f_user_asynch_error )
         : Impl(conf_file_path, cred_file_path)
     {
+        if (!f_user_read_register)
+            Throw( DRM_BadArg, "Read function callback must not be NULL" );
+        if (!f_user_write_register)
+            Throw( DRM_BadArg, "Write function callback must not be NULL" );
+        if (!f_user_asynch_error)
+            Throw( DRM_BadArg, "Error function callback must not be NULL" );
         f_read_register = f_user_read_register;
         f_write_register = f_user_write_register;
         f_asynch_error = f_user_asynch_error;

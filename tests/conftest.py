@@ -187,8 +187,7 @@ class ConfJson(_Json):
             },
             "webservice": {
                 "oauth2_url": f"{url}/o/token/",
-                "metering_url": f"{url}/auth/metering/genlicense/",
-                "minimum_license_duration": 60
+                "metering_url": f"{url}/auth/metering/genlicense/"
             }
         })
 

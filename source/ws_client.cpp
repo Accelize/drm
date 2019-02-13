@@ -245,7 +245,7 @@ Json::Value DrmWSClient::getLicense(const Json::Value& json_req, std::chrono::st
 
     std::string token = getOAuth2token(deadline);
 
-    Debug("json_req = ", json_req.toStyledString());
+    Debug("Web Service JSON request:\n", json_req.toStyledString());
 
     CurlEasyPost req;
 
@@ -280,7 +280,8 @@ Json::Value DrmWSClient::getLicense(const Json::Value& json_req, std::chrono::st
     Json::Reader reader;
     Json::Value json_resp;
     reader.parse(resp, json_resp);
-    Debug2("json_resp=", json_resp.toStyledString());
+
+    Debug( "Web Service JSON response:\n", json_resp.toStyledString() );
 
     // Check for error with details
     if(resp_code == 560) { /*560 : Custom License generation temporary issue*/

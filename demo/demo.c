@@ -537,7 +537,7 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFil
     while (strcmp(answer, "q") != 0) {
         ret = 0;
 
-        printf("\nEnter your command ('h' or '?' for help)\n");
+        printf("\nEnter your command ('h' or '?' for help): \n");
         scanf("%s" , answer) ;
 
         if ( (answer[0] == 'h') || (answer[0] == '?')) {
