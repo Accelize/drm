@@ -175,6 +175,9 @@ class ConfJson(_Json):
             "licensing": {
                 "url": url,
             },
+            "drm": {
+                "frequency_mhz": 125
+            },
 
             # 1.X.X API compatibility
             # TODO: Remove once expired
