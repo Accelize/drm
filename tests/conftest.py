@@ -134,6 +134,7 @@ class _Json:
         self._path = str(tmpdir.join(name))
         self._content = content
         self._initial_content = content
+        self.save()
 
     def __setitem__(self, key, value):
         self._content[key] = value
