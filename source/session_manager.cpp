@@ -87,7 +87,7 @@ protected:
 
     std::string mLastErrorMsg;
 
-    bool mSecurityStop = true;
+    bool mSecurityStop;
 
     //composition
     std::unique_ptr<DrmWSClient> mWsClient;
@@ -102,7 +102,6 @@ protected:
     // Parameters
     std::string mConfFilePath;
     std::string mCredFilePath;
-    std::chrono::seconds minimum_license_duration;
 
     // Node-Locked parameters
     std::string mNodeLockLicenseDirPath;
@@ -150,7 +149,7 @@ protected:
         Json::Reader reader;
         Json::Value conf_json;
 
-        mSecurityStop = true;
+        mSecurityStop = false;
 
         mLicenseCounter = 0;
 
@@ -174,7 +173,7 @@ protected:
             Json::Value license_type_json = JVgetOptional(conf_drm, "mode", Json::stringValue);
             if ( !license_type_json.empty() ) {
                 std::string licType = license_type_json.asString();
-                if ( licType .compare("nodelocked") == 0 ) {
+                if ( licType.compare("nodelocked") == 0 ) {
                 // If this is a node-locked license, get the license path
                 Json::Value license_dir_json = JVgetOptional(conf_drm, "license_dir", Json::stringValue);
                 if (license_dir_json.empty())
@@ -212,9 +211,6 @@ protected:
             std::bind(&DrmManager::Impl::writeDrmRegister, this, std::placeholders::_1, std::placeholders::_2 )
         ));
 
-        // Check compatibility of the DRM Version with Algodone version
-        checkCompatibilityWithDRM();
-
         // Save header information
         mHeaderJsonRequest = getMeteringHeader();
 
@@ -232,7 +228,7 @@ protected:
         struct stat info;
         if ( stat( dir_path.c_str(), &info ) != 0 )
             return false;
-        if(info.st_mode & S_IFDIR)
+        if ( info.st_mode & S_IFDIR )
             return true;
         return false;
     }
@@ -295,9 +291,7 @@ protected:
     }
 
     // Check compatibility of the DRM Version with Algodone version
-    void checkCompatibilityWithDRM() {
-        std::string drmVersion;
-        checkDRMCtlrRet( getDrmController().extractDrmVersion( drmVersion ) );
+    void checkDrmCompatibility( const std::string& drmVersion) {
         uint32_t drmVersionNum = DrmControllerLibrary::DrmControllerDataConverter::hexStringToBinary(drmVersion)[0];
         std::string drmVersionDot = DrmControllerLibrary::DrmControllerDataConverter::binaryToVersionString(drmVersionNum);
         uint8_t drmMajor = (drmVersionNum >> 16) & 0xFF;
@@ -376,11 +370,11 @@ protected:
         return ss.str();
     }
 
-    Json::Value getJsonFromString( const std::string json_string ) {
+    Json::Value getJsonFromString( const std::string& json_string ) {
         Json::Value json_object;
         Json::Reader reader;
         if ( !reader.parse( json_string, json_object ) )
-            Throw(DRM_BadFormat, "Cannot parse JSON string: ", reader.getFormattedErrorMessages());
+            Throw(DRM_BadFormat, "Cannot parse JSON string:\n", json_string, "\nBecause: ", reader.getFormattedErrorMessages());
         return json_object;
     }
 
@@ -399,7 +393,7 @@ protected:
         checkDRMCtlrRet( getDrmController().asynchronousExtractMeteringFile( numberOfDetectedIps, saasChallenge, meteringFile ) );
         std::string meteringDataStr = meteringFile[2].substr(16, 16);
         errno = 0;
-        meteringData = strtoull(meteringDataStr.c_str(), NULL, 16);
+        meteringData = strtoull(meteringDataStr.c_str(), nullptr, 16);
         if (errno)
             Throw(DRM_BadUsage, "Could not convert string '", meteringDataStr, "' to unsigned long long.");
         return meteringData;
@@ -446,6 +440,9 @@ protected:
 
         // Get information from DRM Controller
         getDesignInfo(drmVersion, dna, vlnvFile, mailboxReadOnly);
+
+        // Check compatibility of the DRM Version with Algodone version
+        checkDrmCompatibility( drmVersion );
 
         // Fulfill DRM section
         json_output["drmlibVersion"] = getApiVersion();
@@ -633,8 +630,8 @@ protected:
         getDesignInfo(drmVersion, dna, vlnvFile, mailboxReadOnly);
         ss << dna;
         ss << drmVersion;
-        for(unsigned int i=0; i<vlnvFile.size(); i++)
-            ss << vlnvFile[i];
+        for(const std::string& vlnv: vlnvFile)
+            ss << vlnv;
 
         return computeHash( ss.str() );
     }
@@ -971,6 +968,7 @@ public:
             stopSession();
         } else {
             Debug( "Explicitly not stopping session from destructor" );
+            stopThread();
         }
     }
 
@@ -986,12 +984,15 @@ public:
                 installNodelockedLicense();
                 return;
             }
+            mSecurityStop = true;
             bool isRunning = isSessionRunning();
             if ( isRunning && resume_session_request ) {
                 resumeSession();
             } else {
-                if ( isRunning && !resume_session_request )
+                if ( isRunning && !resume_session_request ) {
+                    Debug( "Session is already running but resume flag is ", resume_session_request );
                     stopSession();
+                }
                 startSession();
             }
 
@@ -1106,7 +1107,7 @@ public:
             Json::Value root;
             Json::Reader reader;
             if ( !reader.parse( json_string, root ) )
-                Throw(DRM_BadFormat, "Cannot parse JSON string: ", reader.getFormattedErrorMessages());
+                Throw(DRM_BadFormat, "Cannot parse JSON string:\n", json_string, "\nBecause: ", reader.getFormattedErrorMessages());
             get(root);
             Json::StyledWriter json_writer;
             json_string = json_writer.write(root);
@@ -1140,7 +1141,7 @@ public:
             Json::Value root;
             Json::Reader reader;
             if ( !reader.parse( json_string, root ) )
-                Throw(DRM_BadFormat, "Cannot parse JSON string: ", reader.getFormattedErrorMessages());
+                Throw(DRM_BadFormat, "Cannot parse JSON string:\n", json_string, "\nBecause: ", reader.getFormattedErrorMessages());
             set(root);
         CATCH_AND_THROW
     }
