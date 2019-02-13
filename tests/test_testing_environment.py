@@ -81,6 +81,9 @@ def test_fpga_driver(accelize_drm, cred_json, conf_json):
         driver.read_register_callback, driver.write_register_callback)
 
     # Tests driver callbacks by writing/reading random values in a register
+    if accelize_drm.pytest_fpga_initialized:
+        pytest.xfail('FPGA not initalized, unable to test read/write')
+
     for i in range(10):
         new_value = randint(0, 2**32 - 1)
         drm_manager.set(CUSTOM_FIELD=new_value)
