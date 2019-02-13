@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.12)
 
 project (demo)
 
@@ -13,6 +13,10 @@ set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 
 find_package(FPGAMGMTLIB REQUIRED)
 find_package(DRMLIB REQUIRED)
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(JSONCPP jsoncpp)
+include_directories(${JSONCPP_INCLUDEDIR})
 
 # demo C
 add_executable(demo_c demo.c)

@@ -109,8 +109,11 @@ def _raise_from_error(error_message, error_code=None):
         DRMException subclass: Exception
     """
     if error_code is None:
+        import re
         try:
-            error_code = int(error_message.split(' [errCode=')[1].strip('\n] '))
+            m = re.search(r'\[errCode=(\d+)\]', error_message)
+            if m is not None:
+                error_code = int(m.group(1))
         except IndexError:
             pass
     raise _ERROR_CODES.get(error_code, DRMException)(error_message.strip())
