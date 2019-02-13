@@ -51,12 +51,19 @@ class FpgaDriverBase:
     #: Accelize FPGA image/bitstream to use for test
     FPGA_IMAGE = None
 
-    def __init__(self):
+    def __init__(self, init_fpga=True):
         # Device and library handles
         self._fpga_handle = None
-        self._fpga_library = None
+        self._fpga_library = self._get_driver()
 
         # Initialize FPGA
+        if init_fpga:
+            self._init_fpga()
+
+    def init_fpga(self):
+        """
+        Initialize FPGA
+        """
         self._init_fpga()
 
     @property
@@ -78,6 +85,15 @@ class FpgaDriverBase:
             function: Callback
         """
         return self._get_write_register_callback()
+
+    @_abstractmethod
+    def _get_driver(self):
+        """
+        Get FPGA driver
+
+        Returns:
+            object: FPGA driver.
+        """
 
     @_abstractmethod
     def _init_fpga(self):

@@ -83,55 +83,59 @@ cdef class DrmManager:
             "accelize_drm.exceptions.DRMException" or its subclasses.
     """
 
-    cdef C_DrmManager* c_drm_manager
-    cdef object read_register_py_func
-    cdef object read_register_c_func
-    cdef object write_register_py_func
-    cdef object write_register_c_func
-    cdef object async_error_py_func
-    cdef object async_error_c_func
+    cdef C_DrmManager* _drm_manager
+    cdef object _read_register
+    cdef object _read_register_c
+    cdef ReadRegisterCallback _read_register_p
+    cdef object _write_register
+    cdef object _write_register_c
+    cdef WriteRegisterCallback _write_register_p
+    cdef object _async_error
+    cdef object _async_error_c
+    cdef AsynchErrorCallback _async_error_p
+    cdef string _conf_file_path
+    cdef string _cred_file_path
 
     def __cinit__(self, conf_file_path, cred_file_path,
                   read_register, write_register, async_error=None):
 
         # Handle python paths
-        cdef string conf_file_path_c = _fsencode(conf_file_path)
-        cdef string cred_file_path_c = _fsencode(cred_file_path)
+        self._conf_file_path = _fsencode(conf_file_path)
+        self._cred_file_path = _fsencode(cred_file_path)
 
         # Handle callbacks
-        self.read_register_py_func = read_register
-        self.read_register_c_func = _READ_REGISTER_CFUNCTYPE(read_register)
-        cdef ReadRegisterCallback read_register_ptr = (
-            <ReadRegisterCallback*><size_t>_addressof(
-                self.read_register_c_func))[0]
+        self._read_register = read_register
+        self._read_register_c = _READ_REGISTER_CFUNCTYPE(read_register)
+        self._read_register_p = (<ReadRegisterCallback*><size_t>_addressof(
+            self._read_register_c))[0]
 
-        self.write_register_py_func = write_register
-        self.write_register_c_func  = _WRITE_REGISTER_CFUNCTYPE(write_register)
-        cdef WriteRegisterCallback write_register_ptr = (
-            <WriteRegisterCallback*><size_t>_addressof(
-                self.write_register_c_func))[0]
+        self._write_register = write_register
+        self._write_register_c  = _WRITE_REGISTER_CFUNCTYPE(write_register)
+        self._write_register_p = (<WriteRegisterCallback*><size_t>_addressof(
+            self._write_register_c))[0]
 
         if async_error is None:
             # Use default error callback
             async_error = _async_error_callback
-        self.async_error_py_func = async_error
-        self.async_error_c_func  = _ASYNC_ERROR_CFUNCTYPE(async_error)
-        cdef AsynchErrorCallback async_error_ptr = (
-            <AsynchErrorCallback*><size_t>_addressof(
-                self.async_error_c_func))[0]
+
+        self._async_error = async_error
+        self._async_error_c  = _ASYNC_ERROR_CFUNCTYPE(async_error)
+        self._async_error_p = (<AsynchErrorCallback*><size_t>_addressof(
+            self._async_error_c))[0]
 
         # Instantiate object
         try:
             with nogil:
-                self.c_drm_manager = new C_DrmManager(
-                    conf_file_path_c, cred_file_path_c,
-                    read_register_ptr, write_register_ptr, async_error_ptr)
+                self._drm_manager = new C_DrmManager(
+                    self._conf_file_path, self._cred_file_path,
+                    self._read_register_p, self._write_register_p,
+                    self._async_error_p)
         except RuntimeError as exception:
             _handle_exceptions(exception)
 
     def __dealloc__(self):
         with nogil:
-            del self.c_drm_manager
+            del self._drm_manager
 
     def activate(self, const bool resume_session_request=False):
         """
@@ -161,7 +165,7 @@ cdef class DrmManager:
         """
         try:
             with nogil:
-                self.c_drm_manager.activate(resume_session_request)
+                self._drm_manager.activate(resume_session_request)
         except RuntimeError as exception:
             _handle_exceptions(exception)
 
@@ -184,7 +188,7 @@ cdef class DrmManager:
         """
         try:
             with nogil:
-                self.c_drm_manager.deactivate(pause_session_request)
+                self._drm_manager.deactivate(pause_session_request)
         except RuntimeError as exception:
             _handle_exceptions(exception)
 
@@ -201,7 +205,7 @@ cdef class DrmManager:
         cdef string json_string = values_json
         try:
             with nogil:
-                self.c_drm_manager.set(json_string)
+                self._drm_manager.set(json_string)
         except RuntimeError as exception:
             _handle_exceptions(exception)
 
@@ -222,7 +226,7 @@ cdef class DrmManager:
         cdef string json_string = keys_json
         try:
             with nogil:
-                self.c_drm_manager.get(json_string)
+                self._drm_manager.get(json_string)
         except RuntimeError as exception:
             _handle_exceptions(exception)
 

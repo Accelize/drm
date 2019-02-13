@@ -35,6 +35,10 @@ def pytest_addoption(parser):
     parser.addoption(
         "--library_log_format", action="store", default='0',
         help='Specify "libaccelize_drm" log format')
+    parser.addoption(
+        "--disable_fpga_initialization", action="store_false",
+        help='Disable FPGA initialization. Useful for Debugging with no'
+             'hardware, but will make a majority of tests fail.')
 
 
 @pytest.fixture(scope='session')
@@ -109,7 +113,8 @@ def accelize_drm(pytestconfig):
         fpga_driver_cls.SLOT_ID = pytestconfig.getoption("fpga_slot_id")
 
     # Initialize FPGA
-    fpga_driver = fpga_driver_cls()
+    init_fpga = pytestconfig.getoption("disable_fpga_initialization")
+    fpga_driver = fpga_driver_cls(init_fpga=init_fpga)
 
     # Store some values for access in tests
     _accelize_drm.pytest_build_environment = build_environment
@@ -117,6 +122,7 @@ def accelize_drm(pytestconfig):
     _accelize_drm.pytest_backend = backend
     _accelize_drm.pytest_fpga_driver = fpga_driver
     _accelize_drm.pytest_lib_verbosity = verbosity
+    _accelize_drm.pytest_fpga_initialized = init_fpga
 
     return _accelize_drm
 
@@ -128,6 +134,7 @@ class _Json:
         self._path = str(tmpdir.join(name))
         self._content = content
         self._initial_content = content
+        self.save()
 
     def __setitem__(self, key, value):
         self._content[key] = value

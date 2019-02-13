@@ -22,19 +22,28 @@ class FpgaDriver(_FpgaDriverBase):
     #: Accelize AGFI to use for test
     FPGA_IMAGE = 'agfi-03be02f29cd7e466e'
 
-    def _init_fpga(self):
+    def _get_driver(self):
         """
-        Initialize FPGA
+        Get FPGA driver
+
+        Returns:
+            ctypes.CDLL: FPGA driver.
         """
         # Load AWS FPGA library
         # See AWS FPGA SDK: https://github.com/aws/aws-fpga
-        self._fpga_library = _cdll.LoadLibrary("libfpga_mgmt.so")
+        fpga_library = _cdll.LoadLibrary("libfpga_mgmt.so")
 
-        fpga_pci_init = self._fpga_library.fpga_pci_init
+        fpga_pci_init = fpga_library.fpga_pci_init
         fpga_pci_init.restype = _c_int  # return code
         if fpga_pci_init():
             raise RuntimeError('Unable to initialize the "fpga_pci" library')
 
+        return fpga_library
+
+    def _init_fpga(self):
+        """
+        Initialize FPGA
+        """
         # Load FPGA image
         load_image = _run(['fpga-load-local-image', f'-S {self.SLOT_ID}', '-I',
                            self.FPGA_IMAGE], stderr=_STDOUT, stdout=_PIPE,

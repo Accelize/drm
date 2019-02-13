@@ -70,24 +70,29 @@ cdef class DrmManager:
             "accelize_drm.exceptions.DRMException" or its subclasses.
     """
 
-    cdef C_DrmManager*c_drm_manager
-    cdef object read_register_py_func
-    cdef object read_register_c_func
-    cdef object write_register_py_func
-    cdef object write_register_c_func
-    cdef object async_error_py_func
-    cdef object async_error_c_func
-    cdef object conf_file_path
-    cdef object cred_file_path
+    cdef C_DrmManager* _drm_manager
+    cdef object _read_register
+    cdef object _read_register_c
+    cdef ReadRegisterCallback _read_register_p
+    cdef object _write_register
+    cdef object _write_register_c
+    cdef WriteRegisterCallback _write_register_p
+    cdef object _async_error
+    cdef object _async_error_c
+    cdef AsynchErrorCallback _async_error_p
+    cdef object _conf_file_path
+    cdef char* _conf_file_path_c
+    cdef object _cred_file_path
+    cdef char* _cred_file_path_c
 
     def __cinit__(self, conf_file_path, cred_file_path, read_register,
                   write_register, async_error=None):
 
         # Handle python paths
-        self.conf_file_path = _fsencode(conf_file_path)
-        cdef char* conf_file_path_c = self.conf_file_path
-        self.cred_file_path = _fsencode(cred_file_path)
-        cdef char* cred_file_path_c = self.cred_file_path
+        self._conf_file_path = _fsencode(conf_file_path)
+        self._conf_file_path_c = self._conf_file_path
+        self._cred_file_path = _fsencode(cred_file_path)
+        self._cred_file_path_c = self._cred_file_path
 
         # Handle callbacks
 
@@ -95,22 +100,19 @@ cdef class DrmManager:
             """read_register with "user_p" support"""
             return read_register(register_offset, returned_data)
 
-        self.read_register_py_func = (read_register_c, read_register)
-        self.read_register_c_func = _READ_REGISTER_CFUNCTYPE(read_register_c)
-        cdef ReadRegisterCallback read_register_ptr = (
-            <ReadRegisterCallback*><size_t>_addressof(
-                self.read_register_c_func))[0]
+        self._read_register = (read_register_c, read_register)
+        self._read_register_c = _READ_REGISTER_CFUNCTYPE(read_register_c)
+        self._read_register_p = (<ReadRegisterCallback*><size_t>_addressof(
+            self._read_register_c))[0]
 
         def write_register_c(register_offset, returned_data, user_p):
             """write_register with "user_p" support"""
             return write_register(register_offset, returned_data)
 
-        self.write_register_py_func = (write_register_c, write_register)
-        self.write_register_c_func  = _WRITE_REGISTER_CFUNCTYPE(
-            write_register_c)
-        cdef WriteRegisterCallback write_register_ptr = (
-            <WriteRegisterCallback*><size_t>_addressof(
-                self.write_register_c_func))[0]
+        self._write_register = (write_register_c, write_register)
+        self._write_register_c  = _WRITE_REGISTER_CFUNCTYPE(write_register_c)
+        self._write_register_p = (<WriteRegisterCallback*><size_t>_addressof(
+            self._write_register_c))[0]
 
         if async_error is None:
             # Use default error callback
@@ -120,22 +122,22 @@ cdef class DrmManager:
             """error_message with "user_p" support"""
             return async_error(error_message)
 
-        self.async_error_py_func = (async_error_c, async_error)
-        self.async_error_c_func  = _ASYNC_ERROR_CFUNCTYPE(async_error_c)
-        cdef AsynchErrorCallback async_error_ptr = (
-            <AsynchErrorCallback*><size_t>_addressof(
-                self.async_error_c_func))[0]
+        self._async_error = (async_error_c, async_error)
+        self._async_error_c  = _ASYNC_ERROR_CFUNCTYPE(async_error_c)
+        self._async_error_p = (<AsynchErrorCallback*><size_t>_addressof(
+            self._async_error_c))[0]
 
         # Instantiate object
         with nogil:
             self._check_return_code(DrmManager_alloc(
-                &self.c_drm_manager, conf_file_path_c, cred_file_path_c,
-                read_register_ptr, write_register_ptr, async_error_ptr,
-                <void*>self))
+                &self._drm_manager,
+                self._conf_file_path_c, self._cred_file_path_c,
+                self._read_register_p, self._write_register_p,
+                self._async_error_p, <void*>self))
 
     def __dealloc__(self):
         with nogil:
-            self._check_return_code(DrmManager_free(&self.c_drm_manager))
+            self._check_return_code(DrmManager_free(&self._drm_manager))
 
     def activate(self, const bint resume_session_request=False):
         """
@@ -165,7 +167,7 @@ cdef class DrmManager:
         """
         with nogil:
             self._check_return_code(DrmManager_activate(
-                self.c_drm_manager, resume_session_request))
+                self._drm_manager, resume_session_request))
 
     def deactivate(self, const bint pause_session_request=False):
         """
@@ -186,7 +188,7 @@ cdef class DrmManager:
         """
         with nogil:
             self._check_return_code(DrmManager_deactivate(
-                self.c_drm_manager, pause_session_request))
+                self._drm_manager, pause_session_request))
 
     def set(self, **values):
         """
@@ -201,7 +203,7 @@ cdef class DrmManager:
         cdef char* json_in = values_json
         with nogil:
             self._check_return_code(DrmManager_set_json_string(
-                self.c_drm_manager, json_in))
+                self._drm_manager, json_in))
 
     def get(self, *keys):
         """
@@ -219,7 +221,7 @@ cdef class DrmManager:
         cdef char* json_out
         with nogil:
              self._check_return_code(DrmManager_get_json_string(
-                 self.c_drm_manager, json_in, &json_out))
+                 self._drm_manager, json_in, &json_out))
         items = _loads(json_out)
         if len(keys) > 1:
             return items

@@ -66,3 +66,25 @@ def test_credentials(cred_json, conf_json):
     if not (200 <= response.status < 300):
         pytest.fail(response.read().decode())
     assert loads(response.read()).get('access_token')
+
+
+def test_fpga_driver(accelize_drm, cred_json, conf_json):
+    """
+    Test the driver used to perform tests.
+    """
+    from random import randint
+    driver = accelize_drm.pytest_fpga_driver
+
+    # Test DRM manager instantiation with driver
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path, cred_json.path,
+        driver.read_register_callback, driver.write_register_callback)
+
+    # Tests driver callbacks by writing/reading random values in a register
+    if accelize_drm.pytest_fpga_initialized:
+        pytest.xfail('FPGA not initalized, unable to test read/write')
+
+    for i in range(10):
+        new_value = randint(0, 2**32 - 1)
+        drm_manager.set(CUSTOM_FIELD=new_value)
+        assert drm_manager.get('CUSTOM_FIELD') == new_value
