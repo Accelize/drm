@@ -24,6 +24,7 @@ Following OS are tested by not officially supported by Accelize:
 
 * Debian Testing
 * Fedora (Last stable version)
+* Ubuntu Rolling release
 
 Installation from packages
 --------------------------
@@ -493,10 +494,11 @@ There is a full testing scenario that exists.
 This scenario performs following actions:
 
 * Build the library in ``debug``, ``release`` and/or ``install`` mode.
+* Get library for packages (``install`` mode only).
 * Run Both C and C++ backend tests.
 * Install libraries (``install`` mode only).
 * Generate documentation (except in ``debug`` mode).
-* Generade packages (``release`` mode only)
+* Generade and export packages (``release`` mode only).
 * Combine all tests coverage and generate Python/C/C++ coverage report
   (``debug`` mode only).
 
@@ -517,22 +519,40 @@ The ``--backend`` option si not supported because managed by tox.
 It is possible to reduce the scenario scope with the ``-e`` tox argument:
 
 .. code-block:: bash
-    :caption: Running Debug scenario only (with coverage)
+    :caption: Build in debug mode and run tests with coverage
 
     tox -e build-debug,cpp-debug,c-debug,coverage-debug -- --cred=~/my_application/cred.json
 
 Coverage reports can be found in the ``report`` directory in the tox debug build
-environment (By default: ``./.ini/debug/build/report``)
+environment (By default: ``./.tox/debug/build/report``)
 
 .. code-block:: bash
-    :caption: Running Release scenario only
+    :caption: Build and run tests
 
     tox -e build-release,cpp-release,c-release -- --cred=~/my_application/cred.json
 
 .. code-block:: bash
-    :caption: Running Install scenario only
+    :caption: Build and export packages
+
+    # Specify packages export directory
+    export PACKAGES_DIR="~/packages"
+
+    # Build and export
+    tox -e build-release,export-release
+
+.. code-block:: bash
+    :caption: Build, install (using "make install") and run tests
 
     sudo tox -e build-install,cpp-install,c-install -- --cred=~/my_application/cred.json
+
+.. code-block:: bash
+    :caption: Install from packages and run tests
+
+    # Get packages, by example build from a previous release scenario
+    export PACKAGES_DIR="./.tox/release/build/packages"
+
+    # Install packages and run tests
+    sudo tox -e package-install,cpp-install,c-install -- --cred=~/my_application/cred.json
 
 Tox can performs some tests in parallel with the ``-p all`` option:
 
