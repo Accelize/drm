@@ -84,7 +84,6 @@ cdef class DrmManager:
     cdef char* _conf_file_path_c
     cdef object _cred_file_path
     cdef char* _cred_file_path_c
-    cdef bint _getting_value
 
     def __cinit__(self, conf_file_path, cred_file_path, read_register,
                   write_register, async_error=None):
@@ -127,9 +126,6 @@ cdef class DrmManager:
         self._async_error_c  = _ASYNC_ERROR_CFUNCTYPE(async_error_c)
         self._async_error_p = (<AsynchErrorCallback*><size_t>_addressof(
             self._async_error_c))[0]
-
-        # Initialize get status
-        self._getting_value = False
 
         # Instantiate object
         cdef int return_code
@@ -238,32 +234,24 @@ cdef class DrmManager:
             dict or object: If multiple keys are specified, return a dict with
                 parameters names as keys else return a single value.
         """
-        if self._getting_value:
-            # Avoid recursive calls when getting error message
-            return
-        self._getting_value = True
-
-        cdef char* json_in
+        keys_json = _dumps({key: None for key in keys}).encode()
+        cdef char* json_in = keys_json
         cdef char* json_out
+
         cdef int return_code
+        with nogil:
+             return_code = DrmManager_get_json_string(
+                 self._drm_manager, json_in, &json_out)
+        if return_code:
+            if keys == ['strerror']:
+                # Avoid recursive calls when getting error message
+                return ''
+            self._raise_exception(return_code)
 
-        try:
-            keys_json = _dumps({key: None for key in keys}).encode()
-            json_in = keys_json
-
-            with nogil:
-                 return_code = DrmManager_get_json_string(
-                     self._drm_manager, json_in, &json_out)
-            if return_code:
-                self._raise_exception(return_code)
-
-            items = _loads(json_out)
-            if len(keys) > 1:
-                return items
-            return items[keys[0]]
-
-        finally:
-            self._getting_value = False
+        items = _loads(json_out)
+        if len(keys) > 1:
+            return items
+        return items[keys[0]]
 
     def _raise_exception(self, return_code):
         """
@@ -277,9 +265,5 @@ cdef class DrmManager:
         """
         error_message = ''
         if self._drm_manager is not NULL:
-            # Get error message
-            try:
-                error_message = self.get('strerror') or ''
-            except RuntimeError:
-                pass
+            error_message = self.get('strerror') or ''
         _raise_from_error(error_message, error_code=return_code)
