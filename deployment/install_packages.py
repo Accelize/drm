@@ -18,9 +18,12 @@ def detect_package_manager():
         str: Package manager utility
     """
     for utility in ('apt', 'dnf', 'yum'):
-        if not _run([utility, '--help'],
-                    stdout=_DEVNULL, stderr=_DEVNULL).returncode:
-            return utility
+        try:
+            if not _run([utility, '--help'],
+                        stdout=_DEVNULL, stderr=_DEVNULL).returncode:
+                return utility
+        except FileNotFoundError:
+            continue
 
 
 def install_accelize_drm_library(packages_dir, quiet=False):
