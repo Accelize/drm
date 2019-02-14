@@ -19,7 +19,11 @@ cmake_minimum_required(VERSION 3.12)
 set(CPACK_PACKAGE_VERSION 2.0.0)
 
 ## Define package release number (Number of time this version was packaged)
-set(CPACK_PACKAGE_RELEASE 1)
+if (NOT CPACK_PACKAGE_RELEASE)
+    # Use 1 as default value if not defined with
+    # "-DCPACK_PACKAGE_RELEASE=value" command line argument.
+    set(CPACK_PACKAGE_RELEASE 1)
+endif()
 
 ## Note: Python package version is synchronised with CPACK_PACKAGE_VERSION
 
@@ -57,10 +61,8 @@ set(ABI_VERSION ${VERSION_MAJOR})
 
 ## Show version information
 message(STATUS "Library version : ${CPACK_PACKAGE_VERSION}")
-message(STATUS "Library ABI version : ${ABI_VERSION}")
-message(STATUS "Library Git commit : ${GIT_COMMIT}")
 message(STATUS "Library long version : ${PACKAGE_LONG_VERSION}")
-message(STATUS "Package release : ${CPACK_PACKAGE_RELEASE}")
+message(STATUS "Library Package version : ${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}")
 
 # CONFIGURE BUILD
 project(accelize/drm)
@@ -71,7 +73,7 @@ ProcessorCount(CPU_COUNT)
 set(CMAKE_BUILD_PARALLEL_LEVEL ${CPU_COUNT})
 
 ## Build type
-set(default_build_type "RelWithDebInfo")
+set(default_build_type "Release")
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
     set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
@@ -346,6 +348,9 @@ if (LSB_RELEASE)
             OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
     string(TOLOWER ${DIST_RELEASE} DIST_RELEASE)
 endif ()
+
+# Copy OS information with packages
+file(COPY /etc/os-release DESTINATION ${PACKAGE_OUTPUT})
 
 # RPM Packages
 find_program(PACKAGE_MANAGER_YUM yum)
