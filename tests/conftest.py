@@ -5,6 +5,44 @@ from os.path import realpath, isfile, expanduser
 from json import dump, load
 import pytest
 
+# Default values
+DEFAULT_FPGA_IMAGE = {
+    'aws_f1': 'agfi-03be02f29cd7e466e',
+}
+
+
+def get_default_conf_json(licensing_server_url):
+    """
+    Get default "conf.json" file content as python dict.
+
+    Args:
+        licensing_server_url (str): Licensing server URL.
+
+    Returns:
+        dict: "conf.json" content
+    """
+    return {
+        "licensing": {
+            "url": licensing_server_url,
+        },
+        "drm": {
+            "frequency_mhz": 125
+        },
+
+        # 1.X.X API compatibility
+        # TODO: Remove once expired
+        "design": {
+            "udid": "6AE1A700-0000-0000-0000-000000000001",
+            "boardType": "DRM_125"
+        },
+        "webservice": {
+            "oauth2_url": f"{licensing_server_url}/o/token/",
+            "metering_url": f"{licensing_server_url}/auth/metering/genlicense/"
+        }
+    }
+
+
+# Pytest configuration
 
 def pytest_addoption(parser):
     """
@@ -36,10 +74,13 @@ def pytest_addoption(parser):
         "--library_log_format", action="store", default='0',
         help='Specify "libaccelize_drm" log format')
     parser.addoption(
-        "--disable_fpga_initialization", action="store_false",
-        help='Disable FPGA initialization. Useful for Debugging with no'
-             'hardware, but will make a majority of tests fail.')
+        "--fpga_image", default="default",
+        help='Select FPGA image to use for program the FPGA. '
+             'By default, use default FPGA image for the selected driver. '
+             'Set to empty string to not program the FPGA.')
 
+
+# Pytest Fixtures
 
 @pytest.fixture(scope='session')
 def accelize_drm(pytestconfig):
@@ -100,29 +141,37 @@ def accelize_drm(pytestconfig):
         raise ValueError('Invalid value for "--backend"')
 
     # Get FPGA driver
-    from tests.fpga_drivers import get_driver
-    fpga_driver_cls = get_driver(pytestconfig.getoption("fpga_driver"))
-    fpga_driver_cls.DRM_CONTROLLER_BASE_ADDR = pytestconfig.getoption(
-        "drm_controller_base_address")
+    from python_fpga_drivers import get_driver
+    fpga_driver_name = pytestconfig.getoption("fpga_driver")
+    fpga_driver_cls = get_driver(fpga_driver_name)
 
+    # Get FPGA image
+    fpga_image = pytestconfig.getoption("fpga_image")
+    if fpga_image.lower() == 'default':
+        fpga_image = DEFAULT_FPGA_IMAGE.get(fpga_driver_name)
+
+    # Define or get FPGA Slot
     if environ.get('TOX_PARALLEL_ENV'):
         # Define FPGA slot for Tox parallel execution
-        fpga_driver_cls.SLOT_ID = 0 if backend == 'c' else 1
+        fpga_slot_id = 0 if backend == 'c' else 1
     else:
         # Use user defined slot
-        fpga_driver_cls.SLOT_ID = pytestconfig.getoption("fpga_slot_id")
+        fpga_slot_id = pytestconfig.getoption("fpga_slot_id")
 
     # Initialize FPGA
-    init_fpga = pytestconfig.getoption("disable_fpga_initialization")
-    fpga_driver = fpga_driver_cls(init_fpga=init_fpga)
+    fpga_driver = fpga_driver_cls(
+        fpga_slot_id=fpga_slot_id,
+        fpga_image=fpga_image,
+        drm_ctrl_base_addr=pytestconfig.getoption(
+            "drm_controller_base_address"))
 
     # Store some values for access in tests
     _accelize_drm.pytest_build_environment = build_environment
     _accelize_drm.pytest_build_type = build_type
     _accelize_drm.pytest_backend = backend
     _accelize_drm.pytest_fpga_driver = fpga_driver
+    _accelize_drm.pytest_fpga_image = fpga_image
     _accelize_drm.pytest_lib_verbosity = verbosity
-    _accelize_drm.pytest_fpga_initialized = init_fpga
 
     return _accelize_drm
 
@@ -171,37 +220,47 @@ class ConfJson(_Json):
     """conf.json file"""
 
     def __init__(self, tmpdir, url):
-        _Json.__init__(self, tmpdir, 'conf.json', {
-            "licensing": {
-                "url": url,
-            },
-            "drm": {
-                "frequency_mhz": 125
-            },
-
-            # 1.X.X API compatibility
-            # TODO: Remove once expired
-            "design": {
-                "udid": "6AE1A700-0000-0000-0000-000000000001",
-                "boardType": "DRM_125"
-            },
-            "webservice": {
-                "oauth2_url": f"{url}/o/token/",
-                "metering_url": f"{url}/auth/metering/genlicense/"
-            }
-        })
+        _Json.__init__(self, tmpdir, 'conf.json', get_default_conf_json(url))
 
 
 class CredJson(_Json):
     """cred.json file"""
 
     def __init__(self, tmpdir, path):
+        self._init_cref_path = path
         try:
             with open(path, 'rt') as cref_file:
                 cred = load(cref_file)
         except OSError:
             cred = dict(client_id='', secret_id='')
+
+        # Load from user specified cred.json
         _Json.__init__(self, tmpdir, 'cred.json', cred)
+
+        # Save current user as default
+        self._default_client_id = self._content['client_id']
+        self._default_client_secret = self._content['client_secret']
+
+    def set_user(self, user=None):
+        """
+        Set user to use.
+
+        Args:
+            user (str): User to use. If not specified, use default user.
+        """
+        if user is None:
+            self._content['client_id'] = self._default_client_id
+            self._content['client_secret'] = self._default_client_secret
+        else:
+            try:
+                self._content['client_id'] = self._content[
+                    f'client_id_{user}']
+                self._content['client_secret'] = self._content[
+                    f'client_secret_{user}']
+            except KeyError:
+                raise ValueError(
+                    f'User "{user}" not found in "{self._init_cref_path}"')
+        self.save()
 
 
 @pytest.fixture

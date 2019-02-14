@@ -6,7 +6,7 @@ AWS F1 driver for Accelize DRM Python library
 Example:
 
     # Get Driver
-    from tests.fpga_drivers import get_driver
+    from tests.python_fpga_drivers import get_driver
     driver = get_driver('aws_f1')()
 
     # Instantiate DrmManager with driver callbacks
@@ -39,31 +39,23 @@ class FpgaDriverBase:
     Base class for FPGA driver to use with accelize_drm.DrmManager.
 
     Args:
+        fpga_slot_id (int): FPGA slot ID.
+        fpga_image (str): FPGA image to use to program FPGA.
         drm_ctrl_base_addr (int): DRM Controller base address.
-        slot_id (int): FPGA slot ID.
     """
-    #: FPGA slot
-    SLOT_ID = 0
 
-    #: Acelize DRM Controller base address
-    DRM_CONTROLLER_BASE_ADDR = 0
+    def __init__(self, fpga_slot_id=0, fpga_image=None, drm_ctrl_base_addr=0):
+        self._fpga_slot_id = fpga_slot_id
+        self._fpga_image = fpga_image
+        self._drm_ctrl_base_addr = drm_ctrl_base_addr
 
-    #: Accelize FPGA image/bitstream to use for test
-    FPGA_IMAGE = None
-
-    def __init__(self, init_fpga=True):
         # Device and library handles
         self._fpga_handle = None
         self._fpga_library = self._get_driver()
 
         # Initialize FPGA
-        if init_fpga:
-            self._init_fpga()
-
-    def init_fpga(self):
-        """
-        Initialize FPGA
-        """
+        if fpga_image:
+            self._program_fpga(fpga_image)
         self._init_fpga()
 
     @property
@@ -96,10 +88,18 @@ class FpgaDriverBase:
         """
 
     @_abstractmethod
+    def _program_fpga(self, fpga_image):
+        """
+        Program the FPGA with the specified image.
+
+        Args:
+            fpga_image (str): FPGA image.
+        """
+
+    @_abstractmethod
     def _init_fpga(self):
         """
-        This function should initialize FPGA and performs checks to verify
-        everything is good with loaded design, driver, ...
+        Initialize FPGA handle with driver library.
         """
 
     @_abstractmethod

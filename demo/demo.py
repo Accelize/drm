@@ -15,7 +15,7 @@ import accelize_drm
 
 # Get Driver
 sys.path.insert(0, '..')
-from tests.fpga_drivers import get_driver
+from python_fpga_drivers import get_driver
 driver_class = get_driver('aws_f1')
 driver = driver_class()
 
