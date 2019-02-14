@@ -350,7 +350,11 @@ if (LSB_RELEASE)
 endif ()
 
 # Copy OS information with packages
-file(COPY /etc/os-release DESTINATION ${PACKAGE_OUTPUT})
+if(EXISTS /usr/lib/os-release)
+    file(COPY /usr/lib/os-release DESTINATION ${PACKAGE_OUTPUT})
+elseif(EXISTS /etc/os-release)
+    file(COPY /etc/os-release DESTINATION ${PACKAGE_OUTPUT})
+endif()
 
 # RPM Packages
 find_program(PACKAGE_MANAGER_YUM yum)
