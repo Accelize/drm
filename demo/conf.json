@@ -3,9 +3,8 @@
     "udid": "6AE1A700-0000-0000-0000-000000000001",
     "boardType": "DRM_125"
   },
-  "webservice": {
-    "oauth2_url": "https://master.metering.accelize.com/o/token/",
-    "metering_url": "https://master.metering.accelize.com/auth/metering/genlicense/"
+  "licensing": {
+    "url": "https://master.metering.accelize.com"
   },
   "drm": {
     "frequency_mhz": 125

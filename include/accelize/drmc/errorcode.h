@@ -34,6 +34,7 @@ typedef enum {
     DRM_BadFormat           = 00002, /**< Bad format of provided input or config file */
     DRM_ExternFail          = 00003, /**< Fail happened in an external library */
     DRM_BadUsage            = 00004, /**< Wrong usage of the DRM Library */
+    DRM_BadFrequency        = 00005, /**< Wrong value of the DRM frequency provided in the configuration file */
 
     DRM_WSRespError         = 10001, /**< A malformed response has been received from Accelize WebService */
     DRM_WSReqError          = 10002, /**< Failed during HTTP request to Accelize WebService */

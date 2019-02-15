@@ -870,12 +870,13 @@ int main(int argc, char **argv) {
         return -1;
     }
 
-    if (interactive_flag) {
-        ret = interactive_mode(&pci_bar_handle, credentialFile, configurationFile, noretry_flag);
-    }
-
-    else {
-        ret = batch_mode(&pci_bar_handle, credentialFile, configurationFile, noretry_flag, batch_cmd_list);
+    try {
+        if (interactive_flag)
+            ret = interactive_mode(&pci_bar_handle, credentialFile, configurationFile, noretry_flag);
+        else
+            ret = batch_mode(&pci_bar_handle, credentialFile, configurationFile, noretry_flag, batch_cmd_list);
+    } catch (const std::runtime_error& e) {
+        printf("Caught exception: %s\n", e.what());
     }
 
     return ret;

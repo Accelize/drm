@@ -2,7 +2,8 @@
 """Configure Pytest"""
 from os import environ
 from os.path import realpath, isfile, expanduser
-from json import dump, load
+from json import dump, load, dumps
+from copy import deepcopy
 import pytest
 
 # Default values
@@ -182,14 +183,20 @@ class _Json:
     def __init__(self, tmpdir, name, content):
         self._path = str(tmpdir.join(name))
         self._content = content
-        self._initial_content = content
+        self._initial_content = deepcopy(content)
         self.save()
+
+    def __delitem__(self, key):
+        del self._content[key]
 
     def __setitem__(self, key, value):
         self._content[key] = value
 
     def __getitem__(self, key):
         return self._content[key]
+
+    def __contains__(self, key):
+        return key in self._content
 
     @property
     def path(self):
@@ -212,7 +219,7 @@ class _Json:
         """
         Reset configuration to initial content.
         """
-        self._content = self._initial_content
+        self._content = deepcopy(self._initial_content)
         self.save()
 
 

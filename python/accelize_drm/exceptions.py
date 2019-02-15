@@ -31,6 +31,12 @@ class DRMBadUsage(DRMException):
     error_code = 4
 
 
+class DRMBadFrequency(DRMException):
+    """DRM frequency defined in configuration script differs from real one detected automatically by the DRMLib"""
+    #: Error code
+    error_code = 5
+
+
 class DRMWSRespError(DRMException):
     """A malformed response has been received from Accelize WebService"""
     #: Error code

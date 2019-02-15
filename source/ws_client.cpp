@@ -19,7 +19,6 @@ limitations under the License.
 #include <list>
 #include <curl/curl.h>
 #include <chrono>
-#include <fstream>
 
 #include "log.h"
 #include "utils.h"
@@ -187,24 +186,20 @@ protected:
 
 DrmWSClient::DrmWSClient(const std::string &conf_file_path, const std::string &cred_file_path) {
 
-    Json::Reader reader;
     Json::Value conf_json;
     Json::Value cred_json;
 
-    parse_configuration(conf_file_path, reader, conf_json);
-    parse_configuration(cred_file_path, reader, cred_json);
+    parseConfiguration(conf_file_path, conf_json);
+    parseConfiguration(cred_file_path, cred_json);
 
     try {
-        Json::Value webservice_json = JVgetRequired(conf_json, "webservice", Json::objectValue);
+        Json::Value webservice_json = JVgetRequired(conf_json, "licensing", Json::objectValue);
         Debug2("Web service configuration: ", webservice_json.toStyledString());
 
-        Json::Value oauth2_json = JVgetRequired(webservice_json, "oauth2_url", Json::stringValue);
-        oauth2_url = oauth2_json.asString();
-        Debug2("oauth2_url=", oauth2_url);
-
-        Json::Value metering_json = JVgetRequired(webservice_json, "metering_url", Json::stringValue);
-        metering_url = metering_json.asString();
-        Debug2("metering_url=", metering_url);
+        std::string url = JVgetRequired(webservice_json, "url", Json::stringValue).asString();
+        oauth2_url = url + std::string("/o/token/");
+        metering_url = url + std::string("/auth/metering/genlicense/");
+        Debug("Licensing URL: ", url);
 
         default_request_timeout = std::chrono::seconds( JVgetOptional(webservice_json, "default_ws_request_timeout", Json::uintValue, 20).asUInt() );
         Debug2("default_request_timeout=", default_request_timeout.count());
@@ -229,12 +224,6 @@ DrmWSClient::DrmWSClient(const std::string &conf_file_path, const std::string &c
     }
 
     CurlSingleton::Init();
-}
-
-void DrmWSClient::parse_configuration(const std::string &conf_file_path, Json::Reader &reader, Json::Value &conf_json) {
-    std::ifstream conf_fd(conf_file_path);
-    if (!reader.parse(conf_fd, conf_json))
-        Throw(DRM_BadFormat, "Cannot parse ", conf_file_path, " : ", reader.getFormattedErrorMessages());
 }
 
 Json::Value DrmWSClient::getLicense(const Json::Value& json_req) {
@@ -296,14 +285,16 @@ Json::Value DrmWSClient::getLicense(const Json::Value& json_req, std::chrono::st
 }
 
 std::string DrmWSClient::getOAuth2token(std::chrono::steady_clock::time_point deadline) {
-    //Request token OAuth2
+
     CurlEasyPost req;
+
+    // Set headers of request
     req.setURL(oauth2_url);
     std::stringstream ss;
     ss << "client_id=" << client_id << "&client_secret=" << client_secret << "&grant_type=client_credentials";
     req.setPostFields(ss.str());
 
-    Debug2("Starting OAuth2 token request");
+    Debug( "Starting OAuth2 token request to url: ", oauth2_url );
 
     std::string resp;
     long resp_code = req.perform(&resp, deadline);
