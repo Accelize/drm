@@ -8,7 +8,7 @@ import pytest
 
 # Default values
 DEFAULT_FPGA_IMAGE = {
-    'aws_f1': 'agfi-03be02f29cd7e466e',
+    'aws_f1': 'agfi-06938e283466fc386',
 }
 
 
