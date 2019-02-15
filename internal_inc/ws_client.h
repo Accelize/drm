@@ -28,9 +28,9 @@ namespace DRM {
  get license and send metering data*/
 class DrmWSClient {
 protected:
-    std::string oauth2_url;
     std::string client_id;
     std::string client_secret;
+    std::string oauth2_url;
     std::string metering_url;
     std::chrono::seconds default_request_timeout;
 

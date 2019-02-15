@@ -146,7 +146,6 @@ protected:
     Impl( const std::string& conf_file_path,
           const std::string& cred_file_path )
     {
-        Json::Reader reader;
         Json::Value conf_json;
 
         mSecurityStop = false;
@@ -156,49 +155,41 @@ protected:
         mConfFilePath = conf_file_path;
         mCredFilePath = cred_file_path;
 
-        parseConfiguration(conf_file_path, reader, conf_json);
+        parseConfiguration(conf_file_path, conf_json);
 
         try {
 
-        // Design configuration
-        Json::Value conf_design = JVgetOptional(conf_json, "design", Json::objectValue);
-        if (!conf_design.empty()) {
-            mUDID = JVgetOptional(conf_design, "udid", Json::stringValue, "").asString();
-            mBoardType = JVgetOptional(conf_design, "boardType", Json::stringValue, "").asString();
-        }
-
-        // DRM configuration
-            Json::Value conf_drm = JVgetRequired(conf_json, "drm", Json::objectValue);
-            // Get DRM license type
-            Json::Value license_type_json = JVgetOptional(conf_drm, "mode", Json::stringValue);
-            if ( !license_type_json.empty() ) {
-                std::string licType = license_type_json.asString();
-                if ( licType.compare("nodelocked") == 0 ) {
-                // If this is a node-locked license, get the license path
-                Json::Value license_dir_json = JVgetOptional(conf_drm, "license_dir", Json::stringValue);
-                if (license_dir_json.empty())
-                    Throw(DRM_BadFormat, "Missing parameter 'license_dir' in crendential file ", cred_file_path);
-                mNodeLockLicenseDirPath = license_dir_json.asString();
-                mLicenseType = LicenseType::NODE_LOCKED;
-                Debug("Detected Node-locked license");
-                return;
+            // Design configuration
+            Json::Value conf_design = JVgetOptional( conf_json, "design", Json::objectValue );
+            if (!conf_design.empty()) {
+                mUDID = JVgetOptional( conf_design, "udid", Json::stringValue, "" ).asString();
+                mBoardType = JVgetOptional( conf_design, "boardType", Json::stringValue, "" ).asString();
             }
-                Debug("License mode in configuration file is: ", licType);
-        }
-        Debug("Detected floating/metered license");
-            // Get DRM frequency
-            Json::Value drm_frequency_json = JVgetRequired(conf_drm, "frequency_mhz", Json::intValue);
-            mFrequencyInit = drm_frequency_json.asUInt();
-            mFrequencyCurr = mFrequencyInit;
+
+            // Licensing configuration
+            Json::Value conf_licensing = JVgetRequired( conf_json, "licensing", Json::objectValue );
+            // Get licensing mode
+            bool is_nodelocked = JVgetOptional( conf_licensing, "nodelocked", Json::booleanValue, false ).asBool();
+            if ( is_nodelocked ) {
+                // If this is a node-locked license, get the license path
+                mNodeLockLicenseDirPath = JVgetRequired( conf_licensing, "license_dir", Json::stringValue ).asString();
+                mLicenseType = LicenseType::NODE_LOCKED;
+                Debug( "Detected Node-locked license" );
+            } else {
+                Debug( "Detected floating/metered license" );
+                // Get DRM frequency
+                Json::Value conf_drm = JVgetRequired( conf_json, "drm", Json::objectValue );
+                mFrequencyInit = JVgetRequired( conf_drm, "frequency_mhz", Json::uintValue ).asUInt();
+                mFrequencyCurr = mFrequencyInit;
+                // Instantiate Web Service client
+                mWsClient.reset( new DrmWSClient(conf_file_path, cred_file_path) );
+            }
 
         } catch(Exception &e) {
             if (e.getErrCode() != DRM_BadFormat)
                 throw;
             Throw(DRM_BadFormat, "Error in service configuration file '", conf_file_path, "': ", e.what());
         }
-
-        // Web Server
-        mWsClient.reset(new DrmWSClient(conf_file_path, cred_file_path));
     }
 
     void initDrmInterface() {
@@ -218,7 +209,8 @@ protected:
         if ( mLicenseType == LicenseType::NODE_LOCKED ) {
             // Check license directory exists
             if ( !dirExists( mNodeLockLicenseDirPath ) )
-                Throw( DRM_BadUsage, "License directory path '", mNodeLockLicenseDirPath, "' specified in configuration file '", mConfFilePath, "' is not existing in the file system");
+                Throw( DRM_BadArg, "License directory path '", mNodeLockLicenseDirPath,
+                        "' specified in configuration file '", mConfFilePath, "' is not existing on file system");
             // Create license request file
             createNodelockedLicenseRequestFile();
         }
@@ -231,16 +223,6 @@ protected:
         if ( info.st_mode & S_IFDIR )
             return true;
         return false;
-    }
-
-    void parseConfiguration(const std::string &file_path, Json::Reader &reader, Json::Value &json_value) {
-        std::ifstream conf_fd(file_path);
-        if (!conf_fd.good()) {
-            Throw(DRM_BadUsage, "Cannot find JSON file: ", file_path);
-        }
-        if(!reader.parse(conf_fd, json_value))
-            Throw(DRM_BadFormat, "Cannot parse ", file_path, " : ", reader.getFormattedErrorMessages());
-        conf_fd.close();
     }
 
     DrmControllerLibrary::DrmControllerOperations& getDrmController() {
@@ -297,9 +279,13 @@ protected:
         uint8_t drmMajor = (drmVersionNum >> 16) & 0xFF;
         uint8_t drmMinor = (drmVersionNum >> 8) & 0xFF;
         if (drmMajor < RETROCOMPATIBLITY_LIMIT_MAJOR) {
-            Throw(DRM_CtlrError, "This DRM Lib ", getApiVersion()," is not compatible with the DRM HDK version ", drmVersionDot,": To be compatible HDK version shall be > or equal to ", RETROCOMPATIBLITY_LIMIT_MAJOR,".",RETROCOMPATIBLITY_LIMIT_MINOR,".0");
+            Throw(DRM_CtlrError, "This DRM Lib ", getApiVersion()," is not compatible with the DRM HDK version ",
+                    drmVersionDot,": To be compatible HDK version shall be > or equal to ",
+                    RETROCOMPATIBLITY_LIMIT_MAJOR,".",RETROCOMPATIBLITY_LIMIT_MINOR,".0");
         } else if (drmMinor < RETROCOMPATIBLITY_LIMIT_MINOR) {
-            Throw(DRM_CtlrError, "This DRM Lib ", getApiVersion()," is not compatible with the DRM HDK version ", drmVersionDot,": To be compatible HDK version shall be > or equal to ", RETROCOMPATIBLITY_LIMIT_MAJOR,".",RETROCOMPATIBLITY_LIMIT_MINOR,".0");
+            Throw(DRM_CtlrError, "This DRM Lib ", getApiVersion()," is not compatible with the DRM HDK version ",
+                    drmVersionDot,": To be compatible HDK version shall be > or equal to ",
+                    RETROCOMPATIBLITY_LIMIT_MAJOR,".",RETROCOMPATIBLITY_LIMIT_MINOR,".0");
         }
         Debug("DRM Version = ", drmVersionDot);
     }
@@ -455,8 +441,15 @@ protected:
             json_output["vlnvFile"][i_str]["name"]    = std::string("x") + vlnvFile[i].substr(8,4);
             json_output["vlnvFile"][i_str]["version"] = std::string("x") + vlnvFile[i].substr(12,4);
         }
-        if ( mailboxReadOnly.size() )
-            json_output["product"] = getJsonFromString(mailboxReadOnly);
+        if ( mailboxReadOnly.size() ) {
+            try {
+                json_output["product"] = getJsonFromString(mailboxReadOnly);
+            } catch ( const Exception &e ) {
+                if (e.getErrCode() == DRM_BadFormat)
+                    Throw(DRM_BadFormat, "Failed to parse Read-Only Mailbox in DRM Controller");
+                throw;
+            }
+        }
         return json_output;
     }
 
@@ -513,7 +506,6 @@ protected:
         std::lock_guard<std::mutex> lk(mDrmControllerMutex);
         checkDRMCtlrRet( getDrmController().endSessionAndExtractMeteringFile( numberOfDetectedIps, saasChallenge, meteringFile ) );
         json_output["saasChallenge"] = saasChallenge;
-        //mSessionID = meteringFile[0].substr(0, 16);
         json_output["sessionId"] = mSessionID;
         json_output["drm_frequency"] = mFrequencyCurr;
         json_output["meteringFile"]  = std::accumulate(meteringFile.begin(), meteringFile.end(), std::string(""));
@@ -578,7 +570,8 @@ protected:
         uint8_t activationErrorCode;
         checkDRMCtlrRet( getDrmController().activate( licenseKey, activationDone, activationErrorCode ) );
         if( activationErrorCode ) {
-            Throw(DRM_CtlrError, "Failed to activate license on DRM controller, activationErr: 0x", std::hex, activationErrorCode, std::dec);
+            Throw(DRM_CtlrError, "Failed to activate license on DRM controller, activationErr: 0x",
+                    std::hex, activationErrorCode, std::dec);
         }
 
         // Load license timer
@@ -595,7 +588,8 @@ protected:
             uint32_t license_duration_sec = license_json["metering"]["timeoutSecond"].asUInt();
             mLicenseDuration = std::chrono::seconds( license_duration_sec );
 
-            Debug( "Set license #", mLicenseCounter, " of session ID ", mSessionID, " for a duration of ", license_duration_sec, " seconds" );
+            Debug( "Set license #", mLicenseCounter, " of session ID ", mSessionID, " for a duration of ",
+                    license_duration_sec, " seconds" );
         }
 
         if (getLogLevel() >= eLogLevel::DEBUG2) {
@@ -725,8 +719,9 @@ protected:
         double precisionError = 100.0 * abs(measuredFrequency  - mFrequencyInit) / mFrequencyCurr ;
         if ( precisionError >= mFrequencyPrecisionThreshold ) {
             mFrequencyCurr = measuredFrequency;
-            Warning("Detected DRM frequency (",mFrequencyCurr," MHz) differs from the value (",mFrequencyInit," MHz) defined in the configuration file '",
-                    mConfFilePath,"': From now on the considered frequency is ", mFrequencyCurr, " MHz");
+            Throw( DRM_BadFrequency, "Detected DRM frequency (",mFrequencyCurr," MHz) differs from the value (",
+                   mFrequencyInit," MHz) defined in the configuration file '",
+                   mConfFilePath,"': From now on the considered frequency is ", mFrequencyCurr, " MHz");
         } else {
             Debug("Detected frequency = ", measuredFrequency, " MHz, config frequency = ", mFrequencyInit,
                   " MHz: gap = ", precisionError, "%");
@@ -856,6 +851,7 @@ protected:
         }
         mThreadKeepAliveCondVar.notify_all();
         mThreadKeepAlive.get();
+        Debug( "Background thread stopped" );
     }
 
     void startSession() {
@@ -919,7 +915,7 @@ protected:
         // Send request and receive answer.
         Json::Value license_json = getDrmWSClient().getLicense( request_json );
         checkSessionID( license_json );
-        Info("Stopped metering session with session ID ", mSessionID, " and uploaded last metering data");
+        Info("Session ID ", mSessionID, " stopped and last metering data uploaded");
 
         /// Clear Session IS
         mSessionID = std::string("");
@@ -969,13 +965,15 @@ public:
     }
 
     ~Impl() {
-        if (mSecurityStop) {
-            Debug("Stopping session from destructor if running");
-            stopSession();
-        } else {
-            Debug( "Explicitly not stopping session from destructor" );
-            stopThread();
+        if ( isSessionRunning() ) {
+            if (mSecurityStop) {
+                Debug("Security stop triggered: stopping current session");
+                stopSession();
+            } else {
+                Debug("Security stop not triggered: current session is kept open");
+            }
         }
+        stopThread();
     }
 
     // Non copyable non movable as we create closure with "this"
@@ -1113,7 +1111,8 @@ public:
             Json::Value root;
             Json::Reader reader;
             if ( !reader.parse( json_string, root ) )
-                Throw(DRM_BadFormat, "Cannot parse JSON string:\n", json_string, "\nBecause: ", reader.getFormattedErrorMessages());
+                Throw(DRM_BadFormat, "Cannot parse JSON string argument provided to 'get' function:\n",
+                        json_string, "\nBecause: ", reader.getFormattedErrorMessages());
             get(root);
             Json::StyledWriter json_writer;
             json_string = json_writer.write(root);
@@ -1147,7 +1146,8 @@ public:
             Json::Value root;
             Json::Reader reader;
             if ( !reader.parse( json_string, root ) )
-                Throw(DRM_BadFormat, "Cannot parse JSON string:\n", json_string, "\nBecause: ", reader.getFormattedErrorMessages());
+                Throw(DRM_BadFormat, "Cannot parse JSON string argument provided to 'set' function:\n",
+                        json_string, "\nBecause: ", reader.getFormattedErrorMessages());
             set(root);
         CATCH_AND_THROW
     }

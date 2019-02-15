@@ -270,7 +270,7 @@ int write_drm_reg32( uint32_t offset, uint32_t value, void* user_p ) {
 
 /* Callback function for DRM library in case of asynchronous error during operation */
 void print_drm_error( const std::string errmsg, void* /*user_p*/ ) {
-    ERROR("%s", errmsg.c_str());
+    ERROR("From async callback: %s", errmsg.c_str());
 }
 
 
@@ -870,12 +870,13 @@ int main(int argc, char **argv) {
         return -1;
     }
 
-    if (interactive_flag) {
-        ret = interactive_mode(&pci_bar_handle, credentialFile, configurationFile, noretry_flag);
-    }
-
-    else {
-        ret = batch_mode(&pci_bar_handle, credentialFile, configurationFile, noretry_flag, batch_cmd_list);
+    try {
+        if (interactive_flag)
+            ret = interactive_mode(&pci_bar_handle, credentialFile, configurationFile, noretry_flag);
+        else
+            ret = batch_mode(&pci_bar_handle, credentialFile, configurationFile, noretry_flag, batch_cmd_list);
+    } catch (const std::runtime_error& e) {
+        printf("Caught exception: %s\n", e.what());
     }
 
     return ret;

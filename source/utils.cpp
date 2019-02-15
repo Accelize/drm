@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <fstream>
+
 #include "utils.h"
 #include "log.h"
 
@@ -33,6 +35,18 @@ std::ostream& operator<<(std::ostream& os, const Json::ValueType& type) {
         default: Unreachable( "Unsupported Jsoncpp ValueType" );
     }
     return os;
+}
+
+void parseConfiguration(const std::string &file_path, Json::Value &json_value) {
+    Json::Reader reader;
+    std::ifstream fh( file_path );
+    if ( !fh.good() ) {
+        Throw( DRM_BadArg, "Cannot find JSON file: ", file_path );
+    }
+    bool ret = reader.parse( fh, json_value );
+    fh.close();
+    if ( !ret  )
+        Throw( DRM_BadFormat, "Cannot parse ", file_path, " : ", reader.getFormattedErrorMessages() );
 }
 
 const Json::Value& JVgetRequired(const Json::Value& jval, const char* key, const Json::ValueType& type) {

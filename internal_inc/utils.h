@@ -28,6 +28,7 @@ namespace DRM {
 
 static const Json::Value nullJSValue = Json::Value{};
 
+void parseConfiguration(const std::string &file_path, Json::Value &json_value);
 const Json::Value& JVgetRequired(const Json::Value& jval, const char* key, const Json::ValueType& type);
 const Json::Value& JVgetOptional(const Json::Value& jval, const char* key, const Json::ValueType& type, const Json::Value& defaultValue = nullJSValue);
 

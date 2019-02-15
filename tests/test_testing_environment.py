@@ -83,5 +83,5 @@ def test_fpga_driver(accelize_drm, cred_json, conf_json):
     # Tests driver callbacks by writing/reading random values in a register
     for i in range(10):
         new_value = randint(0, 2**32 - 1)
-        drm_manager.set(CUSTOM_FIELD=new_value)
-        assert drm_manager.get('CUSTOM_FIELD') == new_value
+        drm_manager.set(custom_field=new_value)
+        assert drm_manager.get('custom_field') == new_value
