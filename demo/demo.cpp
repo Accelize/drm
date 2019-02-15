@@ -270,7 +270,7 @@ int write_drm_reg32( uint32_t offset, uint32_t value, void* user_p ) {
 
 /* Callback function for DRM library in case of asynchronous error during operation */
 void print_drm_error( const std::string errmsg, void* /*user_p*/ ) {
-    ERROR("%s", errmsg.c_str());
+    ERROR("From async callback: %s", errmsg.c_str());
 }
 
 
