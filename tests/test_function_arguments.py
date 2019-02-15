@@ -5,6 +5,8 @@ To run manually, move to the build directory and execute:
 
 import pytest
 import re
+import time
+
 
 def test_drm_manager_constructor_with_bad_arguments(accelize_drm, conf_json, cred_json):
     """Test errors when missing arguments are given to DRM Controller Constructor"""
@@ -306,32 +308,34 @@ def test_drm_manager_get_and_set_bad_arguments(accelize_drm, conf_json, cred_jso
     assert errCode == accelize_drm.exceptions.DRMBadArg.error_code
 
 
-@pytest.mark.skip
-def test_drm_manager_async_error_callback(accelize_drm, conf_json, cred_json):
+def test_drm_manager_async_error_callback(accelize_drm, async_handler, conf_json, cred_json):
     """Test asynchronous error callback has been called"""
 
     driver = accelize_drm.pytest_fpga_driver
 
-    async_message = ''
-    async_called = False
-
-    def asyn_error_handler(msg):
-        global async_message, async_called
-        async_message = msg
-        async_called = True
-
     # Test when no configuration file is given
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        asyn_error_handler
-    )
-    drm_manager.activate()
-    test_message = 'Test message'
-    drm_manager.set(call_async_error_callback=test_message)
-    time.sleep(1)
-    assert async_called
-    assert test_message == async_message
+    async_handler.reset()
+    try:
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback
+    #        async_handler.callback
+        )
+        drm_manager.activate()
+        time.sleep(1)
+        test_message = 'Test message'
+
+        drm_manager.set(trigger_async=test_message)
+    except Exception as e:
+        print("exc=", str(e))
+        assert e is None
+    except:
+        print('c'*100)
+
+    #assert async_handler.was_called, 'Asynchronous callback has not been called.'
+    #assert test_message in async_handler.message, 'Asynchronous callback has not received the correct message'
+    #assert async_handler.errcode == accelize_drm.exceptions.DRMLibDebug.error_code, 'Asynchronous callback has not received the correct error code'
+
 

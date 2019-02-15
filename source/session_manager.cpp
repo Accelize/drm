@@ -74,7 +74,7 @@ protected:
 
     enum class LicenseType: uint8_t {OTHERS=0, NODE_LOCKED};
 
-    std::map<LicenseType, std::string> mLicenseTypeString = {
+    std::map<LicenseType, std::string> LicenseTypeStringMap = {
             {LicenseType::OTHERS     , "Floating/Metering"},
             {LicenseType::NODE_LOCKED, "Node-Locked"}
     };
@@ -155,10 +155,10 @@ protected:
         mConfFilePath = conf_file_path;
         mCredFilePath = cred_file_path;
 
-        parseConfiguration(conf_file_path, conf_json);
+        // Parse configuration file
+        conf_json = parseConfiguration( conf_file_path );
 
         try {
-
             // Design configuration
             Json::Value conf_design = JVgetOptional( conf_json, "design", Json::objectValue );
             if (!conf_design.empty()) {
@@ -188,7 +188,7 @@ protected:
         } catch(Exception &e) {
             if (e.getErrCode() != DRM_BadFormat)
                 throw;
-            Throw(DRM_BadFormat, "Error in service configuration file '", conf_file_path, "': ", e.what());
+            Throw(DRM_BadFormat, "Error in configuration file '", conf_file_path, "': ", e.what());
         }
     }
 
@@ -1026,9 +1026,15 @@ public:
                 const ParameterKey key_id = findParameterKey( key_str );
                 switch(key_id) {
                     case ParameterKey::license_type: {
-                        std::string license_type_str = mLicenseTypeString[ mLicenseType ];
+                        std::string license_type_str = LicenseTypeStringMap[ mLicenseType ];
                         Debug("Get value of parameter '", key_str, "' (ID=", key_id, "): ", license_type_str);
                         json_value[key_str] = license_type_str;
+                        break;
+                    }
+                    case ParameterKey::license_duration: {
+                        uint32_t duration = mLicenseDuration.count();
+                        Debug("Get value of parameter '", key_str, "' (ID=", key_id, "): ", duration);
+                        json_value[key_str] = duration;
                         break;
                     }
                     case ParameterKey::num_activators: {
@@ -1131,7 +1137,16 @@ public:
                     case custom_field: {
                         uint32_t customField = (*it).asUInt();
                         setCustomField( customField );
-                        Debug("Set parameter '", key_str, "' (ID=", key_id, ") to value: ", customField);
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", customField );
+                        break;
+                    }
+                    case trigger_async: {
+                        key_str = it.key().asString();
+                        std::string custom_msg = (*it).asString();
+                        std::stringstream formatted_msg;
+                        formatted_msg << "[errorCode=" << DRM_ErrorCode::DRM_Debug << "] " << custom_msg;
+                        f_asynch_error( formatted_msg.str() );
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", formatted_msg.str() );
                         break;
                     }
                     default:

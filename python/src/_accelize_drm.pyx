@@ -118,8 +118,12 @@ cdef class DrmManager:
             # Use default error callback
             async_error = _async_error_callback
 
-        self._async_error = async_error
-        self._async_error_c  = _ASYNC_ERROR_CFUNCTYPE(async_error)
+        def async_error_c(error_message):
+            """error_message with "user_p" support"""
+            return async_error(str(error_message))
+
+        self._async_error = (async_error_c, async_error)
+        self._async_error_c  = _ASYNC_ERROR_CFUNCTYPE(async_error_c)
         self._async_error_p = (<AsynchErrorCallback*><size_t>_addressof(
             self._async_error_c))[0]
 

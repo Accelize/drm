@@ -79,6 +79,12 @@ class DRMLibAssert(DRMException):
     error_code = 90002
 
 
+class DRMLibDebug(DRMException):
+    """Assertion failed internally (Please contact Accelize)"""
+    #: Error code
+    error_code = 90003
+
+
 _ERROR_CODES = {}
 __all__ = ['DRMException']
 
@@ -100,7 +106,7 @@ def _async_error_callback(error_message):
     Raises:
         DRMException subclass: Exception
     """
-    _raise_from_error(error_message)
+    _raise_from_error(str(error_message))
 
 
 def _raise_from_error(error_message, error_code=None):

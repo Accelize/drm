@@ -44,7 +44,9 @@ typedef enum {
     DRM_CtlrError           = 20001, /**< An error happened on a command on the DRM controller */
 
     DRM_Fatal               = 90001, /**< Fatal error, unknown error (Please contact Accelize) */
-    DRM_Assert              = 90002  /**< Assertion failed internally (Please contact Accelize) */
+    DRM_Assert              = 90002, /**< Assertion failed internally (Please contact Accelize) */
+
+    DRM_Debug               = 90003  /**< Generated for debug and testing only */
 } DRM_ErrorCode;
 
 #ifdef  __cplusplus

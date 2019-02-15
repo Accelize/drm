@@ -186,11 +186,8 @@ protected:
 
 DrmWSClient::DrmWSClient(const std::string &conf_file_path, const std::string &cred_file_path) {
 
-    Json::Value conf_json;
-    Json::Value cred_json;
-
-    parseConfiguration(conf_file_path, conf_json);
-    parseConfiguration(cred_file_path, cred_json);
+    Json::Value conf_json = parseConfiguration( conf_file_path );
+    Json::Value cred_json = parseConfiguration( cred_file_path );
 
     try {
         Json::Value webservice_json = JVgetRequired(conf_json, "licensing", Json::objectValue);

@@ -4,6 +4,7 @@ from os import environ
 from os.path import realpath, isfile, expanduser
 from json import dump, load, dumps
 from copy import deepcopy
+from re import search
 import pytest
 
 # Default values
@@ -285,3 +286,25 @@ def cred_json(pytestconfig, tmpdir):
     """
     return CredJson(
         tmpdir, realpath(expanduser(pytestconfig.getoption("cred"))))
+
+
+class AsyncErrorHandler:
+    def __init__(self):
+        self.reset()
+    def reset(self):
+        self.message = ''
+        self.errcode = None
+        self.was_called = False
+    def callback(self, message):
+        self.was_called = True
+        self.message = message
+        m = search(r'\[errCode=(\d+)\]', self.message)
+        if m:
+            self.errcode = int(m.group(1))
+        else:
+            self.errcode = None
+
+@pytest.fixture
+def async_handler():
+    return AsyncErrorHandler()
+
