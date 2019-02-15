@@ -43,7 +43,7 @@ def install_accelize_drm_library(packages_dir, quiet=False):
             '-dev' not in package_file)]
 
     # Run command
-    if not quiet:
+    if quiet:
         run_kwargs = dict(stdout=_PIPE, stderr=_PIPE, universal_newlines=True)
     else:
         run_kwargs = dict()
