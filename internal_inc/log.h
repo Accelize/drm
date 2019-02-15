@@ -148,7 +148,6 @@ void logTrace(const char* level, const char* file, const unsigned long noline, A
 
 template <typename... Args>
 [[noreturn]] void Throw(DRM_ErrorCode errcode, Args&&... args ) {
-    //Error(stringConcat(std::forward<Args>( args )...));
     throw Exception(errcode, stringConcat(std::forward<Args>( args )...));
 }
 
