@@ -78,7 +78,7 @@ cdef class DrmManager:
             This function is called in case of asynchronous error during
             operation.
             The function needs to return None and accept following argument:
-            error_message (str). The function can't be a non static method.
+            error_message (bytes). The function can't be a non static method.
             If not specified, use default callback that raises
             "accelize_drm.exceptions.DRMException" or its subclasses.
     """
@@ -118,12 +118,8 @@ cdef class DrmManager:
             # Use default error callback
             async_error = _async_error_callback
 
-        def async_error_c(error_message):
-            """error_message with "user_p" support"""
-            return async_error(str(error_message))
-
-        self._async_error = (async_error_c, async_error)
-        self._async_error_c  = _ASYNC_ERROR_CFUNCTYPE(async_error_c)
+        self._async_error = async_error
+        self._async_error_c  = _ASYNC_ERROR_CFUNCTYPE(async_error)
         self._async_error_p = (<AsynchErrorCallback*><size_t>_addressof(
             self._async_error_c))[0]
 

@@ -32,7 +32,8 @@ class DRMBadUsage(DRMException):
 
 
 class DRMBadFrequency(DRMException):
-    """DRM frequency defined in configuration script differs from real one detected automatically by the DRMLib"""
+    """DRM frequency defined in configuration script differs from real one
+    detected automatically by the DRMLib"""
     #: Error code
     error_code = 5
 
@@ -80,7 +81,7 @@ class DRMLibAssert(DRMException):
 
 
 class DRMLibDebug(DRMException):
-    """Assertion failed internally (Please contact Accelize)"""
+    """Generated for debug and testing only"""
     #: Error code
     error_code = 90003
 
@@ -101,12 +102,12 @@ def _async_error_callback(error_message):
     Default Asynchronous errors callback that raise DRM exceptions.
 
     Args:
-        error_message (str): Error message.
+        error_message (bytes): Error message.
 
     Raises:
         DRMException subclass: Exception
     """
-    _raise_from_error(str(error_message))
+    _raise_from_error(error_message)
 
 
 def _raise_from_error(error_message, error_code=None):
@@ -114,12 +115,15 @@ def _raise_from_error(error_message, error_code=None):
     Get Exception from error code.
 
     Args:
-        error_message (str): Error message.
+        error_message (bytes or str): Error message.
         error_code (int): Error code.
 
     Raises:
         DRMException subclass: Exception
     """
+    if isinstance(error_message, bytes):
+        error_message = error_message.decode()
+
     if error_code is None:
         import re
         try:
