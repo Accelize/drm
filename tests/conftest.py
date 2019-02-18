@@ -2,7 +2,7 @@
 """Configure Pytest"""
 from os import environ
 from os.path import realpath, isfile, expanduser
-from json import dump, load, dumps
+from json import dump, load
 from copy import deepcopy
 import pytest
 

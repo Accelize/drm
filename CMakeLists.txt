@@ -470,7 +470,6 @@ endif ()
 option(TESTS "Generates tests files" OFF)
 if(TESTS)
     # Copy tests
-    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tests/ DESTINATION ${CMAKE_BINARY_DIR}/tests
-            FILES_MATCHING PATTERN "*.py")
+    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tests/ DESTINATION ${CMAKE_BINARY_DIR}/tests)
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tests/.coveragerc DESTINATION ${CMAKE_BINARY_DIR})
 endif()
