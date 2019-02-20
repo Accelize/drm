@@ -22,8 +22,8 @@ def test_changelog_and_version(accelize_drm):
     result = run(['git', 'describe', '--abbrev=0', '--exact-match', '--tags',
                   'HEAD'], stderr=PIPE, stdout=PIPE, universal_newlines=True)
 
-    if not result.returncode:
-        pytest.skip("No tag on head to check")
+    if result.returncode:
+        pytest.skip("Can only be checked on tagged git head")
 
     tag = result.stdout.strip()
 
