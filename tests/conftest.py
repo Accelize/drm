@@ -168,6 +168,7 @@ def accelize_drm(pytestconfig):
 
     # Store some values for access in tests
     _accelize_drm.pytest_build_environment = build_environment
+    _accelize_drm.pytest_build_source_dir = '@CMAKE_CURRENT_SOURCE_DIR@'
     _accelize_drm.pytest_build_type = build_type
     _accelize_drm.pytest_backend = backend
     _accelize_drm.pytest_fpga_driver = fpga_driver
