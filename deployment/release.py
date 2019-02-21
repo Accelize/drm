@@ -16,7 +16,7 @@ if __name__ == '__main__':
             'Release Accelize DRM library after performing verifications.')
         parser.add_argument(
             'version', help='Version to release in semantic versioning format.')
-        parser.add_argument('--force', '-f',
+        parser.add_argument('--force', '-f', action='store_true',
                             help='Force overwriting exiting release.')
         args = parser.parse_args()
 
