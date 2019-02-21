@@ -48,7 +48,8 @@ if (GIT)
             OUTPUT_VARIABLE GIT_COMMIT
             OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
     if (GIT_COMMIT)
-        set(PACKAGE_LONG_VERSION ${CPACK_PACKAGE_VERSION}.${GIT_COMMIT})
+        # Add as Semantic versioning build metadata
+        set(PACKAGE_LONG_VERSION ${CPACK_PACKAGE_VERSION}+${GIT_COMMIT})
     endif ()
 endif ()
 

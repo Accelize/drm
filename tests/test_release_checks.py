@@ -12,7 +12,7 @@ def test_changelog_and_version(accelize_drm):
     Checks if Version match with Git tag and if changelog is up to date.
     """
     if not accelize_drm.pytest_build_environment:
-        pytest.skip("Can only be checked in release environment")
+        pytest.skip("Can only be checked in build environment")
 
     # Ensure tags are pulled
     run(['git', 'fetch', '--tags', '--force'],
@@ -26,21 +26,26 @@ def test_changelog_and_version(accelize_drm):
         pytest.skip("Can only be checked on tagged git head")
 
     tag = result.stdout.strip()
+    version = tag.lstrip('v')
 
     # Checks tag format using library version
     lib_ver = accelize_drm.get_api_version()
-    assert tag == f"v{lib_ver.major}.{lib_ver.minor}.{lib_ver.revision}"
+    assert tag == f"v{lib_ver.version.split('+')[0]}"
 
-    # Check if changelog is up-to-date
+    # Check tag format match semantic versioning
 
-    if '-' in lib_ver.revision:
-        # Pre-releases don't need up to date changelog
-        return
+    if not fullmatch(r'^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)'
+                     r'(-(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)'
+                     r'(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?'
+                     r'(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$', version):
+        pytest.fail(f'"{version}" does not match semantic versioning format.')
 
-    changelog_path = f'{accelize_drm.pytest_build_source_dir}/CHANGELOG'
-    with open(changelog_path, 'wt') as changelog:
-        last_change = changelog.readline().strip()
+    # Check if changelog is up-to-date (Not for prereleases)
+    if not lib_ver.prerelease:
+        changelog_path = f'{accelize_drm.pytest_build_source_dir}/CHANGELOG'
+        with open(changelog_path, 'rt') as changelog:
+            last_change = changelog.readline().strip()
 
-    assert fullmatch(
-        r"\* [a-zA-Z]{3} [a-zA-Z]{3} [0-9]{2} [0-9]{4} Accelize " + tag,
-        last_change)
+        assert fullmatch(
+            r"\* [a-zA-Z]{3} [a-zA-Z]{3} [0-9]{2} [0-9]{4} Accelize " + tag,
+            last_change)

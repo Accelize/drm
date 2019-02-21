@@ -37,31 +37,43 @@ def test_get_api_version(accelize_drm):
 
     # Tests
     try:
-        # Versions without commit
-        accelize_drm.__version__ = '1.2.3'
-        accelize_drm._get_api_version = lambda: b'4.5.6'
+        # Short version
+        py_version = '1.2.3'
+        version = '4.5.6'
+        accelize_drm.__version__ = py_version
+        accelize_drm._get_api_version = lambda: version.encode()
         versions = accelize_drm.get_api_version()
         assert versions.py_major == 1
         assert versions.py_minor == 2
         assert versions.py_revision == 3
-        assert versions.py_commit == ''
+        assert versions.py_prerelease == ''
+        assert versions.py_build == ''
+        assert versions.py_version == py_version
         assert versions.major == 4
         assert versions.minor == 5
         assert versions.revision == 6
-        assert versions.commit == ''
+        assert versions.prerelease == ''
+        assert versions.build == ''
+        assert versions.version == version
 
-        # Versions with commit
-        accelize_drm.__version__ = '1.2.3.commit1'
-        accelize_drm._get_api_version = lambda: b'4.5.6.commit2'
+        # Prerelease version with build
+        py_version = '1.2.3-alpha.1+commit1'
+        version = '4.5.6-beta.2+commit2'
+        accelize_drm.__version__ = py_version
+        accelize_drm._get_api_version = lambda: version.encode()
         versions = accelize_drm.get_api_version()
         assert versions.py_major == 1
         assert versions.py_minor == 2
         assert versions.py_revision == 3
-        assert versions.py_commit == 'commit1'
+        assert versions.py_prerelease == 'alpha.1'
+        assert versions.py_build == 'commit1'
+        assert versions.py_version == py_version
         assert versions.major == 4
         assert versions.minor == 5
         assert versions.revision == 6
-        assert versions.commit == 'commit2'
+        assert versions.prerelease == 'beta.2'
+        assert versions.build == 'commit2'
+        assert versions.version == version
 
     # Restore mocked versions
     finally:

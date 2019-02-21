@@ -36,9 +36,9 @@ else:
 del _environ
 
 _ApiVersion = _namedtuple('ApiVersion', [
-    'major', 'minor', 'revision', 'commit',
-    'py_major', 'py_minor', 'py_revision', 'py_commit',
-    'backend'
+    'major', 'minor', 'revision', 'prerelease', 'build', 'version',
+    'py_major', 'py_minor', 'py_revision', 'py_prerelease', 'py_build',
+    'py_version', 'backend'
 ])
 del _namedtuple
 
@@ -47,24 +47,47 @@ def get_api_version():
     """
     Get version as named tuple containing :
 
-    - C/C++ library version as major, minor, revision, commit.
-    - Python library version as py_major, py_minor, py_revision, py_commit.
+    - C/C++ library version as major, minor, revision, prerelease, build.
+    - Python library version as py_major, py_minor, py_revision, py_prerelease,
+      py_build
     - C/C++ backend library name.
 
     Returns:
-        namedtuple: Containing following values: major, minor, revision, commit,
-        py_major, py_minor, py_revision, py_commit, backend
+        namedtuple: Containing following values:
+        major, minor, revision, prerelease, build, version,
+        py_major, py_minor, py_revision, py_prerelease, py_build,
+        backend
     """
-    api_version = _get_api_version().decode().split('.')
-    if len(api_version) == 3:
-        api_version.append('')
-    api_version.extend(__version__.split('.'))
-    if len(api_version) == 7:
-        api_version.append('')
-    for i in range(len(api_version)):
+    api_version = list()
+
+    # Parse version string
+    for version in (_get_api_version().decode(), __version__):
         try:
-            api_version[i] = int(api_version[i])
+            _ver, build = version.split('+', 1)
         except ValueError:
-            pass
+            _ver = version
+            build = ''
+
+        # Get prerelease
+        try:
+            _ver, prerelease = _ver.split('-', 1)
+        except ValueError:
+            prerelease = ''
+
+        major, minor, revision = _ver.split('.', 2)
+
+        # Convert to int if possible
+        version_list = [major, minor, revision, prerelease, build, version]
+        for i in range(len(version_list)):
+            try:
+                version_list[i] = int(version_list[i])
+            except ValueError:
+                pass
+
+        api_version.extend(version_list)
+
+    # Add library backend
     api_version.append(_library)
+
+    # Return named tuple
     return _ApiVersion(*api_version)
