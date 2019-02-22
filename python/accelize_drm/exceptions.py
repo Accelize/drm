@@ -1,80 +1,108 @@
+# coding=utf-8
 """DRM exceptions"""
 import sys as _sys
 
 
 class DRMException(Exception):
-    """Accelize DRM Base exception"""
+    """
+    Accelize DRM Base exception
+    """
     error_code = None
 
 
 class DRMBadArg(DRMException):
-    """Bad argument provided"""
+    """
+    Bad argument provided
+    """
     #: Error code
     error_code = 1
 
 
 class DRMBadFormat(DRMException):
-    """Bad format of provided input or config file"""
+    """
+    Bad format of provided input or config file
+    """
     #: Error code
     error_code = 2
 
 
 class DRMExternFail(DRMException):
-    """Fail happened in an external library"""
+    """
+    Fail happened in an external library
+    """
     #: Error code
     error_code = 3
 
 
 class DRMBadUsage(DRMException):
-    """Wrong usage of the DRMLib"""
+    """
+    Wrong usage of the DRMLib
+    """
     #: Error code
     error_code = 4
 
 
 class DRMBadFrequency(DRMException):
-    """DRM frequency defined in configuration script differs from real one detected automatically by the DRMLib"""
+    """
+    DRM frequency defined in configuration script differs from real one
+    detected automatically by the DRMLib
+    """
     #: Error code
     error_code = 5
 
 
 class DRMWSRespError(DRMException):
-    """A malformed response has been received from Accelize WebService"""
+    """
+    A malformed response has been received from Accelize WebService
+    """
     #: Error code
     error_code = 10001
 
 
 class DRMWSReqError(DRMException):
-    """Failed during HTTP request to Accelize WebService"""
+    """
+    Failed during HTTP request to Accelize WebService
+    """
     #: Error code
     error_code = 10002
 
 
 class DRMWSError(DRMException):
-    """Error returned from Accelize WebService"""
+    """
+    Error returned from Accelize WebService
+    """
     #: Error code
     error_code = 10003
 
 
 class DRMWSMayRetry(DRMException):
-    """Error with request to Accelize Webservice, retry advised"""
+    """
+    Error with request to Accelize Webservice, retry advised
+    """
     #: Error code
     error_code = 10004
 
 
 class DRMCtlrError(DRMException):
-    """An error happened on a command on the DRM controller"""
+    """
+    An error happened on a command on the DRM controller
+    """
     #: Error code
     error_code = 20001
 
 
 class DRMLibFatal(DRMException):
-    """Fatal error, unknown error (Please contact Accelize)"""
+    """
+    Fatal error, unknown error (Please contact Accelize)
+    """
     #: Error code
     error_code = 90001
 
 
 class DRMLibAssert(DRMException):
-    """Assertion failed internally (Please contact Accelize)"""
+    """
+    Assertion failed internally (Please contact Accelize)
+    """
     #: Error code
     error_code = 90002
 

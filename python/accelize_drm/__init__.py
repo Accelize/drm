@@ -1,3 +1,4 @@
+# coding=utf-8
 """Accelize DRM Python Library"""
 # Copyright 2019 Accelize
 #
