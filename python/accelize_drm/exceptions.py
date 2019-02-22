@@ -144,10 +144,7 @@ def _raise_from_error(error_message, error_code=None):
     """
     if error_code is None:
         import re
-        try:
-            m = re.search(r'\[errCode=(\d+)\]', error_message)
-            if m is not None:
-                error_code = int(m.group(1))
-        except IndexError:
-            pass
+        match = re.search(r'\[errCode=(\d+)\]', error_message)
+        if match is not None:
+            error_code = int(match.group(1))
     raise _ERROR_CODES.get(error_code, DRMException)(error_message.strip())
