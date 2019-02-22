@@ -2,6 +2,7 @@
 """
 Performs some pre-release checks
 """
+from os.path import join
 from subprocess import run, PIPE
 from re import fullmatch
 import pytest
@@ -30,7 +31,7 @@ def test_changelog_and_version(accelize_drm):
 
     # Checks tag format using library version
     lib_ver = accelize_drm.get_api_version()
-    assert tag == f"v{lib_ver.version.split('+')[0]}"
+    assert tag == 'v%s' % (lib_ver.version.split('+')[0])
 
     # Check tag format match semantic versioning
 
@@ -38,11 +39,11 @@ def test_changelog_and_version(accelize_drm):
                      r'(-(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)'
                      r'(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?'
                      r'(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$', version):
-        pytest.fail(f'"{version}" does not match semantic versioning format.')
+        pytest.fail('"%s" does not match semantic versioning format.' % version)
 
     # Check if changelog is up-to-date (Not for prereleases)
     if not lib_ver.prerelease:
-        changelog_path = f'{accelize_drm.pytest_build_source_dir}/CHANGELOG'
+        changelog_path = join(accelize_drm.pytest_build_source_dir, 'CHANGELOG')
         with open(changelog_path, 'rt') as changelog:
             last_change = changelog.readline().strip()
 

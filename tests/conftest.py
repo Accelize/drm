@@ -37,8 +37,9 @@ def get_default_conf_json(licensing_server_url):
             "boardType": "DRM_125"
         },
         "webservice": {
-            "oauth2_url": f"{licensing_server_url}/o/token/",
-            "metering_url": f"{licensing_server_url}/auth/metering/genlicense/"
+            "oauth2_url": "%s/o/token/" % licensing_server_url,
+            "metering_url":
+                "%s/auth/metering/genlicense/" % licensing_server_url
         }
     }
 
@@ -262,12 +263,13 @@ class CredJson(_Json):
         else:
             try:
                 self._content['client_id'] = self._content[
-                    f'client_id_{user}']
+                    'client_id_%s' % user]
                 self._content['client_secret'] = self._content[
-                    f'client_secret_{user}']
+                    'client_secret_' % user]
             except KeyError:
                 raise ValueError(
-                    f'User "{user}" not found in "{self._init_cref_path}"')
+                    'User "%s" not found in "%s"' % (
+                        user, self._init_cref_path))
         self.save()
 
 

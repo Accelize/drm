@@ -51,8 +51,8 @@ def test_credentials(cred_json, conf_json):
             conf_json['licensing']['url'].split('//', 1)[1])
         connection.request(
             "POST", "/o/token/",
-            f"client_id={client_id}&client_secret={client_secret}"
-            f"&grant_type=client_credentials",
+            "client_id=%s&client_secret=%s&grant_type=client_credentials" % (
+                client_id, client_secret),
             {'Content-type': 'application/x-www-form-urlencoded',
              'Accept': 'application/json'})
         return connection.getresponse()

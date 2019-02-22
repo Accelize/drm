@@ -11,18 +11,18 @@ LIB_NAMES = ('libaccelize_drmc', 'libaccelize_drm')
 REPOSITORY_PATH = 'https://github.com/Accelize/drmlib'
 
 
-def _run(command):
+def _run(*command, **kwargs):
     """
     Run a command.
 
     Args:
-        command (str):
+        command (list of str):
 
     Returns:
         subprocess.CompletedProcess
     """
-    result = run(command, shell=True, stdout=PIPE, stderr=PIPE,
-                 universal_newlines=True)
+    result = run(*command, stdout=PIPE, stderr=PIPE,
+                 universal_newlines=True, **kwargs)
     try:
         result.check_returncode()
     except CalledProcessError as exception:
@@ -39,8 +39,8 @@ def make(path, target=None):
         path (str): Path of sources to make.
         target (str): Target
     """
-    _run(f'cd {path} && make -j {os.cpu_count()}'
-         f'{(" " + target) if target else ""}')
+    _run(['make', '-j', str(os.cpu_count())] + ([target] if target else []),
+         cwd=path)
 
 
 def dump_abi(dump_file, so_file, include, version, name):
@@ -58,8 +58,8 @@ def dump_abi(dump_file, so_file, include, version, name):
     Returns:
         tuple of str: version and dump_file
     """
-    _run(f"abi-dumper {so_file} "
-         f"-public-headers {include} -o {dump_file} -lver {version}")
+    _run(['abi-dumper', so_file, '-public-headers', include, '-o', dump_file,
+          '-lver', version])
     return version, dump_file, name
 
 
@@ -76,8 +76,8 @@ def checks_abi_compliance(old_dump, new_dump, name, report_path):
     Returns:
         str: Report
     """
-    return _run(f"abi-compliance-checker -l {name} -old {old_dump} -new "
-                f"{new_dump} -report-path {report_path}").stdout
+    return _run(['abi-compliance-checker', '-l', name, '-old', old_dump, '-new',
+                 new_dump, '-report-path', report_path]).stdout
 
 
 def make_tag(version, path):
@@ -93,10 +93,11 @@ def make_tag(version, path):
     """
     # Clone sources
     os.mkdir(path)
-    _run(f'git clone -q -b v{version} --depth 1 {REPOSITORY_PATH} {path}/src')
+    _run(['git', 'clone', '-q', '-b', 'v%s' % version, '--depth', '1',
+          REPOSITORY_PATH, '%s/src' % path])
 
     # Make
-    _run(f'cd {path} && cmake -DCMAKE_BUILD_TYPE=Debug ./src')
+    _run(['cmake', '-DCMAKE_BUILD_TYPE=Debug', './src'], cwd=path)
     make(path, 'all')
 
     return version, path
@@ -113,10 +114,10 @@ def get_reference_versions(tmpdir, abi_version):
     Returns:
         dict: version, directory
     """
-    tags = _run(f'git ls-remote --tags {REPOSITORY_PATH}').stdout
+    tags = _run(['git', 'ls-remote', '--tags', REPOSITORY_PATH]).stdout
     versions = {
         tag: str(tmpdir.join(tag)) for tag in (
-        tag.rsplit('/', 1)[1].strip('v/n') for tag in tags.splitlines())
+            tag.rsplit('/', 1)[1].strip('v/n') for tag in tags.splitlines())
         if (tag.split('.', 1)[0] == abi_version and
             tag.rsplit('.', 1)[1] == '0')}
 
@@ -154,9 +155,9 @@ def test_abi_compliance(tmpdir, accelize_drm):
             include = os.path.join(lib_path, 'include')
             for lib_name in LIB_NAMES:
                 futures.append(executor.submit(
-                    dump_abi,str(tmpdir.join(
-                        f'{lib_name}_{lib_version}.abidump')),
-                    os.path.join(lib_path, f'{lib_name}.so'), include,
+                    dump_abi, str(tmpdir.join(
+                        '%s_%s.abidump' % (lib_name, lib_version))),
+                    os.path.join(lib_path, '%s.so' % lib_name), include,
                     lib_version, lib_name))
 
         # Get references versions
@@ -167,7 +168,7 @@ def test_abi_compliance(tmpdir, accelize_drm):
         versions = versions.result()
         if not versions:
             pytest.skip(
-                f'No previous versions with ABI version {abi_version}')
+                'No previous versions with ABI version %s' % abi_version)
 
         print('CHECKING ABI/API AGAINST VERSIONS:', ', '.join(versions))
         for version, path in versions.items():
@@ -194,10 +195,10 @@ def test_abi_compliance(tmpdir, accelize_drm):
         for future in as_completed(dump_futures):
             version, dump_file, name = future.result()
 
-            reports[f'{name} {version}'] = executor.submit(
+            reports[' '.join((name, version))] = executor.submit(
                 checks_abi_compliance,  old_dump=dump_file,
                 new_dump=latest_dumps[name], name=name,
-                report_path=str(tmpdir.join(f'{name}{version}.html')))
+                report_path=str(tmpdir.join('%s%s.html' % (name, version))))
 
     # Analyses reports
     abi_broken = False
@@ -206,6 +207,6 @@ def test_abi_compliance(tmpdir, accelize_drm):
         if ('Total binary compatibility problems: 0' not in report or
                 'Total source compatibility problems: 0,' not in report):
             abi_broken = True
-            print(f'Comparison against {title}:\n{report}\n')
+            print('Comparison against %s:\n%s\n' % (title, report))
 
     assert not abi_broken
