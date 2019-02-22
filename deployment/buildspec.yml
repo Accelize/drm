@@ -1,0 +1,78 @@
+# AWS CodeBuild
+version: 0.2
+
+env:
+  parameter-store:
+    # Toolbox: Retrieve encryption key
+    XLZCRYPT_KEY: "xlzcrypt_key"
+
+phases:
+  install:
+    commands:
+      # Toolbox: Initialize
+      - sudo $CODEBUILD_SRC_DIR_toolbox/install.py
+
+  build:
+    commands:
+      # Run Debug tests
+      - xlz
+        --if git_file_changed="\(?\!test/utils/|doc/|deployment/|LICENSE|README\\.md|\\.gitgnore\)"
+        run
+        drmlib_dev=$CODEBUILD_SOURCE_VERSION drmlib_build_deps
+        drmlib_unittests_deps drmlib_cred_json drmlib_codecov_token
+        aws_fpga_sdk
+        -n accelize_drm_debug_tests
+        -z /dev/shm/drmlib_dev/.tox/debug/build/report report.tar.gz
+        -r "cd /dev/shm/drmlib_dev &&
+            sudo -E tox -e build-debug,cpp-debug,c-debug,coverage-debug -- --cred=/dev/shm/cred.json"
+
+      # Build documentation
+      - xlz
+        --if git_file_changed="^\(doc/|include/|python/src|python/accelize_drm\)"
+        --if git_branch=master,dev
+        --after_success drmlib_publish_doc=doc.tar.gz
+        install
+        drmlib_build_deps
+        -r "mkdir build_doc &&
+            cd build_doc &&
+            cmake -DPYTHON3=ON -DDOC=ON .. &&
+            make -s -j &&
+            tar -zcf ../doc.tar.gz ./doc_html"
+
+      # Build packages
+      - xlz
+        --if git_head_tagged
+        --if git_branch=master,dev
+        run
+        drmlib_dev=$CODEBUILD_SOURCE_VERSION
+        drmlib_package_release drmlib_packages_key
+        docker_compose
+        -p c5.4xlarge
+        -n accelize_drm_packages_build
+        -z /dev/shm/drmlib_dev/deployment/packages packages.tar.gz
+        -r "cd /dev/shm/drmlib_dev/deployment && sudo -E docker-compose pull &&
+            sudo -E docker-compose up"
+
+      # Tests packages
+      # TODO: Add run tests commands
+      - xlz
+        --if git_head_tagged
+        --if git_branch=master,dev
+        --after_success drmlib_publish_packages=packages.tar.gz
+        run
+        docker
+        -p f1.4xlarge
+        -n accelize_drm_packages_tests
+        --gz_upload packages.tar.gz /dev/shm/packages
+        -r ""
+
+artifacts:
+  files:
+    # Debug tests reports (Coverage, Cython annotation)
+    - report.tar.gz
+
+    # Packages
+    - packages.tar.gz
+
+    # Documentation
+    - doc.tar.gz

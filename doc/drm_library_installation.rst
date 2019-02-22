@@ -220,26 +220,40 @@ To build packages
 RPM package (For RHEL, CentOS, Fedora)
 ``````````````````````````````````````
 
+Required to build packages:
+
 * rpm-build
+
+Required to sign packages:
+
+* rpm-sign
+* gnupg
 
 Run following command to install requirements:
 
 .. code-block:: bash
 
-    sudo yum install -y pkg-config
+    sudo yum install -y rpm-build rpm-sign expect gnupg
 
 DEB Packages (For Debian, Ubuntu)
 `````````````````````````````````
+
+Required to build package:
 
 * pkg-config
 * dpkg-dev
 * file
 
+Required to sign packages:
+
+* dpkg-sig
+* gnupg
+
 Run following command to install requirements:
 
 .. code-block:: bash
 
-    sudo apt install -y pkg-config dpkg-dev
+    sudo apt install -y pkg-config dpkg-dev dpkg-sig gnupg file
 
 To run tests
 ^^^^^^^^^^^^
