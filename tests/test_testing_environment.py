@@ -13,7 +13,8 @@ def test_versions_matches(accelize_drm):
     assert api_version.major == api_version.py_major
     assert api_version.minor == api_version.py_minor
     assert api_version.revision == api_version.py_revision
-    assert api_version.commit == api_version.commit
+    assert api_version.prerelease == api_version.py_prerelease
+    assert api_version.build == api_version.py_build
 
 
 def test_python_backend_library(accelize_drm, pytestconfig):
