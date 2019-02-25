@@ -12,6 +12,7 @@ phases:
       # Toolbox: Initialize
       - sudo $CODEBUILD_SRC_DIR_toolbox/install.py
       - mkdir artifacts
+      - export | grep CODEBUILD >artifacts/env.txt
 
   build:
     commands:
