@@ -22,7 +22,7 @@ phases:
         drmlib_unittests_deps drmlib_cred_json drmlib_codecov_token
         aws_fpga_sdk
         -p f1.4xlarge
-        -n accelize_drm_debug_tests
+        -n drm_debug_tests
         -z /dev/shm/drmlib_dev/.tox/debug/build/report report.tar.gz
         -r "cd /dev/shm/drmlib_dev &&
             sudo -E tox -p all -e build-debug,cpp-debug,c-debug,coverage-debug -- --cred=/dev/shm/cred.json"
@@ -63,7 +63,7 @@ phases:
         run
         docker
         -p f1.4xlarge
-        -n accelize_drm_packages_tests
+        -n drm_packages_tests
         --gz_upload packages.tar.gz /dev/shm/packages
         -r ""
 

@@ -81,6 +81,7 @@ def pytest_addoption(parser):
              'use default FPGA image for the selected driver and last HDK '
              'version.')
 
+
 # Pytest Fixtures
 
 @pytest.fixture(scope='session')

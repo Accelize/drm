@@ -1,11 +1,11 @@
 #! /usr/bin/env python3
 # coding=utf-8
 """
-AWS F1 driver for Accelize DRM Python library
+FPGA driver for Accelize DRM Python library
 
 Example:
 
-    # Get Driver
+    # Get Driver by name (Example with AWS F1 driver)
     from tests.python_fpga_drivers import get_driver
     driver = get_driver('aws_f1')()
 
