@@ -1,15 +1,10 @@
 # -*- coding: utf-8 -*-
 """Configure Pytest"""
-from os import environ
-from os.path import realpath, isfile, expanduser
+from os import environ, listdir
+from os.path import realpath, isfile, expanduser, splitext, join
 from json import dump, load
 from copy import deepcopy
 import pytest
-
-# Default values
-DEFAULT_FPGA_IMAGE = {
-    'aws_f1': 'agfi-06938e283466fc386',
-}
 
 
 def get_default_conf_json(licensing_server_url):
@@ -78,9 +73,13 @@ def pytest_addoption(parser):
     parser.addoption(
         "--fpga_image", default="default",
         help='Select FPGA image to use for program the FPGA. '
-             'By default, use default FPGA image for the selected driver. '
-             'Set to empty string to not program the FPGA.')
-
+             'By default, use default FPGA image for the selected driver and '
+             'last HDK version. Set to empty string to not program the FPGA.')
+    parser.addoption(
+        "--hdk_version",
+        help='Select FPGA image base on Accelize DRM HDK version. By default, '
+             'use default FPGA image for the selected driver and last HDK '
+             'version.')
 
 # Pytest Fixtures
 
@@ -149,8 +148,42 @@ def accelize_drm(pytestconfig):
 
     # Get FPGA image
     fpga_image = pytestconfig.getoption("fpga_image")
-    if fpga_image.lower() == 'default':
-        fpga_image = DEFAULT_FPGA_IMAGE.get(fpga_driver_name)
+    hdk_version = pytestconfig.getoption("hdk_version")
+
+    if hdk_version and fpga_image.lower() != 'default':
+        raise ValueError(
+            'Please set "hdk_version" or "fpga_image" but not both')
+
+    elif fpga_image.lower() == 'default' or hdk_version:
+        # List available HDK versions for specified driver
+        ref_designs = join('tests/refdesigns', fpga_driver_name)
+        hdk_versions = sorted([splitext(file_name)[0].strip('v')
+                               for file_name in listdir(ref_designs)])
+
+        # Use specified HDK version
+        if hdk_version:
+            hdk_version = hdk_version.strip('v')
+            if hdk_version not in hdk_versions:
+                raise ValueError(
+                    f'HDK version {hdk_version} is not supported. '
+                    f'Available versions are: {", ".join(hdk_versions)}')
+
+        # Get last HDK version as default
+        else:
+            hdk_version = hdk_versions[-1]
+
+        # Get FPGA image from HDK version
+        with open(join(ref_designs, f'v{hdk_version}.json')) as hdk_json_file:
+            hdk_json = load(hdk_json_file)
+
+        for key in ('fpga_image', 'FpgaImageGlobalId', 'FpgaImageId'):
+            try:
+                fpga_image = hdk_json[key]
+                break
+            except KeyError:
+                continue
+            else:
+                raise ValueError(f'No FPGA image found for {hdk_version}.')
 
     # Define or get FPGA Slot
     if environ.get('TOX_PARALLEL_ENV'):
@@ -176,6 +209,7 @@ def accelize_drm(pytestconfig):
     _accelize_drm.pytest_backend = backend
     _accelize_drm.pytest_fpga_driver = fpga_driver
     _accelize_drm.pytest_fpga_image = fpga_image
+    _accelize_drm.pytest_hdk_version = hdk_version
     _accelize_drm.pytest_lib_verbosity = verbosity
 
     return _accelize_drm

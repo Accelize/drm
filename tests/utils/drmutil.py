@@ -1,10 +1,10 @@
 #! /usr/bin/env python3
 # coding=utf-8
 """
-Python Accelize DRM library demo
+Python Accelize DRM library utility. Intended to debug and testing.
 
-Usage on AWS F1: sudo LD_LIBRARY_PATH=/path/to/drmlib/so ./demo.py
-If make install has been done: sudo ./demo.py
+Usage on AWS F1: sudo LD_LIBRARY_PATH=/path/to/drmlib/so ./drmutil.py
+If make install has been done: sudo ./drmutil.py
 """
 
 import sys, os

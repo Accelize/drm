@@ -443,8 +443,13 @@ Tests support following options:
   Possibles values: ``0`` to ``5``. Default: ``4``.
 
 * **--fpga_image**: Select FPGA image to use for program the FPGA. By default,
-  use default FPGA image for the selected driver. Set to empty string to not
-  program the FPGA.
+  use default FPGA image for the selected driver and last HDK version.
+  Set to empty string to not program the FPGA.
+
+* **--hdk_version**: Select FPGA image base on Accelize DRM HDK version.
+  By default, use default FPGA image for the selected driver and last HDK
+  version.
+
 
 Running test on previously build environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
