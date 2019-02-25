@@ -161,6 +161,8 @@ def accelize_drm(pytestconfig):
         fpga_slot_id = pytestconfig.getoption("fpga_slot_id")
 
     # Initialize FPGA
+    print('FPGA SLOT ID:', fpga_slot_id)
+    print('FPGA IMAGE:', fpga_image)
     fpga_driver = fpga_driver_cls(
         fpga_slot_id=fpga_slot_id,
         fpga_image=fpga_image,
