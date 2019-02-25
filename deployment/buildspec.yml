@@ -11,6 +11,7 @@ phases:
     commands:
       # Toolbox: Initialize
       - sudo $CODEBUILD_SRC_DIR_toolbox/install.py
+      - mkdir artifacts
 
   build:
     commands:
@@ -23,7 +24,7 @@ phases:
         aws_fpga_sdk
         -p f1.4xlarge
         -n drm_debug_tests
-        -z /dev/shm/drmlib_dev/.tox/debug/build/report report.tar.gz
+        -z /dev/shm/drmlib_dev/.tox/debug/build/report artifacts/report.tar.gz
         -r "cd /dev/shm/drmlib_dev &&
             sudo -E tox -p all -e build-debug,cpp-debug,c-debug,coverage-debug -- --cred=/dev/shm/cred.json"
 
@@ -38,7 +39,7 @@ phases:
             cd build_doc &&
             cmake -DPYTHON3=ON -DDOC=ON .. &&
             make -s -j &&
-            tar -zcf ../doc.tar.gz ./doc_html"
+            tar -zcf ../artifacts/doc.tar.gz ./doc_html"
 
       # Build packages
       - xlz
@@ -50,7 +51,7 @@ phases:
         docker_compose
         -p c5.4xlarge
         -n accelize_drm_packages_build
-        -z /dev/shm/drmlib_dev/deployment/packages packages.tar.gz
+        -z /dev/shm/drmlib_dev/deployment/packages artifacts/packages.tar.gz
         -r "cd /dev/shm/drmlib_dev/deployment && sudo -E docker-compose pull &&
             sudo -E docker-compose up"
 
@@ -69,11 +70,5 @@ phases:
 
 artifacts:
   files:
-    # Debug tests reports (Coverage, Cython annotation)
-    - report.tar.gz
-
-    # Packages
-    - packages.tar.gz
-
-    # Documentation
-    - doc.tar.gz
+    - artifacts/*
+  discard-paths: yes
