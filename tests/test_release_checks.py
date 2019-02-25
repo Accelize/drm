@@ -2,16 +2,20 @@
 """
 Performs some pre-release checks
 """
-from os.path import join
-from subprocess import run, PIPE
-from re import fullmatch
 import pytest
+from tests.conftest import perform_once
 
 
 def test_changelog_and_version(accelize_drm):
     """
     Checks if Version match with Git tag and if changelog is up to date.
     """
+    perform_once(__name__ + '.test_changelog_and_version')
+
+    from os.path import join
+    from subprocess import run, PIPE
+    from re import fullmatch
+
     if not accelize_drm.pytest_build_environment:
         pytest.skip("Can only be checked in build environment")
 

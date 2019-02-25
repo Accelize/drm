@@ -13,6 +13,7 @@ dist/
 .eggs/
 *.egg-info/
 *.key
+*.lock
 
 # Python compiled files
 __pycache__/

@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """Configure Pytest"""
-from os import environ, listdir
+from os import environ, listdir, remove
 from os.path import realpath, isfile, expanduser, splitext, join
 from json import dump, load
 from copy import deepcopy
 import pytest
+
+_SESSION = dict()
 
 
 def get_default_conf_json(licensing_server_url):
@@ -197,11 +199,11 @@ def accelize_drm(pytestconfig):
     # Initialize FPGA
     print('FPGA SLOT ID:', fpga_slot_id)
     print('FPGA IMAGE:', fpga_image)
-    fpga_driver = fpga_driver_cls(
-        fpga_slot_id=fpga_slot_id,
-        fpga_image=fpga_image,
-        drm_ctrl_base_addr=pytestconfig.getoption(
-            "drm_controller_base_address"))
+    fpga_driver = None#fpga_driver_cls(
+        #fpga_slot_id=fpga_slot_id,
+        #fpga_image=fpga_image,
+        #drm_ctrl_base_addr=pytestconfig.getoption(
+         #   "drm_controller_base_address"))
 
     # Store some values for access in tests
     _accelize_drm.pytest_build_environment = build_environment
@@ -325,3 +327,94 @@ def cred_json(pytestconfig, tmpdir):
     """
     return CredJson(
         tmpdir, realpath(expanduser(pytestconfig.getoption("cred"))))
+
+
+def _get_session_info():
+    """
+    Get session information in case of Tox run.
+
+    Returns:
+        dict: Session information.
+    """
+    if _SESSION.get('current_session_name') is None:
+
+        current_session_name = environ.get('TOX_ENV_NAME')
+        if current_session_name:
+
+            backend, build_type = current_session_name.split('-')
+            other_session_name = '-'.join((
+                'c' if backend == 'cpp' else 'c', build_type))
+
+            _SESSION.update(dict(
+                current_session_name=current_session_name,
+                current_session_lock=current_session_name + '.lock',
+                other_session_name=other_session_name,
+                other_session_lock=other_session_name + '.lock'))
+    return _SESSION
+
+
+def pytest_sessionstart(session):
+    """
+    Pytest session initialization
+
+    Args:
+        session (pytest.Session): Current Pytest session.
+    """
+    # Get session information
+    current_session_lock = _get_session_info().get('current_session_name')
+
+    if current_session_lock is None:
+        return
+
+    # Create lock to indicate session is running
+    with open(current_session_lock, 'w'):
+        pass
+
+
+def pytest_sessionfinish(session):
+    """
+    Pytest session ending
+
+    Args:
+        session (pytest.Session): Current Pytest session.
+    """
+    # Get session information
+    session_info = _get_session_info()
+    current_session_lock = session_info.get('current_session_name')
+    if current_session_lock is None:
+        return
+
+    # Delete lock to indicate session is terminated
+    remove(current_session_lock)
+
+    # If other session is also terminated, remove all locks
+    if not isfile(session_info.get('other_session_lock')):
+        for file in listdir('.'):
+            if splitext(file)[1] == '.lock':
+                remove(file)
+
+
+def perform_once(test_name):
+    """
+    Function that skip test if already performed in another session of a Tox
+    parallel run.
+
+    Useful for tests that do not depends on the Python library backend.
+
+    Args:
+        test_name (str): Test name.
+
+    Returns:
+        function: Patched test function.
+    """
+    test_lock = test_name + '.lock'
+
+    # Skip test if lock exists.
+    if isfile(test_lock):
+        pytest.skip(
+            'Test "%s" already performed in another session.' % test_name)
+
+    # Create lock
+    else:
+        with open(test_lock, 'w'):
+            pass

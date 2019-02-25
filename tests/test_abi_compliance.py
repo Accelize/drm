@@ -2,10 +2,10 @@
 """
 Test ABI/API compatibility
 """
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
-from subprocess import run, CalledProcessError, PIPE
+
 import pytest
+from tests.conftest import perform_once
 
 LIB_NAMES = ('libaccelize_drmc', 'libaccelize_drm')
 REPOSITORY_PATH = 'https://github.com/Accelize/drmlib'
@@ -21,6 +21,8 @@ def _run(*command, **kwargs):
     Returns:
         subprocess.CompletedProcess
     """
+    from subprocess import run, CalledProcessError, PIPE
+
     result = run(*command, stdout=PIPE, stderr=PIPE,
                  universal_newlines=True, **kwargs)
     try:
@@ -128,12 +130,15 @@ def test_abi_compliance(tmpdir, accelize_drm):
     """
     Test the ABI/API compliance of the lib_name.
     """
+    perform_once(__name__ + '.test_abi_compliance')
+
     if not accelize_drm.pytest_build_environment:
         pytest.skip('This test is only performed on build environment.')
     elif not accelize_drm.pytest_build_type == 'debug':
         pytest.xfail('This test need libraries compiled in debug mode.')
 
     # Initialize test
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     build_futures = []
     dump_futures = []
     latest_futures = []

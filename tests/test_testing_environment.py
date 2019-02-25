@@ -3,6 +3,7 @@
 Check testing environment.
 """
 import pytest
+from tests.conftest import perform_once
 
 
 def test_versions_matches(accelize_drm):
@@ -36,6 +37,8 @@ def test_credentials(cred_json, conf_json):
     """
     Tests if credentials in "cred.json" are valid.
     """
+    perform_once(__name__ + '.test_credentials')
+
     from http.client import HTTPSConnection
     from json import loads
 
