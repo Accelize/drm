@@ -16,7 +16,7 @@ phases:
     commands:
       # Run Debug tests
       - xlz
-        --if git_file_changed="\(?\!test/utils/|doc/|deployment/|LICENSE|README\\.md|\\.gitgnore\)"
+        --if git_file_changed='(?!test/utils/|doc/|deployment/|LICENSE|README\\.md|\\.gitgnore)'
         run
         drmlib_dev=$CODEBUILD_SOURCE_VERSION drmlib_build_deps
         drmlib_unittests_deps drmlib_cred_json drmlib_codecov_token
@@ -29,7 +29,7 @@ phases:
 
       # Build documentation
       - xlz
-        --if git_file_changed="^\(doc/|include/|python/src|python/accelize_drm\)"
+        --if git_file_changed='doc/|include/|python/src|python/accelize_drm'
         --if git_branch=master,dev
         --after_success drmlib_publish_doc=doc.tar.gz
         install
