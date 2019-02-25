@@ -20,8 +20,14 @@ def test_changelog_and_version(accelize_drm):
         pytest.skip("Can only be checked in build environment")
 
     # Ensure tags are pulled
-    run(['git', 'fetch', '--tags', '--force'],
-        stderr=PIPE, stdout=PIPE, universal_newlines=True)
+    try:
+        run(['git', 'fetch', '--tags', '--force'],
+            stderr=PIPE, stdout=PIPE, universal_newlines=True)
+    except FileNotFoundError:
+        fail = (
+            pytest.fail if accelize_drm.pytest_build_type == 'debug' else
+            pytest.xfail)
+        fail('Git is required for this test.')
 
     # Get head tag if any
     result = run(['git', 'describe', '--abbrev=0', '--exact-match', '--tags',
