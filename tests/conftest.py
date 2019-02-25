@@ -199,11 +199,11 @@ def accelize_drm(pytestconfig):
     # Initialize FPGA
     print('FPGA SLOT ID:', fpga_slot_id)
     print('FPGA IMAGE:', fpga_image)
-    fpga_driver = None#fpga_driver_cls(
-        #fpga_slot_id=fpga_slot_id,
-        #fpga_image=fpga_image,
-        #drm_ctrl_base_addr=pytestconfig.getoption(
-         #   "drm_controller_base_address"))
+    fpga_driver = fpga_driver_cls(
+        fpga_slot_id=fpga_slot_id,
+        fpga_image=fpga_image,
+        drm_ctrl_base_addr=pytestconfig.getoption(
+            "drm_controller_base_address"))
 
     # Store some values for access in tests
     _accelize_drm.pytest_build_environment = build_environment
