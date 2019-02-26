@@ -48,7 +48,7 @@ phases:
         --if git_branch=master,dev
         run
         drmlib_dev=$CODEBUILD_SOURCE_VERSION
-        drmlib_package_release drmlib_packages_key
+        drmlib_package_release drmlib_packages_key=/opt/src
         docker_compose
         -p c5.4xlarge
         -n accelize_drm_packages_build

@@ -130,7 +130,7 @@ def sign_deb_packages(
     packages = [package for package in _listdir(packages_dir)
                 if _splitext(package)[1].lower() == '.deb']
 
-    _run(['dpkg-sig', '-g', '--passphrase "%s"' % pass_phrase,
+    _run(['dpkg-sig', '-g', '--no-tty --passphrase "%s"' % pass_phrase,
           '--sign', 'builder'] + packages, quiet=quiet, cwd=packages_dir)
 
     # Verify signatures
