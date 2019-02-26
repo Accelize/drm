@@ -47,7 +47,8 @@ def _init_gpg_configuration(private_key=None, quiet=False):
     _run(['gpg', '--delete-secret-keys'], quiet=quiet, check_returncode=False)
 
     # Import private key
-    _run(['gpg', '--import', private_key], quiet=quiet, check_returncode=False)
+    _run(['gpg', '--batch', '--no-tty', '--import', private_key],
+         quiet=quiet, check_returncode=False)
 
 
 def sign_rpm_packages(
@@ -130,7 +131,7 @@ def sign_deb_packages(
     packages = [package for package in _listdir(packages_dir)
                 if _splitext(package)[1].lower() == '.deb']
 
-    _run(['dpkg-sig', '-g', '--no-tty --passphrase "%s"' % pass_phrase,
+    _run(['dpkg-sig', '-g', '--passphrase "%s"' % pass_phrase,
           '--sign', 'builder'] + packages, quiet=quiet, cwd=packages_dir)
 
     # Verify signatures
