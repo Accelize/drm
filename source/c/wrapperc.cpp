@@ -20,6 +20,7 @@ limitations under the License.
 
 namespace cpp = Accelize::DRM;
 
+
 struct DrmManager_s {
     cpp::DrmManager *obj;
 };
@@ -29,56 +30,79 @@ const char * DrmManager_getApiVersion() {
 }
 
 void checkPointer(void *p) {
-    if(p==NULL)
+    if ( p == NULL )
         cpp::Throw(DRM_BadArg, "Provided pointer is NULL");
 }
 
 /* Help macros TRY/CATCH to return code error */
-#define TRY \
+#define TRY                           \
     DRM_ErrorCode __try_ret = DRM_OK; \
-    try{
+    if ( m != NULL ) \
+        memset(m->error_message, 0, MAX_MSG_SIZE); \
+    try {
 
-#define _CATCH \
-    } catch(const cpp::Exception& e) { \
-        if (cpp::getLogLevel() >= cpp::eLogLevel::ERROR) \
+#define CATCH_RETURN                                                    \
+    } catch(const cpp::Exception& e) {                                  \
+        int cp_size = strlen( e.what() );                               \
+        if ( cp_size > MAX_MSG_SIZE) {                                  \
+            cp_size = MAX_MSG_SIZE - 5;                                 \
+            strcpy( m->error_message + MAX_MSG_SIZE-5, "[...]" );       \
+        }                                                               \
+        strncpy( m->error_message, e.what(), cp_size );                 \
+        if (cpp::getLogLevel() >= cpp::eLogLevel::ERROR)                \
             cpp::logTrace("ERROR", __SHORT_FILE__, __LINE__, e.what()); \
-        __try_ret = e.getErrCode(); \
-    } catch(const std::exception& e) { \
-        if (cpp::getLogLevel() >= cpp::eLogLevel::ERROR) \
+        __try_ret = e.getErrCode();                                     \
+    } catch(const std::exception& e) {                                  \
+        int cp_size = strlen( e.what() );                               \
+        if ( cp_size > MAX_MSG_SIZE) {                                  \
+            cp_size = MAX_MSG_SIZE - 5;                                 \
+            strcpy( m->error_message + MAX_MSG_SIZE-5, "[...]" );       \
+        }                                                               \
+        strncpy( m->error_message, e.what(), cp_size );                 \
+        if (cpp::getLogLevel() >= cpp::eLogLevel::ERROR)                \
             cpp::logTrace("ERROR", __SHORT_FILE__, __LINE__, e.what()); \
-        __try_ret = DRM_Fatal; \
-    }
-
-#define CATCH_RETURN \
-    _CATCH; \
+        __try_ret = DRM_Fatal;                                          \
+    }                                                                   \
     return __try_ret;
 
+
 // Memory management
-DRM_ErrorCode DrmManager_alloc(DrmManager **p_m,
+DRM_ErrorCode DrmManager_alloc( DrmManager **p_m,
         const char* conf_file_path,
         const char* cred_file_path,
         ReadRegisterCallback read_register,
         WriteRegisterCallback write_register,
         AsynchErrorCallback async_error,
         void* user_p) {
+    DrmManager *m;
+    m = (decltype(m))malloc(sizeof(*m));
+    m->drm = NULL;
+    *p_m = m;
     TRY
-        DrmManager *m;
-        m = (decltype(m))malloc(sizeof(*m));
-        m->obj = new cpp::DrmManager(conf_file_path, cred_file_path,
-                                [user_p, read_register](uint32_t offset, uint32_t* value) {return read_register(offset, value, user_p);},
-                                [user_p, write_register](uint32_t offset, uint32_t value) {return write_register(offset, value, user_p);},
-                                [user_p, async_error](const std::string& msg) {async_error(msg.c_str(), user_p);}
-                            );
-        *p_m = m;
+        m->drm = (decltype(m->drm))malloc(sizeof(*(m->drm)));
+        m->drm->obj = NULL;
+        m->drm->obj = new cpp::DrmManager(conf_file_path, cred_file_path,
+                    [user_p, read_register](uint32_t offset, uint32_t* value)
+                        { return read_register(offset, value, user_p); },
+                    [user_p, write_register](uint32_t offset, uint32_t value)
+                        { return write_register(offset, value, user_p); },
+                    [user_p, async_error](const std::string& msg)
+                        { async_error(msg.c_str(), user_p); }
+                );
     CATCH_RETURN
 }
 
 DRM_ErrorCode DrmManager_free(DrmManager **p_m) {
+    DrmManager *m = NULL;
     TRY
         checkPointer(p_m);
-        DrmManager *m = *p_m;
+        m = *p_m;
         checkPointer(m);
-        delete m->obj;
+        checkPointer(m->drm);
+        if (m->drm->obj != NULL) {
+            delete m->drm->obj;
+        }
+        free(m->drm);
         free(m);
         *p_m = NULL;
     CATCH_RETURN
@@ -88,14 +112,14 @@ DRM_ErrorCode DrmManager_free(DrmManager **p_m) {
 DRM_ErrorCode DrmManager_activate( DrmManager *m, bool resume_session_request ) {
     TRY
         checkPointer(m);
-        m->obj->activate( resume_session_request );
+        m->drm->obj->activate( resume_session_request );
     CATCH_RETURN
 }
 
 DRM_ErrorCode DrmManager_deactivate( DrmManager *m, bool pause_session_request ) {
     TRY
         checkPointer(m);
-        m->obj->deactivate( pause_session_request );
+        m->drm->obj->deactivate( pause_session_request );
     CATCH_RETURN
 }
 
@@ -103,49 +127,49 @@ DRM_ErrorCode DrmManager_deactivate( DrmManager *m, bool pause_session_request )
 DRM_ErrorCode DrmManager_get_int( DrmManager *m, const DrmParameterKey key, int* p_value ) {
     TRY
         checkPointer(m);
-        *p_value = m->obj->get<int32_t>((cpp::ParameterKey) key);
+        *p_value = m->drm->obj->get<int32_t>((cpp::ParameterKey) key);
     CATCH_RETURN
 }
 
 DRM_ErrorCode DrmManager_get_uint( DrmManager *m, const DrmParameterKey key, unsigned int* p_value ) {
     TRY
         checkPointer(m);
-        *p_value = m->obj->get<uint32_t>((cpp::ParameterKey) key);
+        *p_value = m->drm->obj->get<uint32_t>((cpp::ParameterKey) key);
     CATCH_RETURN
 }
 
 DRM_ErrorCode DrmManager_get_int64( DrmManager *m, const DrmParameterKey key, long long* p_value ) {
     TRY
         checkPointer(m);
-        *p_value = m->obj->get<int64_t>((cpp::ParameterKey) key);
+        *p_value = m->drm->obj->get<int64_t>((cpp::ParameterKey) key);
     CATCH_RETURN
 }
 
 DRM_ErrorCode DrmManager_get_uint64( DrmManager *m, const DrmParameterKey key, unsigned long long* p_value ) {
     TRY
     checkPointer(m);
-    *p_value = m->obj->get<uint64_t>((cpp::ParameterKey) key);
+    *p_value = m->drm->obj->get<uint64_t>((cpp::ParameterKey) key);
     CATCH_RETURN
 }
 
 DRM_ErrorCode DrmManager_get_float( DrmManager *m, const DrmParameterKey key, float* p_value ) {
     TRY
     checkPointer(m);
-    *p_value = m->obj->get<float>((cpp::ParameterKey) key);
+    *p_value = m->drm->obj->get<float>((cpp::ParameterKey) key);
     CATCH_RETURN
 }
 
 DRM_ErrorCode DrmManager_get_double( DrmManager *m, const DrmParameterKey key, double* p_value ) {
     TRY
         checkPointer(m);
-        *p_value = m->obj->get<double>((cpp::ParameterKey) key);
+        *p_value = m->drm->obj->get<double>((cpp::ParameterKey) key);
     CATCH_RETURN
 }
 
 DRM_ErrorCode DrmManager_get_string( DrmManager *m, const DrmParameterKey key, char** p_value ) {
     TRY
         checkPointer(m);
-        std::string json = m->obj->get<std::string>((cpp::ParameterKey)key);
+        std::string json = m->drm->obj->get<std::string>((cpp::ParameterKey)key);
         char *json_out = strdup(json.c_str());
         *p_value = json_out;
     CATCH_RETURN
@@ -155,7 +179,7 @@ DRM_ErrorCode DrmManager_get_json_string( DrmManager *m, const char* json_in, ch
     TRY
         checkPointer(m);
         std::string json_string(json_in);
-        m->obj->get(json_string);
+        m->drm->obj->get(json_string);
         char *json_out = strdup(json_string.c_str());
         *p_json_out = json_out;
     CATCH_RETURN
@@ -165,49 +189,49 @@ DRM_ErrorCode DrmManager_get_json_string( DrmManager *m, const char* json_in, ch
 DRM_ErrorCode DrmManager_set_bool( DrmManager *m, const DrmParameterKey key, const bool value ) {
     TRY
         checkPointer(m);
-        m->obj->set<bool>((cpp::ParameterKey)key, value);
+        m->drm->obj->set<bool>((cpp::ParameterKey)key, value);
     CATCH_RETURN
 }
 
 DRM_ErrorCode DrmManager_set_int( DrmManager *m, const DrmParameterKey key, const int value ) {
     TRY
         checkPointer(m);
-        m->obj->set<int32_t>((cpp::ParameterKey)key, value);
+        m->drm->obj->set<int32_t>((cpp::ParameterKey)key, value);
     CATCH_RETURN
 }
 
 DRM_ErrorCode DrmManager_set_uint( DrmManager *m, const DrmParameterKey key, const unsigned int value ) {
     TRY
         checkPointer(m);
-        m->obj->set<uint32_t>((cpp::ParameterKey)key, value);
+        m->drm->obj->set<uint32_t>((cpp::ParameterKey)key, value);
     CATCH_RETURN
 }
 
 DRM_ErrorCode DrmManager_set_int64( DrmManager *m, const DrmParameterKey key, const long long value ) {
     TRY
         checkPointer(m);
-        m->obj->set<int64_t>((cpp::ParameterKey)key, value);
+        m->drm->obj->set<int64_t>((cpp::ParameterKey)key, value);
     CATCH_RETURN
 }
 
 DRM_ErrorCode DrmManager_set_uint64( DrmManager *m, const DrmParameterKey key, const unsigned long long value ) {
     TRY
         checkPointer(m);
-        m->obj->set<uint64_t>((cpp::ParameterKey)key, value);
+        m->drm->obj->set<uint64_t>((cpp::ParameterKey)key, value);
     CATCH_RETURN
 }
 
 DRM_ErrorCode DrmManager_set_float( DrmManager *m, const DrmParameterKey key, const float value ) {
     TRY
         checkPointer(m);
-        m->obj->set<float>((cpp::ParameterKey)key, value);
+        m->drm->obj->set<float>((cpp::ParameterKey)key, value);
     CATCH_RETURN
 }
 
 DRM_ErrorCode DrmManager_set_string( DrmManager *m, const DrmParameterKey key, const char* value ) {
     TRY
         checkPointer(m);
-        m->obj->set<std::string>((cpp::ParameterKey)key, value);
+        m->drm->obj->set<std::string>((cpp::ParameterKey)key, value);
     CATCH_RETURN
 }
 
@@ -215,6 +239,6 @@ DRM_ErrorCode DrmManager_set_json_string( DrmManager *m, const char* json_string
 TRY
     checkPointer(m);
     std::string json(json_string);
-    m->obj->set(json);
+    m->drm->obj->set(json);
 CATCH_RETURN
 }

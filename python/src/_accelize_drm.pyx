@@ -17,7 +17,7 @@ from accelize_drm.libaccelize_drm cimport (
 DrmManager as C_DrmManager, getApiVersion,
 ReadRegisterCallback, WriteRegisterCallback, AsynchErrorCallback)
 
-from accelize_drm.exceptions import _async_error_callback,_raise_from_error
+from accelize_drm.exceptions import _async_error_callback,_raise_from_error, DRMBadArg
 
 _ASYNC_ERROR_CFUNCTYPE = _CFUNCTYPE(_c_void_p, _c_char_p)
 _READ_REGISTER_CFUNCTYPE = _CFUNCTYPE(_c_int, _c_uint32, _POINTER(_c_uint32))
@@ -104,11 +104,15 @@ cdef class DrmManager:
         self._cred_file_path = _fsencode(cred_file_path)
 
         # Handle callbacks
+        if read_register is None:
+            _raise_from_error('Read register callback function must not be None', error_code=DRMBadArg.error_code)
         self._read_register = read_register
         self._read_register_c = _READ_REGISTER_CFUNCTYPE(read_register)
         self._read_register_p = (<ReadRegisterCallback*><size_t>_addressof(
             self._read_register_c))[0]
 
+        if write_register is None:
+            _raise_from_error('Write register callback function must not be None', error_code=DRMBadArg.error_code)
         self._write_register = write_register
         self._write_register_c  = _WRITE_REGISTER_CFUNCTYPE(write_register)
         self._write_register_p = (<WriteRegisterCallback*><size_t>_addressof(

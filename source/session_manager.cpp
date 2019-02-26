@@ -85,14 +85,14 @@ protected:
     const char path_sep = '/';
 #endif
 
-    std::string mLastErrorMsg;
+    mutable std::string mLastErrorMsg;
 
     bool mSecurityStop;
 
     //composition
     std::unique_ptr<DrmWSClient> mWsClient;
     std::unique_ptr<DrmControllerLibrary::DrmControllerOperations> mDrmController;
-    std::mutex mDrmControllerMutex;
+    mutable std::mutex mDrmControllerMutex;
 
     //function callbacks
     DrmManager::ReadRegisterCallback f_read_register;
@@ -225,7 +225,7 @@ protected:
         return false;
     }
 
-    DrmControllerLibrary::DrmControllerOperations& getDrmController() {
+    DrmControllerLibrary::DrmControllerOperations& getDrmController() const {
         Assert(mDrmController);
         return *mDrmController;
     }
@@ -245,7 +245,7 @@ protected:
         Unreachable( msg.c_str() );
     }
 
-    unsigned int readDrmRegister(const std::string& regName, unsigned int& value) {
+    unsigned int readDrmRegister(const std::string& regName, unsigned int& value) const {
         unsigned int ret = 0;
         ret = f_read_register( getDrmRegisterOffset(regName), &value );
         if (ret != 0) {
@@ -256,7 +256,7 @@ protected:
         return 0;
     }
 
-    unsigned int writeDrmRegister(const std::string& regName, unsigned int value) {
+    unsigned int writeDrmRegister(const std::string& regName, unsigned int value) const {
         unsigned int ret = 0;
         ret = f_write_register( getDrmRegisterOffset(regName), value );
         if(ret != 0) {
@@ -267,7 +267,7 @@ protected:
         return 0;
     }
 
-    void checkDRMCtlrRet(unsigned int errcode) {
+    void checkDRMCtlrRet(unsigned int errcode) const {
         if(errcode)
             Throw(DRM_ExternFail, "Error in DRMCtlrLib function call : ", errcode);
     }
@@ -297,13 +297,13 @@ protected:
         }
     }
 
-    void getNumActivator( unsigned int& value ) {
+    void getNumActivator( unsigned int& value ) const {
         std::lock_guard<std::mutex> lk(mDrmControllerMutex);
         checkDRMCtlrRet( getDrmController().writeRegistersPageRegister() );
         checkDRMCtlrRet( getDrmController().readNumberOfDetectedIpsStatusRegister(value) );
     }
 
-    uint64_t getTimerCounterValue() {
+    uint64_t getTimerCounterValue() const {
         std::lock_guard<std::mutex> lk(mDrmControllerMutex);
         unsigned int licenseTimerCounterMsb(0), licenseTimerCounterLsb(0);
         uint64_t licenseTimerCounter;
@@ -314,7 +314,7 @@ protected:
         return licenseTimerCounter;
     }
 
-    uint32_t getCustomField() {
+    uint32_t getCustomField() const {
         uint32_t roSize, rwSize;
         std::vector<uint32_t> ro_data, rw_data;
         std::lock_guard<std::mutex> lk(mDrmControllerMutex);
@@ -334,7 +334,7 @@ protected:
         Debug("Wrote to Read/Write mailbox: rwSize=", rwSize);
     }
 
-    std::string getDrmPage( int page_index ) {
+    std::string getDrmPage( int page_index ) const {
         std::stringstream ss;
         uint32_t value;
         std::lock_guard<std::mutex> lk(mDrmControllerMutex);
@@ -349,14 +349,14 @@ protected:
         return ss.str();
     }
 
-    std::string getDrmReport() {
+    std::string getDrmReport() const {
         std::stringstream ss;
         std::lock_guard<std::mutex> lk(mDrmControllerMutex);
         getDrmController().printHwReport(ss);
         return ss.str();
     }
 
-    Json::Value getJsonFromString( const std::string& json_string ) {
+    Json::Value getJsonFromString( const std::string& json_string ) const {
         Json::Value json_object;
         Json::Reader reader;
         if ( !reader.parse( json_string, json_object ) )
@@ -364,7 +364,7 @@ protected:
         return json_object;
     }
 
-    uint64_t getMeteringData() {
+    uint64_t getMeteringData() const {
         uint32_t numberOfDetectedIps;
         std::string saasChallenge;
         std::vector<std::string> meteringFile;
@@ -953,11 +953,11 @@ public:
         : Impl(conf_file_path, cred_file_path)
     {
         if (!f_user_read_register)
-            Throw( DRM_BadArg, "Read function callback must not be NULL" );
+            Throw( DRM_BadArg, "Read register callback function must not be NULL" );
         if (!f_user_write_register)
-            Throw( DRM_BadArg, "Write function callback must not be NULL" );
+            Throw( DRM_BadArg, "Write register callback function must not be NULL" );
         if (!f_user_asynch_error)
-            Throw( DRM_BadArg, "Error function callback must not be NULL" );
+            Throw( DRM_BadArg, "Error handling callback function must not be NULL" );
         f_read_register = f_user_read_register;
         f_write_register = f_user_write_register;
         f_asynch_error = f_user_asynch_error;
@@ -1019,14 +1019,17 @@ public:
         CATCH_AND_THROW
     }
 
-    void get( Json::Value& json_value ) {
+    void get( Json::Value& json_value ) const {
         TRY
             Debug("Get parameter request input: ", json_value.toStyledString());
             for (const std::string& key_str : json_value.getMemberNames()) {
                 const ParameterKey key_id = findParameterKey( key_str );
                 switch(key_id) {
                     case ParameterKey::license_type: {
-                        std::string license_type_str = LicenseTypeStringMap[ mLicenseType ];
+                        std::map<LicenseType, std::string>::const_iterator it = LicenseTypeStringMap.find( mLicenseType );
+                        if ( it == LicenseTypeStringMap.end() )
+                            Unreachable( "Missing parameter key: license_type" );
+                        std::string license_type_str = it->second;
                         Debug("Get value of parameter '", key_str, "' (ID=", key_id, "): ", license_type_str);
                         json_value[key_str] = license_type_str;
                         break;
@@ -1112,7 +1115,7 @@ public:
         Debug("Get parameter request output: ", json_value.toStyledString());
     }
 
-    void get( std::string& json_string ) {
+    void get( std::string& json_string ) const {
         TRY
             Json::Value root;
             Json::Reader reader;
@@ -1125,7 +1128,7 @@ public:
         CATCH_AND_THROW
     }
 
-    template<typename T> T get( const ParameterKey /*key_id*/ ) { return nullptr; }
+    template<typename T> T get( const ParameterKey /*key_id*/ ) const { return nullptr; }
 
     void set( const Json::Value& json_value ) {
         TRY
@@ -1181,47 +1184,47 @@ public:
     json_value[key_str] = Json::nullValue; \
     get( json_value );
 
-template<> Json::Value DrmManager::Impl::get( const ParameterKey key_id ) {
+template<> Json::Value DrmManager::Impl::get( const ParameterKey key_id ) const {
     IMPL_GET_BODY
     return json_value;
 }
 
-template<> std::string DrmManager::Impl::get( const ParameterKey key_id ) {
+template<> std::string DrmManager::Impl::get( const ParameterKey key_id ) const {
     IMPL_GET_BODY
     return json_value[key_str].asString();
 }
 
-template<> bool DrmManager::Impl::get( const ParameterKey key_id ) {
+template<> bool DrmManager::Impl::get( const ParameterKey key_id ) const {
     IMPL_GET_BODY
     return json_value[key_str].asBool();
 }
 
-template<> int32_t DrmManager::Impl::get( const ParameterKey key_id ) {
+template<> int32_t DrmManager::Impl::get( const ParameterKey key_id ) const {
     IMPL_GET_BODY
     return json_value[key_str].asInt();
 }
 
-template<> uint32_t DrmManager::Impl::get( const ParameterKey key_id ) {
+template<> uint32_t DrmManager::Impl::get( const ParameterKey key_id ) const {
     IMPL_GET_BODY
     return json_value[key_str].asUInt();
 }
 
-template<> int64_t DrmManager::Impl::get( const ParameterKey key_id ) {
+template<> int64_t DrmManager::Impl::get( const ParameterKey key_id ) const {
     IMPL_GET_BODY
     return json_value[key_str].asInt64();
 }
 
-template<> uint64_t DrmManager::Impl::get( const ParameterKey key_id ) {
+template<> uint64_t DrmManager::Impl::get( const ParameterKey key_id ) const {
     IMPL_GET_BODY
     return json_value[key_str].asUInt64();
 }
 
-template<> float DrmManager::Impl::get( const ParameterKey key_id ) {
+template<> float DrmManager::Impl::get( const ParameterKey key_id ) const {
     IMPL_GET_BODY
     return json_value[key_str].asFloat();
 }
 
-template<> double DrmManager::Impl::get( const ParameterKey key_id ) {
+template<> double DrmManager::Impl::get( const ParameterKey key_id ) const {
     IMPL_GET_BODY
     return json_value[key_str].asDouble();
 }
@@ -1302,27 +1305,27 @@ void DrmManager::deactivate( const bool& pause_session ) {
     pImpl->deactivate( pause_session );
 }
 
-void DrmManager::get( Json::Value& json_value ) {
+void DrmManager::get( Json::Value& json_value ) const {
     pImpl->get( json_value );
 }
 
-void DrmManager::get( std::string& json_string ) {
+void DrmManager::get( std::string& json_string ) const {
     pImpl->get( json_string );
 }
 
-template<typename T> T DrmManager::get( const ParameterKey key ) {
+template<typename T> T DrmManager::get( const ParameterKey key ) const {
     return pImpl->get<T>( key );
 }
 
-template<> Json::Value DrmManager::get( const ParameterKey key ) { return pImpl->get<Json::Value>( key ); }
-template<> std::string DrmManager::get( const ParameterKey key ) { return pImpl->get<std::string>( key ); }
-template<> bool DrmManager::get( const ParameterKey key ) { return pImpl->get<bool>( key ); }
-template<> int32_t DrmManager::get( const ParameterKey key ) { return pImpl->get<int32_t>( key ); }
-template<> uint32_t DrmManager::get( const ParameterKey key ) { return pImpl->get<uint32_t>( key ); }
-template<> int64_t DrmManager::get( const ParameterKey key ) { return pImpl->get<int64_t>( key ); }
-template<> uint64_t DrmManager::get( const ParameterKey key ) { return pImpl->get<uint64_t>( key ); }
-template<> float DrmManager::get( const ParameterKey key ) { return pImpl->get<float>( key ); }
-template<> double DrmManager::get( const ParameterKey key ) { return pImpl->get<double>( key ); }
+template<> Json::Value DrmManager::get( const ParameterKey key ) const { return pImpl->get<Json::Value>( key ); }
+template<> std::string DrmManager::get( const ParameterKey key ) const { return pImpl->get<std::string>( key ); }
+template<> bool DrmManager::get( const ParameterKey key ) const { return pImpl->get<bool>( key ); }
+template<> int32_t DrmManager::get( const ParameterKey key ) const { return pImpl->get<int32_t>( key ); }
+template<> uint32_t DrmManager::get( const ParameterKey key ) const { return pImpl->get<uint32_t>( key ); }
+template<> int64_t DrmManager::get( const ParameterKey key ) const { return pImpl->get<int64_t>( key ); }
+template<> uint64_t DrmManager::get( const ParameterKey key ) const { return pImpl->get<uint64_t>( key ); }
+template<> float DrmManager::get( const ParameterKey key ) const { return pImpl->get<float>( key ); }
+template<> double DrmManager::get( const ParameterKey key ) const { return pImpl->get<double>( key ); }
 
 void DrmManager::set( const std::string& json_string ) {
     pImpl->set( json_string );

@@ -8,10 +8,11 @@ import re
 import time
 
 
-def test_drm_manager_constructor_with_bad_arguments(accelize_drm, conf_json, cred_json):
+def test_drm_manager_constructor_with_bad_arguments(pytestconfig, accelize_drm, conf_json, cred_json):
     """Test errors when missing arguments are given to DRM Controller Constructor"""
 
     driver = accelize_drm.pytest_fpga_driver
+    backend = pytestconfig.getoption("backend")
 
     # Test when no configuration file is given
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
@@ -36,23 +37,25 @@ def test_drm_manager_constructor_with_bad_arguments(accelize_drm, conf_json, cre
 
     # Test when no hardware read register function is given
     conf_json.reset()
-    with pytest.raises(TypeError) as excinfo:
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         drm_manager = accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
             None,
             driver.write_register_callback
         )
+    assert 'Read register callback function must not' in str(excinfo.value)
 
     # Test when no hardware write register function is given
     conf_json.reset()
-    with pytest.raises(TypeError) as excinfo:
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         drm_manager = accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
             driver.read_register_callback,
             None
         )
+    assert 'Write register callback function must not' in str(excinfo.value)
 
 
 def test_drm_manager_with_incomplete_configuration_file(accelize_drm, conf_json, cred_json):

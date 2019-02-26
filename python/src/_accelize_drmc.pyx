@@ -17,7 +17,7 @@ DrmManager_alloc, DrmManager_free, DrmManager_activate,
 DrmManager_deactivate, DrmManager_get_json_string, DrmManager_set_json_string,
 DrmManager_getApiVersion)
 
-from accelize_drm.exceptions import _raise_from_error, _async_error_callback
+from accelize_drm.exceptions import _raise_from_error, _async_error_callback, DRMBadArg
 
 _ASYNC_ERROR_CFUNCTYPE = _CFUNCTYPE(_c_void_p, _c_char_p, _c_void_p)
 _READ_REGISTER_CFUNCTYPE = _CFUNCTYPE(
@@ -69,7 +69,6 @@ cdef class DrmManager:
             If not specified, use default callback that raises
             "accelize_drm.exceptions.DRMException" or its subclasses.
     """
-
     cdef C_DrmManager* _drm_manager
     cdef object _read_register
     cdef object _read_register_c
@@ -95,6 +94,8 @@ cdef class DrmManager:
         self._cred_file_path_c = self._cred_file_path
 
         # Handle callbacks
+        if read_register is None:
+            self._raise_exception(DRMBadArg.error_code, 'Read register callback function must not be None')
 
         def read_register_c(register_offset, returned_data, user_p):
             """read_register with "user_p" support"""
@@ -104,6 +105,9 @@ cdef class DrmManager:
         self._read_register_c = _READ_REGISTER_CFUNCTYPE(read_register_c)
         self._read_register_p = (<ReadRegisterCallback*><size_t>_addressof(
             self._read_register_c))[0]
+
+        if write_register is None:
+            self._raise_exception(DRMBadArg.error_code, 'Write register callback function must not be None')
 
         def write_register_c(register_offset, returned_data, user_p):
             """write_register with "user_p" support"""
@@ -136,17 +140,16 @@ cdef class DrmManager:
                 self._read_register_p, self._write_register_p,
                 self._async_error_p, <void*>self)
         if return_code:
-            self._raise_exception(return_code)
+            self._raise_exception(return_code, self._drm_manager.error_message )
 
     def __dealloc__(self):
         if self._drm_manager is NULL:
             return
-
         cdef int return_code
         with nogil:
             return_code = DrmManager_free(&self._drm_manager)
         if return_code:
-            self._raise_exception(return_code)
+            self._raise_exception(return_code, self._drm_manager.error_message)
 
     def activate(self, const bint resume_session_request=False):
         """
@@ -179,7 +182,7 @@ cdef class DrmManager:
             return_code = DrmManager_activate(
                 self._drm_manager, resume_session_request)
         if return_code:
-            self._raise_exception(return_code)
+            self._raise_exception(return_code, self._drm_manager.error_message)
 
     def deactivate(self, const bint pause_session_request=False):
         """
@@ -203,7 +206,7 @@ cdef class DrmManager:
             return_code = DrmManager_deactivate(
                 self._drm_manager, pause_session_request)
         if return_code:
-            self._raise_exception(return_code)
+            self._raise_exception(return_code, self._drm_manager.error_message)
 
     def set(self, **values):
         """
@@ -221,7 +224,7 @@ cdef class DrmManager:
         with nogil:
             return_code = DrmManager_set_json_string(self._drm_manager, json_in)
         if return_code:
-            self._raise_exception(return_code)
+            self._raise_exception(return_code, self._drm_manager.error_message)
 
     def get(self, *keys):
         """
@@ -240,20 +243,16 @@ cdef class DrmManager:
 
         cdef int return_code
         with nogil:
-             return_code = DrmManager_get_json_string(
-                 self._drm_manager, json_in, &json_out)
+             return_code = DrmManager_get_json_string( self._drm_manager, json_in, &json_out )
         if return_code:
-            if keys == ['strerror']:
-                # Avoid recursive calls when getting error message
-                return ''
-            self._raise_exception(return_code)
+            self._raise_exception(return_code, self._drm_manager.error_message)
 
         items = _loads(json_out)
         if len(keys) > 1:
             return items
         return items[keys[0]]
 
-    def _raise_exception(self, return_code):
+    def _raise_exception(self, return_code, error_message = None):
         """
         Raise exception based on return code (if not equal 0)
 
@@ -263,7 +262,6 @@ cdef class DrmManager:
         Raises:
             accelize_drm.exceptions.DrmException subclass: DRM Exception.
         """
-        error_message = ''
-        if self._drm_manager is not NULL:
-            error_message = self.get('strerror') or ''
+        if error_message is None:
+            error_message = ''
         _raise_from_error(error_message, error_code=return_code)
