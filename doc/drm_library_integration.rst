@@ -125,7 +125,7 @@ for more information about configuration files.
     DrmManager *drm_manager = NULL;
     int ctx = 0;
 
-    DrmManager_alloc(
+    if (DrmManager_alloc(
         &drm_manager,
 
         // Configuration files paths
@@ -138,8 +138,10 @@ for more information about configuration files.
         // Asynchronous error callback
         asynch_error,
 
-        &ctx
-    );
+        &ctx)
+        // In the C case, the last error message is stored inside the
+        // "DrmManager"
+        ) fprintf(stderr, drm_manager.error_message);
 
 .. code-block:: python
     :caption: Python
@@ -207,13 +209,8 @@ to the Accelize Web Service.
 .. code-block:: c
     :caption: C
 
-    if DrmManager_activate(drm_manager, false) {
-        // "DrmManager_get" is used to retrieve the error message linked to
-        // the return code in case of error
-        char* message = NULL;
-        DrmManager_get_string(drm_manager, DRM__strerror, &message);
-        fprintf(stderr, error_message);
-    }
+    if (DrmManager_activate(drm_manager, false))
+        fprintf(stderr, drm_manager.error_message);
 
 .. code-block:: python
     :caption: Python
@@ -243,19 +240,13 @@ When this function returns, the protected IPs are guaranteed to be locked
 .. code-block:: c
     :caption: C
 
-    if DrmManager_deactivate(drm_manager, false) {
-        char* message = NULL;
-        DrmManager_get_string(drm_manager, DRM__strerror, &message);
-        fprintf(stderr, error_message);
-    }
+    if (DrmManager_deactivate(drm_manager, false))
+        fprintf(stderr, drm_manager.error_message);
 
     // In the C case, the "DrmManager" needs also to be freed to deallocate
     // associated resources.
-    if DrmManager_free(drm_manager) {
-        char* message = NULL;
-        DrmManager_get_string(drm_manager, DRM__strerror, &message);
-        fprintf(stderr, error_message);
-    }
+    if (DrmManager_free(drm_manager))
+        fprintf(stderr, drm_manager.error_message);
 
 .. code-block:: python
     :caption: Python
@@ -368,20 +359,14 @@ Below codes examples show how to implement pause/resume DRM session.
     :caption: C
 
     // Activate the DRM and resume the existing session if any
-    if DrmManager_activate(drm_manager, true) {
-        char* message = NULL;
-        DrmManager_get_string(drm_manager, DRM__strerror, &message);
-        fprintf(stderr, error_message);
-    }
+    if (DrmManager_activate(drm_manager, true))
+        fprintf(stderr, drm_manager.error_message);
 
     // [...]
 
     // Deactivate the DRM, but pause the session instead of closing it
-    if DrmManager_deactivate(drm_manager, true) {
-        char* message = NULL;
-        DrmManager_get_string(drm_manager, DRM__strerror, &message);
-        fprintf(stderr, error_message);
-    }
+    if (DrmManager_deactivate(drm_manager, true))
+        fprintf(stderr, drm_manager.error_message);
 
 .. code-block:: python
     :caption: Python
