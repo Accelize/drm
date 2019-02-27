@@ -30,12 +30,27 @@ limitations under the License.
 #include <stdbool.h>
 #include <stdint.h>
 
+
+#define MAX_MSG_SIZE 1024
+
+
 /** \brief Struct handling DRM manager.
 
     Manage Accelize DRM by handling communication with DRM controller IP
     and Accelize Web service.
 */
 struct DrmManager_s;
+
+/** \brief Typedef struct handling DRM manager.
+
+    Manage error message and Accelize DRM by handling communication with DRM controller IP
+    and Accelize Web service.
+*/
+typedef struct {
+    char error_message[MAX_MSG_SIZE];
+    struct DrmManager_s *drm;
+} DrmManager;
+
 
 /** \brief Typedef enum listing the parameters accessible from User code.
     Some have ready only access while others have read and write access.
@@ -47,12 +62,6 @@ typedef enum {
     DRM__ParameterKeyCount
 } DrmParameterKey;
 
-/** \brief Typedef struct handling DRM manager.
-
-    Manage Accelize DRM by handling communication with DRM controller IP
-    and Accelize Web service.
-*/
-typedef struct DrmManager_s DrmManager;
 
 /** \brief FPGA read register callback function.
     The register offset is relative to first register of DRM controller
@@ -68,6 +77,7 @@ typedef struct DrmManager_s DrmManager;
 */
 typedef int/*errcode*/ (*ReadRegisterCallback)(uint32_t /*register offset*/, uint32_t* /*returned data*/, void* user_p);
 
+
 /** \brief FPGA write register callback function.
     The register offset is relative to first register of DRM controller
 
@@ -81,6 +91,7 @@ typedef int/*errcode*/ (*ReadRegisterCallback)(uint32_t /*register offset*/, uin
 */
 typedef int/*errcode*/ (*WriteRegisterCallback)(uint32_t /*register offset*/, uint32_t /*data to write*/, void* user_p);
 
+
 /** \brief Asynchronous Error handling callback function.
     This function is called in case of asynchronous error during operation.
 
@@ -89,9 +100,11 @@ typedef int/*errcode*/ (*WriteRegisterCallback)(uint32_t /*register offset*/, ui
 */
 typedef void (*AsynchErrorCallback)(const char* /*error message*/, void* user_p);
 
+
 /** \brief Return API version.
 */
 const char * DrmManager_getApiVersion() DRM_EXPORT;
+
 
 /** \brief Instantiate and initialize a DRM manager.
 
@@ -119,6 +132,7 @@ DRM_ErrorCode DrmManager_alloc(DrmManager **p_m,
         void* user_p
 ) DRM_EXPORT;
 
+
 /** \brief Free a DRM manager object.
 
     \param[in] p_m : Pointer to a DrmManager pointer that will be freed.
@@ -128,6 +142,7 @@ DRM_ErrorCode DrmManager_alloc(DrmManager **p_m,
     the success or the cause of the error during the function execution.
 */
 DRM_ErrorCode DrmManager_free(DrmManager **p_m) DRM_EXPORT;
+
 
 /** \brief Activate DRM session.
 
@@ -158,6 +173,7 @@ DRM_ErrorCode DrmManager_free(DrmManager **p_m) DRM_EXPORT;
 */
 DRM_ErrorCode DrmManager_activate(DrmManager *m, bool resume_session_request ) DRM_EXPORT;
 
+
 /** \brief Deactivate DRM session.
 
     This function deactivates/locks the hardware back and close the session
@@ -177,6 +193,7 @@ DRM_ErrorCode DrmManager_activate(DrmManager *m, bool resume_session_request ) D
     the success or the cause of the error during the function execution.
 */
 DRM_ErrorCode DrmManager_deactivate(DrmManager *m, bool pause_session_request ) DRM_EXPORT;
+
 
 /** \brief Get information from the DRM system.
 
@@ -198,6 +215,7 @@ DRM_ErrorCode DrmManager_deactivate(DrmManager *m, bool pause_session_request ) 
 */
 DRM_ErrorCode DrmManager_get_json_string( DrmManager *m, const char* json_in, char** json_out ) DRM_EXPORT;
 
+
 /** \brief Get information from the DRM system.
 
     This function gives access to the internal parameter of the DRM system.
@@ -212,6 +230,7 @@ DRM_ErrorCode DrmManager_get_json_string( DrmManager *m, const char* json_in, ch
     the success or the cause of the error during the function execution.
 */
 DRM_ErrorCode DrmManager_get_bool( DrmManager *m, const DrmParameterKey key_id, bool* p_value ) DRM_EXPORT;
+
 
 /** \brief Get information from the DRM system.
 
@@ -228,6 +247,7 @@ DRM_ErrorCode DrmManager_get_bool( DrmManager *m, const DrmParameterKey key_id, 
 */
 DRM_ErrorCode DrmManager_get_int( DrmManager *m, const DrmParameterKey key_id, int* p_value ) DRM_EXPORT;
 
+
 /** \brief Get information from the DRM system.
 
     This function gives access to the internal parameter of the DRM system.
@@ -242,6 +262,7 @@ DRM_ErrorCode DrmManager_get_int( DrmManager *m, const DrmParameterKey key_id, i
     the success or the cause of the error during the function execution.
 */
 DRM_ErrorCode DrmManager_get_uint( DrmManager *m, const DrmParameterKey key_id, unsigned int* p_value ) DRM_EXPORT;
+
 
 /** \brief Get information from the DRM system.
 
@@ -258,6 +279,7 @@ DRM_ErrorCode DrmManager_get_uint( DrmManager *m, const DrmParameterKey key_id, 
 */
 DRM_ErrorCode DrmManager_get_int64( DrmManager *m, const DrmParameterKey key_id, long long* p_value ) DRM_EXPORT;
 
+
 /** \brief Get information from the DRM system.
 
     This function gives access to the internal parameter of the DRM system.
@@ -272,6 +294,7 @@ DRM_ErrorCode DrmManager_get_int64( DrmManager *m, const DrmParameterKey key_id,
     the success or the cause of the error during the function execution.
 */
 DRM_ErrorCode DrmManager_get_uint64( DrmManager *m, const DrmParameterKey key_id, unsigned long long* p_value ) DRM_EXPORT;
+
 
 /** \brief Get information from the DRM system.
 
@@ -288,6 +311,7 @@ DRM_ErrorCode DrmManager_get_uint64( DrmManager *m, const DrmParameterKey key_id
 */
 DRM_ErrorCode DrmManager_get_float( DrmManager *m, const DrmParameterKey key_id, float* p_value ) DRM_EXPORT;
 
+
 /** \brief Get information from the DRM system.
 
     This function gives access to the internal parameter of the DRM system.
@@ -302,6 +326,7 @@ DRM_ErrorCode DrmManager_get_float( DrmManager *m, const DrmParameterKey key_id,
     the success or the cause of the error during the function execution.
 */
 DRM_ErrorCode DrmManager_get_double( DrmManager *m, const DrmParameterKey key_id, double* p_value ) DRM_EXPORT;
+
 
 /** \brief Get information from the DRM system.
 
@@ -318,6 +343,7 @@ DRM_ErrorCode DrmManager_get_double( DrmManager *m, const DrmParameterKey key_id
 */
 DRM_ErrorCode DrmManager_get_string( DrmManager *m, const DrmParameterKey key_id, char** p_value ) DRM_EXPORT;
 
+
 /** \brief Set information of the DRM system.
 
     This function overwrites an internal parameter of the DRM system.
@@ -331,6 +357,7 @@ DRM_ErrorCode DrmManager_get_string( DrmManager *m, const DrmParameterKey key_id
     the success or the cause of the error during the function execution.
 */
 DRM_ErrorCode DrmManager_set_json_string( DrmManager *m, const char* json_in ) DRM_EXPORT;
+
 
 /** \brief Set information of the DRM system.
 
@@ -346,6 +373,7 @@ DRM_ErrorCode DrmManager_set_json_string( DrmManager *m, const char* json_in ) D
 */
 DRM_ErrorCode DrmManager_set_bool  ( DrmManager *m, const DrmParameterKey key_id, const bool value ) DRM_EXPORT;
 
+
 /** \brief Set information of the DRM system.
 
     This function overwrites an internal parameter of the DRM system.
@@ -359,6 +387,7 @@ DRM_ErrorCode DrmManager_set_bool  ( DrmManager *m, const DrmParameterKey key_id
     the success or the cause of the error during the function execution.
 */
 DRM_ErrorCode DrmManager_set_int   ( DrmManager *m, const DrmParameterKey key_id, const int value ) DRM_EXPORT;
+
 
 /** \brief Set information of the DRM system.
 
@@ -374,6 +403,7 @@ DRM_ErrorCode DrmManager_set_int   ( DrmManager *m, const DrmParameterKey key_id
 */
 DRM_ErrorCode DrmManager_set_uint  ( DrmManager *m, const DrmParameterKey key_id, const unsigned int value ) DRM_EXPORT;
 
+
 /** \brief Set information of the DRM system.
 
     This function overwrites an internal parameter of the DRM system.
@@ -387,6 +417,7 @@ DRM_ErrorCode DrmManager_set_uint  ( DrmManager *m, const DrmParameterKey key_id
     the success or the cause of the error during the function execution.
 */
 DRM_ErrorCode DrmManager_set_int64 ( DrmManager *m, const DrmParameterKey key_id, const long long value ) DRM_EXPORT;
+
 
 /** \brief Set information of the DRM system.
 
@@ -402,6 +433,7 @@ DRM_ErrorCode DrmManager_set_int64 ( DrmManager *m, const DrmParameterKey key_id
 */
 DRM_ErrorCode DrmManager_set_uint64( DrmManager *m, const DrmParameterKey key_id, const unsigned long long value ) DRM_EXPORT;
 
+
 /** \brief Set information of the DRM system.
 
     This function overwrites an internal parameter of the DRM system.
@@ -415,6 +447,7 @@ DRM_ErrorCode DrmManager_set_uint64( DrmManager *m, const DrmParameterKey key_id
     the success or the cause of the error during the function execution.
 */
 DRM_ErrorCode DrmManager_set_float ( DrmManager *m, const DrmParameterKey key_id, const float value ) DRM_EXPORT;
+
 
 /** \brief Set information of the DRM system.
 
@@ -430,6 +463,7 @@ DRM_ErrorCode DrmManager_set_float ( DrmManager *m, const DrmParameterKey key_id
 */
 DRM_ErrorCode DrmManager_set_double( DrmManager *m, const DrmParameterKey key_id, const double value ) DRM_EXPORT;
 
+
 /** \brief Set information of the DRM system.
 
     This function overwrites an internal parameter of the DRM system.
@@ -443,6 +477,7 @@ DRM_ErrorCode DrmManager_set_double( DrmManager *m, const DrmParameterKey key_id
     the success or the cause of the error during the function execution.
 */
 DRM_ErrorCode DrmManager_set_string( DrmManager *m, const DrmParameterKey key_id, const char* value ) DRM_EXPORT;
+
 
 #ifdef  __cplusplus
 }

@@ -37,7 +37,8 @@ std::ostream& operator<<(std::ostream& os, const Json::ValueType& type) {
     return os;
 }
 
-void parseConfiguration(const std::string &file_path, Json::Value &json_value) {
+Json::Value parseConfiguration( const std::string &file_path ) {
+    Json::Value json_value;
     Json::Reader reader;
     std::ifstream fh( file_path );
     if ( !fh.good() ) {
@@ -47,6 +48,7 @@ void parseConfiguration(const std::string &file_path, Json::Value &json_value) {
     fh.close();
     if ( !ret  )
         Throw( DRM_BadFormat, "Cannot parse ", file_path, " : ", reader.getFormattedErrorMessages() );
+    return json_value;
 }
 
 const Json::Value& JVgetRequired(const Json::Value& jval, const char* key, const Json::ValueType& type) {

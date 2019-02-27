@@ -7,13 +7,16 @@ ctypedef int(*ReadRegisterCallback)(uint32_t, uint32_t*, void*user_p)
 ctypedef int(*WriteRegisterCallback)(uint32_t, uint32_t, void*user_p)
 ctypedef void(*AsynchErrorCallback)(const char*, void*user_p)
 
+
 cdef extern from "accelize/drmc.h" nogil:
 
     ctypedef struct DrmManager:
+        char error_message[1024]
         pass
 
     ctypedef enum DrmParameterKey:
         pass
+
 
     const char * DrmManager_getApiVersion()
 

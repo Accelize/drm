@@ -59,29 +59,12 @@ def test_configuration_file_with_wrong_url(accelize_drm, conf_json, cred_json):
     assert errCode == accelize_drm.exceptions.DRMWSMayRetry.error_code
 
 
-@pytest.mark.skip
-def test_configuration_file_with_bad_frequency(capsys, accelize_drm, conf_json, cred_json):
+def test_configuration_file_with_bad_frequency(capsys, accelize_drm, async_handler, conf_json, cred_json):
     """Test errors when wrong url is given to DRM Controller Constructor"""
 
     driver = accelize_drm.pytest_fpga_driver
 
-    async_callback_called = False
-    async_callback_message = ''
-    async_callback_errcode = -1
-
-    def async_callback(message):
-        global async_callback_called, async_callback_message, async_callback_errcode
-        async_callback_called = True
-        async_callback_message = message
-        m = re.search(r'\[errCode=(\d+)\]', str(excinfo.value))
-        assert m, "Could not find 'errCode' in exception message"
-        async_callback_errcode = int(m.group(1))
-
     # Test a BADFrequency error is returned by asynchronous error callback when frequency in configuration file is different from the detected frequency
-    async_callback_called = False
-    async_callback_message = ''
-    async_callback_errcode = -1
-
     conf_json.reset()
     init_freq = conf_json['drm']['frequency_mhz']
     conf_json['drm']['frequency_mhz'] += 50
@@ -93,19 +76,14 @@ def test_configuration_file_with_bad_frequency(capsys, accelize_drm, conf_json, 
         cred_json.path,
         driver.read_register_callback,
         driver.write_register_callback,
-        async_callback
+        async_handler.callback
     )
     drm_manager.activate()
     time.sleep(2)
     drm_manager.deactivate()
-
-    assert async_callback_called, 'Asynchronous callback has NOT been called'
-    assert len(async_callback_message) > 0, 'No message has been reported by asynchronous callback'
-    assert re.search(r'DRM frequency .* differs from .* configuration file', async_callback_message) is not None, 'An wrong message has been reported by asynchronous callback'
-    assert async_callback_errcode == accelize_drm.exceptions.DRMBadFrequency.error_code, 'An wrong error code has been reported by asynchronous callback'
-
-    #assert re.search(r'WARNING: Detected DRM frequency .* differs', captured.out) is not None
-    #WARNING: Detected DRM frequency (125 MHz) differs from the value (175 MHz) defined in the configuration file '/tmp/pytest-of-root/pytest-152/test_configuration_file_with_w1/conf.json': From now on the considered frequency is 125 MHz
+    assert async_handler.has_been_called == True, 'Asynchronous callback has NOT been called'
+    assert re.search(r'DRM frequency .* differs from .* configuration file', async_handler.message) is not None, 'An wrong message has been reported by asynchronous callback'
+    assert async_handler.errcode == accelize_drm.exceptions.DRMBadFrequency.error_code, 'An wrong error code has been reported by asynchronous callback'
 
     ## Test frequency minimum constraint
     #pytest.xfail('Web service is not checking DRM frequency yet')

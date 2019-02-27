@@ -15,7 +15,7 @@ def test_raise_exceptions(accelize_drm):
     for raise_from_error in (exc._raise_from_error, exc._async_error_callback):
 
         # Raise an exception from message with error code
-        with pytest.raises(exc.DRMLibFatal):
+        with pytest.raises(exc.DRMFatal):
             raise_from_error('message [errCode=90001]\n')
 
         # Raise an exception with no error code

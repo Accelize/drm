@@ -29,6 +29,7 @@ limitations under the License.
 #include "accelize/drmc/common.h"
 #include "accelize/drm/version.h"
 
+
 //! Accelize interfaces and implementations
 namespace Accelize {
 
@@ -50,6 +51,7 @@ enum ParameterKey {
 /** \brief Return API version.
 */
 const char* getApiVersion() DRM_EXPORT;
+
 
 /** \brief Manage Accelize DRM by handling communication with DRM controller IP
     and Accelize Web service.
@@ -93,7 +95,6 @@ public:
         \param[in] error_message : Error message.
     */
     typedef std::function<void (const std::string&/*error message*/)> AsynchErrorCallback;
-
 
     DrmManager() = delete; //!< No default constructor
 
@@ -172,7 +173,7 @@ public:
             json_value["CUSTOM_FIELD"]=json::nullValue;
             json_value["NUM_ACTIVATORS"]=json::nullValue;
     */
-    void get( Json::Value& json_value );
+    void get( Json::Value& json_value ) const;
 
     /** \brief Get information from the DRM system.
 
@@ -182,7 +183,7 @@ public:
         names requested as key and Json::nullValue as value. For instance,
             std::string json_string = "{\"NUM_ACTIVATORS\": null, \"SESSION_ID\": null}";
     */
-    void get( std::string& json_string );
+    void get( std::string& json_string ) const;
 
     /** \brief Get information from the DRM system.
 
@@ -193,7 +194,7 @@ public:
 
         \return the value of the corresponding parameter.
     */
-    template<typename T> T get( const ParameterKey key_id );
+    template<typename T> T get( const ParameterKey key_id ) const;
 
     /** \brief Set information of the DRM system.
 

@@ -4,6 +4,7 @@ from os import environ, listdir, remove
 from os.path import realpath, isfile, expanduser, splitext, join
 from json import dump, load
 from copy import deepcopy
+from re import search
 import pytest
 
 _SESSION = dict()
@@ -74,7 +75,7 @@ def pytest_addoption(parser):
         help='Specify "libaccelize_drm" log format')
     parser.addoption(
         "--fpga_image", default="default",
-        help='Select FPGA image to use for program the FPGA. '
+        help='Select FPGA image to program the FPGA with. '
              'By default, use default FPGA image for the selected driver and '
              'last HDK version. Set to empty string to not program the FPGA.')
     parser.addoption(
@@ -418,3 +419,28 @@ def perform_once(test_name):
     else:
         with open(test_lock, 'w'):
             pass
+
+
+class AsyncErrorHandler:
+    def __init__(self):
+        self.reset()
+    def reset(self):
+        self.message = ''
+        self.errcode = None
+        self.was_called = False
+    def callback(self, message):
+        self.was_called = True
+        if isinstance(message, bytes):
+            self.message = message.decode()
+        else:
+            self.message = message
+        m = search(r'\[errCode=(\d+)\]', self.message)
+        if m:
+            self.errcode = int(m.group(1))
+        else:
+            self.errcode = None
+
+
+@pytest.fixture
+def async_handler():
+    return AsyncErrorHandler()

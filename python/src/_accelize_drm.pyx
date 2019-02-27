@@ -14,12 +14,12 @@ from ctypes import (
 from json import dumps as _dumps, loads as _loads
 
 from accelize_drm.libaccelize_drm cimport (
-DrmManager as C_DrmManager, getApiVersion,
-ReadRegisterCallback, WriteRegisterCallback, AsynchErrorCallback)
+    DrmManager as C_DrmManager, getApiVersion,
+    ReadRegisterCallback, WriteRegisterCallback, AsynchErrorCallback)
 
-from accelize_drm.exceptions import _async_error_callback,_raise_from_error
+from accelize_drm.exceptions import _async_error_callback,_raise_from_error, DRMBadArg
 
-_ASYNC_ERROR_CFUNCTYPE = _CFUNCTYPE(_c_void_p, _c_char_p)
+_ASYNC_ERROR_CFUNCTYPE = _CFUNCTYPE(_c_void_p, _c_void_p)
 _READ_REGISTER_CFUNCTYPE = _CFUNCTYPE(_c_int, _c_uint32, _POINTER(_c_uint32))
 _WRITE_REGISTER_CFUNCTYPE = _CFUNCTYPE(_c_int, _c_uint32, _c_uint32)
 
@@ -47,6 +47,7 @@ def _get_api_version():
         return getApiVersion()
     except RuntimeError as exception:
         _handle_exceptions(exception)
+
 
 cdef class DrmManager:
     """
@@ -78,7 +79,7 @@ cdef class DrmManager:
             This function is called in case of asynchronous error during
             operation.
             The function needs to return None and accept following argument:
-            error_message (str). The function can't be a non static method.
+            error_message (bytes). The function can't be a non static method.
             If not specified, use default callback that raises
             "accelize_drm.exceptions.DRMException" or its subclasses.
     """
@@ -96,6 +97,7 @@ cdef class DrmManager:
     cdef string _conf_file_path
     cdef string _cred_file_path
 
+
     def __cinit__(self, conf_file_path, cred_file_path,
                   read_register, write_register, async_error=None):
 
@@ -104,24 +106,38 @@ cdef class DrmManager:
         self._cred_file_path = _fsencode(cred_file_path)
 
         # Handle callbacks
+        if not hasattr(read_register, "__call__"):
+            _raise_from_error('Read register callback function must not be None',
+                error_code=DRMBadArg.error_code)
+        if not hasattr(write_register, "__call__"):
+            _raise_from_error('Write register callback function must not be None',
+                error_code=DRMBadArg.error_code)
+
         self._read_register = read_register
         self._read_register_c = _READ_REGISTER_CFUNCTYPE(read_register)
-        self._read_register_p = (<ReadRegisterCallback*><size_t>_addressof(
-            self._read_register_c))[0]
+        self._read_register_p = (<ReadRegisterCallback*><size_t>_addressof(self._read_register_c))[0]
 
         self._write_register = write_register
         self._write_register_c  = _WRITE_REGISTER_CFUNCTYPE(write_register)
-        self._write_register_p = (<WriteRegisterCallback*><size_t>_addressof(
-            self._write_register_c))[0]
+        self._write_register_p = (<WriteRegisterCallback*><size_t>_addressof(self._write_register_c))[0]
 
         if async_error is None:
             # Use default error callback
             async_error = _async_error_callback
 
-        self._async_error = async_error
-        self._async_error_c  = _ASYNC_ERROR_CFUNCTYPE(async_error)
-        self._async_error_p = (<AsynchErrorCallback*><size_t>_addressof(
-            self._async_error_c))[0]
+        if not hasattr(async_error, "__call__"):
+            _raise_from_error('Asynchronous error callback function must be a callable',
+                error_code=DRMBadArg.error_code)
+
+        def async_error_char(error_message):
+            """Convert string to char* before passing if to Python callback."""
+            cdef string *error_message_str = <string*><size_t>error_message
+            error_message_char = error_message_str.c_str()
+            async_error(error_message_char)
+
+        self._async_error = async_error_char
+        self._async_error_c  = _ASYNC_ERROR_CFUNCTYPE(async_error_char)
+        self._async_error_p = (<AsynchErrorCallback*><size_t>_addressof(self._async_error_c))[0]
 
         # Instantiate object
         try:

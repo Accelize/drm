@@ -6,16 +6,17 @@ from libc.stdint cimport uint32_t
 from libcpp cimport bool
 from libcpp.string cimport string
 
-ctypedef int(*ReadRegisterCallback)(uint32_t, uint32_t*)
-ctypedef int(*WriteRegisterCallback)(uint32_t, uint32_t)
-ctypedef void(*AsynchErrorCallback)(const string &)
+ctypedef int (*ReadRegisterCallback)(uint32_t, uint32_t*)
+ctypedef int (*WriteRegisterCallback)(uint32_t, uint32_t)
+ctypedef void (*AsynchErrorCallback)(const string &)
+
 
 cdef extern from "accelize/drm.h" namespace "Accelize::DRM" nogil:
 
-    const char* getApiVersion() except +
-
     enum ParameterKey:
         pass
+
+    const char* getApiVersion() except +
 
     cdef cppclass DrmManager:
 

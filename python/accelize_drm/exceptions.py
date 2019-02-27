@@ -91,7 +91,7 @@ class DRMCtlrError(DRMException):
     error_code = 20001
 
 
-class DRMLibFatal(DRMException):
+class DRMFatal(DRMException):
     """
     Fatal error, unknown error (Please contact Accelize)
     """
@@ -99,12 +99,18 @@ class DRMLibFatal(DRMException):
     error_code = 90001
 
 
-class DRMLibAssert(DRMException):
+class DRMAssert(DRMException):
     """
     Assertion failed internally (Please contact Accelize)
     """
     #: Error code
     error_code = 90002
+
+
+class DRMDebug(DRMException):
+    """Generated for debug and testing only"""
+    #: Error code
+    error_code = 90003
 
 
 _ERROR_CODES = {}
@@ -123,7 +129,7 @@ def _async_error_callback(error_message):
     Default Asynchronous errors callback that raise DRM exceptions.
 
     Args:
-        error_message (str): Error message.
+        error_message (bytes): Error message.
 
     Raises:
         DRMException subclass: Exception
@@ -136,12 +142,15 @@ def _raise_from_error(error_message, error_code=None):
     Get Exception from error code.
 
     Args:
-        error_message (str): Error message.
+        error_message (bytes or str): Error message.
         error_code (int): Error code.
 
     Raises:
         DRMException subclass: Exception
     """
+    if isinstance(error_message, bytes):
+        error_message = error_message.decode()
+
     if error_code is None:
         import re
         match = re.search(r'\[errCode=(\d+)\]', error_message)
