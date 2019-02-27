@@ -43,6 +43,7 @@ To install the repository, run the following commands:
 
 .. code-block:: bash
     :caption: Apt repository with HTTPS
+
     # Install HTTPS support for Apt
     sudo apt install -y apt-transport-https
 
@@ -53,6 +54,7 @@ It is also possible to install the repository without HTTPS support:
 
 .. code-block:: bash
     :caption: Apt repository without HTTP
+
     sudo echo "deb http://accelize.s3.amazonaws.com/deb $(lsb_release -cs) main">/etc/apt/sources.list.d/accelize.list
 
 In this case the communication is done in HTTP, security is provided by package
@@ -66,9 +68,14 @@ RHEL, CentOS, Fedora: RPM repository
 To install the repository, run the following commands:
 
 .. code-block:: bash
-    yum-config-manager --add-repo https://accelize.s3.amazonaws.com/rpm/accelize.repo
+    :caption: On CentOS, RHEL
 
-.. todo:: Package repository configuration
+    sudo yum-config-manager --add-repo https://accelize.s3.amazonaws.com/rpm/accelize.repo
+
+.. code-block:: bash
+    :caption: On Fedora
+
+    sudo dnf config-manager --add-repo https://accelize.s3.amazonaws.com/rpm/accelize.repo
 
 C/C++ Library
 ~~~~~~~~~~~~~
@@ -87,6 +94,11 @@ It can be installed using package manager:
 
     sudo yum install -y libaccelize-drm
 
+.. code-block:: bash
+    :caption: On Fedora
+
+    sudo dnf install -y libaccelize-drm
+
 Python Library
 ~~~~~~~~~~~~~~
 
@@ -104,6 +116,11 @@ It can be installed using package manager:
     :caption: On RHEL, CentOS
 
     sudo yum install -y python3-accelize-drm
+
+.. code-block:: bash
+    :caption: On Fedora
+
+    sudo dnf install -y python3-accelize-drm
 
 .. note:: The ``libaccelize-drm`` package is automatically installed with the
           ``python3-accelize-drm`` package.
@@ -133,6 +150,11 @@ It can be installed using package manager:
     :caption: On RHEL, CentOS
 
     sudo yum install -y libaccelize-drm-devel
+
+.. code-block:: bash
+    :caption: On Fedora
+
+    sudo dnf install -y libaccelize-drm-devel
 
 .. note:: The ``libaccelize-drm`` is automatically installed with the
           Development package.
@@ -167,9 +189,14 @@ Run following commands to install requirements:
     sudo apt install -y git make g++ libcurl4-openssl-dev libjsoncpp-dev
 
 .. code-block:: bash
-    :caption: On RHEL, CentOS, Fedora
+    :caption: On RHEL, CentOS
 
     sudo yum install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel
+
+.. code-block:: bash
+    :caption: On Fedora
+
+    sudo dnf install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel
 
 We recommend to install CMake as Python package to get a recent version
 (Some version packaged on some OS are too old to build the Accelize DRM library)
@@ -204,7 +231,7 @@ Run following command to install requirements:
     pip3 install -U setuptools wheel cython
 
 .. code-block:: bash
-    :caption: On Centos7
+    :caption: On RHEL 7, Centos7
 
     # Install EPEL repository to get a recent Python version
     sudo yum install -y epel-release
@@ -217,6 +244,12 @@ Run following command to install requirements:
     sudo ln -s /usr/local/bin/pip3 /usr/bin/pip3
 
     # Install Python Packages
+    pip3 install -U setuptools wheel cython
+
+.. code-block:: bash
+    :caption: On Fedora
+
+    sudo dnf install -y python3-devel python3-pip
     pip3 install -U setuptools wheel cython
 
 To build documentation
@@ -241,9 +274,15 @@ Run following command to install requirements:
     pip3 install -U sphinx breathe sphinx_rtd_theme
 
 .. code-block:: bash
-    :caption: On RHEL, CentOS, Fedora
+    :caption: On RHEL, CentOS
 
     sudo yum install -y doxygen
+    pip3 install -U sphinx breathe sphinx_rtd_theme
+
+.. code-block:: bash
+    :caption: On Fedora
+
+    sudo dnf install -y doxygen
     pip3 install -U sphinx breathe sphinx_rtd_theme
 
 To build packages
@@ -264,8 +303,14 @@ Required to sign packages:
 Run following command to install requirements:
 
 .. code-block:: bash
+    :caption: On RHEL, CentOS
 
-    sudo yum install -y rpm-build rpm-sign expect gnupg
+    sudo yum install -y rpm-build rpm-sign gnupg
+
+.. code-block:: bash
+    :caption: On Fedora
+
+    sudo dnf install -y rpm-build rpm-sign gnupg2
 
 DEB Packages (For Debian, Ubuntu)
 `````````````````````````````````
@@ -334,9 +379,14 @@ Run following command to install requirements:
     cd ..
 
 .. code-block:: bash
-    :caption: On RHEL, CentOS, Fedora
+    :caption: On RHEL, CentOS
 
     sudo yum install -y abi-compliance-checker
+
+.. code-block:: bash
+    :caption: On Fedora
+
+    sudo dnf install -y abi-compliance-checker
 
 Full test scenario support
 ``````````````````````````
@@ -376,9 +426,15 @@ Run following command to install requirements:
     pip3 install -U pytest-cov cython
 
 .. code-block:: bash
-    :caption: On RHEL, CentOS, Fedora
+    :caption: On RHEL, CentOS
 
     sudo yum install -y lcov
+    pip3 install -U pytest-cov cython
+
+.. code-block:: bash
+    :caption: On Fedora
+
+    sudo dnf install -y lcov
     pip3 install -U pytest-cov cython
 
 Building
