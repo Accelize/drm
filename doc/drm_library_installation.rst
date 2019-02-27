@@ -34,9 +34,41 @@ Install the Accelize repository
 
 Packages are hosted on the Accelize repository.
 
-.. todo:: Package repository configuration
+.. note:: All packages are signed for security.
 
-.. note:: Packages are signed for security.
+Debian, Ubuntu: DEB repository
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To install the repository, run the following commands:
+
+.. code-block:: bash
+    :caption: Apt repository with HTTPS
+    # Install HTTPS support for Apt
+    sudo apt install -y apt-transport-https
+
+    # Install repository
+    sudo echo "deb https://accelize.s3.amazonaws.com/deb $(lsb_release -cs) main">/etc/apt/sources.list.d/accelize.list
+
+It is also possible to install the repository without HTTPS support:
+
+.. code-block:: bash
+    :caption: Apt repository without HTTP
+    sudo echo "deb http://accelize.s3.amazonaws.com/deb $(lsb_release -cs) main">/etc/apt/sources.list.d/accelize.list
+
+In this case the communication is done in HTTP, security is provided by package
+signature that ensure package where not tampered.
+
+.. todo:: Check signature verification done correctly.
+
+RHEL, CentOS, Fedora: RPM repository
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To install the repository, run the following commands:
+
+.. code-block:: bash
+    yum-config-manager --add-repo https://accelize.s3.amazonaws.com/rpm/accelize.repo
+
+.. todo:: Package repository configuration
 
 C/C++ Library
 ~~~~~~~~~~~~~
