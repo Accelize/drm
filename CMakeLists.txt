@@ -155,11 +155,10 @@ set(API_HEADERS
   include/accelize/drm/ParameterKey.def
   include/accelize/drm/session_manager.h
   include/accelize/drm/error.h
-  include/accelize/drm/metering.h
-  include/accelize/drm.h
+        include/accelize/drm.h
   include/accelize/drmc/common.h
   include/accelize/drmc/errorcode.h
-  include/accelize/drmc/metering.h
+        include/accelize/drmc/wrapper.h
   include/accelize/drmc.h
 )
 

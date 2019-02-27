@@ -20,4 +20,6 @@ limitations under the License.
     This file includes all the available features/classes of the DRM
 */
 
-#include "accelize/drm/metering.h"
+#include "accelize/drm/session_manager.h"
+#include "accelize/drm/version.h"
+#include "accelize/drm/error.h"

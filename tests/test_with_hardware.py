@@ -59,7 +59,7 @@ def test_configuration_file_with_wrong_url(accelize_drm, conf_json, cred_json):
     assert errCode == accelize_drm.exceptions.DRMWSMayRetry.error_code
 
 
-def test_configuration_file_with_bad_frequency(capsys, accelize_drm, async_handler, conf_json, cred_json):
+def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_json, async_handler):
     """Test errors when wrong url is given to DRM Controller Constructor"""
 
     driver = accelize_drm.pytest_fpga_driver
@@ -82,30 +82,54 @@ def test_configuration_file_with_bad_frequency(capsys, accelize_drm, async_handl
     time.sleep(2)
     drm_manager.deactivate()
     assert async_handler.was_called == True, 'Asynchronous callback has NOT been called'
-    assert re.search(r'DRM frequency .* differs from .* configuration file', async_handler.message) is not None, 'An wrong message has been reported by asynchronous callback'
+    assert re.search(r'DRM frequency .* differs from .* configuration file', async_handler.message) is not None, 'A wrong message has been reported by asynchronous callback'
     assert async_handler.errcode == accelize_drm.exceptions.DRMBadFrequency.error_code, 'An wrong error code has been reported by asynchronous callback'
 
-    ## Test frequency minimum constraint
-    #pytest.xfail('Web service is not checking DRM frequency yet')
-    #conf_json.reset()
-    #conf_json['drm']['frequency_mhz'] = 1000
-    #conf_json.save()
-    #assert conf_json['drm']['frequency_mhz'] == 1000
-    #
-    #drm_manager = accelize_drm.DrmManager(
-    #    conf_json.path,
-    #    cred_json.path,
-    #    driver.read_register_callback,
-    #    driver.write_register_callback
-    #)
-    #with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
-    #    drm_manager.activate()
-    #assert "????" in str(excinfo.value)
-    #m = re.search(r'\[errCode=(\d+)\]', str(excinfo.value))
-    #assert m, "Could not find 'errCode' in exception message"
-    #errCode = int(m.group(1))
-    #assert errCode == accelize_drm.exceptions.DRMWSMayRetry.error_code
+    # TODO: Remove the following line when web service is handling it
+    return
+
+    # Test web service detects a frequency underflow
+    pytest.xfail('Web service is not checking DRM frequency underflow yet')
+    conf_json.reset()
+    conf_json['drm']['frequency_mhz'] = 10
+    conf_json.save()
+    assert conf_json['drm']['frequency_mhz'] == 10
+
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback
+    )
+    with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
+        drm_manager.activate()
+    assert '???' in str(excinfo.value)
+    m = re.search(r'\[errCode=(\d+)\]', str(excinfo.value))
+    assert m, "Could not find 'errCode' in exception message"
+    errCode = int(m.group(1))
+    assert errCode == accelize_drm.exceptions.DRMWSMayRetry.error_code
+
+    # Test web service detects a frequency overflow
+    pytest.xfail('Web service is not checking DRM frequency overflow yet')
+    conf_json.reset()
+    conf_json['drm']['frequency_mhz'] = 1000
+    conf_json.save()
+    assert conf_json['drm']['frequency_mhz'] == 1000
+
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback
+    )
+    with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
+        drm_manager.activate()
+    assert '???' in str(excinfo.value)
+    m = re.search(r'\[errCode=(\d+)\]', str(excinfo.value))
+    assert m, "Could not find 'errCode' in exception message"
+    errCode = int(m.group(1))
+    assert errCode == accelize_drm.exceptions.DRMWSMayRetry.error_code
 
 
-
-
+#def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_json, async_handler):
+#    pass

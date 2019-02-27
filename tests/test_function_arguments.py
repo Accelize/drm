@@ -311,7 +311,7 @@ def test_drm_manager_get_and_set_bad_arguments(accelize_drm, conf_json, cred_jso
     assert errCode == accelize_drm.exceptions.DRMBadArg.error_code
 
 
-def test_drm_manager_async_error_callback(accelize_drm, async_handler, conf_json, cred_json):
+def test_drm_manager_async_error_callback(accelize_drm, conf_json, cred_json, async_handler):
     """Test asynchronous error callback has been called"""
 
     driver = accelize_drm.pytest_fpga_driver
