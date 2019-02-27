@@ -81,7 +81,7 @@ def test_configuration_file_with_bad_frequency(capsys, accelize_drm, async_handl
     drm_manager.activate()
     time.sleep(2)
     drm_manager.deactivate()
-    assert async_handler.has_been_called == True, 'Asynchronous callback has NOT been called'
+    assert async_handler.was_called == True, 'Asynchronous callback has NOT been called'
     assert re.search(r'DRM frequency .* differs from .* configuration file', async_handler.message) is not None, 'An wrong message has been reported by asynchronous callback'
     assert async_handler.errcode == accelize_drm.exceptions.DRMBadFrequency.error_code, 'An wrong error code has been reported by asynchronous callback'
 
