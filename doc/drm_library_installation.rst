@@ -48,14 +48,14 @@ To install the repository, run the following commands:
     sudo apt install -y apt-transport-https
 
     # Install repository
-    sudo echo "deb https://accelize.s3.amazonaws.com/deb $(lsb_release -cs) main">/etc/apt/sources.list.d/accelize.list
+    sudo echo "deb https://accelize.s3.amazonaws.com/deb $(lsb_release -cs) stable">/etc/apt/sources.list.d/accelize.list
 
 It is also possible to install the repository without HTTPS support:
 
 .. code-block:: bash
     :caption: Apt repository without HTTP
 
-    sudo echo "deb http://accelize.s3.amazonaws.com/deb $(lsb_release -cs) main">/etc/apt/sources.list.d/accelize.list
+    sudo echo "deb http://accelize.s3.amazonaws.com/deb $(lsb_release -cs) stable">/etc/apt/sources.list.d/accelize.list
 
 In this case the communication is done in HTTP, security is provided by package
 signature that ensure package where not tampered.
