@@ -48,35 +48,35 @@ services:
       << : *build-environment
       PACKAGES_DIR: /opt/packages/centos_7
 
-  build-ubuntu_18.04:
+  build-ubuntu_bionic:
     << : *build-service
-    image: accelize/accelizedrm-ci:build-ubuntu_18.04
+    image: accelize/accelizedrm-ci:build-ubuntu_bionic
     build:
       context: context
-      dockerfile: build-ubuntu_18.04.Dockerfile
+      dockerfile: build-ubuntu_bionic.Dockerfile
     environment:
       << : *build-environment
-      PACKAGES_DIR: /opt/packages/ubuntu_18.04
+      PACKAGES_DIR: /opt/packages/ubuntu_bionic
 
-  build-ubuntu_16.04:
+  build-ubuntu_xenial:
     << : *build-service
-    image: accelize/accelizedrm-ci:build-ubuntu_16.04
+    image: accelize/accelizedrm-ci:build-ubuntu_xenial
     build:
       context: context
-      dockerfile: build-ubuntu_16.04.Dockerfile
+      dockerfile: build-ubuntu_xenial.Dockerfile
     environment:
       << : *build-environment
-      PACKAGES_DIR: /opt/packages/ubuntu_16.04
+      PACKAGES_DIR: /opt/packages/ubuntu_xenial
 
-  build-debian_9:
+  build-debian_stretch:
     << : *build-service
-    image: accelize/accelizedrm-ci:build-debian_9
+    image: accelize/accelizedrm-ci:build-debian_stretch
     build:
       context: context
-      dockerfile: build-debian_9.Dockerfile
+      dockerfile: build-debian_stretch.Dockerfile
     environment:
       << : *build-environment
-      PACKAGES_DIR: /opt/packages/debian_9
+      PACKAGES_DIR: /opt/packages/debian_stretch
 
   # Unsupported: Run only to ensure future compatibility
   build-fedora_latest:
