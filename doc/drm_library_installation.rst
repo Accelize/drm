@@ -42,10 +42,13 @@ Debian, Ubuntu: DEB repository
 To install the repository, run the following commands:
 
 .. code-block:: bash
-    :caption: Apt repository with HTTPS
+    :caption: Apt repository with HTTPS support
 
     # Install HTTPS support for Apt
     sudo apt install -y apt-transport-https
+
+    # Add Accelize GPG public key for package signature verification
+    curl -fsSL https://accelize.s3.amazonaws.com/gpg | sudo apt-key add -
 
     # Install repository
     sudo echo "deb https://accelize.s3.amazonaws.com/deb $(lsb_release -cs) stable">/etc/apt/sources.list.d/accelize.list
@@ -53,14 +56,16 @@ To install the repository, run the following commands:
 It is also possible to install the repository without HTTPS support:
 
 .. code-block:: bash
-    :caption: Apt repository without HTTP
+    :caption: Apt repository without HTTPS support
 
+    # Add Accelize GPG public key for package signature verification
+    curl -fsSL https://accelize.s3.amazonaws.com/gpg | sudo apt-key add -
+
+    # Install repository
     sudo echo "deb http://accelize.s3.amazonaws.com/deb $(lsb_release -cs) stable">/etc/apt/sources.list.d/accelize.list
 
 In this case the communication is done in HTTP, security is provided by package
 signature that ensure package where not tampered.
-
-.. todo:: Check signature verification done correctly.
 
 RHEL, CentOS, Fedora: RPM repository
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -70,12 +75,12 @@ To install the repository, run the following commands:
 .. code-block:: bash
     :caption: On CentOS, RHEL
 
-    sudo yum-config-manager --add-repo https://accelize.s3.amazonaws.com/rpm/accelize.repo
+    sudo yum-config-manager --add-repo https://accelize.s3.amazonaws.com/rpm/accelize_stable.repo
 
 .. code-block:: bash
     :caption: On Fedora
 
-    sudo dnf config-manager --add-repo https://accelize.s3.amazonaws.com/rpm/accelize.repo
+    sudo dnf config-manager --add-repo https://accelize.s3.amazonaws.com/rpm/accelize_stable.repo
 
 C/C++ Library
 ~~~~~~~~~~~~~
