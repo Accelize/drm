@@ -11,7 +11,7 @@ import time
 def test_drm_manager_constructor_with_bad_arguments(pytestconfig, accelize_drm, conf_json, cred_json):
     """Test errors when missing arguments are given to DRM Controller Constructor"""
 
-    driver = accelize_drm.pytest_fpga_driver
+    driver = accelize_drm.pytest_fpga_driver[0]
     backend = pytestconfig.getoption("backend")
 
     # Test when no configuration file is given
@@ -61,7 +61,7 @@ def test_drm_manager_constructor_with_bad_arguments(pytestconfig, accelize_drm, 
 def test_drm_manager_with_incomplete_configuration_file(accelize_drm, conf_json, cred_json):
     """Test errors when missing arguments are given to DRM Controller Constructor"""
 
-    driver = accelize_drm.pytest_fpga_driver
+    driver = accelize_drm.pytest_fpga_driver[0]
 
     # Test when no licensing node is specified in configuration file
     conf_json.reset()
@@ -235,7 +235,7 @@ def test_drm_manager_with_incomplete_configuration_file(accelize_drm, conf_json,
 
 def test_drm_manager_with_incomplete_credential_file(accelize_drm, conf_json, cred_json):
 
-    driver = accelize_drm.pytest_fpga_driver
+    driver = accelize_drm.pytest_fpga_driver[0]
 
     # Test when credentials no Client ID is specified in credential file
     cred_json.reset()
@@ -283,7 +283,7 @@ def test_drm_manager_with_incomplete_credential_file(accelize_drm, conf_json, cr
 def test_drm_manager_get_and_set_bad_arguments(accelize_drm, conf_json, cred_json):
     """Test errors when bad arguments are given to DRM Controller 'get' function"""
 
-    driver = accelize_drm.pytest_fpga_driver
+    driver = accelize_drm.pytest_fpga_driver[0]
 
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
@@ -314,7 +314,7 @@ def test_drm_manager_get_and_set_bad_arguments(accelize_drm, conf_json, cred_jso
 def test_drm_manager_async_error_callback(accelize_drm, conf_json, cred_json, async_handler):
     """Test asynchronous error callback has been called"""
 
-    driver = accelize_drm.pytest_fpga_driver
+    driver = accelize_drm.pytest_fpga_driver[0]
 
     # Test when no configuration file is given
     async_handler.reset()

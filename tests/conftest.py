@@ -83,6 +83,21 @@ def pytest_addoption(parser):
         help='Select FPGA image base on Accelize DRM HDK version. By default, '
              'use default FPGA image for the selected driver and last HDK '
              'version.')
+    parser.addoption(
+        "--integration", action="store_true",
+        help='Run integration tests. Theses tests may needs two FPGAs.'
+    )
+
+
+def pytest_runtest_setup(item):
+    """
+    Configure test initialization
+    """
+    markers = tuple(item.iter_markers(name='integration'))
+    if not item.config.getoption("integration") and markers:
+        pytest.skip("Don't run integration tests.")
+    elif item.config.getoption("integration") and not markers:
+        pytest.skip("Run only integration tests.")
 
 
 # Pytest Fixtures
@@ -190,21 +205,25 @@ def accelize_drm(pytestconfig):
                 raise ValueError(f'No FPGA image found for {hdk_version}.')
 
     # Define or get FPGA Slot
-    if environ.get('TOX_PARALLEL_ENV'):
+    if pytestconfig.getoption('integration'):
+        # Integration tests requires 2 slots
+        fpga_slot_id = [0, 1]
+    elif environ.get('TOX_PARALLEL_ENV'):
         # Define FPGA slot for Tox parallel execution
-        fpga_slot_id = 0 if backend == 'c' else 1
+        fpga_slot_id = [0 if backend == 'c' else 1]
     else:
         # Use user defined slot
-        fpga_slot_id = pytestconfig.getoption("fpga_slot_id")
+        fpga_slot_id = [pytestconfig.getoption("fpga_slot_id")]
 
     # Initialize FPGA
     print('FPGA SLOT ID:', fpga_slot_id)
     print('FPGA IMAGE:', fpga_image)
-    fpga_driver = fpga_driver_cls(
-        fpga_slot_id=fpga_slot_id,
+    fpga_driver = [fpga_driver_cls(
+        fpga_slot_id=slot_id,
         fpga_image=fpga_image,
         drm_ctrl_base_addr=pytestconfig.getoption(
             "drm_controller_base_address"))
+        for slot_id in fpga_slot_id]
 
     # Store some values for access in tests
     _accelize_drm.pytest_build_environment = build_environment

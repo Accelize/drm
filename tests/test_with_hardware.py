@@ -13,7 +13,7 @@ def test_drm_manager_get_and_set_correctness(accelize_drm, conf_json, cred_json)
 
     import random
 
-    driver = accelize_drm.pytest_fpga_driver
+    driver = accelize_drm.pytest_fpga_driver[0]
 
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
@@ -35,7 +35,7 @@ def test_drm_manager_get_and_set_correctness(accelize_drm, conf_json, cred_json)
 def test_configuration_file_with_wrong_url(accelize_drm, conf_json, cred_json):
     """Test errors when wrong url is given to DRM Controller Constructor"""
 
-    driver = accelize_drm.pytest_fpga_driver
+    driver = accelize_drm.pytest_fpga_driver[0]
 
     # Test when authentication url in configuration file is wrong
     conf_json.reset()
@@ -62,7 +62,7 @@ def test_configuration_file_with_wrong_url(accelize_drm, conf_json, cred_json):
 def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_json, async_handler):
     """Test errors when wrong url is given to DRM Controller Constructor"""
 
-    driver = accelize_drm.pytest_fpga_driver
+    driver = accelize_drm.pytest_fpga_driver[0]
 
     # Test a BADFrequency error is returned by asynchronous error callback when frequency in configuration file is different from the detected frequency
     conf_json.reset()

@@ -77,15 +77,16 @@ def test_fpga_driver(accelize_drm, cred_json, conf_json):
     Test the driver used to perform tests.
     """
     from random import randint
-    driver = accelize_drm.pytest_fpga_driver
 
-    # Test DRM manager instantiation with driver
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path, cred_json.path,
-        driver.read_register_callback, driver.write_register_callback)
+    for driver in accelize_drm.pytest_fpga_driver:
 
-    # Tests driver callbacks by writing/reading random values in a register
-    for i in range(10):
-        new_value = randint(0, 2**32 - 1)
-        drm_manager.set(custom_field=new_value)
-        assert drm_manager.get('custom_field') == new_value
+        # Test DRM manager instantiation with driver
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path, cred_json.path,
+            driver.read_register_callback, driver.write_register_callback)
+
+        # Tests driver callbacks by writing/reading random values in a register
+        for i in range(10):
+            new_value = randint(0, 2**32 - 1)
+            drm_manager.set(custom_field=new_value)
+            assert drm_manager.get('custom_field') == new_value
