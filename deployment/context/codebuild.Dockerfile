@@ -4,7 +4,7 @@ RUN apt-get -qq update;\
 apt-get -qq -o=Dpkg::Use-Pty=0 install -y --no-install-recommends\
     git\
     sudo\
-    g++ make libcurl4-openssl-dev libjsoncpp-dev\
+    g++ make libcurl4-openssl-dev libjsoncpp-dev pkg-config\
     doxygen\
     reprepro createrepo gnupg;\
 python3 -m pip install -U -q --no-cache-dir pip setuptools wheel;\
