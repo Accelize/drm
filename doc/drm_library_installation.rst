@@ -543,6 +543,8 @@ Tests support following options:
   By default, use default FPGA image for the selected driver and last HDK
   version.
 
+* **--integration**: Run integration tests, needs 2 FPGA.
+
 
 Running test on previously build environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -608,6 +610,7 @@ This scenario performs following actions:
 * Build the library in ``debug``, ``release`` and/or ``install`` mode.
 * Get library for packages (``install`` mode only).
 * Run Both C and C++ backend tests.
+* Run Integration tests.
 * Install libraries (``install`` mode only).
 * Generate documentation (except in ``debug`` mode).
 * Generade and export packages (``release`` mode only).
