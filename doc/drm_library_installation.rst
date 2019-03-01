@@ -11,20 +11,24 @@ Software requirements:
 * The Accelize DRM library requires a compiler with full C++11 support.
 * The Accelize DRM Python library requires Python >= 3.5.
 
-Following OS are tested and supported by Accelize:
+Accelize support following "long time support" OS during their entire lifecycle,
+and provides fully tests packages for them:
 
-* Centos 7 [#f1]_
+* RHEL/Centos 7 [#f1]_
 * Debian 9 Stretch
 * Ubuntu 16.04 LTS Xenial
 * Ubuntu 18.04 LTS Bionic
 
 .. [#f1] With Python 3.6 from EPEL repository for Accelize DRM Python library.
 
-Following OS are tested by not officially supported by Accelize:
+Following OS are tested but not supported by Accelize:
 
-* Debian Testing
-* Fedora (Last stable version)
-* Ubuntu Rolling release
+* Debian Testing [#f2]_
+* Fedora (Last stable version) [#f3]_
+* Ubuntu (Last stable version) [#f3]_
+
+.. [#f2] No packages provided.
+.. [#f3] Packages are only provided for last version available.
 
 Installation from packages
 --------------------------
@@ -73,7 +77,7 @@ RHEL, CentOS, Fedora: RPM repository
 To install the repository, run the following commands:
 
 .. code-block:: bash
-    :caption: On CentOS, RHEL
+    :caption: On RHEL 7, CentOS 7
 
     sudo yum-config-manager --add-repo https://accelize.s3.amazonaws.com/rpm/accelize_stable.repo
 
@@ -95,7 +99,7 @@ It can be installed using package manager:
     sudo apt install -y libaccelize-drm
 
 .. code-block:: bash
-    :caption: On RHEL, CentOS
+    :caption: On RHEL 7, CentOS 7
 
     sudo yum install -y libaccelize-drm
 
@@ -118,7 +122,7 @@ It can be installed using package manager:
     sudo apt install -y python3-accelize-drm
 
 .. code-block:: bash
-    :caption: On RHEL, CentOS
+    :caption: On RHEL 7, CentOS 7
 
     sudo yum install -y python3-accelize-drm
 
@@ -152,7 +156,7 @@ It can be installed using package manager:
     sudo apt install -y libaccelize-drm-dev
 
 .. code-block:: bash
-    :caption: On RHEL, CentOS
+    :caption: On RHEL 7, CentOS 7
 
     sudo yum install -y libaccelize-drm-devel
 
@@ -194,7 +198,7 @@ Run following commands to install requirements:
     sudo apt install -y git make g++ libcurl4-openssl-dev libjsoncpp-dev
 
 .. code-block:: bash
-    :caption: On RHEL, CentOS
+    :caption: On RHEL 7, CentOS 7
 
     sudo yum install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel
 
@@ -236,7 +240,7 @@ Run following command to install requirements:
     pip3 install -U setuptools wheel cython
 
 .. code-block:: bash
-    :caption: On RHEL 7, Centos7
+    :caption: On RHEL 7, CentOS 7
 
     # Install EPEL repository to get a recent Python version
     sudo yum install -y epel-release
@@ -279,7 +283,7 @@ Run following command to install requirements:
     pip3 install -U sphinx breathe sphinx_rtd_theme
 
 .. code-block:: bash
-    :caption: On RHEL, CentOS
+    :caption: On RHEL 7, CentOS 7
 
     sudo yum install -y doxygen
     pip3 install -U sphinx breathe sphinx_rtd_theme
@@ -308,7 +312,7 @@ Required to sign packages:
 Run following command to install requirements:
 
 .. code-block:: bash
-    :caption: On RHEL, CentOS
+    :caption: On RHEL 7, CentOS 7
 
     sudo yum install -y rpm-build rpm-sign gnupg
 
@@ -384,7 +388,7 @@ Run following command to install requirements:
     cd ..
 
 .. code-block:: bash
-    :caption: On RHEL, CentOS
+    :caption: On RHEL 7, CentOS 7
 
     sudo yum install -y abi-compliance-checker
 
@@ -431,7 +435,7 @@ Run following command to install requirements:
     pip3 install -U pytest-cov cython
 
 .. code-block:: bash
-    :caption: On RHEL, CentOS
+    :caption: On RHEL 7, CentOS 7
 
     sudo yum install -y lcov
     pip3 install -U pytest-cov cython
