@@ -37,7 +37,7 @@ def assert_NoErrorCallback( async_cb ):
     assert not async_cb.was_called, 'Asynchronous callback has been called.'
 
 
-#@pytest.mark.skip
+@pytest.mark.skip
 def test_bad_authentifaction(accelize_drm, conf_json, cred_json, async_handler):
     """Test errors when bad authentication parameters are provided to DRM Manager Constructor or Web Service."""
 
@@ -109,7 +109,7 @@ def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_jso
             async_cb.callback
         )
         drm_manager.activate()
-        sleep(0.5)
+        sleep(1)
         threshold = drm_manager.get('frequency_detection_threshold')
         frequency = drm_manager.get('drm_frequency')
         drm_manager.deactivate()
@@ -133,7 +133,7 @@ def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_jso
             async_cb.callback
         )
         drm_manager.activate()
-        sleep(0.5)
+        sleep(1)
         drm_manager.deactivate()
         assert_NoErrorCallback(async_cb)
         print('Test frequency mismatch < threashold: PASS')
@@ -155,7 +155,7 @@ def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_jso
             async_cb.callback
         )
         drm_manager.activate()
-        sleep(0.5)
+        sleep(1)
         drm_manager.deactivate()
 
         assert async_cb.was_called, 'Asynchronous callback NOT called'
@@ -459,7 +459,7 @@ def test_parameter_accesses(accelize_drm, conf_json, cred_json, async_handler):
         # Test parameter: trigger_async_callback
         # Write-only: only for testing, call the asynchronous error callback with the given message.
         drm_manager.activate()
-        sleep(0.5)
+        sleep(1)
         test_message = 'Test message'
         drm_manager.set(trigger_async_callback=test_message)
         assert async_cb.was_called, 'Asynchronous callback has not been called.'
