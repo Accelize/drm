@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include <iostream>
+#include <iomanip>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -32,6 +33,7 @@ limitations under the License.
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <cmath>
+#include <algorithm>
 
 #include "accelize/drm/session_manager.h"
 #include "accelize/drm/version.h"
@@ -52,7 +54,6 @@ limitations under the License.
 
 #define CATCH_AND_THROW \
     } catch (const std::exception &e) { \
-        mLastErrorMsg = e.what(); \
         throw; \
     }
 
@@ -74,6 +75,8 @@ protected:
 
     enum class LicenseType: uint8_t {OTHERS=0, NODE_LOCKED};
 
+    enum class MailboxOffset {MB_LOCK_DRM=0, MB_CUSTOM_FIELD, MB_USER};
+
     std::map<LicenseType, std::string> LicenseTypeStringMap = {
             {LicenseType::OTHERS     , "Floating/Metering"},
             {LicenseType::NODE_LOCKED, "Node-Locked"}
@@ -85,14 +88,12 @@ protected:
     const char path_sep = '/';
 #endif
 
-    mutable std::string mLastErrorMsg;
-
     bool mSecurityStop;
 
     //composition
     std::unique_ptr<DrmWSClient> mWsClient;
     std::unique_ptr<DrmControllerLibrary::DrmControllerOperations> mDrmController;
-    mutable std::mutex mDrmControllerMutex;
+    mutable std::recursive_mutex mDrmControllerMutex;
 
     //function callbacks
     DrmManager::ReadRegisterCallback f_read_register;
@@ -109,24 +110,24 @@ protected:
     std::string mNodeLockLicenseFilePath;
 
     // License related properties
-    const TClock::duration cDeadlinePeriod = std::chrono::seconds(5); ///< Time in seconds before the license expired during which no more retry is authorized
+    uint32_t mRetryDeadline;    ///< Time in seconds before the license expired during which no more retry is authorized
     LicenseType mLicenseType = LicenseType::OTHERS;
     uint32_t mLicenseCounter;
     TClock::time_point mLicenseExpirationDate;
-    TClock::duration mLicenseDuration = TClock::duration::zero();
+    uint32_t mLicenseDuration;
 
-    // Design param
+    // Design parameters
     uint32_t mFrequencyInit;
     uint32_t mFrequencyCurr;
-    uint32_t mFrequencyCheckPeriod = 100;  // in milliseconds
-    double mFrequencyPrecisionThreshold = 2.0;      // Error in percentage
-
+    uint32_t mFrequencyDetectionPeriod = 100;  // in milliseconds
+    double mFrequencyDetectionThreshold = 2.0;      // Error in percentage
 
     // Session state
     std::string mSessionID;
     std::string mUDID;
     std::string mBoardType;
 
+    // Web service communication
     Json::Value mHeaderJsonRequest;
 
     // thread to maintain alive
@@ -151,6 +152,8 @@ protected:
         mSecurityStop = false;
 
         mLicenseCounter = 0;
+        mLicenseDuration = 0;
+        mRetryDeadline = 5;
 
         mConfFilePath = conf_file_path;
         mCredFilePath = cred_file_path;
@@ -202,6 +205,9 @@ protected:
             std::bind(&DrmManager::Impl::writeDrmRegister, this, std::placeholders::_1, std::placeholders::_2 )
         ));
 
+        // Try to lock the DRM controller to this instance, return an error is already locked.
+        lockDrmToInstance();
+
         // Save header information
         mHeaderJsonRequest = getMeteringHeader();
 
@@ -225,59 +231,156 @@ protected:
         return false;
     }
 
+    uint32_t getMailboxSize() const {
+        uint32_t roSize, rwSize;
+        std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
+        checkDRMCtlrRet( getDrmController().writeMailBoxFilePageRegister() );
+        checkDRMCtlrRet( getDrmController().readMailboxFileSizeRegister( roSize, rwSize ) );
+        Debug2("Read Mailbox size: ", rwSize);
+        return rwSize;
+    }
+
+    uint32_t readMailbox( const MailboxOffset offset ) const {
+        auto index = (uint32_t)offset;
+        uint32_t roSize, rwSize;
+        std::vector<uint32_t> roData, rwData;
+
+        std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
+        checkDRMCtlrRet( getDrmController().writeMailBoxFilePageRegister() );
+        checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
+
+        if ( index >= rwData.size() )
+            Throw( DRM_BadArg, "Index ", index, " overflows the Mailbox memory: max index is ", rwData.size()-1 );
+        Debug( "Read '", rwData[index], "' in Mailbox at index ", index );
+        return rwData[index];
+    }
+
+    std::vector<uint32_t> readMailbox( const MailboxOffset offset, const uint32_t& nb_elements ) const {
+        auto index = (uint32_t)offset;
+        uint32_t roSize, rwSize;
+        std::vector<uint32_t> roData, rwData;
+
+        std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
+        checkDRMCtlrRet( getDrmController().writeMailBoxFilePageRegister() );
+        checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
+
+        if ( (uint32_t)index >= rwData.size() )
+            Throw( DRM_BadArg, "Index ", index, " overflows the Mailbox memory: max index is ", rwData.size()-1 );
+        if ( index + nb_elements > rwData.size() )
+            Throw( DRM_BadArg, "Trying to write over Mailbox memory: ", rwData.size() );
+
+        auto first = rwData.cbegin() + index;
+        auto last = rwData.cbegin() + index + nb_elements;
+        std::vector<uint32_t> value_vec( first, last );
+        Debug( "Read ", value_vec.size(), " elements in Mailbox from index ", index);
+        return value_vec;
+    }
+
+    void writeMailbox( const MailboxOffset offset, const uint32_t& value ) const {
+        auto index = (uint32_t)offset;
+        uint32_t roSize, rwSize;
+        std::vector<uint32_t> roData, rwData;
+
+        std::lock_guard<std::recursive_mutex> lockk(mDrmControllerMutex);
+        checkDRMCtlrRet( getDrmController().writeMailBoxFilePageRegister() );
+        checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
+
+        if ( index >= rwData.size() )
+            Throw( DRM_BadArg, "Index ", index, " overflows the Mailbox memory: max index is ", rwData.size()-1 );
+        rwData[index] = value;
+        checkDRMCtlrRet( getDrmController().writeMailboxFileRegister( rwData, rwSize ) );
+        Debug( "Wrote '", value, "' in Mailbox at index ", index );
+    }
+
+    void writeMailbox( const MailboxOffset offset, const std::vector<uint32_t> &value_vec ) const {
+        auto index = (uint32_t)offset;
+        uint32_t roSize, rwSize;
+        std::vector<uint32_t> roData, rwData;
+
+        std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
+        checkDRMCtlrRet( getDrmController().writeMailBoxFilePageRegister() );
+        checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
+        if ( index >= rwData.size() )
+            Throw( DRM_BadArg, "Index ", index, " overflows the Mailbox memory: max index is ", rwData.size()-1 );
+        if ( index + value_vec.size() > rwData.size() )
+            Throw( DRM_BadArg, "Trying to write over Mailbox memory: ", rwData.size() );
+        std::copy( std::begin(value_vec), std::end(value_vec), std::begin(rwData) + index );
+        checkDRMCtlrRet( getDrmController().writeMailboxFileRegister( rwData, rwSize ) );
+        Debug( "Wrote ", value_vec.size(), " elements in Mailbox from index ", index );
+    }
+
     DrmControllerLibrary::DrmControllerOperations& getDrmController() const {
         Assert(mDrmController);
         return *mDrmController;
     }
 
     DrmWSClient& getDrmWSClient() {
-        if(!mWsClient)
-            Throw(DRM_BadUsage, "DRM Session Manager constructed with no WebService configuration");
+        if ( !mWsClient )
+            Throw( DRM_BadUsage, "DRM Session Manager constructed with no WebService configuration" );
         return *mWsClient;
     }
 
     static uint32_t getDrmRegisterOffset(const std::string& regName) {
-        if(regName == "DrmPageRegister")
+        if ( regName == "DrmPageRegister" )
             return 0;
-        if(regName.substr(0, 15) == "DrmRegisterLine")
-            return std::stoi(regName.substr(15))*4+4;
-        std::string msg = "Unsupported regName argument: " + regName;
-        Unreachable( msg.c_str() );
+        if ( regName.substr(0, 15) == "DrmRegisterLine" )
+            return (uint32_t)std::stoul(regName.substr(15))*4+4;
+        Unreachable( "Unsupported regName argument: " + regName );
     }
 
     unsigned int readDrmRegister(const std::string& regName, unsigned int& value) const {
-        unsigned int ret = 0;
+        int ret = 0;
         ret = f_read_register( getDrmRegisterOffset(regName), &value );
         if (ret != 0) {
             Error("Error in read register callback, errcode = ", ret);
-            return -1;
+            return (uint32_t)-1;
         }
         Debug2("Read DRM register @", regName, " = 0x", std::hex, value, std::dec);
         return 0;
     }
 
     unsigned int writeDrmRegister(const std::string& regName, unsigned int value) const {
-        unsigned int ret = 0;
+        int ret = 0;
         ret = f_write_register( getDrmRegisterOffset(regName), value );
         if(ret != 0) {
             Error("Error in write register callback, errcode = ", ret);
-            return -1;
+            return (uint32_t)-1;
         }
         Debug2("Write DRM register @", regName, " = 0x", std::hex, value, std::dec);
         return 0;
     }
 
     void checkDRMCtlrRet(unsigned int errcode) const {
-        if(errcode)
+        if ( errcode )
             Throw(DRM_ExternFail, "Error in DRMCtlrLib function call : ", errcode);
+    }
+
+    void lockDrmToInstance() {
+        return;
+        std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
+        uint32_t isLocked = readMailbox( MailboxOffset::MB_LOCK_DRM );
+        if ( isLocked )
+            Throw(DRM_BadUsage, "Another instance of the DRM Manager is currently owning the HW");
+        writeMailbox( MailboxOffset::MB_LOCK_DRM, 1 );
+        Debug("DRM Controller is now locked to this object instance");
+    }
+
+    void unlockDrmToInstance() {
+        return;
+        std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
+        uint32_t isLocked = readMailbox( MailboxOffset::MB_LOCK_DRM );
+        if ( isLocked ) {
+            writeMailbox( MailboxOffset::MB_LOCK_DRM, 0 );
+            Debug("DRM Controller is now unlocked to this object instance");
+        }
     }
 
     // Check compatibility of the DRM Version with Algodone version
     void checkDrmCompatibility( const std::string& drmVersion) {
         uint32_t drmVersionNum = DrmControllerLibrary::DrmControllerDataConverter::hexStringToBinary(drmVersion)[0];
         std::string drmVersionDot = DrmControllerLibrary::DrmControllerDataConverter::binaryToVersionString(drmVersionNum);
-        uint8_t drmMajor = (drmVersionNum >> 16) & 0xFF;
-        uint8_t drmMinor = (drmVersionNum >> 8) & 0xFF;
+        auto drmMajor = (uint8_t)((drmVersionNum >> 16) & 0xFF);
+        auto drmMinor = (uint8_t)((drmVersionNum >> 8) & 0xFF);
         if (drmMajor < RETROCOMPATIBLITY_LIMIT_MAJOR) {
             Throw(DRM_CtlrError, "This DRM Lib ", getApiVersion()," is not compatible with the DRM HDK version ",
                     drmVersionDot,": To be compatible HDK version shall be > or equal to ",
@@ -297,15 +400,15 @@ protected:
         }
     }
 
-    void getNumActivator( unsigned int& value ) const {
-        std::lock_guard<std::mutex> lk(mDrmControllerMutex);
+    void getNumActivator( uint32_t& value ) const {
+        std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
         checkDRMCtlrRet( getDrmController().writeRegistersPageRegister() );
         checkDRMCtlrRet( getDrmController().readNumberOfDetectedIpsStatusRegister(value) );
     }
 
     uint64_t getTimerCounterValue() const {
-        std::lock_guard<std::mutex> lk(mDrmControllerMutex);
-        unsigned int licenseTimerCounterMsb(0), licenseTimerCounterLsb(0);
+        std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
+        uint32_t licenseTimerCounterMsb(0), licenseTimerCounterLsb(0);
         uint64_t licenseTimerCounter;
         checkDRMCtlrRet( getDrmController().sampleLicenseTimerCounter( licenseTimerCounterMsb, licenseTimerCounterLsb ) );
         licenseTimerCounter = licenseTimerCounterMsb;
@@ -314,30 +417,10 @@ protected:
         return licenseTimerCounter;
     }
 
-    uint32_t getCustomField() const {
-        uint32_t roSize, rwSize;
-        std::vector<uint32_t> ro_data, rw_data;
-        std::lock_guard<std::mutex> lk(mDrmControllerMutex);
-        checkDRMCtlrRet( getDrmController().writeMailBoxFilePageRegister() );
-        checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, ro_data, rw_data) );
-        Debug("Read from Read/Write mailbox: rwSize=", rwSize, " roSize=", roSize);
-        return rw_data[0];
-    }
-
-    void setCustomField( uint32_t value ) {
-        uint32_t rwSize;
-        std::vector<uint32_t> rw_data;
-        rw_data.push_back( value );
-        std::lock_guard<std::mutex> lk(mDrmControllerMutex);
-        checkDRMCtlrRet( getDrmController().writeMailBoxFilePageRegister() );
-        checkDRMCtlrRet( getDrmController().writeMailboxFileRegister( rw_data, rwSize) );
-        Debug("Wrote to Read/Write mailbox: rwSize=", rwSize);
-    }
-
-    std::string getDrmPage( int page_index ) const {
+    std::string getDrmPage( uint32_t page_index ) const {
         std::stringstream ss;
         uint32_t value;
-        std::lock_guard<std::mutex> lk(mDrmControllerMutex);
+        std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
         writeDrmRegister("DrmPageRegister", page_index);
         ss << "DRM Page " << page_index << " registry:\n";
         for(uint32_t r=0; r < NB_MAX_REGISTER; r++) {
@@ -351,7 +434,7 @@ protected:
 
     std::string getDrmReport() const {
         std::stringstream ss;
-        std::lock_guard<std::mutex> lk(mDrmControllerMutex);
+        std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
         getDrmController().printHwReport(ss);
         return ss.str();
     }
@@ -372,7 +455,7 @@ protected:
 
         Debug2("Get metering data from session on DRM controller");
 
-        std::lock_guard<std::mutex> lk(mDrmControllerMutex);
+        std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
         checkDRMCtlrRet( getDrmController().asynchronousExtractMeteringFile( numberOfDetectedIps, saasChallenge, meteringFile ) );
         std::string meteringDataStr = meteringFile[2].substr(16, 16);
         errno = 0;
@@ -391,7 +474,7 @@ protected:
         uint32_t readOnlyMailboxSize, readWriteMailboxSize;
         std::vector<uint32_t> readOnlyMailboxData, readWriteMailboxData;
 
-        std::lock_guard<std::mutex> lk(mDrmControllerMutex);
+        std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
         checkDRMCtlrRet(getDrmController().extractDrmVersion( drmVersion ) );
         checkDRMCtlrRet(getDrmController().extractDna( dna ) );
         checkDRMCtlrRet(getDrmController().extractVlnvFile( nbOfDetectedIps, vlnvFile ) );
@@ -414,31 +497,32 @@ protected:
         std::string mailboxReadOnly;
 
         // Fulfill application section
-        if ( mUDID.size() )
+        if ( !mUDID.empty() )
             json_output["udid"] = mUDID;
-        if ( mBoardType.size() )
+        if ( !mBoardType.empty() )
             json_output["boardType"] = mBoardType;
-        json_output["mode"] = (uint8_t)mLicenseType;
+        json_output["mode"] = (uint8_t) mLicenseType;
         json_output["drm_frequency_init"] = mFrequencyInit;
 
         // Get information from DRM Controller
         getDesignInfo(drmVersion, dna, vlnvFile, mailboxReadOnly);
 
         // Check compatibility of the DRM Version with Algodone version
-        checkDrmCompatibility( drmVersion );
+        checkDrmCompatibility(drmVersion);
 
         // Fulfill DRM section
         json_output["drmlibVersion"] = getApiVersion();
         json_output["lgdnVersion"] = drmVersion;
         json_output["dna"] = dna;
-        for( unsigned int i=0; i<vlnvFile.size(); i++ ) {
+        for (uint32_t i = 0; i < vlnvFile.size(); i++) {
             std::string i_str = std::to_string(i);
-            json_output["vlnvFile"][i_str]["vendor"]  = std::string("x") + vlnvFile[i].substr(0,4);
-            json_output["vlnvFile"][i_str]["library"] = std::string("x") + vlnvFile[i].substr(4,4);
-            json_output["vlnvFile"][i_str]["name"]    = std::string("x") + vlnvFile[i].substr(8,4);
-            json_output["vlnvFile"][i_str]["version"] = std::string("x") + vlnvFile[i].substr(12,4);
+            json_output["vlnvFile"][i_str]["vendor"] = std::string("x") + vlnvFile[i].substr(0, 4);
+            json_output["vlnvFile"][i_str]["library"] = std::string("x") + vlnvFile[i].substr(4, 4);
+            json_output["vlnvFile"][i_str]["name"] = std::string("x") + vlnvFile[i].substr(8, 4);
+            json_output["vlnvFile"][i_str]["version"] = std::string("x") + vlnvFile[i].substr(12, 4);
         }
-        if ( mailboxReadOnly.size() ) {
+
+        if ( !mailboxReadOnly.empty() ) {
             try {
                 json_output["product"] = getJsonFromString(mailboxReadOnly);
             } catch ( const Exception &e ) {
@@ -460,7 +544,7 @@ protected:
 
         mLicenseCounter = 0;
 
-        std::lock_guard<std::mutex> lk(mDrmControllerMutex);
+        std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
         checkDRMCtlrRet( getDrmController().initialization( numberOfDetectedIps, saasChallenge, meteringFile ) );
         json_output["saasChallenge"] = saasChallenge;
         json_output["meteringFile"]  = std::accumulate(meteringFile.begin(), meteringFile.end(), std::string(""));
@@ -471,7 +555,7 @@ protected:
         return json_output;
     }
 
-    Json::Value getMeteringWait(unsigned int timeOut) {
+    Json::Value getMeteringWait( uint32_t timeOut ) {
         Json::Value json_output(mHeaderJsonRequest);
         uint32_t numberOfDetectedIps;
         std::string saasChallenge;
@@ -479,7 +563,7 @@ protected:
 
         Debug("Build web request to maintain current session");
 
-        std::lock_guard<std::mutex> lk(mDrmControllerMutex);
+        std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
         //DEPRECATED => checkDRMCtlrRet( getDrmController().extractMeteringFile( timeOut, numberOfDetectedIps, saasChallenge, meteringFile ) );
         checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( timeOut ) );
         checkDRMCtlrRet( getDrmController().synchronousExtractMeteringFile( numberOfDetectedIps, saasChallenge, meteringFile ) );
@@ -500,7 +584,7 @@ protected:
 
         Debug("Build web request to stop current session");
 
-        std::lock_guard<std::mutex> lk(mDrmControllerMutex);
+        std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
         checkDRMCtlrRet( getDrmController().endSessionAndExtractMeteringFile( numberOfDetectedIps, saasChallenge, meteringFile ) );
         json_output["saasChallenge"] = saasChallenge;
         json_output["sessionId"] = mSessionID;
@@ -512,34 +596,36 @@ protected:
 
     bool isSessionRunning() {
         bool sessionRunning(false);
-        std::lock_guard<std::mutex> lk(mDrmControllerMutex);
+        std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
         checkDRMCtlrRet( getDrmController().writeRegistersPageRegister() );
         checkDRMCtlrRet( getDrmController().readSessionRunningStatusRegister(sessionRunning) );
-        Debug( "Is DRM session still running: ", sessionRunning );
+        Debug( "DRM session running state: ", sessionRunning );
         return sessionRunning;
     }
 
     bool isReadyForNewLicense() {
         bool ret(false);
-        std::lock_guard<std::mutex> lk(mDrmControllerMutex);
+        std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
         checkDRMCtlrRet( getDrmController().writeRegistersPageRegister() );
         checkDRMCtlrRet( getDrmController().readLicenseTimerInitLoadedStatusRegister(ret) );
-        Debug( "Is DRM ready to receive a new license: ", !ret );
+        Debug( "DRM readiness to receive a new license: ", !ret );
         return !ret;
     }
 
     bool isLicenseActive() {
         bool isLicenseEmpty(false);
-        std::lock_guard<std::mutex> lk(mDrmControllerMutex);
+        std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
         checkDRMCtlrRet( getDrmController().writeRegistersPageRegister() );
         checkDRMCtlrRet( getDrmController().readLicenseTimerCountEmptyStatusRegister(isLicenseEmpty) );
-        Debug( "Is DRM still licensed: ", !isLicenseEmpty );
+        Debug( "DRM licensing state: ", !isLicenseEmpty );
         return !isLicenseEmpty;
     }
 
     void setLicense(const Json::Value& license_json) {
+
+        std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
+
         Debug("Installing next license on DRM controller");
-        std::lock_guard<std::mutex> lk(mDrmControllerMutex);
 
         /// Get session ID received from web service
         if ( mSessionID.empty() )
@@ -582,11 +668,9 @@ protected:
 
             mLicenseCounter ++;
 
-            uint32_t license_duration_sec = license_json["metering"]["timeoutSecond"].asUInt();
-            mLicenseDuration = std::chrono::seconds( license_duration_sec );
-
+            mLicenseDuration = license_json["metering"]["timeoutSecond"].asUInt();
             Debug( "Set license #", mLicenseCounter, " of session ID ", mSessionID, " for a duration of ",
-                    license_duration_sec, " seconds" );
+                   mLicenseDuration, " seconds" );
         }
 
         if (getLogLevel() >= eLogLevel::DEBUG2) {
@@ -594,37 +678,24 @@ protected:
         }
     }
 
-    static const size_t InitialFNV = 2166136261U;
-    static const size_t FNVMultiple = 16777619;
-
-    /// Fowler / Noll / Vo (FNV) Hash
-    std::string computeHash( const std::string &s ) {
-        uint64_t hash = InitialFNV;
-
-        for(size_t i = 0; i < s.length(); i++)
-        {
-            hash = hash ^ (s[i]);
-            hash = hash * FNVMultiple;
-        }
-        std::stringstream ss;
-        ss << std::hex << hash;
-        return ss.str();
-    }
-
     std::string getDesignHash() {
-        std::stringstream ss;
+        std::hash<std::string> hasher;
+        std::stringstream design_ss;
+        std::stringstream hash_ss;
         std::string drmVersion;
         std::string dna;
         std::vector<std::string> vlnvFile;
         std::string mailboxReadOnly;
 
         getDesignInfo(drmVersion, dna, vlnvFile, mailboxReadOnly);
-        ss << dna;
-        ss << drmVersion;
+        design_ss << dna;
+        design_ss << drmVersion;
         for(const std::string& vlnv: vlnvFile)
-            ss << vlnv;
+            design_ss << vlnv;
 
-        return computeHash( ss.str() );
+        hash_ss << std::uppercase << std::setfill('0') << std::setw(16) << std::hex << hasher( design_ss.str() );
+        Debug( "Hash for HW design is ", hash_ss.str() );
+        return hash_ss.str();
     }
 
     void createNodelockedLicenseRequestFile() {
@@ -693,35 +764,43 @@ protected:
 
     void detectDrmFrequency() {
         TClock::time_point timeStart, timeEnd;
-        TClock::duration timeDuration;
         uint64_t counterStart, counterEnd;
+
+        std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
+
+        /// Check if a stop has been requested till now
+        if (isStopRequested() )
+            return;
+
+        Debug("Detecting DRM frequency");
+        Debug( "Detection period is ", mFrequencyDetectionPeriod, " ms" );
 
         counterStart = getTimerCounterValue();
         timeStart = TClock::now();
-        Debug("Start time = ", timeStart.time_since_epoch().count(), " / Counter start = ", counterStart);
-
-        usleep( mFrequencyCheckPeriod * 1000 );
-
+        usleep( mFrequencyDetectionPeriod * 1000 );
         counterEnd = getTimerCounterValue();
         timeEnd = TClock::now();
-        Debug("End time = ", timeEnd.time_since_epoch().count(), " / Counter end = ", counterEnd);
+        if (counterEnd == 0 )
+            Unreachable( "Frequency auto-detection failed: license timeout counter is already 0" );
+        Debug( "Start time = ", timeStart.time_since_epoch().count(), " / Counter start = ", counterStart );
+        Debug( "End time = ", timeEnd.time_since_epoch().count(), " / Counter end = ", counterEnd );
 
         TClock::duration timeSpan = timeEnd - timeStart;
         double seconds = double(timeSpan.count()) * TClock::period::num / TClock::period::den;
-        uint32_t ticks = counterStart - counterEnd;
-        Debug("Duration = ", seconds, " s   /   ticks = ", ticks);
+        auto ticks = (uint32_t)(counterStart - counterEnd);
+        Debug( "Duration = ", seconds, " s   /   ticks = ", ticks );
 
         // Estimate DRM frequency
-        uint32_t measuredFrequency = (uint32_t)(std::ceil((double)ticks / seconds / 1000000));
-        double precisionError = 100.0 * abs(measuredFrequency  - mFrequencyInit) / mFrequencyCurr ;
-        if ( precisionError >= mFrequencyPrecisionThreshold ) {
+        auto measuredFrequency = (uint32_t)(std::ceil((double)ticks / seconds / 1000000));
+        double precisionError = 100.0 * (measuredFrequency - mFrequencyInit) / mFrequencyCurr ;
+        if ( precisionError >= mFrequencyDetectionThreshold ) {
             mFrequencyCurr = measuredFrequency;
             Throw( DRM_BadFrequency, "Detected DRM frequency (",mFrequencyCurr," MHz) differs from the value (",
                    mFrequencyInit," MHz) defined in the configuration file '",
                    mConfFilePath,"': From now on the considered frequency is ", mFrequencyCurr, " MHz");
         } else {
-            Debug("Detected frequency = ", measuredFrequency, " MHz, config frequency = ", mFrequencyInit,
-                  " MHz: gap = ", precisionError, "%");
+            Debug( "Detected frequency = ", measuredFrequency, " MHz, config frequency = ", mFrequencyInit,
+                  " MHz: gap = ", precisionError, "%" );
         }
     }
 
@@ -745,7 +824,7 @@ protected:
     TClock::time_point getCurrentLicenseExpirationDate() {
         TClock::time_point now = TClock::now();
         uint64_t counterCurr = getTimerCounterValue();
-        uint32_t secondLeft = (uint32_t)std::ceil((double)counterCurr / mFrequencyCurr / 1000000);
+        auto secondLeft = (uint32_t)std::ceil((double)counterCurr / mFrequencyCurr / 1000000);
         return now + std::chrono::seconds( secondLeft );
 
     }
@@ -764,13 +843,17 @@ protected:
                 /// Detecting DRM controller frequency
                 detectDrmFrequency();
 
+                /// Check if a stop has been requested till now
+                if (isStopRequested() )
+                    return;
+
                 /// Starting license request loop
                 while(1) {
 
                     if ( !isReadyForNewLicense() ) {
 
                         TClock::duration wait_duration = getCurrentLicenseExpirationDate() - TClock::now() + std::chrono::seconds(1);
-                        uint32_t wait_seconds = std::chrono::duration_cast<std::chrono::seconds>( wait_duration ).count();
+                        long wait_seconds = std::chrono::duration_cast<std::chrono::seconds>( wait_duration ).count();
                         Debug( "Sleeping for ", wait_seconds, " seconds before checking if DRM Controller is ready to received a new license");
 
                         if ( isStopRequested( wait_duration ) )
@@ -786,12 +869,13 @@ protected:
                     std::string retry_msg;
                     uint32_t retry_counter = 0;
 
-                    if ( mLicenseDuration == TClock::duration::zero() ) {
+                    if ( mLicenseDuration == 0 ) {
                         Unreachable( "mLicenseDuration is 0" );
                     }
-                    TClock::time_point polling_deadline = TClock::now() + mLicenseDuration - cDeadlinePeriod;
 
                     /// Retry Web Service request loop
+                    TClock::time_point polling_deadline = TClock::now() + std::chrono::seconds( mLicenseDuration )
+                            - std::chrono::seconds( mRetryDeadline );
                     while(1) {
 
                         if (isStopRequested() )
@@ -814,9 +898,9 @@ protected:
                         TClock::duration wait_before_retry;
                         if ( polling_deadline - TClock::now() <= std::chrono::seconds(60) )
                             wait_before_retry = std::chrono::seconds(2);
-                            else
+                        else
                             wait_before_retry = std::chrono::seconds(30);
-                        uint32_t wait_time = std::chrono::duration_cast<std::chrono::seconds>(wait_before_retry).count();
+                        long wait_time = std::chrono::duration_cast<std::chrono::seconds>(wait_before_retry).count();
                         Warning( "Attempt #", retry_counter, " to obtain new license from Web Service failed with message: ", retry_msg,
                                 ". New attempt planned in ", wait_time, " seconds");
 
@@ -840,8 +924,10 @@ protected:
     }
 
     void stopThread() {
-        if ( !mThreadKeepAlive.valid() )
+        if ( !mThreadKeepAlive.valid() ) {
+            Debug("Background thread was not running");
             return;
+        }
         {
             std::lock_guard<std::mutex> lk(mThreadKeepAliveMtx);
             mThreadStopRequest = true;
@@ -898,12 +984,8 @@ protected:
             return;
         }
 
-        if ( !isSessionRunning() ) {
-            Debug("No session is currently running");
-            return;
-        }
-
         Info("Stopping DRM session...");
+
         stopThread();
 
         // Get and send metering data to web service
@@ -926,7 +1008,7 @@ protected:
 
     ParameterKey findParameterKey( const std::string& key_string ) const {
         for (auto const& it : mParameterKeyMap) {
-            if (key_string.compare(it.second) == 0)
+            if (key_string == it.second)
                 return it.first;
         }
         Throw(DRM_BadArg, "Cannot find parameter: ", key_string);
@@ -971,6 +1053,7 @@ public:
             }
         }
         stopThread();
+        unlockDrmToInstance();
     }
 
     // Non copyable non movable as we create closure with "this"
@@ -991,12 +1074,11 @@ public:
                 resumeSession();
             } else {
                 if ( isRunning && !resume_session_request ) {
-                    Debug( "Session is already running but resume flag is ", resume_session_request );
+                    Debug( "Session is already running but resume flag is ", resume_session_request, ": stopping this pending session" );
                     stopSession();
                 }
                 startSession();
             }
-
         CATCH_AND_THROW
     }
 
@@ -1007,46 +1089,47 @@ public:
             if (mLicenseType == LicenseType::NODE_LOCKED) {
                 return;
             }
-
+            if ( !isSessionRunning() ) {
+                Debug("No session is currently running");
+                return;
+            }
             if ( pause_session_request )
                 pauseSession();
             else
                 stopSession();
-
         CATCH_AND_THROW
     }
 
     void get( Json::Value& json_value ) const {
         TRY
-            Debug("Get parameter request input: ", json_value.toStyledString());
+            Debug( "Get parameter request input: ", json_value.toStyledString() );
             for (const std::string& key_str : json_value.getMemberNames()) {
                 const ParameterKey key_id = findParameterKey( key_str );
                 switch(key_id) {
                     case ParameterKey::license_type: {
-                        std::map<LicenseType, std::string>::const_iterator it = LicenseTypeStringMap.find( mLicenseType );
+                        auto it = LicenseTypeStringMap.find( mLicenseType );
                         if ( it == LicenseTypeStringMap.end() )
                             Unreachable( "Missing parameter key: license_type" );
                         std::string license_type_str = it->second;
-                        Debug("Get value of parameter '", key_str, "' (ID=", key_id, "): ", license_type_str);
                         json_value[key_str] = license_type_str;
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", license_type_str );
                         break;
                     }
                     case ParameterKey::license_duration: {
-                        uint32_t duration = mLicenseDuration.count();
-                        Debug("Get value of parameter '", key_str, "' (ID=", key_id, "): ", duration);
-                        json_value[key_str] = duration;
+                        json_value[key_str] = mLicenseDuration;
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mLicenseDuration );
                         break;
                     }
                     case ParameterKey::num_activators: {
                         uint32_t nbActivators = 0;
                         getNumActivator(nbActivators);
-                        Debug("Get value of parameter '", key_str, "' (ID=", key_id, "): ", nbActivators);
                         json_value[key_str] = nbActivators;
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", nbActivators );
                         break;
                     }
                     case ParameterKey::session_id: {
-                        Debug("Get value of parameter '", key_str, "' (ID=", key_id, "): ", mSessionID);
                         json_value[key_str] = mSessionID;
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mSessionID );
                         break;
                     }
                     case ParameterKey::metering_data: {
@@ -1056,24 +1139,18 @@ public:
                         // No "int64_t" support with JsonCpp < 1.7.5
                         unsigned long long metering_data = getMeteringData();
 #endif
-                        Debug("Get value of parameter '", key_str, "' (ID=", key_id, "): ", metering_data);
                         json_value[key_str] = metering_data;
-                        break;
-                    }
-                    case ParameterKey::strerror: {
-                        Debug("Get value of parameter '", key_str, "' (ID=", key_id, "): ", mLastErrorMsg);
-                        json_value[key_str] = mLastErrorMsg;
-                        mLastErrorMsg.clear();
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", metering_data );
                         break;
                     }
                     case ParameterKey::nodelocked_request_file: {
                         if ( mLicenseType != LicenseType::NODE_LOCKED ) {
-                            Warning("Parameter only available with Node-Locked licensing");
                             json_value[key_str] = std::string("Not applicable");
+                            Warning( "Parameter only available with Node-Locked licensing" );
                         } else {
-                            Debug("Get value of parameter '", key_str, "' (ID=", key_id,
-                                  "): Node-locked license request file is saved in ", mNodeLockRequestFilePath);
                             json_value[key_str] = mNodeLockRequestFilePath;
+                            Debug( "Get value of parameter '", key_str, "' (ID=", key_id,
+                                  "): Node-locked license request file is saved in ", mNodeLockRequestFilePath );
                         }
                         break;
                     }
@@ -1083,27 +1160,66 @@ public:
                     case ParameterKey::page_tracefile:
                     case ParameterKey::page_meteringfile:
                     case ParameterKey::page_mailbox: {
-                        Debug("Get value of parameter '", key_str, "' (ID=", key_id, ")");
                         std::string str = getDrmPage(key_id - ParameterKey::page_ctrlreg);
                         json_value[key_str] = str;
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, ")" );
                         Info(str);
                         break;
                     }
                     case ParameterKey::hw_report: {
-                        Debug("Get value of parameter '", key_str, "' (ID=", key_id, ")");
                         std::string str = getDrmReport();
                         json_value[key_str] = str;
-                        Info("Print HW report:\n", str);
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, ")" );
+                        Info( "Print HW report:\n", str );
+                        break;
+                    }
+                    case ParameterKey::drm_frequency: {
+                        json_value[key_str] = mFrequencyCurr;
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mFrequencyCurr );
+                        break;
+                    }
+                    case ParameterKey ::frequency_detection_threshold: {
+                        json_value[key_str] = mFrequencyDetectionThreshold;
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mFrequencyDetectionThreshold );
+                        break;
+                    }
+                    case ParameterKey ::frequency_detection_period: {
+                        json_value[key_str] = mFrequencyDetectionPeriod;
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mFrequencyDetectionPeriod );
+                        break;
+                    }
+                    case ParameterKey ::product_id: {
+                        json_value[key_str] = mHeaderJsonRequest["product"];
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mHeaderJsonRequest["product"].toStyledString() );
+                        break;
+                    }
+                    case ParameterKey ::mailbox_size: {
+                        uint32_t mbSize = getMailboxSize() - (uint32_t)MailboxOffset::MB_USER;
+                        json_value[key_str] = mbSize;
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mbSize );
                         break;
                     }
                     case ParameterKey::custom_field: {
-                        uint32_t customField = getCustomField();
-                        Debug("Get value of parameter '", key_str, "' (ID=", key_id, "): ", customField);
+                        uint32_t customField = readMailbox( MailboxOffset::MB_CUSTOM_FIELD );
                         json_value[key_str] = customField;
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", customField );
+                        break;
+                    }
+                    case ParameterKey ::mailbox_data: {
+                        uint32_t mbSize = getMailboxSize() - (uint32_t)MailboxOffset::MB_USER;
+                        std::vector<uint32_t> data_array = readMailbox( MailboxOffset::MB_USER, mbSize );
+                        for( const auto& val: data_array )
+                            json_value[key_str].append(val);
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", json_value[key_str].toStyledString() );
+                        break;
+                    }
+                    case ParameterKey ::retry_deadline: {
+                        json_value[key_str] = mRetryDeadline;
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mRetryDeadline );
                         break;
                     }
                     default: {
-                        Throw(DRM_BadArg, "Cannot find parameter with ID: ", key_id);
+                        Throw( DRM_BadArg, "Cannot find parameter with ID: ", key_id );
                         break;
                     }
                 }
@@ -1134,21 +1250,52 @@ public:
                 std::string key_str = it.key().asString();
                 const ParameterKey key_id = findParameterKey( key_str );
                 switch( key_id ) {
-                    case custom_field: {
+                    case ParameterKey ::frequency_detection_threshold: {
+                        mFrequencyDetectionThreshold = (*it).asDouble();
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", mFrequencyDetectionPeriod );
+                        break;
+                    }
+                    case ParameterKey ::frequency_detection_period: {
+                        mFrequencyDetectionPeriod = (*it).asUInt();
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", mFrequencyDetectionPeriod );
+                        break;
+                    }
+                    case ParameterKey::custom_field: {
                         uint32_t customField = (*it).asUInt();
-                        setCustomField( customField );
+                        writeMailbox( MailboxOffset::MB_CUSTOM_FIELD, customField );
                         Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", customField );
                         break;
                     }
-                    case trigger_async: {
-                        key_str = it.key().asString();
+                    case ParameterKey ::mailbox_data: {
+                        if ( !(*it).isArray() )
+                            Throw( DRM_BadUsage, "Value must be an array of integer values" );
+                        std::vector<uint32_t> data_array;
+                        for( Json::ValueIterator itr = (*it).begin(); itr != (*it).end(); itr++ )
+                            data_array.push_back( (*itr).asUInt() );
+                        writeMailbox( MailboxOffset::MB_USER, data_array );
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", (*it).toStyledString());
+                        break;
+                    }
+                    case ParameterKey ::retry_deadline: {
+                        mRetryDeadline = (*it).asUInt();
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", mRetryDeadline );
+                        break;
+                    }
+                    case ParameterKey::trigger_async_callback: {
                         std::string custom_msg = (*it).asString();
-                        std::stringstream formatted_msg;
                         Exception e(DRM_Debug, custom_msg);
-                        //formatted_msg << "[errorCode=" << DRM_ErrorCode::DRM_Debug << "] " << custom_msg;
-                        //f_asynch_error( formatted_msg.str() );
                         f_asynch_error( e.what() );
-                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", formatted_msg.str() );
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", custom_msg );
+                        break;
+                    }
+                    case ParameterKey::bad_authentication_token: {
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to random value" );
+                        getDrmWSClient().useBadOAuth2Token( "BadToken" );
+                        break;
+                    }
+                    case ParameterKey::bad_product_id: {
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to random value" );
+                        mHeaderJsonRequest["product"]["name"] = "BAD_NAME_JUST_FOR_TEST";
                         break;
                     }
                     default:
@@ -1169,7 +1316,7 @@ public:
         CATCH_AND_THROW
     }
 
-    template<typename T> void set( const ParameterKey key_id, const T& value ) {}
+    template<typename T> void set( const ParameterKey /*key_id*/, const T& /*value*/ ) {}
 
 };
 

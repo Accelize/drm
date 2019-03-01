@@ -28,11 +28,14 @@ namespace DRM {
  get license and send metering data*/
 class DrmWSClient {
 protected:
-    std::string client_id;
-    std::string client_secret;
-    std::string oauth2_url;
-    std::string metering_url;
-    std::chrono::seconds default_request_timeout;
+    std::string mClientId;
+    std::string mClientSecret;
+    std::string mOAuth2Url;
+    std::string mMeteringUrl;
+    std::chrono::seconds mDefaultRequestTimeout;
+
+    // Test only parameters
+    std::string mUseBadOAuth2Token;
 
 public:
     DrmWSClient(const std::string &conf_file_path, const std::string &cred_file_path);
@@ -40,6 +43,8 @@ public:
 
     Json::Value getLicense(const Json::Value& json_req);
     Json::Value getLicense(const Json::Value& json_req, std::chrono::steady_clock::time_point deadline);
+
+    inline void useBadOAuth2Token( const std::string& new_token ) { mUseBadOAuth2Token = new_token; };
 
 protected:
     std::string getOAuth2token(std::chrono::steady_clock::time_point deadline);

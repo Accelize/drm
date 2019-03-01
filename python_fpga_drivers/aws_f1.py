@@ -5,6 +5,7 @@ AWS F1 driver for Accelize DRM Python library
 
 Requires AWS FPGA SDK: https://github.com/aws/aws-fpga/tree/master/sdk
 """
+from threading import Lock as _Lock
 from python_fpga_drivers import FpgaDriverBase as _FpgaDriverBase
 from ctypes import (
     cdll as _cdll, POINTER as _POINTER, byref as _byref, c_uint32 as _c_uint32,
@@ -94,9 +95,14 @@ class FpgaDriver(_FpgaDriverBase):
 
         base_addr = self._drm_ctrl_base_addr
         handle = self._fpga_handle
+        read_lock = _Lock()
 
-        return lambda register_offset, returned_data: fpga_pci_peek(
-            handle, base_addr + register_offset, returned_data)
+        def read_register(register_offset, returned_data):
+            with read_lock:
+                return fpga_pci_peek(
+                    handle, base_addr + register_offset, returned_data)
+
+        return read_register
 
     def _get_write_register_callback(self):
         """

@@ -18,10 +18,12 @@ limitations under the License.
 #define _H_ACCELIZE_DRM_LOG
 
 #include <iostream>
+#include <iomanip>
 #include <sstream>
 #include <cstdlib>
 #include <stdio.h>
 #include <string.h>
+#include <thread>
 
 #include "accelize/drm/error.h"
 
@@ -35,9 +37,6 @@ namespace DRM {
 #define __SHORT_FILE__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #endif
 
-
-static const char* s_ShortLogFormat = "%-7s: ";
-static const char* s_LongLogFormat  = "%-7s [DRM-Lib]: %s, %s:%u - ";
 
 static std::ostream& gLog() {
     return std::cout;
@@ -72,17 +71,14 @@ __attribute__((unused)) static eLogLevel getLogLevel() {
     return ret;
 }
 
-static const char* getLogFormat() {
-    std::string ret = s_ShortLogFormat;
-    const char* logformat_env = std::getenv("ACCELIZE_DRM_LOG_FORMAT");
-    if (logformat_env) {
+static eLogFormat getLogFormat() {
+    const char* log_format_env = std::getenv("ACCELIZE_DRM_LOG_FORMAT");
+    if (log_format_env ) {
         try {
-            unsigned long uint_logformat_env = std::stoul(logformat_env);
-            if (uint_logformat_env == static_cast<unsigned long>(eLogFormat::LONG))
-                ret = s_LongLogFormat;
+            return static_cast<eLogFormat>(std::stoul(log_format_env ));
         } catch(...) {} //fall back to default
     }
-    return ret.c_str();
+    return eLogFormat::SHORT;
 }
 
 static void ssAddToStream(std::ostream& a_stream) {(void)a_stream;}
@@ -102,7 +98,7 @@ static std::string stringConcat(Args&&... a_args)
     return ss.str();
 }
 
-static char* getFormattedTime(void) {
+static std::string getFormattedTime() {
 
     time_t rawtime;
     struct tm* timeinfo;
@@ -111,17 +107,22 @@ static char* getFormattedTime(void) {
     timeinfo = localtime(&rawtime);
 
     // Must be static, otherwise won't work
-    static char _retval[20];
+    //static char _retval[32];
+    char _retval[32];
     strftime(_retval, sizeof(_retval), "%Y-%m-%d/%H:%M:%S", timeinfo);
 
-    return _retval;
+    return std::string( _retval );
 }
 
 template <typename... Args>
-void logTrace(const char* level, const char* file, const unsigned long noline, Args&&... args) {
-    char logPrefix [128];
-    sprintf(logPrefix, getLogFormat(), level, getFormattedTime(), file, noline);
-    ssAddToStream(gLog(), logPrefix, std::forward<Args>( args )...);
+void logTrace(const std::string& level, const std::string& file, const unsigned long noline, Args&&... args) {
+    std::stringstream ss;
+    ss << std::left << std::setfill(' ') << std::setw(7) << level;
+    if ( getLogFormat() == eLogFormat::LONG ) {
+        ss << " [DRM-Lib] " << getFormattedTime() << ", " << file << ":" << noline;
+    }
+    ss << ": [Thread " << std::this_thread::get_id() << "] ";
+    ssAddToStream(gLog(), ss.str(), std::forward<Args>( args )...);
     gLog() << std::endl;
 }
 
@@ -181,7 +182,8 @@ template <typename... Args>
 #define AssertLessEqual(a, b)           __Assert2op(_Assert, a, b, <=)
 
 #define Unreachable( msg ) \
-    Throw(DRM_Assert, "Reached an unexpected part of code in ", __FILENAME__, ":", __LINE__, " (", __func__, ") because ", msg, ": Please contact support.")
+    Throw( DRM_Assert, "Reached an unexpected part of code in ", __FILENAME__, ":", \
+            __LINE__, " (", __func__, ") because ", msg, ": Please contact support." )
 
 
 #endif // _H_ACCELIZE_DRM_LOG
