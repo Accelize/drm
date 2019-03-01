@@ -67,6 +67,7 @@ message(STATUS "Library Package version : ${CPACK_PACKAGE_VERSION}-${CPACK_PACKA
 
 # CONFIGURE BUILD
 project(accelize/drm)
+option(PKG "Produce packages" OFF)
 
 ## Build jobs
 include(ProcessorCount)
@@ -244,12 +245,21 @@ if (PYTHON3)
             python3 ALL
             COMMAND
             ${Python3_EXECUTABLE} ${PYTHON_SETUP} bdist_wheel -b ${PYTHON3_BDIST} -d ${PACKAGE_OUTPUT} -k
-                                                  build_ext -I ${CMAKE_INCLUDE_DIR}:${JSONCPP_INCLUDEDIR} -L ${CMAKE_BINARY_DIR} ${BUILD_EXT_EXTRA} -j ${CPU_COUNT} &&
-            ${Python3_EXECUTABLE} ${PYTHON_SETUP} sdist -d ${PACKAGE_OUTPUT}
+                                                  build_ext -I ${CMAKE_INCLUDE_DIR}:${JSONCPP_INCLUDEDIR} -L ${CMAKE_BINARY_DIR} ${BUILD_EXT_EXTRA} -j ${CPU_COUNT}
             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-            COMMENT "Building accelize_drm Python 3 Package"
+            COMMENT "Building accelize_drm Python 3 (With wheel Package)"
             VERBATIM
     )
+    if (PKG)
+        add_custom_command(
+                TARGET python3 POST_BUILD
+                COMMAND ${Python3_EXECUTABLE} ${PYTHON_SETUP} sdist -d ${PACKAGE_OUTPUT}
+                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+                COMMENT "Building accelize_drm Python 3 source Package"
+                VERBATIM
+        )
+    endif ()
+
     add_dependencies(python3 accelize_drm)
     add_dependencies(python3 accelize_drmc)
     add_dependencies(python3 Python3::Interpreter)
@@ -324,146 +334,148 @@ if (DOC)
 endif ()
 
 # Packages
-set(CPACK_PACKAGE_NAME "libaccelize-drm")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY ${CPACK_DESCRIPTION_SUMMARY})
-set(CPACK_COMPONENT_RUN_DESCRIPTION ${CPACK_DESCRIPTION_SUMMARY})
+if (PKG)
+    set(CPACK_PACKAGE_NAME "libaccelize-drm")
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY ${CPACK_DESCRIPTION_SUMMARY})
+    set(CPACK_COMPONENT_RUN_DESCRIPTION ${CPACK_DESCRIPTION_SUMMARY})
 
-## libaccelize_drm package
+    ## libaccelize_drm package
 
-# Get Linux distribution information
-find_program(LSB_RELEASE lsb_release)
-if (LSB_RELEASE)
-    execute_process(COMMAND lsb_release -is
-            OUTPUT_VARIABLE DIST_ID
-            OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-    string(TOLOWER ${DIST_ID} DIST_ID)
+    # Get Linux distribution information
+    find_program(LSB_RELEASE lsb_release)
+    if (LSB_RELEASE)
+        execute_process(COMMAND lsb_release -is
+                OUTPUT_VARIABLE DIST_ID
+                OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+        string(TOLOWER ${DIST_ID} DIST_ID)
 
-    execute_process(COMMAND lsb_release -cs
-            OUTPUT_VARIABLE DIST_CODENAME
-            OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-    string(TOLOWER ${DIST_CODENAME} DIST_CODENAME)
+        execute_process(COMMAND lsb_release -cs
+                OUTPUT_VARIABLE DIST_CODENAME
+                OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+        string(TOLOWER ${DIST_CODENAME} DIST_CODENAME)
 
-    execute_process(COMMAND lsb_release -rs
-            OUTPUT_VARIABLE DIST_RELEASE
-            OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-    string(TOLOWER ${DIST_RELEASE} DIST_RELEASE)
-endif ()
+        execute_process(COMMAND lsb_release -rs
+                OUTPUT_VARIABLE DIST_RELEASE
+                OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+        string(TOLOWER ${DIST_RELEASE} DIST_RELEASE)
+    endif ()
 
-# Copy OS information with packages
-if(EXISTS /usr/lib/os-release)
-    file(COPY /usr/lib/os-release DESTINATION ${PACKAGE_OUTPUT})
-elseif(EXISTS /etc/os-release)
-    file(COPY /etc/os-release DESTINATION ${PACKAGE_OUTPUT})
-endif()
+    # Copy OS information with packages
+    if(EXISTS /usr/lib/os-release)
+        file(COPY /usr/lib/os-release DESTINATION ${PACKAGE_OUTPUT})
+    elseif(EXISTS /etc/os-release)
+        file(COPY /etc/os-release DESTINATION ${PACKAGE_OUTPUT})
+    endif()
 
-# RPM Packages
-find_program(PACKAGE_MANAGER_YUM yum)
-find_program(PACKAGE_MANAGER_DNF dnf)
-if (PACKAGE_MANAGER_YUM OR PACKAGE_MANAGER_DNF)
-    set(CPACK_GENERATOR "RPM")
-    set(CPACK_RPM_COMPONENT_INSTALL ON)
+    # RPM Packages
+    find_program(PACKAGE_MANAGER_YUM yum)
+    find_program(PACKAGE_MANAGER_DNF dnf)
+    if (PACKAGE_MANAGER_YUM OR PACKAGE_MANAGER_DNF)
+        set(CPACK_GENERATOR "RPM")
+        set(CPACK_RPM_COMPONENT_INSTALL ON)
 
-    # Get dist RPM Release dist value (ex: "el7")
-    execute_process(COMMAND sh /usr/lib/rpm/redhat/dist.sh
-            OUTPUT_VARIABLE CPACK_RPM_PACKAGE_RELEASE_DIST
-            OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-
-    # Runtime package
-    set(CPACK_RPM_RUN_PACKAGE_NAME "${CPACK_PACKAGE_NAME}")
-    set(CPACK_RPM_RUN_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}${CPACK_RPM_PACKAGE_RELEASE_DIST}.${CMAKE_SYSTEM_PROCESSOR}.rpm")
-
-    # Dev package
-    set(CPACK_RPM_DEV_PACKAGE_NAME "${CPACK_PACKAGE_NAME}-devel")
-    set(CPACK_RPM_DEV_FILE_NAME "${CPACK_RPM_DEV_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}${CPACK_RPM_PACKAGE_RELEASE_DIST}.noarch.rpm")
-    set(CPACK_RPM_DEV_PACKAGE_SUMMARY ${CPACK_COMPONENT_DEV_DESCRIPTION})
-    set(CPACK_RPM_DEV_PACKAGE_REQUIRES "${CPACK_PACKAGE_NAME}, libcurl-devel, jsoncpp-devel")
-
-    # Python Package
-    if (PYTHON3)
-        # Package Dependencies (Without Python)
-        set(CPACK_RPM_PYTHON3_PACKAGE_REQUIRES "${CPACK_PACKAGE_NAME} >= ${VERSION_MAJOR}.${VERSION_MINOR}")
-
-        # Find Python3 base package
-        execute_process(COMMAND rpm -qf ${Python3_EXECUTABLE} --queryformat '%{NAME}'
-                OUTPUT_VARIABLE PYTHON3_PACKAGE
+        # Get dist RPM Release dist value (ex: "el7")
+        execute_process(COMMAND sh /usr/lib/rpm/redhat/dist.sh
+                OUTPUT_VARIABLE CPACK_RPM_PACKAGE_RELEASE_DIST
                 OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
 
-        if (PYTHON3_PACKAGE MATCHES "is not owned by any package" OR NOT PYTHON3_PACKAGE)
-            # Python3 is not from a Package, define package name
-            set(PYTHON3_PACKAGE "python${Python3_VERSION_MAJOR}${Python3_VERSION_MINOR}")
-        else()
-            # Python3 is from a package, add it as dependency
-            set(CPACK_RPM_PYTHON3_PACKAGE_REQUIRES "${CPACK_RPM_PYTHON3_PACKAGE_REQUIRES}, ${PYTHON3_PACKAGE}")
+        # Runtime package
+        set(CPACK_RPM_RUN_PACKAGE_NAME "${CPACK_PACKAGE_NAME}")
+        set(CPACK_RPM_RUN_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}${CPACK_RPM_PACKAGE_RELEASE_DIST}.${CMAKE_SYSTEM_PROCESSOR}.rpm")
+
+        # Dev package
+        set(CPACK_RPM_DEV_PACKAGE_NAME "${CPACK_PACKAGE_NAME}-devel")
+        set(CPACK_RPM_DEV_FILE_NAME "${CPACK_RPM_DEV_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}${CPACK_RPM_PACKAGE_RELEASE_DIST}.noarch.rpm")
+        set(CPACK_RPM_DEV_PACKAGE_SUMMARY ${CPACK_COMPONENT_DEV_DESCRIPTION})
+        set(CPACK_RPM_DEV_PACKAGE_REQUIRES "${CPACK_PACKAGE_NAME}, libcurl-devel, jsoncpp-devel")
+
+        # Python Package
+        if (PYTHON3)
+            # Package Dependencies (Without Python)
+            set(CPACK_RPM_PYTHON3_PACKAGE_REQUIRES "${CPACK_PACKAGE_NAME} >= ${VERSION_MAJOR}.${VERSION_MINOR}")
+
+            # Find Python3 base package
+            execute_process(COMMAND rpm -qf ${Python3_EXECUTABLE} --queryformat '%{NAME}'
+                    OUTPUT_VARIABLE PYTHON3_PACKAGE
+                    OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+
+            if (PYTHON3_PACKAGE MATCHES "is not owned by any package" OR NOT PYTHON3_PACKAGE)
+                # Python3 is not from a Package, define package name
+                set(PYTHON3_PACKAGE "python${Python3_VERSION_MAJOR}${Python3_VERSION_MINOR}")
+            else()
+                # Python3 is from a package, add it as dependency
+                set(CPACK_RPM_PYTHON3_PACKAGE_REQUIRES "${CPACK_RPM_PYTHON3_PACKAGE_REQUIRES}, ${PYTHON3_PACKAGE}")
+            endif ()
+
+            # Configure package
+            set(CPACK_RPM_PYTHON3_PACKAGE_NAME "${PYTHON3_PACKAGE}-accelize-drm")
+            set(CPACK_RPM_PYTHON3_FILE_NAME "${CPACK_RPM_PYTHON3_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}${CPACK_RPM_PACKAGE_RELEASE_DIST}.${CMAKE_SYSTEM_PROCESSOR}.rpm")
+            set(CPACK_RPM_PYTHON3_PACKAGE_SUMMARY ${CPACK_COMPONENT_PYTHON3_DESCRIPTION})
+            set(CPACK_RPM_PYTHON3_PACKAGE_GROUP "Development/Libraries/Python")
+
         endif ()
 
-        # Configure package
-        set(CPACK_RPM_PYTHON3_PACKAGE_NAME "${PYTHON3_PACKAGE}-accelize-drm")
-        set(CPACK_RPM_PYTHON3_FILE_NAME "${CPACK_RPM_PYTHON3_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}${CPACK_RPM_PACKAGE_RELEASE_DIST}.${CMAKE_SYSTEM_PROCESSOR}.rpm")
-        set(CPACK_RPM_PYTHON3_PACKAGE_SUMMARY ${CPACK_COMPONENT_PYTHON3_DESCRIPTION})
-        set(CPACK_RPM_PYTHON3_PACKAGE_GROUP "Development/Libraries/Python")
+        # Other information
+        set(CPACK_RPM_CHANGELOG_FILE ${CMAKE_CURRENT_SOURCE_DIR}/CHANGELOG)
+        set(CPACK_RPM_PACKAGE_LICENSE "Apache v2.0")
+        set(CPACK_RPM_PACKAGE_GROUP "Development/Libraries/C and C++")
 
+        message(STATUS "Packaging : RPM for ${DIST_ID} ${DIST_RELEASE}")
     endif ()
 
-    # Other information
-    set(CPACK_RPM_CHANGELOG_FILE ${CMAKE_CURRENT_SOURCE_DIR}/CHANGELOG)
-    set(CPACK_RPM_PACKAGE_LICENSE "Apache v2.0")
-    set(CPACK_RPM_PACKAGE_GROUP "Development/Libraries/C and C++")
+    # DEB Packages
+    find_program(PACKAGE_MANAGER_APT apt-get)
+    if (PACKAGE_MANAGER_APT)
+        set(CPACK_GENERATOR "DEB")
+        set(CPACK_DEB_COMPONENT_INSTALL ON)
+        set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
 
-    message(STATUS "Packaging : RPM for ${DIST_ID} ${DIST_RELEASE}")
-endif ()
+        # Get Architecture Debian name
+        execute_process(COMMAND dpkg --print-architecture
+                OUTPUT_VARIABLE CPACK_DEBIAN_PACKAGE_ARCHITECTURE
+                OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
 
-# DEB Packages
-find_program(PACKAGE_MANAGER_APT apt-get)
-if (PACKAGE_MANAGER_APT)
-    set(CPACK_GENERATOR "DEB")
-    set(CPACK_DEB_COMPONENT_INSTALL ON)
-    set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+        # Runtime package
+        set(CPACK_DEBIAN_RUN_PACKAGE_NAME ${CPACK_PACKAGE_NAME})
+        set(CPACK_DEBIAN_RUN_FILE_NAME "${CPACK_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}.deb")
+        set(CPACK_DEBIAN_RUN_PACKAGE_SECTION libs)
 
-    # Get Architecture Debian name
-    execute_process(COMMAND dpkg --print-architecture
-            OUTPUT_VARIABLE CPACK_DEBIAN_PACKAGE_ARCHITECTURE
-            OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+        # Dev package
+        set(CPACK_DEBIAN_DEV_PACKAGE_NAME "${CPACK_PACKAGE_NAME}-dev")
+        set(CPACK_DEBIAN_DEV_FILE_NAME "${CPACK_DEBIAN_DEV_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}_all.deb")
+        set(CPACK_DEBIAN_DEV_PACKAGE_SECTION libdevel)
+        set(CPACK_DEBIAN_DEV_PACKAGE_DEPENDS "${CPACK_PACKAGE_NAME}, libcurl4-openssl-dev, libjsoncpp-dev")
 
-    # Runtime package
-    set(CPACK_DEBIAN_RUN_PACKAGE_NAME ${CPACK_PACKAGE_NAME})
-    set(CPACK_DEBIAN_RUN_FILE_NAME "${CPACK_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}.deb")
-    set(CPACK_DEBIAN_RUN_PACKAGE_SECTION libs)
+        # Python Package
+        if (PYTHON3)
+            # Configure package
+            set(CPACK_DEBIAN_PYTHON3_PACKAGE_NAME "python3-accelize-drm")
+            set(CPACK_DEBIAN_PYTHON3_FILE_NAME "${CPACK_DEBIAN_PYTHON3_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}.deb")
+            set(CPACK_DEBIAN_PYTHON3_PACKAGE_SECTION libs)
+            set(CPACK_DEBIAN_PYTHON3_PACKAGE_DEPENDS "${CPACK_PACKAGE_NAME} (>= ${VERSION_MAJOR}.${VERSION_MINOR}), python3:any (>= 3.4)")
+        endif ()
 
-    # Dev package
-    set(CPACK_DEBIAN_DEV_PACKAGE_NAME "${CPACK_PACKAGE_NAME}-dev")
-    set(CPACK_DEBIAN_DEV_FILE_NAME "${CPACK_DEBIAN_DEV_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}_all.deb")
-    set(CPACK_DEBIAN_DEV_PACKAGE_SECTION libdevel)
-    set(CPACK_DEBIAN_DEV_PACKAGE_DEPENDS "${CPACK_PACKAGE_NAME}, libcurl4-openssl-dev, libjsoncpp-dev")
+        # Other information
+        message(STATUS "Packaging : DEB for ${DIST_ID} ${DIST_CODENAME}")
+    endif ()
 
-    # Python Package
+    include(CPack)
+
+    # Runtime libraries package
+    cpack_add_component_group(RUN)
+    cpack_add_component(libraries GROUP RUN)
+    cpack_add_component(licenses GROUP RUN)
+
+    # Dev/Devel package
+    cpack_add_component_group(DEV)
+    cpack_add_component(headers GROUP DEV)
+    cpack_add_component(doc GROUP DEV)
+
+    # Python package
     if (PYTHON3)
-        # Configure package
-        set(CPACK_DEBIAN_PYTHON3_PACKAGE_NAME "python3-accelize-drm")
-        set(CPACK_DEBIAN_PYTHON3_FILE_NAME "${CPACK_DEBIAN_PYTHON3_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}.deb")
-        set(CPACK_DEBIAN_PYTHON3_PACKAGE_SECTION libs)
-        set(CPACK_DEBIAN_PYTHON3_PACKAGE_DEPENDS "${CPACK_PACKAGE_NAME} (>= ${VERSION_MAJOR}.${VERSION_MINOR}), python3:any (>= 3.4)")
+        cpack_add_component_group(PYTHON3)
+        cpack_add_component(python3 GROUP PYTHON3)
     endif ()
-
-    # Other information
-    message(STATUS "Packaging : DEB for ${DIST_ID} ${DIST_CODENAME}")
-endif ()
-
-include(CPack)
-
-# Runtime libraries package
-cpack_add_component_group(RUN)
-cpack_add_component(libraries GROUP RUN)
-cpack_add_component(licenses GROUP RUN)
-
-# Dev/Devel package
-cpack_add_component_group(DEV)
-cpack_add_component(headers GROUP DEV)
-cpack_add_component(doc GROUP DEV)
-
-# Python package
-if (PYTHON3)
-    cpack_add_component_group(PYTHON3)
-    cpack_add_component(python3 GROUP PYTHON3)
 endif ()
 
 # Tests

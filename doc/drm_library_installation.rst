@@ -473,6 +473,7 @@ components:
   full library documentation in *Sphinx* HTML format, else only the
   documentation for the C/C++ API is generated in *Doxygen* HTML format.
 * ``-DTESTS=ON``: Generates testings related files.
+* ``-DPKG=ON``: Generates packages.
 * ``-DCOVERAGE=ON``: If ``-DTESTS`` is ``ON``, compile with coverage support.
 
 .. note:: Build the development package require both ``-DPYTHON3=ON`` and
