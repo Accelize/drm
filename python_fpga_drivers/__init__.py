@@ -58,6 +58,10 @@ class FpgaDriverBase:
             self._program_fpga(fpga_image)
         self._init_fpga()
 
+        # Call backs
+        self._read_register_callback = self._get_read_register_callback()
+        self._write_register_callback = self._get_write_register_callback()
+
     @property
     def read_register_callback(self):
         """
@@ -66,7 +70,7 @@ class FpgaDriverBase:
         Returns:
             function: Callback
         """
-        return self._get_read_register_callback()
+        return self._read_register_callback
 
     @property
     def write_register_callback(self):
@@ -76,7 +80,7 @@ class FpgaDriverBase:
         Returns:
             function: Callback
         """
-        return self._get_write_register_callback()
+        return self._write_register_callback
 
     @_abstractmethod
     def _get_driver(self):
