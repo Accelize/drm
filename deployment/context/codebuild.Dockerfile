@@ -1,10 +1,9 @@
-FROM ubuntu:18.04
+FROM python:3-slim
 
 RUN apt-get -qq update;\
 apt-get -qq -o=Dpkg::Use-Pty=0 install -y --no-install-recommends\
     git\
     sudo\
-    python3-dev python3-pip\
     g++ make libcurl4-openssl-dev libjsoncpp-dev\
     doxygen\
     reprepro createrepo gnupg;\
