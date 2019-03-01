@@ -91,7 +91,6 @@ class FpgaDriver(_FpgaDriverBase):
             _c_uint64,  # offset
             _POINTER(_c_uint32)  # value
         )
-        self._fpga_pci_peek = fpga_pci_peek
 
         base_addr = self._drm_ctrl_base_addr
         handle = self._fpga_handle
@@ -113,7 +112,6 @@ class FpgaDriver(_FpgaDriverBase):
             _c_uint64,  # offset
             _c_uint32  # value
         )
-        self._fpga_pci_poke = fpga_pci_poke
 
         base_addr = self._drm_ctrl_base_addr
         handle = self._fpga_handle
