@@ -91,12 +91,24 @@ class FpgaDriver(_FpgaDriverBase):
             _c_uint64,  # offset
             _POINTER(_c_uint32)  # value
         )
+        self._fpga_pci_peek = fpga_pci_peek
 
-        base_addr = self._drm_ctrl_base_addr
-        handle = self._fpga_handle
+        def read_register(register_offset, returned_data, driver=self):
+            """
+            Read register.
 
-        return lambda register_offset, returned_data: fpga_pci_peek(
-            handle, base_addr + register_offset, returned_data)
+            Args:
+                register_offset (int): Offset
+                returned_data (int pointer): Return data.
+                driver (python_fpga_drivers.aws_f1.FpgaDriver):
+                    Keep a reference to driver.
+            """
+            return driver._fpga_pci_peek(
+                driver._fpga_handle,
+                driver._drm_ctrl_base_addr + register_offset,
+                returned_data)
+
+        return read_register
 
     def _get_write_register_callback(self):
         """
@@ -112,9 +124,21 @@ class FpgaDriver(_FpgaDriverBase):
             _c_uint64,  # offset
             _c_uint32  # value
         )
+        self._fpga_pci_poke = fpga_pci_poke
 
-        base_addr = self._drm_ctrl_base_addr
-        handle = self._fpga_handle
+        def write_register(register_offset, data_to_write, driver=self):
+            """
+            Read register.
 
-        return lambda register_offset, data_to_write: fpga_pci_poke(
-            handle, base_addr + register_offset, data_to_write)
+            Args:
+                register_offset (int): Offset
+                data_to_write (int): Data to write.
+                driver (python_fpga_drivers.aws_f1.FpgaDriver):
+                    Keep a reference to driver.
+            """
+            return driver._fpga_pci_poke(
+                driver._fpga_handle,
+                driver._drm_ctrl_base_addr + register_offset,
+                data_to_write)
+
+        return write_register
