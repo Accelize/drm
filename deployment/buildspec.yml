@@ -11,7 +11,11 @@ phases:
     commands:
       # Toolbox: Initialize
       - sudo $CODEBUILD_SRC_DIR_toolbox/install.py
+
+      # Artifacts output directory
       - mkdir artifacts
+
+      # Save environment as artifact
       - export | grep CODEBUILD >artifacts/env.txt
 
   build:
@@ -33,7 +37,6 @@ phases:
       - xlz
         --if git_file_changed='doc/|include/|python/src|python/accelize_drm'
         --if git_branch=master,dev
-        --after_success drmlib_publish_doc=doc.tar.gz
         install
         drmlib_build_deps
         drmlib_doc_deps
@@ -42,6 +45,12 @@ phases:
             cmake -DPYTHON3=ON -DDOC=ON .. &&
             make -s -j &&
             tar -zcf ../artifacts/doc.tar.gz ./doc_html"
+
+      # Upload documentation
+      - xlz
+        --if file_exists=artifacts/doc.tar.gz
+        install
+        drmlib_publish_doc=artifacts/doc.tar.gz
 
       # Build packages
       - xlz
@@ -61,9 +70,7 @@ phases:
       # Tests packages
       # TODO: Add run tests commands
       - xlz
-        --if git_head_tagged
-        --if git_branch=master,dev
-        --after_success drmlib_publish_packages=packages.tar.gz
+        --if file_exists=artifacts/packages.tar.gz
         run
         docker
         -s ubuntu
@@ -71,6 +78,12 @@ phases:
         -n drm_packages_tests
         --gz_upload packages.tar.gz /dev/shm/packages
         -r ""
+
+      # Upload packages to repository
+      - xlz
+        --if file_exists=artifacts/packages.tar.gz
+        install
+        drmlib_publish_packages=artifacts/packages.tar.gz
 
 artifacts:
   files:
