@@ -20,9 +20,13 @@ def get_default_conf_json(licensing_server_url):
     Returns:
         dict: "conf.json" content
     """
+    if licensing_server_url.lower() == 'dev':
+        url = 'https://master.devmetering.accelize.com'
+    else:
+        url = licensing_server_url
     return {
         "licensing": {
-            "url": licensing_server_url,
+            "url": url,
         },
         "drm": {
             "frequency_mhz": 125
@@ -35,9 +39,9 @@ def get_default_conf_json(licensing_server_url):
             "boardType": "DRM_125"
         },
         "webservice": {
-            "oauth2_url": "%s/o/token/" % licensing_server_url,
+            "oauth2_url": "%s/o/token/" % url,
             "metering_url":
-                "%s/auth/metering/genlicense/" % licensing_server_url
+                "%s/auth/metering/genlicense/" % url
         }
     }
 
@@ -444,7 +448,7 @@ class AsyncErrorHandler:
     def __init__(self):
         self.reset()
     def reset(self):
-        self.message = ''
+        self.message = None
         self.errcode = None
         self.was_called = False
     def callback(self, message):
@@ -459,7 +463,14 @@ class AsyncErrorHandler:
         else:
             self.errcode = None
 
+class AsyncErrorHandlerList(list):
+    def create(self):
+        cb = AsyncErrorHandler()
+        super(AsyncErrorHandlerList, self).append(cb)
+        return cb
+
 
 @pytest.fixture
 def async_handler():
-    return AsyncErrorHandler()
+    return AsyncErrorHandlerList()
+

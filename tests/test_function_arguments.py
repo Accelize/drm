@@ -309,29 +309,3 @@ def test_drm_manager_get_and_set_bad_arguments(accelize_drm, conf_json, cred_jso
     assert m, "Could not find 'errCode' in exception message"
     errCode = int(m.group(1))
     assert errCode == accelize_drm.exceptions.DRMBadArg.error_code
-
-
-def test_drm_manager_async_error_callback(accelize_drm, conf_json, cred_json, async_handler):
-    """Test asynchronous error callback has been called"""
-
-    driver = accelize_drm.pytest_fpga_driver[0]
-
-    # Test when no configuration file is given
-    async_handler.reset()
-
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_handler.callback
-    )
-    drm_manager.activate()
-    time.sleep(1)
-    test_message = 'Test message'
-    drm_manager.set(trigger_async=test_message)
-    assert async_handler.was_called, 'Asynchronous callback has not been called.'
-    assert test_message in async_handler.message, 'Asynchronous callback has not received the correct message'
-    assert async_handler.errcode == accelize_drm.exceptions.DRMDebug.error_code, 'Asynchronous callback has not received the correct error code'
-
-

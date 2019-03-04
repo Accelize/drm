@@ -43,12 +43,12 @@ public:
 class CurlEasyPost {
 private:
     CURL *curl;
-    struct curl_slist *headers = NULL;
+    struct curl_slist *headers = nullptr;
     std::list<std::string> data; // keep data until request performed
     std::array<char, CURL_ERROR_SIZE> errbuff;
 
 public:
-    CurlEasyPost(bool verbose = false) {
+    CurlEasyPost( bool verbose = false ) {
         curl = curl_easy_init();
         if(!curl)
             Throw(DRM_ExternFail, "Curl : cannot init curl_easy");
@@ -142,7 +142,7 @@ public:
 
 protected:
     static size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
-        std::string *s = (std::string*)userp;
+        auto *s = (std::string*)userp;
         size_t realsize = size * nmemb;
         s->append((const char*)contents, realsize);
         return realsize;
@@ -189,17 +189,19 @@ DrmWSClient::DrmWSClient(const std::string &conf_file_path, const std::string &c
     Json::Value conf_json = parseConfiguration( conf_file_path );
     Json::Value cred_json = parseConfiguration( cred_file_path );
 
+    mUseBadOAuth2Token = std::string("");
+
     try {
         Json::Value webservice_json = JVgetRequired(conf_json, "licensing", Json::objectValue);
         Debug2("Web service configuration: ", webservice_json.toStyledString());
 
         std::string url = JVgetRequired(webservice_json, "url", Json::stringValue).asString();
-        oauth2_url = url + std::string("/o/token/");
-        metering_url = url + std::string("/auth/metering/genlicense/");
+        mOAuth2Url = url + std::string("/o/token/");
+        mMeteringUrl = url + std::string("/auth/metering/genlicense/");
         Debug("Licensing URL: ", url);
 
-        default_request_timeout = std::chrono::seconds( JVgetOptional(webservice_json, "default_ws_request_timeout", Json::uintValue, 20).asUInt() );
-        Debug2("default_request_timeout=", default_request_timeout.count());
+        mDefaultRequestTimeout = std::chrono::seconds( JVgetOptional(webservice_json, "default_ws_request_timeout", Json::uintValue, 20).asUInt() );
+        Debug2("mDefaultRequestTimeout=", mDefaultRequestTimeout.count());
 
     } catch(Exception &e) {
         if (e.getErrCode() != DRM_BadFormat)
@@ -209,10 +211,10 @@ DrmWSClient::DrmWSClient(const std::string &conf_file_path, const std::string &c
 
     try {
         Json::Value client_id_json = JVgetRequired(cred_json, "client_id", Json::stringValue);
-        client_id = client_id_json.asString();
+        mClientId = client_id_json.asString();
 
         Json::Value client_secret_json = JVgetRequired(cred_json, "client_secret", Json::stringValue);
-        client_secret = client_secret_json.asString();
+        mClientSecret = client_secret_json.asString();
 
     } catch(Exception &e) {
         if (e.getErrCode() != DRM_BadFormat)
@@ -224,19 +226,27 @@ DrmWSClient::DrmWSClient(const std::string &conf_file_path, const std::string &c
 }
 
 Json::Value DrmWSClient::getLicense(const Json::Value& json_req) {
-    return getLicense(json_req, std::chrono::steady_clock::now() + default_request_timeout);
+    return getLicense(json_req, std::chrono::steady_clock::now() + mDefaultRequestTimeout);
 }
 
 Json::Value DrmWSClient::getLicense(const Json::Value& json_req, std::chrono::steady_clock::time_point deadline) {
 
-    std::string token = getOAuth2token(deadline);
+    std::string token = mUseBadOAuth2Token;
+    if ( mUseBadOAuth2Token.empty() ) {
+        Debug("Requesting new token");
+        token = getOAuth2token(deadline);
+    } else {
+        Debug("Overwriting token with: ", mUseBadOAuth2Token);
+        mUseBadOAuth2Token.clear();
+        Debug("NEw token with: ", mUseBadOAuth2Token);
+    }
 
     Debug("Web Service JSON request:\n", json_req.toStyledString());
 
     CurlEasyPost req;
 
     // Set headers of request
-    req.setURL(metering_url);
+    req.setURL(mMeteringUrl);
     req.appendHeader("Accept: application/json");
     req.appendHeader("Content-Type: application/json");
     req.appendHeader(std::string("Authorization: Bearer ") + token);
@@ -286,12 +296,12 @@ std::string DrmWSClient::getOAuth2token(std::chrono::steady_clock::time_point de
     CurlEasyPost req;
 
     // Set headers of request
-    req.setURL(oauth2_url);
+    req.setURL( mOAuth2Url );
     std::stringstream ss;
-    ss << "client_id=" << client_id << "&client_secret=" << client_secret << "&grant_type=client_credentials";
+    ss << "client_id=" << mClientId << "&client_secret=" << mClientSecret << "&grant_type=client_credentials";
     req.setPostFields(ss.str());
 
-    Debug( "Starting OAuth2 token request to url: ", oauth2_url );
+    Debug( "Starting OAuth2 token request to url: ", mOAuth2Url );
 
     std::string resp;
     long resp_code = req.perform(&resp, deadline);
