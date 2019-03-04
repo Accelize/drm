@@ -19,6 +19,7 @@ Example:
 """
 from abc import abstractmethod as _abstractmethod
 from importlib import import_module as _import_module
+from threading import Lock as _Lock
 
 
 def get_driver(name):
@@ -48,6 +49,12 @@ class FpgaDriverBase:
         self._fpga_slot_id = fpga_slot_id
         self._fpga_image = fpga_image
         self._drm_ctrl_base_addr = drm_ctrl_base_addr
+
+        # FPGA read/write low level functions ans associated locks
+        self._fpga_read_register = None
+        self._fpga_write_register = None
+        self._fpga_read_register_lock = _Lock()
+        self._fpga_write_register_lock = _Lock()
 
         # Device and library handles
         self._fpga_handle = None
@@ -81,6 +88,15 @@ class FpgaDriverBase:
             function: Callback
         """
         return self._write_register_callback
+
+    def program_fpga(self, fpga_image):
+        """
+        Program FPGA with specified image.
+
+        Args:
+            fpga_image (str): FPGA image to program.
+        """
+        return self._program_fpga(fpga_image)
 
     @_abstractmethod
     def _get_driver(self):
