@@ -223,6 +223,7 @@ def accelize_drm(pytestconfig):
     # Initialize FPGA
     print('FPGA SLOT ID:', fpga_slot_id)
     print('FPGA IMAGE:', fpga_image)
+    print('HDK VERSION:', hdk_version)
     fpga_driver = [fpga_driver_cls(
         fpga_slot_id=slot_id,
         fpga_image=fpga_image,
