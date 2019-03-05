@@ -90,7 +90,7 @@ set(CMAKE_CXX_STANDARD 11)
 add_compile_options(-fvisibility=hidden)
 if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     # Enable warnings
-    add_compile_options(-O0 -Wall -Wextra -Wnon-virtual-dtor -Wpedantic)
+    add_compile_options(-O0 -Wall -Wextra -Wnon-virtual-dtor -Wpedantic -Werror=format-security)
 
     # Optimize for Debugging
     if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
