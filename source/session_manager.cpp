@@ -70,6 +70,12 @@ const char* getApiVersion() {
 class DRM_LOCAL DrmManager::Impl {
 
 protected:
+
+    // Design constants
+    const uint32_t cRetryDeadline = 5;
+    uint32_t cFrequencyDetectionPeriod = 100;  // in milliseconds
+    double cFrequencyDetectionThreshold = 2.0;      // Error in percentage
+
     //helper typedef
     typedef std::chrono::steady_clock TClock; /// Shortcut type def to steady clock which is monotonic (so unaffected by clock adjustments)
 
@@ -117,8 +123,8 @@ protected:
     uint32_t mLicenseDuration;
 
     // Design parameters
-    uint32_t mFrequencyInit;
-    uint32_t mFrequencyCurr;
+    int32_t mFrequencyInit;
+    int32_t mFrequencyCurr;
     uint32_t mFrequencyDetectionPeriod = 100;  // in milliseconds
     double mFrequencyDetectionThreshold = 2.0;      // Error in percentage
 
@@ -153,7 +159,6 @@ protected:
 
         mLicenseCounter = 0;
         mLicenseDuration = 0;
-        mRetryDeadline = 5;
 
         mConfFilePath = conf_file_path;
         mCredFilePath = cred_file_path;
@@ -162,6 +167,20 @@ protected:
         conf_json = parseConfiguration( conf_file_path );
 
         try {
+
+            Json::Value param_lib = JVgetOptional( conf_json, "parameter_key", Json::objectValue );
+            if (!param_lib.empty()) {
+                mRetryDeadline = JVgetOptional( param_lib, "retry_deadline", Json::uintValue, cRetryDeadline).asUInt();
+                mFrequencyDetectionPeriod = JVgetOptional( param_lib, "frequency_detection_period", Json::uintValue,
+                        cFrequencyDetectionPeriod).asUInt();
+                mFrequencyDetectionThreshold = JVgetOptional( param_lib, "frequency_detection_threshold", Json::uintValue,
+                        cFrequencyDetectionThreshold).asDouble();
+            } else {
+                mRetryDeadline = cRetryDeadline;
+                mFrequencyDetectionPeriod = cFrequencyDetectionPeriod;
+                mFrequencyDetectionThreshold = cFrequencyDetectionThreshold;
+            }
+
             // Design configuration
             Json::Value conf_design = JVgetOptional( conf_json, "design", Json::objectValue );
             if (!conf_design.empty()) {
@@ -182,7 +201,7 @@ protected:
                 Debug( "Detected floating/metered license" );
                 // Get DRM frequency
                 Json::Value conf_drm = JVgetRequired( conf_json, "drm", Json::objectValue );
-                mFrequencyInit = JVgetRequired( conf_drm, "frequency_mhz", Json::uintValue ).asUInt();
+                mFrequencyInit = JVgetRequired( conf_drm, "frequency_mhz", Json::intValue ).asUInt();
                 mFrequencyCurr = mFrequencyInit;
                 // Instantiate Web Service client
                 mWsClient.reset( new DrmWSClient(conf_file_path, cred_file_path) );
@@ -765,19 +784,21 @@ protected:
     void detectDrmFrequency() {
         TClock::time_point timeStart, timeEnd;
         uint64_t counterStart, counterEnd;
+        TClock::duration wait_duration = std::chrono::milliseconds(mFrequencyDetectionPeriod);
 
         std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
-
-        /// Check if a stop has been requested till now
-        if (isStopRequested() )
-            return;
 
         Debug("Detecting DRM frequency");
         Debug( "Detection period is ", mFrequencyDetectionPeriod, " ms" );
 
         counterStart = getTimerCounterValue();
         timeStart = TClock::now();
-        usleep( mFrequencyDetectionPeriod * 1000 );
+
+        //usleep( mFrequencyDetectionPeriod * 1000 );
+        /// Check if a stop has been requested till now
+        if ( isStopRequested( wait_duration ) )
+            return;
+
         counterEnd = getTimerCounterValue();
         timeEnd = TClock::now();
         if (counterEnd == 0 )
@@ -791,13 +812,13 @@ protected:
         Debug( "Duration = ", seconds, " s   /   ticks = ", ticks );
 
         // Estimate DRM frequency
-        auto measuredFrequency = (uint32_t)(std::ceil((double)ticks / seconds / 1000000));
-        double precisionError = 100.0 * (measuredFrequency - mFrequencyInit) / mFrequencyCurr ;
+        auto measuredFrequency = (int32_t)(std::ceil((double)ticks / seconds / 1000000));
+        double precisionError = 100.0 * abs(measuredFrequency - mFrequencyCurr) / mFrequencyCurr ; // At that point mFrequencyCurr = mFrequencyInit
         if ( precisionError >= mFrequencyDetectionThreshold ) {
             mFrequencyCurr = measuredFrequency;
             Throw( DRM_BadFrequency, "Detected DRM frequency (",mFrequencyCurr," MHz) differs from the value (",
                    mFrequencyInit," MHz) defined in the configuration file '",
-                   mConfFilePath,"': From now on the considered frequency is ", mFrequencyCurr, " MHz");
+                   mConfFilePath,"' by more than ", mFrequencyDetectionThreshold, "%: From now on the considered frequency is ", mFrequencyCurr, " MHz");
         } else {
             Debug( "Detected frequency = ", measuredFrequency, " MHz, config frequency = ", mFrequencyInit,
                   " MHz: gap = ", precisionError, "%" );
@@ -1252,7 +1273,7 @@ public:
                 switch( key_id ) {
                     case ParameterKey ::frequency_detection_threshold: {
                         mFrequencyDetectionThreshold = (*it).asDouble();
-                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", mFrequencyDetectionPeriod );
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", mFrequencyDetectionThreshold );
                         break;
                     }
                     case ParameterKey ::frequency_detection_period: {

@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """Configure Pytest"""
-from os import environ, listdir, remove, path, pardir
-from os.path import realpath, isfile, expanduser, splitext, join
+from os import environ, listdir, remove, pardir
+from os.path import realpath, isfile, expanduser, splitext, join, dirname
 from json import dump, load
 from copy import deepcopy
 from re import search
 import pytest
 
-_ThisFilePath = path.dirname(path.abspath(__file__))
+_THIS_FILE_PATH = dirname(realpath(__file__))
 
 _SESSION = dict()
 
@@ -181,7 +181,7 @@ def accelize_drm(pytestconfig):
 
     elif fpga_image.lower() == 'default' or hdk_version:
         # List available HDK versions for specified driver
-        ref_designs = join(_ThisFilePath, pardir, 'tests/refdesigns', fpga_driver_name)
+        ref_designs = join(_THIS_FILE_PATH, 'refdesigns', fpga_driver_name)
         hdk_versions = sorted([splitext(file_name)[0].strip('v')
                                for file_name in listdir(ref_designs) if file_name.endswith('.json')])
         # Use specified HDK version
