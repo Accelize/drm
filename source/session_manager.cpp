@@ -1291,7 +1291,7 @@ public:
                         if ( !(*it).isArray() )
                             Throw( DRM_BadUsage, "Value must be an array of integer values" );
                         std::vector<uint32_t> data_array;
-                        for( Json::ValueIterator itr = (*it).begin(); itr != (*it).end(); itr++ )
+                        for( Json::ValueConstIterator itr = (*it).begin(); itr != (*it).end(); itr++ )
                             data_array.push_back( (*itr).asUInt() );
                         writeMailbox( MailboxOffset::MB_USER, data_array );
                         Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", (*it).toStyledString());
