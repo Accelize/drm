@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 """Configure Pytest"""
-from os import environ, listdir, remove, pardir
+from os import environ, listdir, remove
 from os.path import realpath, isfile, expanduser, splitext, join, dirname
 from json import dump, load
 from copy import deepcopy
 from re import search
 import pytest
 
-_THIS_FILE_PATH = dirname(realpath(__file__))
-
+_TESTS_PATH = dirname(realpath(__file__))
 _SESSION = dict()
+_LICENSING_SERVERS = dict(
+    dev='https://master.devmetering.accelize.com',
+    prod='https://master.metering.accelize.com')
 
 
 def get_default_conf_json(licensing_server_url):
@@ -22,10 +24,9 @@ def get_default_conf_json(licensing_server_url):
     Returns:
         dict: "conf.json" content
     """
-    if licensing_server_url.lower() == 'dev':
-        url = 'https://master.devmetering.accelize.com'
-    else:
-        url = licensing_server_url
+    url = _LICENSING_SERVERS.get(
+        licensing_server_url.lower(), licensing_server_url)
+
     return {
         "licensing": {
             "url": url,
@@ -71,8 +72,7 @@ def pytest_addoption(parser):
         help='Specify cred.json path')
     parser.addoption(
         "--server", action="store",
-        default="https://master.metering.accelize.com",
-        help='Specify the metering server to use')
+        default="prod", help='Specify the metering server to use')
     parser.addoption(
         "--library_verbosity", action="store", default='4',
         help='Specify "libaccelize_drm" verbosity level')
@@ -147,24 +147,12 @@ def accelize_drm(pytestconfig):
     # Select C or C++ based on environment and import Python Accelize Library
     backend = pytestconfig.getoption("backend")
     if backend == 'c':
-        # Import
         environ['ACCELIZE_DRM_PYTHON_USE_C'] = '1'
-        import accelize_drm as _accelize_drm
 
-        # Check imported class
-        from accelize_drm._accelize_drmc import DrmManager
-        assert _accelize_drm.DrmManager is DrmManager
-
-    elif backend == 'c++':
-        # Import
-        import accelize_drm as _accelize_drm
-
-        # Check imported class
-        from accelize_drm._accelize_drm import DrmManager
-        assert _accelize_drm.DrmManager is DrmManager
-
-    else:
+    elif backend != 'c++':
         raise ValueError('Invalid value for "--backend"')
+
+    import accelize_drm as _accelize_drm
 
     # Get FPGA driver
     from python_fpga_drivers import get_driver
@@ -181,23 +169,25 @@ def accelize_drm(pytestconfig):
 
     elif fpga_image.lower() == 'default' or hdk_version:
         # List available HDK versions for specified driver
-        ref_designs = join(_THIS_FILE_PATH, 'refdesigns', fpga_driver_name)
+        ref_designs = join(_TESTS_PATH, 'refdesigns', fpga_driver_name)
         hdk_versions = sorted([splitext(file_name)[0].strip('v')
-                               for file_name in listdir(ref_designs) if file_name.endswith('.json')])
+                               for file_name in listdir(ref_designs)
+                               if file_name.endswith('.json')])
         # Use specified HDK version
         if hdk_version:
             hdk_version = hdk_version.strip('v')
             if hdk_version not in hdk_versions:
-                raise ValueError(
-                    f'HDK version {hdk_version} is not supported. '
-                    f'Available versions are: {", ".join(hdk_versions)}')
+                raise ValueError((
+                    'HDK version %s is not supported. '
+                    'Available versions are: %s') % (
+                    hdk_version, ", ".join(hdk_versions)))
 
         # Get last HDK version as default
         else:
             hdk_version = hdk_versions[-1]
 
         # Get FPGA image from HDK version
-        with open(join(ref_designs, f'v{hdk_version}.json')) as hdk_json_file:
+        with open(join(ref_designs, 'v%s.json' % hdk_version)) as hdk_json_file:
             hdk_json = load(hdk_json_file)
 
         for key in ('fpga_image', 'FpgaImageGlobalId', 'FpgaImageId'):
@@ -206,8 +196,8 @@ def accelize_drm(pytestconfig):
                 break
             except KeyError:
                 continue
-            else:
-                raise ValueError(f'No FPGA image found for {hdk_version}.')
+        else:
+            raise ValueError('No FPGA image found for %s.' % hdk_version)
 
     # Define or get FPGA Slot
     if pytestconfig.getoption('integration'):
