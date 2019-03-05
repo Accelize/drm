@@ -175,7 +175,8 @@ if __name__ == '__main__':
 
         try:
             sign(packages_dir=packages_dir, private_key=args.private_key,
-                 public_key=args.public_key, quiet=args.quiet)
+                 public_key=args.public_key, pass_phrase=args.pass_phrase,
+                 quiet=args.quiet)
         except _CalledProcessError as exception:
             parser.exit(exception.returncode, exception.stdout)
         except RuntimeError as exception:
