@@ -15,7 +15,7 @@ sys.path.insert(0, join(SETUP_PATH, '@PYTHON3_BDIST_RELATIVE@'))
 project = "Accelize DRM"
 author = "@CPACK_PACKAGE_VENDOR@"
 copyright = '2018-%s, %s' % (datetime.now().year, author)
-version = release = "@CPACK_PACKAGE_VERSION@"
+version = release = "@ACCELIZEDRM_VERSION@"
 
 
 # -- General configuration ---------------------------------------------------

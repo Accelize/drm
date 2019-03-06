@@ -10,7 +10,7 @@ from os.path import dirname, abspath, join, isfile, splitext
 # Set Package information
 PACKAGE_INFO = dict(
     name='python_accelize_drm',
-    version='@CPACK_PACKAGE_VERSION@',
+    version='@ACCELIZEDRM_VERSION@',
     description='@CPACK_COMPONENT_PYTHON3_DESCRIPTION@',
     long_description_content_type='text/markdown; charset=UTF-8',
     classifiers=[

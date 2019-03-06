@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__version__ = "@PACKAGE_LONG_VERSION@"
+__version__ = "@ACCELIZEDRM_LONG_VERSION@"
 __copyright__ = "Copyright 2019 Accelize"
 __licence__ = "Apache 2.0"
 __all__ = ['DrmManager', 'exceptions', 'get_api_version']

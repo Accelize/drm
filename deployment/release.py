@@ -72,17 +72,17 @@ if __name__ == '__main__':
         # Check CMake file
         with open('CMakeLists.txt', 'rt') as cmakelists:
             for line in cmakelists:
-                if line.startswith('set(CPACK_PACKAGE_VERSION '):
+                if line.startswith('set(ACCELIZEDRM_VERSION '):
                     cpack_package_version = line.split(
                         ' ')[1].strip().strip(')')
                     break
             else:
-                print('CPACK_PACKAGE_VERSION not found in CMakeLists.txt')
+                print('ACCELIZEDRM_VERSION not found in CMakeLists.txt')
                 parser.exit(1, 'Release cancelled')
                 return
 
         if cpack_package_version != base_version:
-            print('CPACK_PACKAGE_VERSION in CMakeLists.txt does not match '
+            print('ACCELIZEDRM_VERSION in CMakeLists.txt does not match '
                   'release version (CPack package version: '
                   f'"{cpack_package_version}")')
             parser.exit(1, 'Release cancelled')

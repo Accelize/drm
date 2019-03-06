@@ -1,7 +1,7 @@
 # Doxygen configuration file: C/C++ documentation generation
 
 PROJECT_NAME = "Accelize DRM C and C++ Library"
-PROJECT_NUMBER = @CPACK_PACKAGE_VERSION@
+PROJECT_NUMBER = @ACCELIZEDRM_VERSION@
 INPUT = @API_PUBLIC_HEADERS_DOC@ ../include/accelize/drm/ ../include/accelize/drmc/
 FILE_PATTERNS = *.h
 RECURSIVE = YES

@@ -16,7 +16,7 @@ cmake_minimum_required(VERSION 3.12)
 # CONFIGURE VERSION AND COMMON INFORMATIONS
 
 ## Define package version
-set(CPACK_PACKAGE_VERSION 2.0.0)
+set(ACCELIZEDRM_VERSION 2.0.0)
 
 ## Define package release number (Number of time this version was packaged)
 if (NOT CPACK_PACKAGE_RELEASE)
@@ -25,7 +25,7 @@ if (NOT CPACK_PACKAGE_RELEASE)
     set(CPACK_PACKAGE_RELEASE 1)
 endif()
 
-## Note: Python package version is synchronised with CPACK_PACKAGE_VERSION
+## Note: Python package version is synchronised with ACCELIZEDRM_VERSION
 
 ## Configure common informations
 set(CPACK_PACKAGE_VENDOR "Accelize")
@@ -40,7 +40,7 @@ set(ACCELIZE_HOMEPAGE https://www.accelize.com)
 set(ACCELIZE_EMAIL info@accelize.com)
 
 ## Find package CommitID
-set(PACKAGE_LONG_VERSION ${CPACK_PACKAGE_VERSION})
+set(ACCELIZEDRM_LONG_VERSION ${ACCELIZEDRM_VERSION})
 find_program(GIT git)
 if (GIT)
     execute_process(COMMAND git rev-parse --short HEAD
@@ -49,21 +49,21 @@ if (GIT)
             OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
     if (GIT_COMMIT)
         # Add as Semantic versioning build metadata
-        set(PACKAGE_LONG_VERSION ${CPACK_PACKAGE_VERSION}+${GIT_COMMIT})
+        set(ACCELIZEDRM_LONG_VERSION ${ACCELIZEDRM_VERSION}+${GIT_COMMIT})
     endif ()
 endif ()
 
 ## Find ABI version
-string(REPLACE "." ";" VERSION_LIST ${CPACK_PACKAGE_VERSION})
+string(REPLACE "." ";" VERSION_LIST ${ACCELIZEDRM_VERSION})
 list(GET VERSION_LIST 0 VERSION_MAJOR)
 list(GET VERSION_LIST 1 VERSION_MINOR)
 list(GET VERSION_LIST 2 VERSION_BUG)
 set(ABI_VERSION ${VERSION_MAJOR})
 
 ## Show version information
-message(STATUS "Library version : ${CPACK_PACKAGE_VERSION}")
-message(STATUS "Library long version : ${PACKAGE_LONG_VERSION}")
-message(STATUS "Library Package version : ${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}")
+message(STATUS "Library version : ${ACCELIZEDRM_VERSION}")
+message(STATUS "Library long version : ${ACCELIZEDRM_LONG_VERSION}")
+message(STATUS "Library Package version : ${ACCELIZEDRM_VERSION}-${CPACK_PACKAGE_RELEASE}")
 
 # CONFIGURE BUILD
 project(accelize/drm)
@@ -190,7 +190,7 @@ set(TARGET_SOURCES
 )
 
 add_library(accelize_drm SHARED ${TARGET_SOURCES})
-set_target_properties(accelize_drm PROPERTIES VERSION ${CPACK_PACKAGE_VERSION} SOVERSION ${ABI_VERSION})
+set_target_properties(accelize_drm PROPERTIES VERSION ${ACCELIZEDRM_VERSION} SOVERSION ${ABI_VERSION})
 target_link_libraries(accelize_drm ${CURL_LIBRARIES})
 target_link_libraries(accelize_drm jsoncpp)
 target_link_libraries(accelize_drm drm_controller_lib)
@@ -202,7 +202,7 @@ set(TARGET_C_SOURCES
 )
 
 add_library(accelize_drmc SHARED ${TARGET_C_SOURCES})
-set_target_properties(accelize_drmc PROPERTIES VERSION ${CPACK_PACKAGE_VERSION} SOVERSION ${ABI_VERSION})
+set_target_properties(accelize_drmc PROPERTIES VERSION ${ACCELIZEDRM_VERSION} SOVERSION ${ABI_VERSION})
 target_link_libraries(accelize_drmc accelize_drm)
 
 ## Install and output directories
@@ -335,6 +335,7 @@ endif ()
 
 # Packages
 if (PKG)
+    set(CPACK_PACKAGE_VERSION ${ACCELIZEDRM_VERSION})
     set(CPACK_PACKAGE_NAME "libaccelize-drm")
     set(CPACK_PACKAGE_DESCRIPTION_SUMMARY ${CPACK_DESCRIPTION_SUMMARY})
     set(CPACK_COMPONENT_RUN_DESCRIPTION ${CPACK_DESCRIPTION_SUMMARY})
@@ -349,6 +350,7 @@ if (PKG)
     endif()
 
     if (OS_RELEASE)
+        # Get information from file
         file (STRINGS ${OS_RELEASE} lines)
         foreach (line ${lines})
             # Get Distribution name
@@ -386,9 +388,6 @@ if (PKG)
                 set (DIST_CODENAME "${CMAKE_MATCH_1}")
             endif ()
         endif()
-
-        # Copy OS information with packages
-        file(COPY ${OS_RELEASE} DESTINATION ${PACKAGE_OUTPUT})
     endif ()
 
     # RPM Packages
@@ -405,11 +404,11 @@ if (PKG)
 
         # Runtime package
         set(CPACK_RPM_RUN_PACKAGE_NAME "${CPACK_PACKAGE_NAME}")
-        set(CPACK_RPM_RUN_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}${CPACK_RPM_PACKAGE_RELEASE_DIST}.${CMAKE_SYSTEM_PROCESSOR}.rpm")
+        set(CPACK_RPM_RUN_FILE_NAME "${CPACK_PACKAGE_NAME}-${ACCELIZEDRM_VERSION}-${CPACK_PACKAGE_RELEASE}${CPACK_RPM_PACKAGE_RELEASE_DIST}.${CMAKE_SYSTEM_PROCESSOR}.rpm")
 
         # Dev package
         set(CPACK_RPM_DEV_PACKAGE_NAME "${CPACK_PACKAGE_NAME}-devel")
-        set(CPACK_RPM_DEV_FILE_NAME "${CPACK_RPM_DEV_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}${CPACK_RPM_PACKAGE_RELEASE_DIST}.noarch.rpm")
+        set(CPACK_RPM_DEV_FILE_NAME "${CPACK_RPM_DEV_PACKAGE_NAME}-${ACCELIZEDRM_VERSION}-${CPACK_PACKAGE_RELEASE}${CPACK_RPM_PACKAGE_RELEASE_DIST}.noarch.rpm")
         set(CPACK_RPM_DEV_PACKAGE_SUMMARY ${CPACK_COMPONENT_DEV_DESCRIPTION})
         set(CPACK_RPM_DEV_PACKAGE_REQUIRES "${CPACK_PACKAGE_NAME}, libcurl-devel, jsoncpp-devel")
 
@@ -433,7 +432,7 @@ if (PKG)
 
             # Configure package
             set(CPACK_RPM_PYTHON3_PACKAGE_NAME "${PYTHON3_PACKAGE}-accelize-drm")
-            set(CPACK_RPM_PYTHON3_FILE_NAME "${CPACK_RPM_PYTHON3_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}${CPACK_RPM_PACKAGE_RELEASE_DIST}.${CMAKE_SYSTEM_PROCESSOR}.rpm")
+            set(CPACK_RPM_PYTHON3_FILE_NAME "${CPACK_RPM_PYTHON3_PACKAGE_NAME}-${ACCELIZEDRM_VERSION}-${CPACK_PACKAGE_RELEASE}${CPACK_RPM_PACKAGE_RELEASE_DIST}.${CMAKE_SYSTEM_PROCESSOR}.rpm")
             set(CPACK_RPM_PYTHON3_PACKAGE_SUMMARY ${CPACK_COMPONENT_PYTHON3_DESCRIPTION})
             set(CPACK_RPM_PYTHON3_PACKAGE_GROUP "Development/Libraries/Python")
 
@@ -450,6 +449,7 @@ if (PKG)
     # DEB Packages
     find_program(PACKAGE_MANAGER_APT apt-get)
     if (PACKAGE_MANAGER_APT)
+        set(CPACK_PACKAGE_VERSION "${ACCELIZEDRM_VERSION}-${CPACK_PACKAGE_RELEASE}+${DIST_CODENAME}")
         set(CPACK_GENERATOR "DEB")
         set(CPACK_DEB_COMPONENT_INSTALL ON)
         set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
@@ -461,12 +461,12 @@ if (PKG)
 
         # Runtime package
         set(CPACK_DEBIAN_RUN_PACKAGE_NAME ${CPACK_PACKAGE_NAME})
-        set(CPACK_DEBIAN_RUN_FILE_NAME "${CPACK_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}+${DIST_CODENAME}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}.deb")
+        set(CPACK_DEBIAN_RUN_FILE_NAME "${CPACK_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}.deb")
         set(CPACK_DEBIAN_RUN_PACKAGE_SECTION libs)
 
         # Dev package
         set(CPACK_DEBIAN_DEV_PACKAGE_NAME "${CPACK_PACKAGE_NAME}-dev")
-        set(CPACK_DEBIAN_DEV_FILE_NAME "${CPACK_DEBIAN_DEV_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}+${DIST_CODENAME}_all.deb")
+        set(CPACK_DEBIAN_DEV_FILE_NAME "${CPACK_DEBIAN_DEV_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}_all.deb")
         set(CPACK_DEBIAN_DEV_PACKAGE_SECTION libdevel)
         set(CPACK_DEBIAN_DEV_PACKAGE_DEPENDS "${CPACK_PACKAGE_NAME}, libcurl4-openssl-dev, libjsoncpp-dev")
 
@@ -474,7 +474,7 @@ if (PKG)
         if (PYTHON3)
             # Configure package
             set(CPACK_DEBIAN_PYTHON3_PACKAGE_NAME "python3-accelize-drm")
-            set(CPACK_DEBIAN_PYTHON3_FILE_NAME "${CPACK_DEBIAN_PYTHON3_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}+${DIST_CODENAME}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}.deb")
+            set(CPACK_DEBIAN_PYTHON3_FILE_NAME "${CPACK_DEBIAN_PYTHON3_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}.deb")
             set(CPACK_DEBIAN_PYTHON3_PACKAGE_SECTION libs)
             set(CPACK_DEBIAN_PYTHON3_PACKAGE_DEPENDS "${CPACK_PACKAGE_NAME} (>= ${VERSION_MAJOR}.${VERSION_MINOR}), python3:any (>= 3.4)")
         endif ()
