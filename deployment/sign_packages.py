@@ -52,7 +52,7 @@ def _init_gpg_configuration(private_key=None, quiet=False):
 
 
 def sign_rpm_packages(
-        packages_dir, private_key=None, public_key=None, pass_phrase='',
+        packages_dir, private_key=None, public_key=None, pass_phrase=None,
         quiet=False):
     """
     Sign all RPM packages in a directory.
@@ -84,14 +84,17 @@ def sign_rpm_packages(
     else:
         raise RuntimeError('Unable to read GPG User ID')
 
-    macros = (
+    macros = [
         '_signature gpg', '_gpg_path %s' % _expanduser("~/.gnupg"),
-        '_gpg_name %s' % gpg_user_id, '_gpgbin /usr/bin/gpg', ' '.join((
+        '_gpg_name %s' % gpg_user_id]
+
+    if pass_phrase:
+        macros += ['_gpgbin /usr/bin/gpg', ' '.join((
             '__gpg_sign_cmd %{__gpg}', 'gpg', '--force-v3-sigs', '--batch',
             '--verbose', '--no-armor', '--passphrase "%s"' % pass_phrase,
             '--no-secmem-warning', '-u', '"%{_gpg_name}"', '-sbo',
             '%{__signature_filename}', '--digest-algo', 'sha256',
-            '%{__plaintext_filename}')))
+            '%{__plaintext_filename}'))]
     define = []
     for macro in macros:
         define.extend(["--define", macro])
@@ -112,7 +115,7 @@ def sign_rpm_packages(
 
 
 def sign_deb_packages(
-        packages_dir, private_key=None, public_key=None, pass_phrase='',
+        packages_dir, private_key=None, public_key=None, pass_phrase=None,
         quiet=False):
     """
     Sign all DEB packages in a directory.
@@ -131,8 +134,12 @@ def sign_deb_packages(
     packages = [package for package in _listdir(packages_dir)
                 if _splitext(package)[1].lower() == '.deb']
 
-    _run(['dpkg-sig', '-g', '--passphrase "%s"' % pass_phrase,
-          '--sign', 'builder'] + packages, quiet=quiet, cwd=packages_dir)
+    command = ['dpkg-sig']
+    if pass_phrase:
+        command += ['-g', '--passphrase "%s"' % pass_phrase]
+
+    _run(command + ['--sign', 'builder'] + packages,
+         quiet=quiet, cwd=packages_dir)
 
     # Verify signatures
     _run(['dpkg-sig', '--verify'] + packages, quiet=quiet, cwd=packages_dir)
