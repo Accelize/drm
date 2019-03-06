@@ -56,12 +56,12 @@ const Json::Value& JVgetRequired(const Json::Value& jval, const char* key, const
         Throw(DRM_BadFormat, "Missing parameter '", key, "' of type ", type);
 
     const Json::Value& jvalmember = jval[key];
-
     if (jvalmember.type()!=type && !jvalmember.isConvertibleTo(type))
         Throw(DRM_BadFormat, "Wrong parameter type for '", key, "' = ", jvalmember, ", expecting ", type, ", parsed as ", jvalmember.type());
-
     if (jvalmember.empty())
         Throw(DRM_BadFormat, "Value of parameter '", key, "' is empty");
+    if ( ( jvalmember.type() == Json::stringValue ) && ( jvalmember.asString().empty() ) )
+        Throw(DRM_BadFormat, "Value of parameter '", key, "' is an empty string");
 
     return jvalmember;
 }

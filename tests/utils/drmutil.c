@@ -266,7 +266,7 @@ int print_all_information( DrmManager* pDrmManager ) {
         \"strerror\": null }";
 
     if (DrmManager_get_json_string(pDrmManager, info_in, &info_out )) {
-        ERROR("Failed to get all DRM information");
+        ERROR("Failed to get all DRM information: %s", pDrmManager->error_message);
         return 1;
     }
     INFO("DRM information:\n%s", info_out);
@@ -277,7 +277,7 @@ int print_all_information( DrmManager* pDrmManager ) {
 
 int get_num_activators( DrmManager* pDrmManager, uint32_t* p_numActivator ) {
     if (DrmManager_get_uint(pDrmManager, DRM__num_activators, p_numActivator )) {
-        ERROR("Failed to get the number of activators in FPGA design");
+        ERROR("Failed to get the number of activators in FPGA design: %s", pDrmManager->error_message);
         return 1;
     }
     return 0;
@@ -319,7 +319,7 @@ int get_activators_status( DrmManager* pDrmManager, pci_bar_handle_t* pci_bar_ha
 void print_license_type( DrmManager* pDrmManager ) {
     char* license_type;
     if ( DrmManager_get_string(pDrmManager, DRM__license_type, &license_type) ) {
-        ERROR("Failed to get the license type");
+        ERROR("Failed to get the license type: %s", pDrmManager->error_message);
         return;
     }
     INFO(COLOR_GREEN "License type: %s", license_type);
@@ -343,7 +343,7 @@ void print_activators_status( DrmManager* pDrmManager, pci_bar_handle_t* pci_bar
 void print_session_id( DrmManager* pDrmManager ) {
     char* sessionID;
     if ( DrmManager_get_string(pDrmManager, DRM__session_id, &sessionID) ) {
-        ERROR("Failed to get the current session ID in FPGA design");
+        ERROR("Failed to get the current session ID in FPGA design: %s", pDrmManager->error_message);
         return;
     }
     INFO(COLOR_GREEN "Current session ID in FPGA design: %s", sessionID);
@@ -354,7 +354,7 @@ void print_session_id( DrmManager* pDrmManager ) {
 void print_metering_data( DrmManager* pDrmManager ) {
     uint64_t metering_data;
     if ( DrmManager_get_uint64(pDrmManager, DRM__metering_data, &metering_data) )
-        ERROR("Failed to get the current metering data from FPGA design");
+        ERROR("Failed to get the current metering data from FPGA design: %s", pDrmManager->error_message);
     else
         INFO(COLOR_GREEN "Current metering data fromFPGA design: %llu", metering_data);
 }
@@ -363,13 +363,13 @@ int test_custom_field( DrmManager* pDrmManager, uint32_t value ) {
     uint32_t rd_value = 0;
     // Write value
     if ( DrmManager_set_uint(pDrmManager, DRM__custom_field, value) ) {
-        ERROR("Failed to set the custom field in FPGA design");
+        ERROR("Failed to set the custom field in FPGA design: %s", pDrmManager->error_message);
         return 1;
     }
     INFO(COLOR_GREEN "Wrote '%u' custom field in FPGA design with", value);
     // Read value back
     if ( DrmManager_get_uint(pDrmManager, DRM__custom_field, &rd_value) ) {
-        ERROR("Failed to get the custom field in FPGA design");
+        ERROR("Failed to get the custom field in FPGA design: %s", pDrmManager->error_message);
         return 2;
     }
     INFO(COLOR_GREEN "Read custom field in FPGA design: %u", rd_value);
@@ -381,27 +381,18 @@ int test_custom_field( DrmManager* pDrmManager, uint32_t value ) {
     return 0;
 }
 
-void print_last_error( DrmManager* pDrmManager ) {
-    char* errMsg = NULL;
-    if (DrmManager_get_string(pDrmManager, DRM__strerror, &errMsg) )
-        ERROR("Failed to get the last error message (if any)");
-    else if (strlen(errMsg) == 0)
-        INFO(COLOR_GREEN "No error message so far.");
-    else
-        INFO(COLOR_RED "Last error message: %s", errMsg);
-    free(errMsg);
-}
+#define DRM_CHECK(drm) if (strlen(drm.error_message) ERROR(drm.error_message);
 
 
 #define DRM_RETRY(__expr, __no_retry) \
 ({DRM_ErrorCode __err; \
-        do { \
-            __err = __expr; \
-            if(__err!=DRM_WSMayRetry || __no_retry) break;\
-            WARN("DRM operation failed but will retry in 1 second...\n"); \
-            fflush(stdout); \
-            sleep(1); \
-        } while(1); \
+    do { \
+        __err = __expr; \
+        if (__err != DRM_WSMayRetry || __no_retry) break;\
+        WARN("DRM operation failed but will retry in 1 second...\n"); \
+        fflush(stdout); \
+        sleep(1); \
+    } while(1); \
 __err;})
 
 
@@ -472,7 +463,7 @@ int print_drm_page(DrmManager* pDrmManager, uint32_t page)
     }
     /* Print registers in page */
     if (DrmManager_get_string(pDrmManager, DRM__page_ctrlreg+page, &dump))
-        ERROR("Failed to print HW page %u registry", page);
+        ERROR("Failed to print HW page %u registry: %s", page, pDrmManager->error_message);
     free(dump);
     return 0;
 }
@@ -483,7 +474,7 @@ int print_drm_report(DrmManager* pDrmManager)
     char* dump;
     /* Print hw report */
     if (DrmManager_get_string(pDrmManager, DRM__hw_report, &dump))
-        ERROR("Failed to print HW report");
+        ERROR("Failed to print HW report: %s", pDrmManager->error_message);
     free(dump);
     return 0;
 }
@@ -505,7 +496,7 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFil
             configurationFile, credentialFile,
             read_drm_reg32, write_drm_reg32, print_drm_error,
             pci_bar_handle )) {
-        ERROR("Error allocating DRM Manager object");
+        ERROR("Error allocating DRM Manager object: %s", pDrmManager->error_message);
         return -1;
     }
 
@@ -573,7 +564,6 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFil
             print_session_id( pDrmManager );
             print_metering_data( pDrmManager );
             test_custom_field( pDrmManager, rand() );
-            print_last_error( pDrmManager );
         }
 
         else if (answer[0] == 't') {
@@ -596,11 +586,9 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFil
             ERROR("Failed to execute last command: %u", ret);
     }
 
-    /* Check error message if any */
-    print_last_error( pDrmManager );
-
     /* Stop session and free the DrmManager object */
-    DrmManager_free(&pDrmManager);
+    if (DrmManager_free(&pDrmManager))
+        ERROR("Failed to free DRM manager object: %s", pDrmManager->error_message);
 
     return ret;
 }
@@ -643,7 +631,7 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, con
                 INFO(COLOR_CYAN
                              "Starting a new session ...");
                 if (DRM_OK != DRM_RETRY(DrmManager_activate(pDrmManager, true), no_retry_flag)) {
-                    ERROR("Failed to start a new session");
+                    ERROR("Failed to start a new session: %s", pDrmManager->error_message);
                     goto batch_mode_free;
                 }
                 DEBUG("Start session done");
@@ -655,7 +643,7 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, con
                 INFO(COLOR_CYAN
                              "Resuming an existing session ...");
                 if (DRM_OK != DRM_RETRY(DrmManager_activate(pDrmManager, true), no_retry_flag)) {
-                    ERROR("Failed to resume existing session");
+                    ERROR("Failed to resume existing session: %s", pDrmManager->error_message);
                     goto batch_mode_free;
                 }
                 DEBUG("Resume session done");
@@ -716,7 +704,7 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, con
                              "Pausing current session ...");
                 /* Pause the current DRM session */
                 if (DRM_OK != DrmManager_deactivate(pDrmManager, true)) {
-                    ERROR("Failed to pause the DRM session");
+                    ERROR("Failed to pause the DRM session: %s", pDrmManager->error_message);
                     goto batch_mode_free;
                 }
                 DEBUG("Pause session done");
@@ -728,7 +716,7 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, con
                              "Stopping current session ...");
                 /* Pause the current DRM session */
                 if (DRM_OK != DrmManager_deactivate(pDrmManager, false)) {
-                    ERROR("Failed to stop the DRM session");
+                    ERROR("Failed to stop the DRM session: %s", pDrmManager->error_message);
                     goto batch_mode_free;
                 }
                 DEBUG("Stop session done");
@@ -768,7 +756,8 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, con
 
 batch_mode_free:
     /* Free the DrmManager*/
-    DrmManager_free(&pDrmManager);
+    if (DrmManager_free(&pDrmManager))
+        ERROR("Failed to free DRM manager object: %s", pDrmManager->error_message);
 
     return ret;
 }

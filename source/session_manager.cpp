@@ -613,7 +613,7 @@ protected:
         return json_output;
     }
 
-    bool isSessionRunning() {
+    bool isSessionRunning()const  {
         bool sessionRunning(false);
         std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
         checkDRMCtlrRet( getDrmController().writeRegistersPageRegister() );
@@ -622,22 +622,13 @@ protected:
         return sessionRunning;
     }
 
-    bool isReadyForNewLicense() {
+    bool isReadyForNewLicense() const {
         bool ret(false);
         std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
         checkDRMCtlrRet( getDrmController().writeRegistersPageRegister() );
         checkDRMCtlrRet( getDrmController().readLicenseTimerInitLoadedStatusRegister(ret) );
         Debug( "DRM readiness to receive a new license: ", !ret );
         return !ret;
-    }
-
-    bool isLicenseActive() {
-        bool isLicenseEmpty(false);
-        std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
-        checkDRMCtlrRet( getDrmController().writeRegistersPageRegister() );
-        checkDRMCtlrRet( getDrmController().readLicenseTimerCountEmptyStatusRegister(isLicenseEmpty) );
-        Debug( "DRM licensing state: ", !isLicenseEmpty );
-        return !isLicenseEmpty;
     }
 
     void setLicense(const Json::Value& license_json) {
@@ -1095,8 +1086,13 @@ public:
                 resumeSession();
             } else {
                 if ( isRunning && !resume_session_request ) {
-                    Debug( "Session is already running but resume flag is ", resume_session_request, ": stopping this pending session" );
-                    stopSession();
+                    Debug("Session is already running but resume flag is ", resume_session_request,
+                          ": stopping this pending session");
+                    try {
+                        stopSession();
+                    } catch (const Exception &e) {
+                        Debug("Failed to stop pending session: ", e.what());
+                    }
                 }
                 startSession();
             }
@@ -1151,6 +1147,11 @@ public:
                     case ParameterKey::session_id: {
                         json_value[key_str] = mSessionID;
                         Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mSessionID );
+                        break;
+                    }
+                    case ParameterKey::session_status: {
+                        json_value[key_str] = isSessionRunning();
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", json_value[key_str] );
                         break;
                     }
                     case ParameterKey::metering_data: {
@@ -1267,7 +1268,7 @@ public:
     void set( const Json::Value& json_value ) {
         TRY
             Debug("Set parameter request: ", json_value.toStyledString());
-            for( Json::Value::const_iterator it = json_value.begin() ; it != json_value.end() ; it++ ) {
+            for( Json::ValueConstIterator it = json_value.begin() ; it != json_value.end() ; it++ ) {
                 std::string key_str = it.key().asString();
                 const ParameterKey key_id = findParameterKey( key_str );
                 switch( key_id ) {

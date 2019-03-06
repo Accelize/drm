@@ -320,7 +320,7 @@ class CredJson(_Json):
                 self._content['client_id'] = self._content[
                     'client_id_%s' % user]
                 self._content['client_secret'] = self._content[
-                    'client_secret_' % user]
+                    'client_secret_%s' % user]
             except KeyError:
                 raise ValueError(
                     'User "%s" not found in "%s"' % (
