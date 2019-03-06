@@ -341,23 +341,34 @@ if (PKG)
 
     ## libaccelize_drm package
 
-    # Get Linux distribution information
-    find_program(LSB_RELEASE lsb_release)
-    if (LSB_RELEASE)
-        execute_process(COMMAND lsb_release -is
-                OUTPUT_VARIABLE DIST_ID
-                OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-        string(TOLOWER ${DIST_ID} DIST_ID)
-
-        execute_process(COMMAND lsb_release -cs
-                OUTPUT_VARIABLE DIST_CODENAME
-                OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-        string(TOLOWER ${DIST_CODENAME} DIST_CODENAME)
-
-        execute_process(COMMAND lsb_release -rs
-                OUTPUT_VARIABLE DIST_RELEASE
-                OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-        string(TOLOWER ${DIST_RELEASE} DIST_RELEASE)
+    # Get Linux distribution information from os-release
+    if (EXISTS "/etc/os-release")
+        set(OS_RELEASE "/etc/os-release")
+    elseif(EXISTS "/usr/lib/os-release")
+        set(OS_RELEASE "/usr/lib/os-release")
+    endif()
+    if (OS_RELEASE)
+        file (STRINGS ${OS_RELEASE} lines)
+        foreach (line ${lines})
+            if (line MATCHES "^ID=(.*)")
+                SET (DIST_ID "${CMAKE_MATCH_1}")
+                if (DIST_ID MATCHES "^['\"](.*)['\"]\$")
+                    set (DIST_ID "${CMAKE_MATCH_1}")
+                endif ()
+            endif ()
+            if (line MATCHES "^VERSION_CODENAME=(.*)")
+                SET (DIST_CODENAME "${CMAKE_MATCH_1}")
+                if (DIST_CODENAME MATCHES "^['\"](.*)['\"]\$")
+                    set (DIST_CODENAME "${CMAKE_MATCH_1}")
+                endif ()
+            endif ()
+            if (line MATCHES "^VERSION_ID=(.*)")
+                SET (VERSION_ID "${CMAKE_MATCH_1}")
+                if (VERSION_ID MATCHES "^['\"](.*)['\"]\$")
+                    set (VERSION_ID "${CMAKE_MATCH_1}")
+                endif ()
+            endif ()
+        endforeach ()
     endif ()
 
     # Copy OS information with packages
