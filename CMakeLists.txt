@@ -347,6 +347,7 @@ if (PKG)
     elseif(EXISTS "/usr/lib/os-release")
         set(OS_RELEASE "/usr/lib/os-release")
     endif()
+
     if (OS_RELEASE)
         file (STRINGS ${OS_RELEASE} lines)
         foreach (line ${lines})
@@ -385,14 +386,10 @@ if (PKG)
                 set (DIST_CODENAME "${CMAKE_MATCH_1}")
             endif ()
         endif()
-    endif ()
 
-    # Copy OS information with packages
-    if(EXISTS /usr/lib/os-release)
-        file(COPY /usr/lib/os-release DESTINATION ${PACKAGE_OUTPUT})
-    elseif(EXISTS /etc/os-release)
-        file(COPY /etc/os-release DESTINATION ${PACKAGE_OUTPUT})
-    endif()
+        # Copy OS information with packages
+        file(COPY ${OS_RELEASE} DESTINATION ${PACKAGE_OUTPUT})
+    endif ()
 
     # RPM Packages
     find_program(PACKAGE_MANAGER_YUM yum)
