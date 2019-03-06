@@ -1,6 +1,6 @@
 """
 To run manually, move to the build directory and execute:
-    sudo LD_LIBRARY_PATH=. pytest -v <path/to/tests/test_with_hardware.py> --cred <path/to/cred.json>
+    sudo LD_LIBRARY_PATH=. pytest -v <path/to/tests/test_with_hardware.py> --cred <path/to/cred.json> --library_verbosity=3 --server='dev' --backend='c++' -s
 """
 
 import pytest
@@ -337,7 +337,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     # Test parameter: metering_data
     # Read-only, return uint64_t or string with the current value of the metering data counter
     drm_manager.activate()
-    generateCoins( driver, 50 )
+    generateCoins( driver, 0, 50 )
     metered_data = drm_manager.get('metering_data')
     drm_manager.deactivate()
     assert_NoErrorCallback( async_cb )
@@ -636,7 +636,7 @@ def test_nodelock_cases(accelize_drm, conf_json, cred_json, async_handler):
     licType = drm_manager.get(license_type)
     assert licType == 'Node-Locked'
     drm_manager.activate()
-    generateCoins(50)
+    generateCoins(driver, 0, 50)
     metered_data = drm_manager.get('metering_data')
     drm_manager.deactivate()
     assert_NoErrorCallback( async_cb )
@@ -722,7 +722,7 @@ def test_2_drm_manager_concurrently(accelize_drm, conf_json, cred_json, async_ha
         )
     assert 'Another instance of the DRM Manager is currently owning the HW' in str(excinfo.value)
 
-
+@pytest.mark.skip
 def test_lock_unlock_activators(accelize_drm, conf_json, cred_json, async_handler):
     """Test errors when 2 DrmManager instances are used."""
 
