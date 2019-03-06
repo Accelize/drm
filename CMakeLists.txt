@@ -421,6 +421,10 @@ if (PKG)
             execute_process(COMMAND rpm -qf ${Python3_EXECUTABLE} --queryformat '%{NAME}'
                     OUTPUT_VARIABLE PYTHON3_PACKAGE
                     OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+            if (PYTHON3_PACKAGE MATCHES "^['](.*)[']\$")
+                # Remove eventual ' from result
+                set (PYTHON3_PACKAGE "${CMAKE_MATCH_1}")
+            endif ()
 
             if (PYTHON3_PACKAGE MATCHES "is not owned by any package" OR NOT PYTHON3_PACKAGE)
                 # Python3 is not from a Package, define package name
