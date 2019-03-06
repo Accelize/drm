@@ -6,14 +6,43 @@ To run manually, move to the build directory and execute:
 import pytest
 from re import search, finditer
 from time import sleep
-from json import loads, dumps
+from json import loads
 from datetime import datetime, timedelta
-from ctypes import c_uint32, byref, pointer
+from ctypes import c_uint32, byref
 
 ACTIVATOR_0_BASE_ADDR = 0x10000
+ACTIVATOR_RANGE_ADDR = 0x10000
+
+_PARAM_LIST = ['license_type',
+               'license_duration',
+               'num_activators',
+               'session_id',
+               'session_status',
+               'metered_data',
+               'nodelocked_request_file',
+               'drm_frequency',
+               'product_id',
+               'mailbox_size',
+               'frequency_detection_threshold',
+               'frequency_detection_period',
+               'custom_field',
+               'mailbox_data',
+               'retry_deadline',
+               'list_all',
+               'dump_all',
+               'page_ctrlreg',
+               'page_vlnvfile',
+               'page_licfile',
+               'page_tracefile',
+               'page_meteringfile',
+               'page_mailbox',
+               'hw_report',
+               'trigger_async_callback',
+               'bad_authentication_token',
+               'bad_product_id',]
 
 
-def getErrorCode( msg ):
+def get_error_code(msg):
     match = search(r'\[errCode=(\d+)\]', msg)
     assert match, "Could not find 'errCode' in exception message: %s" % msg
     return int(match.group(1))
@@ -28,10 +57,11 @@ def ordered_json(obj):
         return obj
 
 
-def generateCoins( driver, activator_index, coins ):
+def generate_coin(driver, activator_index, coins):
     value = c_uint32()
     for i in range(coins):
-        driver.read_register_callback( activator_index * ACTIVATOR_0_BASE_ADDR, byref(value) )
+        driver.read_register_callback( ACTIVATOR_0_BASE_ADDR +
+                       activator_index * ACTIVATOR_RANGE_ADDR, byref(value) )
 
 
 def get_activator_status( driver, activator_index=None ):
@@ -41,19 +71,16 @@ def get_activator_status( driver, activator_index=None ):
         activator_index_list = [activator_index]
     else:
         raise TypeError('Unsupported type: %s' % type(activator_index))
-    reg = c_uint32(0)
-    p_regvalue = pointer(reg)
+    regvalue = c_uint32(0)
     status_list = []
     for i in activator_index_list:
-        #driver.read_register_callback( i * ACTIVATOR_0_BASE_ADDR, byref(regvalue) )
-        driver.read_register_callback( i * ACTIVATOR_0_BASE_ADDR, p_regvalue )
-        value = reg.value
-        print('reg=', reg)
-        print('value=', value)
-        code_rdy = (value >> 1) & 1;
-        active = value & 1;
+        driver.read_register_callback( ACTIVATOR_0_BASE_ADDR +
+                       i * ACTIVATOR_RANGE_ADDR, byref(regvalue) )
+        value = regvalue.value
+        code_rdy = (value >> 1) & 1
+        active = value & 1
         status_list.append(active)
-    if len(status_list) == 1 and activator_index is None:
+    if len(status_list) == 1 and activator_index is None or isinstance(activator_index, int):
         return status_list[0]
     return status_list
 
@@ -68,8 +95,8 @@ def assert_NoErrorCallback( async_cb, extra_msg=None ):
     assert not async_cb.was_called, '%sAsynchronous callback has been called' % prepend_msg
 
 @pytest.mark.skip
-def test_bad_authentifaction(accelize_drm, conf_json, cred_json, async_handler):
-    """Test errors when bad authentication parameters are provided to DRM Manager Constructor or Web Service."""
+def test_metered_short_time_use_case(accelize_drm, conf_json, cred_json, async_handler):
+    """Test no error occuurs in normal metering mode."""
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -77,9 +104,6 @@ def test_bad_authentifaction(accelize_drm, conf_json, cred_json, async_handler):
     # Test when authentication url in configuration file is wrong
     async_cb.reset()
     conf_json.reset()
-    conf_json['licensing']['url'] = "http://accelize.com"
-    conf_json.save()
-    assert conf_json['licensing']['url'] == "http://accelize.com"
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
@@ -87,27 +111,82 @@ def test_bad_authentifaction(accelize_drm, conf_json, cred_json, async_handler):
         driver.write_register_callback,
         async_cb.callback
     )
-    with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
+    try:
+        session_status = drm_manager.get('session_status')
+        assert not session_status
+        ip_status = get_activator_status(driver, 0)
+        assert not ip_status
         drm_manager.activate()
-    assert "WSOAuth HTTP response code" in str(excinfo.value)
-    assert getErrorCode(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
-    assert_NoErrorCallback( async_cb )
+        sleep(1)
+        session_status = drm_manager.get('session_status')
+        assert session_status
+        coins = drm_manager.get('metered_data')
+        assert coins == 0
+        ip_status = get_activator_status(driver, 0)
+        assert ip_status
+        generate_coin(driver, 0, 10)
+        coins = drm_manager.get('metered_data')
+        assert coins > 1 # Calling get_activator_status function generates 1 coin
+        drm_manager.deactivate()
+        session_status = drm_manager.get('session_status')
+        assert not session_status
+        ip_status = get_activator_status(driver, 0)
+        assert not ip_status
+        coins = drm_manager.get('metered_data')
+        assert coins == 0
+        assert_NoErrorCallback( async_cb )
+    finally:
+        drm_manager.deactivate()
 
-    # Test when token is wrong
-    async_cb.reset()
-    conf_json.reset()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    drm_manager.set( bad_authentication_token=None )
-    with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
-        drm_manager.activate()
-    assert "Authentication credentials" in str(excinfo.value)
-    assert getErrorCode(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+@pytest.mark.skip
+def test_bad_authentication(accelize_drm, conf_json, cred_json, async_handler):
+    """Test errors when bad authentication parameters are provided to
+    DRM Manager Constructor or Web Service."""
+
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+
+    drm_manager = None
+    try:
+
+        # Test when authentication url in configuration file is wrong
+        async_cb.reset()
+        conf_json.reset()
+        conf_json['licensing']['url'] = "http://accelize.com"
+        conf_json.save()
+        assert conf_json['licensing']['url'] == "http://accelize.com"
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+        with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
+            drm_manager.activate()
+        assert "WSOAuth HTTP response code" in str(excinfo.value)
+        assert get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
+        assert_NoErrorCallback( async_cb )
+
+        # Test when token is wrong
+        async_cb.reset()
+        conf_json.reset()
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+        drm_manager.set( bad_authentication_token=None )
+        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+            drm_manager.activate()
+        assert "Authentication credentials" in str(excinfo.value)
+        assert get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+
+    finally:
+        if drm_manager:
+            drm_manager.deactivate()
 
 @pytest.mark.skip
 def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_json, async_handler):
@@ -203,7 +282,7 @@ def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_jso
     with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
         drm_manager.activate()
     assert '???' in str(excinfo.value)
-    assert getErrorCode(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
+    assert get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
     print('Test frequency underflow: PASS')
 
     # Test web service detects a frequency overflow
@@ -223,15 +302,16 @@ def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_jso
     with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
         drm_manager.activate()
     assert '???' in str(excinfo.value)
-    assert getErrorCode(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
+    assert get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
     print('Test frequency overflow: PASS')
 
 
 @pytest.mark.skip(reason='WebService is not handling Product ID information yet')
-def test_bad_product_id(accelize_drm, conf_json, cred_json):
+def test_bad_product_id(accelize_drm, conf_json, cred_json, async_handler):
     """Test errors when an incorrect product ID is requested to License Web Server"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
 
     # Test Web Service when a bad product ID is provided
     async_cb.reset()
@@ -239,7 +319,8 @@ def test_bad_product_id(accelize_drm, conf_json, cred_json):
         conf_json.path,
         cred_json.path,
         driver.read_register_callback,
-        driver.write_register_callback
+        driver.write_register_callback,
+        async_cb.callback
     )
 
     drm_manager.set( bad_product_id=None )
@@ -248,7 +329,8 @@ def test_bad_product_id(accelize_drm, conf_json, cred_json):
     with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
         drm_manager.activate()
     assert "Authentication credentials" in str(excinfo.value)
-    assert getErrorCode(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+    assert get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+    assert_NoErrorCallback(async_cb)
 
 @pytest.mark.skip
 def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_json, async_handler):
@@ -256,6 +338,8 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
+
+    print()
 
 #    # Test parameter: license_type in nodelocked and nodelocked_request_file
 #    # license_type: Read-only, return string with the license type: node-locked, floating/metering
@@ -307,16 +391,14 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     # Test parameter: num_activators
     # Read-only, return uint32_t/string with the number of activators detected by the DRM controller
     nbActivator = drm_manager.get('num_activators')
-    assert nbActivator == 1, 'Unexpected number of activators: ' \
-        'function returns %d but expect %d' % (nbActivator, 1)
+    assert nbActivator == 1, 'Unexpected number of activators'
     print("Test parameter 'num_activators': PASS")
 
     # Test parameter: session_id
     # Read-only, return string with the current session ID
     drm_manager.activate()
     sessionId = drm_manager.get('session_id')
-    assert len(sessionId) == 16, 'Unexpected length of session ID: ' \
-        'function returns %d but expect %d' % (len(sessionId), 16)
+    assert len(sessionId) == 16, 'Unexpected length of session ID'
     drm_manager.deactivate()
     assert_NoErrorCallback( async_cb )
     print("Test parameter 'session_id': PASS")
@@ -334,16 +416,16 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     assert_NoErrorCallback( async_cb )
     print("Test parameter 'session_status': PASS")
 
-    # Test parameter: metering_data
+    # Test parameter: metered_data
     # Read-only, return uint64_t or string with the current value of the metering data counter
     drm_manager.activate()
-    generateCoins( driver, 0, 50 )
-    metered_data = drm_manager.get('metering_data')
-    drm_manager.deactivate()
+    generate_coin(driver, 0, 10)
+    metered_data = drm_manager.get('metered_data')
+    assert metered_data > 0, 'Unexpected metered_data'
     assert_NoErrorCallback( async_cb )
-    assert metered_data == 50, 'Unexpected value of metered data: ' \
-        'function returns %d but expect %d' % (metered_data, 50)
-    print("Test parameter 'metering_data': PASS")
+    drm_manager.deactivate()
+
+    print("Test parameter 'metered_data': PASS")
 
     # Test parameter: page_ctrlreg
     # Read-only, return nothing, print all registers in the DRM Controller Registry page
@@ -394,8 +476,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     expFreqThrehsold = origFreqThrehsold * 2
     drm_manager.set(frequency_detection_threshold=expFreqThrehsold)
     newFreqThrehsold = drm_manager.get('frequency_detection_threshold')
-    assert newFreqThrehsold == expFreqThrehsold, 'Unexpected frequency dectection threshold percentage: ' \
-        'function returns %f but expect %f' % (newFreqThrehsold, expFreqThrehsold)
+    assert newFreqThrehsold == expFreqThrehsold, 'Unexpected frequency dectection threshold percentage'
     drm_manager.set(frequency_detection_threshold=origFreqThrehsold)    # Restore original threshold
     print("Test parameter 'frequency_detection_threshold': PASS")
 
@@ -405,8 +486,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     expFreqPeriod = origFreqPeriod * 2
     drm_manager.set(frequency_detection_period=expFreqPeriod)
     newFreqPeriod = drm_manager.get('frequency_detection_period')
-    assert newFreqPeriod == expFreqPeriod, 'Unexpected frequency dectection period percentage: ' \
-        'function returns %f but expect %f' % (newFreqPeriod, expFreqPeriod)
+    assert newFreqPeriod == expFreqPeriod, 'Unexpected frequency dectection period'
     drm_manager.set(frequency_detection_period=origFreqPeriod)    # Restore original period
     print("Test parameter 'frequency_detection_period': PASS")
 
@@ -418,8 +498,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     sleep(2.0*freqPeriod/1000)
     freqDrm = drm_manager.get('drm_frequency')
     drm_manager.deactivate()
-    assert freqDrm == 125, 'Unexpected frequency gap threshold: ' \
-        'function returns %d but expect %d' % (freqthreshold, 2)
+    assert freqDrm == 125, 'Unexpected frequency gap threshold'
     print("Test parameter 'drm_frequency': PASS")
 
     # Test parameter: product_id
@@ -438,9 +517,22 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     # Test parameter: mailbox_size
     # Read-only, return the size of the Mailbox read-write memory in DRM Controller
     mailbox_size = drm_manager.get('mailbox_size')
-    assert mailbox_size == 14, 'Unexpected Mailbox size: function returns: ' \
-        '"%d" but expect "%d"' % (mailbox_size, 16)
+    assert mailbox_size == 14, 'Unexpected Mailbox size'
     print("Test parameter 'mailbox_size': PASS")
+
+    # Test parameter: list_all
+    # Read-only, list all parameter keys
+    list_param = drm_manager.get('list_all')
+    assert len(list_param) == len(_PARAM_LIST)
+    assert all(key in _PARAM_LIST for key in list_param)
+    print("Test parameter 'list_all': PASS")
+
+    # Test parameter: dump_all
+    # Read-only, read all parameter key values
+    dump_param = drm_manager.get('dump_all')
+    assert len(dump_param) == _PARAM_LIST.index('dump_all')
+    assert all(key in _PARAM_LIST for key in dump_param.keys())
+    print("Test parameter 'dump_all': PASS")
 
     # Test parameter: custom_field
     # Read-write: only for testing, any uint32_t register accessible to the user for any purpose.
@@ -613,12 +705,12 @@ def test_nodelock_cases(accelize_drm, conf_json, cred_json, async_handler):
         driver.write_register_callback,
         async_cb
     )
-    licType = drm_manager.get(license_type)
+    licType = drm_manager.get('license_type')
     assert licType == 'Node-Locked'
     with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
         drm_manager.activate()
     assert '???' in str(excinfo.value)
-    assert getErrorCode(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
+    assert get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
     drm_manager.deactivate()
     assert_NoErrorCallback( async_cb )
 
@@ -633,15 +725,14 @@ def test_nodelock_cases(accelize_drm, conf_json, cred_json, async_handler):
         driver.read_register_callback,
         driver.write_register_callback
     )
-    licType = drm_manager.get(license_type)
+    licType = drm_manager.get('license_type')
     assert licType == 'Node-Locked'
     drm_manager.activate()
-    generateCoins(driver, 0, 50)
-    metered_data = drm_manager.get('metering_data')
+    generate_coin(driver, 0, 10)
+    metered_data = drm_manager.get('metered_data')
     drm_manager.deactivate()
     assert_NoErrorCallback( async_cb )
-    assert metered_data == 50, 'Unexpected value of metered data: ' \
-        'function returns %d but expect %d' % (metered_data, 50)
+    assert metered_data > 0, 'Unexpected value of metered data'
 
 @pytest.mark.integration
 @pytest.mark.skip
@@ -667,16 +758,14 @@ def test_nodelock_limit(accelize_drm, conf_json, cred_json, async_handler):
         driver1.write_register_callback,
         async_cb
     )
-    licType = drm_manager.get(license_type)
+    licType = drm_manager.get('license_type')
     assert licType == 'Node-Locked'
     drm_manager.activate()
-    for i in range(50):
-        drm_manager.get('custom_field')
-    metered_data = drm_manager.get('metering_data')
+    generate_coin(driver1, 0, 10)
+    metered_data = drm_manager.get('metered_data')
     drm_manager.deactivate()
     assert_NoErrorCallback( async_cb )
-    assert metered_data == 50, 'Unexpected value of metered data: ' \
-        'function returns %d but expect %d' % (metered_data, 50)
+    assert metered_data > 0, 'Unexpected value of metered data'
 
     # Test a second node-locked user cannot get a license
     async_cb.reset()
@@ -689,7 +778,7 @@ def test_nodelock_limit(accelize_drm, conf_json, cred_json, async_handler):
         driver2.read_register_callback,
         driver2.write_register_callback
     )
-    licType = drm_manager.get(license_type)
+    licType = drm_manager.get('license_type')
     assert licType == 'Node-Locked'
     with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
         drm_manager.activate()
@@ -723,8 +812,8 @@ def test_2_drm_manager_concurrently(accelize_drm, conf_json, cred_json, async_ha
     assert 'Another instance of the DRM Manager is currently owning the HW' in str(excinfo.value)
 
 @pytest.mark.skip
-def test_lock_unlock_activators(accelize_drm, conf_json, cred_json, async_handler):
-    """Test errors when 2 DrmManager instances are used."""
+def test_activation_status(accelize_drm, conf_json, cred_json, async_handler):
+    """Test status of IP activators"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -736,29 +825,114 @@ def test_lock_unlock_activators(accelize_drm, conf_json, cred_json, async_handle
         driver.write_register_callback,
         async_cb.callback
     )
-    nb_activators = drm_manager.get('num_activators')
+    try:
+        print()
+        nb_activators = drm_manager.get('num_activators')
 
-    # Check all activators are locked
-    status = get_activator_status( driver, range(nb_activators) )
-    print('status=', status)
-    assert not any(status), 'At least one activator is unlocked: %s' % str(status)
-    # Activate all activators
-    drm_manager.activate()
-    # Check all activators are unlocked
-    status = get_activator_status( driver, range(nb_activators) )
-    assert all(status), 'At least one activator is locked: %s' % str(status)
-    # Deactivate all activators
-    drm_manager.deactivate()
-    # Check all activators are locked again
-    status = get_activator_status( driver, range(nb_activators) )
-    assert not any(status), 'At least one activator is unlocked: %s' % str(status)
+        # Test start/stop
+
+        # Check all activators are locked
+        status = get_activator_status( driver, range(nb_activators) )
+        assert not any(status), 'At least one activator is unlocked: %s' % str(status)
+        # Activate all activators
+        drm_manager.activate()
+        # Check all activators are unlocked
+        status = get_activator_status( driver, range(nb_activators) )
+        assert all(status), 'At least one activator is locked: %s' % str(status)
+        # Deactivate all activators
+        drm_manager.deactivate()
+        # Check all activators are locked again
+        status = get_activator_status( driver, range(nb_activators) )
+        assert not any(status), 'At least one activator is unlocked: %s' % str(status)
+        assert_NoErrorCallback(async_cb)
+        print('Test start/stop: PASS')
+
+        # Test start/pause
+
+        # Check all activators are locked
+        status = get_activator_status( driver, range(nb_activators) )
+        assert not any(status), 'At least one activator is unlocked: %s' % str(status)
+        # Activate all activators
+        drm_manager.activate()
+        start = datetime.now()
+        # Check all activators are unlocked
+        status = get_activator_status( driver, range(nb_activators) )
+        assert all(status), 'At least one activator is locked: %s' % str(status)
+        # Deactivate all activators
+        drm_manager.deactivate( True )
+        # Check all activators are still unlocked
+        status = get_activator_status( driver, range(nb_activators) )
+        assert all(status), 'At least one activator is locked: %s' % str(status)
+        assert_NoErrorCallback(async_cb)
+        print('Test start/pause: PASS')
+
+        # Test resume from valid license/pause
+
+        # Check all activators are unlocked
+        status = get_activator_status( driver, range(nb_activators) )
+        assert all(status), 'At least one activator is locked: %s' % str(status)
+        # Activate all activators
+        drm_manager.activate( True )
+        # Check all activators are still unlocked
+        status = get_activator_status( driver, range(nb_activators) )
+        assert all(status), 'At least one activator is locked: %s' % str(status)
+        # Deactivate all activators
+        drm_manager.deactivate( True )
+        # Check all activators are still unlocked
+        status = get_activator_status( driver, range(nb_activators) )
+        assert all(status), 'At least one activator is locked: %s' % str(status)
+        # Wait until license expires
+        lic_duration = drm_manager.get('license_duration')
+        wait_period = start + timedelta(seconds=2*lic_duration+1) - datetime.now()
+        sleep(wait_period.total_seconds())
+        # Check all activators are now locked again
+        status = get_activator_status( driver, range(nb_activators) )
+        assert not any(status), 'At least one activator is unlocked: %s' % str(status)
+        assert_NoErrorCallback(async_cb)
+        print('Test resume from valid license/pause: PASS')
+
+        # Test resume from expired license/pause
+
+        # Check all activators are locked
+        status = get_activator_status( driver, range(nb_activators) )
+        assert not any(status), 'At least one activator is unlocked: %s' % str(status)
+        # Activate all activators
+        drm_manager.activate( True )
+        # Check all activators are unlocked
+        status = get_activator_status( driver, range(nb_activators) )
+        assert all(status), 'At least one activator is unlocked: %s' % str(status)
+        # Deactivate all activators
+        drm_manager.deactivate( True )
+        # Check all activators are still unlocked
+        status = get_activator_status( driver, range(nb_activators) )
+        assert all(status), 'At least one activator is unlocked: %s' % str(status)
+        assert_NoErrorCallback(async_cb)
+        print('Test resume from expired license/pause: PASS')
+
+        # Test resume/stop
+
+        # Activate all activators
+        drm_manager.activate( True )
+        # Check all activators are still unlocked
+        status = get_activator_status( driver, range(nb_activators) )
+        assert all(status), 'At least one activator is locked: %s' % str(status)
+        # Deactivate all activators
+        drm_manager.deactivate()
+        # Check all activators are locked again
+        status = get_activator_status( driver, range(nb_activators) )
+        assert not any(status), 'At least one activator is unlocked: %s' % str(status)
+        assert_NoErrorCallback(async_cb)
+        print('Test resume/stop: PASS')
+
+    finally:
+        if drm_manager:
+            drm_manager.deactivate()
 
 @pytest.mark.skip
-def test_open_close_session(accelize_drm, conf_json, cred_json, async_handler):
-    """Test errors when 2 DrmManager instances are used."""
+def test_session_status(accelize_drm, conf_json, cred_json, async_handler):
+    """Test status of session"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
-
     async_cb = async_handler.create()
 
     drm_manager = accelize_drm.DrmManager(
@@ -768,31 +942,116 @@ def test_open_close_session(accelize_drm, conf_json, cred_json, async_handler):
         driver.write_register_callback,
         async_cb.callback
     )
-    nb_activators = drm_manager.get('num_activators')
+    try:
+        print()
+        nb_activators = drm_manager.get('num_activators')
 
-    # Test resume_session_request = False
-    # Check all activators are locked
-    status = get_activator_status( driver, range(nb_activators) )
-    assert not any(status), 'At least one activator is unlocked: %s' % str(status)
-    start = datetime.now()
-    # Activators all activators
-    drm_manager.activate()
-    drm_manager.deactivate(True)    # Not to stop the session which would unlock the
-    # Check all activators are unlocked
-    status = get_activator_status( driver, range(nb_activators) )
-    assert all(status), 'At least one activator is locked: %s' % str(status)
-    lic_duration = drm_manager.get('license_duration')
-    wait_period = start + timedelta(seconds=lic_duration-1) - datetime.now()
-    # Wait right before the license expires
-    sleep(wait_period.total_seconds())
-    # Check all activators are unlocked right before the license expires
-    status = get_activator_status( driver, range(nb_activators) )
-    assert all(status), 'At least one activator is not locked: %s' % str(status)
-    # Wait until license expires
-    sleep(1.1)
-    # Check all activators are locked
-    status = get_activator_status( driver, range(nb_activators) )
-    assert any(status), 'At least one activator is unlocked: %s' % str(status)
+        # Test start/stop
+
+        # Check no session is running and no ID is available
+        status = drm_manager.get('session_status')
+        id = drm_manager.get('session_id')
+        assert not status, 'A session is running'
+        assert len(id) == 0, 'A session ID exists'
+        # Activate all activators
+        drm_manager.activate()
+        # Check a session is running with a valid ID
+        status = drm_manager.get('session_status')
+        id = drm_manager.get('session_id')
+        assert status, 'No session is running'
+        print("type=", type(id))
+        print("id=", id)
+        assert len(id) == 64, 'A session ID exists'
+        assert id == 0, 'A session ID exists'
+        # Deactivate all activators
+        drm_manager.deactivate()
+        # Check all activators are locked again
+        status = get_activator_status( driver, range(nb_activators) )
+        assert not any(status), 'At least one activator is unlocked: %s' % str(status)
+        assert_NoErrorCallback(async_cb)
+        print('Test start/stop: PASS')
+
+        # Test start/pause
+
+        # Check all activators are locked
+        status = get_activator_status( driver, range(nb_activators) )
+        assert not any(status), 'At least one activator is unlocked: %s' % str(status)
+        # Activate all activators
+        drm_manager.activate()
+        start = datetime.now()
+        # Check all activators are unlocked
+        status = get_activator_status( driver, range(nb_activators) )
+        assert all(status), 'At least one activator is locked: %s' % str(status)
+        # Deactivate all activators
+        drm_manager.deactivate( True )
+        # Check all activators are still unlocked
+        status = get_activator_status( driver, range(nb_activators) )
+        assert all(status), 'At least one activator is locked: %s' % str(status)
+        assert_NoErrorCallback(async_cb)
+        print('Test start/pause: PASS')
+
+        # Test resume from valid license/pause
+
+        # Check all activators are unlocked
+        status = get_activator_status( driver, range(nb_activators) )
+        assert all(status), 'At least one activator is locked: %s' % str(status)
+        # Activate all activators
+        drm_manager.activate( True )
+        # Check all activators are still unlocked
+        status = get_activator_status( driver, range(nb_activators) )
+        assert all(status), 'At least one activator is locked: %s' % str(status)
+        # Deactivate all activators
+        drm_manager.deactivate( True )
+        # Check all activators are still unlocked
+        status = get_activator_status( driver, range(nb_activators) )
+        assert all(status), 'At least one activator is locked: %s' % str(status)
+        # Wait until license expires
+        lic_duration = drm_manager.get('license_duration')
+        wait_period = start + timedelta(seconds=2*lic_duration+1) - datetime.now()
+        sleep(wait_period.total_seconds())
+        # Check all activators are now locked again
+        status = get_activator_status( driver, range(nb_activators) )
+        assert not any(status), 'At least one activator is unlocked: %s' % str(status)
+        assert_NoErrorCallback(async_cb)
+        print('Test resume from valid license/pause: PASS')
+
+        # Test resume from expired license/pause
+
+        # Check all activators are locked
+        status = get_activator_status( driver, range(nb_activators) )
+        assert not any(status), 'At least one activator is unlocked: %s' % str(status)
+        # Activate all activators
+        drm_manager.activate( True )
+        # Check all activators are unlocked
+        status = get_activator_status( driver, range(nb_activators) )
+        assert all(status), 'At least one activator is unlocked: %s' % str(status)
+        # Deactivate all activators
+        drm_manager.deactivate( True )
+        # Check all activators are still unlocked
+        status = get_activator_status( driver, range(nb_activators) )
+        assert all(status), 'At least one activator is unlocked: %s' % str(status)
+        assert_NoErrorCallback(async_cb)
+        print('Test resume from expired license/pause: PASS')
+
+        # Test resume/stop
+
+        # Activate all activators
+        drm_manager.activate( True )
+        # Check all activators are still unlocked
+        status = get_activator_status( driver, range(nb_activators) )
+        assert all(status), 'At least one activator is locked: %s' % str(status)
+        # Deactivate all activators
+        drm_manager.deactivate()
+        # Check all activators are locked again
+        status = get_activator_status( driver, range(nb_activators) )
+        assert not any(status), 'At least one activator is unlocked: %s' % str(status)
+        assert_NoErrorCallback(async_cb)
+        print('Test resume/stop: PASS')
+
+    finally:
+        if drm_manager:
+            drm_manager.deactivate()
+
 
 @pytest.mark.skip
 def test_license_expiration(accelize_drm, conf_json, cred_json, async_handler):
@@ -834,45 +1093,3 @@ def test_license_expiration(accelize_drm, conf_json, cred_json, async_handler):
     # Check all activators are locked
     status = get_activator_status( driver, range(nb_activators) )
     assert any(status), 'At least one activator is unlocked: %s' % str(status)
-
-
-@pytest.mark.skip
-def test_metered_usecase(accelize_drm, conf_json, cred_json, async_handler):
-    """Test errors when 2 DrmManager instances are used."""
-
-    driver = accelize_drm.pytest_fpga_driver[0]
-
-    async_cb = async_handler.create()
-
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    nb_activators = drm_manager.get('num_activators')
-    # Check all activators are locked
-    status = get_activator_status( driver, range(nb_activators) )
-    assert not all(status), 'At least one activator is unlocked: %s' % str(status)
-    start = now()
-    # Activators all activators
-    drm_manager.activate()
-    # Check all activators are unlocked
-    status = get_activator_status( driver, range(nb_activators) )
-    assert not any(status), 'At least one activator is locked: %s' % str(status)
-    lic_duration = drm_manager.get('license_duration')
-    # Wait right before the license expires
-    wait_period = start + timedelta(seconds=lic_duration-1) - datetime.now()
-    sleep(wait_period)
-    # Check all activators are unlocked right before the license expires
-    status = get_activator_status( driver, range(nb_activators) )
-    assert not all(status), 'At least one activator is not locked: %s' % str(status)
-    # Wait until license expires
-    sleep(1.1)
-    # Check all activators are locked
-    status = get_activator_status( driver, range(nb_activators) )
-    assert not all(status), 'At least one activator is unlocked: %s' % str(status)
-
-    assert 'Another instance of the DRM Manager is currently owning the HW' in str(excinfo.value)
-

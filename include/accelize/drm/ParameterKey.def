@@ -3,15 +3,8 @@ PARAMETERKEY_ITEM( license_duration )               ///< Read-only, return uint3
 PARAMETERKEY_ITEM( num_activators )                 ///< Read-only, return uint32_t/string with the number of activators detected by the DRM controller
 PARAMETERKEY_ITEM( session_id )                     ///< Read-only, return string with the current session ID
 PARAMETERKEY_ITEM( session_status )                 ///< Read-only, return boolean to indicate if a session is currently running
-PARAMETERKEY_ITEM( metering_data )                  ///< Read-only, return uint64_t or string with the current value of the metering data counter
+PARAMETERKEY_ITEM( metered_data )                   ///< Read-only, return uint64_t or string with the current value of the metering data counter
 PARAMETERKEY_ITEM( nodelocked_request_file )        ///< Read-only, return string with the path to the node-locked license request JSON file
-PARAMETERKEY_ITEM( page_ctrlreg )                   ///< Read-only, return nothing, print all registers in the DRM Controller Registry page
-PARAMETERKEY_ITEM( page_vlnvfile )                  ///< Read-only, return nothing, print all registers in the VLNV File page
-PARAMETERKEY_ITEM( page_licfile )                   ///< Read-only, return nothing, print all registers in the License File page
-PARAMETERKEY_ITEM( page_tracefile )                 ///< Read-only, return nothing, print all registers in the Trace File page
-PARAMETERKEY_ITEM( page_meteringfile )              ///< Read-only, return nothing, print all registers in the Metering File page
-PARAMETERKEY_ITEM( page_mailbox )                   ///< Read-only, return nothing, print all registers in the Mailbox page
-PARAMETERKEY_ITEM( hw_report )                      ///< Read-only, return nothing, print the Algodone HW report
 PARAMETERKEY_ITEM( drm_frequency )                  ///< Read-only, return the measured DRM frequency
 PARAMETERKEY_ITEM( product_id )                     ///< Read-only, return the product ID
 PARAMETERKEY_ITEM( mailbox_size )                   ///< Read-only, return the size of the Mailbox read-write memory in DRM Controller
@@ -20,6 +13,15 @@ PARAMETERKEY_ITEM( frequency_detection_period )     ///< Read-write, read and wr
 PARAMETERKEY_ITEM( custom_field )                   ///< Read-write, only for testing, any uint32_t register accessible to the user for any purpose
 PARAMETERKEY_ITEM( mailbox_data )                   ///< Read-write, only for testing, read or write values to Mailbox read-write memory in DRM Controller
 PARAMETERKEY_ITEM( retry_deadline )                 ///< Read-write, read and write the retry period deadline in seconds from the license timeout during which no more retry is sent
+PARAMETERKEY_ITEM( list_all )                       ///< Read-only, list all parameter key available
+PARAMETERKEY_ITEM( dump_all )                       ///< Read-only, read all parameter key values
+PARAMETERKEY_ITEM( page_ctrlreg )                   ///< Read-only, return nothing, print all registers in the DRM Controller Registry page
+PARAMETERKEY_ITEM( page_vlnvfile )                  ///< Read-only, return nothing, print all registers in the VLNV File page
+PARAMETERKEY_ITEM( page_licfile )                   ///< Read-only, return nothing, print all registers in the License File page
+PARAMETERKEY_ITEM( page_tracefile )                 ///< Read-only, return nothing, print all registers in the Trace File page
+PARAMETERKEY_ITEM( page_meteringfile )              ///< Read-only, return nothing, print all registers in the Metering File page
+PARAMETERKEY_ITEM( page_mailbox )                   ///< Read-only, return nothing, print all registers in the Mailbox page
+PARAMETERKEY_ITEM( hw_report )                      ///< Read-only, return nothing, print the Algodone HW report
 PARAMETERKEY_ITEM( trigger_async_callback )         ///< Write-only, only for testing, call the asynchronous error callback with the given message
 PARAMETERKEY_ITEM( bad_authentication_token )       ///< Write-only, only for testing, uses a bad authentication token
 PARAMETERKEY_ITEM( bad_product_id )                 ///< Write-only, only for testing, uses a bad product ID

@@ -1034,6 +1034,27 @@ protected:
         return it->second;
     }
 
+    Json::Value list_parameter_key() const {
+        Json::Value node;
+        for(int i=0; i<ParameterKey::ParameterKeyCount; i++) {
+            ParameterKey e = static_cast<ParameterKey>(i);
+            std::string keyStr = findParameterString(e);
+            node.append( keyStr );
+        }
+        return node;
+    }
+
+    Json::Value dump_parameter_key() const {
+        Json::Value node;
+        for(int i=0; i<ParameterKey::dump_all; i++) {
+            ParameterKey e = static_cast<ParameterKey>(i);
+            std::string keyStr = findParameterString(e);
+            node[ keyStr ] = Json::nullValue;
+        }
+        get(node);
+        return node;
+    }
+
 
 public:
     Impl( const std::string& conf_file_path,
@@ -1154,15 +1175,15 @@ public:
                         Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", json_value[key_str] );
                         break;
                     }
-                    case ParameterKey::metering_data: {
+                    case ParameterKey::metered_data: {
 #if ((JSONCPP_VERSION_MAJOR ) >= 1 and ((JSONCPP_VERSION_MINOR) > 7 or ((JSONCPP_VERSION_MINOR) == 7 and JSONCPP_VERSION_PATCH >= 5)))
-                        uint64_t metering_data = getMeteringData();
+                        uint64_t metered_data = getMeteringData();
 #else
                         // No "int64_t" support with JsonCpp < 1.7.5
-                        unsigned long long metering_data = getMeteringData();
+                        unsigned long long metered_data = getMeteringData();
 #endif
-                        json_value[key_str] = metering_data;
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", metering_data );
+                        json_value[key_str] = metered_data;
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", metered_data );
                         break;
                     }
                     case ParameterKey::nodelocked_request_file: {
@@ -1221,6 +1242,16 @@ public:
                         Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mbSize );
                         break;
                     }
+                    case ParameterKey ::list_all: {
+                        json_value[key_str] = list_parameter_key();
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", json_value[key_str].toStyledString() );
+                        break;
+                    }
+                    case ParameterKey ::dump_all: {
+                        json_value[key_str] = dump_parameter_key();
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", json_value[key_str].toStyledString() );
+                        break;
+                    }
                     case ParameterKey::custom_field: {
                         uint32_t customField = readMailbox( MailboxOffset::MB_CUSTOM_FIELD );
                         json_value[key_str] = customField;
@@ -1263,7 +1294,7 @@ public:
         CATCH_AND_THROW
     }
 
-    template<typename T> T get( const ParameterKey /*key_id*/ ) const { return nullptr; }
+    template<typename T> T get( const ParameterKey /*key_id*/ ) const {}
 
     void set( const Json::Value& json_value ) {
         TRY
