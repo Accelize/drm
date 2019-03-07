@@ -18,6 +18,7 @@ _PARAM_LIST = ['license_type',
                'num_activators',
                'session_id',
                'session_status',
+               'license_status',
                'metered_data',
                'nodelocked_request_file',
                'drm_frequency',
@@ -65,7 +66,7 @@ def generate_coin(driver, activator_index, coins):
 
 
 def get_activator_status( driver, activator_index=None ):
-    if isinstance(activator_index, list) or isinstance(activator_index, range):
+    if isinstance(activator_index, list):
         activator_index_list = activator_index
     elif isinstance(activator_index, int):
         activator_index_list = [activator_index]
@@ -94,9 +95,9 @@ def assert_NoErrorCallback( async_cb, extra_msg=None ):
     assert async_cb.errcode is None, '%sAsynchronous callback returned error code: %d' % (prepend_msg, async_cb.errcode)
     assert not async_cb.was_called, '%sAsynchronous callback has been called' % prepend_msg
 
-@pytest.mark.skip
+#@pytest.mark.skip
 def test_metered_short_time_use_case(accelize_drm, conf_json, cred_json, async_handler):
-    """Test no error occuurs in normal metering mode."""
+    """Test no error occurs in normal metering mode."""
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -138,7 +139,7 @@ def test_metered_short_time_use_case(accelize_drm, conf_json, cred_json, async_h
     finally:
         drm_manager.deactivate()
 
-@pytest.mark.skip
+#@pytest.mark.skip
 def test_bad_authentication(accelize_drm, conf_json, cred_json, async_handler):
     """Test errors when bad authentication parameters are provided to
     DRM Manager Constructor or Web Service."""
@@ -188,7 +189,7 @@ def test_bad_authentication(accelize_drm, conf_json, cred_json, async_handler):
         if drm_manager:
             drm_manager.deactivate()
 
-@pytest.mark.skip
+#@pytest.mark.skip
 def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_json, async_handler):
     """Test errors when wrong url is given to DRM Controller Constructor"""
 
@@ -332,7 +333,7 @@ def test_bad_product_id(accelize_drm, conf_json, cred_json, async_handler):
     assert get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
     assert_NoErrorCallback(async_cb)
 
-@pytest.mark.skip
+#@pytest.mark.skip
 def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_json, async_handler):
     """Test accesses to parameter"""
 
@@ -415,6 +416,19 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     assert not sessionState
     assert_NoErrorCallback( async_cb )
     print("Test parameter 'session_status': PASS")
+
+    # Test parameter: license_status
+    # Read-only, return the current license status
+    licenseState = drm_manager.get('license_status')
+    assert not licenseState
+    drm_manager.activate()
+    licenseState  = drm_manager.get('license_status')
+    assert licenseState
+    drm_manager.deactivate()
+    licenseState  = drm_manager.get('license_status')
+    assert not licenseState
+    assert_NoErrorCallback( async_cb )
+    print("Test parameter 'license_status': PASS")
 
     # Test parameter: metered_data
     # Read-only, return uint64_t or string with the current value of the metering data counter
@@ -523,6 +537,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     # Test parameter: list_all
     # Read-only, list all parameter keys
     list_param = drm_manager.get('list_all')
+    assert isinstance(list_param , list)
     assert len(list_param) == len(_PARAM_LIST)
     assert all(key in _PARAM_LIST for key in list_param)
     print("Test parameter 'list_all': PASS")
@@ -530,6 +545,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     # Test parameter: dump_all
     # Read-only, read all parameter key values
     dump_param = drm_manager.get('dump_all')
+    assert isinstance(dump_param, dict)
     assert len(dump_param) == _PARAM_LIST.index('dump_all')
     assert all(key in _PARAM_LIST for key in dump_param.keys())
     print("Test parameter 'dump_all': PASS")
@@ -590,7 +606,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     # Write-only: only for testing, uses a bad product ID.
     # => Skipped: Tested in test_bad_product_id
 
-@pytest.mark.skip
+#@pytest.mark.skip
 def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cred_json, async_handler):
     """Test accesses to parameter"""
 
@@ -811,8 +827,8 @@ def test_2_drm_manager_concurrently(accelize_drm, conf_json, cred_json, async_ha
         )
     assert 'Another instance of the DRM Manager is currently owning the HW' in str(excinfo.value)
 
-@pytest.mark.skip
-def test_activation_status(accelize_drm, conf_json, cred_json, async_handler):
+#@pytest.mark.skip
+def test_activation_and_license_status(accelize_drm, conf_json, cred_json, async_handler):
     """Test status of IP activators"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -828,107 +844,174 @@ def test_activation_status(accelize_drm, conf_json, cred_json, async_handler):
     try:
         print()
         nb_activators = drm_manager.get('num_activators')
+        activator_indexes = list(range(nb_activators))
 
-        # Test start/stop
+        # Test license status on start/stop
 
         # Check all activators are locked
-        status = get_activator_status( driver, range(nb_activators) )
-        assert not any(status), 'At least one activator is unlocked: %s' % str(status)
+        lic_status = drm_manager.get('license_status')
+        assert not lic_status, 'License is not inactive'
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert not any(ip_status), 'At least one activator is unlocked'
         # Activate all activators
         drm_manager.activate()
         # Check all activators are unlocked
-        status = get_activator_status( driver, range(nb_activators) )
-        assert all(status), 'At least one activator is locked: %s' % str(status)
+        lic_status = drm_manager.get('license_status')
+        assert lic_status, 'License is not active'
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert all(ip_status), 'At least one activator is locked'
         # Deactivate all activators
         drm_manager.deactivate()
         # Check all activators are locked again
-        status = get_activator_status( driver, range(nb_activators) )
-        assert not any(status), 'At least one activator is unlocked: %s' % str(status)
+        lic_status = drm_manager.get('license_status')
+        assert not lic_status, 'License is not inactive'
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert not any(ip_status), 'At least one activator is unlocked'
         assert_NoErrorCallback(async_cb)
-        print('Test start/stop: PASS')
+        print('Test license status on start/stop: PASS')
 
-        # Test start/pause
+        # Test license status on start/pause
 
         # Check all activators are locked
-        status = get_activator_status( driver, range(nb_activators) )
-        assert not any(status), 'At least one activator is unlocked: %s' % str(status)
+        lic_status = drm_manager.get('license_status')
+        assert not lic_status, 'License is not inactive'
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert not any(ip_status), 'At least one activator is unlocked'
         # Activate all activators
         drm_manager.activate()
         start = datetime.now()
         # Check all activators are unlocked
-        status = get_activator_status( driver, range(nb_activators) )
-        assert all(status), 'At least one activator is locked: %s' % str(status)
-        # Deactivate all activators
+        lic_status = drm_manager.get('license_status')
+        assert lic_status, 'License is not active'
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert all(ip_status), 'At least one activator is locked'
+        # Pause all activators
         drm_manager.deactivate( True )
         # Check all activators are still unlocked
-        status = get_activator_status( driver, range(nb_activators) )
-        assert all(status), 'At least one activator is locked: %s' % str(status)
+        lic_status = drm_manager.get('license_status')
+        assert lic_status, 'License is not active'
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert all(ip_status), 'At least one activator is locked'
         assert_NoErrorCallback(async_cb)
-        print('Test start/pause: PASS')
+        print('Test license status on start/pause: PASS')
 
-        # Test resume from valid license/pause
+        # Test license status on resume from valid license/pause
 
         # Check all activators are unlocked
-        status = get_activator_status( driver, range(nb_activators) )
-        assert all(status), 'At least one activator is locked: %s' % str(status)
-        # Activate all activators
+        lic_status = drm_manager.get('license_status')
+        assert lic_status, 'License is not active'
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert all(ip_status), 'At least one activator is locked'
+        # Resume all activators
         drm_manager.activate( True )
         # Check all activators are still unlocked
-        status = get_activator_status( driver, range(nb_activators) )
-        assert all(status), 'At least one activator is locked: %s' % str(status)
-        # Deactivate all activators
+        lic_status = drm_manager.get('license_status')
+        assert lic_status, 'License is not active'
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert all(ip_status), 'At least one activator is locked'
+        # Pause all activators
         drm_manager.deactivate( True )
         # Check all activators are still unlocked
-        status = get_activator_status( driver, range(nb_activators) )
-        assert all(status), 'At least one activator is locked: %s' % str(status)
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert all(ip_status), 'At least one activator is locked'
         # Wait until license expires
         lic_duration = drm_manager.get('license_duration')
         wait_period = start + timedelta(seconds=2*lic_duration+1) - datetime.now()
         sleep(wait_period.total_seconds())
         # Check all activators are now locked again
-        status = get_activator_status( driver, range(nb_activators) )
-        assert not any(status), 'At least one activator is unlocked: %s' % str(status)
+        lic_status = drm_manager.get('license_status')
+        assert not lic_status, 'License is not inactive'
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert not any(ip_status), 'At least one activator is unlocked'
         assert_NoErrorCallback(async_cb)
-        print('Test resume from valid license/pause: PASS')
+        print('Test license status on resume from valid license/pause: PASS')
 
-        # Test resume from expired license/pause
+        # Test license status on resume from expired license/pause
 
         # Check all activators are locked
-        status = get_activator_status( driver, range(nb_activators) )
-        assert not any(status), 'At least one activator is unlocked: %s' % str(status)
-        # Activate all activators
+        lic_status = drm_manager.get('license_status')
+        assert not lic_status, 'License is not inactive'
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert not any(ip_status), 'At least one activator is unlocked'
+        # Resume all activators
         drm_manager.activate( True )
         # Check all activators are unlocked
-        status = get_activator_status( driver, range(nb_activators) )
-        assert all(status), 'At least one activator is unlocked: %s' % str(status)
-        # Deactivate all activators
+        lic_status = drm_manager.get('license_status')
+        assert lic_status, 'License is not active'
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert all(ip_status), 'At least one activator is unlocked'
+        # Pause all activators
         drm_manager.deactivate( True )
         # Check all activators are still unlocked
-        status = get_activator_status( driver, range(nb_activators) )
-        assert all(status), 'At least one activator is unlocked: %s' % str(status)
+        lic_status = drm_manager.get('license_status')
+        assert lic_status, 'License is not active'
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert all(ip_status), 'At least one activator is unlocked'
         assert_NoErrorCallback(async_cb)
-        print('Test resume from expired license/pause: PASS')
+        print('Test license status on resume from expired license/pause: PASS')
 
-        # Test resume/stop
+        # Test license status on resume/stop
 
-        # Activate all activators
+        # Check all activators are still unlocked
+        lic_status = drm_manager.get('license_status')
+        assert lic_status, 'License is not active'
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert all(ip_status), 'At least one activator is unlocked'
+        assert_NoErrorCallback(async_cb)
+        # Resume all activators
         drm_manager.activate( True )
         # Check all activators are still unlocked
-        status = get_activator_status( driver, range(nb_activators) )
-        assert all(status), 'At least one activator is locked: %s' % str(status)
+        lic_status = drm_manager.get('license_status')
+        assert lic_status, 'License is not active'
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert all(ip_status), 'At least one activator is locked'
         # Deactivate all activators
         drm_manager.deactivate()
         # Check all activators are locked again
-        status = get_activator_status( driver, range(nb_activators) )
-        assert not any(status), 'At least one activator is unlocked: %s' % str(status)
+        lic_status = drm_manager.get('license_status')
+        assert not lic_status, 'License is not inactive'
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert not any(ip_status), 'At least one activator is unlocked'
         assert_NoErrorCallback(async_cb)
-        print('Test resume/stop: PASS')
+        print('Test license status on resume/stop: PASS')
+
+        # Test license status on restart from paused session/stop
+
+        # Check all activators are locked again
+        lic_status = drm_manager.get('license_status')
+        assert not lic_status, 'License is not inactive'
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert not any(ip_status), 'At least one activator is unlocked'
+        assert_NoErrorCallback(async_cb)
+        # Activate all activators
+        drm_manager.activate()
+        # Check all activators are unlocked
+        lic_status = drm_manager.get('license_status')
+        assert lic_status, 'License is not active'
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert all(ip_status), 'At least one activator is locked'
+        # Pause activators
+        drm_manager.deactivate( True )
+        # Check all activators are still unlocked
+        lic_status = drm_manager.get('license_status')
+        assert lic_status, 'License is not active'
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert all(ip_status), 'At least one activator is locked'
+        # Restart all activators
+        drm_manager.activate()
+        # Check all activators are still unlocked
+        lic_status = drm_manager.get('license_status')
+        assert lic_status, 'License is not active'
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert all(ip_status), 'At least one activator is locked'
+        assert_NoErrorCallback(async_cb)
+        print('Test license status on restart: PASS')
 
     finally:
         if drm_manager:
             drm_manager.deactivate()
 
-@pytest.mark.skip
+#@pytest.mark.skip
 def test_session_status(accelize_drm, conf_json, cred_json, async_handler):
     """Test status of session"""
 
@@ -946,107 +1029,187 @@ def test_session_status(accelize_drm, conf_json, cred_json, async_handler):
         print()
         nb_activators = drm_manager.get('num_activators')
 
-        # Test start/stop
+        # Test session status on start/stop
 
         # Check no session is running and no ID is available
         status = drm_manager.get('session_status')
         id = drm_manager.get('session_id')
         assert not status, 'A session is running'
         assert len(id) == 0, 'A session ID exists'
-        # Activate all activators
+        # Activate new session
         drm_manager.activate()
         # Check a session is running with a valid ID
         status = drm_manager.get('session_status')
         id = drm_manager.get('session_id')
         assert status, 'No session is running'
-        print("type=", type(id))
-        print("id=", id)
-        assert len(id) == 64, 'A session ID exists'
-        assert id == 0, 'A session ID exists'
-        # Deactivate all activators
+        assert len(id) == 16, 'No session ID is returned'
+        # Deactivate current session
         drm_manager.deactivate()
-        # Check all activators are locked again
-        status = get_activator_status( driver, range(nb_activators) )
-        assert not any(status), 'At least one activator is unlocked: %s' % str(status)
-        assert_NoErrorCallback(async_cb)
-        print('Test start/stop: PASS')
+        # Check session is closed
+        status = drm_manager.get('session_status')
+        id = drm_manager.get('session_id')
+        assert not status, 'A session is running'
+        assert len(id) == 0, 'A session ID exists'
+        print('Test session status on start/stop: PASS')
 
-        # Test start/pause
+        # Test session status on start/pause
 
-        # Check all activators are locked
-        status = get_activator_status( driver, range(nb_activators) )
-        assert not any(status), 'At least one activator is unlocked: %s' % str(status)
-        # Activate all activators
+        # Check no session is running and no ID is available
+        status = drm_manager.get('session_status')
+        id = drm_manager.get('session_id')
+        assert not status, 'A session is running'
+        assert len(id) == 0, 'A session ID exists'
+        # Activate new session
         drm_manager.activate()
         start = datetime.now()
-        # Check all activators are unlocked
-        status = get_activator_status( driver, range(nb_activators) )
-        assert all(status), 'At least one activator is locked: %s' % str(status)
-        # Deactivate all activators
+        # Check a session is running with a valid ID
+        status = drm_manager.get('session_status')
+        id_ref = drm_manager.get('session_id')
+        assert status, 'No session is running'
+        assert len(id_ref) == 16, 'No session ID is returned'
+        # Pause current session
         drm_manager.deactivate( True )
-        # Check all activators are still unlocked
-        status = get_activator_status( driver, range(nb_activators) )
-        assert all(status), 'At least one activator is locked: %s' % str(status)
+        # Check a session is still alive with the same ID
+        status = drm_manager.get('session_status')
+        id = drm_manager.get('session_id')
+        assert status, 'No session is running'
+        assert len(id) == 16, 'No session ID is returned'
+        assert id == id_ref, 'Return different session ID'
         assert_NoErrorCallback(async_cb)
-        print('Test start/pause: PASS')
+        print('Test session status on start/pause: PASS')
 
-        # Test resume from valid license/pause
+        # Test session status on resume from valid license/pause
 
-        # Check all activators are unlocked
-        status = get_activator_status( driver, range(nb_activators) )
-        assert all(status), 'At least one activator is locked: %s' % str(status)
-        # Activate all activators
+        # Check a session is still alive with the same ID
+        status = drm_manager.get('session_status')
+        id = drm_manager.get('session_id')
+        assert status, 'No session is running'
+        assert len(id) == 16, 'No session ID is returned'
+        assert id == id_ref, 'Return different session ID'
+        # Resume current session
         drm_manager.activate( True )
-        # Check all activators are still unlocked
-        status = get_activator_status( driver, range(nb_activators) )
-        assert all(status), 'At least one activator is locked: %s' % str(status)
-        # Deactivate all activators
+        # Check a session is still alive with the same ID
+        status = drm_manager.get('session_status')
+        id = drm_manager.get('session_id')
+        assert status, 'No session is running'
+        assert len(id) == 16, 'No session ID is returned'
+        assert id == id_ref, 'Return different session ID'
+        # Pause current session
         drm_manager.deactivate( True )
-        # Check all activators are still unlocked
-        status = get_activator_status( driver, range(nb_activators) )
-        assert all(status), 'At least one activator is locked: %s' % str(status)
+        # Check a session is still alive with the same ID
+        status = drm_manager.get('session_status')
+        id = drm_manager.get('session_id')
+        assert status, 'No session is running'
+        assert len(id) == 16, 'No session ID is returned'
+        assert id == id_ref, 'Return different session ID'
         # Wait until license expires
         lic_duration = drm_manager.get('license_duration')
         wait_period = start + timedelta(seconds=2*lic_duration+1) - datetime.now()
         sleep(wait_period.total_seconds())
-        # Check all activators are now locked again
-        status = get_activator_status( driver, range(nb_activators) )
-        assert not any(status), 'At least one activator is unlocked: %s' % str(status)
+        # Check a session is still alive with the same ID
+        status = drm_manager.get('session_status')
+        id = drm_manager.get('session_id')
+        assert status, 'No session is running'
+        assert len(id) == 16, 'No session ID is returned'
+        assert id == id_ref, 'Return different session ID'
         assert_NoErrorCallback(async_cb)
-        print('Test resume from valid license/pause: PASS')
+        print('Test session status on resume from valid license/pause: PASS')
 
-        # Test resume from expired license/pause
+        # Test session status on resume from expired license/pause
 
-        # Check all activators are locked
-        status = get_activator_status( driver, range(nb_activators) )
-        assert not any(status), 'At least one activator is unlocked: %s' % str(status)
-        # Activate all activators
+        # Check a session is still alive with the same ID
+        status = drm_manager.get('session_status')
+        id = drm_manager.get('session_id')
+        assert status, 'No session is running'
+        assert len(id) == 16, 'No session ID is returned'
+        assert id == id_ref, 'Return different session ID'
+        # Resume current session
         drm_manager.activate( True )
-        # Check all activators are unlocked
-        status = get_activator_status( driver, range(nb_activators) )
-        assert all(status), 'At least one activator is unlocked: %s' % str(status)
-        # Deactivate all activators
+        # Check a session is still alive with the same ID
+        status = drm_manager.get('session_status')
+        id = drm_manager.get('session_id')
+        assert status, 'No session is running'
+        assert len(id) == 16, 'No session ID is returned'
+        assert id == id_ref, 'Return different session ID'
+        # Pause current session
         drm_manager.deactivate( True )
-        # Check all activators are still unlocked
-        status = get_activator_status( driver, range(nb_activators) )
-        assert all(status), 'At least one activator is unlocked: %s' % str(status)
+        # Check a session is still alive with the same ID
+        status = drm_manager.get('session_status')
+        id = drm_manager.get('session_id')
+        assert status, 'No session is running'
+        assert len(id) == 16, 'No session ID is returned'
+        assert id == id_ref, 'Return different session ID'
         assert_NoErrorCallback(async_cb)
-        print('Test resume from expired license/pause: PASS')
+        print('Test session status on resume from expired license/pause: PASS')
 
-        # Test resume/stop
+        # Test session status on resume/stop
 
-        # Activate all activators
+        # Check a session is still alive with the same ID
+        status = drm_manager.get('session_status')
+        id = drm_manager.get('session_id')
+        assert status, 'No session is running'
+        assert len(id) == 16, 'No session ID is returned'
+        assert id == id_ref, 'Return different session ID'
+        # Resume current session
         drm_manager.activate( True )
-        # Check all activators are still unlocked
-        status = get_activator_status( driver, range(nb_activators) )
-        assert all(status), 'At least one activator is locked: %s' % str(status)
-        # Deactivate all activators
+        # Check a session is still alive with the same ID
+        status = drm_manager.get('session_status')
+        id = drm_manager.get('session_id')
+        assert status, 'No session is running'
+        assert len(id) == 16, 'No session ID is returned'
+        assert id == id_ref, 'Return different session ID'
+        # Close session
         drm_manager.deactivate()
-        # Check all activators are locked again
-        status = get_activator_status( driver, range(nb_activators) )
-        assert not any(status), 'At least one activator is unlocked: %s' % str(status)
+        # Check session is closed
+        status = drm_manager.get('session_status')
+        id = drm_manager.get('session_id')
+        assert not status, 'A session is running'
+        assert len(id) == 0, 'A session ID exists'
         assert_NoErrorCallback(async_cb)
-        print('Test resume/stop: PASS')
+        print('Test session status on resume/stop: PASS')
+
+        # Test session status on start from paused session/stop
+
+        # Check no session is running
+        status = drm_manager.get('session_status')
+        id = drm_manager.get('session_id')
+        assert not status, 'A session is running'
+        assert len(id) == 0, 'A session ID exists'
+        # Start a new session
+        drm_manager.activate()
+        # Check a session is alive with a new ID
+        status = drm_manager.get('session_status')
+        id = drm_manager.get('session_id')
+        assert status, 'No session is running'
+        assert len(id) == 16, 'No session ID is returned'
+        assert id != id_ref, 'Return different session ID'
+        id_ref = id
+        # Pause session
+        drm_manager.deactivate( True )
+        # Check a session is still alive with the same ID
+        status = drm_manager.get('session_status')
+        id = drm_manager.get('session_id')
+        assert status, 'No session is running'
+        assert len(id) == 16, 'No session ID is returned'
+        assert id == id_ref, 'Return different session ID'
+        # Start a new session
+        drm_manager.activate()
+        # Check a new session has been created with a new ID
+        status = drm_manager.get('session_status')
+        id = drm_manager.get('session_id')
+        assert status, 'No session is running'
+        assert len(id) == 16, 'No session ID is returned'
+        assert id != id_ref, 'Return different session ID'
+        id_ref = id
+        # Close session
+        drm_manager.deactivate()
+        # Check session is closed
+        status = drm_manager.get('session_status')
+        id = drm_manager.get('session_id')
+        assert not status, 'A session is running'
+        assert len(id) == 0, 'A session ID exists'
+        assert_NoErrorCallback(async_cb)
+        print('Test session status on restart: PASS')
 
     finally:
         if drm_manager:
@@ -1055,10 +1218,9 @@ def test_session_status(accelize_drm, conf_json, cred_json, async_handler):
 
 @pytest.mark.skip
 def test_license_expiration(accelize_drm, conf_json, cred_json, async_handler):
-    """Test errors when 2 DrmManager instances are used."""
+    """Test license expiration"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
-
     async_cb = async_handler.create()
 
     drm_manager = accelize_drm.DrmManager(
@@ -1068,28 +1230,137 @@ def test_license_expiration(accelize_drm, conf_json, cred_json, async_handler):
         driver.write_register_callback,
         async_cb.callback
     )
-    nb_activators = drm_manager.get('num_activators')
 
-    # Test resume_session_request = False
-    # Check all activators are locked
-    status = get_activator_status( driver, range(nb_activators) )
-    assert any(status), 'At least one activator is unlocked: %s' % str(status)
-    start = datetime.now()
-    # Activators all activators
-    drm_manager.activate()
-    drm_manager.deactivate(True)    # Not to stop the session which would unlock the
-    # Check all activators are unlocked
-    status = get_activator_status( driver, range(nb_activators) )
-    assert all(status), 'At least one activator is locked: %s' % str(status)
-    lic_duration = drm_manager.get('license_duration')
-    wait_period = start + timedelta(seconds=lic_duration-1) - datetime.now()
-    # Wait right before the license expires
-    sleep(wait_period.total_seconds())
-    # Check all activators are unlocked right before the license expires
-    status = get_activator_status( driver, range(nb_activators) )
-    assert all(status), 'At least one activator is not locked: %s' % str(status)
-    # Wait until license expires
-    sleep(1.1)
-    # Check all activators are locked
-    status = get_activator_status( driver, range(nb_activators) )
-    assert any(status), 'At least one activator is unlocked: %s' % str(status)
+    try:
+        print()
+        nb_activators = drm_manager.get('num_activators')
+        activator_indexes = list(range(nb_activators))
+
+        # Test license expires after 2 duration periods when start/pause
+
+        # Check no license is running
+        lic_status = drm_manager.get('license_status')
+        assert not lic_status
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert not any(ip_status), 'At least one activator is locked'
+        # Start
+        drm_manager.activate()
+        start = datetime.now()
+        # Stop
+        drm_manager.deactivate( True )
+        # Check license is running
+        lic_status = drm_manager.get('license_status')
+        assert lic_status
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert all(ip_status), 'At least one activator is unlocked'
+        # Wait right before expiration
+        lic_duration = drm_manager.get('license_duration')
+        wait_period = start + timedelta(seconds=2*lic_duration-1) - datetime.now()
+        sleep(wait_period.total_seconds())
+        # Check license is still running
+        lic_status = drm_manager.get('license_status')
+        assert lic_status
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert all(ip_status), 'At least one activator is unlocked'
+        # Wait a bit more time the expiration
+        sleep(2)
+        # Check no license is running
+        lic_status = drm_manager.get('license_status')
+        assert not lic_status
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert not any(ip_status), 'At least one activator is locked'
+        drm_manager.deactivate()
+        # Check no license is running
+        lic_status = drm_manager.get('license_status')
+        assert not lic_status
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert not any(ip_status), 'At least one activator is locked'
+        assert_NoErrorCallback(async_cb)
+        print('Test license expires after 2 duration periods when start/pause/stop')
+
+        # Test license does not expire after 3 duration periods when start
+
+        # Check no license is running
+        lic_status = drm_manager.get('license_status')
+        assert not lic_status
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert not any(ip_status), 'At least one activator is locked'
+        # Start
+        drm_manager.activate()
+        start = datetime.now()
+        # Check license is running
+        lic_status = drm_manager.get('license_status')
+        assert lic_status
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert all(ip_status), 'At least one activator is unlocked'
+        # Wait 3 duration periods
+        lic_duration = drm_manager.get('license_duration')
+        wait_period = start + timedelta(seconds=3*lic_duration+1) - datetime.now()
+        sleep(wait_period.total_seconds())
+        # Check license is still running
+        lic_status = drm_manager.get('license_status')
+        assert lic_status
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert all(ip_status), 'At least one activator is unlocked'
+        # Stop
+        drm_manager.deactivate()
+        # Check no license is running
+        lic_status = drm_manager.get('license_status')
+        assert not lic_status
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert not any(ip_status), 'At least one activator is locked'
+        assert_NoErrorCallback(async_cb)
+        print('Test license does not expire after 3 duration periods when start')
+
+        # Test license does not expire after 3 duration periods when start/pause
+
+        # Check no license is running
+        lic_status = drm_manager.get('license_status')
+        assert not lic_status
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert not any(ip_status), 'At least one activator is locked'
+        # Start
+        drm_manager.activate()
+        start = datetime.now()
+        # Check license is running
+        lic_status = drm_manager.get('license_status')
+        assert lic_status
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert all(ip_status), 'At least one activator is unlocked'
+        # Wait 1 duration period
+        lic_duration = drm_manager.get('license_duration')
+        wait_period = start + timedelta(seconds=lic_duration+1) - datetime.now()
+        sleep(wait_period.total_seconds())
+        # Check license is still running
+        lic_status = drm_manager.get('license_status')
+        assert lic_status
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert all(ip_status), 'At least one activator is unlocked'
+        # Pause
+        drm_manager.deactivate( True )
+        # Wait right before the next 2 duration periods expire
+        wait_period = start + timedelta(seconds=3*lic_duration-1) - datetime.now()
+        sleep(wait_period.total_seconds())
+        # Check no license is running
+        lic_status = drm_manager.get('license_status')
+        assert not lic_status
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert not any(ip_status), 'At least one activator is locked'
+        # Wait a bit more time the expiration
+        sleep(2)
+        # Check license has expired
+        lic_status = drm_manager.get('license_status')
+        assert not lic_status
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert not any(ip_status), 'At least one activator is locked'
+        drm_manager.deactivate()
+        # Check no license is running
+        lic_status = drm_manager.get('license_status')
+        assert not lic_status
+        ip_status = get_activator_status( driver, activator_indexes )
+        assert not any(ip_status), 'At least one activator is locked'
+        assert_NoErrorCallback(async_cb)
+
+    finally:
+        if drm_manager:
+            drm_manager.deactivate()

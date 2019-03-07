@@ -270,7 +270,7 @@ int print_all_information( DrmManager* pDrmManager ) {
         \"license_type\": null,\
         \"num_activators\": null,\
         \"session_id\": null,\
-        \"metering_data\": null,\
+        \"metered_data\": null,\
         \"nodelocked_request_file\": null,\
         \"page_ctrlreg\": null,\
         \"page_vlnvfile\": null,\
@@ -279,8 +279,7 @@ int print_all_information( DrmManager* pDrmManager ) {
         \"page_meteringfile\": null,\
         \"page_mailbox\": null,\
         \"hw_report\": null,\
-        \"custom_field\": null,\
-        \"strerror\": null }";
+        \"custom_field\": null }";
 
     TRY
         pDrmManager->get( info_str );
@@ -359,10 +358,10 @@ void print_session_id( DrmManager* pDrmManager ) {
 }
 
 
-void print_metering_data( DrmManager* pDrmManager ) {
+void print_metered_data( DrmManager* pDrmManager ) {
     TRY
-        uint64_t metering_data = pDrmManager->get<uint64_t>( ParameterKey::metering_data );
-        INFO(COLOR_GREEN "Current metering data fromFPGA design: %llu", metering_data);
+        uint64_t metered_data = pDrmManager->get<uint64_t>( ParameterKey::metered_data );
+        INFO(COLOR_GREEN "Current metering data fromFPGA design: %llu", metered_data);
     CATCH("Failed to get the current metering data from FPGA design")
 }
 
@@ -387,17 +386,6 @@ int test_custom_field( DrmManager* pDrmManager, uint32_t value ) {
     }
     return 0;
 }
-
-void print_last_error( DrmManager* pDrmManager ) {
-    TRY
-        std::string errMsg = pDrmManager->get<std::string>( ParameterKey::strerror );
-        if ( errMsg.size() == 0)
-            INFO(COLOR_GREEN "No error message so far.");
-        else
-            INFO(COLOR_RED "Last error message: %s", errMsg.c_str());
-    CATCH("Failed to get the last error message (if any)")
-}
-
 
 #define DRM_RETRY(__expr, __no_retry) \
     do { \
@@ -584,9 +572,8 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const std::string& creden
             print_license_type( pDrmManager );
             print_num_activators( pDrmManager );
             print_session_id( pDrmManager );
-            print_metering_data( pDrmManager );
+            print_metered_data( pDrmManager );
             test_custom_field( pDrmManager, rand() );
-            print_last_error( pDrmManager );
         }
 
         else if (cmd == 't') {
@@ -608,9 +595,6 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const std::string& creden
         if (ret)
             ERROR("Failed to execute last command: %u", ret);
     }
-
-    /* Check error message if any */
-    print_last_error( pDrmManager );
 
     /* Stop session and free the DrmManager object */
     delete pDrmManager;

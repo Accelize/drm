@@ -186,8 +186,8 @@ protected:
 
 DrmWSClient::DrmWSClient(const std::string &conf_file_path, const std::string &cred_file_path) {
 
-    Json::Value conf_json = parseConfiguration( conf_file_path );
-    Json::Value cred_json = parseConfiguration( cred_file_path );
+    Json::Value conf_json = parseJsonFile(conf_file_path);
+    Json::Value cred_json = parseJsonFile(cred_file_path);
 
     mUseBadOAuth2Token = std::string("");
 
@@ -252,12 +252,10 @@ Json::Value DrmWSClient::getLicense(const Json::Value& json_req, std::chrono::st
     req.appendHeader(std::string("Authorization: Bearer ") + token);
 
     // Set data of request
-    Json::FastWriter json_writer;
-    req.setPostFields(json_writer.write(json_req));
-
-    Debug("Starting license request");
+    req.setPostFields( saveJsonToString( json_req ) );
 
     // Perform
+    Debug("Starting license request");
     std::string resp;
     long resp_code = req.perform(&resp, deadline);
     Debug("Received code = ", resp_code);
@@ -273,10 +271,7 @@ Json::Value DrmWSClient::getLicense(const Json::Value& json_req, std::chrono::st
     Debug("License response obtained in ", req.getTotalTime()*1000, "ms");
 
     // Parse response
-    Json::Reader reader;
-    Json::Value json_resp;
-    reader.parse(resp, json_resp);
-
+    Json::Value json_resp = parseJsonString(resp);
     Debug( "Web Service JSON response:\n", json_resp.toStyledString() );
 
     // Check for error with details
@@ -314,10 +309,8 @@ std::string DrmWSClient::getOAuth2token(std::chrono::steady_clock::time_point de
     }
 
     //Parse response
-    Json::Reader reader;
-    Json::Value json_resp;
-    reader.parse(resp, json_resp);
-    if(!json_resp.isMember("access_token"))
+    Json::Value json_resp = parseJsonString(resp);
+    if ( !json_resp.isMember("access_token") )
         Throw(DRM_WSRespError, "Non-valid response from WSOAuth : ", resp);
 
     Debug("OAuth2 token ", json_resp["access_token"].asString(), " obtained in ", req.getTotalTime()*1000, "ms");

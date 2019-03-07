@@ -3,6 +3,7 @@ PARAMETERKEY_ITEM( license_duration )               ///< Read-only, return uint3
 PARAMETERKEY_ITEM( num_activators )                 ///< Read-only, return uint32_t/string with the number of activators detected by the DRM controller
 PARAMETERKEY_ITEM( session_id )                     ///< Read-only, return string with the current session ID
 PARAMETERKEY_ITEM( session_status )                 ///< Read-only, return boolean to indicate if a session is currently running
+PARAMETERKEY_ITEM( license_status )                 ///< Read-only, return the current license status
 PARAMETERKEY_ITEM( metered_data )                   ///< Read-only, return uint64_t or string with the current value of the metering data counter
 PARAMETERKEY_ITEM( nodelocked_request_file )        ///< Read-only, return string with the path to the node-locked license request JSON file
 PARAMETERKEY_ITEM( drm_frequency )                  ///< Read-only, return the measured DRM frequency

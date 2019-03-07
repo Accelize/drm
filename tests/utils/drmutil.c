@@ -253,7 +253,7 @@ int print_all_information( DrmManager* pDrmManager ) {
         \"license_type\": null,\
         \"num_activators\": null,\
         \"session_id\": null,\
-        \"metering_data\": null,\
+        \"metered_data\": null,\
         \"nodelocked_request_file\": null,\
         \"page_ctrlreg\": null,\
         \"page_vlnvfile\": null,\
@@ -351,12 +351,12 @@ void print_session_id( DrmManager* pDrmManager ) {
 }
 
 
-void print_metering_data( DrmManager* pDrmManager ) {
-    uint64_t metering_data;
-    if ( DrmManager_get_uint64(pDrmManager, DRM__metering_data, &metering_data) )
+void print_metered_data( DrmManager* pDrmManager ) {
+    uint64_t metered_data;
+    if ( DrmManager_get_uint64(pDrmManager, DRM__metered_data, &metered_data) )
         ERROR("Failed to get the current metering data from FPGA design: %s", pDrmManager->error_message);
     else
-        INFO(COLOR_GREEN "Current metering data fromFPGA design: %llu", metering_data);
+        INFO(COLOR_GREEN "Current metering data fromFPGA design: %llu", metered_data);
 }
 
 int test_custom_field( DrmManager* pDrmManager, uint32_t value ) {
@@ -562,7 +562,7 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFil
             print_license_type( pDrmManager );
             print_num_activators( pDrmManager );
             print_session_id( pDrmManager );
-            print_metering_data( pDrmManager );
+            print_metered_data( pDrmManager );
             test_custom_field( pDrmManager, rand() );
         }
 

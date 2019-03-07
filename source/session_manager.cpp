@@ -164,7 +164,7 @@ protected:
         mCredFilePath = cred_file_path;
 
         // Parse configuration file
-        conf_json = parseConfiguration( conf_file_path );
+        conf_json = parseJsonFile(conf_file_path);
 
         try {
 
@@ -458,14 +458,6 @@ protected:
         return ss.str();
     }
 
-    Json::Value getJsonFromString( const std::string& json_string ) const {
-        Json::Value json_object;
-        Json::Reader reader;
-        if ( !reader.parse( json_string, json_object ) )
-            Throw(DRM_BadFormat, "Cannot parse JSON string:\n", json_string, "\nBecause: ", reader.getFormattedErrorMessages());
-        return json_object;
-    }
-
     uint64_t getMeteringData() const {
         uint32_t numberOfDetectedIps;
         std::string saasChallenge;
@@ -543,10 +535,10 @@ protected:
 
         if ( !mailboxReadOnly.empty() ) {
             try {
-                json_output["product"] = getJsonFromString(mailboxReadOnly);
+                json_output["product"] = parseJsonString(mailboxReadOnly);
             } catch ( const Exception &e ) {
                 if (e.getErrCode() == DRM_BadFormat)
-                    Throw(DRM_BadFormat, "Failed to parse Read-Only Mailbox in DRM Controller");
+                    Throw( DRM_BadFormat, "Failed to parse Read-Only Mailbox in DRM Controller: ", e.what() );
                 throw;
             }
         }
@@ -629,6 +621,15 @@ protected:
         checkDRMCtlrRet( getDrmController().readLicenseTimerInitLoadedStatusRegister(ret) );
         Debug( "DRM readiness to receive a new license: ", !ret );
         return !ret;
+    }
+
+    bool isLicenseActive() const {
+        bool isLicenseEmpty(false);
+        std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
+        checkDRMCtlrRet( getDrmController().writeRegistersPageRegister() );
+        checkDRMCtlrRet( getDrmController().readLicenseTimerCountEmptyStatusRegister(isLicenseEmpty) );
+        Debug( "DRM licensing state: ", !isLicenseEmpty );
+        return !isLicenseEmpty;
     }
 
     void setLicense(const Json::Value& license_json) {
@@ -718,12 +719,7 @@ protected:
         mNodeLockLicenseFilePath = mNodeLockLicenseDirPath + path_sep + designHash + ".lic";
         Debug("Creating hash name based on design info: ", designHash);
         // - Save license request to file
-        std::ofstream ofs( mNodeLockRequestFilePath );
-        Json::StyledWriter json_writer;
-        ofs << json_writer.write( request_json );
-        if (!ofs.good())
-            Throw(DRM_ExternFail, "Unable to write node-locked license request to file: ", mNodeLockRequestFilePath);
-        ofs.close();
+        saveJsonToFile( mNodeLockRequestFilePath, request_json );
         Debug("License request file saved on: ", mNodeLockRequestFilePath);
     }
 
@@ -759,12 +755,7 @@ protected:
             // - Send request to web service and receive the new license
             license_json = getDrmWSClient().getLicense( request_json );
             // - Save license to file
-            std::ofstream ofs( mNodeLockLicenseFilePath );
-            Json::StyledWriter json_writer;
-            ofs << json_writer.write( license_json );
-            if (!ofs.good())
-                Throw(DRM_ExternFail, "Unable to write newly received node-locked license to file: ", mNodeLockLicenseFilePath);
-            ofs.close();
+            saveJsonToFile( mNodeLockLicenseFilePath, license_json );
             Debug("Requested and saved new node-locked license file: ", mNodeLockLicenseFilePath);
         }
         // Install the license
@@ -1175,6 +1166,11 @@ public:
                         Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", json_value[key_str] );
                         break;
                     }
+                    case ParameterKey::license_status: {
+                        json_value[key_str] = isLicenseActive();
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", json_value[key_str] );
+                        break;
+                    }
                     case ParameterKey::metered_data: {
 #if ((JSONCPP_VERSION_MAJOR ) >= 1 and ((JSONCPP_VERSION_MINOR) > 7 or ((JSONCPP_VERSION_MINOR) == 7 and JSONCPP_VERSION_PATCH >= 5)))
                         uint64_t metered_data = getMeteringData();
@@ -1283,14 +1279,9 @@ public:
 
     void get( std::string& json_string ) const {
         TRY
-            Json::Value root;
-            Json::Reader reader;
-            if ( !reader.parse( json_string, root ) )
-                Throw(DRM_BadFormat, "Cannot parse JSON string argument provided to 'get' function:\n",
-                        json_string, "\nBecause: ", reader.getFormattedErrorMessages());
+            Json::Value root = parseJsonString(json_string);
             get(root);
-            Json::StyledWriter json_writer;
-            json_string = json_writer.write(root);
+            json_string = root.toStyledString();
         CATCH_AND_THROW
     }
 
@@ -1360,11 +1351,7 @@ public:
 
     void set( const std::string& json_string ) {
         TRY
-            Json::Value root;
-            Json::Reader reader;
-            if ( !reader.parse( json_string, root ) )
-                Throw(DRM_BadFormat, "Cannot parse JSON string argument provided to 'set' function:\n",
-                        json_string, "\nBecause: ", reader.getFormattedErrorMessages());
+            Json::Value root = parseJsonString(json_string);
             set(root);
         CATCH_AND_THROW
     }
