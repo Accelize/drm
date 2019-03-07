@@ -95,7 +95,7 @@ def assert_NoErrorCallback( async_cb, extra_msg=None ):
     assert async_cb.errcode is None, '%sAsynchronous callback returned error code: %d' % (prepend_msg, async_cb.errcode)
     assert not async_cb.was_called, '%sAsynchronous callback has been called' % prepend_msg
 
-@pytest.mark.skip
+#@pytest.mark.skip
 def test_metered_short_time_use_case(accelize_drm, conf_json, cred_json, async_handler):
     """Test no error occurs in normal metering mode."""
 
@@ -139,7 +139,7 @@ def test_metered_short_time_use_case(accelize_drm, conf_json, cred_json, async_h
     finally:
         drm_manager.deactivate()
 
-@pytest.mark.skip
+#@pytest.mark.skip
 def test_bad_authentication(accelize_drm, conf_json, cred_json, async_handler):
     """Test errors when bad authentication parameters are provided to
     DRM Manager Constructor or Web Service."""
@@ -189,7 +189,7 @@ def test_bad_authentication(accelize_drm, conf_json, cred_json, async_handler):
         if drm_manager:
             drm_manager.deactivate()
 
-@pytest.mark.skip
+#@pytest.mark.skip
 def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_json, async_handler):
     """Test errors when wrong url is given to DRM Controller Constructor"""
 
@@ -333,7 +333,7 @@ def test_bad_product_id(accelize_drm, conf_json, cred_json, async_handler):
     assert get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
     assert_NoErrorCallback(async_cb)
 
-@pytest.mark.skip
+#@pytest.mark.skip
 def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_json, async_handler):
     """Test accesses to parameter"""
 
@@ -606,7 +606,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     # Write-only: only for testing, uses a bad product ID.
     # => Skipped: Tested in test_bad_product_id
 
-@pytest.mark.skip
+#@pytest.mark.skip
 def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cred_json, async_handler):
     """Test accesses to parameter"""
 
@@ -827,7 +827,7 @@ def test_2_drm_manager_concurrently(accelize_drm, conf_json, cred_json, async_ha
         )
     assert 'Another instance of the DRM Manager is currently owning the HW' in str(excinfo.value)
 
-@pytest.mark.skip
+#@pytest.mark.skip
 def test_activation_and_license_status(accelize_drm, conf_json, cred_json, async_handler):
     """Test status of IP activators"""
 
@@ -1011,7 +1011,7 @@ def test_activation_and_license_status(accelize_drm, conf_json, cred_json, async
         if drm_manager:
             drm_manager.deactivate()
 
-@pytest.mark.skip
+#@pytest.mark.skip
 def test_session_status(accelize_drm, conf_json, cred_json, async_handler):
     """Test status of session"""
 
@@ -1216,7 +1216,7 @@ def test_session_status(accelize_drm, conf_json, cred_json, async_handler):
             drm_manager.deactivate()
 
 
-#@pytest.mark.skip
+@pytest.mark.skip
 def test_license_expiration(accelize_drm, conf_json, cred_json, async_handler):
     """Test license expiration"""
 
