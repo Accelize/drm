@@ -22,6 +22,7 @@ limitations under the License.
 namespace Accelize {
 namespace DRM {
 
+
 std::ostream& operator<<(std::ostream& os, const Json::ValueType& type) {
     switch(type) {
         case Json::nullValue    : os << "nullValue"; break;
@@ -37,19 +38,61 @@ std::ostream& operator<<(std::ostream& os, const Json::ValueType& type) {
     return os;
 }
 
-Json::Value parseConfiguration( const std::string &file_path ) {
-    Json::Value json_value;
-    Json::Reader reader;
+
+std::string saveJsonToString( const Json::Value& json_value, const std::string& indent ) {
+    Json::StreamWriterBuilder builder;
+    builder["indentation"] = indent;
+    return Json::writeString( builder, json_value );
+}
+
+
+void saveJsonToFile( const std::string& file_path, const Json::Value& json_value, const std::string& indent ) {
+    Json::StreamWriterBuilder builder;
+    builder["indentation"] = indent;
+    std::unique_ptr<Json::StreamWriter> writer( builder.newStreamWriter() );
+    std::ofstream ofs( file_path );
+
+    if ( !ofs.is_open() )
+        Throw( DRM_ExternFail, "Unable to access file: ", file_path );
+    if ( writer->write( json_value, &ofs ) )
+        Throw(DRM_ExternFail, "Unable to write file: ", file_path);
+    if ( !ofs.good())
+        Throw(DRM_ExternFail, "Unable to write file: ", file_path);
+    ofs.close();
+}
+
+
+Json::Value parseJsonString(const std::string &json_string) {
+    Json::Value json_node;
+    std::string parseErr;
+    Json::CharReaderBuilder builder;
+    std::unique_ptr<Json::CharReader> const reader(builder.newCharReader() );
+
+    if ( json_string.size() == 0 )
+        Throw( DRM_BadArg, "Cannot parse an empty JSON string" );
+    if ( !reader->parse( json_string.c_str(), json_string.c_str() + json_string.size(), &json_node, &parseErr) )
+        Throw( DRM_BadFormat, "Cannot parse following JSON string because ", parseErr, "\n", json_string );
+
+    return json_node;
+}
+
+
+Json::Value parseJsonFile( const std::string& file_path ) {
+    Json::Value json_node;
+    std::string parseErr;
+    Json::CharReaderBuilder builder;
     std::ifstream fh( file_path );
-    if ( !fh.good() ) {
+
+    if ( !fh.good() )
         Throw( DRM_BadArg, "Cannot find JSON file: ", file_path );
-    }
-    bool ret = reader.parse( fh, json_value );
+    bool ret = Json::parseFromStream( builder, fh, &json_node, &parseErr);
     fh.close();
     if ( !ret  )
-        Throw( DRM_BadFormat, "Cannot parse ", file_path, " : ", reader.getFormattedErrorMessages() );
-    return json_value;
+        Throw( DRM_BadFormat, "Cannot parse ", file_path, " : ", parseErr );
+
+    return json_node;
 }
+
 
 const Json::Value& JVgetRequired(const Json::Value& jval, const char* key, const Json::ValueType& type) {
     if (!jval.isMember(key))
@@ -65,6 +108,7 @@ const Json::Value& JVgetRequired(const Json::Value& jval, const char* key, const
 
     return jvalmember;
 }
+
 
 const Json::Value& JVgetOptional(const Json::Value& jval, const char* key, const Json::ValueType& type, const Json::Value& defaultValue) {
     bool exists = jval.isMember(key);
