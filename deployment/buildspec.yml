@@ -68,16 +68,31 @@ phases:
             sudo -E docker-compose up"
 
       # Tests packages
-      # TODO: Add run tests commands
       - xlz
         --if file_exists=artifacts/packages.tar.gz
         run
         docker
+        drmlib_dev=dev drmlib_cred_json
         -s ubuntu
         -p f1.4xlarge
         -n drm_packages_tests
-        --gz_upload packages.tar.gz /dev/shm/packages
-        -r ""
+        --gz_upload artifacts/packages.tar.gz /dev/shm/packages
+        -x OS centos_7
+        -x OS debian_stretch
+        -x OS debian_testing
+        -x OS fedora_latest
+        -x OS ubuntu_bionic
+        -x OS ubuntu_rolling
+        -x OS ubuntu_xenial
+        -r 'cd /dev/shm &&
+            sudo docker run -ti --privileged
+            -e PACKAGES_DIR=/opt/packages/~{OS}~
+            -v /dev/shm:/opt/
+            accelize/accelizedrm-ci:test-aws_f1-~{OS}~
+            bash -c "cd /opt/drmlib_dev &&
+                     tox --workdir=/tmp
+                     -e package-install,c-install,cpp-install
+                     -p all -- --cred=/opt/cred.json"'
 
       # Upload packages to repository
       - xlz
