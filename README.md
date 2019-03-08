@@ -15,9 +15,9 @@ This library provides C/C++/Python API.
 
 For more information see [Documentation](https://drmlib.readthedocs.io/).
 
-## Licenses
+## License
 
-Please consult [license](licenses/LICENSE)
+Please consult [license](LICENSE)
 
 ## Changelog
 
