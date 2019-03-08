@@ -618,7 +618,7 @@ This scenario performs following actions:
 * Run Integration tests.
 * Install libraries (``install`` mode only).
 * Generate documentation (except in ``debug`` mode).
-* Generade and export packages (``release`` mode only).
+* Generate and export packages (``release`` mode only).
 * Combine all tests coverage and generate Python/C/C++ coverage report
   (``debug`` mode only).
 
@@ -639,9 +639,9 @@ The ``--backend`` option si not supported because managed by tox.
 It is possible to reduce the scenario scope with the ``-e`` tox argument:
 
 .. code-block:: bash
-    :caption: Build in debug mode and run tests with coverage
+    :caption: Build in debug mode and run all tests with coverage
 
-    tox -e build-debug,cpp-debug,c-debug,coverage-debug -- --cred=~/my_application/cred.json
+    tox -e build-debug,cpp-debug,c-debug,integration-debug,coverage-debug -- --cred=~/my_application/cred.json
 
 Coverage reports can be found in the ``report`` directory in the tox debug build
 environment (By default: ``./.tox/debug/build/report``)
