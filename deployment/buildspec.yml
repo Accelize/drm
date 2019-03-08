@@ -81,9 +81,10 @@ phases:
         -x OS debian_stretch
         -x OS debian_testing
         -x OS fedora_latest
-        -x OS ubuntu_bionic
-        -x OS ubuntu_rolling
-        -x OS ubuntu_xenial
+        # TODO: AWS FGPA SDK do not build, wait for fixed version (Fixed on Github dev branch)
+        #-x OS ubuntu_bionic
+        #-x OS ubuntu_rolling
+        #-x OS ubuntu_xenial
         -r 'cd /dev/shm &&
             sudo docker run -ti --privileged
             -e PACKAGES_DIR=/opt/packages/~{OS}~
