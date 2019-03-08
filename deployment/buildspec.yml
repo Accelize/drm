@@ -45,12 +45,14 @@ phases:
             cmake -DPYTHON3=ON -DDOC=ON .. &&
             make -s -j &&
             tar -zcf ../artifacts/doc.tar.gz ./doc_html"
+        -v
 
       # Upload documentation
       - xlz
         --if file_exists=artifacts/doc.tar.gz
         install
         drmlib_publish_doc=artifacts/doc.tar.gz
+        -v
 
       # Build packages
       - xlz
@@ -100,6 +102,7 @@ phases:
         --if file_exists=artifacts/packages.tar.gz
         install
         drmlib_publish_packages=artifacts/packages.tar.gz
+        -v
 
 artifacts:
   files:

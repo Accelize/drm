@@ -533,6 +533,8 @@ Tests support following options:
 * **--library_verbosity**: Specify Accelize DRM library verbosity.
   Possibles values: ``0`` to ``5``. Default: ``4``.
 
+* **--library_log_format**: Specify library log format.
+
 * **--fpga_image**: Select FPGA image to use for program the FPGA. By default,
   use default FPGA image for the selected driver and last HDK version.
   Set to empty string to not program the FPGA.
