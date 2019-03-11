@@ -13,11 +13,25 @@ if __name__ == '__main__':
 
         parser = ArgumentParser(
             prog='release', description=
-            'Release Accelize DRM library after performing verifications.')
+            'Release Accelize DRM library. This tool performs sanity checks and'
+            ' add a Git tag for the release, then CI start and perform release '
+            'steps (Tests, packaging, deployment).'
+        )
         parser.add_argument(
-            'version', help='Version to release in semantic versioning format.')
+            'version', help=
+            'Version to release in semantic versioning format. '
+            'Expected format: '
+            'Stable: "1.0.0"; '
+            'Alpha: "1.0.0-alpha.1"; '
+            'Beta: "1.0.0-beta.1"; '
+            'Release candidate: "1.0.0-rc.1"'
+        )
         parser.add_argument('--force', '-f', action='store_true',
                             help='Force overwriting exiting release.')
+        parser.add_argument('--remove', '-r', action='store_true',
+                            help='Remove release tag if exist.')
+        parser.add_argument('--dry', '-d', action='store_true',
+                            help='Dry run. Do not modify Git repository')
         args = parser.parse_args()
 
         from os import chdir
@@ -104,14 +118,15 @@ if __name__ == '__main__':
         # Checks if tag not already exists on origin or locally
         result = run(['git', 'ls-remote', '--tags', 'origin'], **run_args)
         result.check_returncode()
-        remote_existing_tags = set(result.stdout.splitlines())
+        remote_existing_tags = set(
+            line.rsplit('/', 1)[1] for line in result.stdout.splitlines())
 
         result = run(['git', 'tag'], **run_args)
         result.check_returncode()
         existing_tags = set(result.stdout.splitlines())
 
         if version in remote_existing_tags or version in existing_tags:
-            if not args.force:
+            if not (args.force or args.remove):
                 print(f'A release with version {version} already exist !')
                 answer = None
                 while answer not in ('y', 'n'):
@@ -126,21 +141,24 @@ if __name__ == '__main__':
 
             # Remove previously existing tag
             print(f"Removing previous {version} tag...")
-            if version in remote_existing_tags:
+            if version in remote_existing_tags and not args.dry:
                 run(['git', 'push', '--delete', 'origin ', version],
                     **run_args).check_returncode()
-            if version in existing_tags:
+            if version in existing_tags and not args.dry:
                 run(['git', 'tag', '--delete', version],
                     **run_args).check_returncode()
 
         # Add tag and push
-        print(f'Adding {version} tag...')
-        run(['git', 'tag', '-a', version, '-m', f'Release {version}'],
-            **run_args).check_returncode()
+        if not args.remove:
+            print(f'Adding {version} tag...')
+            if not args.dry:
+                run(['git', 'tag', '-a', version, '-m', f'Release {version}'],
+                    **run_args).check_returncode()
 
-        print('Pushing tag...')
-        run(['git', 'push', '--tags'], **run_args).check_returncode()
+            print('Pushing tag...')
+            if not args.dry:
+                run(['git', 'push', '--tags'], **run_args).check_returncode()
 
-        parser.exit(0, 'Release successful')
+            parser.exit(message='Release successful')
 
     _release()

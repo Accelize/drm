@@ -11,8 +11,8 @@ Software requirements:
 * The Accelize DRM library requires a compiler with full C++11 support.
 * The Accelize DRM Python library requires Python >= 3.5.
 
-Accelize support following "long time support" OS during their entire lifecycle,
-and provides fully tests packages for them:
+Accelize support following "long time support" OS and provides fully tested
+packages for them:
 
 * RHEL/Centos 7 [#f1]_
 * Debian 9 Stretch
@@ -27,7 +27,7 @@ Following OS are tested but not supported by Accelize:
 * Fedora (Last stable version) [#f3]_
 * Ubuntu (Last stable version) [#f3]_
 
-.. [#f2] No packages provided.
+.. [#f2] No packages are provided.
 .. [#f3] Packages are only provided for last version available.
 
 Installation from packages
@@ -134,19 +134,11 @@ It can be installed using package manager:
 .. note:: The ``libaccelize-drm`` package is automatically installed with the
           ``python3-accelize-drm`` package.
 
-The Python library can also be installed with Pip. In this case, the library
-will be compiled from source distribution and require the Accelize DRM C/C++
-development package.
-
-.. code-block:: bash
-
-    pip3 install -U accelize_drm
-
 C/C++ Development package
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The development package contain C/C++ header files and documentation.
-It is required to build application that depends on Accelize DRM.
+It is required to build applications that depends on Accelize DRM.
 
 It can be installed using package manager:
 
@@ -208,7 +200,7 @@ Run following commands to install requirements:
     sudo dnf install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel
 
 We recommend to install CMake as Python package to get a recent version
-(Some version packaged on some OS are too old to build the Accelize DRM library)
+(Versions packaged on some OS are too old to build the Accelize DRM library)
 
 Run following command to install CMake as Python package:
 
@@ -223,7 +215,7 @@ To build Python Library
 
 Packages:
 
-* Python 3 with development package
+* Python3-devel
 
 Python packages:
 
@@ -247,6 +239,7 @@ Run following command to install requirements:
 
     # Install Python3.6
     sudo yum install -y python36 python36-devel
+    sudo ln -s /usr/bin/python36 /usr/bin/python3
 
     # Install Pip
     sudo python36 -m ensurepip
@@ -540,6 +533,8 @@ Tests support following options:
 * **--library_verbosity**: Specify Accelize DRM library verbosity.
   Possibles values: ``0`` to ``5``. Default: ``4``.
 
+* **--library_log_format**: Specify library log format.
+
 * **--fpga_image**: Select FPGA image to use for program the FPGA. By default,
   use default FPGA image for the selected driver and last HDK version.
   Set to empty string to not program the FPGA.
@@ -549,7 +544,6 @@ Tests support following options:
   version.
 
 * **--integration**: Run integration tests, needs 2 FPGA.
-
 
 Running test on previously build environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -618,7 +612,7 @@ This scenario performs following actions:
 * Run Integration tests.
 * Install libraries (``install`` mode only).
 * Generate documentation (except in ``debug`` mode).
-* Generade and export packages (``release`` mode only).
+* Generate and export packages (``release`` mode only).
 * Combine all tests coverage and generate Python/C/C++ coverage report
   (``debug`` mode only).
 
@@ -639,9 +633,9 @@ The ``--backend`` option si not supported because managed by tox.
 It is possible to reduce the scenario scope with the ``-e`` tox argument:
 
 .. code-block:: bash
-    :caption: Build in debug mode and run tests with coverage
+    :caption: Build in debug mode and run all tests with coverage
 
-    tox -e build-debug,cpp-debug,c-debug,coverage-debug -- --cred=~/my_application/cred.json
+    tox -e build-debug,cpp-debug,c-debug,integration-debug,coverage-debug -- --cred=~/my_application/cred.json
 
 Coverage reports can be found in the ``report`` directory in the tox debug build
 environment (By default: ``./.tox/debug/build/report``)

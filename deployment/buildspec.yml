@@ -20,6 +20,28 @@ phases:
 
   build:
     commands:
+
+      # Build documentation
+      - xlz
+        --if git_file_changed='doc/|include/|python/src|python/accelize_drm'
+        --if git_branch=master,dev
+        install
+        drmlib_build_deps
+        drmlib_doc_deps
+        -r "mkdir build_doc &&
+        cd build_doc &&
+        cmake -DPYTHON3=ON -DDOC=ON .. &&
+        make -s -j &&
+        tar -zcf ../artifacts/doc.tar.gz ./doc_html"
+        -v
+
+      # Upload documentation
+      - xlz
+        --if file_exists=artifacts/doc.tar.gz
+        install
+        drmlib_publish_doc=artifacts/doc.tar.gz
+        -v
+
       # Run Debug tests
       - xlz
         --if git_file_changed='(?!test/utils/|doc/|deployment/|LICENSE|README\\.md|\\.gitgnore)'
@@ -32,25 +54,6 @@ phases:
         -z /dev/shm/drmlib_dev/.tox/debug/build/report artifacts/report.tar.gz
         -r "cd /dev/shm/drmlib_dev &&
             sudo -E tox -p all -e build-debug,cpp-debug,c-debug,integration-debug,coverage-debug -- --cred=/dev/shm/cred.json"
-
-      # Build documentation
-      - xlz
-        --if git_file_changed='doc/|include/|python/src|python/accelize_drm'
-        --if git_branch=master,dev
-        install
-        drmlib_build_deps
-        drmlib_doc_deps
-        -r "mkdir build_doc &&
-            cd build_doc &&
-            cmake -DPYTHON3=ON -DDOC=ON .. &&
-            make -s -j &&
-            tar -zcf ../artifacts/doc.tar.gz ./doc_html"
-
-      # Upload documentation
-      - xlz
-        --if file_exists=artifacts/doc.tar.gz
-        install
-        drmlib_publish_doc=artifacts/doc.tar.gz
 
       # Build packages
       - xlz
@@ -68,22 +71,39 @@ phases:
             sudo -E docker-compose up"
 
       # Tests packages
-      # TODO: Add run tests commands
+        # TODO: AWS FGPA SDK do not build, wait for fixed version (Fixed on Github dev branch)
+        #-x OS ubuntu_bionic
+        #-x OS ubuntu_rolling
+        #-x OS ubuntu_xenial
       - xlz
         --if file_exists=artifacts/packages.tar.gz
         run
         docker
+        drmlib_dev=dev drmlib_cred_json
         -s ubuntu
         -p f1.4xlarge
         -n drm_packages_tests
-        --gz_upload packages.tar.gz /dev/shm/packages
-        -r ""
+        --gz_upload artifacts/packages.tar.gz /dev/shm/packages
+        -x OS centos_7
+        -x OS debian_stretch
+        -x OS debian_testing
+        -x OS fedora_latest
+        -r 'cd /dev/shm &&
+            sudo docker run -ti --privileged
+            -e PACKAGES_DIR=/opt/packages/~{OS}~
+            -v /dev/shm:/opt/
+            accelize/accelizedrm-ci:test-aws_f1-~{OS}~
+            bash -c "cd /opt/drmlib_dev &&
+                     tox --workdir=/tmp
+                     -e package-install,c-install,cpp-install
+                     -p all -- --cred=/opt/cred.json"'
 
       # Upload packages to repository
       - xlz
         --if file_exists=artifacts/packages.tar.gz
         install
         drmlib_publish_packages=artifacts/packages.tar.gz
+        -v
 
 artifacts:
   files:
