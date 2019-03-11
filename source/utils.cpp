@@ -89,6 +89,8 @@ Json::Value parseJsonFile( const std::string& file_path ) {
     fh.close();
     if ( !ret  )
         Throw( DRM_BadFormat, "Cannot parse ", file_path, " : ", parseErr );
+    if ( json_node.empty() )
+        Throw( DRM_BadArg, "JSON file '", file_path, "' is empty" );
 
     return json_node;
 }
@@ -97,7 +99,6 @@ Json::Value parseJsonFile( const std::string& file_path ) {
 const Json::Value& JVgetRequired(const Json::Value& jval, const char* key, const Json::ValueType& type) {
     if (!jval.isMember(key))
         Throw(DRM_BadFormat, "Missing parameter '", key, "' of type ", type);
-
     const Json::Value& jvalmember = jval[key];
     if (jvalmember.type()!=type && !jvalmember.isConvertibleTo(type))
         Throw(DRM_BadFormat, "Wrong parameter type for '", key, "' = ", jvalmember, ", expecting ", type, ", parsed as ", jvalmember.type());

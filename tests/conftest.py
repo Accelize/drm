@@ -5,6 +5,7 @@ from os.path import realpath, isfile, expanduser, splitext, join, dirname
 from json import dump, load
 from copy import deepcopy
 from re import search
+
 import pytest
 
 _TESTS_PATH = dirname(realpath(__file__))
@@ -77,7 +78,7 @@ def pytest_addoption(parser):
         "--library_verbosity", action="store", default='4',
         help='Specify "libaccelize_drm" verbosity level')
     parser.addoption(
-        "--library_log_format", action="store", default='0',
+        "--library_logformat", action="store", default='0',
         help='Specify "libaccelize_drm" log format')
     parser.addoption(
         "--fpga_image", default="default",
@@ -131,14 +132,6 @@ def accelize_drm(pytestconfig):
     else:
         build_environment = False
         build_type = 'release'
-
-    # Set verbosity level
-    verbosity = pytestconfig.getoption("library_verbosity")
-    environ['ACCELIZE_DRM_VERBOSE'] = verbosity
-
-    # Set log format
-    log_format = pytestconfig.getoption("library_log_format")
-    environ['ACCELIZE_DRM_LOG_FORMAT'] = log_format
 
     # Check cred.json
     if not isfile(realpath(expanduser(pytestconfig.getoption("cred")))):
@@ -229,7 +222,6 @@ def accelize_drm(pytestconfig):
     _accelize_drm.pytest_fpga_driver = fpga_driver
     _accelize_drm.pytest_fpga_image = fpga_image
     _accelize_drm.pytest_hdk_version = hdk_version
-    _accelize_drm.pytest_lib_verbosity = verbosity
 
     return _accelize_drm
 
@@ -283,8 +275,11 @@ class _Json:
 class ConfJson(_Json):
     """conf.json file"""
 
-    def __init__(self, tmpdir, url):
-        _Json.__init__(self, tmpdir, 'conf.json', get_default_conf_json(url))
+    def __init__(self, tmpdir, url, **kwargs):
+        content = get_default_conf_json(url)
+        for k, v in kwargs.items():
+            content[k] = v
+        _Json.__init__(self, tmpdir, 'conf.json', content)
 
 
 class CredJson(_Json):
@@ -297,13 +292,8 @@ class CredJson(_Json):
                 cred = load(cref_file)
         except OSError:
             cred = dict(client_id='', secret_id='')
-
         # Load from user specified cred.json
         _Json.__init__(self, tmpdir, 'cred.json', cred)
-
-        # Save current user as default
-        self._default_client_id = self._content['client_id']
-        self._default_client_secret = self._content['client_secret']
 
     def set_user(self, user=None):
         """
@@ -313,17 +303,14 @@ class CredJson(_Json):
             user (str): User to use. If not specified, use default user.
         """
         if user is None:
-            self._content['client_id'] = self._default_client_id
-            self._content['client_secret'] = self._default_client_secret
+            self['client_id'] = self._initial_content['client_id']
+            self['client_secret'] = self._initial_content['client_secret']
         else:
             try:
-                self._content['client_id'] = self._content[
-                    'client_id_%s' % user]
-                self._content['client_secret'] = self._content[
-                    'client_secret_%s' % user]
+                self['client_id'] = self._initial_content['client_id_%s' % user]
+                self['client_secret'] = self._initial_content['client_secret_%s' % user]
             except KeyError:
-                raise ValueError(
-                    'User "%s" not found in "%s"' % (
+                raise ValueError( 'User "%s" not found in "%s"' % (
                         user, self._init_cref_path))
         self.save()
 
@@ -333,7 +320,11 @@ def conf_json(pytestconfig, tmpdir):
     """
     Manage "conf.json" in testing environment.
     """
-    return ConfJson(tmpdir, pytestconfig.getoption("server"))
+    log_param = { 'log_verbosity': int(pytestconfig.getoption("library_verbosity")),
+                  'log_format': int(pytestconfig.getoption("library_logformat")) }
+    json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param)
+    json_conf.save()
+    return json_conf
 
 
 @pytest.fixture
@@ -454,12 +445,26 @@ class AsyncErrorHandler:
             self.errcode = int(m.group(1))
         else:
             self.errcode = None
+    def assert_NoError( self, extra_msg=None ):
+        if extra_msg is None:
+            prepend_msg = ''
+        else:
+            prepend_msg = '%s: ' % extra_msg
+        assert self.message is None, '%sAsynchronous callback reports a message: %s' % (prepend_msg, self.message)
+        assert self.errcode is None, '%sAsynchronous callback returned error code: %d' % (prepend_msg, self.errcode)
+        assert not self.was_called, '%sAsynchronous callback has been called' % prepend_msg
+
 
 class AsyncErrorHandlerList(list):
     def create(self):
         cb = AsyncErrorHandler()
         super(AsyncErrorHandlerList, self).append(cb)
         return cb
+    def parse_error_code(self, msg):
+        from re import search
+        match = search(r'\[errCode=(\d+)\]', msg)
+        assert match, "Could not find 'errCode' in exception message: %s" % msg
+        return int(match.group(1))
 
 
 @pytest.fixture

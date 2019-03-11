@@ -8,6 +8,9 @@
   },
   "drm": {
     "frequency_mhz": 125
+  },
+  "settings": {
+    "log_verbosity": 2
   }
 }
 
