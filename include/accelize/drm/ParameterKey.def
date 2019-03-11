@@ -9,12 +9,15 @@ PARAMETERKEY_ITEM( nodelocked_request_file )        ///< Read-only, return strin
 PARAMETERKEY_ITEM( drm_frequency )                  ///< Read-only, return the measured DRM frequency
 PARAMETERKEY_ITEM( product_id )                     ///< Read-only, return the product ID
 PARAMETERKEY_ITEM( mailbox_size )                   ///< Read-only, return the size of the Mailbox read-write memory in DRM Controller
+PARAMETERKEY_ITEM( log_verbosity )                  ///< Read-write, read and write the logging verbosity: 0=quiet, 5=debug2
+PARAMETERKEY_ITEM( log_format )                     ///< Read-write, read and write the logging format: 0=short, 1=long
 PARAMETERKEY_ITEM( frequency_detection_threshold )  ///< Read-write, read and write frequency gap threshold used to measure the real DRM Controller frequency
 PARAMETERKEY_ITEM( frequency_detection_period )     ///< Read-write, read and write the period of time in milliseconds used to measure the real DRM Controller frequency
 PARAMETERKEY_ITEM( custom_field )                   ///< Read-write, only for testing, any uint32_t register accessible to the user for any purpose
 PARAMETERKEY_ITEM( mailbox_data )                   ///< Read-write, only for testing, read or write values to Mailbox read-write memory in DRM Controller
 PARAMETERKEY_ITEM( retry_deadline )                 ///< Read-write, read and write the retry period deadline in seconds from the license timeout during which no more retry is sent
-PARAMETERKEY_ITEM( list_all )                       ///< Read-only, list all parameter key available
+PARAMETERKEY_ITEM( log_message_level )              ///< Read-write, only for testing, read and write the log level used with log_message parameter to set the message level
+PARAMETERKEY_ITEM( list_all )                       ///< Read-only, list all parameter keys available
 PARAMETERKEY_ITEM( dump_all )                       ///< Read-only, read all parameter key values
 PARAMETERKEY_ITEM( page_ctrlreg )                   ///< Read-only, return nothing, print all registers in the DRM Controller Registry page
 PARAMETERKEY_ITEM( page_vlnvfile )                  ///< Read-only, return nothing, print all registers in the VLNV File page
@@ -26,3 +29,4 @@ PARAMETERKEY_ITEM( hw_report )                      ///< Read-only, return nothi
 PARAMETERKEY_ITEM( trigger_async_callback )         ///< Write-only, only for testing, call the asynchronous error callback with the given message
 PARAMETERKEY_ITEM( bad_authentication_token )       ///< Write-only, only for testing, uses a bad authentication token
 PARAMETERKEY_ITEM( bad_product_id )                 ///< Write-only, only for testing, uses a bad product ID
+PARAMETERKEY_ITEM( log_message )                    ///< Write-only, only for testing, insert a message with the value as content

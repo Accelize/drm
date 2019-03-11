@@ -41,28 +41,28 @@ void checkPointer(void *p) {
         memset(m->error_message, 0, MAX_MSG_SIZE); \
     try {
 
-#define CATCH_RETURN                                                    \
-    } catch(const cpp::Exception& e) {                                  \
-        int cp_size = strlen( e.what() );                               \
-        if ( cp_size > MAX_MSG_SIZE) {                                  \
-            cp_size = MAX_MSG_SIZE - 5;                                 \
-            strcpy( m->error_message + MAX_MSG_SIZE-5, "[...]" );       \
-        }                                                               \
-        strncpy( m->error_message, e.what(), cp_size );                 \
-        if (cpp::getLogLevel() >= cpp::eLogLevel::ERROR)                \
-            cpp::logTrace("ERROR", __SHORT_FILE__, __LINE__, e.what()); \
-        __try_ret = e.getErrCode();                                     \
-    } catch(const std::exception& e) {                                  \
-        int cp_size = strlen( e.what() );                               \
-        if ( cp_size > MAX_MSG_SIZE) {                                  \
-            cp_size = MAX_MSG_SIZE - 5;                                 \
-            strcpy( m->error_message + MAX_MSG_SIZE-5, "[...]" );       \
-        }                                                               \
-        strncpy( m->error_message, e.what(), cp_size );                 \
-        if (cpp::getLogLevel() >= cpp::eLogLevel::ERROR)                \
-            cpp::logTrace("ERROR", __SHORT_FILE__, __LINE__, e.what()); \
-        __try_ret = DRM_Fatal;                                          \
-    }                                                                   \
+#define CATCH_RETURN                                                                  \
+    } catch(const cpp::Exception& e) {                                                \
+        int cp_size = strlen( e.what() );                                             \
+        if ( cp_size > MAX_MSG_SIZE) {                                                \
+            cp_size = MAX_MSG_SIZE - 5;                                               \
+            strcpy( m->error_message + MAX_MSG_SIZE-5, "[...]" );                     \
+        }                                                                             \
+        strncpy( m->error_message, e.what(), cp_size );                               \
+        if (cpp::sLogVerbosity >= cpp::eLogLevel::ERROR)                              \
+            cpp::logTrace(cpp::eLogLevel::ERROR, __SHORT_FILE__, __LINE__, e.what()); \
+        __try_ret = e.getErrCode();                                                   \
+    } catch(const std::exception& e) {                                                \
+        int cp_size = strlen( e.what() );                                             \
+        if ( cp_size > MAX_MSG_SIZE) {                                                \
+            cp_size = MAX_MSG_SIZE - 5;                                               \
+            strcpy( m->error_message + MAX_MSG_SIZE-5, "[...]" );                     \
+        }                                                                             \
+        strncpy( m->error_message, e.what(), cp_size );                               \
+        if (cpp::sLogVerbosity >= cpp::eLogLevel::ERROR)                              \
+            cpp::logTrace(cpp::eLogLevel::ERROR, __SHORT_FILE__, __LINE__, e.what()); \
+        __try_ret = DRM_Fatal;                                                        \
+    }                                                                                 \
     return __try_ret;
 
 

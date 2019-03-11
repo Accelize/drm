@@ -142,6 +142,10 @@ protected:
     std::condition_variable mThreadKeepAliveCondVar;
     bool mThreadStopRequest{false};
 
+    // Debug parameters
+    eLogLevel mDebugMessageLevel;
+
+
     const std::map<ParameterKey, std::string> mParameterKeyMap = {
     #   define PARAMETERKEY_ITEM(id) {id, #id},
     #   include "accelize/drm/ParameterKey.def"
@@ -163,18 +167,24 @@ protected:
         mConfFilePath = conf_file_path;
         mCredFilePath = cred_file_path;
 
+        mDebugMessageLevel = eLogLevel::QUIET;
+
         // Parse configuration file
         conf_json = parseJsonFile(conf_file_path);
 
         try {
-
-            Json::Value param_lib = JVgetOptional( conf_json, "parameter_key", Json::objectValue );
-            if (!param_lib.empty()) {
-                mRetryDeadline = JVgetOptional( param_lib, "retry_deadline", Json::uintValue, cRetryDeadline).asUInt();
+            Json::Value param_lib = JVgetOptional( conf_json, "settings", Json::objectValue );
+            if ( param_lib != Json::nullValue ) {
+                // Logging
+                sLogVerbosity = static_cast<eLogLevel >(JVgetOptional( param_lib, "log_verbosity", Json::intValue, (int)eLogLevel::QUIET ).asInt());
+                sLogFormat = static_cast<eLogFormat >(JVgetOptional( param_lib, "log_format", Json::intValue, (int)eLogFormat::SHORT ).asInt());
+                // Frequency detection
                 mFrequencyDetectionPeriod = JVgetOptional( param_lib, "frequency_detection_period", Json::uintValue,
-                        cFrequencyDetectionPeriod).asUInt();
+                                                           cFrequencyDetectionPeriod).asUInt();
                 mFrequencyDetectionThreshold = JVgetOptional( param_lib, "frequency_detection_threshold", Json::uintValue,
-                        cFrequencyDetectionThreshold).asDouble();
+                                                              cFrequencyDetectionThreshold).asDouble();
+                // Others
+                mRetryDeadline = JVgetOptional( param_lib, "retry_deadline", Json::uintValue, cRetryDeadline).asUInt();
             } else {
                 mRetryDeadline = cRetryDeadline;
                 mFrequencyDetectionPeriod = cFrequencyDetectionPeriod;
@@ -683,10 +693,6 @@ protected:
             Debug( "Set license #", mLicenseCounter, " of session ID ", mSessionID, " for a duration of ",
                    mLicenseDuration, " seconds" );
         }
-
-        if (getLogLevel() >= eLogLevel::DEBUG2) {
-            Info("Print HW report:\n", getDrmReport());
-        }
     }
 
     std::string getDesignHash() {
@@ -1011,8 +1017,9 @@ protected:
 
     ParameterKey findParameterKey( const std::string& key_string ) const {
         for (auto const& it : mParameterKeyMap) {
-            if (key_string == it.second)
+            if (key_string == it.second) {
                 return it.first;
+            }
         }
         Throw(DRM_BadArg, "Cannot find parameter: ", key_string);
     }
@@ -1135,6 +1142,18 @@ public:
             for (const std::string& key_str : json_value.getMemberNames()) {
                 const ParameterKey key_id = findParameterKey( key_str );
                 switch(key_id) {
+                    case ParameterKey::log_verbosity: {
+                        int logVerbosity = static_cast<int>(sLogVerbosity);
+                        json_value[key_str] = logVerbosity;
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", logVerbosity );
+                        break;
+                    }
+                    case ParameterKey::log_format: {
+                        int logFormat = static_cast<int>(sLogFormat);
+                        json_value[key_str] = logFormat;
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", logFormat );
+                        break;
+                    }
                     case ParameterKey::license_type: {
                         auto it = LicenseTypeStringMap.find( mLicenseType );
                         if ( it == LicenseTypeStringMap.end() )
@@ -1162,13 +1181,15 @@ public:
                         break;
                     }
                     case ParameterKey::session_status: {
-                        json_value[key_str] = isSessionRunning();
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", json_value[key_str] );
+                        bool status = isSessionRunning();
+                        json_value[key_str] = status;
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", status );
                         break;
                     }
                     case ParameterKey::license_status: {
-                        json_value[key_str] = isLicenseActive();
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", json_value[key_str] );
+                        bool status = isLicenseActive();
+                        json_value[key_str] = status;
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", status );
                         break;
                     }
                     case ParameterKey::metered_data: {
@@ -1238,16 +1259,6 @@ public:
                         Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mbSize );
                         break;
                     }
-                    case ParameterKey ::list_all: {
-                        json_value[key_str] = list_parameter_key();
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", json_value[key_str].toStyledString() );
-                        break;
-                    }
-                    case ParameterKey ::dump_all: {
-                        json_value[key_str] = dump_parameter_key();
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", json_value[key_str].toStyledString() );
-                        break;
-                    }
                     case ParameterKey::custom_field: {
                         uint32_t customField = readMailbox( MailboxOffset::MB_CUSTOM_FIELD );
                         json_value[key_str] = customField;
@@ -1265,6 +1276,22 @@ public:
                     case ParameterKey ::retry_deadline: {
                         json_value[key_str] = mRetryDeadline;
                         Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mRetryDeadline );
+                        break;
+                    }
+                    case ParameterKey ::log_message_level: {
+                        int msgLevel = static_cast<int>(mDebugMessageLevel);
+                        json_value[key_str] = msgLevel;
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", msgLevel );
+                        break;
+                    }
+                    case ParameterKey ::list_all: {
+                        json_value[key_str] = list_parameter_key();
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", json_value[key_str].toStyledString() );
+                        break;
+                    }
+                    case ParameterKey::dump_all: {
+                        json_value[key_str] = dump_parameter_key();
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", json_value[key_str].toStyledString() );
                         break;
                     }
                     default: {
@@ -1294,6 +1321,18 @@ public:
                 std::string key_str = it.key().asString();
                 const ParameterKey key_id = findParameterKey( key_str );
                 switch( key_id ) {
+                    case ParameterKey ::log_verbosity: {
+                        int logVerbosity = (*it).asInt();
+                        sLogVerbosity = static_cast<eLogLevel>(logVerbosity);
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", logVerbosity );
+                        break;
+                    }
+                    case ParameterKey ::log_format: {
+                        int logFormat = (*it).asInt();
+                        sLogFormat = static_cast<eLogFormat>(logFormat);
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", logFormat );
+                        break;
+                    }
                     case ParameterKey ::frequency_detection_threshold: {
                         mFrequencyDetectionThreshold = (*it).asDouble();
                         Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", mFrequencyDetectionThreshold );
@@ -1340,6 +1379,17 @@ public:
                     case ParameterKey::bad_product_id: {
                         Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to random value" );
                         mHeaderJsonRequest["product"]["name"] = "BAD_NAME_JUST_FOR_TEST";
+                        break;
+                    }
+                    case ParameterKey::log_message_level: {
+                        int message_level = (*it).asInt();
+                        mDebugMessageLevel = static_cast<eLogLevel>(message_level);
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value ", message_level );
+                        break;
+                    }
+                    case ParameterKey::log_message: {
+                        std::string custom_msg = (*it).asString();
+                        logTrace(mDebugMessageLevel, __SHORT_FILE__, __LINE__, custom_msg);
                         break;
                     }
                     default:

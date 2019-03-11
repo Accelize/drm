@@ -238,7 +238,6 @@ Json::Value DrmWSClient::getLicense(const Json::Value& json_req, std::chrono::st
     } else {
         Debug("Overwriting token with: ", mUseBadOAuth2Token);
         mUseBadOAuth2Token.clear();
-        Debug("NEw token with: ", mUseBadOAuth2Token);
     }
 
     Debug("Web Service JSON request:\n", json_req.toStyledString());
