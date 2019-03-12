@@ -50,7 +50,7 @@ def test_drm_manager_constructor_with_bad_arguments(pytestconfig, accelize_drm, 
             driver.write_register_callback,
             async_cb.callback
         )
-    assert 'Read register callback function must not' in str(excinfo.value)
+    assert 'Read register callback function must' in str(excinfo.value)
     print('Test when no hardware read register function is given: PASS')
 
     # Test when no hardware write register function is given
@@ -62,7 +62,7 @@ def test_drm_manager_constructor_with_bad_arguments(pytestconfig, accelize_drm, 
             driver.read_register_callback,
             None
         )
-    assert 'Write register callback function must not' in str(excinfo.value)
+    assert 'Write register callback function must' in str(excinfo.value)
     print('Test when no hardware write register function is given: PASS')
 
     # Test when read register function is not a callable
@@ -75,7 +75,7 @@ def test_drm_manager_constructor_with_bad_arguments(pytestconfig, accelize_drm, 
             driver.write_register_callback,
             async_cb.callback
         )
-    assert 'Read register callback function must not' in str(excinfo.value)
+    assert 'Read register callback function must' in str(excinfo.value)
     print('Test when read register function is not a callable: PASS')
 
 
