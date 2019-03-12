@@ -45,6 +45,7 @@ phases:
       # Run Debug tests
       - xlz
         --if git_file_changed='(?!test/utils/|doc/|deployment/|LICENSE|README\\.md|\\.gitgnore)'
+        --if git_branch=master,dev
         run
         drmlib_dev=$CODEBUILD_SOURCE_VERSION drmlib_build_deps
         drmlib_unittests_deps drmlib_cred_json drmlib_codecov_token
