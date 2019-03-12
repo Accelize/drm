@@ -17,7 +17,8 @@ DrmManager_alloc, DrmManager_free, DrmManager_activate,
 DrmManager_deactivate, DrmManager_get_json_string, DrmManager_set_json_string,
 DrmManager_getApiVersion)
 
-from accelize_drm.exceptions import _raise_from_error, _async_error_callback, DRMBadArg
+from accelize_drm.exceptions import (
+    _raise_from_error, _async_error_callback, DRMBadArg as _DRMBadArg)
 
 _ASYNC_ERROR_CFUNCTYPE = _CFUNCTYPE(_c_void_p, _c_char_p, _c_void_p)
 _READ_REGISTER_CFUNCTYPE = _CFUNCTYPE(
@@ -33,7 +34,6 @@ def _get_api_version():
         bytes: C library version
     """
     return DrmManager_getApiVersion()
-
 
 cdef class DrmManager:
     """
@@ -69,7 +69,7 @@ cdef class DrmManager:
             If not specified, use default callback that raises
             "accelize_drm.exceptions.DRMException" or its subclasses.
     """
-    cdef C_DrmManager* _drm_manager
+    cdef C_DrmManager*_drm_manager
     cdef object _read_register
     cdef object _read_register_c
     cdef ReadRegisterCallback _read_register_p
@@ -80,9 +80,9 @@ cdef class DrmManager:
     cdef object _async_error_c
     cdef AsynchErrorCallback _async_error_p
     cdef object _conf_file_path
-    cdef char* _conf_file_path_c
+    cdef char*_conf_file_path_c
     cdef object _cred_file_path
-    cdef char* _cred_file_path_c
+    cdef char*_cred_file_path_c
 
     def __cinit__(self, conf_file_path, cred_file_path, read_register,
                   write_register, async_error=None):
@@ -95,11 +95,13 @@ cdef class DrmManager:
 
         # Handle callbacks
         if not hasattr(read_register, "__call__"):
-            _raise_from_error('Read register callback function must not be None',
-                error_code=DRMBadArg.error_code)
+            _raise_from_error(
+                'Read register callback function must be a callable',
+                error_code=_DRMBadArg.error_code)
         if not hasattr(write_register, "__call__"):
-            _raise_from_error('Write register callback function must not be None',
-                error_code=DRMBadArg.error_code)
+            _raise_from_error(
+                'Write register callback function must be a callable',
+                error_code=_DRMBadArg.error_code)
 
         def read_register_c(register_offset, returned_data, user_p):
             """read_register with "user_p" support"""
@@ -107,7 +109,7 @@ cdef class DrmManager:
 
         self._read_register = (read_register_c, read_register)
         self._read_register_c = _READ_REGISTER_CFUNCTYPE(read_register_c)
-        self._read_register_p = (<ReadRegisterCallback*><size_t>_addressof(
+        self._read_register_p = (<ReadRegisterCallback*> <size_t> _addressof(
             self._read_register_c))[0]
 
         def write_register_c(register_offset, returned_data, user_p):
@@ -115,8 +117,8 @@ cdef class DrmManager:
             return write_register(register_offset, returned_data)
 
         self._write_register = (write_register_c, write_register)
-        self._write_register_c  = _WRITE_REGISTER_CFUNCTYPE(write_register_c)
-        self._write_register_p = (<WriteRegisterCallback*><size_t>_addressof(
+        self._write_register_c = _WRITE_REGISTER_CFUNCTYPE(write_register_c)
+        self._write_register_p = (<WriteRegisterCallback*> <size_t> _addressof(
             self._write_register_c))[0]
 
         if async_error is None:
@@ -128,8 +130,8 @@ cdef class DrmManager:
             return async_error(error_message)
 
         self._async_error = (async_error_c, async_error)
-        self._async_error_c  = _ASYNC_ERROR_CFUNCTYPE(async_error_c)
-        self._async_error_p = (<AsynchErrorCallback*><size_t>_addressof(
+        self._async_error_c = _ASYNC_ERROR_CFUNCTYPE(async_error_c)
+        self._async_error_p = (<AsynchErrorCallback*> <size_t> _addressof(
             self._async_error_c))[0]
 
         # Instantiate object
@@ -139,7 +141,7 @@ cdef class DrmManager:
                 &self._drm_manager,
                 self._conf_file_path_c, self._cred_file_path_c,
                 self._read_register_p, self._write_register_p,
-                self._async_error_p, <void*>self)
+                self._async_error_p, <void*> self)
         if return_code:
             _raise_from_error(self._drm_manager.error_message, return_code)
 
@@ -219,7 +221,7 @@ cdef class DrmManager:
             values: Parameters to set as keyword arguments
         """
         values_json = _dumps(values).encode()
-        cdef char* json_in = values_json
+        cdef char*json_in = values_json
 
         cdef int return_code
         with nogil:
@@ -239,12 +241,13 @@ cdef class DrmManager:
                 parameters names as keys else return a single value.
         """
         keys_json = _dumps({key: None for key in keys}).encode()
-        cdef char* json_in = keys_json
-        cdef char* json_out
+        cdef char*json_in = keys_json
+        cdef char*json_out
 
         cdef int return_code
         with nogil:
-             return_code = DrmManager_get_json_string( self._drm_manager, json_in, &json_out )
+            return_code = DrmManager_get_json_string(
+                self._drm_manager, json_in, &json_out)
         if return_code:
             _raise_from_error(self._drm_manager.error_message, return_code)
 
