@@ -15,7 +15,8 @@ PARAMETERKEY_ITEM( frequency_detection_threshold )  ///< Read-write, read and wr
 PARAMETERKEY_ITEM( frequency_detection_period )     ///< Read-write, read and write the period of time in milliseconds used to measure the real DRM Controller frequency
 PARAMETERKEY_ITEM( custom_field )                   ///< Read-write, only for testing, any uint32_t register accessible to the user for any purpose
 PARAMETERKEY_ITEM( mailbox_data )                   ///< Read-write, only for testing, read or write values to Mailbox read-write memory in DRM Controller
-PARAMETERKEY_ITEM( retry_deadline )                 ///< Read-write, read and write the retry period deadline in seconds from the license timeout during which no more retry is sent
+PARAMETERKEY_ITEM( retry_deadline )                 ///< Read-write, read and write the retry deadline in seconds from the license timeout during which no more retry is sent
+PARAMETERKEY_ITEM( ws_request_timeout )             ///< Read-write, read and write the web service request timeout in seconds during which the response is waited
 PARAMETERKEY_ITEM( log_message_level )              ///< Read-write, only for testing, read and write the log level used with log_message parameter to set the message level
 PARAMETERKEY_ITEM( list_all )                       ///< Read-only, list all parameter keys available
 PARAMETERKEY_ITEM( dump_all )                       ///< Read-only, read all parameter key values

@@ -73,6 +73,7 @@ protected:
 
     // Design constants
     const uint32_t cRetryDeadline = 5;
+    const uint32_t cWSRequestTimeout = 30;
     uint32_t cFrequencyDetectionPeriod = 100;  // in milliseconds
     double cFrequencyDetectionThreshold = 2.0;      // Error in percentage
 
@@ -116,7 +117,9 @@ protected:
     std::string mNodeLockLicenseFilePath;
 
     // License related properties
-    uint32_t mRetryDeadline;    ///< Time in seconds before the license expired during which no more retry is authorized
+    uint32_t mRetryDeadline;    ///< Time in seconds before the license expiration during which no more retry is authorized
+    uint32_t mWSRequestTimeout ;      ///< Time in seconds during which retries occur
+
     LicenseType mLicenseType = LicenseType::OTHERS;
     uint32_t mLicenseCounter;
     TClock::time_point mLicenseExpirationDate;
@@ -169,6 +172,11 @@ protected:
 
         mDebugMessageLevel = eLogLevel::QUIET;
 
+        mRetryDeadline = cRetryDeadline;
+        mWSRequestTimeout  = cWSRequestTimeout;
+        mFrequencyDetectionPeriod = cFrequencyDetectionPeriod;
+        mFrequencyDetectionThreshold = cFrequencyDetectionThreshold;
+
         // Parse configuration file
         conf_json = parseJsonFile(conf_file_path);
 
@@ -185,11 +193,9 @@ protected:
                                                               cFrequencyDetectionThreshold).asDouble();
                 // Others
                 mRetryDeadline = JVgetOptional( param_lib, "retry_deadline", Json::uintValue, cRetryDeadline).asUInt();
-            } else {
-                mRetryDeadline = cRetryDeadline;
-                mFrequencyDetectionPeriod = cFrequencyDetectionPeriod;
-                mFrequencyDetectionThreshold = cFrequencyDetectionThreshold;
+                mWSRequestTimeout  = JVgetOptional( param_lib, "ws_request_timeout", Json::uintValue, cWSRequestTimeout).asUInt();
             }
+            initLog();
 
             // Design configuration
             Json::Value conf_design = JVgetOptional( conf_json, "design", Json::objectValue );
@@ -214,18 +220,21 @@ protected:
                 mFrequencyInit = JVgetRequired( conf_drm, "frequency_mhz", Json::intValue ).asUInt();
                 mFrequencyCurr = mFrequencyInit;
                 // Instantiate Web Service client
-                mWsClient.reset( new DrmWSClient(conf_file_path, cred_file_path) );
+                mWsClient.reset( new DrmWSClient( conf_file_path, cred_file_path ) );
+                getDrmWSClient().setRetryDeadline( mRetryDeadline );
+                getDrmWSClient().setRequestTimeout( mWSRequestTimeout );
             }
 
-        } catch(Exception &e) {
-            if (e.getErrCode() != DRM_BadFormat)
+        } catch( Exception &e ) {
+            if ( e.getErrCode() != DRM_BadFormat )
                 throw;
-            Throw(DRM_BadFormat, "Error in configuration file '", conf_file_path, "': ", e.what());
+            Throw( DRM_BadFormat, "Error in configuration file '", conf_file_path, "': ", e.what() );
         }
     }
 
     void initDrmInterface() {
-        if (mDrmController)
+
+        if ( mDrmController )
             return;
 
         // create instance
@@ -759,7 +768,8 @@ protected:
             }
             ifs.close();
             // - Send request to web service and receive the new license
-            license_json = getDrmWSClient().getLicense( request_json );
+            TClock::time_point deadline = TClock::now() + std::chrono::seconds( mWSRequestTimeout  );
+            license_json = getDrmWSClient().getLicense( request_json, deadline );
             // - Save license to file
             saveJsonToFile( mNodeLockLicenseFilePath, license_json );
             Debug("Requested and saved new node-locked license file: ", mNodeLockLicenseFilePath);
@@ -954,7 +964,8 @@ protected:
         Json::Value request_json = getMeteringStart();
 
         // Send request and receive new license
-        Json::Value license_json = getDrmWSClient().getLicense(request_json);
+        Json::Value license_json = getDrmWSClient().getLicense( request_json,
+                std::chrono::seconds( mWSRequestTimeout ) );
         setLicense(license_json);
 
         // Save session ID locally and into web service request header for later request needs
@@ -975,7 +986,8 @@ protected:
             Json::Value request_json = getMeteringWait(1);
 
             // Send license request to web service
-            Json::Value license_json = getDrmWSClient().getLicense( request_json );
+            Json::Value license_json = getDrmWSClient().getLicense( request_json,
+                    std::chrono::seconds( mWSRequestTimeout ) );
 
             // Install license on DRM controller
             setLicense( license_json );
@@ -1001,7 +1013,7 @@ protected:
         Json::Value request_json = getMeteringStop();
 
         // Send request and receive answer.
-        Json::Value license_json = getDrmWSClient().getLicense( request_json );
+        Json::Value license_json = getDrmWSClient().getLicense( request_json, std::chrono::seconds( mWSRequestTimeout ) );
         checkSessionID( license_json );
         Info("Session ID ", mSessionID, " stopped and last metering data uploaded");
 
@@ -1085,6 +1097,7 @@ public:
         }
         stopThread();
         unlockDrmToInstance();
+        uninitLog();
     }
 
     // Non copyable non movable as we create closure with "this"
@@ -1278,6 +1291,11 @@ public:
                         Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mRetryDeadline );
                         break;
                     }
+                    case ParameterKey ::ws_request_timeout: {
+                        json_value[key_str] = mWSRequestTimeout ;
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mWSRequestTimeout  );
+                        break;
+                    }
                     case ParameterKey ::log_message_level: {
                         int msgLevel = static_cast<int>(mDebugMessageLevel);
                         json_value[key_str] = msgLevel;
@@ -1362,6 +1380,11 @@ public:
                     case ParameterKey ::retry_deadline: {
                         mRetryDeadline = (*it).asUInt();
                         Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", mRetryDeadline );
+                        break;
+                    }
+                    case ParameterKey ::ws_request_timeout: {
+                        mWSRequestTimeout  = (*it).asUInt();
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", mWSRequestTimeout  );
                         break;
                     }
                     case ParameterKey::trigger_async_callback: {

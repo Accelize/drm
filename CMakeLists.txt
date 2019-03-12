@@ -192,7 +192,7 @@ set(TARGET_SOURCES
   source/session_manager.cpp
   source/utils.cpp
   source/error.cpp
-)
+        source/log.cpp)
 
 add_library(accelize_drm SHARED ${TARGET_SOURCES})
 set_target_properties(accelize_drm PROPERTIES VERSION ${ACCELIZEDRM_VERSION} SOVERSION ${ABI_VERSION})
@@ -204,7 +204,7 @@ target_link_libraries(accelize_drm ${CMAKE_THREAD_LIBS_INIT})
 ## libaccelize_drmc
 set(TARGET_C_SOURCES
     source/c/wrapperc.cpp
-)
+    source/log.cpp)
 
 add_library(accelize_drmc SHARED ${TARGET_C_SOURCES})
 set_target_properties(accelize_drmc PROPERTIES VERSION ${ACCELIZEDRM_VERSION} SOVERSION ${ABI_VERSION})

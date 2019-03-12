@@ -1,6 +1,6 @@
 """
 To run manually, move to the build directory and execute:
-    sudo LD_LIBRARY_PATH=. pytest -v <path/to/tests/test_with_hardware.py> --cred <path/to/cred.json> --library_verbosity=3 --server='dev' --backend='c++' -s
+    sudo LD_LIBRARY_PATH=. pytest -v <path/to/tests/test_unittest_on_hw.py> --cred <path/to/cred.json> --library_verbosity=3 --server='dev' --backend='c++' -s
 """
 
 import pytest
@@ -31,6 +31,7 @@ _PARAM_LIST = ['license_type',
                'custom_field',
                'mailbox_data',
                'retry_deadline',
+               'ws_request_timeout',
                'log_message_level',
                'list_all',
                'dump_all',
@@ -102,19 +103,15 @@ def test_logging(accelize_drm, conf_json, cred_json, async_handler):
         driver.write_register_callback,
         async_cb.callback
     )
-    try:
-        drm_manager.activate()
-        drm_manager.set(log_message_level=5)
-        msg = 'This should be a DEBUG2 message'
-        drm_manager.set(log_message=msg)
-#        assert 'DEBUG2' in captured.out
-#        assert msg in captured.out
-        async_cb.assert_NoError()
+    drm_manager.set(log_message_level=5)
+    msg = 'This should be a DEBUG2 message'
+    drm_manager.set(log_message=msg)
+#    assert 'DEBUG2' in captured.out
+#    assert msg in captured.out
+    async_cb.assert_NoError()
 
-    finally:
-        drm_manager.deactivate()
 
-#@pytest.mark.skip
+@pytest.mark.skip
 def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cred_json, async_handler):
     """Test errors when bad authentication parameters are provided to
     DRM Manager Constructor or Web Service."""
@@ -164,7 +161,7 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
         if drm_manager:
             drm_manager.deactivate()
 
-#@pytest.mark.skip
+@pytest.mark.skip
 def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_json, async_handler):
     """Test errors when wrong url is given to DRM Controller Constructor"""
 
@@ -308,7 +305,7 @@ def test_configuration_file_bad_product_id(accelize_drm, conf_json, cred_json, a
     assert async_handler.parse_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
     async_cb.assert_NoError()
 
-#@pytest.mark.skip
+@pytest.mark.skip
 def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cred_json, async_handler):
     """Test accesses to parameter"""
 
@@ -331,6 +328,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     origFrequencyDetectPeriod = drm_manager.get('frequency_detection_period')
     origFrequencyDetectThreshold = drm_manager.get('frequency_detection_threshold')
     origRetryDeadline = drm_manager.get('retry_deadline')
+    origResponseTimeout = drm_manager.get('ws_request_timeout')
 
     # Test parameter: log_verbosity
     # Read-write, read and write the logging verbosity: 0=quiet, 5=debug2
@@ -451,6 +449,25 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     async_cb.assert_NoError()
     print("Test parameter 'retry_deadline': PASS")
 
+    # Test parameter: ws_request_timeout
+    # Read-write: read and write the web service request timeout in seconds during which the response is waited
+    async_cb.reset()
+    conf_json.reset()
+    expValue = 2*origResponseTimeout
+    conf_json['settings'] = {'ws_request_timeout': expValue}
+    conf_json.save()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    value = drm_manager.get('ws_request_timeout')
+    assert value == expValue
+    async_cb.assert_NoError()
+    print("Test parameter 'ws_request_timeout': PASS")
+
     # Test unsupported parameter
     # Verify the parameter is simply ignored
     async_cb.reset()
@@ -483,7 +500,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     async_cb.assert_NoError()
     print("Test empty parameter: PASS")
 
-#@pytest.mark.skip
+@pytest.mark.skip
 def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_json, async_handler):
     """Test accesses to parameter"""
 
@@ -763,13 +780,24 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     # Test parameter: retry_deadline
     # Read-write: read and write the retry period deadline in seconds from the license timeout during which no more retry is sent
     origRetryDeadline = drm_manager.get('retry_deadline')  # Save original value
-    expRetryDeadline = origRetryDeadline + 100
-    drm_manager.set(retry_deadline=expRetryDeadline)
-    newRetryDeadline = drm_manager.get('retry_deadline')
-    assert newRetryDeadline == expRetryDeadline, 'Failed to write-read retry_deadline parameter'
+    expValue = origRetryDeadline + 100
+    drm_manager.set(retry_deadline=expValue)
+    value = drm_manager.get('retry_deadline')
+    assert value == expValue
     drm_manager.set(retry_deadline=origRetryDeadline)  # Restore original value
     async_cb.assert_NoError(async_cb.assert_NoError)
     print("Test parameter 'retry_deadline': PASS")
+
+    # Test parameter: ws_request_timeout
+    # Read-write: read and write the web service request timeout in seconds during which the response is waited
+    origResponseTimeout = drm_manager.get('ws_request_timeout')  # Save original value
+    expValue = origResponseTimeout + 100
+    drm_manager.set(ws_request_timeout=expValuee)
+    value = drm_manager.get('ws_request_timeout')
+    assert value == expValue
+    drm_manager.set(ws_request_timeout=origResponseTimeout)  # Restore original value
+    async_cb.assert_NoError(async_cb.assert_NoError)
+    print("Test parameter 'ws_request_timeout': PASS")
 
     # Test parameter: log_message_level
     # Read-write, only for testing, read and write the log level used with log_message parameter to set the message level
@@ -852,7 +880,7 @@ def test_2_drm_manager_concurrently(accelize_drm, conf_json, cred_json, async_ha
         )
     assert 'Another instance of the DRM Manager is currently owning the HW' in str(excinfo.value)
 
-#@pytest.mark.skip
+@pytest.mark.skip
 def test_activation_and_license_status(accelize_drm, conf_json, cred_json, async_handler):
     """Test status of IP activators"""
 
@@ -1036,7 +1064,7 @@ def test_activation_and_license_status(accelize_drm, conf_json, cred_json, async
         if drm_manager:
             drm_manager.deactivate()
 
-#@pytest.mark.skip
+@pytest.mark.skip
 def test_session_status(accelize_drm, conf_json, cred_json, async_handler):
     """Test status of session"""
 
@@ -1241,7 +1269,7 @@ def test_session_status(accelize_drm, conf_json, cred_json, async_handler):
             drm_manager.deactivate()
 
 
-#@pytest.mark.skip
+@pytest.mark.skip
 def test_license_expiration(accelize_drm, conf_json, cred_json, async_handler):
     """Test license expiration"""
 
@@ -1392,7 +1420,7 @@ def test_license_expiration(accelize_drm, conf_json, cred_json, async_handler):
             drm_manager.deactivate()
 
 
-#@pytest.mark.skip
+@pytest.mark.skip
 def test_multiple_call(accelize_drm, conf_json, cred_json, async_handler):
     """Test multiple calls to activate and deactivate"""
 

@@ -65,12 +65,29 @@ enum class eLogFormat {
 };
 
 
-__attribute__((unused)) static eLogLevel sLogVerbosity = eLogLevel::QUIET;
-static eLogFormat sLogFormat = eLogFormat::SHORT;
-static std::ostream& sLogStream = std::cout;
+extern eLogLevel sLogVerbosity;
+extern eLogFormat sLogFormat;
+extern std::ostream* sLogStream;
 
 
-static void ssAddToStream(std::ostream& a_stream) {(void)a_stream;}
+static std::string getFormattedTime() {
+
+    time_t rawtime;
+    struct tm* timeinfo;
+
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+
+    // Must be static, otherwise won't work
+    //static char _retval[32];
+    char _retval[32];
+    strftime(_retval, sizeof(_retval), "%Y-%m-%d/%H:%M:%S", timeinfo);
+
+    return std::string( _retval );
+}
+
+
+__attribute__((unused)) static void ssAddToStream(std::ostream& a_stream) { (void)a_stream; }
 
 template<typename T, typename... Args>
 static void ssAddToStream(std::ostream& a_stream, T&& a_value, Args&&... a_args)
@@ -94,22 +111,6 @@ template <typename... Args>
 }
 
 
-static std::string getFormattedTime() {
-
-    time_t rawtime;
-    struct tm* timeinfo;
-
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-
-    // Must be static, otherwise won't work
-    //static char _retval[32];
-    char _retval[32];
-    strftime(_retval, sizeof(_retval), "%Y-%m-%d/%H:%M:%S", timeinfo);
-
-    return std::string( _retval );
-}
-
 template <typename... Args>
 void logTrace(const eLogLevel& level, const std::string& file, const unsigned long noline, Args&&... args) {
     std::stringstream ss;
@@ -118,8 +119,8 @@ void logTrace(const eLogLevel& level, const std::string& file, const unsigned lo
         ss << " [DRM-Lib] " << getFormattedTime() << ", " << file << ":" << noline;
     }
     ss << ": [Thread " << std::this_thread::get_id() << "] ";
-    ssAddToStream(sLogStream, ss.str(), std::forward<Args>( args )...);
-    sLogStream << std::endl;
+    ssAddToStream(*sLogStream, ss.str(), std::forward<Args>( args )...);
+    *sLogStream << std::endl;
 }
 
 #define Debug2(...) \
@@ -142,6 +143,10 @@ void logTrace(const eLogLevel& level, const std::string& file, const unsigned lo
     do { if ( sLogVerbosity >= eLogLevel::ERROR ) \
         logTrace( eLogLevel::ERROR, __SHORT_FILE__, __LINE__, ##__VA_ARGS__ ); } while(0)
 
+
+    void initLog();
+    void uninitLog();
+
 }
 }
 
@@ -149,11 +154,19 @@ void logTrace(const eLogLevel& level, const std::string& file, const unsigned lo
 #define __FILENAME__ (__FILE__ + SOURCE_PATH_SIZE)
 
 #define _WarningAssert(expr, ...) \
-    if(expr) {} else {Warning("An assertion in DRM was not verified in ", __FILENAME__, ":", __LINE__, " (", __func__, ") : ", __VA_ARGS__, ". Please contact support, the library may not work as expected.");}
+    if ( expr ) {} \
+    else { Warning( "An assertion in DRM was not verified in ", \
+        __FILENAME__, ":", __LINE__, " (", __func__, ") : ", __VA_ARGS__, \
+        ". Please contact support, the library may not work as expected." ); }
+
 #define _Assert(expr, ...) \
-    if(expr) {} else {Throw(DRM_Assert, "An assertion failed in DRM Library in ", __FILENAME__, ":", __LINE__, " (", __func__, ") : ", __VA_ARGS__, ". Please contact support.");}
+    if ( expr ) {} \
+    else { Throw( DRM_Assert, "An assertion failed in DRM Library in ", \
+        __FILENAME__, ":", __LINE__, " (", __func__, ") : ", __VA_ARGS__, \
+        ". Please contact support." ); }
 
 #define __Assert(F, expr) F(expr, #expr)
+
 #define __Assert2op(F, a, b, _op_) \
     do { auto _a=a; auto _b=b; \
       F(_a _op_ _b, #a, " (= ", _a, ") " , #_op_, " ", #b " (= ", _b, ")"); \
