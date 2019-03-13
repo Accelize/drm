@@ -50,6 +50,7 @@ phases:
         drmlib_dev=$CODEBUILD_SOURCE_VERSION drmlib_build_deps
         drmlib_unittests_deps drmlib_cred_json drmlib_codecov_token
         aws_fpga_sdk
+        --shutdown_after 60
         -p f1.4xlarge
         -n drm_debug_tests
         -z /dev/shm/drmlib_dev/.tox/debug/build/report artifacts/report.tar.gz
@@ -64,6 +65,7 @@ phases:
         drmlib_dev=$CODEBUILD_SOURCE_VERSION
         drmlib_package_release drmlib_packages_key=/opt/src
         docker_compose
+        --shutdown_after 15
         -p c5.4xlarge
         -s ubuntu
         -n accelize_drm_packages_build
@@ -81,6 +83,7 @@ phases:
         run
         docker
         drmlib_dev=dev drmlib_cred_json
+        --shutdown_after 240
         -s ubuntu
         -p f1.4xlarge
         -n drm_packages_tests
