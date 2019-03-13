@@ -54,6 +54,7 @@ limitations under the License.
 
 #define CATCH_AND_THROW \
     } catch (const std::exception &e) { \
+        Error( e.what() ); \
         throw; \
     }
 
@@ -72,10 +73,12 @@ class DRM_LOCAL DrmManager::Impl {
 protected:
 
     // Design constants
-    const uint32_t cRetryDeadline = 5;
-    const uint32_t cWSRequestTimeout = 30;
-    uint32_t cFrequencyDetectionPeriod = 100;  // in milliseconds
-    double cFrequencyDetectionThreshold = 2.0;      // Error in percentage
+    const uint32_t cWSRequestTimeout = 10;
+    const uint32_t cFrequencyDetectionPeriod = 100;  // in milliseconds
+    const double cFrequencyDetectionThreshold = 2.0;      // Error in percentage
+    const uint32_t cWSRetryPeriodLarge = 60; // In seconds
+    const uint32_t cWSRetryPeriodShort = 3; // In seconds
+    const uint32_t cWSRetryDeadline = 5;
 
     //helper typedef
     typedef std::chrono::steady_clock TClock; /// Shortcut type def to steady clock which is monotonic (so unaffected by clock adjustments)
@@ -117,8 +120,10 @@ protected:
     std::string mNodeLockLicenseFilePath;
 
     // License related properties
-    uint32_t mRetryDeadline;    ///< Time in seconds before the license expiration during which no more retry is authorized
-    uint32_t mWSRequestTimeout ;      ///< Time in seconds during which retries occur
+    uint32_t mWSRetryPeriodLarge;   ///< Time in seconds before the next request attempt to the Web Server when the time left before timeout is large
+    uint32_t mWSRetryPeriodShort;   ///< Time in seconds before the next request attempt to the Web Server when the time left before timeout is short
+    uint32_t mWSRetryDeadline;      ///< Safety margin time in seconds before the timeout time during which no more retry is attempted
+    uint32_t mWSRequestTimeout ;    ///< Time in seconds during which retries occur
 
     LicenseType mLicenseType = LicenseType::OTHERS;
     uint32_t mLicenseCounter;
@@ -172,7 +177,9 @@ protected:
 
         mDebugMessageLevel = eLogLevel::QUIET;
 
-        mRetryDeadline = cRetryDeadline;
+        mWSRetryDeadline = cWSRetryDeadline;
+        mWSRetryPeriodLarge = cWSRetryPeriodLarge;
+        mWSRetryPeriodShort = cWSRetryPeriodShort;
         mWSRequestTimeout  = cWSRequestTimeout;
         mFrequencyDetectionPeriod = cFrequencyDetectionPeriod;
         mFrequencyDetectionThreshold = cFrequencyDetectionThreshold;
@@ -186,15 +193,23 @@ protected:
                 // Logging
                 sLogVerbosity = static_cast<eLogLevel >(JVgetOptional( param_lib, "log_verbosity", Json::intValue, (int)eLogLevel::QUIET ).asInt());
                 sLogFormat = static_cast<eLogFormat >(JVgetOptional( param_lib, "log_format", Json::intValue, (int)eLogFormat::SHORT ).asInt());
+                sLogFilePath = JVgetOptional( param_lib, "log_file", Json::stringValue ).asString();
                 // Frequency detection
                 mFrequencyDetectionPeriod = JVgetOptional( param_lib, "frequency_detection_period", Json::uintValue,
                                                            cFrequencyDetectionPeriod).asUInt();
                 mFrequencyDetectionThreshold = JVgetOptional( param_lib, "frequency_detection_threshold", Json::uintValue,
                                                               cFrequencyDetectionThreshold).asDouble();
                 // Others
-                mRetryDeadline = JVgetOptional( param_lib, "retry_deadline", Json::uintValue, cRetryDeadline).asUInt();
-                mWSRequestTimeout  = JVgetOptional( param_lib, "ws_request_timeout", Json::uintValue, cWSRequestTimeout).asUInt();
+                mWSRetryPeriodLarge = JVgetOptional( param_lib, "wb_retry_period_large", Json::uintValue, cWSRetryPeriodLarge).asUInt();
+                mWSRetryPeriodShort = JVgetOptional( param_lib, "wb_retry_period_short", Json::uintValue, cWSRetryPeriodShort).asUInt();
+                mWSRetryDeadline = JVgetOptional( param_lib, "wb_retry_deadline", Json::uintValue, cWSRetryDeadline).asUInt();
+                mWSRequestTimeout = JVgetOptional( param_lib, "ws_request_timeout", Json::uintValue, cWSRequestTimeout).asUInt();
+                if ( mWSRequestTimeout == 0 )
+                    Throw( DRM_BadArg, "ws_request_timeout must not be 0");
             }
+            if ( mWSRetryPeriodLarge < mWSRetryPeriodShort )
+                Throw( DRM_BadArg, "wb_retry_period_large (", mWSRetryPeriodLarge,
+                        ") must be greater than wb_retry_period_short (", mWSRetryPeriodShort, ")" );
             initLog();
 
             // Design configuration
@@ -221,8 +236,6 @@ protected:
                 mFrequencyCurr = mFrequencyInit;
                 // Instantiate Web Service client
                 mWsClient.reset( new DrmWSClient( conf_file_path, cred_file_path ) );
-                getDrmWSClient().setRetryDeadline( mRetryDeadline );
-                getDrmWSClient().setRequestTimeout( mWSRequestTimeout );
             }
 
         } catch( Exception &e ) {
@@ -651,6 +664,60 @@ protected:
         return !isLicenseEmpty;
     }
 
+    Json::Value getLicense( const Json::Value& request_json, const TClock::duration& timeout,
+            const TClock::duration& retry_period = TClock::duration::zero()) {
+        TClock::time_point deadline = TClock::now() + timeout;
+        return getLicense( request_json, deadline, retry_period );
+    }
+
+    Json::Value getLicense( const Json::Value& request_json, const TClock::time_point& deadline,
+            const TClock::duration& retry_period = TClock::duration::zero() ) {
+
+        // Get valid OAUth2 token
+        uint32_t attempt = 0;
+        while ( 1 ) {
+            try {
+                getDrmWSClient().requestOAuth2token( deadline );
+                break;
+            } catch ( const Exception& e ) {
+                if ( e.getErrCode() != DRM_WSMayRetry ) {
+                    //Throw( e.getErrCode(), "Authentication error: ", e.what() );
+                    throw;
+                }
+                Warning("Temporary failure: ", e.what() );
+                // It is retryable
+                attempt ++;
+                if ( TClock::now() > deadline ) {
+                    Throw( DRM_WSError, "Timeout on Authentication request after ", attempt, " attempts");
+                }
+                TClock::duration wait_period = retry_period;
+                if ( retry_period == TClock::duration::zero() ) {
+                    wait_period = std::chrono::seconds( mWSRetryPeriodLarge );
+                    if ( (deadline - TClock::now()) < wait_period )
+                        wait_period = std::chrono::seconds(mWSRetryPeriodShort);
+                }
+                // Wait a bit before retrying
+                sleepOrExit( wait_period );
+            }
+        }
+
+        // Get new license
+        attempt = 0;
+        while ( 1 ) {
+            try {
+                return getDrmWSClient().requestLicense( request_json, deadline );
+            } catch ( const Exception& e ) {
+                if ( e.getErrCode() != DRM_WSMayRetry ) {
+                    //Throw( e.getErrCode(), "Authentication error: ", e.what() );
+                    throw;
+                }
+                Warning("Temporary failure: ", e.what() );
+                if ( TClock::now() > deadline )
+                    Throw( DRM_WSError, "Timeout on License request after ", attempt, " attempts");
+            }
+        }
+    }
+
     void setLicense(const Json::Value& license_json) {
 
         std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
@@ -724,6 +791,7 @@ protected:
         return hash_ss.str();
     }
 
+
     void createNodelockedLicenseRequestFile() {
         // Build request for node-locked license
         Json::Value request_json = getMeteringStart();
@@ -769,7 +837,7 @@ protected:
             ifs.close();
             // - Send request to web service and receive the new license
             TClock::time_point deadline = TClock::now() + std::chrono::seconds( mWSRequestTimeout  );
-            license_json = getDrmWSClient().getLicense( request_json, deadline );
+            license_json = getLicense( request_json, deadline );
             // - Save license to file
             saveJsonToFile( mNodeLockLicenseFilePath, license_json );
             Debug("Requested and saved new node-locked license file: ", mNodeLockLicenseFilePath);
@@ -792,10 +860,8 @@ protected:
         counterStart = getTimerCounterValue();
         timeStart = TClock::now();
 
-        //usleep( mFrequencyDetectionPeriod * 1000 );
-        /// Check if a stop has been requested till now
-        if ( isStopRequested( wait_duration ) )
-            return;
+        /// Wait a fixed period of time
+        sleepOrExit( wait_duration );
 
         counterEnd = getTimerCounterValue();
         timeEnd = TClock::now();
@@ -824,15 +890,22 @@ protected:
     }
 
     template< class Clock, class Duration >
-    bool isStopRequested(const std::chrono::time_point<Clock, Duration> &timeout_time) {
+    void sleepOrExit(
+            const std::chrono::time_point<Clock, Duration> &timeout_time) {
         std::unique_lock<std::mutex> lk(mThreadKeepAliveMtx);
-        return mThreadKeepAliveCondVar.wait_until(lk, timeout_time, [this]{return mThreadStopRequest;});
+        bool isExitRequested = mThreadKeepAliveCondVar.wait_until(lk, timeout_time,
+                [this]{return mThreadStopRequest;});
+        if ( isExitRequested )
+            Throw( DRM_Exit, "Exit requested" );
     }
 
     template< class Rep, class Period >
-    bool isStopRequested(const std::chrono::duration<Rep, Period> &rel_time) {
+    void sleepOrExit(const std::chrono::duration<Rep, Period> &rel_time) {
         std::unique_lock<std::mutex> lk(mThreadKeepAliveMtx);
-        return mThreadKeepAliveCondVar.wait_for(lk, rel_time, [this]{return mThreadStopRequest;});
+        bool isExitRequested = mThreadKeepAliveCondVar.wait_for(lk, rel_time,
+                [this]{return mThreadStopRequest;});
+        if ( isExitRequested )
+            Throw( DRM_Exit, "Exit requested" );
     }
 
     bool isStopRequested() {
@@ -845,7 +918,6 @@ protected:
         uint64_t counterCurr = getTimerCounterValue();
         auto secondLeft = (uint32_t)std::ceil((double)counterCurr / mFrequencyCurr / 1000000);
         return now + std::chrono::seconds( secondLeft );
-
     }
 
     void startThread() {
@@ -858,7 +930,7 @@ protected:
         Debug( "Starting background thread which maintains licensing" );
 
         mThreadKeepAlive = std::async(std::launch::async, [this](){
-            try{
+            try {
                 /// Detecting DRM controller frequency
                 detectDrmFrequency();
 
@@ -870,14 +942,11 @@ protected:
                 while(1) {
 
                     if ( !isReadyForNewLicense() ) {
-
+                        // DRM licensing queue is full, wait until current license expires
                         TClock::duration wait_duration = getCurrentLicenseExpirationDate() - TClock::now() + std::chrono::seconds(1);
                         long wait_seconds = std::chrono::duration_cast<std::chrono::seconds>( wait_duration ).count();
                         Debug( "Sleeping for ", wait_seconds, " seconds before checking if DRM Controller is ready to received a new license");
-
-                        if ( isStopRequested( wait_duration ) )
-                            return;
-
+                        sleepOrExit(wait_duration);
                         continue;
                     }
 
@@ -894,7 +963,7 @@ protected:
 
                     /// Retry Web Service request loop
                     TClock::time_point polling_deadline = TClock::now() + std::chrono::seconds( mLicenseDuration )
-                            - std::chrono::seconds( mRetryDeadline );
+                            - std::chrono::seconds( mWSRetryDeadline );
                     while(1) {
 
                         if (isStopRequested() )
@@ -907,7 +976,7 @@ protected:
 
                         /// Attempt to get the next license
                         try {
-                            license_json = getDrmWSClient().getLicense( request_json, polling_deadline );
+                            license_json = getLicense( request_json, polling_deadline );
                             break;
                         } catch(const Exception& e) {
                             if ( e.getErrCode() == DRM_WSMayRetry ) throw;
@@ -915,17 +984,16 @@ protected:
                             }
                         /// Attempt failed, computing the sleep period before next retry. It depends on the time left.
                         TClock::duration wait_before_retry;
-                        if ( polling_deadline - TClock::now() <= std::chrono::seconds(60) )
-                            wait_before_retry = std::chrono::seconds(2);
+                        if ( polling_deadline - TClock::now() <= std::chrono::seconds( mWSRetryPeriodLarge ) )
+                            wait_before_retry = std::chrono::seconds( mWSRetryPeriodShort );
                         else
-                            wait_before_retry = std::chrono::seconds(30);
+                            wait_before_retry = std::chrono::seconds( mWSRetryPeriodLarge );
                         long wait_time = std::chrono::duration_cast<std::chrono::seconds>(wait_before_retry).count();
                         Warning( "Attempt #", retry_counter, " to obtain new license from Web Service failed with message: ", retry_msg,
                                 ". New attempt planned in ", wait_time, " seconds");
 
                         /// Sleep until a stop is requested or timeout is hit
-                        if (isStopRequested(wait_before_retry) )
-                            return;
+                        sleepOrExit(wait_before_retry);
                     }
 
                     /// Check if stop has been requested
@@ -934,6 +1002,11 @@ protected:
 
                     /// New license has been received: now send it to the DRM Controller
                     setLicense(license_json);
+                }
+            } catch( const Exception& e ) {
+                if ( e.getErrCode() != DRM_Exit ) {
+                    Error(e.what());
+                    f_asynch_error( std::string( e.what() ) );
                 }
             } catch(const std::exception& e) {
                 Error(e.what());
@@ -964,8 +1037,7 @@ protected:
         Json::Value request_json = getMeteringStart();
 
         // Send request and receive new license
-        Json::Value license_json = getDrmWSClient().getLicense( request_json,
-                std::chrono::seconds( mWSRequestTimeout ) );
+        Json::Value license_json = getLicense( request_json, std::chrono::seconds( mWSRequestTimeout ) );
         setLicense(license_json);
 
         // Save session ID locally and into web service request header for later request needs
@@ -986,8 +1058,7 @@ protected:
             Json::Value request_json = getMeteringWait(1);
 
             // Send license request to web service
-            Json::Value license_json = getDrmWSClient().getLicense( request_json,
-                    std::chrono::seconds( mWSRequestTimeout ) );
+            Json::Value license_json = getLicense( request_json, std::chrono::seconds( mWSRequestTimeout ) );
 
             // Install license on DRM controller
             setLicense( license_json );
@@ -1013,7 +1084,7 @@ protected:
         Json::Value request_json = getMeteringStop();
 
         // Send request and receive answer.
-        Json::Value license_json = getDrmWSClient().getLicense( request_json, std::chrono::seconds( mWSRequestTimeout ) );
+        Json::Value license_json = getLicense( request_json, std::chrono::seconds( mWSRequestTimeout ) );
         checkSessionID( license_json );
         Info("Session ID ", mSessionID, " stopped and last metering data uploaded");
 
@@ -1167,6 +1238,11 @@ public:
                         Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", logFormat );
                         break;
                     }
+                    case ParameterKey::log_file: {
+                        json_value[key_str] = sLogFilePath;
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", sLogFilePath );
+                        break;
+                    }
                     case ParameterKey::license_type: {
                         auto it = LicenseTypeStringMap.find( mLicenseType );
                         if ( it == LicenseTypeStringMap.end() )
@@ -1251,22 +1327,22 @@ public:
                         Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mFrequencyCurr );
                         break;
                     }
-                    case ParameterKey ::frequency_detection_threshold: {
+                    case ParameterKey::frequency_detection_threshold: {
                         json_value[key_str] = mFrequencyDetectionThreshold;
                         Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mFrequencyDetectionThreshold );
                         break;
                     }
-                    case ParameterKey ::frequency_detection_period: {
+                    case ParameterKey::frequency_detection_period: {
                         json_value[key_str] = mFrequencyDetectionPeriod;
                         Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mFrequencyDetectionPeriod );
                         break;
                     }
-                    case ParameterKey ::product_id: {
+                    case ParameterKey::product_id: {
                         json_value[key_str] = mHeaderJsonRequest["product"];
                         Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mHeaderJsonRequest["product"].toStyledString() );
                         break;
                     }
-                    case ParameterKey ::mailbox_size: {
+                    case ParameterKey::mailbox_size: {
                         uint32_t mbSize = getMailboxSize() - (uint32_t)MailboxOffset::MB_USER;
                         json_value[key_str] = mbSize;
                         Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mbSize );
@@ -1278,7 +1354,7 @@ public:
                         Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", customField );
                         break;
                     }
-                    case ParameterKey ::mailbox_data: {
+                    case ParameterKey::mailbox_data: {
                         uint32_t mbSize = getMailboxSize() - (uint32_t)MailboxOffset::MB_USER;
                         std::vector<uint32_t> data_array = readMailbox( MailboxOffset::MB_USER, mbSize );
                         for( const auto& val: data_array )
@@ -1286,17 +1362,27 @@ public:
                         Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", json_value[key_str].toStyledString() );
                         break;
                     }
-                    case ParameterKey ::retry_deadline: {
-                        json_value[key_str] = mRetryDeadline;
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mRetryDeadline );
+                    case ParameterKey::ws_retry_deadline: {
+                        json_value[key_str] = mWSRetryDeadline;
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mWSRetryDeadline );
                         break;
                     }
-                    case ParameterKey ::ws_request_timeout: {
+                    case ParameterKey::ws_retry_period_large: {
+                        json_value[key_str] = mWSRetryPeriodLarge;
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mWSRetryPeriodLarge );
+                        break;
+                    }
+                    case ParameterKey::ws_retry_period_short: {
+                        json_value[key_str] = mWSRetryPeriodShort;
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mWSRetryPeriodShort );
+                        break;
+                    }
+                    case ParameterKey::ws_request_timeout: {
                         json_value[key_str] = mWSRequestTimeout ;
                         Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mWSRequestTimeout  );
                         break;
                     }
-                    case ParameterKey ::log_message_level: {
+                    case ParameterKey::log_message_level: {
                         int msgLevel = static_cast<int>(mDebugMessageLevel);
                         json_value[key_str] = msgLevel;
                         Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", msgLevel );
@@ -1339,24 +1425,24 @@ public:
                 std::string key_str = it.key().asString();
                 const ParameterKey key_id = findParameterKey( key_str );
                 switch( key_id ) {
-                    case ParameterKey ::log_verbosity: {
+                    case ParameterKey::log_verbosity: {
                         int logVerbosity = (*it).asInt();
                         sLogVerbosity = static_cast<eLogLevel>(logVerbosity);
                         Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", logVerbosity );
                         break;
                     }
-                    case ParameterKey ::log_format: {
+                    case ParameterKey::log_format: {
                         int logFormat = (*it).asInt();
                         sLogFormat = static_cast<eLogFormat>(logFormat);
                         Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", logFormat );
                         break;
                     }
-                    case ParameterKey ::frequency_detection_threshold: {
+                    case ParameterKey::frequency_detection_threshold: {
                         mFrequencyDetectionThreshold = (*it).asDouble();
                         Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", mFrequencyDetectionThreshold );
                         break;
                     }
-                    case ParameterKey ::frequency_detection_period: {
+                    case ParameterKey::frequency_detection_period: {
                         mFrequencyDetectionPeriod = (*it).asUInt();
                         Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", mFrequencyDetectionPeriod );
                         break;
@@ -1367,7 +1453,7 @@ public:
                         Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", customField );
                         break;
                     }
-                    case ParameterKey ::mailbox_data: {
+                    case ParameterKey::mailbox_data: {
                         if ( !(*it).isArray() )
                             Throw( DRM_BadUsage, "Value must be an array of integer values" );
                         std::vector<uint32_t> data_array;
@@ -1377,14 +1463,26 @@ public:
                         Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", (*it).toStyledString());
                         break;
                     }
-                    case ParameterKey ::retry_deadline: {
-                        mRetryDeadline = (*it).asUInt();
-                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", mRetryDeadline );
+                    case ParameterKey::ws_retry_deadline: {
+                        mWSRetryDeadline = (*it).asUInt();
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", mWSRetryDeadline );
                         break;
                     }
-                    case ParameterKey ::ws_request_timeout: {
+                    case ParameterKey::ws_retry_period_large: {
+                        mWSRetryPeriodLarge = (*it).asUInt();
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", mWSRetryPeriodLarge );
+                        break;
+                    }
+                    case ParameterKey::ws_retry_period_short: {
+                        mWSRetryPeriodShort = (*it).asUInt();
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", mWSRetryPeriodShort );
+                        break;
+                    }
+                    case ParameterKey::ws_request_timeout: {
                         mWSRequestTimeout  = (*it).asUInt();
                         Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", mWSRequestTimeout  );
+                        if ( mWSRequestTimeout == 0 )
+                            Throw( DRM_BadArg, "ws_request_timeout must not be 0");
                         break;
                     }
                     case ParameterKey::trigger_async_callback: {
@@ -1412,7 +1510,18 @@ public:
                     }
                     case ParameterKey::log_message: {
                         std::string custom_msg = (*it).asString();
-                        logTrace(mDebugMessageLevel, __SHORT_FILE__, __LINE__, custom_msg);
+                        if ( mDebugMessageLevel == eLogLevel::ERROR )
+                            Error(custom_msg);
+                        else if ( mDebugMessageLevel == eLogLevel::WARNING )
+                            Warning(custom_msg);
+                        else if ( mDebugMessageLevel == eLogLevel::INFO )
+                            Info(custom_msg);
+                        else if ( mDebugMessageLevel == eLogLevel::DEBUG )
+                            Debug(custom_msg);
+                        else if ( mDebugMessageLevel == eLogLevel::DEBUG2 )
+                            Debug2(custom_msg);
+                        else
+                            Unreachable( "Unsupported log level: " + std::to_string((int)mDebugMessageLevel) );
                         break;
                     }
                     default:

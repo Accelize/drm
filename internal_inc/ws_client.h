@@ -53,23 +53,23 @@ private:
 public:
 
     static bool is_error_retryable(long resp_code) {
-        return     resp_code == 408 // Request Timeout
+        return        resp_code == 408 // Request Timeout
                    || resp_code == 500 // Internal Server Error
                    || resp_code == 502 // Bad Gateway
                    || resp_code == 503 // Service Unavailable
                    || resp_code == 504 // Gateway timeout
                    || resp_code == 505 // HTTP version not supported
-                   || resp_code == 507 // Insufficient strorage
+                   || resp_code == 507 // Insufficient storage
                    || resp_code == 429 // Too Many Requests
                    || resp_code == 520 // Unknown Error
                    || resp_code == 521 // Web Server is Down
                    || resp_code == 522 // Connection Timed Out
-                   || resp_code == 524 // A Timeout Occured
+                   || resp_code == 524 // A Timeout Occurred
                    || resp_code == 525 // SSL Handshake Failed
                    || resp_code == 527 // Railgun Error
                    || resp_code == 530 // Origin DNS Error
-                   || resp_code == 404 // Not Found Error
                    || resp_code == 470 // Floating License: no token available
+                   || resp_code == 560 // Accelize License generation temporary issue
                 ;
     }
 
@@ -150,18 +150,14 @@ class DrmWSClient {
 protected:
 
     typedef std::chrono::steady_clock TClock; /// Shortcut type def to steady clock which is monotonic (so unaffected by clock adjustments)
-    const uint32_t cRetryDeadline = 2;    // In seconds
-    const uint32_t cRequestTimeout = 30;    // In seconds
 
     std::string mClientId;
     std::string mClientSecret;
     std::string mOAuth2Url;
     std::string mMeteringUrl;
     std::string mOAuth2Token;
-    uint32_t mRetryDeadline;
     TClock::time_point mTokenExpirationTime;
     CurlEasyPost mOAUth2Request;
-    uint32_t mRequestTimeout;
 
     // Test only parameters
     std::string mUseBadOAuth2Token;
@@ -170,15 +166,12 @@ public:
     DrmWSClient(const std::string &conf_file_path, const std::string &cred_file_path);
     ~DrmWSClient() = default;
 
-    Json::Value getLicense( const Json::Value& json_req, TClock::time_point deadline );
-    Json::Value getLicense( const Json::Value& json_req, TClock::duration timeout );
-    inline void setRetryDeadline(const uint32_t &retry_deadline) { mRetryDeadline = retry_deadline; };
-    inline void setRequestTimeout(const uint32_t &request_timeout) { mRequestTimeout = request_timeout; };
+    void requestOAuth2token(TClock::time_point deadline);
+    Json::Value requestLicense( const Json::Value& json_req, TClock::time_point deadline );
 
     inline void useBadOAuth2Token( const std::string& new_token ) { mUseBadOAuth2Token = new_token; };
 
 protected:
-    void updateOAuth2token( TClock::time_point timeout );
     void parse_configuration(const std::string &conf_file_path, Json::Reader &reader, Json::Value &conf_json);
 
 };

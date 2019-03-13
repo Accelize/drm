@@ -23,20 +23,42 @@ namespace Accelize {
 
         eLogLevel sLogVerbosity = eLogLevel::ERROR;
         eLogFormat sLogFormat = eLogFormat::SHORT;
-        std::ostream *sLogStream = &std::cout;
+        std::string sLogFilePath = std::string("");
+        //std::unique_ptr<std::ostream> sLogStream;
+        //std::ostream* sLogStream = nullptr;
+        std::ostream* sLogStream = &std::cout;
 
 
         void initLog() {
-            /*std::string file_path("test.log");
-
-            std::ofstream *ofs = new std::ofstream(file_path);
-            if (!ofs->is_open())
-                Throw( DRM_BadUsage, "Failed to open file ", file_path );
-            sLogStream = ofs;*/
+            /*
+            std::lock_guard<std::recursive_mutex> lock(mLogMutex);
+            if ( sLogFilePath.size() ) {
+                //std::unique_ptr<std::ofstream> ofs( new std::ofstream( sLogFilePath ) );
+                std::ofstream* ofs = new std::ofstream( sLogFilePath );
+                if (!ofs->is_open()) {
+                    Throw(DRM_ExternFail, "Unable to access file: ", sLogFilePath);
+                }
+                //sLogStream = std::move(ofs);
+                sLogStream = ofs;
+                Debug( "Init logger to file ", sLogFilePath );
+                //sLogStream = std::unique_ptr<std::ostream>(&std::cout);
+            }
+            else {
+                //sLogStream = std::unique_ptr<std::ostream>(&std::cout);
+                sLogStream = &std::cout;
+                Debug( "Init logger to stdout" );
+            }*/
         }
 
         void uninitLog() {
-            //delete sLogStream;
+            /*
+            Debug( "Uninit logger" );
+            if ( sLogFilePath.size() ) {
+                std::lock_guard<std::recursive_mutex> lock(mLogMutex);
+                //sLogStream.release();
+                delete sLogStream;
+                sLogStream = nullptr;
+            }*/
         }
     }
 }

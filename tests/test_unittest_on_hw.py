@@ -1,11 +1,11 @@
 """
 To run manually, move to the build directory and execute:
-    sudo LD_LIBRARY_PATH=. pytest -v <path/to/tests/test_unittest_on_hw.py> --cred <path/to/cred.json> --library_verbosity=3 --server='dev' --backend='c++' -s
+    sudo LD_LIBRARY_PATH=. pytest -v <path/to/tests/test_unittest_on_hw.py> --cred <path/to/cred.json> --library_verbosity=2 --server='dev' --backend='c++' -s
 """
 
 import pytest
-from re import search, finditer
-from time import sleep
+from re import search, match, finditer, MULTILINE
+from time import sleep, time
 from json import loads
 from datetime import datetime, timedelta
 from ctypes import c_uint32, byref
@@ -26,11 +26,14 @@ _PARAM_LIST = ['license_type',
                'mailbox_size',
                'log_verbosity',
                'log_format',
+               'log_file',
                'frequency_detection_threshold',
                'frequency_detection_period',
                'custom_field',
                'mailbox_data',
-               'retry_deadline',
+               'ws_retry_deadline',
+               'ws_retry_period_large',
+               'ws_retry_period_short',
                'ws_request_timeout',
                'log_message_level',
                'list_all',
@@ -86,32 +89,132 @@ def get_activator_status( driver, activator_index=None ):
     return status_list
 
 
-#@pytest.mark.skip
+@pytest.mark.skip(reason='Logging to file is not yet implemented')
 def test_logging(accelize_drm, conf_json, cred_json, async_handler):
     """Test logging mechanism and enhance coverage"""
+    from os.path import isfile
+    from os import remove
+
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
-    # Test logging with long format
-    async_cb.reset()
-    conf_json['settings']['log_format'] = 1
-    conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    drm_manager.set(log_message_level=5)
-    msg = 'This should be a DEBUG2 message'
-    drm_manager.set(log_message=msg)
-#    assert 'DEBUG2' in captured.out
-#    assert msg in captured.out
-    async_cb.assert_NoError()
+    regex_short = r'(\S+)\s*: \[Thread \d+\] (.*)'
+    regex_long = r'(\S+)\s* \[DRM-Lib\] \d{4}-\d{2}-\d{2}/\d{2}:\d{2}:\d{2}, \S+:\d+: \[Thread \d+\] (.+)'
+
+    # Test logging with short format
+    try:
+        async_cb.reset()
+        log_file = "log_%s.txt" % time()
+        conf_json.reset()
+        conf_json['settings']['log_verbosity'] = 1
+        conf_json['settings']['log_format'] = 0
+        conf_json['settings']['log_file'] = log_file
+        conf_json.save()
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+        msg = 'This is a message'
+        drm_manager.set(log_message_level=1)
+        drm_manager.set(log_message=msg)
+        assert isfile(log_file)
+        with open(log_file) as f:
+            log_content = f.read()
+        m = match(regex_short, log_content)
+        assert m is not None, log_content
+        assert m.group(1) == 'ERROR'
+        assert m.group(2) == msg
+        async_cb.assert_NoError()
+    finally:
+        del drm_manager
+        if isfile(log_file):
+            remove(log_file)
+    print('Test logging short format: PASS')
+
+    # Test logging with short format
+    try:
+        async_cb.reset()
+        log_file = "log_%s.txt" % time()
+        conf_json.reset()
+        conf_json['settings']['log_verbosity'] = 1
+        conf_json['settings']['log_format'] = 1
+        conf_json['settings']['log_file'] = log_file
+        conf_json.save()
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+        msg = 'This is a message'
+        drm_manager.set(log_message_level=1)
+        drm_manager.set(log_message=msg)
+        assert isfile(log_file)
+        with open(log_file) as f:
+            log_content = f.read()
+        m = match(regex_long, log_content)
+        assert m is not None, log_content
+        assert m.group(1) == 'ERROR'
+        assert m.group(2) == msg
+        async_cb.assert_NoError()
+    finally:
+        del drm_manager
+        if isfile(log_file):
+            remove(log_file)
+    print('Test logging long format: PASS')
+
+    # Test verbosity filter
+    msg = 'This is a %s message'
+    level_dict = {5:'DEBUG2', 4:'DEBUG', 3:'INFO', 2:'WARNING', 1:'ERROR'}
+    for verbosity in range(6):
+        try:
+            async_cb.reset()
+            log_file = "log_%s.txt" % time()
+            conf_json.reset()
+            conf_json['settings']['log_format'] = 0
+            conf_json['settings']['log_file'] = log_file
+            conf_json.save()
+            drm_manager = accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            )
+            exp_level = [v for k,v in level_dict.items() if k<=verbosity]
+            drm_manager.set(log_verbosity=verbosity)
+            verbosity_back = drm_manager.get('log_verbosity')
+            assert verbosity_back == verbosity
+            for i in sorted(level_dict.keys()):
+                drm_manager.set(log_message_level=i)
+                drm_manager.set(log_message=msg % level_dict[i])
+            assert isfile(log_file)
+            with open(log_file) as f:
+                log_lines = f.readlines()
+            trace_hit = dict.fromkeys(exp_level, 0)
+            for line in log_lines:
+                m = match(regex_short, line)
+                if m is not None:
+                    trace_msg = m.group(2)
+                    trace_lvl = m.group(1)
+                    assert trace_lvl in exp_level
+                    if trace_msg == msg % trace_lvl:
+                        trace_hit[trace_lvl] += 1
+            assert sum(trace_hit.values()) == verbosity
+            assert all(trace_hit.values())
+            async_cb.assert_NoError()
+        finally:
+            del drm_manager
+            if isfile(log_file):
+                remove(log_file)
+    print('Test verbosity filter: PASS')
 
 
-@pytest.mark.skip
+#@pytest.mark.skip
 def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cred_json, async_handler):
     """Test errors when bad authentication parameters are provided to
     DRM Manager Constructor or Web Service."""
@@ -126,6 +229,8 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
         async_cb.reset()
         conf_json.reset()
         conf_json['licensing']['url'] = "http://accelize.com"
+        conf_json['settings']['ws_request_timeout'] = 5
+        conf_json['settings']['ws_retry_period_short'] = 1
         conf_json.save()
         assert conf_json['licensing']['url'] == "http://accelize.com"
         drm_manager = accelize_drm.DrmManager(
@@ -135,11 +240,12 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
             driver.write_register_callback,
             async_cb.callback
         )
-        with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
+        with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
             drm_manager.activate()
-        assert "WSOAuth HTTP response code" in str(excinfo.value)
+        assert "HTTP response code from OAuth2 Web Service: 404" in str(excinfo.value)
         assert async_handler.parse_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
         async_cb.assert_NoError()
+        print('Test when authentication url in configuration file is wrong: PASS')
 
         # Test when token is wrong
         async_cb.reset()
@@ -156,6 +262,9 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
             drm_manager.activate()
         assert "Authentication credentials" in str(excinfo.value)
         assert async_handler.parse_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+        print('Test when token is wrong: PASS')
+
+        # Test when token has expired
 
     finally:
         if drm_manager:
@@ -327,7 +436,9 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     origFrequencyMHz = drm_manager.get('drm_frequency')
     origFrequencyDetectPeriod = drm_manager.get('frequency_detection_period')
     origFrequencyDetectThreshold = drm_manager.get('frequency_detection_threshold')
-    origRetryDeadline = drm_manager.get('retry_deadline')
+    origRetryDeadline = drm_manager.get('ws_retry_deadline')
+    origRetryPeriodLarge = drm_manager.get('ws_retry_period_large')
+    origRetryPerdioShort = drm_manager.get('ws_retry_period_short')
     origResponseTimeout = drm_manager.get('ws_request_timeout')
 
     # Test parameter: log_verbosity
@@ -357,8 +468,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     # Read-write, read and write the logging verbosity: 0=quiet, 5=debug2
     async_cb.reset()
     conf_json.reset()
-    expValue = 1
-    assert expValue != origLogFormat
+    expValue = 0 if origLogFormat else 1
     conf_json['settings']['log_format'] = expValue
     conf_json.save()
     drm_manager = accelize_drm.DrmManager(
@@ -372,6 +482,35 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     assert value == expValue
     async_cb.assert_NoError()
     print("Test parameter 'log_format': PASS")
+
+#    # Test parameter: log_file
+#    # Read-only, read the logging file path: null=stdout, any string=path to file. Can be set only from configuration file
+#    from time import time
+#    from os.path import isfile
+#    async_cb.reset()
+#    conf_json.reset()
+#    expLogPath = "log_%s.txt" % time()
+#    conf_json['settings']['log_file'] = expLogPath
+#    conf_json.save()
+#    drm_manager = accelize_drm.DrmManager(
+#        conf_json.path,
+#        cred_json.path,
+#        driver.read_register_callback,
+#        driver.write_register_callback,
+#        async_cb.callback
+#    )
+#    logPath = drm_manager.get('log_file')
+#    assert logPath == expLogPath
+#    drm_manager.set(log_message_level=1)
+#    msg = 'This should be ERROR message'
+#    drm_manager.set(log_message=msg)
+#    assert isfile(logPath)
+#    with open(logPath) as f:
+#        log_content = f.read()
+#    assert "ERROR" in log_content
+#    assert msg in log_content
+#    assert_NoErrorCallback(async_cb)
+#    print("Test parameter 'log_file': PASS")
 
     # Test parameter: drm_frequency
     # Read-only, return the measured DRM frequency
@@ -430,12 +569,12 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     async_cb.assert_NoError()
     print("Test parameter 'frequency_detection_threshold': PASS")
 
-    # Test parameter: retry_deadline
+    # Test parameter: ws_retry_deadline
     # Read-write: read and write the retry period deadline in seconds from the license timeout during which no more retry is sent
     async_cb.reset()
     conf_json.reset()
     expValue = 2*origRetryDeadline
-    conf_json['settings'] = {'retry_deadline': expValue}
+    conf_json['settings'] = {'ws_retry_deadline': expValue}
     conf_json.save()
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
@@ -444,10 +583,48 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
         driver.write_register_callback,
         async_cb.callback
     )
-    value = drm_manager.get('retry_deadline')
+    value = drm_manager.get('ws_retry_deadline')
     assert value == expValue
     async_cb.assert_NoError()
-    print("Test parameter 'retry_deadline': PASS")
+    print("Test parameter 'ws_retry_deadline': PASS")
+
+    # Test parameter: ws_retry_period_large
+    # Read-write: read and write the time in seconds before the next request attempt to the Web Server when the time left before timeout is large
+    async_cb.reset()
+    conf_json.reset()
+    expValue = 2*origRetryPerdioLarge
+    conf_json['settings'] = {'ws_retry_period_large': expValue}
+    conf_json.save()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    value = drm_manager.get('ws_retry_period_large')
+    assert value == expValue
+    async_cb.assert_NoError()
+    print("Test parameter 'ws_retry_period_large': PASS")
+
+    # Test parameter: ws_retry_period_short
+    # Read-write: read and write the time in seconds before the next request attempt to the Web Server when the time left before timeout is short
+    async_cb.reset()
+    conf_json.reset()
+    expValue = 2*origRetryPerdioShort
+    conf_json['settings'] = {'ws_retry_period_short': expValue}
+    conf_json.save()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    value = drm_manager.get('ws_retry_period_short')
+    assert value == expValue
+    async_cb.assert_NoError()
+    print("Test parameter 'ws_retry_period_short': PASS")
 
     # Test parameter: ws_request_timeout
     # Read-write: read and write the web service request timeout in seconds during which the response is waited
@@ -519,10 +696,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         async_cb.callback
     )
     orig_verbosity = drm_manager.get('log_verbosity')
-    if orig_verbosity == 5:
-        new_verbosity = 4
-    else:
-        new_verbosity = 5
+    new_verbosity = 4 if orig_verbosity == 5 else 5
     verbosity = drm_manager.set(log_verbosity=new_verbosity)
     verbosity = drm_manager.get('log_verbosity')
     assert verbosity == new_verbosity
@@ -540,10 +714,10 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         async_cb.callback
     )
     format = drm_manager.get('log_format')
-    assert format == 0
-    format = drm_manager.set(log_format=4)
+    exp_format = 0 if format else 1
+    format = drm_manager.set(log_format=exp_format)
     format = drm_manager.get('log_format')
-    assert format == 4
+    assert format == exp_format
     async_cb.assert_NoError()
     print("Test parameter 'log_format': PASS")
 
@@ -777,22 +951,44 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
 #        assert rd_msg == wr_msg, 'Failed to write-read Mailbox'
 #        print("Test parameter 'mailbox_data': PASS")
 
-    # Test parameter: retry_deadline
+    # Test parameter: ws_retry_deadline
     # Read-write: read and write the retry period deadline in seconds from the license timeout during which no more retry is sent
-    origRetryDeadline = drm_manager.get('retry_deadline')  # Save original value
+    origRetryDeadline = drm_manager.get('ws_retry_deadline')  # Save original value
     expValue = origRetryDeadline + 100
-    drm_manager.set(retry_deadline=expValue)
-    value = drm_manager.get('retry_deadline')
+    drm_manager.set(ws_retry_deadline=expValue)
+    value = drm_manager.get('ws_retry_deadline')
     assert value == expValue
-    drm_manager.set(retry_deadline=origRetryDeadline)  # Restore original value
+    drm_manager.set(ws_retry_deadline=origRetryDeadline)  # Restore original value
     async_cb.assert_NoError(async_cb.assert_NoError)
-    print("Test parameter 'retry_deadline': PASS")
+    print("Test parameter 'ws_retry_deadline': PASS")
+
+    # Test parameter: ws_retry_period_large
+    # Read-write: read and write the time in seconds before the next request attempt to the Web Server when the time left before timeout is large
+    origRetryPeriodLarge = drm_manager.get('ws_retry_period_large')  # Save original value
+    expValue = origRetryPeriodLarge + 100
+    drm_manager.set(ws_retry_period_large=expValue)
+    value = drm_manager.get('ws_retry_period_large')
+    assert value == expValue
+    drm_manager.set(ws_retry_period_large=origRetryPeriodLarge)  # Restore original value
+    async_cb.assert_NoError(async_cb.assert_NoError)
+    print("Test parameter 'ws_retry_period_large': PASS")
+
+    # Test parameter: ws_retry_period_short
+    # Read-write: read and write the time in seconds before the next request attempt to the Web Server when the time left before timeout is short
+    origRetryPeriodShort = drm_manager.get('ws_retry_period_short')  # Save original value
+    expValue = origRetryPeriodShort + 100
+    drm_manager.set(ws_retry_period_short=expValue)
+    value = drm_manager.get('ws_retry_period_short')
+    assert value == expValue
+    drm_manager.set(ws_retry_period_short=origRetryPeriodShort)  # Restore original value
+    async_cb.assert_NoError(async_cb.assert_NoError)
+    print("Test parameter 'ws_retry_period_short': PASS")
 
     # Test parameter: ws_request_timeout
     # Read-write: read and write the web service request timeout in seconds during which the response is waited
     origResponseTimeout = drm_manager.get('ws_request_timeout')  # Save original value
     expValue = origResponseTimeout + 100
-    drm_manager.set(ws_request_timeout=expValuee)
+    drm_manager.set(ws_request_timeout=expValue)
     value = drm_manager.get('ws_request_timeout')
     assert value == expValue
     drm_manager.set(ws_request_timeout=origResponseTimeout)  # Restore original value
@@ -833,24 +1029,32 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     # Write-only: only for testing, uses a bad product ID.
     # => Skipped: Tested in test_bad_product_id
 
-    # Test parameter: log_message
-    # Write-only, only for testing, insert a message with the value as content
-    from time import time
-    from os.path import isfile
-    async_cb.reset()
-    conf_json.reset()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    drm_manager.set(log_message_level=5)
-    msg = 'This should be DEBUG2 message'
-    drm_manager.set(log_message=msg)
-    async_cb.assert_NoError()
-    print("Test parameter 'log_message': PASS")
+#    # Test parameter: log_message
+#    # Write-only, only for testing, insert a message with the value as content
+#    from time import time
+#    from os.path import isfile
+#    async_cb.reset()
+#    conf_json.reset()
+#    logpath = "log_%s.txt" % time()
+#    conf_json['settings']['log_file'] = logpath
+#    conf_json.save()
+#    drm_manager = accelize_drm.DrmManager(
+#        conf_json.path,
+#        cred_json.path,
+#        driver.read_register_callback,
+#        driver.write_register_callback,
+#        async_cb.callback
+#    )
+#    drm_manager.set(log_message_level=5)
+#    msg = 'This should be DEBUG2 message'
+#    drm_manager.set(log_message=msg)
+#    assert isfile(logpath)
+#    with open(logpath) as f:
+#        log_content = f.read()
+#    assert "DEBUG2" in log_content
+#    assert msg in log_content
+#    assert_NoErrorCallback(async_cb)
+#    print("Test parameter 'log_message': PASS")
 
 
 @pytest.mark.skip(reason='Not sure what is the expected behavior of the DRM Manager in case of 2 instances: seems to create issues like the timerEnable timeout')
