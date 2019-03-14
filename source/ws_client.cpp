@@ -129,6 +129,11 @@ DrmWSClient::DrmWSClient(const std::string &conf_file_path, const std::string &c
     mOAUth2Request.setPostFields( ss.str() );
 }
 
+double DrmWSClient::getTokenExpiration() const {
+    TClock::duration delta = mTokenExpirationTime - TClock::now();
+    return (double)delta.count() / 1000000000;
+}
+
 void DrmWSClient::setTokenValidityPeriod( const uint32_t& validity_period ) {
     if (mTokenValidityPeriod > validity_period) {
         uint32_t delta = mTokenValidityPeriod - validity_period;
@@ -175,7 +180,7 @@ void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
         // Build the error message
         std::stringstream msg;
         msg << "HTTP response code from OAuth2 Web Service: " << resp_code;
-        msg << "(" << response << ")";
+        msg << " (" << response << ")";
 
         if (CurlEasyPost::is_error_retryable(resp_code)) {
             Throw(DRM_WSMayRetry, msg.str());
@@ -243,7 +248,7 @@ Json::Value DrmWSClient::requestLicense( const Json::Value& json_req, TClock::ti
     msg << "HTTP response code from License Web Service: " << resp_code;
     std::string error_details = json_resp.get("detail", "").asString();
     if ( error_details.size() )
-        msg << "(" << error_details << ")";
+        msg << " (" << error_details << ")";
 
     if ( CurlEasyPost::is_error_retryable( resp_code ) ) {
         Throw(DRM_WSMayRetry, msg.str());

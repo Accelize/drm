@@ -16,7 +16,7 @@ def test_raise_exceptions(accelize_drm):
 
         # Raise an exception from message with error code
         with pytest.raises(exc.DRMFatal):
-            raise_from_error('message [errCode=90001]\n')
+            raise_from_error('message [errCode=30001]\n')
 
         # Raise an exception with no error code
         with pytest.raises(exc.DRMException):

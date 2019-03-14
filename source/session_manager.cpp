@@ -1349,6 +1349,12 @@ public:
                         Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", token_string );
                         break;
                     }
+                    case ParameterKey::token_expired_in: {
+                        double expired_in = getDrmWSClient().getTokenExpiration();
+                        json_value[key_str] = expired_in ;
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", expired_in  );
+                        break;
+                    }
                     case ParameterKey::token_validity: {
                         uint32_t token_validity = getDrmWSClient().getTokenValidityPeriod();
                         json_value[key_str] = token_validity;
@@ -1433,7 +1439,7 @@ public:
 
     void set( const Json::Value& json_value ) {
         TRY
-            Debug("Set parameter request: ", json_value.toStyledString());
+            Debug2("Set parameter request: ", json_value.toStyledString());
             for( Json::ValueConstIterator it = json_value.begin() ; it != json_value.end() ; it++ ) {
                 std::string key_str = it.key().asString();
                 const ParameterKey key_id = findParameterKey( key_str );

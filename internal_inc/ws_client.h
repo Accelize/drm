@@ -168,6 +168,7 @@ public:
     ~DrmWSClient() = default;
 
     uint32_t getTokenValidityPeriod() const { return mTokenValidityPeriod; }
+    double getTokenExpiration() const;
     std::string getTokenString() const { return mOAuth2Token; }
 
     void setTokenValidityPeriod( const uint32_t& validity_period );
