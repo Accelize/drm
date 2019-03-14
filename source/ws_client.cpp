@@ -18,6 +18,7 @@ limitations under the License.
 #include <sstream>
 #include <curl/curl.h>
 #include <chrono>
+#include <unistd.h>
 
 #include "log.h"
 #include "utils.h"
@@ -86,9 +87,8 @@ DrmWSClient::DrmWSClient(const std::string &conf_file_path, const std::string &c
 
     mUseBadOAuth2Token = std::string("");
     mOAuth2Token = std::string("");
+    mTokenValidityPeriod = 0;
     mTokenExpirationTime = TClock::now();
-    mRetryDeadline = cRetryDeadline;
-    mRequestTimeout = cRequestTimeout;
 
     Json::Value conf_json = parseJsonFile(conf_file_path);
     try {
@@ -100,13 +100,6 @@ DrmWSClient::DrmWSClient(const std::string &conf_file_path, const std::string &c
         mMeteringUrl = url + std::string("/auth/metering/genlicense/");
         Debug("Licensing URL: ", url);
 
-        Json::Value param_lib = JVgetOptional( conf_json, "settings", Json::objectValue );
-        if ( param_lib != Json::nullValue ) {
-            mRetryDeadline = JVgetOptional(param_lib, "retry_deadline", Json::uintValue,
-                                  cRetryDeadline).asUInt();
-            mRequestTimeout = JVgetOptional(param_lib, "ws_request_timeout", Json::uintValue,
-                                            cRequestTimeout).asUInt();
-        }
     } catch(Exception &e) {
         if (e.getErrCode() != DRM_BadFormat)
             throw;
@@ -136,66 +129,20 @@ DrmWSClient::DrmWSClient(const std::string &conf_file_path, const std::string &c
     mOAUth2Request.setPostFields( ss.str() );
 }
 
-Json::Value DrmWSClient::getLicense( const Json::Value& json_req, TClock::duration timeout ) {
-    TClock::time_point deadline = TClock::now() + timeout;
-    Debug( "Getting starting license with timeout of ", timeout.count()/1000000000, "s" );
-    return getLicense( json_req, deadline );
-}
-
-Json::Value DrmWSClient::getLicense( const Json::Value& json_req, TClock::time_point deadline ) {
-
-    Debug( "Web Service JSON request:", json_req.toStyledString() );
-
-    while ( TClock::now() <= deadline ) {
-
-        // Update token: request new one if needed
-        updateOAuth2token( deadline );
-
-        // Create new request
-        CurlEasyPost req;
-        req.setURL(mMeteringUrl);
-        req.appendHeader("Accept: application/json");
-        req.appendHeader("Content-Type: application/json");
-        req.appendHeader(std::string("Authorization: Bearer ") + mOAuth2Token);
-        req.setPostFields(saveJsonToString(json_req));
-
-        // Send request
-        Debug("Starting license request");
-        std::string response;
-        long resp_code = req.perform(&response, deadline);
-        Debug("Received code ", resp_code, " in ", req.getTotalTime() * 1000,
-              "ms");
-
-        if ((resp_code != 200) && (resp_code != 560) && (resp_code != 400)) {
-            if (!CurlEasyPost::is_error_retryable(resp_code)) {
-                Throw(DRM_WSReqError, "WS HTTP response code : ", resp_code,
-                      "(", response, ")");
-            }
-            Debug("WS HTTP response code: ", resp_code, ", ", response);
-            continue;
-        }
-
-        // Parse response
-        Json::Value json_resp = parseJsonString(response);
-        Debug("Web Service JSON response:\n", json_resp.toStyledString());
-
-        // Check for error with details
-        if (resp_code == 560) { /*560 : Custom License generation temporary issue*/
-            Throw(DRM_WSMayRetry, "Error from WS with details : ",
-                  json_resp.get("detail", "Unknown error"));
-        }
-        if (resp_code == 400) { /*400 : Bad request */
-            Throw(DRM_WSError, "Error from WS with details : ",
-                  json_resp.get("detail", "Unknown error"));
-        }
-        return json_resp;
+void DrmWSClient::setTokenValidityPeriod( const uint32_t& validity_period ) {
+    if (mTokenValidityPeriod > validity_period) {
+        uint32_t delta = mTokenValidityPeriod - validity_period;
+        mTokenExpirationTime -= std::chrono::seconds(delta);
+    } else {
+        uint32_t delta = validity_period - mTokenValidityPeriod ;
+        mTokenExpirationTime += std::chrono::seconds(delta);
     }
-    Throw(DRM_WSError, "Timeout: failed to get a valid license from the Web Service" );
+    mTokenValidityPeriod = validity_period;
 }
 
-void DrmWSClient::updateOAuth2token( TClock::time_point timeout ) {
+void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
 
-    if ( !mUseBadOAuth2Token.empty() ) {
+    if (!mUseBadOAuth2Token.empty()) {
         Debug("Temporary use following token: ", mUseBadOAuth2Token);
         mOAuth2Token = mUseBadOAuth2Token;
         mTokenExpirationTime = TClock::now();
@@ -204,36 +151,107 @@ void DrmWSClient::updateOAuth2token( TClock::time_point timeout ) {
     }
 
     // Check if a token exists
-    if ( !mOAuth2Token.empty() ) {
+    if (!mOAuth2Token.empty()) {
         // Check if existing token has expired or is about to expire
-        if ( mTokenExpirationTime > TClock::now() ) {
-            Debug( "Existing token is still valid" );
+        if (mTokenExpirationTime > TClock::now()) {
+            Debug("Existing token is still valid");
             return;
         }
-        Debug( "Existing token has expired" );
+        Debug("Existing token has expired");
     }
 
-    // Request a new token
-    Debug( "Requesting a new token to ", mOAuth2Url );
+    // Request a new token and wait response
+    Debug("Starting a new token request to ", mOAuth2Url);
     std::string response;
-    long resp_code = mOAUth2Request.perform( &response, timeout );
-    Debug( "Received code ", resp_code, " from OAuth2 service in ", mOAUth2Request.getTotalTime()*1000, "ms" );
+    long resp_code = mOAUth2Request.perform( &response, deadline );
+    Debug( "Received code ", resp_code, " from License Web Server in ",
+           mOAUth2Request.getTotalTime() * 1000, "ms with following response: ",
+           response );
+
+    // Analyze response
     if ( resp_code != 200 ) {
-        if ( CurlEasyPost::is_error_retryable( resp_code ) ) {
-            Throw( DRM_WSMayRetry, "WSOAuth HTTP response code : ", resp_code, "(", response, ")" );
+
+        // An error occurred
+        // Build the error message
+        std::stringstream msg;
+        msg << "HTTP response code from OAuth2 Web Service: " << resp_code;
+        msg << "(" << response << ")";
+
+        if (CurlEasyPost::is_error_retryable(resp_code)) {
+            Throw(DRM_WSMayRetry, msg.str());
+        } else if ( (resp_code >= 400) && (resp_code < 500) ) {
+            Throw(DRM_WSReqError, msg.str());
         } else {
-            Throw( DRM_WSReqError, "WSOAuth HTTP response code : ", resp_code, "(", response, ")" );
+            Throw(DRM_WSError, msg.str());
         }
     }
-    // Parse response
-    Json::Value json_resp = parseJsonString( response );
-    if ( !json_resp.isMember( "access_token" ) )
-        Throw( DRM_WSRespError, "Non-valid response from WSOAuth : ", response );
-    Debug( "New OAuth2 token is ", json_resp["access_token"].asString(),
-            "; it will expire in ", json_resp["expires_in"].asInt(), " ms" );
+    // No error: parse the response
+    Json::Value json_resp;
+    try {
+        json_resp = parseJsonString( response );
+    } catch ( const Exception&e ) {
+        Throw( DRM_WSRespError, "Failed to parse Web Service response: ", e.what() );
+    }
+    if ( !json_resp.isMember("access_token") )
+        Throw(DRM_WSRespError, "Non-valid response from WSOAuth : ", response);
+    Debug("New OAuth2 token is ", json_resp["access_token"].asString(),
+          "; it will expire in ", json_resp["expires_in"].asInt(), " ms");
 
     mOAuth2Token = json_resp["access_token"].asString();
-    mTokenExpirationTime = TClock::now() + std::chrono::seconds( json_resp["expires_in"].asInt() - mRetryDeadline );
+    mTokenValidityPeriod = json_resp["expires_in"].asInt();
+    mTokenExpirationTime = TClock::now() + std::chrono::seconds( mTokenValidityPeriod );
+}
+
+
+Json::Value DrmWSClient::requestLicense( const Json::Value& json_req, TClock::time_point deadline ) {
+
+    // Create new request
+    CurlEasyPost req;
+    req.setURL(mMeteringUrl);
+    req.appendHeader("Accept: application/json");
+    req.appendHeader("Content-Type: application/json");
+    req.appendHeader( std::string("Authorization: Bearer ") + mOAuth2Token );
+    req.setPostFields( saveJsonToString(json_req) );
+
+    // Send request and wait response
+    Debug("Starting license request to ", mMeteringUrl);
+    std::string response;
+    long resp_code = req.perform( &response, deadline );
+    Debug( "Received code ", resp_code, " from License Web Service in ",
+           req.getTotalTime() * 1000, "ms with following response\n",
+           response );
+
+    // Parse response
+    Json::Value json_resp;
+    try {
+        json_resp = parseJsonString(response);
+    } catch ( const Exception&e ) {
+        Throw( DRM_WSRespError, "Failed to parse Web Service response: ", e.what() );
+    }
+
+    // Analyze response
+    if ( resp_code == 200 ) {
+        // No error
+        return json_resp;
+    }
+
+    // An error occurred
+    Warning("Received code ", resp_code, " from License Web Service in ",
+            req.getTotalTime() * 1000, "ms");
+    // Build the error message
+    std::stringstream msg;
+    msg << "HTTP response code from License Web Service: " << resp_code;
+    std::string error_details = json_resp.get("detail", "").asString();
+    if ( error_details.size() )
+        msg << "(" << error_details << ")";
+
+    if ( CurlEasyPost::is_error_retryable( resp_code ) ) {
+        Throw(DRM_WSMayRetry, msg.str());
+    } else if ( (resp_code >= 400) && (resp_code < 500) ) {
+        Throw( DRM_WSReqError, msg.str() );
+    } else {
+        Throw(DRM_WSError, msg.str());
+    }
 }
 
 }

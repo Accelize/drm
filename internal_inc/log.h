@@ -24,6 +24,7 @@ limitations under the License.
 #include <stdio.h>
 #include <string.h>
 #include <thread>
+#include <mutex>
 
 #include "accelize/drm/error.h"
 
@@ -41,11 +42,11 @@ namespace DRM {
 
 enum class eLogLevel: int {
     QUIET = 0,
-    ERROR = 1,
-    WARNING = 2,
-    INFO = 3,
-    DEBUG = 4,
-    DEBUG2 = 5,
+    ERROR,
+    WARNING,
+    INFO,
+    DEBUG,
+    DEBUG2,
     __SIZE
 };
 
@@ -67,20 +68,22 @@ enum class eLogFormat {
 
 extern eLogLevel sLogVerbosity;
 extern eLogFormat sLogFormat;
+extern std::string sLogFilePath;
+//extern std::unique_ptr<std::ostream> sLogStream;
 extern std::ostream* sLogStream;
+
+static std::recursive_mutex mLogMutex;
+
 
 
 static std::string getFormattedTime() {
 
     time_t rawtime;
     struct tm* timeinfo;
+    char _retval[32];
 
     time(&rawtime);
     timeinfo = localtime(&rawtime);
-
-    // Must be static, otherwise won't work
-    //static char _retval[32];
-    char _retval[32];
     strftime(_retval, sizeof(_retval), "%Y-%m-%d/%H:%M:%S", timeinfo);
 
     return std::string( _retval );
@@ -119,8 +122,12 @@ void logTrace(const eLogLevel& level, const std::string& file, const unsigned lo
         ss << " [DRM-Lib] " << getFormattedTime() << ", " << file << ":" << noline;
     }
     ss << ": [Thread " << std::this_thread::get_id() << "] ";
-    ssAddToStream(*sLogStream, ss.str(), std::forward<Args>( args )...);
-    *sLogStream << std::endl;
+    std::lock_guard<std::recursive_mutex> lock(mLogMutex);
+    //if ( sLogStream.get() != nullptr ) {
+    if ( sLogStream != nullptr ) {
+        ssAddToStream(*sLogStream, ss.str(), std::forward<Args>(args)...);
+        *sLogStream << std::endl;
+    }
 }
 
 #define Debug2(...) \

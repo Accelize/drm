@@ -41,12 +41,15 @@ typedef enum {
     DRM_WSError             = 10003, /**< Error returned from Accelize WebService */
     DRM_WSMayRetry          = 10004, /**< Error with request to Accelize Webservice, retry advised */
 
-    DRM_CtlrError           = 20001, /**< An error happened on a command on the DRM controller */
+    DRM_CtlrError           = 20001, /**< An error happened on a command to the DRM controller */
 
-    DRM_Fatal               = 90001, /**< Fatal error, unknown error (Please contact Accelize) */
-    DRM_Assert              = 90002, /**< Assertion failed internally (Please contact Accelize) */
+    DRM_Fatal               = 30001, /**< Fatal error, unknown error (Please contact Accelize) */
+    DRM_Assert              = 30002, /**< Assertion failed internally (Please contact Accelize) */
 
-    DRM_Debug               = 90003  /**< Generated for debug and testing only */
+    DRM_Debug               = 40001, /**< Generated for debug and testing only */
+
+    DRM_Exit                = 99999  /**< Generated for debug and testing only */
+
 } DRM_ErrorCode;
 
 #ifdef  __cplusplus

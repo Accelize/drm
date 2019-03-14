@@ -13,7 +13,6 @@ def test_drm_manager_constructor_with_bad_arguments(pytestconfig, accelize_drm, 
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-    backend = pytestconfig.getoption("backend")
 
     # Test when no configuration file is given
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:

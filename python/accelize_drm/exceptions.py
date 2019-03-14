@@ -96,7 +96,7 @@ class DRMFatal(DRMException):
     Fatal error, unknown error (Please contact Accelize)
     """
     #: Error code
-    error_code = 90001
+    error_code = 30001
 
 
 class DRMAssert(DRMException):
@@ -104,13 +104,13 @@ class DRMAssert(DRMException):
     Assertion failed internally (Please contact Accelize)
     """
     #: Error code
-    error_code = 90002
+    error_code = 30002
 
 
 class DRMDebug(DRMException):
     """Generated for debug and testing only"""
     #: Error code
-    error_code = 90003
+    error_code = 40001
 
 
 _ERROR_CODES = {}

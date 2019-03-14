@@ -5,6 +5,7 @@ from os.path import realpath, isfile, expanduser, splitext, join, dirname
 from json import dump, load
 from copy import deepcopy
 from re import search
+from ctypes import c_uint32, byref
 
 import pytest
 
@@ -94,6 +95,13 @@ def pytest_addoption(parser):
         "--integration", action="store_true",
         help='Run integration tests. Theses tests may needs two FPGAs.'
     )
+    parser.addoption(
+        "--activator_base_address", action="store", default=0x10000, type=int,
+        help='Specify the lowest activator base address in the design')
+    parser.addoption(
+        "--activator_range_address", action="store", default=0x10000, type=int,
+        help='Specify the lowest activator base address in the design')
+
 
 
 def pytest_runtest_setup(item):
@@ -105,6 +113,42 @@ def pytest_runtest_setup(item):
         pytest.skip("Don't run integration tests.")
     elif item.config.getoption("integration") and not markers:
         pytest.skip("Run only integration tests.")
+
+
+class ActivatorsInFPGA:
+    """
+    Activators object
+    """
+    def __init__(self, driver, base_address, address_range):
+        self.driver = driver
+        self.base_address = base_address
+        self.address_range = address_range
+
+    def generate_coin(self, coins, activator_index=0):
+        value = c_uint32()
+        for i in range(coins):
+            self.driver.read_register_callback( self.base_address +
+                           activator_index * self.address_range, byref(value) )
+
+    def get_status(self, activator_index=None):
+        if isinstance(activator_index, list):
+            activator_index_list = activator_index
+        elif isinstance(activator_index, int):
+            activator_index_list = [activator_index]
+        else:
+            raise TypeError('Unsupported type: %s' % type(activator_index))
+        regvalue = c_uint32(0)
+        status_list = []
+        for i in activator_index_list:
+            self.driver.read_register_callback( self.base_address +
+                           i * self.address_range, byref(regvalue) )
+            value = regvalue.value
+            code_rdy = (value >> 1) & 1
+            active = value & 1
+            status_list.append(active)
+        if len(status_list) == 1 and activator_index is None or isinstance(activator_index, int):
+            return status_list[0]
+        return status_list
 
 
 # Pytest Fixtures
@@ -214,6 +258,12 @@ def accelize_drm(pytestconfig):
             "drm_controller_base_address"))
         for slot_id in fpga_slot_id]
 
+    # Define Activator access
+    fpga_activators = [ ActivatorsInFPGA(fpga_driver[slot_id],
+        pytestconfig.getoption("activator_base_address"),
+        pytestconfig.getoption("activator_range_address"))
+        for slot_id in fpga_slot_id]
+
     # Store some values for access in tests
     _accelize_drm.pytest_build_environment = build_environment
     _accelize_drm.pytest_build_source_dir = '@CMAKE_CURRENT_SOURCE_DIR@'
@@ -222,6 +272,7 @@ def accelize_drm(pytestconfig):
     _accelize_drm.pytest_fpga_driver = fpga_driver
     _accelize_drm.pytest_fpga_image = fpga_image
     _accelize_drm.pytest_hdk_version = hdk_version
+    _accelize_drm.pytest_fpga_activators = fpga_activators
 
     return _accelize_drm
 
