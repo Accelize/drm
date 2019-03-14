@@ -1230,18 +1230,21 @@ public:
                     case ParameterKey::log_verbosity: {
                         int logVerbosity = static_cast<int>(sLogVerbosity);
                         json_value[key_str] = logVerbosity;
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", logVerbosity );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, "): ", logVerbosity );
                         break;
                     }
                     case ParameterKey::log_format: {
                         int logFormat = static_cast<int>(sLogFormat);
                         json_value[key_str] = logFormat;
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", logFormat );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, "): ", logFormat );
                         break;
                     }
                     case ParameterKey::log_file: {
                         json_value[key_str] = sLogFilePath;
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", sLogFilePath );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, "): ", sLogFilePath );
                         break;
                     }
                     case ParameterKey::license_type: {
@@ -1250,36 +1253,42 @@ public:
                             Unreachable( "Missing parameter key: license_type" );
                         std::string license_type_str = it->second;
                         json_value[key_str] = license_type_str;
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", license_type_str );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, "): ", license_type_str );
                         break;
                     }
                     case ParameterKey::license_duration: {
                         json_value[key_str] = mLicenseDuration;
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mLicenseDuration );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, "): ", mLicenseDuration );
                         break;
                     }
                     case ParameterKey::num_activators: {
                         uint32_t nbActivators = 0;
                         getNumActivator(nbActivators);
                         json_value[key_str] = nbActivators;
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", nbActivators );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, "): ", nbActivators );
                         break;
                     }
                     case ParameterKey::session_id: {
                         json_value[key_str] = mSessionID;
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mSessionID );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, "): ", mSessionID );
                         break;
                     }
                     case ParameterKey::session_status: {
                         bool status = isSessionRunning();
                         json_value[key_str] = status;
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", status );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, "): ", status );
                         break;
                     }
                     case ParameterKey::license_status: {
                         bool status = isLicenseActive();
                         json_value[key_str] = status;
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", status );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, "): ", status );
                         break;
                     }
                     case ParameterKey::metered_data: {
@@ -1290,7 +1299,8 @@ public:
                         unsigned long long metered_data = getMeteringData();
 #endif
                         json_value[key_str] = metered_data;
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", metered_data );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, "): ", metered_data );
                         break;
                     }
                     case ParameterKey::nodelocked_request_file: {
@@ -1299,8 +1309,10 @@ public:
                             Warning( "Parameter only available with Node-Locked licensing" );
                         } else {
                             json_value[key_str] = mNodeLockRequestFilePath;
-                            Debug( "Get value of parameter '", key_str, "' (ID=", key_id,
-                                  "): Node-locked license request file is saved in ", mNodeLockRequestFilePath );
+                            Debug( "Get value of parameter '", key_str,
+                                    "' (ID=", key_id, "): ",
+                                    "Node-locked license request file is saved in ",
+                                    mNodeLockRequestFilePath );
                         }
                         break;
                     }
@@ -1312,59 +1324,69 @@ public:
                     case ParameterKey::page_mailbox: {
                         std::string str = getDrmPage(key_id - ParameterKey::page_ctrlreg);
                         json_value[key_str] = str;
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, ")" );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, ")" );
                         Info(str);
                         break;
                     }
                     case ParameterKey::hw_report: {
                         std::string str = getDrmReport();
                         json_value[key_str] = str;
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, ")" );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, ")" );
                         Info( "Print HW report:\n", str );
                         break;
                     }
                     case ParameterKey::drm_frequency: {
                         json_value[key_str] = mFrequencyCurr;
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mFrequencyCurr );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, "): ", mFrequencyCurr );
                         break;
                     }
                     case ParameterKey::frequency_detection_threshold: {
                         json_value[key_str] = mFrequencyDetectionThreshold;
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mFrequencyDetectionThreshold );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, "): ", mFrequencyDetectionThreshold );
                         break;
                     }
                     case ParameterKey::frequency_detection_period: {
                         json_value[key_str] = mFrequencyDetectionPeriod;
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mFrequencyDetectionPeriod );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, "): ", mFrequencyDetectionPeriod );
                         break;
                     }
                     case ParameterKey::product_id: {
                         json_value[key_str] = mHeaderJsonRequest["product"];
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mHeaderJsonRequest["product"].toStyledString() );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, "): ", mHeaderJsonRequest["product"].toStyledString() );
                         break;
                     }
                     case ParameterKey::token_string: {
                         std::string token_string = getDrmWSClient().getTokenString();
                         json_value[key_str] = token_string;
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", token_string );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, "): ", token_string );
                         break;
                     }
                     case ParameterKey::token_expired_in: {
                         double expired_in = getDrmWSClient().getTokenExpiration();
                         json_value[key_str] = expired_in ;
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", expired_in  );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, "): ", expired_in  );
                         break;
                     }
                     case ParameterKey::token_validity: {
                         uint32_t token_validity = getDrmWSClient().getTokenValidityPeriod();
                         json_value[key_str] = token_validity;
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", token_validity );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, "): ", token_validity );
                         break;
                     }
                     case ParameterKey::mailbox_size: {
                         uint32_t mbSize = getMailboxSize() - (uint32_t)MailboxOffset::MB_USER;
                         json_value[key_str] = mbSize;
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mbSize );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, "): ", mbSize );
                         break;
                     }
                     case ParameterKey::mailbox_data: {
@@ -1372,49 +1394,58 @@ public:
                         std::vector<uint32_t> data_array = readMailbox( MailboxOffset::MB_USER, mbSize );
                         for( const auto& val: data_array )
                             json_value[key_str].append(val);
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", json_value[key_str].toStyledString() );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, "): ", json_value[key_str].toStyledString() );
                         break;
                     }
                     case ParameterKey::ws_retry_deadline: {
                         json_value[key_str] = mWSRetryDeadline;
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mWSRetryDeadline );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, "): ", mWSRetryDeadline );
                         break;
                     }
                     case ParameterKey::ws_retry_period_large: {
                         json_value[key_str] = mWSRetryPeriodLarge;
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mWSRetryPeriodLarge );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, "): ", mWSRetryPeriodLarge );
                         break;
                     }
                     case ParameterKey::ws_retry_period_short: {
                         json_value[key_str] = mWSRetryPeriodShort;
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mWSRetryPeriodShort );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, "): ", mWSRetryPeriodShort );
                         break;
                     }
                     case ParameterKey::ws_request_timeout: {
                         json_value[key_str] = mWSRequestTimeout ;
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", mWSRequestTimeout  );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, "): ", mWSRequestTimeout  );
                         break;
                     }
                     case ParameterKey::log_message_level: {
                         int msgLevel = static_cast<int>(mDebugMessageLevel);
                         json_value[key_str] = msgLevel;
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", msgLevel );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, "): ", msgLevel );
                         break;
                     }
                     case ParameterKey::custom_field: {
                         uint32_t customField = readMailbox( MailboxOffset::MB_CUSTOM_FIELD );
                         json_value[key_str] = customField;
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", customField );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, "): ", customField );
                         break;
                     }
                     case ParameterKey ::list_all: {
                         json_value[key_str] = list_parameter_key();
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", json_value[key_str].toStyledString() );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, "): ", json_value[key_str].toStyledString() );
                         break;
                     }
                     case ParameterKey::dump_all: {
                         json_value[key_str] = dump_parameter_key();
-                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ", json_value[key_str].toStyledString() );
+                        Debug( "Get value of parameter '", key_str,
+                                "' (ID=", key_id, "): ", json_value[key_str].toStyledString() );
                         break;
                     }
                     default: {
