@@ -46,30 +46,17 @@ Debian, Ubuntu: DEB repository
 To install the repository, run the following commands:
 
 .. code-block:: bash
-    :caption: Apt repository with HTTPS support
 
-    # Install HTTPS support for Apt
-    sudo apt install -y apt-transport-https
-
-    # Add Accelize GPG public key for package signature verification
-    curl -fsSL https://accelize.s3.amazonaws.com/gpg | sudo apt-key add -
-
-    # Install repository
-    sudo echo "deb https://accelize.s3.amazonaws.com/deb $(lsb_release -cs) stable">/etc/apt/sources.list.d/accelize.list
-
-It is also possible to install the repository without HTTPS support:
-
-.. code-block:: bash
-    :caption: Apt repository without HTTPS support
+    # Install Apt utilities and ensure "lsb-release", "curl" and "gnupg" are available
+    sudo apt update
+    sudo apt install -y apt-transport-https software-properties-common lsb-release gnupg curl
 
     # Add Accelize GPG public key for package signature verification
     curl -fsSL https://accelize.s3.amazonaws.com/gpg | sudo apt-key add -
 
     # Install repository
-    sudo echo "deb http://accelize.s3.amazonaws.com/deb $(lsb_release -cs) stable">/etc/apt/sources.list.d/accelize.list
-
-In this case the communication is done in HTTP, security is provided by package
-signature that ensure package where not tampered.
+    sudo add-apt-repository "deb https://accelize.s3.amazonaws.com/deb $(lsb_release -cs) stable"
+    sudo apt update
 
 RHEL, CentOS, Fedora: RPM repository
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
