@@ -38,7 +38,7 @@ Install the Accelize repository
 
 Packages are hosted on the Accelize repository.
 
-.. note:: All packages are signed for security.
+.. note:: Packages and repositories metadata are signed for security.
 
 Debian, Ubuntu: DEB repository
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -47,7 +47,7 @@ To install the repository, run the following commands:
 
 .. code-block:: bash
 
-    # Install Apt utilities and ensure "lsb-release", "curl" and "gnupg" are available
+    # Ensure common system utilities are installed
     sudo apt update
     sudo apt install -y apt-transport-https software-properties-common lsb-release gnupg curl
 
@@ -71,7 +71,22 @@ To install the repository, run the following commands:
 .. code-block:: bash
     :caption: On Fedora
 
+    # Ensure config manager is installed
+    sudo dnf install -y 'dnf-command(config-manager)'
+
+    # Install repository
     sudo dnf config-manager --add-repo https://accelize.s3.amazonaws.com/rpm/accelize_stable.repo
+
+Prerelease channel
+^^^^^^^^^^^^^^^^^^
+
+Accelize provides *stable* and a *prerelease* channels.
+
+Installation instructions are for the stable channel, but is it possible to use
+prerelease channel by following same instructions and replacing
+`stable` by `prerelease` in commands.
+
+.. warning:: No support is provided for prerelease packages.
 
 C/C++ Library
 ~~~~~~~~~~~~~
