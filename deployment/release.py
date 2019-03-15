@@ -142,7 +142,7 @@ if __name__ == '__main__':
             # Remove previously existing tag
             print(f"Removing previous {version} tag...")
             if version in remote_existing_tags and not args.dry:
-                run(['git', 'push', '--delete', 'origin ', version],
+                run('git push --delete origin ' + version, shell=True,
                     **run_args).check_returncode()
             if version in existing_tags and not args.dry:
                 run(['git', 'tag', '--delete', version],

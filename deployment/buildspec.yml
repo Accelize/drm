@@ -92,7 +92,7 @@ phases:
         -x OS debian_testing
         -x OS fedora_latest
         -r 'cd /dev/shm &&
-            sudo docker run -ti --privileged
+            sudo docker run --privileged
             -e PACKAGES_DIR=/opt/packages/~{OS}~
             -v /dev/shm:/opt/
             accelize/accelizedrm-ci:test-aws_f1-~{OS}~
