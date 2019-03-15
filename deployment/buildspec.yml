@@ -60,7 +60,6 @@ phases:
       # Build packages
       - xlz
         --if git_head_tagged
-        --if git_branch=master,dev
         run
         drmlib_dev=$CODEBUILD_SOURCE_VERSION
         drmlib_package_release drmlib_packages_key=/opt/src
