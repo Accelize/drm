@@ -46,9 +46,10 @@ class FpgaDriver(_FpgaDriverBase):
         Args:
             fpga_image (str): FPGA image.
         """
-        load_image = _run(['fpga-load-local-image', '-S', self._fpga_slot_id,
-                           '-I', fpga_image], stderr=_STDOUT, stdout=_PIPE,
-                          universal_newlines=True)
+        load_image = _run([
+            'fpga-load-local-image', '-S', str(self._fpga_slot_id),
+            '-I', fpga_image], stderr=_STDOUT, stdout=_PIPE,
+            universal_newlines=True)
         if load_image.returncode:
             raise RuntimeError(load_image.stdout)
 
