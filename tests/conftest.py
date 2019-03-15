@@ -259,10 +259,10 @@ def accelize_drm(pytestconfig):
         for slot_id in fpga_slot_id]
 
     # Define Activator access
-    fpga_activators = [ ActivatorsInFPGA(fpga_driver[slot_id],
+    fpga_activators = [ ActivatorsInFPGA(fpga_driver[i],
         pytestconfig.getoption("activator_base_address"),
         pytestconfig.getoption("activator_range_address"))
-        for slot_id in fpga_slot_id]
+        for i in range(len(fpga_driver))]
 
     # Store some values for access in tests
     _accelize_drm.pytest_build_environment = build_environment

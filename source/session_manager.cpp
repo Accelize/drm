@@ -1357,8 +1357,8 @@ public:
                     }
                     case ParameterKey::product_id: {
                         json_value[key_str] = mHeaderJsonRequest["product"];
-                        Debug( "Get value of parameter '", key_str,
-                                "' (ID=", key_id, "): ", mHeaderJsonRequest["product"].toStyledString() );
+                        Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ",
+                                mHeaderJsonRequest["product"].toStyledString() );
                         break;
                     }
                     case ParameterKey::token_string: {
@@ -1478,35 +1478,41 @@ public:
                     case ParameterKey::log_verbosity: {
                         int logVerbosity = (*it).asInt();
                         sLogVerbosity = static_cast<eLogLevel>(logVerbosity);
-                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", logVerbosity );
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") ",
+                                "to value: ", logVerbosity );
                         break;
                     }
                     case ParameterKey::log_format: {
                         int logFormat = (*it).asInt();
                         sLogFormat = static_cast<eLogFormat>(logFormat);
-                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", logFormat );
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") ",
+                                "to value: ", logFormat );
                         break;
                     }
                     case ParameterKey::frequency_detection_threshold: {
                         mFrequencyDetectionThreshold = (*it).asDouble();
-                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", mFrequencyDetectionThreshold );
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") ",
+                                "to value: ", mFrequencyDetectionThreshold );
                         break;
                     }
                     case ParameterKey::frequency_detection_period: {
                         mFrequencyDetectionPeriod = (*it).asUInt();
-                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", mFrequencyDetectionPeriod );
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") ",
+                                "to value: ", mFrequencyDetectionPeriod );
                         break;
                     }
                     case ParameterKey::custom_field: {
                         uint32_t customField = (*it).asUInt();
                         writeMailbox( MailboxOffset::MB_CUSTOM_FIELD, customField );
-                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", customField );
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") ",
+                                "to value: ", customField );
                         break;
                     }
                     case ParameterKey::token_validity: {
                         uint32_t token_validity = (*it).asUInt();
                         getDrmWSClient().setTokenValidityPeriod( token_validity );
-                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", token_validity );
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") ",
+                                "to value: ", token_validity );
                         break;
                     }
                     case ParameterKey::mailbox_data: {
@@ -1516,27 +1522,32 @@ public:
                         for( Json::ValueConstIterator itr = (*it).begin(); itr != (*it).end(); itr++ )
                             data_array.push_back( (*itr).asUInt() );
                         writeMailbox( MailboxOffset::MB_USER, data_array );
-                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", (*it).toStyledString());
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") ",
+                                "to value: ", (*it).toStyledString());
                         break;
                     }
                     case ParameterKey::ws_retry_deadline: {
                         mWSRetryDeadline = (*it).asUInt();
-                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", mWSRetryDeadline );
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") ",
+                                "to value: ", mWSRetryDeadline );
                         break;
                     }
                     case ParameterKey::ws_retry_period_large: {
                         mWSRetryPeriodLarge = (*it).asUInt();
-                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", mWSRetryPeriodLarge );
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") ",
+                                "to value: ", mWSRetryPeriodLarge );
                         break;
                     }
                     case ParameterKey::ws_retry_period_short: {
                         mWSRetryPeriodShort = (*it).asUInt();
-                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", mWSRetryPeriodShort );
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") ",
+                                "to value: ", mWSRetryPeriodShort );
                         break;
                     }
                     case ParameterKey::ws_request_timeout: {
                         mWSRequestTimeout  = (*it).asUInt();
-                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", mWSRequestTimeout  );
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") ",
+                                "to value: ", mWSRequestTimeout  );
                         if ( mWSRequestTimeout == 0 )
                             Throw( DRM_BadArg, "ws_request_timeout must not be 0");
                         break;
@@ -1545,23 +1556,27 @@ public:
                         std::string custom_msg = (*it).asString();
                         Exception e(DRM_Debug, custom_msg);
                         f_asynch_error( e.what() );
-                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value: ", custom_msg );
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") ",
+                                "to value: ", custom_msg );
                         break;
                     }
                     case ParameterKey::bad_authentication_token: {
-                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to random value" );
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") ",
+                                "to random value" );
                         getDrmWSClient().useBadOAuth2Token( "BadToken" );
                         break;
                     }
                     case ParameterKey::bad_product_id: {
-                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to random value" );
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") ",
+                                "to random value" );
                         mHeaderJsonRequest["product"]["name"] = "BAD_NAME_JUST_FOR_TEST";
                         break;
                     }
                     case ParameterKey::log_message_level: {
                         int message_level = (*it).asInt();
                         mDebugMessageLevel = static_cast<eLogLevel>(message_level);
-                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") to value ", message_level );
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") ",
+                                "to value ", message_level );
                         break;
                     }
                     case ParameterKey::log_message: {
