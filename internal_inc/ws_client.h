@@ -160,9 +160,6 @@ protected:
     TClock::time_point mTokenExpirationTime;
     CurlEasyPost mOAUth2Request;
 
-    // Test only parameters
-    std::string mUseBadOAuth2Token;
-
 public:
     DrmWSClient(const std::string &conf_file_path, const std::string &cred_file_path);
     ~DrmWSClient() = default;
@@ -175,8 +172,6 @@ public:
 
     void requestOAuth2token(TClock::time_point deadline);
     Json::Value requestLicense( const Json::Value& json_req, TClock::time_point deadline );
-
-    inline void useBadOAuth2Token( const std::string& new_token ) { mUseBadOAuth2Token = new_token; };
 
 protected:
     void parse_configuration(const std::string &conf_file_path, Json::Reader &reader, Json::Value &conf_json);

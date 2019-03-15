@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Configure Pytest"""
 from os import environ, listdir, remove
-from os.path import realpath, isfile, expanduser, splitext, join, dirname
+from os.path import realpath, isfile, isdir, expanduser, splitext, join, dirname
 from json import dump, load
 from copy import deepcopy
 from re import search
@@ -26,8 +26,11 @@ def get_default_conf_json(licensing_server_url):
     Returns:
         dict: "conf.json" content
     """
-    url = _LICENSING_SERVERS.get(
-        licensing_server_url.lower(), licensing_server_url)
+    if licensing_server_url in _LICENSING_SERVERS.keys():
+        url = _LICENSING_SERVERS.get(
+            licensing_server_url.lower(), licensing_server_url)
+    else:
+        url = licensing_server_url
 
     return {
         "licensing": {
@@ -72,6 +75,9 @@ def pytest_addoption(parser):
     parser.addoption(
         "--cred", action="store", default="./cred.json",
         help='Specify cred.json path')
+    parser.addoption(
+        "--conf", action="store", default=None,
+        help='Specify default conf.json path')
     parser.addoption(
         "--server", action="store",
         default="prod", help='Specify the metering server to use')
@@ -151,6 +157,32 @@ class ActivatorsInFPGA:
         return status_list
 
 
+class RefDesign:
+    """
+    Handle HDK versions and their related FPGA image ID
+    """
+    def __init__(self, path):
+        if not isdir(path):
+            raise IOError("Following path must be a valid directory: %s" % path)
+        self._path = path
+        self.hdk_versions = sorted([splitext(file_name)[0].strip('v')
+                               for file_name in listdir(self._path)
+                               if file_name.endswith('.json')])
+
+    def get_image_id(self, hdk_version=None):
+        if hdk_version is None:
+            hdk_version = self.hdk_versions[-1]
+        with open(join(self._path, 'v%s.json' % hdk_version)) as hdk_json_file:
+            hdk_json = load(hdk_json_file)
+        for key in ('fpga_image', 'FpgaImageGlobalId', 'FpgaImageId'):
+            try:
+                return hdk_json[key]
+            except KeyError:
+                continue
+        else:
+            raise ValueError('No FPGA image found for %s.' % hdk_version)
+
+
 # Pytest Fixtures
 
 @pytest.fixture(scope='session')
@@ -200,41 +232,27 @@ def accelize_drm(pytestconfig):
     fpga_image = pytestconfig.getoption("fpga_image")
     hdk_version = pytestconfig.getoption("hdk_version")
 
+    ref_designs = RefDesign(join(_TESTS_PATH, 'refdesigns', fpga_driver_name))
+
     if hdk_version and fpga_image.lower() != 'default':
         raise ValueError(
             'Please set "hdk_version" or "fpga_image" but not both')
 
     elif fpga_image.lower() == 'default' or hdk_version:
-        # List available HDK versions for specified driver
-        ref_designs = join(_TESTS_PATH, 'refdesigns', fpga_driver_name)
-        hdk_versions = sorted([splitext(file_name)[0].strip('v')
-                               for file_name in listdir(ref_designs)
-                               if file_name.endswith('.json')])
         # Use specified HDK version
         if hdk_version:
             hdk_version = hdk_version.strip('v')
-            if hdk_version not in hdk_versions:
+            if hdk_version not in ref_designs.hdk_versions:
                 raise ValueError((
                     'HDK version %s is not supported. '
                     'Available versions are: %s') % (
-                    hdk_version, ", ".join(hdk_versions)))
-
+                    hdk_version, ", ".join(ref_designs.hdk_versions)))
         # Get last HDK version as default
         else:
-            hdk_version = hdk_versions[-1]
+            hdk_version = ref_designs.hdk_versions[-1]
 
         # Get FPGA image from HDK version
-        with open(join(ref_designs, 'v%s.json' % hdk_version)) as hdk_json_file:
-            hdk_json = load(hdk_json_file)
-
-        for key in ('fpga_image', 'FpgaImageGlobalId', 'FpgaImageId'):
-            try:
-                fpga_image = hdk_json[key]
-                break
-            except KeyError:
-                continue
-        else:
-            raise ValueError('No FPGA image found for %s.' % hdk_version)
+        fpga_image = ref_designs.get_image_id(hdk_version)
 
     # Define or get FPGA Slot
     if pytestconfig.getoption('integration'):
@@ -273,6 +291,7 @@ def accelize_drm(pytestconfig):
     _accelize_drm.pytest_fpga_image = fpga_image
     _accelize_drm.pytest_hdk_version = hdk_version
     _accelize_drm.pytest_fpga_activators = fpga_activators
+    _accelize_drm.pytest_ref_designs = ref_designs
 
     return _accelize_drm
 
@@ -479,6 +498,9 @@ def perform_once(test_name):
 
 
 class AsyncErrorHandler:
+    """
+    Asynchronous error callback
+    """
     def __init__(self):
         self.reset()
     def reset(self):
@@ -507,6 +529,9 @@ class AsyncErrorHandler:
 
 
 class AsyncErrorHandlerList(list):
+    """
+    Handle a list of asynchronous error callbacks and error message parsing
+    """
     def create(self):
         cb = AsyncErrorHandler()
         super(AsyncErrorHandlerList, self).append(cb)

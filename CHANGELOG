@@ -1,5 +1,12 @@
 * Fri Jan 24 2019 Accelize v2.0.0
 - NEW: API v2.0: Break retro-compatibility!
+- NEW: Optimize authentication
+- NEW: Implement an automatic retry mechanism
+- NEW: Integrate new status bit in DRM HDK to enhance robustness and optimize scheduling
+- NEW: Enhance robustness by self-detection of the DRM Controller frequency
+- NEW: Remove environment variable dependency and use the configuration file instead
+- NEW: Enhance the level of parametrization of the library through the configuration file and programmatically
+- NEW: Remove boost and unifdef dependency
 
 * Fri Dec 1 2018 Accelize v1.3.0
 - NEW: Floating mode support

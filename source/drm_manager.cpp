@@ -35,7 +35,7 @@ limitations under the License.
 #include <cmath>
 #include <algorithm>
 
-#include "accelize/drm/session_manager.h"
+#include "accelize/drm/drm_manager.h"
 #include "accelize/drm/version.h"
 #include "ws_client.h"
 #include "log.h"
@@ -73,10 +73,12 @@ class DRM_LOCAL DrmManager::Impl {
 protected:
 
     // Design constants
+    const uint32_t RETROCOMPATIBLITY_LIMIT_MAJOR = 3;
+    const uint32_t RETROCOMPATIBLITY_LIMIT_MINOR = 1;
     const uint32_t cWSRequestTimeout = 10;
     const uint32_t cFrequencyDetectionPeriod = 100;  // in milliseconds
     const double cFrequencyDetectionThreshold = 2.0;      // Error in percentage
-    const uint32_t cWSRetryPeriodLarge = 60; // In seconds
+    const uint32_t cWSRetryPeriodLong = 60; // In seconds
     const uint32_t cWSRetryPeriodShort = 3; // In seconds
     const uint32_t cWSRetryDeadline = 5;
 
@@ -120,7 +122,7 @@ protected:
     std::string mNodeLockLicenseFilePath;
 
     // License related properties
-    uint32_t mWSRetryPeriodLarge;   ///< Time in seconds before the next request attempt to the Web Server when the time left before timeout is large
+    uint32_t mWSRetryPeriodLong;   ///< Time in seconds before the next request attempt to the Web Server when the time left before timeout is large
     uint32_t mWSRetryPeriodShort;   ///< Time in seconds before the next request attempt to the Web Server when the time left before timeout is short
     uint32_t mWSRetryDeadline;      ///< Safety margin time in seconds before the timeout time during which no more retry is attempted
     uint32_t mWSRequestTimeout ;    ///< Time in seconds during which retries occur
@@ -178,7 +180,7 @@ protected:
         mDebugMessageLevel = eLogLevel::QUIET;
 
         mWSRetryDeadline = cWSRetryDeadline;
-        mWSRetryPeriodLarge = cWSRetryPeriodLarge;
+        mWSRetryPeriodLong = cWSRetryPeriodLong;
         mWSRetryPeriodShort = cWSRetryPeriodShort;
         mWSRequestTimeout  = cWSRequestTimeout;
         mFrequencyDetectionPeriod = cFrequencyDetectionPeriod;
@@ -200,16 +202,16 @@ protected:
                 mFrequencyDetectionThreshold = JVgetOptional( param_lib, "frequency_detection_threshold", Json::uintValue,
                                                               cFrequencyDetectionThreshold).asDouble();
                 // Others
-                mWSRetryPeriodLarge = JVgetOptional( param_lib, "ws_retry_period_large", Json::uintValue, cWSRetryPeriodLarge).asUInt();
+                mWSRetryPeriodLong = JVgetOptional( param_lib, "ws_retry_period_long", Json::uintValue, cWSRetryPeriodLong).asUInt();
                 mWSRetryPeriodShort = JVgetOptional( param_lib, "ws_retry_period_short", Json::uintValue, cWSRetryPeriodShort).asUInt();
                 mWSRetryDeadline = JVgetOptional( param_lib, "ws_retry_deadline", Json::uintValue, cWSRetryDeadline).asUInt();
                 mWSRequestTimeout = JVgetOptional( param_lib, "ws_request_timeout", Json::uintValue, cWSRequestTimeout).asUInt();
                 if ( mWSRequestTimeout == 0 )
                     Throw( DRM_BadArg, "ws_request_timeout must not be 0");
             }
-            if ( mWSRetryPeriodLarge < mWSRetryPeriodShort )
-                Throw( DRM_BadArg, "wb_retry_period_large (", mWSRetryPeriodLarge,
-                        ") must be greater than wb_retry_period_short (", mWSRetryPeriodShort, ")" );
+            if ( mWSRetryPeriodLong <= mWSRetryPeriodShort )
+                Throw( DRM_BadArg, "ws_retry_period_long (", mWSRetryPeriodLong,
+                        ") must be greater than ws_retry_period_short (", mWSRetryPeriodShort, ")" );
             initLog();
 
             // Design configuration
@@ -251,16 +253,31 @@ protected:
             return;
 
         // create instance
-        mDrmController.reset( new DrmControllerLibrary::DrmControllerOperations(
-            std::bind(&DrmManager::Impl::readDrmRegister, this, std::placeholders::_1, std::placeholders::_2),
-            std::bind(&DrmManager::Impl::writeDrmRegister, this, std::placeholders::_1, std::placeholders::_2 )
-        ));
+        try {
+            mDrmController.reset(
+                    new DrmControllerLibrary::DrmControllerOperations(
+                            std::bind(&DrmManager::Impl::readDrmRegister,
+                                      this,
+                                      std::placeholders::_1,
+                                      std::placeholders::_2),
+                            std::bind(&DrmManager::Impl::writeDrmRegister,
+                                      this,
+                                      std::placeholders::_1,
+                                      std::placeholders::_2)
+                    ));
+        } catch( const std::exception& e ) {
+            Throw(DRM_CtlrError, "Failed to initialize DRM Controller: ", e.what() );
+        }
+        Debug("DRM Controller SDK is initialized");
 
-        // Try to lock the DRM controller to this instance, return an error is already locked.
-        lockDrmToInstance();
+        // Check compatibility of the DRM Version with Algodone version
+        checkDrmCompatibility();
 
         // Save header information
         mHeaderJsonRequest = getMeteringHeader();
+
+        // Try to lock the DRM controller to this instance, return an error is already locked.
+        lockDrmToInstance();
 
         // If node-locked license is requested, create license request file
         if ( mLicenseType == LicenseType::NODE_LOCKED ) {
@@ -361,14 +378,15 @@ protected:
     }
 
     DrmControllerLibrary::DrmControllerOperations& getDrmController() const {
-        Assert(mDrmController);
-        return *mDrmController;
+        if (mDrmController)
+            return *mDrmController;
+        Throw( DRM_CtlrError, "No DRM Controller available" );
     }
 
     DrmWSClient& getDrmWSClient() const {
-        if ( !mWsClient )
-            Throw( DRM_BadUsage, "DRM Session Manager constructed with no WebService configuration" );
-        return *mWsClient;
+        if ( mWsClient )
+            return *mWsClient;
+        Throw( DRM_BadUsage, "No Web Service available" );
     }
 
     static uint32_t getDrmRegisterOffset(const std::string& regName) {
@@ -393,7 +411,7 @@ protected:
     unsigned int writeDrmRegister(const std::string& regName, unsigned int value) const {
         int ret = 0;
         ret = f_write_register( getDrmRegisterOffset(regName), value );
-        if(ret != 0) {
+        if ( ret ) {
             Error("Error in write register callback, errcode = ", ret);
             return (uint32_t)-1;
         }
@@ -427,17 +445,24 @@ protected:
     }
 
     // Check compatibility of the DRM Version with Algodone version
-    void checkDrmCompatibility( const std::string& drmVersion) {
-        uint32_t drmVersionNum = DrmControllerLibrary::DrmControllerDataConverter::hexStringToBinary(drmVersion)[0];
-        std::string drmVersionDot = DrmControllerLibrary::DrmControllerDataConverter::binaryToVersionString(drmVersionNum);
-        auto drmMajor = (uint8_t)((drmVersionNum >> 16) & 0xFF);
-        auto drmMinor = (uint8_t)((drmVersionNum >> 8) & 0xFF);
+    void checkDrmCompatibility() const {
+        uint32_t drmVersionNum;
+        std::string drmVersionDot;
+        std::string drmVersion = getDrmCtrlVersion();
+
+        drmVersionNum = DrmControllerLibrary::DrmControllerDataConverter::hexStringToBinary( drmVersion )[0];
+        drmVersionDot = DrmControllerLibrary::DrmControllerDataConverter::binaryToVersionString( drmVersionNum );
+
+        auto drmMajor = (drmVersionNum >> 16) & 0xFF;
+        auto drmMinor = (drmVersionNum >> 8) & 0xFF;
+
         if (drmMajor < RETROCOMPATIBLITY_LIMIT_MAJOR) {
             Throw(DRM_CtlrError, "This DRM Lib ", getApiVersion()," is not compatible with the DRM HDK version ",
                     drmVersionDot,": To be compatible HDK version shall be > or equal to ",
                     RETROCOMPATIBLITY_LIMIT_MAJOR,".",RETROCOMPATIBLITY_LIMIT_MINOR,".0");
-        } else if (drmMinor < RETROCOMPATIBLITY_LIMIT_MINOR) {
-            Throw(DRM_CtlrError, "This DRM Lib ", getApiVersion()," is not compatible with the DRM HDK version ",
+        }
+        if (drmMinor < RETROCOMPATIBLITY_LIMIT_MINOR) {
+            Throw(DRM_CtlrError, "This DRM Library version ", getApiVersion()," is not compatible with the DRM HDK version ",
                     drmVersionDot,": To be compatible HDK version shall be > or equal to ",
                     RETROCOMPATIBLITY_LIMIT_MAJOR,".",RETROCOMPATIBLITY_LIMIT_MINOR,".0");
         }
@@ -508,6 +533,14 @@ protected:
         return meteringData;
     }
 
+    // Get DRM HDK version
+    std::string getDrmCtrlVersion() const {
+        std::string drmVersion;
+        std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
+        checkDRMCtlrRet(getDrmController().extractDrmVersion( drmVersion ) );
+        return drmVersion;
+    }
+
     // Get common info
     void getDesignInfo(std::string &drmVersion,
                        std::string &dna,
@@ -549,9 +582,6 @@ protected:
 
         // Get information from DRM Controller
         getDesignInfo(drmVersion, dna, vlnvFile, mailboxReadOnly);
-
-        // Check compatibility of the DRM Version with Algodone version
-        checkDrmCompatibility(drmVersion);
 
         // Fulfill DRM section
         json_output["drmlibVersion"] = getApiVersion();
@@ -687,7 +717,7 @@ protected:
                 attempt ++;
                 TClock::duration wait_period = retry_period;
                 if ( retry_period == TClock::duration::zero() ) {
-                    wait_period = std::chrono::seconds( mWSRetryPeriodLarge );
+                    wait_period = std::chrono::seconds( mWSRetryPeriodLong );
                     if ( (deadline - TClock::now()) < wait_period )
                         wait_period = std::chrono::seconds(mWSRetryPeriodShort);
                 }
@@ -714,7 +744,7 @@ protected:
                 attempt ++;
                 TClock::duration wait_period = retry_period;
                 if ( retry_period == TClock::duration::zero() ) {
-                    wait_period = std::chrono::seconds( mWSRetryPeriodLarge );
+                    wait_period = std::chrono::seconds( mWSRetryPeriodLong );
                     if ( (deadline - TClock::now()) < wait_period )
                         wait_period = std::chrono::seconds(mWSRetryPeriodShort);
                 }
@@ -748,20 +778,20 @@ protected:
         std::string dna;
         checkDRMCtlrRet( getDrmController().extractDna( dna ) );
 
-        // Extract license and license timer from webservice response
+        // Extract license and license timer from web service response
         std::string licenseKey   = license_json["license"][dna]["key"].asString();
         std::string licenseTimer = license_json["license"][dna]["licenseTimer"].asString();
 
         if ( licenseKey.empty() )
-            Throw(DRM_WSRespError, "Malformed response from Accelize WebService : license key is empty");
+            Throw(DRM_WSRespError, "Malformed response from Accelize Web Service : license key is empty");
         if ( (mLicenseType != LicenseType::NODE_LOCKED) && licenseTimer.empty() )
-            Throw(DRM_WSRespError, "Malformed response from Accelize WebService : LicenseTimer is empty");
+            Throw(DRM_WSRespError, "Malformed response from Accelize Web Service : LicenseTimer is empty");
 
         // Activate
         bool activationDone = false;
         uint8_t activationErrorCode;
         checkDRMCtlrRet( getDrmController().activate( licenseKey, activationDone, activationErrorCode ) );
-        if( activationErrorCode ) {
+        if ( activationErrorCode ) {
             Throw(DRM_CtlrError, "Failed to activate license on DRM controller, activationErr: 0x",
                     std::hex, activationErrorCode, std::dec);
         }
@@ -950,7 +980,7 @@ protected:
 
     void startThread() {
 
-        if(mThreadKeepAlive.valid()) {
+        if (mThreadKeepAlive.valid() ) {
             Warning("Thread already started");
             return;
         }
@@ -1159,12 +1189,10 @@ public:
     }
 
     ~Impl() {
-        if ( isSessionRunning() ) {
-            if (mSecurityStop) {
+        if (mSecurityStop) {
+            if ( isSessionRunning() ) {
                 Debug("Security stop triggered: stopping current session");
                 stopSession();
-            } else {
-                Debug("Security stop not triggered: current session is kept open");
             }
         }
         stopThread();
@@ -1404,10 +1432,10 @@ public:
                                 "' (ID=", key_id, "): ", mWSRetryDeadline );
                         break;
                     }
-                    case ParameterKey::ws_retry_period_large: {
-                        json_value[key_str] = mWSRetryPeriodLarge;
+                    case ParameterKey::ws_retry_period_long: {
+                        json_value[key_str] = mWSRetryPeriodLong;
                         Debug( "Get value of parameter '", key_str,
-                                "' (ID=", key_id, "): ", mWSRetryPeriodLarge );
+                                "' (ID=", key_id, "): ", mWSRetryPeriodLong );
                         break;
                     }
                     case ParameterKey::ws_retry_period_short: {
@@ -1532,14 +1560,22 @@ public:
                                 "to value: ", mWSRetryDeadline );
                         break;
                     }
-                    case ParameterKey::ws_retry_period_large: {
-                        mWSRetryPeriodLarge = (*it).asUInt();
+                    case ParameterKey::ws_retry_period_long: {
+                        uint32_t retry_period = (*it).asUInt();
+                        if ( retry_period <= mWSRetryPeriodShort )
+                            Throw( DRM_BadArg, "ws_retry_period_long (", retry_period,
+                                   ") must be greater than ws_retry_period_short (", mWSRetryPeriodShort, ")" );
+                        mWSRetryPeriodLong = retry_period;
                         Debug( "Set parameter '", key_str, "' (ID=", key_id, ") ",
-                                "to value: ", mWSRetryPeriodLarge );
+                                "to value: ", mWSRetryPeriodLong );
                         break;
                     }
                     case ParameterKey::ws_retry_period_short: {
-                        mWSRetryPeriodShort = (*it).asUInt();
+                        uint32_t retry_period = (*it).asUInt();
+                        if ( mWSRetryPeriodLong <= retry_period )
+                            Throw( DRM_BadArg, "ws_retry_period_long (", mWSRetryPeriodLong,
+                                   ") must be greater than ws_retry_period_short (", retry_period, ")" );
+                        mWSRetryPeriodShort = retry_period;
                         Debug( "Set parameter '", key_str, "' (ID=", key_id, ") ",
                                 "to value: ", mWSRetryPeriodShort );
                         break;
@@ -1558,12 +1594,6 @@ public:
                         f_asynch_error( e.what() );
                         Debug( "Set parameter '", key_str, "' (ID=", key_id, ") ",
                                 "to value: ", custom_msg );
-                        break;
-                    }
-                    case ParameterKey::bad_authentication_token: {
-                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") ",
-                                "to random value" );
-                        getDrmWSClient().useBadOAuth2Token( "BadToken" );
                         break;
                     }
                     case ParameterKey::bad_product_id: {

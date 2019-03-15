@@ -38,7 +38,7 @@ namespace DRM {
 #define __SHORT_FILE__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #endif
 
-#define stringify( name ) #name
+#define STRINGIFY( name ) #name
 
 enum class eLogLevel: int {
     QUIET = 0,
@@ -51,12 +51,12 @@ enum class eLogLevel: int {
 };
 
 static const char* cLogLevelString[] = {
-        stringify( QUIET ),
-        stringify( ERROR ),
-        stringify( WARNING ),
-        stringify( INFO ),
-        stringify( DEBUG ),
-        stringify( DEBUG2 )
+        STRINGIFY( QUIET ),
+        STRINGIFY( ERROR ),
+        STRINGIFY( WARNING ),
+        STRINGIFY( INFO ),
+        STRINGIFY( DEBUG ),
+        STRINGIFY( DEBUG2 )
 };
 
 enum class eLogFormat {
@@ -158,42 +158,8 @@ void logTrace(const eLogLevel& level, const std::string& file, const unsigned lo
 }
 
 
-#define __FILENAME__ (__FILE__ + SOURCE_PATH_SIZE)
-
-#define _WarningAssert(expr, ...) \
-    if ( expr ) {} \
-    else { Warning( "An assertion in DRM was not verified in ", \
-        __FILENAME__, ":", __LINE__, " (", __func__, ") : ", __VA_ARGS__, \
-        ". Please contact support, the library may not work as expected." ); }
-
-#define _Assert(expr, ...) \
-    if ( expr ) {} \
-    else { Throw( DRM_Assert, "An assertion failed in DRM Library in ", \
-        __FILENAME__, ":", __LINE__, " (", __func__, ") : ", __VA_ARGS__, \
-        ". Please contact support." ); }
-
-#define __Assert(F, expr) F(expr, #expr)
-
-#define __Assert2op(F, a, b, _op_) \
-    do { auto _a=a; auto _b=b; \
-      F(_a _op_ _b, #a, " (= ", _a, ") " , #_op_, " ", #b " (= ", _b, ")"); \
-  } while(0);
-
-#define WarningAssert(expr)             __Assert(_WarningAssert, expr)
-#define WarningAssertEqual(a, b)        __Assert2op(_WarningAssert, a, b, ==)
-#define WarningAssertGreater(a, b)      __Assert2op(_WarningAssert, a, b, >)
-#define WarningAssertGreaterEqual(a, b) __Assert2op(_WarningAssert, a, b, >=)
-#define WarningAssertLess(a, b)         __Assert2op(_WarningAssert, a, b, <)
-#define WarningAssertLessEqual(a, b)    __Assert2op(_WarningAssert, a, b, <=)
-#define Assert(expr)                    __Assert(_Assert, expr)
-#define AssertEqual(a, b)               __Assert2op(_Assert, a, b, ==)
-#define AssertGreater(a, b)             __Assert2op(_Assert, a, b, >)
-#define AssertGreaterEqual(a, b)        __Assert2op(_Assert, a, b, >=)
-#define AssertLess(a, b)                __Assert2op(_Assert, a, b, <)
-#define AssertLessEqual(a, b)           __Assert2op(_Assert, a, b, <=)
-
 #define Unreachable( msg ) \
-    Throw( DRM_Assert, "Reached an unexpected part of code in ", __FILENAME__, ":", \
+    Throw( DRM_Assert, "Reached an unexpected part of code in ", __SHORT_FILE__, ":", \
             __LINE__, " (", __func__, ") because ", msg, ": Please contact support." )
 
 

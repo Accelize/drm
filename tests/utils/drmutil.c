@@ -134,7 +134,8 @@ void print_usage()
 void print_interactive_menu()
 {
     printf("\nInteractive menu:\n");
-    printf(" 'vN': view drm registers on page N,\n");
+    printf(" 'vN': print drm registers on page N,\n");
+    printf(" 'z' : print drm hw report,\n");
     printf(" 'i' : display number of activators in design,\n");
     printf(" 's' : display activators status,\n");
     printf(" 'a' : activate session (default start),\n");
@@ -218,7 +219,7 @@ int read_drm_reg32( uint32_t offset, uint32_t* p_value, void* user_p ) {
 }
 
 /* Callback function for DRM library to perform a thread safe register write */
-int write_drm_reg32(uint32_t offset, uint32_t value, void* user_p){
+int write_drm_reg32( uint32_t offset, uint32_t value, void* user_p ) {
     if (fpga_pci_poke(*(pci_bar_handle_t*)user_p, DRM_CTRL_BASE_ADDR+offset, value)) {
         ERROR("Unable to write to the fpga.");
         return 1;
@@ -255,13 +256,6 @@ int print_all_information( DrmManager* pDrmManager ) {
         \"session_id\": null,\
         \"metered_data\": null,\
         \"nodelocked_request_file\": null,\
-        \"page_ctrlreg\": null,\
-        \"page_vlnvfile\": null,\
-        \"page_licfile\": null,\
-        \"page_tracefile\": null,\
-        \"page_meteringfile\": null,\
-        \"page_mailbox\": null,\
-        \"hw_report\": null,\
         \"custom_field\": null,\
         \"strerror\": null }";
 
@@ -293,7 +287,7 @@ int get_activators_status( DrmManager* pDrmManager, pci_bar_handle_t* pci_bar_ha
     bool active, all_active;
 
     // Get the number of activators in the HW
-    if (get_num_activators(pDrmManager, &nb_activators))
+    if ( get_num_activators(pDrmManager, &nb_activators) )
         return 1;
 
     all_active = true;
@@ -464,6 +458,7 @@ int print_drm_page(DrmManager* pDrmManager, uint32_t page)
     /* Print registers in page */
     if (DrmManager_get_string(pDrmManager, DRM__page_ctrlreg+page, &dump))
         ERROR("Failed to print HW page %u registry: %s", page, pDrmManager->error_message);
+    printf("Page %d:\n%s", page, dump);
     free(dump);
     return 0;
 }
@@ -475,6 +470,7 @@ int print_drm_report(DrmManager* pDrmManager)
     /* Print hw report */
     if (DrmManager_get_string(pDrmManager, DRM__hw_report, &dump))
         ERROR("Failed to print HW report: %s", pDrmManager->error_message);
+    printf("HW report:\n%s", dump);
     free(dump);
     return 0;
 }

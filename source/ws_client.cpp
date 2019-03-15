@@ -85,7 +85,6 @@ double CurlEasyPost::getTotalTime() {
 
 DrmWSClient::DrmWSClient(const std::string &conf_file_path, const std::string &cred_file_path) {
 
-    mUseBadOAuth2Token = std::string("");
     mOAuth2Token = std::string("");
     mTokenValidityPeriod = 0;
     mTokenExpirationTime = TClock::now();
@@ -146,14 +145,6 @@ void DrmWSClient::setTokenValidityPeriod( const uint32_t& validity_period ) {
 }
 
 void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
-
-    if (!mUseBadOAuth2Token.empty()) {
-        Debug("Temporary use following token: ", mUseBadOAuth2Token);
-        mOAuth2Token = mUseBadOAuth2Token;
-        mTokenExpirationTime = TClock::now();
-        mUseBadOAuth2Token.clear();
-        return;
-    }
 
     // Check if a token exists
     if (!mOAuth2Token.empty()) {

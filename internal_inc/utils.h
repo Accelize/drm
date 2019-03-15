@@ -23,9 +23,6 @@ limitations under the License.
 namespace Accelize {
 namespace DRM {
 
-#define RETROCOMPATIBLITY_LIMIT_MAJOR     3
-#define RETROCOMPATIBLITY_LIMIT_MINOR     1
-
 std::string saveJsonToString( const Json::Value& json_value, const std::string& indent = "" );
 void saveJsonToFile( const std::string& file_path, const Json::Value& json_value, const std::string& indent = "\t" );
 Json::Value parseJsonString(const std::string &json_string);

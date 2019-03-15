@@ -157,7 +157,8 @@ void print_usage()
 void print_interactive_menu()
 {
     printf("\nInteractive menu:\n");
-    printf(" 'vN': view drm registers on page N,\n");
+    printf(" 'vN': print drm registers on page N,\n");
+    printf(" 'z' : print drm hw report,\n");
     printf(" 'i' : display number of activators in design,\n");
     printf(" 's' : display activators status,\n");
     printf(" 'a' : activate session (default start),\n");
@@ -225,6 +226,7 @@ std::vector<t_BatchCmd> tokenize( std::string str ) {
     return result;
 }
 
+
 /** Define Three callback for the DRM Lib **/
 /* Callback function for DRM library to perform a thread safe register read */
 int read_drm_reg32( uint32_t offset, uint32_t* p_value, void* user_p ) {
@@ -272,13 +274,6 @@ int print_all_information( DrmManager* pDrmManager ) {
         \"session_id\": null,\
         \"metered_data\": null,\
         \"nodelocked_request_file\": null,\
-        \"page_ctrlreg\": null,\
-        \"page_vlnvfile\": null,\
-        \"page_licfile\": null,\
-        \"page_tracefile\": null,\
-        \"page_meteringfile\": null,\
-        \"page_mailbox\": null,\
-        \"hw_report\": null,\
         \"custom_field\": null }";
 
     TRY
@@ -466,7 +461,8 @@ int print_drm_page(DrmManager* pDrmManager, uint32_t page)
     }
     TRY
         /* Print registers in page */
-        pDrmManager->get<std::string>( (ParameterKey)(ParameterKey::page_ctrlreg + page));
+        std::cout << pDrmManager->get<std::string>( (ParameterKey)(ParameterKey::page_ctrlreg + page));
+        std::cout << std::endl;
         return 0;
     CATCH_EXIT("Failed to print HW registry", 1)
 }
@@ -475,9 +471,9 @@ int print_drm_page(DrmManager* pDrmManager, uint32_t page)
 int print_drm_report(DrmManager* pDrmManager)
 {
     TRY
-        std::string report;
         /* Print hw report */
-        report = pDrmManager->get<std::string>( ParameterKey::hw_report );
+        std::cout << pDrmManager->get<std::string>( ParameterKey::hw_report );
+        std::cout << std::endl;
         return 0;
     CATCH_EXIT("Failed to print HW report", 1)
 }

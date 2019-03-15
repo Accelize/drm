@@ -32,7 +32,7 @@ _PARAM_LIST = ['license_type',
                'custom_field',
                'mailbox_data',
                'ws_retry_deadline',
-               'ws_retry_period_large',
+               'ws_retry_period_long',
                'ws_retry_period_short',
                'ws_request_timeout',
                'log_message_level',
@@ -46,7 +46,6 @@ _PARAM_LIST = ['license_type',
                'page_mailbox',
                'hw_report',
                'trigger_async_callback',
-               'bad_authentication_token',
                'bad_product_id',
                'log_message',
            ]
@@ -60,6 +59,61 @@ def ordered_json(obj):
     else:
         return obj
 
+
+def test_retrocompatibility(accelize_drm, conf_json, cred_json, async_handler):
+    """Test API is not compatible with DRM HDK < 3.0"""
+    refdesign = accelize_drm.pytest_ref_designs
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    drm_manager = None
+
+    try:
+
+        # Program FPGA with old HDK 2.x.x
+        hdk = list(filter(lambda x: x.startswith('2.'), refdesign.hdk_versions))[0]
+        assert hdk.startswith('2.')
+        image_id = refdesign.get_image_id(hdk)
+        driver.program_fpga(image_id)
+        # Test compatibility issue
+        with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
+            async_cb.reset()
+            drm_manager = accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            )
+        assert 'Failed to initialize DRM Controller' in str(excinfo.value)
+        assert async_handler.parse_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
+        async_cb.assert_NoError()
+
+        # Program FPGA with old HDK 3.0.x
+        hdk = list(filter(lambda x: x.startswith('3.0'), refdesign.hdk_versions))[0]
+        assert hdk.startswith('3.0.')
+        image_id = refdesign.get_image_id(hdk)
+        driver.program_fpga(image_id)
+        # Test compatibility issue
+        async_cb = async_handler.create()
+        with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
+            async_cb.reset()
+            drm_manager = accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            )
+        assert search(r'This DRM Library version .* is not compatible with the DRM HDK version .*', str(excinfo.value)) is not None
+        assert async_handler.parse_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
+        async_cb.assert_NoError()
+
+    finally:
+        if drm_manager:
+            del drm_manager
+        # Reprogram FPGA
+        image_id = refdesign.get_image_id() # Get most recent version
+        driver.program_fpga(image_id)
 
 
 def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cred_json, async_handler):
@@ -84,7 +138,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     origFrequencyDetectPeriod = drm_manager.get('frequency_detection_period')
     origFrequencyDetectThreshold = drm_manager.get('frequency_detection_threshold')
     origRetryDeadline = drm_manager.get('ws_retry_deadline')
-    origRetryPeriodLarge = drm_manager.get('ws_retry_period_large')
+    origRetryPeriodLong = drm_manager.get('ws_retry_period_long')
     origRetryPeriodShort = drm_manager.get('ws_retry_period_short')
     origResponseTimeout = drm_manager.get('ws_request_timeout')
 
@@ -235,12 +289,28 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     async_cb.assert_NoError()
     print("Test parameter 'ws_retry_deadline': PASS")
 
-    # Test parameter: ws_retry_period_large
+    # Test parameter: ws_retry_period_long
     # Read-write: read and write the time in seconds before the next request attempt to the Web Server when the time left before timeout is large
     async_cb.reset()
     conf_json.reset()
-    expValue = 2*origRetryPeriodLarge
-    conf_json['settings'] = {'ws_retry_period_large': expValue}
+    conf_json['settings'] = {'ws_retry_period_long': origRetryPeriodShort} # Check error: ws_retry_period_long must be != ws_retry_period_short
+    conf_json.save()
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+    assert search(r'ws_retry_period_long .+ must be greater than ws_retry_period_short .+', str(excinfo.value)) is not None
+    assert async_handler.parse_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+    async_cb.assert_NoError()
+
+    async_cb.reset()
+    conf_json.reset()
+    expValue = origRetryPeriodLong + 1
+    conf_json['settings'] = {'ws_retry_period_long': expValue}
     conf_json.save()
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
@@ -249,16 +319,32 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
         driver.write_register_callback,
         async_cb.callback
     )
-    value = drm_manager.get('ws_retry_period_large')
+    value = drm_manager.get('ws_retry_period_long')
     assert value == expValue
     async_cb.assert_NoError()
-    print("Test parameter 'ws_retry_period_large': PASS")
+    print("Test parameter 'ws_retry_period_long': PASS")
 
     # Test parameter: ws_retry_period_short
     # Read-write: read and write the time in seconds before the next request attempt to the Web Server when the time left before timeout is short
     async_cb.reset()
     conf_json.reset()
-    expValue = 2*origRetryPeriodShort
+    conf_json['settings'] = {'ws_retry_period_short': origRetryPeriodLong} # Check error: ws_retry_period_long must be != ws_retry_period_short
+    conf_json.save()
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+    assert search(r'ws_retry_period_long .+ must be greater than ws_retry_period_short .+', str(excinfo.value)) is not None
+    assert async_handler.parse_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+    async_cb.assert_NoError()
+
+    async_cb.reset()
+    conf_json.reset()
+    expValue = origRetryPeriodShort + 1
     conf_json['settings'] = {'ws_retry_period_short': expValue}
     conf_json.save()
     drm_manager = accelize_drm.DrmManager(
@@ -334,40 +420,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
 
     print()
 
-    # Test parameter: log_verbosity
-    # Read-write, read and write the logging verbosity: 0=quiet, 5=debug2
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    orig_verbosity = drm_manager.get('log_verbosity')
-    new_verbosity = 4 if orig_verbosity == 5 else 5
-    verbosity = drm_manager.set(log_verbosity=new_verbosity)
-    verbosity = drm_manager.get('log_verbosity')
-    assert verbosity == new_verbosity
-    verbosity = drm_manager.set(log_verbosity=orig_verbosity)
-    async_cb.assert_NoError()
-    print("Test parameter 'log_verbosity': PASS")
-
-    # Test parameter: log_format
-    # Read-write, read and write the logging verbosity: 0=quiet, 5=debug2
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    format = drm_manager.get('log_format')
-    exp_format = 0 if format else 1
-    format = drm_manager.set(log_format=exp_format)
-    format = drm_manager.get('log_format')
-    assert format == exp_format
-    async_cb.assert_NoError()
-    print("Test parameter 'log_format': PASS")
+    # Test with a node locked user
 
 #    # Test parameter: license_type in nodelocked and nodelocked_request_file
 #    # license_type: Read-only, return string with the license type: node-locked, floating/metering
@@ -390,8 +443,9 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
 #    assert '???' in licRequest, 'Unexpected content of license request'
 #    print("Test parameter 'license_type' and 'nodelocked_request_file' in Node-Locked: PASS")
 
-    # Test parameter: license_type in metering
-    # Read-only, return string with the license type: node-locked, floating/metering
+
+    # Test with a floating/metered user
+
     async_cb.reset()
     cred_json.reset()
     drm_manager = accelize_drm.DrmManager(
@@ -401,6 +455,39 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         driver.write_register_callback,
         async_cb.callback
     )
+
+    # Test when parameter is a list
+    value = drm_manager.get('num_activators','license_type')
+    assert isinstance(value, dict)
+    assert value['num_activators'] == 1
+    assert value['license_type'] == 'Floating/Metering'
+    async_cb.assert_NoError()
+    print("Test when parameter is a list: PASS")
+
+
+    # Test parameter: log_verbosity
+    # Read-write, read and write the logging verbosity: 0=quiet, 5=debug2
+    orig_verbosity = drm_manager.get('log_verbosity')
+    new_verbosity = 4 if orig_verbosity == 5 else 5
+    verbosity = drm_manager.set(log_verbosity=new_verbosity)
+    verbosity = drm_manager.get('log_verbosity')
+    assert verbosity == new_verbosity
+    verbosity = drm_manager.set(log_verbosity=orig_verbosity)
+    async_cb.assert_NoError()
+    print("Test parameter 'log_verbosity': PASS")
+
+    # Test parameter: log_format
+    # Read-write, read and write the logging verbosity: 0=quiet, 5=debug2
+    format = drm_manager.get('log_format')
+    exp_format = 0 if format else 1
+    format = drm_manager.set(log_format=exp_format)
+    format = drm_manager.get('log_format')
+    assert format == exp_format
+    async_cb.assert_NoError()
+    print("Test parameter 'log_format': PASS")
+
+    # Test parameter: license_type in metering
+    # Read-only, return string with the license type: node-locked, floating/metering
     licType = drm_manager.get('license_type')
     assert licType == 'Floating/Metering'
     async_cb.assert_NoError()
@@ -640,21 +727,31 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     async_cb.assert_NoError(async_cb.assert_NoError)
     print("Test parameter 'ws_retry_deadline': PASS")
 
-    # Test parameter: ws_retry_period_large
+    # Test parameter: ws_retry_period_long
     # Read-write: read and write the time in seconds before the next request attempt to the Web Server when the time left before timeout is large
-    origRetryPeriodLarge = drm_manager.get('ws_retry_period_large')  # Save original value
-    expValue = origRetryPeriodLarge + 100
-    drm_manager.set(ws_retry_period_large=expValue)
-    value = drm_manager.get('ws_retry_period_large')
+    origRetryPeriodLong = drm_manager.get('ws_retry_period_long')  # Save original value
+    origRetryPeriodShort = drm_manager.get('ws_retry_period_short')
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+        drm_manager.set(ws_retry_period_long=origRetryPeriodShort)
+    assert search(r'ws_retry_period_long .+ must be greater than ws_retry_period_short .+', str(excinfo.value)) is not None
+    assert async_handler.parse_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+    expValue = origRetryPeriodLong + 1
+    drm_manager.set(ws_retry_period_long=expValue)
+    value = drm_manager.get('ws_retry_period_long')
     assert value == expValue
-    drm_manager.set(ws_retry_period_large=origRetryPeriodLarge)  # Restore original value
+    drm_manager.set(ws_retry_period_long=origRetryPeriodLong)  # Restore original value
     async_cb.assert_NoError(async_cb.assert_NoError)
-    print("Test parameter 'ws_retry_period_large': PASS")
+    print("Test parameter 'ws_retry_period_long': PASS")
 
     # Test parameter: ws_retry_period_short
     # Read-write: read and write the time in seconds before the next request attempt to the Web Server when the time left before timeout is short
     origRetryPeriodShort = drm_manager.get('ws_retry_period_short')  # Save original value
-    expValue = origRetryPeriodShort + 100
+    origRetryPeriodLong = drm_manager.get('ws_retry_period_long')
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+        drm_manager.set(ws_retry_period_short=origRetryPeriodLong)
+    assert search(r'ws_retry_period_long .+ must be greater than ws_retry_period_short .+', str(excinfo.value)) is not None
+    assert async_handler.parse_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+    expValue = origRetryPeriodShort + 1
     drm_manager.set(ws_retry_period_short=expValue)
     value = drm_manager.get('ws_retry_period_short')
     assert value == expValue
@@ -665,6 +762,10 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     # Test parameter: ws_request_timeout
     # Read-write: read and write the web service request timeout in seconds during which the response is waited
     origResponseTimeout = drm_manager.get('ws_request_timeout')  # Save original value
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+        drm_manager.set(ws_request_timeout=0)
+    assert "ws_request_timeout must not be 0" in str(excinfo.value)
+    assert async_handler.parse_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
     expValue = origResponseTimeout + 100
     drm_manager.set(ws_request_timeout=expValue)
     value = drm_manager.get('ws_request_timeout')
@@ -698,10 +799,6 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         'Asynchronous callback has not received the correct error code'
     drm_manager.deactivate()
     print("Test parameter 'trigger_async_callback': PASS")
-
-    # Test parameter: bad_authentication_token
-    # Write-only: only for testing, uses a bad authentication token.
-    # => Skipped: Tested in test_bad_authentifaction
 
     # Test parameter: bad_product_id
     # Write-only: only for testing, uses a bad product ID.
@@ -870,28 +967,28 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
     drm_manager = None
     print()
     try:
-#        # Test when authentication url in configuration file is wrong
-#        async_cb.reset()
-#        conf_json.reset()
-#        conf_json['licensing']['url'] = "http://accelize.com"
-#        conf_json['settings']['ws_request_timeout'] = 5
-#        conf_json['settings']['ws_retry_period_short'] = 1
-#        conf_json.save()
-#        assert conf_json['licensing']['url'] == "http://accelize.com"
-#        drm_manager = accelize_drm.DrmManager(
-#            conf_json.path,
-#            cred_json.path,
-#            driver.read_register_callback,
-#            driver.write_register_callback,
-#            async_cb.callback
-#        )
-#        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
-#            drm_manager.activate()
-#        assert "HTTP response code from OAuth2 Web Service: 404" in str(excinfo.value)
-#        assert async_handler.parse_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
-#        async_cb.assert_NoError()
-#        print('Test when authentication url in configuration file is wrong: PASS')
-#
+        # Test when authentication url in configuration file is wrong
+        async_cb.reset()
+        conf_json.reset()
+        conf_json['licensing']['url'] = "http://accelize.com"
+        conf_json['settings']['ws_request_timeout'] = 5
+        conf_json['settings']['ws_retry_period_short'] = 1
+        conf_json.save()
+        assert conf_json['licensing']['url'] == "http://accelize.com"
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+            drm_manager.activate()
+        assert "HTTP response code from OAuth2 Web Service: 404" in str(excinfo.value)
+        assert async_handler.parse_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+        async_cb.assert_NoError()
+        print('Test when authentication url in configuration file is wrong: PASS')
+
 #        # Test when token is wrong
 #        async_cb.reset()
 #        conf_json.reset()
@@ -909,31 +1006,31 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
 #        assert async_handler.parse_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
 #        async_cb.assert_NoError()
 #        print('Test when token is wrong: PASS')
-#
-#        # Test token validity across deactivate
-#        async_cb.reset()
-#        conf_json.reset()
-#        drm_manager = accelize_drm.DrmManager(
-#            conf_json.path,
-#            cred_json.path,
-#            driver.read_register_callback,
-#            driver.write_register_callback,
-#            async_cb.callback
-#        )
-#        drm_manager.activate()
-#        exp_token_string = drm_manager.get('token_string')
-#        token_validity = drm_manager.get('token_validity')
-#        drm_manager.deactivate()
-#        token_string = drm_manager.get('token_string')
-#        assert token_string == exp_token_string
-#        drm_manager.activate()
-#        token_string = drm_manager.get('token_string')
-#        assert token_string == exp_token_string
-#        drm_manager.deactivate()
-#        token_string = drm_manager.get('token_string')
-#        assert token_string == exp_token_string
-#        async_cb.assert_NoError()
-#        print('Test token validity across deactivate: PASS')
+
+        # Test token validity across deactivate
+        async_cb.reset()
+        conf_json.reset()
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+        drm_manager.activate()
+        exp_token_string = drm_manager.get('token_string')
+        token_validity = drm_manager.get('token_validity')
+        drm_manager.deactivate()
+        token_string = drm_manager.get('token_string')
+        assert token_string == exp_token_string
+        drm_manager.activate()
+        token_string = drm_manager.get('token_string')
+        assert token_string == exp_token_string
+        drm_manager.deactivate()
+        token_string = drm_manager.get('token_string')
+        assert token_string == exp_token_string
+        async_cb.assert_NoError()
+        print('Test token validity across deactivate: PASS')
 
         # Test when token has expired
         async_cb.reset()
@@ -1121,6 +1218,7 @@ def test_configuration_file_bad_product_id(accelize_drm, conf_json, cred_json, a
     assert "Authentication credentials" in str(excinfo.value)
     assert async_handler.parse_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
     async_cb.assert_NoError()
+
 
 @pytest.mark.skip(reason='Not sure what is the expected behavior of the DRM Manager in case of 2 instances: seems to create issues like the timerEnable timeout')
 def test_2_drm_manager_concurrently(accelize_drm, conf_json, cred_json, async_handler):
@@ -1829,7 +1927,7 @@ def test_retry_function(accelize_drm, conf_json, cred_json, async_handler):
             driver.write_register_callback,
             async_cb.callback
         )
-        drm_manager.set(bad_authentication_token=1)
+        # Find here a way to screw up the request
         start = datetime.now()
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
