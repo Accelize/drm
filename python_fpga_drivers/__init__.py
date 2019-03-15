@@ -32,7 +32,7 @@ def get_driver(name):
     Returns:
         FpgaDriverBase subclass: driver class.
     """
-    return getattr(_import_module(f'{__name__}.{name}'), 'FpgaDriver')
+    return getattr(_import_module('%s.%s' % (__name__, name)), 'FpgaDriver')
 
 
 class FpgaDriverBase:

@@ -46,7 +46,7 @@ class FpgaDriver(_FpgaDriverBase):
         Args:
             fpga_image (str): FPGA image.
         """
-        load_image = _run(['fpga-load-local-image', f'-S {self._fpga_slot_id}',
+        load_image = _run(['fpga-load-local-image', '-S', self._fpga_slot_id,
                            '-I', fpga_image], stderr=_STDOUT, stdout=_PIPE,
                           universal_newlines=True)
         if load_image.returncode:
@@ -75,7 +75,8 @@ class FpgaDriver(_FpgaDriverBase):
                            0,  # APP_PF_BAR0
                            0, _byref(self._fpga_handle)):
             raise RuntimeError(
-                f"Unable to attach to the AFI on slot ID {self._fpga_slot_id}")
+                "Unable to attach to the AFI on slot ID %s" %
+                self._fpga_slot_id)
 
     def _get_read_register_callback(self):
         """
