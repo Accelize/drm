@@ -251,7 +251,7 @@ cdef class DrmManager:
         if return_code:
             _raise_from_error(self._drm_manager.error_message, return_code)
 
-        items = _loads(json_out)
+        items = _loads(bytes(json_out).decode())
         if len(keys) > 1:
             return items
         return items[keys[0]]

@@ -252,7 +252,7 @@ cdef class DrmManager:
         except RuntimeError as exception:
             _handle_exceptions(exception)
 
-        items = _loads(json_string)
+        items = _loads(bytes(json_string).decode())
         if len(keys) > 1:
             return items
         return items[keys[0]]
