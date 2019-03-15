@@ -60,3 +60,10 @@ def test_changelog_and_version(accelize_drm):
         assert fullmatch(
             r"\* [a-zA-Z]{3} [a-zA-Z]{3} [0-9]{2} [0-9]{4} Accelize " + tag,
             last_change)
+
+    # Check prerelease format:
+    # Alpha: "1.0.0-alpha.1"
+    # Beta: "1.0.0-beta.1"
+    # Release candidate: "1.0.0-rc.1"
+    else:
+        assert fullmatch(r"(alpha|beta|rc)\.[0-9]+", lib_ver.prerelease)

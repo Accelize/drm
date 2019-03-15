@@ -15,13 +15,17 @@ def detect_package_manager():
     Detect current OS package manager.
 
     Returns:
-        str: Package manager utility
+        str: Install command.
     """
-    for utility in ('apt', 'dnf', 'yum'):
+    for utility, command in (
+            ('apt-get', 'apt-get -qq update && '
+                        'apt-get install -y --no-install-recommends '),
+            ('dnf', 'dnf install -y '),
+            ('yum', 'yum install -y ')):
         try:
             if not _run([utility, '--help'],
                         stdout=_DEVNULL, stderr=_DEVNULL).returncode:
-                return utility
+                return command
         except FileNotFoundError:
             continue
 
@@ -48,7 +52,7 @@ def install_accelize_drm_library(packages_dir, quiet=False):
     else:
         run_kwargs = dict()
 
-    _run([detect_package_manager(), 'install', '-y'] + packages,
+    _run(detect_package_manager() + ' '.join(packages), shell=True,
          **run_kwargs).check_returncode()
 
 
