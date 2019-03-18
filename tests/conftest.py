@@ -82,7 +82,7 @@ def pytest_addoption(parser):
         "--server", action="store",
         default="prod", help='Specify the metering server to use')
     parser.addoption(
-        "--library_verbosity", action="store", default='4',
+        "--library_verbosity", action="store", default='2',
         help='Specify "libaccelize_drm" verbosity level')
     parser.addoption(
         "--library_logformat", action="store", default='0',
@@ -211,7 +211,7 @@ def accelize_drm(pytestconfig):
 
     # Check cred.json
     if not isfile(realpath(expanduser(pytestconfig.getoption("cred")))):
-        raise ValueError('Credential file specified by "--cred" do not exists')
+        raise ValueError('Credential file specified by "--cred" does not exist')
 
     # Select C or C++ based on environment and import Python Accelize Library
     backend = pytestconfig.getoption("backend")

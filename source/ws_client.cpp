@@ -191,7 +191,7 @@ void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
     if ( !json_resp.isMember("access_token") )
         Throw(DRM_WSRespError, "Non-valid response from WSOAuth : ", response);
     Debug("New OAuth2 token is ", json_resp["access_token"].asString(),
-          "; it will expire in ", json_resp["expires_in"].asInt(), " ms");
+          "; it will expire in ", json_resp["expires_in"].asInt(), " seconds");
 
     mOAuth2Token = json_resp["access_token"].asString();
     mTokenValidityPeriod = json_resp["expires_in"].asInt();
