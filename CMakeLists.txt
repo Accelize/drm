@@ -118,8 +118,6 @@ else()
     add_compile_options(-O3)
 endif()
 
-string(LENGTH "${CMAKE_SOURCE_DIR}/" SOURCE_PATH_SIZE)
-add_definitions("-DSOURCE_PATH_SIZE=${SOURCE_PATH_SIZE}")
 add_definitions(-DBUILDING_DRMLIB)
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined")
 
@@ -159,7 +157,7 @@ execute_process(COMMAND uname -r OUTPUT_VARIABLE UNAME_R OUTPUT_STRIP_TRAILING_W
 
 set(API_HEADERS
   include/accelize/drm/ParameterKey.def
-  include/accelize/drm/session_manager.h
+        include/accelize/drm/drm_manager.h
   include/accelize/drm/error.h
         include/accelize/drm.h
   include/accelize/drmc/common.h
@@ -189,7 +187,7 @@ include_directories(include)
 ## libaccelize_drm
 set(TARGET_SOURCES
   source/ws_client.cpp
-  source/session_manager.cpp
+        source/drm_manager.cpp
   source/utils.cpp
   source/error.cpp
         source/log.cpp)

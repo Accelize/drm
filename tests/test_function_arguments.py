@@ -78,7 +78,7 @@ def test_drm_manager_constructor_with_bad_arguments(pytestconfig, accelize_drm, 
     print('Test when read register function is not a callable: PASS')
 
 
-def test_drm_manager_with_incomplete_configuration_file(accelize_drm, conf_json, cred_json, async_handler):
+def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_json, async_handler):
     """Test errors when missing arguments are given to DRM Controller Constructor"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -229,7 +229,7 @@ def test_drm_manager_with_incomplete_configuration_file(accelize_drm, conf_json,
     assert "Missing parameter 'license_dir' of type String" in str(excinfo.value)
     errCode = async_handler.parse_error_code(str(excinfo.value))
     assert errCode == accelize_drm.exceptions.DRMBadFormat.error_code
-    print('Test in node-locked wheb no license_dir is in config file: PASS')
+    print('Test in node-locked when no license_dir is in config file: PASS')
 
     # In nodelocked, test when license_dir in configuration file is not existing
     conf_json.reset()
@@ -249,7 +249,29 @@ def test_drm_manager_with_incomplete_configuration_file(accelize_drm, conf_json,
     assert search(r'License directory path .* is not existing on file system', str(excinfo.value)) is not None
     errCode = async_handler.parse_error_code(str(excinfo.value))
     assert errCode == accelize_drm.exceptions.DRMBadArg.error_code
-    print('Test in node-locked when license_dir in config file is not existing in filesystem: PASS')
+    print('Test in node-locked when license_dir in config file is not existing: PASS')
+
+    # In nodelocked, test when license_dir in configuration file is not a directory
+    conf_json.reset()
+    conf_json['licensing']['nodelocked'] = True
+    conf_json['licensing']['license_dir'] = 'nodelocked_licenses'
+    conf_json.save()
+    assert conf_json['licensing']['license_dir'] == 'nodelocked_licenses'
+    # Create file
+    with open('nodelocked_licenses', 'w') as f:
+        f.write('dummy file')
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+    assert search(r'License directory path .* is not existing on file system', str(excinfo.value)) is not None
+    errCode = async_handler.parse_error_code(str(excinfo.value))
+    assert errCode == accelize_drm.exceptions.DRMBadArg.error_code
+    print('Test in node-locked when license_dir in config file is not a directory: PASS')
 
     # Test when no DRM section is not specified
     conf_json.reset()
@@ -315,7 +337,7 @@ def test_drm_manager_with_incomplete_configuration_file(accelize_drm, conf_json,
     print('Test no DRM frequency in config file: PASS')
 
 
-def test_drm_manager_with_incomplete_credential_file(accelize_drm, conf_json, cred_json, async_handler):
+def test_drm_manager_with_bad_credential_file(accelize_drm, conf_json, cred_json, async_handler):
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -435,16 +457,14 @@ def test_drm_manager_get_and_set_bad_arguments(accelize_drm, conf_json, cred_jso
         async_cb.callback
     )
 
+    # Test when parameter is None
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+        value = drm_manager.get(None)
+    assert 'Cannot find parameter:' in str(excinfo.value)
+    async_cb.assert_NoError()
+    print("Test when parameter is None: PASS")
+
     # Test when parameter is empty
-    async_cb.reset()
-    conf_json.reset()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         value = drm_manager.get('')
     assert 'Cannot find parameter:' in str(excinfo.value)

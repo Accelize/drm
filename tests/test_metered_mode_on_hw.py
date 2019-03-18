@@ -214,3 +214,7 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
     finally:
         drm_manager.deactivate()
 
+
+@pytest.mark.skip(reason='todo')
+def test_limits():
+    pass

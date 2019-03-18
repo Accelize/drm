@@ -36,7 +36,8 @@ protected:
 
 public:
     template <class S>
-    Exception(DRM_ErrorCode errCode, S&& errMsg) : std::runtime_error(std::forward<S>(errMsg)), errCode(errCode) {}
+    Exception(DRM_ErrorCode errCode, S&& errMsg)
+        : std::runtime_error(std::forward<S>(errMsg)), errCode(errCode) {}
     virtual ~Exception() {};
     DRM_ErrorCode getErrCode() const;
     virtual const char* what() const noexcept;

@@ -7,7 +7,7 @@ Headers
 drm.h
 ~~~~~
 
-.. doxygenfile:: drm/session_manager.h
+.. doxygenfile:: drm/drm_manager.h
    :project: accelize_drm
 
 drm/error.h
