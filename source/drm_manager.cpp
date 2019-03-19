@@ -1449,7 +1449,7 @@ public:
                                 "' (ID=", key_id, "): ", mFrequencyDetectionPeriod );
                         break;
                     }
-                    case ParameterKey::product_id: {
+                    case ParameterKey::product_info: {
                         json_value[key_str] = mHeaderJsonRequest["product"];
                         Debug( "Get value of parameter '", key_str, "' (ID=", key_id, "): ",
                                 mHeaderJsonRequest["product"].toStyledString() );

@@ -20,7 +20,7 @@ _PARAM_LIST = ['license_type',
                'metered_data',
                'nodelocked_request_file',
                'drm_frequency',
-               'product_id',
+               'product_info',
                'mailbox_size',
                'token_string',
                'token_expired_in',
@@ -638,10 +638,10 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     assert freqDrm == 125, 'Unexpected frequency gap threshold'
     print("Test parameter 'drm_frequency': PASS")
 
-    # Test parameter: product_id
+    # Test parameter: product_info
     # Read-only, return the product ID
     from pprint import pformat
-    productID = pformat(drm_manager.get('product_id'))
+    productID = pformat(drm_manager.get('product_info'))
     expProductID = pformat(loads("""{
             "vendor": "accelize.com",
             "library": "refdesign",
@@ -649,7 +649,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
             "sign":"31f4b20548d39d9cc8895ec7a52e68f0"
         }"""))
     assert productID == expProductID, 'Unexpected product ID'
-    print("Test parameter 'product_id': PASS")
+    print("Test parameter 'product_info': PASS")
 
     # Test parameter: mailbox_size
     # Read-only, return the size of the Mailbox read-write memory in DRM Controller
@@ -995,6 +995,24 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
         async_cb.assert_NoError()
         print('Test when authentication url in configuration file is wrong: PASS')
 
+        # Test authentication failed with unknown user
+        async_cb.reset()
+        cred_json.set_user('jbleclere@accelize.com')
+        conf_json.reset()
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+            drm_manager.activate()
+        assert "HTTP response code from OAuth2 Web Service: 404" in str(excinfo.value)
+        assert async_handler.parse_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+        async_cb.assert_NoError()
+        print('Test when authentication url in configuration file is wrong: PASS')
+
 #        # Test when token is wrong
 #        async_cb.reset()
 #        conf_json.reset()
@@ -1013,7 +1031,7 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
 #        async_cb.assert_NoError()
 #        print('Test when token is wrong: PASS')
 
-        # Test token validity across deactivate
+        # Test token validity after deactivate
         async_cb.reset()
         conf_json.reset()
         drm_manager = accelize_drm.DrmManager(
@@ -1036,7 +1054,7 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
         token_string = drm_manager.get('token_string')
         assert token_string == exp_token_string
         async_cb.assert_NoError()
-        print('Test token validity across deactivate: PASS')
+        print('Test token validity after deactivate: PASS')
 
         # Test when token has expired
         async_cb.reset()
@@ -1217,7 +1235,7 @@ def test_configuration_file_bad_product_id(accelize_drm, conf_json, cred_json, a
     )
 
     drm_manager.set( bad_product_id=None )
-    pid = drm_manager.get('product_id')
+    pid = drm_manager.get('product_info')
 
     with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
         drm_manager.activate()

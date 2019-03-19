@@ -1,13 +1,19 @@
 # -*- coding: utf-8 -*-
 """Configure Pytest"""
 from os import environ, listdir, remove
-from os.path import realpath, isfile, isdir, expanduser, splitext, join, dirname
+from os.path import realpath, abspath, isfile, isdir, expanduser, splitext, join, dirname
 from json import dump, load
 from copy import deepcopy
 from re import search
 from ctypes import c_uint32, byref
 
 import pytest
+
+import sys
+myPath = dirname(abspath(__file__))
+sys.path.insert(0, myPath)
+from ws_admin_functions import WSListFunction
+
 
 _TESTS_PATH = dirname(realpath(__file__))
 _SESSION = dict()
@@ -75,9 +81,6 @@ def pytest_addoption(parser):
     parser.addoption(
         "--cred", action="store", default="./cred.json",
         help='Specify cred.json path')
-    parser.addoption(
-        "--conf", action="store", default=None,
-        help='Specify default conf.json path')
     parser.addoption(
         "--server", action="store",
         default="prod", help='Specify the metering server to use')
@@ -364,6 +367,7 @@ class CredJson(_Json):
             cred = dict(client_id='', secret_id='')
         # Load from user specified cred.json
         _Json.__init__(self, tmpdir, 'cred.json', cred)
+        self._user = 'default'
 
     def set_user(self, user=None):
         """
@@ -375,14 +379,26 @@ class CredJson(_Json):
         if user is None:
             self['client_id'] = self._initial_content['client_id']
             self['client_secret'] = self._initial_content['client_secret']
+            self._user = 'default'
         else:
             try:
                 self['client_id'] = self._initial_content['client_id_%s' % user]
                 self['client_secret'] = self._initial_content['client_secret_%s' % user]
+                self._user = user
             except KeyError:
                 raise ValueError( 'User "%s" not found in "%s"' % (
                         user, self._init_cref_path))
         self.save()
+
+    @property
+    def user(self):
+        """
+        User name
+
+        Returns:
+            str: user
+        """
+        return self._user
 
 
 @pytest.fixture
@@ -546,4 +562,31 @@ class AsyncErrorHandlerList(list):
 @pytest.fixture
 def async_handler():
     return AsyncErrorHandlerList()
+
+
+
+class WSAdmin:
+    """
+    Handle Web Service administration for test and debug of the DRM Lib
+    """
+    def __init__(self, url, client_id, client_secret):
+        self._functions = WSListFunction( url, client_id, client_secret)
+
+    def remove_product_information(self, product, user):
+        self._functions._get_user_token()
+        data = {'library': product['library'], 'name':product['name'], 'user':user}
+        print('data=', data)
+        self._functions.remove_product_information(data)
+
+    @property
+    def function(self):
+        return self._functions
+
+
+@pytest.fixture
+def ws_admin(cred_json, conf_json):
+    cred_json.set_user('admin')
+    assert cred_json.user == 'admin'
+    return WSAdmin(conf_json['licensing']['url'],
+        cred_json['client_id'], cred_json['client_secret'])
 

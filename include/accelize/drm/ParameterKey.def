@@ -7,7 +7,7 @@ PARAMETERKEY_ITEM( license_status )                 ///< Read-only, return the c
 PARAMETERKEY_ITEM( metered_data )                   ///< Read-only, return uint64_t or string with the current value of the metering data counter
 PARAMETERKEY_ITEM( nodelocked_request_file )        ///< Read-only, return string with the path to the node-locked license request JSON file
 PARAMETERKEY_ITEM( drm_frequency )                  ///< Read-only, return the measured DRM frequency
-PARAMETERKEY_ITEM( product_id )                     ///< Read-only, return the product ID
+PARAMETERKEY_ITEM( product_info )                   ///< Read-only, return the product information stored in the DRM Controller Read Only Mailbox
 PARAMETERKEY_ITEM( mailbox_size )                   ///< Read-only, return the size of the Mailbox read-write memory in DRM Controller
 PARAMETERKEY_ITEM( token_string )                   ///< Read-only, return the token string
 PARAMETERKEY_ITEM( token_expired_in )               ///< Read-only, return the number of seconds left until the current token expires

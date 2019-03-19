@@ -160,7 +160,7 @@ void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
     Debug("Starting a new token request to ", mOAuth2Url);
     std::string response;
     long resp_code = mOAUth2Request.perform( &response, deadline );
-    Debug( "Received code ", resp_code, " from License Web Server in ",
+    Debug( "Received code ", resp_code, " from OAuth2 Web Service in ",
            mOAUth2Request.getTotalTime() * 1000, "ms with following response: ",
            response );
 
@@ -186,10 +186,10 @@ void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
     try {
         json_resp = parseJsonString( response );
     } catch ( const Exception&e ) {
-        Throw( DRM_WSRespError, "Failed to parse Web Service response: ", e.what() );
+        Throw( DRM_WSRespError, "Failed to parse response from OAuth2 Web Service: ", e.what() );
     }
     if ( !json_resp.isMember("access_token") )
-        Throw(DRM_WSRespError, "Non-valid response from WSOAuth : ", response);
+        Throw(DRM_WSRespError, "Non-valid response from OAuth2 Web Service : ", response);
     Debug("New OAuth2 token is ", json_resp["access_token"].asString(),
           "; it will expire in ", json_resp["expires_in"].asInt(), " seconds");
 
@@ -210,7 +210,7 @@ Json::Value DrmWSClient::requestLicense( const Json::Value& json_req, TClock::ti
     req.setPostFields( saveJsonToString(json_req) );
 
     // Send request and wait response
-    Debug("Starting license request to ", mMeteringUrl);
+    Debug("Starting license request to ", mMeteringUrl, "with request: ", json_req.toStyledString() );
     std::string response;
     long resp_code = req.perform( &response, deadline );
     Debug( "Received code ", resp_code, " from License Web Service in ",
@@ -222,7 +222,7 @@ Json::Value DrmWSClient::requestLicense( const Json::Value& json_req, TClock::ti
     try {
         json_resp = parseJsonString(response);
     } catch ( const Exception&e ) {
-        Throw( DRM_WSRespError, "Failed to parse Web Service response: ", e.what() );
+        Throw( DRM_WSRespError, "Failed to parse response from License Web Service: ", e.what() );
     }
 
     // Analyze response
