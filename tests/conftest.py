@@ -94,7 +94,7 @@ def pytest_addoption(parser):
         "--fpga_image", default="default",
         help='Select FPGA image to program the FPGA with. '
              'By default, use default FPGA image for the selected driver and '
-             'last HDK version. Set to empty string to not program the FPGA.')
+             'last HDK version.')
     parser.addoption(
         "--hdk_version",
         help='Select FPGA image base on Accelize DRM HDK version. By default, '
@@ -213,7 +213,8 @@ def accelize_drm(pytestconfig):
         build_type = 'release'
 
     # Check cred.json
-    if not isfile(realpath(expanduser(pytestconfig.getoption("cred")))):
+    cred_path = realpath(expanduser(pytestconfig.getoption("cred")))
+    if not isfile(cred_path):
         raise ValueError('Credential file specified by "--cred" does not exist')
 
     # Select C or C++ based on environment and import Python Accelize Library
@@ -285,6 +286,16 @@ def accelize_drm(pytestconfig):
         pytestconfig.getoption("activator_range_address"))
         for i in range(len(fpga_driver))]
 
+    def cleanNodelockEnv(drm_manager, driver, conf_json, cred_json, ws_admin):
+        # Clean license directory for nodelock
+        conf_json.cleanNodelockDir()
+        # Clear nodelock request from WS DB (not to hit the limit)
+        product_info = {'library': 'refdesign', 'name': 'drm_1activator'}
+        ws_admin.remove_product_information(product_info, cred_json['email'])
+        # Reprogram FPGA
+        if drm_manager.get('drm_license_type') == 'Node-Locked':
+            driver.program_fpga()
+
     # Store some values for access in tests
     _accelize_drm.pytest_build_environment = build_environment
     _accelize_drm.pytest_build_source_dir = '@CMAKE_CURRENT_SOURCE_DIR@'
@@ -295,6 +306,7 @@ def accelize_drm(pytestconfig):
     _accelize_drm.pytest_hdk_version = hdk_version
     _accelize_drm.pytest_fpga_activators = fpga_activators
     _accelize_drm.pytest_ref_designs = ref_designs
+    _accelize_drm.clean_nodelock_function = cleanNodelockEnv
 
     return _accelize_drm
 
@@ -354,6 +366,29 @@ class ConfJson(_Json):
             content[k] = v
         _Json.__init__(self, tmpdir, 'conf.json', content)
 
+    def addNodelock(self):
+        self['licensing']['nodelocked'] = True
+        self['licensing']['license_dir'] = dirname(self._path)
+        assert isdir(self['licensing']['license_dir'])
+        self.save()
+
+    def removeNodelock(self):
+        if 'nodelocked' in self['licensing']:
+            del self['licensing']['nodelocked']
+        assert 'nodelocked' not in self['licensing']
+        if 'license_dir' in self['licensing'].keys():
+            del self['licensing']['license_dir']
+        assert 'license_dir' not in self['licensing']
+        self.save()
+
+    def cleanNodelockDir(self):
+        from glob import glob
+        dirpath = self['licensing']['license_dir']
+        fileList = glob(join(dirpath, '*.req'))
+        fileList.extend(glob(join(dirpath,'*.lic')))
+        for e in fileList:
+            remove(e)
+
 
 class CredJson(_Json):
     """cred.json file"""
@@ -392,13 +427,23 @@ class CredJson(_Json):
 
     @property
     def user(self):
-        """
-        User name
-
-        Returns:
-            str: user
-        """
         return self._user
+
+    @property
+    def client_id(self):
+        return self['client_id']
+
+    @client_id.setter
+    def client_id(self, s):
+        self['client_id'] = s
+
+    @property
+    def client_secret(self):
+        return self['client_secret']
+
+    @client_secret.setter
+    def client_secret(self, s):
+        self['client_secret'] = s
 
 
 @pytest.fixture
@@ -529,11 +574,12 @@ class AsyncErrorHandler:
             self.message = message.decode()
         else:
             self.message = message
-        m = search(r'\[errCode=(\d+)\]', self.message)
-        if m:
-            self.errcode = int(m.group(1))
-        else:
-            self.errcode = None
+        self.errcode = AsyncErrorHandlerList.get_error_code(self.message)
+        #m = search(r'\[errCode=(\d+)\]', self.message)
+        #if m:
+        #    self.errcode = int(m.group(1))
+        #else:
+        #    self.errcode = None
     def assert_NoError( self, extra_msg=None ):
         if extra_msg is None:
             prepend_msg = ''
@@ -552,11 +598,22 @@ class AsyncErrorHandlerList(list):
         cb = AsyncErrorHandler()
         super(AsyncErrorHandlerList, self).append(cb)
         return cb
-    def parse_error_code(self, msg):
+
+    @staticmethod
+    def get_error_code(msg):
         from re import search
         match = search(r'\[errCode=(\d+)\]', msg)
         assert match, "Could not find 'errCode' in exception message: %s" % msg
         return int(match.group(1))
+
+    @staticmethod
+    def get_error_details(msg):
+        from re import search
+        match = search(r'\{"error": "(.+)"\}', msg)
+        if match:
+            return match.group(1)
+        else:
+            return None
 
 
 @pytest.fixture
@@ -575,11 +632,10 @@ class WSAdmin:
     def remove_product_information(self, product, user):
         self._functions._get_user_token()
         data = {'library': product['library'], 'name':product['name'], 'user':user}
-        print('data=', data)
         self._functions.remove_product_information(data)
 
     @property
-    def function(self):
+    def functions(self):
         return self._functions
 
 
@@ -589,4 +645,3 @@ def ws_admin(cred_json, conf_json):
     assert cred_json.user == 'admin'
     return WSAdmin(conf_json['licensing']['url'],
         cred_json['client_id'], cred_json['client_secret'])
-

@@ -208,7 +208,6 @@ class WSListFunction(object):
 
     def remove_product_information(self, data):
         # url(r'^auth/metering/rmthissession/', APIMetering.remove_product_information),
-        print('url=', self.url)
         response, status = self._authentifed_call("POST", "/auth/metering/archiveduserproductinfo/", data=data)
         return response, status
 

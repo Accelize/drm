@@ -1277,7 +1277,7 @@ public:
             }
             if (isDrmCtrlInNodelock()) {
                 Throw(DRM_BadUsage, "DRM Controller is locked in Node-Locked licensing mode: "
-                                    "To use other modes you must reprogram the FPGA device");
+                                    "To use other modes you must reprogram the FPGA device.");
             }
             mSecurityStop = true;
             if ( isRunning && resume_session_request ) {
@@ -1435,6 +1435,24 @@ public:
                         json_value[key_str] = mFrequencyCurr;
                         Debug( "Get value of parameter '", key_str,
                                 "' (ID=", key_id, "): ", mFrequencyCurr );
+                        break;
+                    }
+                    case ParameterKey::drm_license_type: {
+                        LicenseType lic_type;
+                        bool is_nodelock = isDrmCtrlInNodelock();
+                        bool is_metering = isDrmCtrlInMetering();
+                        std::string status;
+                        if ( is_metering && is_nodelock )
+                            Unreachable( "DRM is in multiple license mode" );
+                        if ( is_metering )
+                            lic_type = LicenseType::OTHERS;
+                        else if ( is_nodelock )
+                            lic_type = LicenseType::NODE_LOCKED;
+                        auto it = LicenseTypeStringMap.find(lic_type);
+                        status = it->second;
+                        json_value[key_str] = status;
+                        Debug( "Get value of parameter '", key_str,
+                               "' (ID=", key_id, "): ", status );
                         break;
                     }
                     case ParameterKey::frequency_detection_threshold: {

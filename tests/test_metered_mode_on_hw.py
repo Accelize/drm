@@ -8,13 +8,13 @@ from random import randint
 import pytest
 
 
-@pytest.mark.quick_on_hw
 def test_metered_start_stop_short_time(accelize_drm, conf_json, cred_json, async_handler):
     """Test no error occurs in normal metering mode."""
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
+    cred_json.set_user('accelize_accelerator_test_02')
 
     # Test when authentication url in configuration file is wrong
     async_cb.reset()
@@ -56,12 +56,14 @@ def test_metered_start_stop_short_time(accelize_drm, conf_json, cred_json, async
         drm_manager.deactivate()
 
 
+@pytest.mark.on_dev_only
 def test_metered_start_stop_long_time(accelize_drm, conf_json, cred_json, async_handler):
     """Test no error occurs in normal metering mode."""
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
+    cred_json.set_user('accelize_accelerator_test_02')
 
     # Test when authentication url in configuration file is wrong
     async_cb.reset()
@@ -111,6 +113,7 @@ def test_metered_start_stop_long_time(accelize_drm, conf_json, cred_json, async_
     finally:
         drm_manager.deactivate()
 
+
 @pytest.mark.skip
 def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, async_handler):
     """Test no error occurs in normal metering mode."""
@@ -118,6 +121,7 @@ def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, asy
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
+    cred_json.set_user('accelize_accelerator_test_02')
 
     # Test when authentication url in configuration file is wrong
     async_cb.reset()
@@ -158,6 +162,8 @@ def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, asy
     finally:
         drm_manager.deactivate()
 
+
+@pytest.mark.on_dev_only
 @pytest.mark.skip
 def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, async_handler):
     """Test no error occurs in normal metering mode."""
@@ -165,6 +171,7 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
+    cred_json.set_user('accelize_accelerator_test_02')
 
     # Test when authentication url in configuration file is wrong
     async_cb.reset()
