@@ -4,7 +4,7 @@ from os import environ, listdir, remove
 from os.path import realpath, abspath, isfile, isdir, expanduser, splitext, join, dirname
 from json import dump, load
 from copy import deepcopy
-from re import search
+from re import match, search
 from ctypes import c_uint32, byref
 
 import pytest
@@ -60,6 +60,20 @@ def get_default_conf_json(licensing_server_url):
     }
 
 
+def clean_nodelock_env(drm_manager=None, driver=None, conf_json=None, cred_json=None, ws_admin=None):
+    # Clean license directory for nodelock
+    if conf_json is not None:
+        conf_json.cleanNodelockDir()
+    # Clear nodelock request from WS DB (not to hit the limit)
+    if (ws_admin is not None) and (cred_json is not None):
+        ws_admin.remove_product_information(library='refdesign',
+            name='drm_1activator', user=cred_json.user)
+    # Reprogram FPGA
+    if drm_manager is not None:
+        if (driver is not None) and (drm_manager.get('drm_license_type') == 'Node-Locked'):
+            driver.program_fpga()
+
+
 # Pytest configuration
 
 def pytest_addoption(parser):
@@ -102,14 +116,10 @@ def pytest_addoption(parser):
              'version.')
     parser.addoption(
         "--integration", action="store_true",
-        help='Run integration tests. Theses tests may needs two FPGAs.'
-    )
+        help='Run integration tests. Theses tests may needs two FPGAs.')
     parser.addoption(
-        "--activator_base_address", action="store", default=0x10000, type=int,
-        help='Specify the lowest activator base address in the design')
-    parser.addoption(
-        "--activator_range_address", action="store", default=0x10000, type=int,
-        help='Specify the lowest activator base address in the design')
+        "--activator_base_address", action="store", default='0x10000', type=str,
+        help='Specify a list of all activator base addresses separated by a coma: "0x10000,0x20000"')
 
 
 
@@ -124,40 +134,60 @@ def pytest_runtest_setup(item):
         pytest.skip("Run only integration tests.")
 
 
+class SingleActivator:
+    """
+    SingleActivator object
+    """
+    def __init__(self, driver, base_address):
+        self.driver = driver
+        self.base_address = base_address
+
+    def generate_coin(self, coins):
+        value = c_uint32()
+        for i in range(coins):
+            self.driver.read_register_callback( self.base_address, byref(value) )
+
+    def get_status(self):
+        regvalue = c_uint32(0)
+        self.driver.read_register_callback( self.base_address, byref(regvalue) )
+        value = regvalue.value
+        code_rdy = (value >> 1) & 1
+        return value & 1
+
+
 class ActivatorsInFPGA:
     """
     Activators object
     """
-    def __init__(self, driver, base_address, address_range):
-        self.driver = driver
-        self.base_address = base_address
-        self.address_range = address_range
+    def __init__(self, driver, base_address_list):
+        self.base_address_list = base_address_list
+        self.activators = list()
+        for addr in self.base_address_list:
+            self.activators.append(SingleActivator(driver, addr))
 
-    def generate_coin(self, coins, activator_index=0):
-        value = c_uint32()
-        for i in range(coins):
-            self.driver.read_register_callback( self.base_address +
-                           activator_index * self.address_range, byref(value) )
+    def __getitem__(self, index):
+        return self.activators[index]
 
-    def get_status(self, activator_index=None):
-        if isinstance(activator_index, list):
-            activator_index_list = activator_index
-        elif isinstance(activator_index, int):
-            activator_index_list = [activator_index]
+    def get_status(self, activator_indexes=None):
+        if activator_indexes is None:
+            activator_index_list = list(range(len(self.activators)))
+        elif isinstance(activator_indexes, list):
+            activator_index_list = activator_indexes
+        elif isinstance(activator_indexes, int):
+            activator_index_list = [activator_indexes]
         else:
-            raise TypeError('Unsupported type: %s' % type(activator_index))
+            raise TypeError('Unsupported type: %s' % type(activator_indexes))
         regvalue = c_uint32(0)
         status_list = []
         for i in activator_index_list:
-            self.driver.read_register_callback( self.base_address +
-                           i * self.address_range, byref(regvalue) )
-            value = regvalue.value
-            code_rdy = (value >> 1) & 1
-            active = value & 1
-            status_list.append(active)
-        if len(status_list) == 1 and activator_index is None or isinstance(activator_index, int):
+            status_list.append(self.activators[i].get_status())
+        if isinstance(activator_indexes, int) and len(status_list) == 1:
             return status_list[0]
         return status_list
+
+    def is_activated(self, activator_indexes=None):
+        status_list = self.get_status(activator_indexes)
+        return all(status_list)
 
 
 class RefDesign:
@@ -281,20 +311,9 @@ def accelize_drm(pytestconfig):
         for slot_id in fpga_slot_id]
 
     # Define Activator access
-    fpga_activators = [ ActivatorsInFPGA(fpga_driver[i],
-        pytestconfig.getoption("activator_base_address"),
-        pytestconfig.getoption("activator_range_address"))
+    base_address = [int(e,0) for e in pytestconfig.getoption("activator_base_address").split(',')]
+    fpga_activators = [ ActivatorsInFPGA(fpga_driver[i], base_address)
         for i in range(len(fpga_driver))]
-
-    def cleanNodelockEnv(drm_manager, driver, conf_json, cred_json, ws_admin):
-        # Clean license directory for nodelock
-        conf_json.cleanNodelockDir()
-        # Clear nodelock request from WS DB (not to hit the limit)
-        product_info = {'library': 'refdesign', 'name': 'drm_1activator'}
-        ws_admin.remove_product_information(product_info, cred_json['email'])
-        # Reprogram FPGA
-        if drm_manager.get('drm_license_type') == 'Node-Locked':
-            driver.program_fpga()
 
     # Store some values for access in tests
     _accelize_drm.pytest_build_environment = build_environment
@@ -306,7 +325,7 @@ def accelize_drm(pytestconfig):
     _accelize_drm.pytest_hdk_version = hdk_version
     _accelize_drm.pytest_fpga_activators = fpga_activators
     _accelize_drm.pytest_ref_designs = ref_designs
-    _accelize_drm.clean_nodelock_function = cleanNodelockEnv
+    _accelize_drm.clean_nodelock = clean_nodelock_env
 
     return _accelize_drm
 
@@ -315,6 +334,7 @@ class _Json:
     """Json file"""
 
     def __init__(self, tmpdir, name, content):
+        self._dirname = str(tmpdir)
         self._path = str(tmpdir.join(name))
         self._content = content
         self._initial_content = deepcopy(content)
@@ -383,9 +403,8 @@ class ConfJson(_Json):
 
     def cleanNodelockDir(self):
         from glob import glob
-        dirpath = self['licensing']['license_dir']
-        fileList = glob(join(dirpath, '*.req'))
-        fileList.extend(glob(join(dirpath,'*.lic')))
+        fileList = glob(join(self._dirname, '*.req'))
+        fileList.extend(glob(join(self._dirname,'*.lic')))
         for e in fileList:
             remove(e)
 
@@ -394,7 +413,7 @@ class CredJson(_Json):
     """cred.json file"""
 
     def __init__(self, tmpdir, path):
-        self._init_cref_path = path
+        self._init_cred_path = path
         try:
             with open(path, 'rt') as cref_file:
                 cred = load(cref_file)
@@ -402,7 +421,7 @@ class CredJson(_Json):
             cred = dict(client_id='', secret_id='')
         # Load from user specified cred.json
         _Json.__init__(self, tmpdir, 'cred.json', cred)
-        self._user = 'default'
+        self._user = ''
 
     def set_user(self, user=None):
         """
@@ -411,18 +430,19 @@ class CredJson(_Json):
         Args:
             user (str): User to use. If not specified, use default user.
         """
+        self._content = {}
         if user is None:
-            self['client_id'] = self._initial_content['client_id']
-            self['client_secret'] = self._initial_content['client_secret']
-            self._user = 'default'
+            for k,v in [e for e in self._initial_content.items() if not e.endswith('__')]:
+                self[k]= v
+            self._user = ''
         else:
-            try:
-                self['client_id'] = self._initial_content['client_id_%s' % user]
-                self['client_secret'] = self._initial_content['client_secret_%s' % user]
-                self._user = user
-            except KeyError:
-                raise ValueError( 'User "%s" not found in "%s"' % (
-                        user, self._init_cref_path))
+            for k,v in self._initial_content.items():
+                m =  match(r'(.+)__%s__' % user, k)
+                if m:
+                    self[m.group(1)]= v
+            self._user = user
+        if ('client_id' not in self._content) or ('client_secret' not in self._content):
+            raise ValueError( 'User "%s" not found in "%s"' % ( self._user, self._init_cred_path))
         self.save()
 
     @property
@@ -606,15 +626,6 @@ class AsyncErrorHandlerList(list):
         assert match, "Could not find 'errCode' in exception message: %s" % msg
         return int(match.group(1))
 
-    @staticmethod
-    def get_error_details(msg):
-        from re import search
-        match = search(r'\{"error": "(.+)"\}', msg)
-        if match:
-            return match.group(1)
-        else:
-            return None
-
 
 @pytest.fixture
 def async_handler():
@@ -629,10 +640,11 @@ class WSAdmin:
     def __init__(self, url, client_id, client_secret):
         self._functions = WSListFunction( url, client_id, client_secret)
 
-    def remove_product_information(self, product, user):
+    def remove_product_information(self, library, name, user):
         self._functions._get_user_token()
-        data = {'library': product['library'], 'name':product['name'], 'user':user}
-        self._functions.remove_product_information(data)
+        data = {'library': library, 'name':name, 'user':user}
+        text, status = self._functions.remove_product_information(data)
+        assert status == 200, text
 
     @property
     def functions(self):
