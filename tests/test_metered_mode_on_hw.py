@@ -198,6 +198,7 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
         assert not drm_manager.get('session_status')
         assert not drm_manager.get('license_status')
         assert not activators.is_activated()
+        async_cb.assert_NoError()
         drm_manager.activate()
         start = datetime.now()
         assert drm_manager.get('metered_data') == 0
@@ -215,6 +216,7 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
             assert coins == coins_ref + new_coins
             coins_ref = coins
             drm_manager.deactivate(True)
+            async_cb.assert_NoError()
             assert drm_manager.get('session_status')
             assert drm_manager.get('license_status')
             assert drm_manager.get('session_id') == session_id

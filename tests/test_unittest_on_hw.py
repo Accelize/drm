@@ -1880,22 +1880,22 @@ def test_license_expiration(accelize_drm, conf_json, cred_json, async_handler):
         drm_manager.deactivate( True )
         # Check license is still running and activator are all unlocked
         assert drm_manager.get('license_status')
-        assert not activators.is_activated(), 'At least one activator is unlocked'
+        assert activators.is_activated(), 'At least one activator is unlocked'
         # Wait right before expiration
         wait_period = start + timedelta(seconds=2*lic_duration-2) - datetime.now()
         sleep(wait_period.total_seconds())
         # Check license is still running and activators are all unlocked
         assert drm_manager.get('license_status')
-        assert not activators.is_activated(), 'At least one activator is unlocked'
+        assert activators.is_activated(), 'At least one activator is unlocked'
         # Wait a bit more time the expiration
         sleep(3)
         # Check no license is running
         assert not drm_manager.get('license_status')
-        assert activators.is_activated(), 'At least one activator is locked'
+        assert not activators.is_activated(), 'At least one activator is locked'
         drm_manager.deactivate()
         # Check no license is running
         assert not drm_manager.get('license_status')
-        assert activators.is_activated(), 'At least one activator is locked'
+        assert not activators.is_activated(), 'At least one activator is locked'
         async_cb.assert_NoError()
         print('Test license expires after 2 duration periods when start/pause/stop')
 
