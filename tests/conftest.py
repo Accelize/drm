@@ -127,7 +127,7 @@ def pytest_runtest_setup(item):
     """
     Configure test initialization
     """
-    markers = tuple(item.iter_markers(name='integration'))
+    markers = tuple(item.iter_markers(name='on_2_fpga'))
     if not item.config.getoption("integration") and markers:
         pytest.skip("Don't run integration tests.")
     elif item.config.getoption("integration") and not markers:
