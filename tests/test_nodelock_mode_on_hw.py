@@ -23,6 +23,7 @@ def test_nodelock_license_is_not_given_to_inactive_user(accelize_drm, conf_json,
             async_cb.callback
         )
         assert drm_manager.get('license_type') == 'Node-Locked'
+        assert not drm_manager.get('license_status')
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
         assert 'No valid entitlement found for your account' in str(excinfo.value)
@@ -55,7 +56,9 @@ def test_nodelock_normal_case(accelize_drm, conf_json, cred_json, async_handler,
         assert drm_manager.get('license_type') == 'Node-Locked'
         # Start application
         assert drm_manager.get('drm_license_type') == 'Floating/Metering'
+        assert not drm_manager.get('license_status')
         drm_manager.activate()
+        assert not drm_manager.get('license_status')
         assert drm_manager.get('drm_license_type') == 'Node-Locked'
         assert drm_manager.get('license_duration') == 0
         expCoins = 10
