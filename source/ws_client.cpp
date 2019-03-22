@@ -109,10 +109,8 @@ DrmWSClient::DrmWSClient(const std::string &conf_file_path, const std::string &c
     try {
         Json::Value client_id_json = JVgetRequired(cred_json, "client_id", Json::stringValue);
         mClientId = client_id_json.asString();
-
         Json::Value client_secret_json = JVgetRequired(cred_json, "client_secret", Json::stringValue);
         mClientSecret = client_secret_json.asString();
-
     } catch(Exception &e) {
         if (e.getErrCode() != DRM_BadFormat)
             throw;
@@ -160,18 +158,35 @@ void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
     Debug("Starting a new token request to ", mOAuth2Url);
     std::string response;
     long resp_code = mOAUth2Request.perform( &response, deadline );
-    Debug( "Received code ", resp_code, " from License Web Server in ",
+    Debug( "Received code ", resp_code, " from OAuth2 Web Service in ",
            mOAUth2Request.getTotalTime() * 1000, "ms with following response: ",
            response );
 
+    // Parse response
+    std::string formatted_response, error_msg;
+    Json::Value json_resp;
+    try {
+        json_resp = parseJsonString(response);
+        formatted_response = json_resp.toStyledString();
+    } catch ( const Exception& e ) {
+        json_resp = Json::nullValue;
+        formatted_response = response;
+        error_msg = e.what();
+    }
+    Debug( "Received code ", resp_code, " from License Web Service in ",
+           mOAUth2Request.getTotalTime() * 1000, "ms with following response:\n", formatted_response );
+
     // Analyze response
     if ( resp_code != 200 ) {
-
         // An error occurred
-        // Build the error message
+        // Extract the error message
         std::stringstream msg;
         msg << "HTTP response code from OAuth2 Web Service: " << resp_code;
-        msg << " (" << response << ")";
+        std::string error_details = json_resp.get("error", "").asString();
+        if ( error_details.size() )
+            msg << " (" << error_details << ")";
+        else
+            msg << " (" << response << ")";
 
         if (CurlEasyPost::is_error_retryable(resp_code)) {
             Throw(DRM_WSMayRetry, msg.str());
@@ -181,17 +196,12 @@ void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
             Throw(DRM_WSError, msg.str());
         }
     }
-    // No error: parse the response
-    Json::Value json_resp;
-    try {
-        json_resp = parseJsonString( response );
-    } catch ( const Exception&e ) {
-        Throw( DRM_WSRespError, "Failed to parse Web Service response: ", e.what() );
-    }
+    // Verify response parsing
+    if ( json_resp == Json::nullValue )
+        Throw( DRM_WSRespError, "Failed to parse response from OAuth2 Web Service: ", error_msg );
+
     if ( !json_resp.isMember("access_token") )
-        Throw(DRM_WSRespError, "Non-valid response from WSOAuth : ", response);
-    Debug("New OAuth2 token is ", json_resp["access_token"].asString(),
-          "; it will expire in ", json_resp["expires_in"].asInt(), " seconds");
+        Throw(DRM_WSRespError, "Non-valid response from OAuth2 Web Service : ", response);
 
     mOAuth2Token = json_resp["access_token"].asString();
     mTokenValidityPeriod = json_resp["expires_in"].asInt();
@@ -210,44 +220,48 @@ Json::Value DrmWSClient::requestLicense( const Json::Value& json_req, TClock::ti
     req.setPostFields( saveJsonToString(json_req) );
 
     // Send request and wait response
-    Debug("Starting license request to ", mMeteringUrl);
+    Debug("Starting license request to ", mMeteringUrl, "with request: ", json_req.toStyledString() );
     std::string response;
     long resp_code = req.perform( &response, deadline );
-    Debug( "Received code ", resp_code, " from License Web Service in ",
-           req.getTotalTime() * 1000, "ms with following response\n",
-           response );
 
     // Parse response
+    std::string formatted_response, error_msg;
     Json::Value json_resp;
     try {
         json_resp = parseJsonString(response);
-    } catch ( const Exception&e ) {
-        Throw( DRM_WSRespError, "Failed to parse Web Service response: ", e.what() );
+        formatted_response = json_resp.toStyledString();
+    } catch ( const Exception& e ) {
+        json_resp = Json::nullValue;
+        formatted_response = response;
+        error_msg = e.what();
     }
+    Debug( "Received code ", resp_code, " from License Web Service in ",
+           req.getTotalTime() * 1000, "ms with following response\n", formatted_response );
 
     // Analyze response
-    if ( resp_code == 200 ) {
-        // No error
-        return json_resp;
-    }
+    if ( resp_code != 200 ) {
+        // An error occurred
+        // Extract the error message
+        std::stringstream msg;
+        msg << "HTTP response code from License Web Service: " << resp_code;
+        std::string error_details = json_resp.get("detail", "").asString();
+        if ( error_details.size() )
+            msg << " (" << error_details << ")";
 
-    // An error occurred
-    Warning("Received code ", resp_code, " from License Web Service in ",
-            req.getTotalTime() * 1000, "ms");
-    // Build the error message
-    std::stringstream msg;
-    msg << "HTTP response code from License Web Service: " << resp_code;
-    std::string error_details = json_resp.get("detail", "").asString();
-    if ( error_details.size() )
-        msg << " (" << error_details << ")";
-
-    if ( CurlEasyPost::is_error_retryable( resp_code ) ) {
-        Throw(DRM_WSMayRetry, msg.str());
-    } else if ( (resp_code >= 400) && (resp_code < 500) ) {
-        Throw( DRM_WSReqError, msg.str() );
-    } else {
-        Throw(DRM_WSError, msg.str());
+        if (CurlEasyPost::is_error_retryable(resp_code)) {
+            Throw(DRM_WSMayRetry, msg.str());
+        } else if ((resp_code >= 400) && (resp_code < 500)) {
+            Throw(DRM_WSReqError, msg.str());
+        } else {
+            Throw(DRM_WSError, msg.str());
+        }
     }
+    // Verify response parsing
+    if ( json_resp == Json::nullValue )
+        Throw( DRM_WSRespError, "Failed to parse response from License Web Service: ", error_msg );
+
+    // No error: return the response as JSON object
+    return json_resp;
 }
 
 }

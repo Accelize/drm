@@ -375,8 +375,6 @@ int test_custom_field( DrmManager* pDrmManager, uint32_t value ) {
     return 0;
 }
 
-#define DRM_CHECK(drm) if (strlen(drm.error_message) ERROR(drm.error_message);
-
 
 #define DRM_RETRY(__expr, __no_retry) \
 ({DRM_ErrorCode __err; \

@@ -70,6 +70,16 @@ class FpgaDriverBase:
         self._write_register_callback = self._get_write_register_callback()
 
     @property
+    def fpga_image(self):
+        """
+        fpga_image
+
+        Returns:
+            str: _fpga_image
+        """
+        return self._fpga_image
+
+    @property
     def read_register_callback(self):
         """
         Read register callback.
@@ -89,13 +99,17 @@ class FpgaDriverBase:
         """
         return self._write_register_callback
 
-    def program_fpga(self, fpga_image):
+    def program_fpga(self, fpga_image=None):
         """
         Program FPGA with specified image.
 
         Args:
             fpga_image (str): FPGA image to program.
         """
+        if fpga_image is None:
+            if self._fpga_image.strip() == '':
+                raise RuntimeError('Unspecified fpga_image')
+            fpga_image = self._fpga_image
         return self._program_fpga(fpga_image)
 
     @_abstractmethod
