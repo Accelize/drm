@@ -6,9 +6,11 @@ To run manually, move to the build directory and execute:
 from time import sleep
 from random import randint
 from datetime import datetime, timedelta
+from re import search
 import pytest
 
 
+@pytest.mark.minimum
 def test_metered_start_stop_short_time(accelize_drm, conf_json, cred_json, async_handler):
     """
     Test no error occurs in normal start/stop metering mode during a short period of time
@@ -98,13 +100,12 @@ def test_metered_start_stop_long_time(accelize_drm, conf_json, cred_json, async_
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         assert not activators.is_activated()
-        coins = drm_manager.get('metered_data')
-        assert coins == 0
         async_cb.assert_NoError()
     finally:
         drm_manager.deactivate()
 
 
+@pytest.mark.minimum
 def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, async_handler):
     """
     Test no error occurs in normal pause/resume metering mode during a short period of time
@@ -155,7 +156,7 @@ def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, asy
         assert drm_manager.get('session_id') == session_id
         assert activators.is_activated()
         # Wait expiration
-        sleep(3)
+        sleep(4)
         assert drm_manager.get('session_status')
         assert drm_manager.get('session_id') == session_id
         assert not drm_manager.get('license_status')
@@ -241,6 +242,8 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
         drm_manager.deactivate()
 
 
+@pytest.mark.minimum
+@pytest.mark.no_parallel
 def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
     """
     Test an error is returned and the design is locked when the limit is reached.
@@ -253,7 +256,7 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
     # Test activate function call fails when limit is reached
     async_cb.reset()
     conf_json.reset()
-    accelize_drm.clean_nodelock(cred_json=cred_json, ws_admin=ws_admin)
+    accelize_drm.clean_metering_env(cred_json, ws_admin)
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
@@ -293,7 +296,7 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
     # Test background thread stops when limit is reached
     async_cb.reset()
     conf_json.reset()
-    accelize_drm.clean_nodelock(cred_json=cred_json, ws_admin=ws_admin)
+    accelize_drm.clean_metering_env(cred_json=cred_json, ws_admin=ws_admin)
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
@@ -305,14 +308,14 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         assert not drm_manager.get('license_status')
         drm_manager.activate()
         start = datetime.now()
-        sleep(1)
         assert drm_manager.get('license_status')
-        lic_duration = drm_manager.get('license_duration')
         assert drm_manager.get('metered_data') == 0
+        lic_duration = drm_manager.get('license_duration')
+        sleep(2)
         new_coins = 1000
         activators[0].generate_coin(new_coins)
         assert drm_manager.get('metered_data') == new_coins
-        # Wait expiration of 1st license
+        # Wait right before expiration
         nb_lic_expired = int((datetime.now() - start).total_seconds() / lic_duration)
         wait_period = start + timedelta(seconds=(nb_lic_expired+3)*lic_duration-3) - datetime.now()
         sleep(wait_period.total_seconds())
@@ -334,7 +337,7 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
 
 
 @pytest.mark.on_2_fpga
-@pytest.mark.long_run
+@pytest.mark.minimum
 def test_floating_limits(accelize_drm, conf_json, cred_json, async_handler):
     """
     Test an error is returned when the floating limit is reached
@@ -368,10 +371,10 @@ def test_floating_limits(accelize_drm, conf_json, cred_json, async_handler):
     try:
         drm_manager0.activate()
         assert drm_manager0.get('license_status')
-        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+        with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
             drm_manager1.activate()
-        assert '???' in str(excinfo.value)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+        assert search(r'Timeout on License request after .+ attempts', str(excinfo.value)) is not None
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
         async_cb1.assert_NoError()
     finally:
         drm_manager0.deactivate()
@@ -380,13 +383,12 @@ def test_floating_limits(accelize_drm, conf_json, cred_json, async_handler):
     try:
         drm_manager1.activate()
         assert drm_manager1.get('license_status')
-        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+        with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
             drm_manager0.activate()
-        assert '???' in str(excinfo.value)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+        assert search(r'Timeout on License request after .+ attempts', str(excinfo.value)) is not None
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
         async_cb0.assert_NoError()
     finally:
         drm_manager1.deactivate()
         assert not drm_manager1.get('license_status')
         async_cb1.assert_NoError()
-

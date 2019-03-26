@@ -148,19 +148,16 @@ void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
     if (!mOAuth2Token.empty()) {
         // Check if existing token has expired or is about to expire
         if (mTokenExpirationTime > TClock::now()) {
-            Debug("Existing token is still valid");
+            Debug("Current authentication token is still valid");
             return;
         }
-        Debug("Existing token has expired");
+        Debug("Current authentication token has expired");
     }
 
     // Request a new token and wait response
-    Debug("Starting a new token request to ", mOAuth2Url);
+    Debug("Requesting a new authentication token from ", mOAuth2Url);
     std::string response;
     long resp_code = mOAUth2Request.perform( &response, deadline );
-    Debug( "Received code ", resp_code, " from OAuth2 Web Service in ",
-           mOAUth2Request.getTotalTime() * 1000, "ms with following response: ",
-           response );
 
     // Parse response
     std::string formatted_response, error_msg;

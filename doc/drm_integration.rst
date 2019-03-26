@@ -22,7 +22,7 @@ The web service access require:
 Software and hardware integration
 ---------------------------------
 
-The next step is to perform DRM Hardware and software integrations.
+The next step is to perform DRM Hardware and Software integrations.
 
 .. toctree::
    :maxdepth: 2
@@ -108,21 +108,24 @@ Node locked
 Troubleshooting
 ---------------
 
-How to check a read of DRM registers
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+How to check the read/write register callbacks
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You can do a basic check on read DRM register callbacks by reading the known
-value of HDK version register of the DRM controller.
+If you are facing an issue with the read/write register callbacks you should get
+the following kind of error message:
 
-This can be done using the read/write callback functions :
+"Failed to initialize DRM Controller"
 
-* Write value 0x0 to register at offset 0x0 : this will set the register page
-  number to the Page 0 of registers
+You can perform a basic check of the read DRM register callback by reading the
+DRM controller version register:
 
-* Read value from register at offset 0x68 : this correspond to the version
-  register, it will contain the version of the HDK used to integrate the DRM
-  controller. For version 3.2.0 of the HDK this register will contain value
-  0x30200.
+* Write value 0x0 in register at offset 0x0 : this will load the register Page 0
+  of the DRM Controller containing the version register.
+
+* Read value in register at the version offset (refer to the DRM Register Map
+  documentation to get the exact offset value): the value should be the version
+  number of the HDK integrated in your design.
+  For instancen, the HDK version 3.2.0 is stored in the register like this: 0x30200.
 
 How to check the correct license duration on Metering mode
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -133,18 +136,17 @@ your design:
 * Launch your FPGA application (Using ``DrmManager.activate`` from the Accelize
   DRM library).
 
-* Just after, disconnect the network. By consequence, the next license will not
-  be provided to the Hardware.
+* Then, disconnect the network. The next license will not be provided to the
+  Hardware.
 
-* Check that the FPGA application is locked after 2x the license duration (at
-  the session begin, 2 licenses are applied, so the first license duration is
-  2x the license duration)
+* Check that the FPGA application is locked after 2 license durations (when the
+  activate function is called 2 licenses are provisioned).
 
-* If the duration is not correct, please check the frequency applied to the DRM
-  Controller clock (DRM_aCLK)
+* If the duration is not correct, you should see in the log a message informing
+  the detected frequency differs from valu ein the configuration file. You should
+  also get a DRM_BadFrequency error code.
 
-If the duration is still not correct, you can contact Accelize
-support: :doc:`contacts`
+If the duration is still not correct, please contact Accelize support: :doc:`contacts`
 
 .. _Accelize account metering section: https://drmportal.accelize.com/user/metering
 .. _master.metering.accelize.com: https://master.metering.accelize.com

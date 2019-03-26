@@ -14,7 +14,7 @@ def test_nodelock_license_is_not_given_to_inactive_user(accelize_drm, conf_json,
 
     try:
         # Start application
-        accelize_drm.clean_nodelock(conf_json=conf_json, cred_json=cred_json, ws_admin=ws_admin)
+        accelize_drm.clean_nodelock_env(conf_json=conf_json, cred_json=cred_json, ws_admin=ws_admin)
         drm_manager = accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
@@ -30,9 +30,11 @@ def test_nodelock_license_is_not_given_to_inactive_user(accelize_drm, conf_json,
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_NoError()
     finally:
-        accelize_drm.clean_nodelock(drm_manager, driver, conf_json, cred_json, ws_admin)
+        accelize_drm.clean_nodelock_env(drm_manager, driver, conf_json, cred_json, ws_admin)
 
 
+@pytest.mark.minimum
+@pytest.mark.no_parallel
 def test_nodelock_normal_case(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
     """Test normal nodelock license usage"""
 
@@ -45,7 +47,7 @@ def test_nodelock_normal_case(accelize_drm, conf_json, cred_json, async_handler,
 
     try:
         # Load a user who has a valid nodelock license
-        accelize_drm.clean_nodelock(conf_json=conf_json, cred_json=cred_json, ws_admin=ws_admin)
+        accelize_drm.clean_nodelock_env(conf_json=conf_json, cred_json=cred_json, ws_admin=ws_admin)
         drm_manager = accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
@@ -67,11 +69,11 @@ def test_nodelock_normal_case(accelize_drm, conf_json, cred_json, async_handler,
         drm_manager.deactivate()
         async_cb.assert_NoError()
     finally:
-        accelize_drm.clean_nodelock(drm_manager, driver, conf_json, cred_json, ws_admin)
+        accelize_drm.clean_nodelock_env(None, driver, conf_json, cred_json, ws_admin)
 
 
-@pytest.mark.skip
 @pytest.mark.on_2_fpga
+@pytest.mark.minimum
 def test_nodelock_limits(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
     """
     Test behavior when limits are reached. 2 FPGA are required.
@@ -81,14 +83,14 @@ def test_nodelock_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
     async_cb0 = async_handler.create()
     async_cb1 = async_handler.create()
 
-    conf_json.addNodelock()
     cred_json.set_user('accelize_accelerator_test_03')
+    conf_json.addNodelock()
 
     try:
 
         # Create the first instance
         async_cb0.reset()
-        accelize_drm.clean_nodelock(drm_manager, driver, conf_json, cred_json, ws_admin)
+        accelize_drm.clean_nodelock_env(None, driver0, conf_json, cred_json, ws_admin)
         drm_manager0 = accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
@@ -99,11 +101,11 @@ def test_nodelock_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         assert drm_manager0.get('license_type') == 'Node-Locked'
 
         # Consume the single token available
-        assert drm_manager1.get('drm_license_type') == 'Floating/Metering'
+        assert drm_manager0.get('drm_license_type') == 'Floating/Metering'
         drm_manager0.activate()
-        assert drm_manager1.get('drm_license_type') == 'Node-Locked'
+        assert drm_manager0.get('drm_license_type') == 'Node-Locked'
         drm_manager0.deactivate()
-        assert drm_manager1.get('drm_license_type') == 'Node-Locked'
+        assert drm_manager0.get('drm_license_type') == 'Node-Locked'
         async_cb0.assert_NoError()
 
         # Create the second instance on the other FPGA
@@ -116,16 +118,17 @@ def test_nodelock_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         )
         assert drm_manager1.get('license_type') == 'Node-Locked'
         assert drm_manager1.get('drm_license_type') == 'Floating/Metering'
-        with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
+        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager1.activate()
-        assert '???' in str(excinfo.value)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
+        assert 'You reach the Nodelocked entitlement limit: 1' in str(excinfo.value)
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb1.assert_NoError()
 
     finally:
-        accelize_drm.clean_nodelock(drm_manager, driver, conf_json, cred_json, ws_admin)
+        accelize_drm.clean_nodelock_env(None, driver0, conf_json, cred_json, ws_admin)
 
 
+@pytest.mark.no_parallel
 def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
     """Test normal nodelock license usage"""
 
@@ -136,7 +139,7 @@ def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, c
     try:
         # Set nodelock configuration
         conf_json.addNodelock()
-        accelize_drm.clean_nodelock(conf_json=conf_json, cred_json=cred_json, ws_admin=ws_admin)
+        accelize_drm.clean_nodelock_env(conf_json=conf_json, cred_json=cred_json, ws_admin=ws_admin)
         drm_manager = accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
@@ -169,5 +172,5 @@ def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, c
         async_cb.assert_NoError()
 
     finally:
-        accelize_drm.clean_nodelock(drm_manager, driver, conf_json, cred_json, ws_admin)
+        accelize_drm.clean_nodelock_env(None, driver, conf_json, cred_json, ws_admin)
 

@@ -62,6 +62,7 @@ def ordered_json(obj):
         return obj
 
 
+@pytest.mark.minimum
 def test_retrocompatibility(accelize_drm, conf_json, cred_json, async_handler):
     """Test API is not compatible with DRM HDK < 3.0"""
     refdesign = accelize_drm.pytest_ref_designs
@@ -117,6 +118,7 @@ def test_retrocompatibility(accelize_drm, conf_json, cred_json, async_handler):
         driver.program_fpga(fpga_image)
 
 
+@pytest.mark.minimum
 def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
     """
     Test the entitlements for all accounts used in regression
@@ -167,7 +169,7 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_NoError()
     finally:
-        accelize_drm.clean_nodelock(conf_json=conf_json)
+        accelize_drm.clean_nodelock_env(conf_json=conf_json)
     print('# Test user-01 entitlements: PASS')
 
     # Test user-02 entitlements
@@ -208,7 +210,7 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_NoError()
     finally:
-        accelize_drm.clean_nodelock(conf_json=conf_json)
+        accelize_drm.clean_nodelock_env(conf_json=conf_json)
     print('# Test user-02 entitlements: PASS')
 
     # Test user-03 entitlements
@@ -216,6 +218,7 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
     cred_json.set_user('accelize_accelerator_test_03')
     async_cb.reset()
     conf_json.reset()
+    accelize_drm.clean_floating(cred_json, ws_admin)
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
@@ -234,7 +237,7 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
         async_cb.reset()
         conf_json.reset()
         conf_json.addNodelock()
-        accelize_drm.clean_nodelock(drm_manager, driver, conf_json, cred_json, ws_admin)
+        accelize_drm.clean_nodelock_env(None, driver, conf_json, cred_json, ws_admin)
         drm_manager = accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
@@ -250,7 +253,7 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
         drm_manager.deactivate()
         async_cb.assert_NoError()
     finally:
-        accelize_drm.clean_nodelock(drm_manager, driver, conf_json, cred_json, ws_admin)
+        accelize_drm.clean_nodelock_env(drm_manager, driver, conf_json, cred_json, ws_admin)
     print('# Test user-03 entitlements: PASS')
 
     # Test user-04 entitlements
@@ -291,10 +294,11 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_NoError()
     finally:
-        accelize_drm.clean_nodelock(conf_json=conf_json)
+        accelize_drm.clean_nodelock_env(conf_json=conf_json)
     print('Test user-04 entitlements: PASS')
 
 
+@pytest.mark.minimum
 def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cred_json, async_handler):
     """Test accesses to parameter"""
 
@@ -609,7 +613,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     async_cb.reset()
     cred_json.set_user('accelize_accelerator_test_03')
     conf_json.addNodelock()
-    accelize_drm.clean_nodelock(conf_json=conf_json, cred_json=cred_json, ws_admin=ws_admin)
+    accelize_drm.clean_nodelock_env(conf_json=conf_json, cred_json=cred_json, ws_admin=ws_admin)
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
@@ -633,7 +637,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         assert drm_manager.get('drm_license_type') == 'Node-Locked'
         drm_manager.deactivate()
     finally:
-        accelize_drm.clean_nodelock(drm_manager, driver, conf_json, cred_json, ws_admin)
+        accelize_drm.clean_nodelock_env(drm_manager, driver, conf_json, cred_json, ws_admin)
 
     # Test with a floating/metered user
 
@@ -1437,7 +1441,6 @@ def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_jso
     print('Test frequency overflow: PASS')
 
 
-@pytest.mark.skip(reason='WebService is not handling Product ID information yet')
 def test_configuration_file_bad_product_id(accelize_drm, conf_json, cred_json, async_handler):
     """Test errors when an incorrect product ID is requested to License Web Server"""
 
@@ -1455,12 +1458,12 @@ def test_configuration_file_bad_product_id(accelize_drm, conf_json, cred_json, a
         async_cb.callback
     )
 
-    drm_manager.set( bad_product_id=None )
+    drm_manager.set( bad_product_id=1 )
     pid = drm_manager.get('product_info')
 
     with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
         drm_manager.activate()
-    assert "Authentication credentials" in str(excinfo.value)
+    assert 'HTTP response code from License Web Service: 400 (Server has detected an incoherency related to the product object.)' in str(excinfo.value)
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
     async_cb.assert_NoError()
 
@@ -2072,6 +2075,7 @@ def test_retry_function(accelize_drm, conf_json, cred_json, async_handler):
     """
     driver0 = accelize_drm.pytest_fpga_driver[0]
     driver1 = accelize_drm.pytest_fpga_driver[1]
+
     async_cb0 = async_handler.create()
     async_cb1 = async_handler.create()
 
@@ -2079,8 +2083,8 @@ def test_retry_function(accelize_drm, conf_json, cred_json, async_handler):
 
     # Test no retry
     conf_json.reset()
-    timeout = 0
-    conf_json['settings']['ws_request_timeout'] = timeout
+    retry_period = 0
+    conf_json['settings']['ws_retry_period_short'] = retry_period
     conf_json.save()
     async_cb0.reset()
     drm_manager0 = accelize_drm.DrmManager(
@@ -2104,12 +2108,12 @@ def test_retry_function(accelize_drm, conf_json, cred_json, async_handler):
         drm_manager0.activate()
         assert drm_manager0.get('license_status')
         start = datetime.now()
-        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+        with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
             drm_manager1.activate()
         end = datetime.now()
-        assert (end - start).totla_seconds() < timeout + 1
-        assert '???' in str(excinfo.value)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+        assert (end - start).total_seconds() < 1
+        assert 'HTTP response code from License Web Service: 470' in str(excinfo.value)
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
     finally:
         drm_manager0.deactivate()
         assert not drm_manager0.get('license_status')
@@ -2121,9 +2125,10 @@ def test_retry_function(accelize_drm, conf_json, cred_json, async_handler):
     # Test 10s retry
     conf_json.reset()
     timeout = 10
+    retry = 1
     conf_json['settings']['ws_request_timeout'] = timeout
+    conf_json['settings']['ws_retry_period_short'] = retry
     conf_json['settings']['ws_retry_deadline'] = 0
-    conf_json['settings']['ws_retry_period_short'] = 1
     conf_json.save()
     async_cb0.reset()
     drm_manager0 = accelize_drm.DrmManager(
@@ -2147,19 +2152,22 @@ def test_retry_function(accelize_drm, conf_json, cred_json, async_handler):
         drm_manager0.activate()
         assert drm_manager0.get('license_status')
         start = datetime.now()
-        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+        with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
             drm_manager1.activate()
         end = datetime.now()
-        assert (end - start).totla_seconds() >= timeout
-        assert '???' in str(excinfo.value)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+        m = search(r'Timeout on License request after (\d+) attempts', str(excinfo.value))
+        assert m is not None
+        assert int(m.group(1)) > 1
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
+        assert (end - start).total_seconds() >= timeout
+        assert (end - start).total_seconds() <= timeout + 1
     finally:
         drm_manager0.deactivate()
         assert not drm_manager0.get('license_status')
         assert not drm_manager1.get('license_status')
         async_cb0.assert_NoError()
         async_cb1.assert_NoError()
-    print('Test no retry: PASS')
+    print('Test 10s retry: PASS')
 
 
 def test_security_stop(accelize_drm, conf_json, cred_json, async_handler):

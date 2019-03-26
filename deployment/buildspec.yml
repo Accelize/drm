@@ -99,7 +99,7 @@ phases:
             bash -c "cd /opt/drmlib_dev &&
                      tox --workdir=/tmp
                      -e package-install,c-install,cpp-install
-                     -p all -- -m "not long_run" --cred=/opt/cred.json"'
+                     -p all -- -m minimum --cred=/opt/cred.json"'
 
       # Upload packages to repository
       - xlz

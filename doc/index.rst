@@ -4,31 +4,31 @@ Accelize DRM
 Overview
 --------
 
-The Accelize DRM is based on a licensing mechanism, where license keys including
-activation codes are delivered to the FPGA to control the behavior of IP cores,
-and where metering information is retrieved from the FPGA and stored in a
-database to measure the usage of all IP cores. The metering information is
-then used to invoice end users.
+The Accelize DRM solution is based on a licensing mechanism where license keys
+including activation codes are delivered to the FPGA in order to control the
+behavior of IP cores, to gather and store the metering information about IP usage
+from the FPGA. The metering information is then used to invoice end users.
 
 .. image:: _static/platform-overview.png
    :target: _static/platform-overview.png
    :alt: alt_text
 
-The Accelize DRM is built upon 3 main entities:
+The Accelize DRM solution is built upon 3 main entities:
 
 * The DRM HDK: a set of dedicated hardware IPs used to instrument the
   targeted HW
 * The DRM Library: a C/C++/Python library to communicate between the
-  targeted DRM Hardware IP and the DRM web service
+  targeted DRM Hardware IPs and the DRM web service
 * The DRM Web service: a Web Service application with a database
-  (cloud hosted or on premise)
+  (cloud hosted or on premise) to deliver the licenses and to store
+  hardware usage.
 
-Accelize operates the licensing/metering
-service for your FPGA solution deployed in your public Cloud, private Cloud,
-on-premise or hybrid multi-Cloud infrastructure. This allows you to implement
-any business model securely. You then bill your customers according to their
-usage reported to you by Accelize. The following table gives an overview of
-business models supported by Accelize.
+Accelize operates the licensing/metering service for your FPGA solution
+deployed in your public Cloud, private Cloud, on-premise or hybrid multi-Cloud
+infrastructure. This allows you to implement any business model securely.
+Then you bill your customers according to their usage reported to you by
+Accelize. The following table gives an overview of the business models supported
+by Accelize.
 
 Licensing Modes
 ---------------
@@ -36,15 +36,15 @@ Licensing Modes
 The Accelize DRM enables following licensing modes:
 
 Metering, Data usage-based::
-    Monetize your FPGA design / IP based on the data it processes
+    Monetize your FPGA design or IP based on the data it processes
     (# of GBytes, # of frames, # of inferences, # of API calls, ...)
 
 Metering, Time-based::
-    Monetize your FPGA design / IP based on the operating time
-    seconds, minutes, hours, days…)
+    Monetize your FPGA design or IP based on the operating time
+    (seconds, minutes, hours, days…)
 
 Floating::
-    Enable the use of X number of FPGA designs / IP's on a pool of FPGA boards
+    Enable the use of X number of FPGA designs or IPs on a pool of FPGA boards
     in a hybrid cloud infrastructure (distributed across multiple public/private
     data centers)
 

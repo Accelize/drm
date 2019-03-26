@@ -61,6 +61,9 @@ def get_default_conf_json(licensing_server_url):
 
 
 def clean_nodelock_env(drm_manager=None, driver=None, conf_json=None, cred_json=None, ws_admin=None):
+    """
+    Clean nodelock related residues
+    """
     # Clean license directory for nodelock
     if conf_json is not None:
         conf_json.cleanNodelockDir()
@@ -69,9 +72,21 @@ def clean_nodelock_env(drm_manager=None, driver=None, conf_json=None, cred_json=
         ws_admin.remove_product_information(library='refdesign',
             name='drm_1activator', user=cred_json.user)
     # Reprogram FPGA
-    if drm_manager is not None:
-        if (driver is not None) and (drm_manager.get('drm_license_type') == 'Node-Locked'):
+    if driver is not None:
+        if drm_manager is None:
             driver.program_fpga()
+        elif drm_manager.get('drm_license_type') == 'Node-Locked':
+            driver.program_fpga()
+
+
+def clean_metering_env(cred_json=None, ws_admin=None):
+    """
+    Clean floating related residues
+    """
+    # Clear nodelock request from WS DB (not to hit the limit)
+    if (ws_admin is not None) and (cred_json is not None):
+        ws_admin.remove_product_information(library='refdesign',
+            name='drm_1activator', user=cred_json.user)
 
 
 # Pytest configuration
@@ -127,7 +142,8 @@ def pytest_runtest_setup(item):
     """
     Configure test initialization
     """
-    markers = tuple(item.iter_markers(name='on_2_fpga'))
+    markers = tuple(item.iter_markers(name='no_parallel'))
+    markers += tuple(item.iter_markers(name='on_2_fpga'))
     if not item.config.getoption("integration") and markers:
         pytest.skip("Don't run integration tests.")
     elif item.config.getoption("integration") and not markers:
@@ -325,7 +341,8 @@ def accelize_drm(pytestconfig):
     _accelize_drm.pytest_hdk_version = hdk_version
     _accelize_drm.pytest_fpga_activators = fpga_activators
     _accelize_drm.pytest_ref_designs = ref_designs
-    _accelize_drm.clean_nodelock = clean_nodelock_env
+    _accelize_drm.clean_nodelock_env = clean_nodelock_env
+    _accelize_drm.clean_metering_env = clean_metering_env
 
     return _accelize_drm
 
@@ -622,9 +639,9 @@ class AsyncErrorHandlerList(list):
     @staticmethod
     def get_error_code(msg):
         from re import search
-        match = search(r'\[errCode=(\d+)\]', msg)
-        assert match, "Could not find 'errCode' in exception message: %s" % msg
-        return int(match.group(1))
+        m = search(r'\[errCode=(\d+)\]', msg)
+        assert m, "Could not find 'errCode' in exception message: %s" % msg
+        return int(m.group(1))
 
 
 @pytest.fixture
