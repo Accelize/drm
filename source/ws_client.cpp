@@ -30,9 +30,9 @@ namespace DRM {
 
 CurlEasyPost::CurlEasyPost( bool verbose ) {
     curl = curl_easy_init();
-    if(!curl)
+    if ( !curl )
         Throw(DRM_ExternFail, "Curl : cannot init curl_easy");
-    if(verbose)
+    if ( verbose )
         curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, debug_callback);
 }
 
@@ -53,20 +53,22 @@ long CurlEasyPost::perform(std::string* resp, std::chrono::steady_clock::time_po
 
     {//compute timeout
         std::chrono::milliseconds timeout = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - std::chrono::steady_clock::now());
-        if(timeout <= std::chrono::milliseconds(0))
+        if ( timeout <= std::chrono::milliseconds(0) )
             Throw(DRM_WSMayRetry, "Did not perform HTTP request to Accelize webservice because deadline is already reached.");
         curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, timeout.count());
     }
 
     res = curl_easy_perform(curl);
-    if(res != CURLE_OK) {
-        if(   res == CURLE_COULDNT_RESOLVE_PROXY
-              || res == CURLE_COULDNT_RESOLVE_HOST
-              || res == CURLE_COULDNT_CONNECT
-              || res == CURLE_OPERATION_TIMEDOUT ) {
-            Throw(DRM_WSMayRetry, "Failed performing HTTP request to Accelize webservice (", curl_easy_strerror(res), ") : ", errbuff.data());
+    if ( res != CURLE_OK ) {
+        if ( res == CURLE_COULDNT_RESOLVE_PROXY
+          || res == CURLE_COULDNT_RESOLVE_HOST
+          || res == CURLE_COULDNT_CONNECT
+          || res == CURLE_OPERATION_TIMEDOUT ) {
+            Throw(DRM_WSMayRetry, "Failed performing HTTP request to Accelize webservice (",
+                    curl_easy_strerror(res), ") : ", errbuff.data());
         } else {
-            Throw(DRM_ExternFail, "Failed performing HTTP request to Accelize webservice (", curl_easy_strerror(res), ") : ", errbuff.data());
+            Throw(DRM_ExternFail, "Failed performing HTTP request to Accelize webservice (",
+                    curl_easy_strerror(res), ") : ", errbuff.data());
         }
     }
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &resp_code);
@@ -75,7 +77,7 @@ long CurlEasyPost::perform(std::string* resp, std::chrono::steady_clock::time_po
 
 double CurlEasyPost::getTotalTime() {
     double ret;
-    if(!curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &ret))
+    if ( !curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &ret) )
         return ret;
     else
         return 0.0;
@@ -92,17 +94,17 @@ DrmWSClient::DrmWSClient(const std::string &conf_file_path, const std::string &c
     Json::Value conf_json = parseJsonFile(conf_file_path);
     try {
         Json::Value webservice_json = JVgetRequired(conf_json, "licensing", Json::objectValue);
-        Debug2("Web service configuration: ", webservice_json.toStyledString());
+        Debug2( "Web service configuration: ", webservice_json.toStyledString() );
 
         std::string url = JVgetRequired(webservice_json, "url", Json::stringValue).asString();
         mOAuth2Url = url + std::string("/o/token/");
         mMeteringUrl = url + std::string("/auth/metering/genlicense/");
-        Debug("Licensing URL: ", url);
+        Debug( "Licensing URL: ", url );
 
     } catch(Exception &e) {
         if (e.getErrCode() != DRM_BadFormat)
             throw;
-        Throw(DRM_BadFormat, "Error in service configuration file '", conf_file_path, "': ", e.what());
+        Throw( DRM_BadFormat, "Error in service configuration file '", conf_file_path, "': ", e.what() );
     }
 
     Json::Value cred_json = parseJsonFile(cred_file_path);
@@ -148,14 +150,14 @@ void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
     if (!mOAuth2Token.empty()) {
         // Check if existing token has expired or is about to expire
         if (mTokenExpirationTime > TClock::now()) {
-            Debug("Current authentication token is still valid");
+            Debug( "Current authentication token is still valid" );
             return;
         }
-        Debug("Current authentication token has expired");
+        Debug( "Current authentication token has expired" );
     }
 
     // Request a new token and wait response
-    Debug("Requesting a new authentication token from ", mOAuth2Url);
+    Debug( "Requesting a new authentication token from ", mOAuth2Url );
     std::string response;
     long resp_code = mOAUth2Request.perform( &response, deadline );
 
@@ -198,7 +200,7 @@ void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
         Throw( DRM_WSRespError, "Failed to parse response from OAuth2 Web Service: ", error_msg );
 
     if ( !json_resp.isMember("access_token") )
-        Throw(DRM_WSRespError, "Non-valid response from OAuth2 Web Service : ", response);
+        Throw( DRM_WSRespError, "Non-valid response from OAuth2 Web Service : ", response );
 
     mOAuth2Token = json_resp["access_token"].asString();
     mTokenValidityPeriod = json_resp["expires_in"].asInt();
@@ -211,13 +213,13 @@ Json::Value DrmWSClient::requestLicense( const Json::Value& json_req, TClock::ti
     // Create new request
     CurlEasyPost req;
     req.setURL(mMeteringUrl);
-    req.appendHeader("Accept: application/json");
-    req.appendHeader("Content-Type: application/json");
+    req.appendHeader( "Accept: application/json" );
+    req.appendHeader( "Content-Type: application/json" );
     req.appendHeader( std::string("Authorization: Bearer ") + mOAuth2Token );
     req.setPostFields( saveJsonToString(json_req) );
 
     // Send request and wait response
-    Debug("Starting license request to ", mMeteringUrl, "with request: ", json_req.toStyledString() );
+    Debug( "Starting license request to ", mMeteringUrl, "with request: ", json_req.toStyledString() );
     std::string response;
     long resp_code = req.perform( &response, deadline );
 

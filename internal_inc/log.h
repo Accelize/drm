@@ -117,12 +117,12 @@ template <typename... Args>
 template <typename... Args>
 void logTrace(const eLogLevel& level, const std::string& file, const unsigned long noline, Args&&... args) {
     std::stringstream ss;
-    /*ss << std::left << std::setfill(' ') << std::setw(7) << cLogLevelString[(int)level];
+/*    ss << std::left << std::setfill(' ') << std::setw(7) << cLogLevelString[(int)level];
     if ( sLogFormat == eLogFormat::LONG ) {
         ss << " [DRM-Lib] " << getFormattedTime() << ", " << file << ", " << noline;
     }
     ss << ": [Thread " << std::this_thread::get_id() << "] ";
-    */
+*/
     if ( sLogFormat == eLogFormat::LONG ) {
         ss << getFormattedTime() << " - DRM-Lib, " << std::left << std::setfill(' ') << std::setw(16) << file;
         ss << ", " << std::right << std::setfill(' ') << std::setw(4) << noline << ": ";
@@ -130,7 +130,7 @@ void logTrace(const eLogLevel& level, const std::string& file, const unsigned lo
     ss << "Thread " << std::this_thread::get_id() << " - ";
     ss << std::left << std::setfill(' ') << std::setw(7) << cLogLevelString[(int)level] << ", ";
     std::lock_guard<std::recursive_mutex> lock(mLogMutex);
-    //if ( sLogStream.get() != nullptr ) {
+//    if ( sLogStream.get() != nullptr ) {
     if ( sLogStream != nullptr ) {
         ssAddToStream(*sLogStream, ss.str(), std::forward<Args>(args)...);
         *sLogStream << std::endl;
