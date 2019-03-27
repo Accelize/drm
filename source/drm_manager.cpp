@@ -1065,11 +1065,9 @@ protected:
         return mThreadStopRequest;
     }
 
-    TClock::time_point getCurrentLicenseExpirationDate() {
-        TClock::time_point now = TClock::now();
+    uint32_t getCurrentLicenseTimeLeft() {
         uint64_t counterCurr = getTimerCounterValue();
-        auto secondLeft = (uint32_t)std::ceil((double)counterCurr / mFrequencyCurr / 1000000);
-        return now + std::chrono::seconds( secondLeft );
+        return (uint32_t)std::ceil((double)counterCurr / mFrequencyCurr / 1000000);
     }
 
     void startLicenseContinuityThread() {
@@ -1092,10 +1090,9 @@ protected:
                     // Check DRM licensing queue
                     if ( !isReadyForNewLicense() ) {
                         // DRM licensing queue is full, wait until current license expires
-                        TClock::duration wait_duration = getCurrentLicenseExpirationDate()
-                                - TClock::now() + std::chrono::seconds(1);
-                        long wait_seconds = std::chrono::duration_cast<std::chrono::seconds>( wait_duration ).count();
-                        Debug( "Sleeping for ", wait_seconds,
+                        uint32_t licenseTimeLeft = getCurrentLicenseTimeLeft();
+                        TClock::duration wait_duration = std::chrono::seconds(licenseTimeLeft+1);
+                        Debug( "Sleeping for ", licenseTimeLeft,
                                 " seconds before checking DRM Controller readiness for a new license");
                         sleepOrExit( wait_duration );
 
