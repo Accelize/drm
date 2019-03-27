@@ -119,6 +119,7 @@ def test_retrocompatibility(accelize_drm, conf_json, cred_json, async_handler):
 
 
 @pytest.mark.minimum
+@pytest.mark.no_parallel
 def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
     """
     Test the entitlements for all accounts used in regression
@@ -218,7 +219,7 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
     cred_json.set_user('accelize_accelerator_test_03')
     async_cb.reset()
     conf_json.reset()
-    accelize_drm.clean_floating(cred_json, ws_admin)
+    accelize_drm.clean_metering_env(cred_json, ws_admin)
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
@@ -632,10 +633,8 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
                 'lgdnVersion','meteringFile','request','saasChallenge','vlnvFile','product']
         assert all([e in data.keys() for e in mandatoryFields])
         assert data['request'] == 'open'
+        async_cb.assert_NoError()
         print("Test parameter 'license_type' and 'nodelocked_request_file' in Node-Locked: PASS")
-        drm_manager.activate()
-        assert drm_manager.get('drm_license_type') == 'Node-Locked'
-        drm_manager.deactivate()
     finally:
         accelize_drm.clean_nodelock_env(drm_manager, driver, conf_json, cred_json, ws_admin)
 
