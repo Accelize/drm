@@ -3,22 +3,23 @@ Configuration
 
 The DRM requires the following configuration files:
 
-* The credentials file (``cred.json``): The user Accelize credentials.
-  This file should be managed by the application user.
-* The DRM Configuration file ``conf.json``: This file allow to define
-  the DRM configuration. This file is managed by the application vendor.
+* The credentials file (``cred.json``): The end user credentials from Accelize
+  portal. This file is managed by the application end user.
+* The DRM Configuration file ``conf.json``: This file defines some basic
+  parameters used to enable the application. This file is managed by the
+  application vendor.
 
 Credentials file
 ----------------
 
-The credentials file contain Accelize web service access key and is used to
-authenticate the user running the application and allow or not license
-generation based on user entitlements.
+The credentials file contains the Accelize web service access keys required to
+authenticate the user and grant access to the application through license
+generation based on the user entitlements.
 
 To create Accelize account and get credentials:
 
-* Create an account on `Accelize DRM portal registration`_.
-* Create an access key from your `Accelize account`_.
+* Create an account on `Accelize portal registration`_.
+* Create an access key from your `Accelize portal account`_.
 
 Download the credential files (`cred.json`), you should obtain a file like this:
 
@@ -29,15 +30,15 @@ Download the credential files (`cred.json`), you should obtain a file like this:
       "client_secret": "Your client secret from Accelize DRM portal"
    }
 
-.. note:: In node locked licensing mode, the credentials configuration file is
-          only accessed on license provisioning, and may be omitted if a
-          license file is already installed on the machine.
+.. note:: In node-locked licensing mode, the credentials configuration file is
+          required only once, when the license is provisioned the first time.
+          Then it can be omitted.
 
 DRM Configuration file
 ----------------------
 
 The ``conf.json`` configuration file content depends on the licensing mode to
-use and can be changed without rebuilding the entire application. Here is the
+use. It can be modified without rebuilding the entire application. Here is the
 basic ``conf.json`` file content:
 
 .. code-block:: json
@@ -53,11 +54,11 @@ Node locked mode configuration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 By default, the configuration allow metering and floating licensing. To enable
-node locked licensing, the following options must be added to the ``conf.json``
+node-locked licensing, the following options must be added to the ``conf.json``
 configuration file:
 
-* ``nodelocked``: If ``true`` enable the node locked licensing.
-  If ``false`` or missing, disable the node locked licensing and use other
+* ``nodelocked``: If ``true`` enable the node-locked licensing.
+  If ``false`` or missing, disable the node-locked licensing and use other
   licensing modes.
 * ``license_dir``: Path to an existing directory where licenses files are stored
   locally. This path must have read access for users that will use the
@@ -93,5 +94,5 @@ running the DRM protected application.
   user needs to have read and write access to it. On Linux, it can be stored in
   something line ``~/.my_application``.
 
-.. _Accelize DRM portal registration: https://drmportal.accelize.com/user/register
-.. _Accelize account: https://drmportal.accelize.com/user/applications
+.. _Accelize portal registration: https://drmportal.accelize.com/user/register
+.. _Accelize portal account: https://drmportal.accelize.com/front/customer/apicredential

@@ -265,23 +265,25 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         async_cb.callback
     )
     try:
+        assert drm_manager.get('license_type') == 'Floating/Metering'
         assert not drm_manager.get('license_status')
         drm_manager.activate()
-        sleep(1)
+        assert drm_manager.get('drm_license_type') == 'Floating/Metering'
         assert drm_manager.get('license_status')
         assert drm_manager.get('metered_data') == 0
         new_coins = 999
         activators[0].generate_coin(new_coins)
         assert drm_manager.get('metered_data') == new_coins
+        sleep(1)
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         drm_manager.activate()
         assert drm_manager.get('license_status')
-        sleep(1)
         assert drm_manager.get('metered_data') == 0
         new_coins = 1
         activators[0].generate_coin(new_coins)
         assert drm_manager.get('metered_data') == new_coins
+        sleep(1)
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
@@ -296,7 +298,7 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
     # Test background thread stops when limit is reached
     async_cb.reset()
     conf_json.reset()
-    accelize_drm.clean_metering_env(cred_json=cred_json, ws_admin=ws_admin)
+    accelize_drm.clean_metering_env(cred_json, ws_admin)
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
@@ -305,9 +307,11 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         async_cb.callback
     )
     try:
+        assert drm_manager.get('license_type') == 'Floating/Metering'
         assert not drm_manager.get('license_status')
         drm_manager.activate()
         start = datetime.now()
+        assert drm_manager.get('drm_license_type') == 'Floating/Metering'
         assert drm_manager.get('license_status')
         assert drm_manager.get('metered_data') == 0
         lic_duration = drm_manager.get('license_duration')
@@ -324,13 +328,13 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         sleep(5)
         assert not drm_manager.get('license_status')
         assert not activators.is_activated()
-        drm_manager.deactivate()
-        assert not drm_manager.get('license_status')
-        assert not activators.is_activated()
         # Verify asynchronous callback has been called
         assert async_cb.was_called
         assert 'You reach the licensed , usage_unit  limit: 1000' in async_cb.message
         assert async_cb.errcode == accelize_drm.exceptions.DRMWSReqError.error_code
+        drm_manager.deactivate()
+        assert not drm_manager.get('license_status')
+        assert not activators.is_activated()
     finally:
         drm_manager.deactivate()
     print('Test background thread stops when limit is reached: PASS')
