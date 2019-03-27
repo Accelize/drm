@@ -9,11 +9,12 @@ env:
 phases:
   install:
     commands:
+      # Avoid loosing connection with docker
+      - sudo ls /sbin/sys*
+      #- sudo /sbin/sysctl -w net.ipv4.tcp_keepalive_time=200 net.ipv4.tcp_keepalive_intvl=200 net.ipv4.tcp_keepalive_probes=5
+
       # Toolbox: Initialize
       - sudo $CODEBUILD_SRC_DIR_toolbox/install.py
-
-      # Avoid loosing connection with docker
-      - sudo /sbin/sysctl -w net.ipv4.tcp_keepalive_time=200 net.ipv4.tcp_keepalive_intvl=200 net.ipv4.tcp_keepalive_probes=5
 
       # Artifacts output directory
       - mkdir artifacts
