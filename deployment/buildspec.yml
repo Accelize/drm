@@ -9,6 +9,9 @@ env:
 phases:
   install:
     commands:
+      # Avoid loosing connection with docker
+      - /sbin/sysctl -w net.ipv4.tcp_keepalive_time=200 net.ipv4.tcp_keepalive_intvl=200 net.ipv4.tcp_keepalive_probes=5
+
       # Toolbox: Initialize
       - sudo $CODEBUILD_SRC_DIR_toolbox/install.py
 
@@ -44,7 +47,7 @@ phases:
 
       # Run Debug tests
       - xlz
-        --if git_file_changed='(?!test/utils/|doc/|deployment/|LICENSE|README\\.md|\\.gitgnore)'
+        --if git_file_changed='(?!test/utils/|doc/|LICENSE|README\\.md|\\.gitgnore)'
         --if git_branch=master,dev
         run
         drmlib_dev=$CODEBUILD_SOURCE_VERSION drmlib_build_deps
