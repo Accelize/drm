@@ -3,8 +3,8 @@
 "$@" &
 
 while kill -0 $!; do
-    printf '.' > /dev/tty
+    echo "."
     sleep 2
 done
 
-printf '\n' > /dev/tty
+echo "Complete\n"
