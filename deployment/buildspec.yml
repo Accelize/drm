@@ -12,7 +12,6 @@ phases:
       # Avoid loosing connection with docker
       - sudo apt update
       - sudo apt install -y procps
-      - sudo ls -l /sbin/sysctl
       - sudo /sbin/sysctl -w net.ipv4.tcp_keepalive_time=200 net.ipv4.tcp_keepalive_intvl=200 net.ipv4.tcp_keepalive_probes=5
 
       # Toolbox: Initialize
