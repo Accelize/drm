@@ -53,6 +53,50 @@ def test_metered_start_stop_short_time(accelize_drm, conf_json, cred_json, async
         drm_manager.deactivate()
 
 
+def test_metered_start_stop_short_time_in_debug(accelize_drm, conf_json, cred_json, async_handler):
+    """
+    Test no error occurs in normal start/stop metering mode during a short period of time
+    """
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    activators = accelize_drm.pytest_fpga_activators[0]
+    cred_json.set_user('accelize_accelerator_test_02')
+
+    async_cb.reset()
+    conf_json.reset()
+    conf_json['settings']['log_verbosity'] = 4
+    conf_json.save()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    try:
+        assert not drm_manager.get('license_status')
+        assert not activators.is_activated()
+        drm_manager.activate()
+        sleep(1)
+        coins = drm_manager.get('metered_data')
+        assert coins == 0
+        assert drm_manager.get('license_status')
+        assert activators.is_activated()
+        orig_coins = drm_manager.get('metered_data')
+        new_coins = 10
+        activators[0].generate_coin(new_coins)
+        coins = drm_manager.get('metered_data')
+        assert coins == orig_coins + new_coins
+        drm_manager.deactivate()
+        assert not drm_manager.get('license_status')
+        assert not activators.is_activated()
+        coins = drm_manager.get('metered_data')
+        assert coins == 0
+        async_cb.assert_NoError()
+    finally:
+        drm_manager.deactivate()
+
+
 @pytest.mark.long_run
 def test_metered_start_stop_long_time(accelize_drm, conf_json, cred_json, async_handler):
     """

@@ -125,6 +125,11 @@ cdef class DrmManager:
             # Use default error callback
             async_error = _async_error_callback
 
+        if not hasattr(async_error, "__call__"):
+            _raise_from_error(
+                'Asynchronous error callback function must be a callable',
+                error_code=_DRMBadArg.error_code)
+
         def async_error_c(error_message, user_p):
             """error_message with "user_p" support"""
             return async_error(error_message)
@@ -240,7 +245,10 @@ cdef class DrmManager:
             dict or object: If multiple keys are specified, return a dict with
                 parameters names as keys else return a single value.
         """
-        keys_json = _dumps({key: None for key in keys}).encode()
+        keys_dict = {key: None for key in filter(lambda x: x, keys)}
+        if len(keys_dict) == 0:
+            _raise_from_error('keys argument is empty', error_code=_DRMBadArg.error_code)
+        keys_json = _dumps(keys_dict).encode()
         cdef char*json_in = keys_json
         cdef char*json_out
 

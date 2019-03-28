@@ -244,12 +244,16 @@ cdef class DrmManager:
             dict or object: If multiple keys are specified, return a dict with
                 parameters names as keys else return a single value.
         """
-        keys_json = _dumps({key: None for key in keys}).encode()
+        keys_dict = {key: None for key in filter(lambda x: x, keys)}
+        if len(keys_dict) == 0:
+            _raise_from_error('keys argument is empty', error_code=_DRMBadArg.error_code)
+        keys_json = _dumps(keys_dict).encode()
         cdef string json_string = keys_json
         try:
             with nogil:
                 self._drm_manager.get(json_string)
         except RuntimeError as exception:
+            print('CAUGHT exception')
             _handle_exceptions(exception)
 
         items = _loads(bytes(json_string).decode())

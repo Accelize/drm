@@ -645,7 +645,7 @@ protected:
         return json_request;
     }
 
-    Json::Value getMeteringWait( uint32_t timeOut ) {
+    Json::Value getMeteringWait() {
         Json::Value json_request(mHeaderJsonRequest);
         uint32_t numberOfDetectedIps;
         std::string saasChallenge;
@@ -653,7 +653,6 @@ protected:
 
         Debug( "Build web request to maintain current session" );
         std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
-        //checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( timeOut ) );
         checkDRMCtlrRet( getDrmController().synchronousExtractMeteringFile( numberOfDetectedIps, saasChallenge, meteringFile ) );
         json_request["saasChallenge"] = saasChallenge;
         json_request["sessionId"] = meteringFile[0].substr(0, 16);
@@ -1102,7 +1101,7 @@ protected:
 
                         Debug( "Requesting a new license now" );
 
-                        Json::Value request_json = getMeteringWait(1);
+                        Json::Value request_json = getMeteringWait();
                         Json::Value license_json;
 
                         if (mLicenseDuration == 0) {
@@ -1174,7 +1173,7 @@ protected:
         if ( isReadyForNewLicense() ) {
 
             // Create JSON license request
-            Json::Value request_json = getMeteringWait(1);
+            Json::Value request_json = getMeteringWait();
 
             // Send license request to web service
             Json::Value license_json = getLicense( request_json, mWSRequestTimeout, mWSRetryPeriodShort );
