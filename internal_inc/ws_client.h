@@ -73,7 +73,7 @@ public:
                 ;
     }
 
-    CurlEasyPost( bool verbose = false );
+    CurlEasyPost();
     ~CurlEasyPost();
 
     long perform(std::string* resp, std::chrono::steady_clock::time_point deadline);
@@ -104,41 +104,6 @@ protected:
         size_t realsize = size * nmemb;
         s->append((const char*)contents, realsize);
         return realsize;
-    }
-
-    static int debug_callback(CURL *handle, curl_infotype type, char *data, size_t size, void *userptr) {
-        (void)handle; (void)userptr;
-
-        std::string msg(data, size);
-        std::string msg_head;
-
-        switch (type) {
-            case CURLINFO_TEXT:
-                msg_head = "Curl info : ";
-                break;
-            case CURLINFO_HEADER_OUT:
-                msg_head = "=> Send header";
-                break;
-            case CURLINFO_DATA_OUT:
-                msg_head = "=> Send data";
-                break;
-            case CURLINFO_SSL_DATA_OUT:
-                msg_head = "=> Send SSL data";
-                break;
-            case CURLINFO_HEADER_IN:
-                msg_head = "<= Recv header";
-                break;
-            case CURLINFO_DATA_IN:
-                msg_head = "<= Recv data";
-                break;
-            case CURLINFO_SSL_DATA_IN:
-                msg_head = "<= Recv SSL data";
-                break;
-            default: /* in case a new one is introduced to shock us */
-                return 0;
-        }
-//        Debug(msg_head, msg);
-        return 0;
     }
 };
 

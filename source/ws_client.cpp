@@ -28,12 +28,10 @@ namespace Accelize {
 namespace DRM {
 
 
-CurlEasyPost::CurlEasyPost( bool verbose ) {
+CurlEasyPost::CurlEasyPost() {
     curl = curl_easy_init();
     if ( !curl )
         Throw(DRM_ExternFail, "Curl : cannot init curl_easy");
-    if ( verbose )
-        curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, debug_callback);
 }
 
 CurlEasyPost::~CurlEasyPost() {
