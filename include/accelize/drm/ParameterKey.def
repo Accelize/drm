@@ -11,11 +11,11 @@ PARAMETERKEY_ITEM( drm_license_type )               ///< Read-only, return the l
 PARAMETERKEY_ITEM( product_info )                   ///< Read-only, return the product information stored in the DRM Controller Read Only Mailbox
 PARAMETERKEY_ITEM( mailbox_size )                   ///< Read-only, return the size of the Mailbox read-write memory in DRM Controller
 PARAMETERKEY_ITEM( token_string )                   ///< Read-only, return the token string
-PARAMETERKEY_ITEM( token_expired_in )               ///< Read-only, return the number of seconds left until the current token expires
+PARAMETERKEY_ITEM( token_validity )                 ///< Read-only, return the total number of seconds the current token is valid as received from OAuth2 Web Service
+PARAMETERKEY_ITEM( token_expires_in )               ///< Read-only, return the number of seconds left until the current token expires
 PARAMETERKEY_ITEM( log_file )                       ///< Read-only, read the logging file path: null=stdout, any string=path to file. Can be set only from configuration file
 PARAMETERKEY_ITEM( log_verbosity )                  ///< Read-write, read and write the logging verbosity: 0=quiet, 5=debug2
 PARAMETERKEY_ITEM( log_format )                     ///< Read-write, read and write the logging format: 0=short, 1=long
-PARAMETERKEY_ITEM( token_validity )                 ///< Read-write, read and write the OAuth2 token validity period in seconds. The write is for debug and test purpose
 PARAMETERKEY_ITEM( frequency_detection_threshold )  ///< Read-write, read and write frequency gap threshold used to measure the real DRM Controller frequency
 PARAMETERKEY_ITEM( frequency_detection_period )     ///< Read-write, read and write the period of time in milliseconds used to measure the real DRM Controller frequency
 PARAMETERKEY_ITEM( custom_field )                   ///< Read-write, only for testing, any uint32_t register accessible to the user for any purpose

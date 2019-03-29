@@ -129,11 +129,9 @@ public:
     DrmWSClient(const std::string &conf_file_path, const std::string &cred_file_path);
     ~DrmWSClient() = default;
 
-    uint32_t getTokenValidityPeriod() const { return mTokenValidityPeriod; }
-    double getTokenExpiration() const;
     std::string getTokenString() const { return mOAuth2Token; }
-
-    void setTokenValidityPeriod( const uint32_t& validity_period );
+    uint32_t getTokenValidityPeriod() const { return mTokenValidityPeriod; }
+    uint32_t getTokenValidityLeft() const;
 
     void requestOAuth2token(TClock::time_point deadline);
     Json::Value requestLicense( const Json::Value& json_req, TClock::time_point deadline );
