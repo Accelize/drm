@@ -43,12 +43,13 @@ CurlEasyPost::~CurlEasyPost() {
 long CurlEasyPost::perform(std::string* resp, std::chrono::steady_clock::time_point deadline) {
     CURLcode res;
     long resp_code;
+
     if ( headers ) {
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
         std::string sHeader;
         for( const std::string& h: data )
-            sHeader += h + std::string(" ");
-        Debug( "CURL header: ", sHeader );
+            sHeader += std::string("\t") + h + std::string("\n");
+        Debug( "CURL header:\n", sHeader );
     }
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &CurlEasyPost::write_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)resp);
