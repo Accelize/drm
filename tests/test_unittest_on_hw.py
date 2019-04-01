@@ -24,11 +24,11 @@ _PARAM_LIST = ['license_type',
                'product_info',
                'mailbox_size',
                'token_string',
-               'token_expired_in',
+               'token_validity',
+               'token_time_left',
                'log_file',
                'log_verbosity',
                'log_format',
-               'token_validity',
                'frequency_detection_threshold',
                'frequency_detection_period',
                'custom_field',
@@ -633,6 +633,10 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
                 'lgdnVersion','meteringFile','request','saasChallenge','vlnvFile','product']
         assert all([e in data.keys() for e in mandatoryFields])
         assert data['request'] == 'open'
+        assert drm_manager.get('drm_license_type') == 'Floating/Metering'
+        drm_manager.activate()
+        assert drm_manager.get('drm_license_type') == 'Node-Locked'
+        drm_manager.deactivate()
         async_cb.assert_NoError()
         print("Test parameter 'license_type' and 'nodelocked_request_file' in Node-Locked: PASS")
     finally:
@@ -641,6 +645,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     # Test with a floating/metered user
 
     async_cb.reset()
+    cred_json.set_user('accelize_accelerator_test_02')
     conf_json.reset()
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
@@ -663,10 +668,9 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     # Read-write, read and write the logging verbosity: 0=quiet, 5=debug2
     orig_verbosity = drm_manager.get('log_verbosity')
     new_verbosity = 4 if orig_verbosity == 5 else 5
-    verbosity = drm_manager.set(log_verbosity=new_verbosity)
-    verbosity = drm_manager.get('log_verbosity')
-    assert verbosity == new_verbosity
-    verbosity = drm_manager.set(log_verbosity=orig_verbosity)
+    drm_manager.set(log_verbosity=new_verbosity)
+    assert drm_manager.get('log_verbosity') == new_verbosity
+    drm_manager.set(log_verbosity=orig_verbosity)
     async_cb.assert_NoError()
     print("Test parameter 'log_verbosity': PASS")
 
@@ -674,9 +678,8 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     # Read-write, read and write the logging verbosity: 0=quiet, 5=debug2
     format = drm_manager.get('log_format')
     exp_format = 0 if format else 1
-    format = drm_manager.set(log_format=exp_format)
-    format = drm_manager.get('log_format')
-    assert format == exp_format
+    drm_manager.set(log_format=exp_format)
+    assert drm_manager.get('log_format') == exp_format
     async_cb.assert_NoError()
     print("Test parameter 'log_format': PASS")
 
@@ -686,22 +689,14 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     async_cb.assert_NoError()
     print("Test parameter 'license_type' in Metered: PASS")
 
-    # Test parameter: drm_license_type
+    # Test parameter: drm_license_type and license_duration
     # Read-only, return the license type of the DRM Controller: node-locked, floating/metering
     drm_manager.activate()
     assert drm_manager.get('drm_license_type') == 'Floating/Metering'
+    assert drm_manager.get('license_duration') != 0
     drm_manager.deactivate()
     async_cb.assert_NoError()
-    print("Test parameter 'license_duration': PASS")
-
-    # Test parameter: license_duration
-    # Read-only, return uint32 with the duration in seconds of the current or last license.
-    drm_manager.activate()
-    licDuration = drm_manager.get('license_duration')
-    assert licDuration != 0
-    drm_manager.deactivate()
-    async_cb.assert_NoError()
-    print("Test parameter 'license_duration': PASS")
+    print("Test parameter 'license_duration' and 'license_duration': PASS")
 
     # Test parameter: num_activators
     # Read-only, return uint32_t/string with the number of activators detected by the DRM controller
@@ -847,21 +842,27 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     assert mailbox_size == 14, 'Unexpected Mailbox size'
     print("Test parameter 'mailbox_size': PASS")
 
-    # Test parameter: token_string
+    # Test parameter: token_string, token_validity and token_time_left
     # Read-only, return the token string
-    drm_manager.activate()
-    drm_manager.deactivate()
-    token_string = drm_manager.get('token_string')
-    assert len(token_string) > 0
-    print("Test parameter 'token_string': PASS")
-
-    # Test parameter: token_expired_in
+    # Read-only, return the validity in seconds of the current token as provided by the WOAuth2 WS
     # Read-only, return the number of seconds left until the current token expires
     drm_manager.activate()
+    token_time_left = drm_manager.get('token_time_left')
+    if token_time_left < 15:
+        drm_manager.deactivate()
+        sleep(16)
+        drm_manager.activate()
+    token_string = drm_manager.get('token_string')
+    assert len(token_string) > 0
+    token_validity = drm_manager.get('token_validity')
+    assert token_validity > 15
+    token_time_left = drm_manager.get('token_time_left')
+    sleep(2)
+    assert 2 <= token_time_left - drm_manager.get('token_time_left') <= 3
+    assert drm_manager.get('token_validity') == token_validity
+    assert token_string == drm_manager.get('token_string')
     drm_manager.deactivate()
-    token_expired_in = drm_manager.get('token_expired_in')
-    assert token_expired_in > 0
-    print("Test parameter 'token_expired_in': PASS")
+    print("Test parameter 'token_string', 'token_validity' and 'token_time_left': PASS")
 
     # Test parameter: list_all
     # Read-only, list all parameter keys
@@ -878,18 +879,6 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     assert len(dump_param) == _PARAM_LIST.index('dump_all')
     assert all(key in _PARAM_LIST for key in dump_param.keys())
     print("Test parameter 'dump_all': PASS")
-
-    # Test parameter: token_validity
-    # Read-only, read and write the OAuth2 token validity period in seconds. The write is for debug and test purpose
-    token_validity = drm_manager.get('token_validity')
-    if token_validity > 5:
-        exp_value = token_validity - 5
-    else:
-        exp_value = 5
-    drm_manager.set(token_validity = exp_value)
-    value = drm_manager.get('token_validity')
-    assert value == exp_value
-    print("Test parameter 'token_validity': PASS")
 
     # Test parameter: custom_field
     # Read-write: only for testing, any uint32_t register accessible to the user for any purpose.
@@ -1264,8 +1253,17 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
             async_cb.callback
         )
         drm_manager.activate()
-        exp_token_string = drm_manager.get('token_string')
+        start = datetime.now()
+        token_time_left = drm_manager.get('token_time_left')
+        if token_time_left < 15:
+            drm_manager.deactivate()
+            # Wait expiration of current oauth2 token before starting test
+            sleep(16)
+            drm_manager.activate()
+            start = datetime.now()
         token_validity = drm_manager.get('token_validity')
+        assert token_validity > 15
+        exp_token_string = drm_manager.get('token_string')
         drm_manager.deactivate()
         token_string = drm_manager.get('token_string')
         assert token_string == exp_token_string
@@ -1278,44 +1276,44 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
         async_cb.assert_NoError()
         print('Test token validity after deactivate: PASS')
 
-        # Test when token has expired
-        async_cb.reset()
-        conf_json.reset()
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        drm_manager.activate()
-        start = datetime.now()
-        drm_manager.deactivate()
-        exp_token_string = drm_manager.get('token_string')
-        token_validity = drm_manager.get('token_validity')
-        token_expired_in = drm_manager.get('token_expired_in')
-        exp_token_validity = 10
-        drm_manager.set(token_validity=exp_token_validity)
-        token_validity = drm_manager.get('token_validity')
-        assert token_validity == exp_token_validity
-        token_expired_in = drm_manager.get('token_expired_in')
-        ts = drm_manager.get('token_string')
-        assert token_expired_in > token_validity/3
-        assert token_expired_in > 3
-        # Wait right before the token expires and verifiy it is the same
-        wait_period = start + timedelta(seconds=token_expired_in-3) - datetime.now()
-        sleep(wait_period.total_seconds())
-        drm_manager.activate()
-        drm_manager.deactivate()
-        token_string = drm_manager.get('token_string')
-        assert token_string == exp_token_string
-        sleep(4)
-        drm_manager.activate()
-        drm_manager.deactivate()
-        token_string = drm_manager.get('token_string')
-        assert token_string != exp_token_string
-        async_cb.assert_NoError()
-        print('Test when token has expired: PASS')
+#        # Test when token has expired
+#        async_cb.reset()
+#        conf_json.reset()
+#        drm_manager = accelize_drm.DrmManager(
+#            conf_json.path,
+#            cred_json.path,
+#            driver.read_register_callback,
+#            driver.write_register_callback,
+#            async_cb.callback
+#        )
+#        drm_manager.activate()
+#        start = datetime.now()
+#        drm_manager.deactivate()
+#        exp_token_string = drm_manager.get('token_string')
+#        token_validity = drm_manager.get('token_validity')
+#        token_expired_in = drm_manager.get('token_expired_in')
+#        exp_token_validity = 10
+#        drm_manager.set(token_validity=exp_token_validity)
+#        token_validity = drm_manager.get('token_validity')
+#        assert token_validity == exp_token_validity
+#        token_expired_in = drm_manager.get('token_expired_in')
+#        ts = drm_manager.get('token_string')
+#        assert token_expired_in > token_validity/3
+#        assert token_expired_in > 3
+#        # Wait right before the token expires and verifiy it is the same
+#        wait_period = start + timedelta(seconds=token_expired_in-3) - datetime.now()
+#        sleep(wait_period.total_seconds())
+#        drm_manager.activate()
+#        drm_manager.deactivate()
+#        token_string = drm_manager.get('token_string')
+#        assert token_string == exp_token_string
+#        sleep(4)
+#        drm_manager.activate()
+#        drm_manager.deactivate()
+#        token_string = drm_manager.get('token_string')
+#        assert token_string != exp_token_string
+#        async_cb.assert_NoError()
+#        print('Test when token has expired: PASS')
 
     finally:
         if drm_manager:
@@ -1899,7 +1897,7 @@ def test_license_expiration(accelize_drm, conf_json, cred_json, async_handler):
         assert not drm_manager.get('license_status')
         assert not activators.is_activated(), 'At least one activator is locked'
         async_cb.assert_NoError()
-        print('Test license expires after 2 duration periods when start/pause/stop')
+        print('Test license expires after 2 duration periods when start/pause/stop: PASS')
 
         # Test license does not expire after 3 duration periods when start
 
@@ -1925,7 +1923,7 @@ def test_license_expiration(accelize_drm, conf_json, cred_json, async_handler):
         assert not drm_manager.get('license_status')
         assert not activators.is_activated(), 'At least one activator is unlocked'
         async_cb.assert_NoError()
-        print('Test license does not expire after 3 duration periods when start')
+        print('Test license does not expire after 3 duration periods when start: PASS')
 
         # Test license does not expire after 3 duration periods when start/pause
 
@@ -1963,6 +1961,7 @@ def test_license_expiration(accelize_drm, conf_json, cred_json, async_handler):
         assert not drm_manager.get('license_status')
         assert not activators.is_activated(), 'At least one activator is unlocked'
         async_cb.assert_NoError()
+        print('Test license does not expire after 3 duration periods when start/pause: PASS')
 
     finally:
         if drm_manager:

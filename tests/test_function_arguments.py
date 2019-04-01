@@ -77,6 +77,32 @@ def test_drm_manager_constructor_with_bad_arguments(pytestconfig, accelize_drm, 
     assert 'Read register callback function must' in str(excinfo.value)
     print('Test when read register function is not a callable: PASS')
 
+    # Test when write register function is not a callable
+    conf_json.reset()
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            0,
+            async_cb.callback
+        )
+    assert 'Write register callback function must' in str(excinfo.value)
+    print('Test when write register function is not a callable: PASS')
+
+    # Test when asynchronous error function is not a callable
+    conf_json.reset()
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            0
+        )
+    assert 'Asynchronous error callback function must' in str(excinfo.value)
+    print('Test when asynchronous error function is not a callable: PASS')
+
 
 def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_json, async_handler):
     """Test errors when missing arguments are given to DRM Controller Constructor"""
@@ -460,14 +486,14 @@ def test_drm_manager_get_and_set_bad_arguments(accelize_drm, conf_json, cred_jso
     # Test when parameter is None
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         value = drm_manager.get(None)
-    assert 'Cannot find parameter:' in str(excinfo.value)
+    assert 'keys argument is empty' in str(excinfo.value)
     async_cb.assert_NoError()
     print("Test when parameter is None: PASS")
 
     # Test when parameter is empty
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         value = drm_manager.get('')
-    assert 'Cannot find parameter:' in str(excinfo.value)
+    assert 'keys argument is empty' in str(excinfo.value)
     async_cb.assert_NoError()
     print("Test empty parameter: PASS")
 

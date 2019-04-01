@@ -19,6 +19,7 @@ limitations under the License.
 #include <curl/curl.h>
 #include <chrono>
 #include <unistd.h>
+#include <math.h>
 
 #include "log.h"
 #include "utils.h"
@@ -28,12 +29,10 @@ namespace Accelize {
 namespace DRM {
 
 
-CurlEasyPost::CurlEasyPost( bool verbose ) {
+CurlEasyPost::CurlEasyPost() {
     curl = curl_easy_init();
     if ( !curl )
         Throw(DRM_ExternFail, "Curl : cannot init curl_easy");
-    if ( verbose )
-        curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, debug_callback);
 }
 
 CurlEasyPost::~CurlEasyPost() {
@@ -44,14 +43,20 @@ CurlEasyPost::~CurlEasyPost() {
 long CurlEasyPost::perform(std::string* resp, std::chrono::steady_clock::time_point deadline) {
     CURLcode res;
     long resp_code;
-    if ( headers )
+
+    if ( headers ) {
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        std::string sHeader;
+        for( const std::string& h: data )
+            sHeader += std::string("\t") + h + std::string("\n");
+        Debug( "CURL header:\n", sHeader );
+    }
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &CurlEasyPost::write_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)resp);
     curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuff.data());
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 
-    {//compute timeout
+    { // Compute timeout
         std::chrono::milliseconds timeout = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - std::chrono::steady_clock::now());
         if ( timeout <= std::chrono::milliseconds(0) )
             Throw(DRM_WSMayRetry, "Did not perform HTTP request to Accelize webservice because deadline is already reached.");
@@ -128,20 +133,9 @@ DrmWSClient::DrmWSClient(const std::string &conf_file_path, const std::string &c
     mOAUth2Request.setPostFields( ss.str() );
 }
 
-double DrmWSClient::getTokenExpiration() const {
+uint32_t DrmWSClient::getTokenTimeLeft() const {
     TClock::duration delta = mTokenExpirationTime - TClock::now();
-    return (double)delta.count() / 1000000000;
-}
-
-void DrmWSClient::setTokenValidityPeriod( const uint32_t& validity_period ) {
-    if (mTokenValidityPeriod > validity_period) {
-        uint32_t delta = mTokenValidityPeriod - validity_period;
-        mTokenExpirationTime -= std::chrono::seconds(delta);
-    } else {
-        uint32_t delta = validity_period - mTokenValidityPeriod ;
-        mTokenExpirationTime += std::chrono::seconds(delta);
-    }
-    mTokenValidityPeriod = validity_period;
+    return (uint32_t)round( (double)delta.count() / 1000000000 );
 }
 
 void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
@@ -219,7 +213,7 @@ Json::Value DrmWSClient::requestLicense( const Json::Value& json_req, TClock::ti
     req.setPostFields( saveJsonToString(json_req) );
 
     // Send request and wait response
-    Debug( "Starting license request to ", mMeteringUrl, "with request: ", json_req.toStyledString() );
+    Debug( "Starting license request to ", mMeteringUrl, "with request:\n", json_req.toStyledString() );
     std::string response;
     long resp_code = req.perform( &response, deadline );
 

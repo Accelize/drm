@@ -645,7 +645,7 @@ protected:
         return json_request;
     }
 
-    Json::Value getMeteringWait( uint32_t timeOut ) {
+    Json::Value getMeteringWait() {
         Json::Value json_request(mHeaderJsonRequest);
         uint32_t numberOfDetectedIps;
         std::string saasChallenge;
@@ -653,7 +653,6 @@ protected:
 
         Debug( "Build web request to maintain current session" );
         std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
-        //checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( timeOut ) );
         checkDRMCtlrRet( getDrmController().synchronousExtractMeteringFile( numberOfDetectedIps, saasChallenge, meteringFile ) );
         json_request["saasChallenge"] = saasChallenge;
         json_request["sessionId"] = meteringFile[0].substr(0, 16);
@@ -923,7 +922,7 @@ protected:
         }
         // Build request for node-locked license
         Json::Value request_json = getMeteringStart();
-        Debug( "License request JSON: ", request_json.toStyledString() );
+        Debug( "License request JSON:\n", request_json.toStyledString() );
 
         // Save license request to file
         saveJsonToFile( mNodeLockRequestFilePath, request_json );
@@ -1102,7 +1101,7 @@ protected:
 
                         Debug( "Requesting a new license now" );
 
-                        Json::Value request_json = getMeteringWait(1);
+                        Json::Value request_json = getMeteringWait();
                         Json::Value license_json;
 
                         if (mLicenseDuration == 0) {
@@ -1174,7 +1173,7 @@ protected:
         if ( isReadyForNewLicense() ) {
 
             // Create JSON license request
-            Json::Value request_json = getMeteringWait(1);
+            Json::Value request_json = getMeteringWait();
 
             // Send license request to web service
             Json::Value license_json = getLicense( request_json, mWSRequestTimeout, mWSRetryPeriodShort );
@@ -1346,7 +1345,7 @@ public:
 
     void get( Json::Value& json_value ) const {
         TRY
-            Debug2( "Get parameter request input: ", json_value.toStyledString() );
+            Debug2( "Get parameter request input:\n", json_value.toStyledString() );
             for (const std::string& key_str : json_value.getMemberNames()) {
                 const ParameterKey key_id = findParameterKey( key_str );
                 switch(key_id) {
@@ -1509,18 +1508,18 @@ public:
                                 "' (ID=", key_id, "): ", token_string );
                         break;
                     }
-                    case ParameterKey::token_expired_in: {
-                        double expired_in = getDrmWSClient().getTokenExpiration();
-                        json_value[key_str] = expired_in ;
+                    case ParameterKey::token_validity: {
+                        uint32_t validity = getDrmWSClient().getTokenValidity();
+                        json_value[key_str] = validity ;
                         Debug( "Get value of parameter '", key_str,
-                                "' (ID=", key_id, "): ", expired_in  );
+                               "' (ID=", key_id, "): ", validity  );
                         break;
                     }
-                    case ParameterKey::token_validity: {
-                        uint32_t token_validity = getDrmWSClient().getTokenValidityPeriod();
-                        json_value[key_str] = token_validity;
+                    case ParameterKey::token_time_left: {
+                        uint32_t time_left = getDrmWSClient().getTokenTimeLeft();
+                        json_value[key_str] = time_left;
                         Debug( "Get value of parameter '", key_str,
-                                "' (ID=", key_id, "): ", token_validity );
+                                "' (ID=", key_id, "): ", time_left );
                         break;
                     }
                     case ParameterKey::mailbox_size: {
@@ -1596,7 +1595,7 @@ public:
                 }
             }
         CATCH_AND_THROW
-        Debug2( "Get parameter request output: ", json_value.toStyledString() );
+        Debug2( "Get parameter request output:\n", json_value.toStyledString() );
     }
 
     void get( std::string& json_string ) const {
@@ -1611,7 +1610,7 @@ public:
 
     void set( const Json::Value& json_value ) {
         TRY
-            Debug2( "Set parameter request: ", json_value.toStyledString() );
+            Debug2( "Set parameter request:\n", json_value.toStyledString() );
             for( Json::ValueConstIterator it = json_value.begin() ; it != json_value.end() ; it++ ) {
                 std::string key_str = it.key().asString();
                 const ParameterKey key_id = findParameterKey( key_str );
@@ -1647,13 +1646,6 @@ public:
                         writeMailbox( MailboxOffset::MB_CUSTOM_FIELD, customField );
                         Debug( "Set parameter '", key_str, "' (ID=", key_id, ") ",
                                 "to value: ", customField );
-                        break;
-                    }
-                    case ParameterKey::token_validity: {
-                        uint32_t token_validity = (*it).asUInt();
-                        getDrmWSClient().setTokenValidityPeriod( token_validity );
-                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") ",
-                                "to value: ", token_validity );
                         break;
                     }
                     case ParameterKey::mailbox_data: {
