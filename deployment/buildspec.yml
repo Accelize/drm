@@ -21,7 +21,20 @@ phases:
       - mkdir artifacts
 
       # Save environment as artifact
-      - export | grep CODEBUILD >artifacts/env.txt
+      - echo "CODEBUILD:" >artifacts/env.txt
+      - export | grep CODEBUILD >>artifacts/env.txt
+      - echo "" >>artifacts/env.txt
+
+      - echo "PYTHON VERSION:" >>artifacts/env.txt
+      - python3 --version >>artifacts/env.txt
+      - echo "" >>artifacts/env.txt
+
+      - echo "PYTHON PACKAGES:" >>artifacts/env.txt
+      - pip3 list >>artifacts/env.txt
+      - echo "" >>artifacts/env.txt
+
+      - echo "LINUX PACKAGES:" >>artifacts/env.txt
+      - apt list --installed >>artifacts/env.txt
 
   build:
     commands:

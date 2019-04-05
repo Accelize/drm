@@ -19,7 +19,8 @@ Tel:
 
 **Sales**
 
-For sales questions, please contact `Accelize <https://www.accelize.com/contact-us>`_.
+For sales questions, please contact
+`Accelize <https://www.accelize.com/contact-us>`_.
 
 **Technical Support**
 
