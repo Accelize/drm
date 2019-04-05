@@ -2,14 +2,29 @@ FROM debian:stretch-slim
 
 SHELL ["/bin/bash", "-c"]
 
-RUN apt-get -qq update && \
-apt-get -qq -o=Dpkg::Use-Pty=0 install -y --no-install-recommends python3-pip gcc libc-dev make git sudo && \
-python3 -m pip install -U -q --no-cache-dir pip setuptools wheel && \
-pip3 install -U -q --no-cache-dir tox pytest && \
+RUN apt-get update && \
+apt-get install -y --no-install-recommends \
+    gcc \
+    git \
+    libc-dev \
+    make \
+    python3-pip \
+    sudo && \
+python3 -m pip install -U --no-cache-dir \
+    pip \
+    setuptools \
+    wheel && \
+pip3 install -U --no-cache-dir \
+    pytest \
+    tox && \
 git clone https://github.com/aws/aws-fpga /tmp/aws-fpga --depth 1 && \
 source /tmp/aws-fpga/sdk_setup.sh && \
 rm -Rf /tmp/aws-fpga && \
-apt-get remove -y --purge gcc libc-dev make git && \
+apt-get remove -y --purge \
+    gcc \
+    git \
+    libc-dev \
+    make && \
 apt-get clean && \
 apt-get autoremove -y --purge && \
 rm -rf /var/lib/apt/lists/*

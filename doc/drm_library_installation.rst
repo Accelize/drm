@@ -28,7 +28,7 @@ Following OS are tested but not supported by Accelize:
 * Ubuntu (Last stable version) [#f3]_
 
 .. [#f2] No packages are provided.
-.. [#f3] Packages are only provided for last version available.
+.. [#f3] Packages are only provided for the last available version.
 
 Installation from packages
 --------------------------
