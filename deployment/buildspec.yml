@@ -60,7 +60,7 @@ phases:
         -n drm_debug_tests
         -z /dev/shm/drmlib_dev/.tox/debug/build/report artifacts/report.tar.gz
         -r "cd /dev/shm/drmlib_dev &&
-            sudo -E tox -p all -e build-debug,cpp-debug,c-debug,integration-debug,coverage-debug -- --cred=/dev/shm/cred.json --server=prod"
+            sudo -E tox -p all -e build-debug,cpp-debug,c-debug,integration-debug,coverage-debug -- --cred=/dev/shm/cred.json --server=dev"
 
       # Build packages
       - xlz
@@ -104,7 +104,7 @@ phases:
             bash -c "cd /opt/drmlib_dev &&
                      tox --workdir=/tmp
                      -e package-install,c-install,cpp-install
-                     -p all -- -m minimum --cred=/opt/cred.json"'
+                     -p all -- -m minimum --cred=/opt/cred.json --server=prod"'
 
       # Upload packages to repository
       - xlz
