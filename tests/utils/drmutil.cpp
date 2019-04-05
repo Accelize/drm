@@ -18,8 +18,6 @@
 
 /* 1. Include the C-API of the DRM Library*/
 #include "accelize/drm.h"
-//#include "../include/accelize/drmc/metering.h"
-//#include "../include/accelize/drmc.h"
 /* end of 1 */
 
 using namespace Accelize::DRM;
@@ -382,21 +380,9 @@ int test_custom_field( DrmManager* pDrmManager, uint32_t value ) {
     return 0;
 }
 
-#define DRM_RETRY(__expr, __no_retry) \
-    do { \
-        try { \
-            __expr; \
-            break; \
-        } catch( const Exception& e) { \
-            if (e.getErrCode() != DRM_WSMayRetry || __no_retry) break; \
-            WARN("DRM operation failed but will retry in 1 second ...\n"); fflush(stdout); \
-            sleep(1); \
-        } \
-    } while(1);
-
 
 /*
-* check if the corresponding AFI for hello_world is loaded
+* check if the corresponding AFI is loaded
 */
 int check_afi_ready(int slot_id)
 {
@@ -493,13 +479,13 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const std::string& creden
     /* Allocate a DrmManager, providing our previously defined callbacks */
     pDrmManager = new DrmManager(
             configurationFile, credentialFile,
-            [&]( uint32_t offset, uint32_t* p_value ) { /* Read DRM register */
+            [&]( uint32_t offset, uint32_t* p_value ) { // Read DRM register callback
                 return read_drm_reg32( offset, p_value, pci_bar_handle );
             },
-            [&]( uint32_t offset, uint32_t value ) {    /* Write DRM register */
+            [&]( uint32_t offset, uint32_t value ) {    // Write DRM register callback
                 return write_drm_reg32( offset, value, pci_bar_handle );
             },
-            [&]( const std::string& msg ) {
+            [&]( const std::string& msg ) {     // Asynchronous error callback
                 print_drm_error( msg, nullptr );
             }
         );
@@ -509,87 +495,65 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const std::string& creden
         ret = 0;
 
         std::cout << "\nEnter your command ('h' or '?' for help): " << std::endl;
-        getline(std::cin, answer);
+        std::cin >> answer;
 
-        std::stringstream ss;
-        ss << answer;
-        ss >> cmd;
-        if (answer.size() > 1)
-            ss >> val;
+        try {
+            std::stringstream ss;
+            ss << answer;
+            ss >> cmd;
+            if (answer.size() > 1)
+                ss >> val;
 
-        if ( (answer[0] == 'h') || (answer[0] == '?')) {
-            print_interactive_menu();
-        }
-
-        else if (cmd == 'z') {
-            if (print_drm_report(pDrmManager) == 0)
-                INFO(COLOR_CYAN "HW report printed");
-        }
-
-        else if (cmd == 'v') {
-            if (answer.size() < 2) {
+            if ((answer[0] == 'h') || (answer[0] == '?')) {
                 print_interactive_menu();
-                continue;
-            }
-            if (print_drm_page(pDrmManager, val) == 0)
-                INFO(COLOR_CYAN "Registers on page %u printed", val);
-        }
-
-        else if (cmd == 'a') {
-            DRM_RETRY( pDrmManager->activate(false), no_retry_flag )
-            INFO(COLOR_CYAN "Session started");
-        }
-
-        else if (cmd == 'r') {
-            DRM_RETRY( pDrmManager->activate(true), no_retry_flag )
-            INFO(COLOR_CYAN "Session resumed");
-        }
-
-        else if (cmd == 'p') {
-            DRM_RETRY( pDrmManager->deactivate(true), no_retry_flag )
-            INFO(COLOR_CYAN "Session paused");
-        }
-
-        else if (cmd == 'd') {
-            DRM_RETRY( pDrmManager->deactivate(false), no_retry_flag )
-            INFO(COLOR_CYAN "Session stopped");
-        }
-
-        else if (cmd == 'g') {
-            if (answer.size() < 2) {
+            } else if (cmd == 'z') {
+                if (print_drm_report(pDrmManager) == 0)
+                    INFO(COLOR_CYAN "HW report printed");
+            } else if (cmd == 'v') {
+                if (answer.size() < 2) {
+                    print_interactive_menu();
+                    continue;
+                }
+                if (print_drm_page(pDrmManager, val) == 0)
+                    INFO(COLOR_CYAN "Registers on page %u printed", val);
+            } else if (cmd == 'a') {
+                pDrmManager->activate(false);
+                INFO(COLOR_CYAN "Session started");
+            } else if (cmd == 'r') {
+                pDrmManager->activate(true);
+                INFO(COLOR_CYAN "Session resumed");
+            } else if (cmd == 'p') {
+                pDrmManager->deactivate(true);
+                INFO(COLOR_CYAN "Session paused");
+            } else if (cmd == 'd') {
+                pDrmManager->deactivate(false);
+                INFO(COLOR_CYAN "Session stopped");
+            } else if (cmd == 'g') {
+                if (answer.size() < 2) {
+                    print_interactive_menu();
+                    continue;
+                }
+                if (!generate_coin(pci_bar_handle, 0, val))
+                    INFO(COLOR_CYAN "%u coins generated", val);
+            } else if (cmd == 'i') {
+                print_license_type(pDrmManager);
+                print_num_activators(pDrmManager);
+                print_session_id(pDrmManager);
+                print_metered_data(pDrmManager);
+                test_custom_field(pDrmManager, rand());
+            } else if (cmd == 't') {
+                print_all_information(pDrmManager);
+            } else if (cmd == 's') {
+                print_activators_status(pDrmManager, pci_bar_handle);
+            } else if (cmd == 'q') {
+                pDrmManager->deactivate(false);
+                INFO(COLOR_CYAN "Stopped session if running and exit application");
+            } else
                 print_interactive_menu();
-                continue;
-            }
-            if (!generate_coin(pci_bar_handle, 0, val))
-                INFO(COLOR_CYAN "%u coins generated", val);
+
+        } catch(...) {
+            ERROR("Failed to execute last command");
         }
-
-        else if (cmd == 'i') {
-            print_license_type( pDrmManager );
-            print_num_activators( pDrmManager );
-            print_session_id( pDrmManager );
-            print_metered_data( pDrmManager );
-            test_custom_field( pDrmManager, rand() );
-        }
-
-        else if (cmd == 't') {
-            print_all_information(pDrmManager);
-        }
-
-        else if (cmd == 's') {
-            print_activators_status( pDrmManager, pci_bar_handle );
-        }
-
-        else if (cmd == 'q') {
-            DRM_RETRY(pDrmManager->deactivate(false), no_retry_flag)
-            INFO(COLOR_CYAN "Stopped session if running and exit application");
-        }
-
-        else
-            print_interactive_menu();
-
-        if (ret)
-            ERROR("Failed to execute last command: %u", ret);
     }
 
     /* Stop session and free the DrmManager object */
@@ -639,7 +603,7 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const std::string& credentialFi
             case START_SESSION: {
                 /* Start a new session */
                 INFO(COLOR_CYAN "Starting a new session ...");
-                DRM_RETRY(pDrmManager->activate(true), no_retry_flag)
+                pDrmManager->activate(true);
                 DEBUG("Start session done");
                 break;
             }
@@ -647,7 +611,7 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const std::string& credentialFi
             case RESUME_SESSION: {
                 /* Resume an existing session */
                 INFO(COLOR_CYAN "Resuming an existing session ...");
-                DRM_RETRY(pDrmManager->activate(true), no_retry_flag)
+                pDrmManager->activate(true);
                 DEBUG("Resume session done");
                 break;
             }
@@ -703,7 +667,7 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const std::string& credentialFi
             case PAUSE_SESSION: {
                 /* Pause the current DRM session */
                 INFO(COLOR_CYAN "Pausing current session ...");
-                DRM_RETRY(pDrmManager->deactivate(true), no_retry_flag)
+                pDrmManager->deactivate(true);
                 DEBUG("Pause session done");
                 break;
             }
@@ -711,7 +675,7 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const std::string& credentialFi
             case STOP_SESSION: {
                 /* Pause the current DRM session */
                 INFO(COLOR_CYAN "Stopping current session ...");
-                DRM_RETRY(pDrmManager->deactivate(false), no_retry_flag)
+                pDrmManager->deactivate(false);
                 DEBUG("Stop session done");
                 break;
             }

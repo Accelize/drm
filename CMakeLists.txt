@@ -517,4 +517,29 @@ if(TESTS)
             PATTERN __pycache__ EXCLUDE PATTERN .pyc EXCLUDE)
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tests/.coveragerc DESTINATION ${CMAKE_BINARY_DIR})
     configure_file(${CMAKE_BINARY_DIR}/tests/conftest.py ${CMAKE_BINARY_DIR}/tests/conftest.py)
+
+    # Compile unittest.cpp application
+    if ( NOT DEFINED ENV{SDK_DIR} )
+        message( WARNING "SDK_DIR environment variable is not defined: "
+                "Cannot compile with AWS FPGA Management driver." )
+    else()
+        find_path(FPGAMGMTLIB_INCLUDE_DIRS
+                NAMES fpga_mgmt.h
+                PATHS $ENV{SDK_DIR}/userspace/include /usr/local/include NO_DEFAULT_PATH
+        )
+        message( "FPGAMGMTLIB_INCLUDE_DIRS=${FPGAMGMTLIB_INCLUDE_DIRS}" )
+        find_library(FPGAMGMTLIB_LIBRARIES
+                NAMES fpga_mgmt
+                PATHS $ENV{SDK_DIR}/userspace/lib/so /usr/local/lib64 NO_DEFAULT_PATH
+        )
+        message( "FPGAMGMTLIB_LIBRARIES=${FPGAMGMTLIB_LIBRARIES}" )
+        add_executable( unittests ${CMAKE_CURRENT_SOURCE_DIR}/tests/unittests.cpp )
+        set_target_properties( unittests
+            PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+        )
+        target_include_directories(unittests PUBLIC ${FPGAMGMTLIB_INCLUDE_DIRS})
+        target_link_libraries( unittests accelize_drmc )
+        target_link_libraries( unittests ${FPGAMGMTLIB_LIBRARIES})
+    endif()
 endif()

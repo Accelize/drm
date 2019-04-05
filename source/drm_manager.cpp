@@ -53,7 +53,9 @@ limitations under the License.
 #define TRY try {
 
 #define CATCH_AND_THROW \
-    } catch (const std::exception &e) { \
+    } catch( const Exception &e ) { \
+        throw; \
+    } catch( const std::exception &e ) { \
         Error( e.what() ); \
         throw; \
     }
@@ -107,6 +109,7 @@ protected:
     std::unique_ptr<DrmWSClient> mWsClient;
     std::unique_ptr<DrmControllerLibrary::DrmControllerOperations> mDrmController;
     mutable std::recursive_mutex mDrmControllerMutex;
+    bool mIsLockedToDrm = false;
 
     //function callbacks
     DrmManager::ReadRegisterCallback f_read_register;
@@ -130,7 +133,6 @@ protected:
 
     LicenseType mLicenseType = LicenseType::OTHERS;
     uint32_t mLicenseCounter;
-    TClock::time_point mLicenseExpirationDate;
     uint32_t mLicenseDuration;
 
     // Design parameters
@@ -171,6 +173,7 @@ protected:
         Json::Value conf_json;
 
         mSecurityStop = false;
+        mIsLockedToDrm = false;
 
         mLicenseCounter = 0;
         mLicenseDuration = 0;
@@ -240,57 +243,12 @@ protected:
                 Json::Value conf_drm = JVgetRequired( conf_json, "drm", Json::objectValue );
                 mFrequencyInit = JVgetRequired( conf_drm, "frequency_mhz", Json::intValue ).asUInt();
                 mFrequencyCurr = mFrequencyInit;
-                // Instantiate Web Service client
-                mWsClient.reset( new DrmWSClient( conf_file_path, cred_file_path ) );
             }
 
         } catch( Exception &e ) {
             if ( e.getErrCode() != DRM_BadFormat )
                 throw;
             Throw( DRM_BadFormat, "Error in configuration file '", conf_file_path, "': ", e.what() );
-        }
-    }
-
-    void initDrmInterface() {
-
-        if ( mDrmController )
-            return;
-
-        // create instance
-        try {
-            mDrmController.reset(
-                    new DrmControllerLibrary::DrmControllerOperations(
-                            std::bind(&DrmManager::Impl::readDrmRegister,
-                                      this,
-                                      std::placeholders::_1,
-                                      std::placeholders::_2),
-                            std::bind(&DrmManager::Impl::writeDrmRegister,
-                                      this,
-                                      std::placeholders::_1,
-                                      std::placeholders::_2)
-                    ));
-        } catch( const std::exception& e ) {
-            Throw(DRM_CtlrError, "Failed to initialize DRM Controller: ", e.what() );
-        }
-        Debug( "DRM Controller SDK is initialized" );
-
-        // Check compatibility of the DRM Version with Algodone version
-        checkDrmCompatibility();
-
-        // Save header information
-        mHeaderJsonRequest = getMeteringHeader();
-
-        // Try to lock the DRM controller to this instance, return an error is already locked.
-        lockDrmToInstance();
-
-        // If node-locked license is requested, create license request file
-        if ( mLicenseType == LicenseType::NODE_LOCKED ) {
-            // Check license directory exists
-            if ( !dirExists( mNodeLockLicenseDirPath ) )
-                Throw( DRM_BadArg, "License directory path '", mNodeLockLicenseDirPath,
-                        "' specified in configuration file '", mConfFilePath, "' is not existing on file system");
-            // Create license request file
-            createNodelockedLicenseRequestFile();
         }
     }
 
@@ -395,7 +353,7 @@ protected:
     DrmWSClient& getDrmWSClient() const {
         if ( mWsClient )
             return *mWsClient;
-        Throw( DRM_BadUsage, "No Web Service available" );
+        Throw( DRM_BadUsage, "No Web Service has been defined" );
     }
 
     static uint32_t getDrmRegisterOffset(const std::string& regName) {
@@ -440,12 +398,15 @@ protected:
         if ( isLocked )
             Throw( DRM_BadUsage, "Another instance of the DRM Manager is currently owning the HW" );
         writeMailbox( MailboxOffset::MB_LOCK_DRM, 1 );
+        mIsLockedToDrm = true;
         Debug( "DRM Controller is now locked to this object instance" );
     }
 
     void unlockDrmToInstance() {
         return;
         std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
+        if (!mIsLockedToDrm)
+            return;
         uint32_t isLocked = readMailbox( MailboxOffset::MB_LOCK_DRM );
         if ( isLocked ) {
             writeMailbox( MailboxOffset::MB_LOCK_DRM, 0 );
@@ -476,6 +437,67 @@ protected:
                     RETROCOMPATIBLITY_LIMIT_MAJOR,".",RETROCOMPATIBLITY_LIMIT_MINOR,".0" );
         }
         Debug( "DRM Version = ", drmVersionDot );
+    }
+
+    void initDrmInterface() {
+
+        if ( mDrmController )
+            return;
+
+        // create instance
+        try {
+            mDrmController.reset(
+                    new DrmControllerLibrary::DrmControllerOperations(
+                            std::bind(&DrmManager::Impl::readDrmRegister,
+                                      this,
+                                      std::placeholders::_1,
+                                      std::placeholders::_2),
+                            std::bind(&DrmManager::Impl::writeDrmRegister,
+                                      this,
+                                      std::placeholders::_1,
+                                      std::placeholders::_2)
+                    ));
+        } catch( const std::exception& e ) {
+            Throw(DRM_CtlrError, "Failed to initialize DRM Controller: ", e.what() );
+        }
+        Debug( "DRM Controller SDK is initialized" );
+
+        // Check compatibility of the DRM Version with Algodone version
+        checkDrmCompatibility();
+
+        // Try to lock the DRM controller to this instance, return an error is already locked.
+        lockDrmToInstance();
+
+        // Save header information
+        mHeaderJsonRequest = getMeteringHeader();
+
+        // If node-locked license is requested, create license request file
+        if ( mLicenseType == LicenseType::NODE_LOCKED ) {
+
+            // Check license directory exists
+            if ( !dirExists( mNodeLockLicenseDirPath ) )
+                Throw( DRM_BadArg, "License directory path '", mNodeLockLicenseDirPath,
+                       "' specified in configuration file '", mConfFilePath, "' is not existing on file system");
+
+            // If a floating/metering session is still running, try to close it gracefully.
+            if ( isDrmCtrlInMetering() && isSessionRunning() ) {
+                Debug( "A floating/metering session is still pending: ",
+                       "trying to close it gracefully before switching to nodelocked license." );
+                mHeaderJsonRequest["mode"] = (uint8_t)LicenseType::OTHERS;
+                try {
+                    mWsClient.reset( new DrmWSClient( mConfFilePath, mCredFilePath ) );
+                    stopSession();
+                } catch( const Exception& e ) {
+                    Debug( "Failed to stop gracefully the pending session because: ", e.what() );
+                }
+                mHeaderJsonRequest["mode"] = (uint8_t)LicenseType::NODE_LOCKED;
+            }
+
+            // Create license request file
+            createNodelockedLicenseRequestFile();
+        } else {
+            mWsClient.reset( new DrmWSClient( mConfFilePath, mCredFilePath ) );
+        }
     }
 
     void checkSessionIDFromWS(Json::Value license_json) {
@@ -540,14 +562,19 @@ protected:
         Debug2( "Get metering data from session on DRM controller" );
 
         std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
-        checkDRMCtlrRet( getDrmController().asynchronousExtractMeteringFile(
-                numberOfDetectedIps, saasChallenge, meteringFile ) );
-        std::string meteringDataStr = meteringFile[2].substr(16, 16);
-        errno = 0;
-        meteringData = strtoull(meteringDataStr.c_str(), nullptr, 16);
-        if (errno)
-            Throw( DRM_BadUsage, "Could not convert string '", meteringDataStr, "' to unsigned long long." );
-        return meteringData;
+        if ( isLicenseActive() ) {
+            checkDRMCtlrRet(getDrmController().asynchronousExtractMeteringFile(
+                    numberOfDetectedIps, saasChallenge, meteringFile));
+            std::string meteringDataStr = meteringFile[2].substr(16, 16);
+            errno = 0;
+            meteringData = strtoull(meteringDataStr.c_str(), nullptr, 16);
+            if (errno)
+                Throw(DRM_CtlrError, "Could not convert string '", meteringDataStr,
+                      "' to unsigned long long.");
+            return meteringData;
+        } else {
+            return 0;
+        }
     }
 
     // Get DRM HDK version
@@ -595,7 +622,8 @@ protected:
         if ( !mBoardType.empty() )
             json_output["boardType"] = mBoardType;
         json_output["mode"] = (uint8_t) mLicenseType;
-        json_output["drm_frequency_init"] = mFrequencyInit;
+        if ( mLicenseType != LicenseType::NODE_LOCKED )
+            json_output["drm_frequency_init"] = mFrequencyInit;
 
         // Get information from DRM Controller
         getDesignInfo(drmVersion, dna, vlnvFile, mailboxReadOnly);
@@ -639,7 +667,8 @@ protected:
         json_request["saasChallenge"] = saasChallenge;
         json_request["meteringFile"]  = std::accumulate(meteringFile.begin(), meteringFile.end(), std::string(""));
         json_request["request"] = "open";
-        json_request["drm_frequency"] = mFrequencyCurr;
+        if ( mLicenseType != LicenseType::NODE_LOCKED )
+            json_request["drm_frequency"] = mFrequencyCurr;
         json_request["mode"] = (uint8_t)mLicenseType;
 
         return json_request;
@@ -657,7 +686,8 @@ protected:
         json_request["saasChallenge"] = saasChallenge;
         json_request["sessionId"] = meteringFile[0].substr(0, 16);
         checkSessionIDFromDRM( json_request );
-        json_request["drm_frequency"] = mFrequencyCurr;
+        if ( mLicenseType != LicenseType::NODE_LOCKED )
+            json_request["drm_frequency"] = mFrequencyCurr;
         json_request["meteringFile"]  = std::accumulate(meteringFile.begin(), meteringFile.end(), std::string(""));
         json_request["request"] = "running";
         return json_request;
@@ -675,7 +705,8 @@ protected:
         json_request["saasChallenge"] = saasChallenge;
         json_request["sessionId"] = meteringFile[0].substr(0, 16);
         checkSessionIDFromDRM( json_request );
-        json_request["drm_frequency"] = mFrequencyCurr;
+        if ( mLicenseType != LicenseType::NODE_LOCKED )
+            json_request["drm_frequency"] = mFrequencyCurr;
         json_request["meteringFile"]  = std::accumulate(meteringFile.begin(), meteringFile.end(), std::string(""));
         json_request["request"] = "close";
         return json_request;
@@ -816,39 +847,44 @@ protected:
 
         Debug("Installing next license on DRM controller");
 
-        /// Get session ID received from web service
-        if ( mSessionID.empty() ) {
-            /// Save new Session ID
-            mSessionID = license_json["metering"]["sessionId"].asString();
-            Debug( "Saving session ID: ", mSessionID );
-        } else {
-            /// Verify Session ID
-            checkSessionIDFromWS(license_json);
+        std::string dna = mHeaderJsonRequest["dna"].asString();
+        std::string licenseKey, licenseTimer;
+
+        try {
+            Json::Value metering_node = JVgetRequired( license_json, "metering", Json::objectValue );
+            Json::Value license_node = JVgetRequired( license_json, "license", Json::objectValue );
+            Json::Value dna_node = JVgetRequired( license_node, dna.c_str(), Json::objectValue );
+
+            /// Get session ID received from web service
+            if ( mSessionID.empty() ) {
+                /// Save new Session ID
+                mSessionID = JVgetRequired( metering_node, "sessionId", Json::stringValue ).asString();
+                Debug( "Saving session ID: ", mSessionID );
+            } else {
+                /// Verify Session ID
+                checkSessionIDFromWS(license_json);
+            }
+
+            // Extract license and license timer from web service response
+
+            licenseKey = JVgetRequired( dna_node, "key", Json::stringValue ).asString();
+            if ( mLicenseType != LicenseType::NODE_LOCKED ) {
+                licenseTimer = JVgetRequired( dna_node, "licenseTimer", Json::stringValue ).asString();
+                mLicenseDuration = JVgetRequired( metering_node, "timeoutSecond", Json::stringValue ).asUInt();
+            }
+
+        } catch( Exception &e ) {
+            if ( e.getErrCode() != DRM_BadFormat )
+                throw;
+            Throw( DRM_WSRespError, "Malformed response from License Web Service: ", e.what() );
         }
-
-        // get DNA
-        std::string dna;
-        checkDRMCtlrRet( getDrmController().extractDna(dna) );
-
-        // Extract license and license timer from web service response
-        std::string licenseKey = license_json["license"][dna]["key"].asString();
-        std::string licenseTimer = license_json["license"][dna]["licenseTimer"].asString();
-
-        if (licenseKey.empty())
-            Throw(DRM_WSRespError,
-                  "Malformed response from Accelize Web Service : license key is empty");
-        if ((mLicenseType != LicenseType::NODE_LOCKED) && licenseTimer.empty())
-            Throw(DRM_WSRespError,
-                  "Malformed response from Accelize Web Service : LicenseTimer is empty");
 
         // Activate
         bool activationDone = false;
         uint8_t activationErrorCode;
-        checkDRMCtlrRet(getDrmController().activate(licenseKey, activationDone,
-                                                    activationErrorCode));
+        checkDRMCtlrRet(getDrmController().activate(licenseKey, activationDone, activationErrorCode));
         if (activationErrorCode) {
-            Throw(DRM_CtlrError,
-                  "Failed to activate license on DRM controller, activationErr: 0x",
+            Throw(DRM_CtlrError, "Failed to activate license on DRM controller, activationErr: 0x",
                   std::hex, activationErrorCode, std::dec);
         }
 
@@ -856,18 +892,14 @@ protected:
         if (mLicenseType != LicenseType::NODE_LOCKED) {
             bool licenseTimerEnabled = false;
             checkDRMCtlrRet(
-                    getDrmController().loadLicenseTimerInit(licenseTimer,
-                                                            licenseTimerEnabled));
-            if (!licenseTimerEnabled) {
-                Throw(DRM_CtlrError,
+                    getDrmController().loadLicenseTimerInit( licenseTimer, licenseTimerEnabled ) );
+            if ( !licenseTimerEnabled ) {
+                Throw( DRM_CtlrError,
                       "Failed to load license timer on DRM controller, licenseTimerEnabled: 0x",
-                      std::hex, licenseTimerEnabled, std::dec);
+                      std::hex, licenseTimerEnabled, std::dec );
             }
 
-            mLicenseCounter++;
-
-            mLicenseDuration = license_json["metering"]["timeoutSecond"].asUInt();
-            Debug("Set license #", mLicenseCounter, " of session ID ",
+            Debug("Set license #", ++mLicenseCounter, " of session ID ",
                   mSessionID, " for a duration of ", mLicenseDuration, " seconds");
         }
 
@@ -931,7 +963,7 @@ protected:
 
     void installNodelockedLicense() {
         Json::Value license_json;
-        std::ifstream ifs;
+            std::ifstream ifs;
 
         Debug ( "Looking for local node-locked license file: ", mNodeLockLicenseFilePath );
 
@@ -941,7 +973,7 @@ protected:
             if (ifs.good()) {
                 // A license file has already been installed locally; read its content
                 ifs >> license_json;
-                if (!ifs.good())
+                if ( !ifs.good() )
                     Throw(DRM_ExternFail, "Cannot parse license file ",
                           mNodeLockLicenseFilePath);
                 ifs.close();
@@ -949,21 +981,20 @@ protected:
                       mNodeLockLicenseFilePath );
             } else {
                 // No license has been found locally, request one:
-                // - Create access to license web service
-                mWsClient.reset(new DrmWSClient(mConfFilePath, mCredFilePath));
+                Debug( "No license file found: ", mNodeLockLicenseFilePath );
+                // - Create WS access
+                mWsClient.reset( new DrmWSClient( mConfFilePath, mCredFilePath ) );
                 // - Read request file
-                Json::Value request_json;
-                ifs.open(mNodeLockRequestFilePath);
-                if (!ifs.is_open()) {
-                    Throw(DRM_ExternFail,
-                          "Failed to access license request file ",
-                          mNodeLockRequestFilePath);
+                ifs.open( mNodeLockRequestFilePath );
+                if ( !ifs.is_open() ) {
+                    Throw( DRM_ExternFail, "Failed to access license request file ",
+                          mNodeLockRequestFilePath );
                 }
+                Json::Value request_json;
                 ifs >> request_json;
-                if (!ifs.good()) {
-                    Throw(DRM_ExternFail,
-                          "Failed to parse license request file ",
-                          mNodeLockRequestFilePath);
+                if ( !ifs.good() ) {
+                    Throw( DRM_ExternFail, "Failed to parse license request file ",
+                          mNodeLockRequestFilePath );
                 }
                 ifs.close();
                 // - Send request to web service and receive the new license
@@ -972,8 +1003,7 @@ protected:
                 license_json = getLicense(request_json, deadline, mWSRetryPeriodShort );
                 // - Save license to file
                 saveJsonToFile(mNodeLockLicenseFilePath, license_json);
-                Debug( "Requested and saved new node-locked license file: ",
-                      mNodeLockLicenseFilePath );
+                Debug( "Requested and saved new node-locked license file: ", mNodeLockLicenseFilePath );
             }
             // Install the license
             setLicense(license_json);
@@ -981,7 +1011,7 @@ protected:
 
         } catch( const Exception& e ) {
             if ( e.getErrCode() != DRM_Exit )
-                throw;
+                Throw( e.getErrCode(), "Failed to install a license: ", e.what() );
         }
     }
 
@@ -1186,10 +1216,6 @@ protected:
 
     void stopSession() {
 
-        if (mLicenseType == LicenseType::NODE_LOCKED){
-            return;
-        }
-
         Info( "Stopping DRM session..." );
 
         // Stop background thread
@@ -1266,7 +1292,7 @@ public:
         if (!f_user_write_register)
             Throw( DRM_BadArg, "Write register callback function must not be NULL" );
         if (!f_user_asynch_error)
-            Throw( DRM_BadArg, "Error handling callback function must not be NULL" );
+            Throw( DRM_BadArg, "Asynchronous error callback function must not be NULL" );
         f_read_register = f_user_read_register;
         f_write_register = f_user_write_register;
         f_asynch_error = f_user_asynch_error;
@@ -1296,10 +1322,7 @@ public:
             bool isRunning = isSessionRunning();
 
             if (mLicenseType == LicenseType::NODE_LOCKED) {
-                // In NodeLock, make sure to close any previously open session
-                if (isDrmCtrlInMetering() && isRunning)
-                    stopSession();
-                // Then install the odelocked license
+                // Install the nodelocked license
                 installNodelockedLicense();
                 return;
             }
@@ -1345,7 +1368,7 @@ public:
 
     void get( Json::Value& json_value ) const {
         TRY
-            Debug2( "Get parameter request input:\n", json_value.toStyledString() );
+            Debug( "Calling 'get' with Json object: ", json_value.toStyledString() );
             for (const std::string& key_str : json_value.getMemberNames()) {
                 const ParameterKey key_id = findParameterKey( key_str );
                 switch(key_id) {
@@ -1415,11 +1438,12 @@ public:
                     }
                     case ParameterKey::metered_data: {
 #if ((JSONCPP_VERSION_MAJOR ) >= 1 and ((JSONCPP_VERSION_MINOR) > 7 or ((JSONCPP_VERSION_MINOR) == 7 and JSONCPP_VERSION_PATCH >= 5)))
-                        uint64_t metered_data = getMeteringData();
+                        uint64_t metered_data = 0;
 #else
                         // No "int64_t" support with JsonCpp < 1.7.5
-                        unsigned long long metered_data = getMeteringData();
+                        unsigned long long metered_data = 0;
 #endif
+                        metered_data = getMeteringData();
                         json_value[key_str] = metered_data;
                         Debug( "Get value of parameter '", key_str,
                                 "' (ID=", key_id, "): ", metered_data );
@@ -1577,40 +1601,50 @@ public:
                         break;
                     }
                     case ParameterKey ::list_all: {
-                        json_value[key_str] = list_parameter_key();
+                        Json::Value list = list_parameter_key();
+                        json_value[key_str] = list;
                         Debug( "Get value of parameter '", key_str,
-                                "' (ID=", key_id, "): ", json_value[key_str].toStyledString() );
+                                "' (ID=", key_id, "): ", list.toStyledString() );
                         break;
                     }
                     case ParameterKey::dump_all: {
-                        json_value[key_str] = dump_parameter_key();
+                        Json::Value list = dump_parameter_key();
+                        json_value[key_str] = list;
                         Debug( "Get value of parameter '", key_str,
-                                "' (ID=", key_id, "): ", json_value[key_str].toStyledString() );
+                                "' (ID=", key_id, "): ", list.toStyledString() );
                         break;
                     }
-                    default: {
+                    case ParameterKey::key_count: {
+                        uint32_t count = static_cast<int>(key_count);
+                        json_value[key_str] = count;
+                        Debug( "Get value of parameter '", key_str,
+                               "' (ID=", key_id, "): ", count );
+                        break;
+                    }default: {
                         Throw( DRM_BadArg, "Cannot find parameter with ID: ", key_id );
                         break;
                     }
                 }
             }
         CATCH_AND_THROW
-        Debug2( "Get parameter request output:\n", json_value.toStyledString() );
     }
 
     void get( std::string& json_string ) const {
         TRY
+            Debug( "Calling 'get' with in/out string: ", json_string );
             Json::Value root = parseJsonString(json_string);
             get(root);
             json_string = root.toStyledString();
         CATCH_AND_THROW
     }
 
-    template<typename T> T get( const ParameterKey /*key_id*/ ) const {}
+    template<typename T> T get( const ParameterKey /*key_id*/ ) const {
+        Unreachable("Default template for get function");
+    }
 
     void set( const Json::Value& json_value ) {
         TRY
-            Debug2( "Set parameter request:\n", json_value.toStyledString() );
+            Debug( "Calling 'set' with Json object: ", json_value.toStyledString() );
             for( Json::ValueConstIterator it = json_value.begin() ; it != json_value.end() ; it++ ) {
                 std::string key_str = it.key().asString();
                 const ParameterKey key_id = findParameterKey( key_str );
@@ -1707,6 +1741,12 @@ public:
                         mHeaderJsonRequest["product"]["name"] = "BAD_NAME_JUST_FOR_TEST";
                         break;
                     }
+                    case ParameterKey::bad_oauth2_token: {
+                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") ",
+                               "to random value" );
+                        getDrmWSClient().setOAuth2token( "BAD_TOKEN" );
+                        break;
+                    }
                     case ParameterKey::log_message_level: {
                         int message_level = (*it).asInt();
                         mDebugMessageLevel = static_cast<eLogLevel>(message_level);
@@ -1739,6 +1779,7 @@ public:
 
     void set( const std::string& json_string ) {
         TRY
+            Debug( "Calling 'set' with in/out string" );
             Json::Value root = parseJsonString(json_string);
             set(root);
         CATCH_AND_THROW

@@ -1,8 +1,7 @@
+# -*- coding: utf-8 -*-
 """
-To run manually, move to the build directory and execute:
-    sudo LD_LIBRARY_PATH=. pytest -v <path/to/tests/test_with_hardware.py> --cred <path/to/cred.json> --library_verbosity=3 --server='dev' --backend='c++' -s
+Test metering and floating behaviors of DRM Library.
 """
-
 from time import sleep
 from random import randint
 from datetime import datetime, timedelta

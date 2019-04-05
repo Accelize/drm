@@ -42,24 +42,22 @@ void checkPointer(void *p) {
     try {
 
 #define CATCH_RETURN                                                                  \
-    } catch(const cpp::Exception& e) {                                                \
+    } catch( const cpp::Exception& e ) {                                              \
         int cp_size = strlen( e.what() );                                             \
-        if ( cp_size > MAX_MSG_SIZE) {                                                \
+        if ( cp_size > MAX_MSG_SIZE ) {                                               \
             cp_size = MAX_MSG_SIZE - 5;                                               \
             strcpy( m->error_message + MAX_MSG_SIZE-5, "[...]" );                     \
         }                                                                             \
         strncpy( m->error_message, e.what(), cp_size );                               \
-        if (cpp::sLogVerbosity >= cpp::eLogLevel::ERROR)                              \
-            cpp::logTrace(cpp::eLogLevel::ERROR, __SHORT_FILE__, __LINE__, e.what()); \
         __try_ret = e.getErrCode();                                                   \
-    } catch(const std::exception& e) {                                                \
+    } catch( const std::exception& e ) {                                              \
         int cp_size = strlen( e.what() );                                             \
-        if ( cp_size > MAX_MSG_SIZE) {                                                \
+        if ( cp_size > MAX_MSG_SIZE ) {                                               \
             cp_size = MAX_MSG_SIZE - 5;                                               \
             strcpy( m->error_message + MAX_MSG_SIZE-5, "[...]" );                     \
         }                                                                             \
         strncpy( m->error_message, e.what(), cp_size );                               \
-        if (cpp::sLogVerbosity >= cpp::eLogLevel::ERROR)                              \
+        if ( cpp::sLogVerbosity >= cpp::eLogLevel::ERROR )                            \
             cpp::logTrace(cpp::eLogLevel::ERROR, __SHORT_FILE__, __LINE__, e.what()); \
         __try_ret = DRM_Fatal;                                                        \
     }                                                                                 \
@@ -79,6 +77,12 @@ DRM_ErrorCode DrmManager_alloc( DrmManager **p_m,
     m->drm = NULL;
     *p_m = m;
     TRY
+        if (read_register == NULL)
+            cpp::Throw( DRM_BadArg, "Read register callback function must not be NULL" );
+        if (write_register == NULL)
+            cpp::Throw( DRM_BadArg, "Write register callback function must not be NULL" );
+        if (async_error == NULL)
+            cpp::Throw( DRM_BadArg, "Asynchronous error callback function must not be NULL" );
         m->drm = (decltype(m->drm))malloc(sizeof(*(m->drm)));
         m->drm->obj = NULL;
         m->drm->obj = new cpp::DrmManager(conf_file_path, cred_file_path,
@@ -123,6 +127,13 @@ DRM_ErrorCode DrmManager_deactivate( DrmManager *m, bool pause_session_request )
     CATCH_RETURN
 }
 
+
+DRM_ErrorCode DrmManager_get_bool( DrmManager *m, const DrmParameterKey key, bool* p_value ) {
+    TRY
+        checkPointer(m);
+        *p_value = m->drm->obj->get<bool>((cpp::ParameterKey) key);
+    CATCH_RETURN
+}
 
 DRM_ErrorCode DrmManager_get_int( DrmManager *m, const DrmParameterKey key, int* p_value ) {
     TRY

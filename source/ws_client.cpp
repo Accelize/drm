@@ -138,6 +138,12 @@ uint32_t DrmWSClient::getTokenTimeLeft() const {
     return (uint32_t)round( (double)delta.count() / 1000000000 );
 }
 
+void DrmWSClient::setOAuth2token( const std::string& token ) {
+    mOAuth2Token = token;
+    mTokenValidityPeriod = 10;
+    mTokenExpirationTime = TClock::now() + std::chrono::seconds( mTokenValidityPeriod );
+}
+
 void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
 
     // Check if a token exists
@@ -189,15 +195,8 @@ void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
             Throw(DRM_WSError, msg.str());
         }
     }
-    // Verify response parsing
-    if ( json_resp == Json::nullValue )
-        Throw( DRM_WSRespError, "Failed to parse response from OAuth2 Web Service: ", error_msg );
-
-    if ( !json_resp.isMember("access_token") )
-        Throw( DRM_WSRespError, "Non-valid response from OAuth2 Web Service : ", response );
-
-    mOAuth2Token = json_resp["access_token"].asString();
-    mTokenValidityPeriod = json_resp["expires_in"].asInt();
+    mOAuth2Token = JVgetRequired( json_resp, "access_token", Json::stringValue ).asString();
+    mTokenValidityPeriod = JVgetRequired( json_resp, "expires_in", Json::intValue ).asInt();
     mTokenExpirationTime = TClock::now() + std::chrono::seconds( mTokenValidityPeriod );
 }
 

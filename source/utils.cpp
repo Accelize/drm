@@ -69,7 +69,7 @@ Json::Value parseJsonString(const std::string &json_string) {
     std::unique_ptr<Json::CharReader> const reader(builder.newCharReader() );
     
     if ( json_string.size() == 0 )
-        Throw( DRM_BadArg, "Cannot parse an empty JSON string" );
+        Throw( DRM_BadFormat, "Cannot parse an empty JSON string" );
     if ( !reader->parse( json_string.c_str(), json_string.c_str() + json_string.size(), &json_node, &parseErr) )
         Throw( DRM_BadFormat, "Cannot parse following JSON string because ", parseErr, "\n", json_string );
     return json_node;
@@ -86,8 +86,10 @@ Json::Value parseJsonFile( const std::string& file_path ) {
         Throw( DRM_BadArg, "Cannot find JSON file: ", file_path );
     bool ret = Json::parseFromStream( builder, fh, &json_node, &parseErr);
     fh.close();
+
     if ( !ret  )
         Throw( DRM_BadFormat, "Cannot parse ", file_path, " : ", parseErr );
+
     if ( json_node.empty() )
         Throw( DRM_BadArg, "JSON file '", file_path, "' is empty" );
 
@@ -98,12 +100,16 @@ Json::Value parseJsonFile( const std::string& file_path ) {
 const Json::Value& JVgetRequired(const Json::Value& jval, const char* key, const Json::ValueType& type) {
     if (!jval.isMember(key))
         Throw(DRM_BadFormat, "Missing parameter '", key, "' of type ", type);
+
     const Json::Value& jvalmember = jval[key];
     Debug( "Found parameter '", key, "' of type ", jvalmember.type());
+
     if (jvalmember.type()!=type && !jvalmember.isConvertibleTo(type))
         Throw(DRM_BadFormat, "Wrong parameter type for '", key, "' = ", jvalmember, ", expecting ", type, ", parsed as ", jvalmember.type());
+
     if (jvalmember.empty())
         Throw(DRM_BadFormat, "Value of parameter '", key, "' is empty");
+
     if ( ( jvalmember.type() == Json::stringValue ) && ( jvalmember.asString().empty() ) )
         Throw(DRM_BadFormat, "Value of parameter '", key, "' is an empty string");
     return jvalmember;
@@ -113,11 +119,13 @@ const Json::Value& JVgetRequired(const Json::Value& jval, const char* key, const
 const Json::Value& JVgetOptional(const Json::Value& jval, const char* key, const Json::ValueType& type, const Json::Value& defaultValue) {
     bool exists = jval.isMember(key);
     const Json::Value& jvalmember = exists ? jval[key] : defaultValue;
+
     if (exists || !jvalmember.isNull())
         Debug( "Found parameter '", key, "' of type ", jvalmember.type());
         if (jvalmember.type()!=type && !jvalmember.isConvertibleTo(type))
             Throw(DRM_BadFormat, "Wrong parameter type for '", key, "' = ", jvalmember, ", expecting ", type, ", parsed as ", jvalmember.type());
-    return jvalmember;
+
+        return jvalmember;
 }
 
 }

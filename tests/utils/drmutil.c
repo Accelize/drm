@@ -15,8 +15,6 @@
 
 /* 1. Include the C-API of the DRM Library*/
 #include "accelize/drmc.h"
-//#include "../include/accelize/drmc/metering.h"
-//#include "../include/accelize/drmc.h"
 /* end of 1 */
 
 
@@ -376,18 +374,6 @@ int test_custom_field( DrmManager* pDrmManager, uint32_t value ) {
 }
 
 
-#define DRM_RETRY(__expr, __no_retry) \
-({DRM_ErrorCode __err; \
-    do { \
-        __err = __expr; \
-        if (__err != DRM_WSMayRetry || __no_retry) break;\
-        WARN("DRM operation failed but will retry in 1 second...\n"); \
-        fflush(stdout); \
-        sleep(1); \
-    } while(1); \
-__err;})
-
-
 /*
 * check if the corresponding AFI for hello_world is loaded
 */
@@ -496,7 +482,6 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFil
 
     print_interactive_menu();
     while (strcmp(answer, "q") != 0) {
-        ret = 0;
 
         printf("\nEnter your command ('h' or '?' for help): \n");
         scanf("%s" , answer) ;
@@ -522,12 +507,12 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFil
         }
 
         else if (answer[0] == 'a') {
-            if (!DRM_RETRY( DrmManager_activate(pDrmManager, false), no_retry_flag ))
+            if (!DrmManager_activate(pDrmManager, false))
                 INFO(COLOR_CYAN "Session started");
         }
 
         else if (answer[0] == 'r') {
-            if (!DRM_RETRY( DrmManager_activate(pDrmManager, true), no_retry_flag ))
+            if (!DrmManager_activate(pDrmManager, true))
                 INFO(COLOR_CYAN "Session resumed");
         }
 
@@ -575,9 +560,6 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFil
 
         else
             print_interactive_menu();
-
-        if (ret)
-            ERROR("Failed to execute last command: %u", ret);
     }
 
     /* Stop session and free the DrmManager object */
@@ -624,7 +606,7 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, con
                 /* Start a new session */
                 INFO(COLOR_CYAN
                              "Starting a new session ...");
-                if (DRM_OK != DRM_RETRY(DrmManager_activate(pDrmManager, true), no_retry_flag)) {
+                if (DRM_OK != DrmManager_activate(pDrmManager, true)) {
                     ERROR("Failed to start a new session: %s", pDrmManager->error_message);
                     goto batch_mode_free;
                 }
@@ -636,7 +618,7 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, con
                 /* Resume an existing session */
                 INFO(COLOR_CYAN
                              "Resuming an existing session ...");
-                if (DRM_OK != DRM_RETRY(DrmManager_activate(pDrmManager, true), no_retry_flag)) {
+                if (DRM_OK != DrmManager_activate(pDrmManager, true)) {
                     ERROR("Failed to resume existing session: %s", pDrmManager->error_message);
                     goto batch_mode_free;
                 }

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Configure Pytest"""
 from os import environ, listdir, remove
-from os.path import realpath, abspath, isfile, isdir, expanduser, splitext, join, dirname
+from os.path import realpath, isfile, isdir, expanduser, splitext, join, dirname
 from json import dump, load
 from copy import deepcopy
 from re import match, search
@@ -9,13 +9,9 @@ from ctypes import c_uint32, byref
 
 import pytest
 
-import sys
-myPath = dirname(abspath(__file__))
-sys.path.insert(0, myPath)
-from ws_admin_functions import WSListFunction
+from tests.ws_admin_functions import WSListFunction
 
 
-_TESTS_PATH = dirname(realpath(__file__))
 _SESSION = dict()
 _LICENSING_SERVERS = dict(
     dev='https://master.devmetering.accelize.com',
@@ -60,7 +56,8 @@ def get_default_conf_json(licensing_server_url):
     }
 
 
-def clean_nodelock_env(drm_manager=None, driver=None, conf_json=None, cred_json=None, ws_admin=None):
+def clean_nodelock_env(drm_manager=None, driver=None,
+                       conf_json=None, cred_json=None, ws_admin=None):
     """
     Clean nodelock related residues
     """
@@ -69,8 +66,8 @@ def clean_nodelock_env(drm_manager=None, driver=None, conf_json=None, cred_json=
         conf_json.cleanNodelockDir()
     # Clear nodelock request from WS DB (not to hit the limit)
     if (ws_admin is not None) and (cred_json is not None):
-        ws_admin.remove_product_information(library='refdesign',
-            name='drm_1activator', user=cred_json.user)
+        ws_admin.remove_product_information(library='refdesign', name='drm_1activator',
+                                            user=cred_json.user)
     # Reprogram FPGA
     if driver is not None:
         if drm_manager is None:
@@ -85,8 +82,8 @@ def clean_metering_env(cred_json=None, ws_admin=None):
     """
     # Clear nodelock request from WS DB (not to hit the limit)
     if (ws_admin is not None) and (cred_json is not None):
-        ws_admin.remove_product_information(library='refdesign',
-            name='drm_1activator', user=cred_json.user)
+        ws_admin.remove_product_information(library='refdesign', name='drm_1activator',
+                                            user=cred_json.user)
 
 
 # Pytest configuration
@@ -134,8 +131,7 @@ def pytest_addoption(parser):
         help='Run integration tests. Theses tests may needs two FPGAs.')
     parser.addoption(
         "--activator_base_address", action="store", default='0x10000', type=str,
-        help='Specify a list of all activator base addresses separated by a coma: "0x10000,0x20000"')
-
+        help='Specify a list of all activator base addresses separated by coma: "0x10000,0x20000"')
 
 
 def pytest_runtest_setup(item):
@@ -161,13 +157,12 @@ class SingleActivator:
     def generate_coin(self, coins):
         value = c_uint32()
         for i in range(coins):
-            self.driver.read_register_callback( self.base_address, byref(value) )
+            self.driver.read_register_callback(self.base_address, byref(value))
 
     def get_status(self):
         regvalue = c_uint32(0)
-        self.driver.read_register_callback( self.base_address, byref(regvalue) )
+        self.driver.read_register_callback(self.base_address, byref(regvalue))
         value = regvalue.value
-        code_rdy = (value >> 1) & 1
         return value & 1
 
 
@@ -193,7 +188,6 @@ class ActivatorsInFPGA:
             activator_index_list = [activator_indexes]
         else:
             raise TypeError('Unsupported type: %s' % type(activator_indexes))
-        regvalue = c_uint32(0)
         status_list = []
         for i in activator_index_list:
             status_list.append(self.activators[i].get_status())
@@ -215,8 +209,8 @@ class RefDesign:
             raise IOError("Following path must be a valid directory: %s" % path)
         self._path = path
         self.hdk_versions = sorted([splitext(file_name)[0].strip('v')
-                               for file_name in listdir(self._path)
-                               if file_name.endswith('.json')])
+                                    for file_name in listdir(self._path)
+                                    if file_name.endswith('.json')])
 
     def get_image_id(self, hdk_version=None):
         if hdk_version is None:
@@ -282,7 +276,9 @@ def accelize_drm(pytestconfig):
     fpga_image = pytestconfig.getoption("fpga_image")
     hdk_version = pytestconfig.getoption("hdk_version")
 
-    ref_designs = RefDesign(join(_TESTS_PATH, 'refdesigns', fpga_driver_name))
+    build_source_dir = '@CMAKE_CURRENT_SOURCE_DIR@'
+
+    ref_designs = RefDesign(join(build_source_dir, 'tests', 'refdesigns', fpga_driver_name))
 
     if hdk_version and fpga_image.lower() != 'default':
         raise ValueError(
@@ -328,12 +324,12 @@ def accelize_drm(pytestconfig):
 
     # Define Activator access
     base_address = [int(e,0) for e in pytestconfig.getoption("activator_base_address").split(',')]
-    fpga_activators = [ ActivatorsInFPGA(fpga_driver[i], base_address)
-        for i in range(len(fpga_driver))]
+    fpga_activators = [ActivatorsInFPGA(fpga_driver[i], base_address)
+                       for i in range(len(fpga_driver))]
 
     # Store some values for access in tests
     _accelize_drm.pytest_build_environment = build_environment
-    _accelize_drm.pytest_build_source_dir = '@CMAKE_CURRENT_SOURCE_DIR@'
+    _accelize_drm.pytest_build_source_dir = build_source_dir
     _accelize_drm.pytest_build_type = build_type
     _accelize_drm.pytest_backend = backend
     _accelize_drm.pytest_fpga_driver = fpga_driver
@@ -420,9 +416,9 @@ class ConfJson(_Json):
 
     def cleanNodelockDir(self):
         from glob import glob
-        fileList = glob(join(self._dirname, '*.req'))
-        fileList.extend(glob(join(self._dirname,'*.lic')))
-        for e in fileList:
+        file_list = glob(join(self._dirname, '*.req'))
+        file_list.extend(glob(join(self._dirname, '*.lic')))
+        for e in file_list:
             remove(e)
 
 
@@ -449,17 +445,17 @@ class CredJson(_Json):
         """
         self._content = {}
         if user is None:
-            for k,v in [e for e in self._initial_content.items() if not e.endswith('__')]:
-                self[k]= v
+            for k, v in [e for e in self._initial_content.items() if not e.endswith('__')]:
+                self[k] = v
             self._user = ''
         else:
-            for k,v in self._initial_content.items():
-                m =  match(r'(.+)__%s__' % user, k)
+            for k, v in self._initial_content.items():
+                m = match(r'(.+)__%s__' % user, k)
                 if m:
-                    self[m.group(1)]= v
+                    self[m.group(1)] = v
             self._user = user
         if ('client_id' not in self._content) or ('client_secret' not in self._content):
-            raise ValueError( 'User "%s" not found in "%s"' % ( self._user, self._init_cred_path))
+            raise ValueError('User "%s" not found in "%s"' % (self._user, self._init_cred_path))
         self.save()
 
     @property
@@ -488,8 +484,8 @@ def conf_json(pytestconfig, tmpdir):
     """
     Manage "conf.json" in testing environment.
     """
-    log_param = { 'log_verbosity': int(pytestconfig.getoption("library_verbosity")),
-                  'log_format': int(pytestconfig.getoption("library_logformat")) }
+    log_param = {'log_verbosity': int(pytestconfig.getoption("library_verbosity")),
+                 'log_format': int(pytestconfig.getoption("library_logformat"))}
     json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param)
     json_conf.save()
     return json_conf
@@ -600,11 +596,15 @@ class AsyncErrorHandler:
     Asynchronous error callback
     """
     def __init__(self):
-        self.reset()
+        self.message = None
+        self.errcode = None
+        self.was_called = False
+
     def reset(self):
         self.message = None
         self.errcode = None
         self.was_called = False
+
     def callback(self, message):
         self.was_called = True
         if isinstance(message, bytes):
@@ -612,18 +612,16 @@ class AsyncErrorHandler:
         else:
             self.message = message
         self.errcode = AsyncErrorHandlerList.get_error_code(self.message)
-        #m = search(r'\[errCode=(\d+)\]', self.message)
-        #if m:
-        #    self.errcode = int(m.group(1))
-        #else:
-        #    self.errcode = None
-    def assert_NoError( self, extra_msg=None ):
+
+    def assert_NoError(self, extra_msg=None):
         if extra_msg is None:
             prepend_msg = ''
         else:
             prepend_msg = '%s: ' % extra_msg
-        assert self.message is None, '%sAsynchronous callback reports a message: %s' % (prepend_msg, self.message)
-        assert self.errcode is None, '%sAsynchronous callback returned error code: %d' % (prepend_msg, self.errcode)
+        assert self.message is None, '%sAsynchronous callback reports a message: %s' \
+                                     % (prepend_msg, self.message)
+        assert self.errcode is None, '%sAsynchronous callback returned error code: %d' \
+                                     % (prepend_msg, self.errcode)
         assert not self.was_called, '%sAsynchronous callback has been called' % prepend_msg
 
 
@@ -649,17 +647,16 @@ def async_handler():
     return AsyncErrorHandlerList()
 
 
-
 class WSAdmin:
     """
     Handle Web Service administration for test and debug of the DRM Lib
     """
     def __init__(self, url, client_id, client_secret):
-        self._functions = WSListFunction( url, client_id, client_secret)
+        self._functions = WSListFunction(url, client_id, client_secret)
 
     def remove_product_information(self, library, name, user):
         self._functions._get_user_token()
-        data = {'library': library, 'name':name, 'user':user}
+        data = {'library': library, 'name': name, 'user': user}
         text, status = self._functions.remove_product_information(data)
         assert status == 200, text
 
@@ -672,5 +669,67 @@ class WSAdmin:
 def ws_admin(cred_json, conf_json):
     cred_json.set_user('admin')
     assert cred_json.user == 'admin'
-    return WSAdmin(conf_json['licensing']['url'],
-        cred_json['client_id'], cred_json['client_secret'])
+    return WSAdmin(conf_json['licensing']['url'], cred_json['client_id'],
+                   cred_json['client_secret'])
+
+
+class ExecFunction:
+    """
+    Provide test functions using directly C or C++ object
+    """
+    def __init__(self, slot_id, is_cpp, test_file_name, conf_path, cred_path):
+        self._conf_path = conf_path
+        self._cred_path = cred_path
+        self._is_cpp = is_cpp
+        self._slot_id = slot_id
+        self._test_func_path = join('@CMAKE_BINARY_DIR@', 'tests', test_file_name)
+        if not isfile(self._test_func_path):
+            pytest.skip("No executable '%s' found: test skipped" % self._test_func_path)
+        else:
+            self._cmd_line = '%s -s %d -f %s -d %s' % (self._test_func_path, self._slot_id,
+                                                       self._conf_path, self._cred_path)
+            if not self._is_cpp:
+                self._cmd_line += ' -c'
+        self.returncode = None
+        self.stdout = None
+        self.stderr = None
+        self.asyncmsg = None
+
+    def run(self, test_name=None):
+        from subprocess import run, PIPE
+        cmdline = self._cmd_line
+        if test_name is not None:
+            cmdline += ' -t %s' % test_name
+        print('cmdline=', cmdline)
+        result = run(cmdline, shell=True, stdout=PIPE, stderr=PIPE)
+        self.returncode = result.returncode
+        self.stdout = result.stdout.decode()
+        self.stderr = result.stderr.decode()
+        if self.stdout:
+            print(self.stdout)
+        if self.stderr:
+            print(self.stderr)
+        # Looking for asynchronous error
+        m = search(r'\bAsyncErrorMessage=(.*)', self.stderr)
+        if m:
+            self.asyncmsg = m.group(1)
+
+
+class ExecFunctionFactory:
+    """
+    Provide an object to load executable with test functions in C/C++
+    """
+    def __init__(self, conf_path, cred_path, is_cpp):
+        self._conf_path = conf_path
+        self._cred_path = cred_path
+        self._is_cpp = is_cpp
+
+    def load(self, test_file_name, slot_id):
+        return ExecFunction(slot_id, self._is_cpp, test_file_name, self._conf_path,
+                            self._cred_path)
+
+
+@pytest.fixture
+def exec_func(accelize_drm, cred_json, conf_json):
+    is_cpp = accelize_drm.pytest_backend == 'c++'
+    return ExecFunctionFactory(conf_json.path, cred_json.path, is_cpp)

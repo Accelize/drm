@@ -253,7 +253,7 @@ cdef class DrmManager:
             with nogil:
                 self._drm_manager.get(json_string)
         except RuntimeError as exception:
-            print('CAUGHT exception')
+            print('Caught exception')
             _handle_exceptions(exception)
 
         items = _loads(bytes(json_string).decode())

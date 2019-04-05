@@ -12,9 +12,6 @@ limitations under the License.
 """
 import json
 import requests
-import subprocess
-import hashlib
-import re
 
 
 class WSListFunction(object):
@@ -26,7 +23,8 @@ class WSListFunction(object):
         self.token = token
 
     def _get_user_token_raw(self):
-        r = requests.post(self.url + '/o/token/?grant_type=client_credentials', auth=(self.login, self.password),
+        r = requests.post(self.url + '/o/token/?grant_type=client_credentials',
+                          auth=(self.login, self.password),
                           headers={'Content-Type': 'application/json'})
         json_acceptable_string = r.content.decode("latin1").replace("'", "\"")
         try:
@@ -46,7 +44,7 @@ class WSListFunction(object):
         headers['Authorization'] = "Bearer " + str(self.token)
         headers['Content-Type'] = "application/json"
         r = requests.request(method, self.url + url, data=json.dumps(data), headers=headers)
-        ##json_acceptable_string = r.content.replace("'", "\"")
+#        json_acceptable_string = r.content.replace("'", "\"")
         try:
             text = json.loads(r.content)
         except:
@@ -64,49 +62,42 @@ class WSListFunction(object):
     def application_create(self, data):
         #    url(r'^auth/createapplication/', APIMetering.create_application),
 
-        response, status = self._authentifed_call("POST", "/auth/createapplication/",
-            data=data)
+        response, status = self._authentifed_call("POST", "/auth/createapplication/", data=data)
         return response, status
 
     def application_list(self, data):
         #        url(r'^auth/listapplication/', APIMetering.list_application),
-        response, status = self._authentifed_call("POST", "/auth/listapplication/",
-            data=data)
+        response, status = self._authentifed_call("POST", "/auth/listapplication/", data=data)
         return response, status
 
     def application_delete(self, data):
         #            url(r'^auth/deleteapplication/', APIMetering.delete_application),
-        response, status = self._authentifed_call("POST", "/auth/deleteapplication/",
-            data=data)
+        response, status = self._authentifed_call("POST", "/auth/deleteapplication/", data=data)
         return response, status
 
     def metering_information(self, data):
         #            url(r'^auth/meteringinformation/', APIMetering.user_metering),
-        response, status = self._authentifed_call("POST", "/auth/meteringinformation/",
-            data=data)
+        response, status = self._authentifed_call("POST", "/auth/meteringinformation/", data=data)
         return response, status
 
     def floatingallinformation(self, data):
         #            url(r'^auth/meteringinformation/', APIMetering.user_metering),
-        response, status = self._authentifed_call("POST", "/auth/floatingallinformation/",
-            data=data)
+        response, status = self._authentifed_call("POST", "/auth/floatingallinformation/", data=data)
         return response, status
 
     def vendorallinformation(self, data):
         #            url(r'^auth/vendorallinformation/', APIMetering.user_metering),
-        response, status = self._authentifed_call("POST", "/auth/vendorallinformation/",
-            data=data)
+        response, status = self._authentifed_call("POST", "/auth/vendorallinformation/", data=data)
         return response, status
+
     def vendorcheckinformation(self, data):
         #            url(r'^auth/vendorcheckinformation/', APIMetering.user_metering),
-        response, status = self._authentifed_call("POST", "/auth/vendorcheckinformation/",
-            data=data)
+        response, status = self._authentifed_call("POST", "/auth/vendorcheckinformation/", data=data)
         return response, status
 
     def nodelock_information(self, data):
         #            url(r'^auth/meteringinformation/', APIMetering.nodelockassociated),
-        response, status = self._authentifed_call("POST", "/auth/nodelockassociated/",
-            data=data)
+        response, status = self._authentifed_call("POST", "/auth/nodelockassociated/", data=data)
         return response, status
 
     def metering_get_license_timeout(self):
@@ -115,25 +106,21 @@ class WSListFunction(object):
 
     def metering_lastinformation(self, data):
         #                url(r'^auth/lastmeteringinformation/', APIMetering.last_metering),
-        response, status = self._authentifed_call("POST", "/auth/lastmeteringinformation/",
-            data=data)
+        response, status = self._authentifed_call("POST", "/auth/lastmeteringinformation/", data=data)
         return response, status
 
     def metering_getlicense(self, data):
         #                  url(r'^auth/metering/genlicense/', APIMetering.get_license ),
-        response, status = self._authentifed_call("POST", "/auth/metering/genlicense/",
-            data=data)
+        response, status = self._authentifed_call("POST", "/auth/metering/genlicense/", data=data)
         return response, status
 
     def metering_getlicense_random(self, data):
         #                  url(r'^auth/metering/genlicense/', APIMetering.get_license ),
-        response, status = self._authentifed_call("POST", "/auth/tests/genlicense/",
-            data=data)
+        response, status = self._authentifed_call("POST", "/auth/tests/genlicense/", data=data)
         return response, status
 
     def nodelock_getlicense(self, data):
-        response, status = self._authentifed_call("POST", "/auth/metering/genlicense/",
-            data=data)
+        response, status = self._authentifed_call("POST", "/auth/metering/genlicense/", data=data)
         return response, status
 
     def configuration_list(self):
