@@ -562,7 +562,7 @@ protected:
         Debug2( "Get metering data from session on DRM controller" );
 
         std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
-        if ( isLicenseActive() ) {
+        if ( (mLicenseType == LicenseType::NODE_LOCKED) || isLicenseActive() ) {
             checkDRMCtlrRet(getDrmController().asynchronousExtractMeteringFile(
                     numberOfDetectedIps, saasChallenge, meteringFile));
             std::string meteringDataStr = meteringFile[2].substr(16, 16);
