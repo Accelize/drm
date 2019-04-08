@@ -1019,8 +1019,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
 
     # Test parameter: key_count
     # Read-only, gives number of key elements
-    nb_keys = drm_manager.get(key_count)
-    assert nb_keys == len(_PARAM_LIST)
+    assert drm_manager.get('key_count') == len(_PARAM_LIST)
     async_cb.assert_NoError()
     print("Test parameter 'key_count': PASS")
 

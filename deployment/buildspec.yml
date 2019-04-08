@@ -78,7 +78,7 @@ phases:
         -p f1.4xlarge
         -n drm_debug_tests
         -z /dev/shm/drmlib_dev/.tox/debug/build/report artifacts/report.tar.gz
-        -r "cd /dev/shm/aws-fpga && source sdk_setup.sh && cd /dev/shm/drmlib_dev && 
+        -r "cd /dev/shm/aws-fpga && source sdk_setup.sh && cd /dev/shm/drmlib_dev &&
             sudo -E tox -p all -e build-debug,cpp-debug,c-debug,integration-debug,coverage-debug -- --cred=/dev/shm/cred.json --server=${WS_ENV}"
 
       # Build packages
