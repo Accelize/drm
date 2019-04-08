@@ -430,6 +430,40 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
     assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
     print('Test no DRM frequency in config file: PASS')
 
+    # Test when DRM frequency is a wrong type
+    conf_json.reset()
+    conf_json['drm']['frequency_mhz'] = 'this is wrong type'
+    conf_json.save()
+    with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
+        accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+    assert "Wrong parameter type for 'frequency_mhz' = " in str(excinfo.value)
+    err_code = async_handler.get_error_code(str(excinfo.value))
+    assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
+    print('Test DRM frequency is a wrong type: PASS')
+
+    # Test when settings is a wrong type
+    conf_json.reset()
+    conf_json['settings'] = 'this is wrong type'
+    conf_json.save()
+    with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
+        accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+    assert "Wrong parameter type for 'settings' = " in str(excinfo.value)
+    err_code = async_handler.get_error_code(str(excinfo.value))
+    assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
+    print('Test settings is a wrong type: PASS')
+
 
 def test_drm_manager_with_bad_credential_file(accelize_drm, conf_json, cred_json, async_handler):
 

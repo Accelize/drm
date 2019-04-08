@@ -1492,15 +1492,12 @@ public:
                         LicenseType lic_type;
                         bool is_nodelock = isDrmCtrlInNodelock();
                         bool is_metering = isDrmCtrlInMetering();
-                        std::string status;
-                        if ( is_metering && is_nodelock )
-                            Unreachable( "DRM is in multiple license mode" );
                         if ( is_metering )
                             lic_type = LicenseType::OTHERS;
                         else if ( is_nodelock )
                             lic_type = LicenseType::NODE_LOCKED;
                         auto it = LicenseTypeStringMap.find(lic_type);
-                        status = it->second;
+                        std::string status = it->second;
                         json_value[key_str] = status;
                         Debug( "Get value of parameter '", key_str,
                                "' (ID=", key_id, "): ", status );
