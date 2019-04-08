@@ -35,11 +35,11 @@ if __name__ == '__main__':
         args = parser.parse_args()
 
         from os import chdir
-        from os.path import dirname
+        from os.path import realpath, dirname
         from subprocess import run, PIPE
 
         run_args = dict(stdout=PIPE, stderr=PIPE, universal_newlines=True)
-        chdir(dirname(dirname(__file__)))
+        chdir(dirname(dirname(realpath(__file__))))
 
         # Force version format to start with "v"
         print(f'Checking version format...')
@@ -62,13 +62,13 @@ if __name__ == '__main__':
             print(
                 f'Version {version} does not match semantic versioning format: '
                 '"major.minor.path-prerelease" (https://semver.org/)')
-            parser.exit(1, 'Release cancelled')
+            parser.exit(1, 'Release cancelled\n')
 
         # Build metadata is automatically generated
         if '+' in base_version:
             print('Do not add build metadata (Value after "+"). '
                   'It is automatically generated.')
-            parser.exit(1, 'Release cancelled')
+            parser.exit(1, 'Release cancelled\n')
             return
 
         # Check prerelease on non master branch
@@ -80,7 +80,7 @@ if __name__ == '__main__':
         if branch != 'master' and '-' not in version:
             print('A non prerelease version must be released only on master '
                   'branch.')
-            parser.exit(1, 'Release cancelled')
+            parser.exit(1, 'Release cancelled\n')
             return
 
         # Check CMake file
@@ -92,14 +92,14 @@ if __name__ == '__main__':
                     break
             else:
                 print('ACCELIZEDRM_VERSION not found in CMakeLists.txt')
-                parser.exit(1, 'Release cancelled')
+                parser.exit(1, 'Release cancelled\n')
                 return
 
         if cpack_package_version != base_version:
             print('ACCELIZEDRM_VERSION in CMakeLists.txt does not match '
                   'release version (CPack package version: '
                   f'"{cpack_package_version}")')
-            parser.exit(1, 'Release cancelled')
+            parser.exit(1, 'Release cancelled\n')
             return
 
         # Check changelog (Not for prereleases)
@@ -112,7 +112,7 @@ if __name__ == '__main__':
                     version, last_change):
                 print('Version not found as last change in "CHANGELOG" file '
                       f'(Last change: "{last_change}")')
-                parser.exit(1, 'Release cancelled')
+                parser.exit(1, 'Release cancelled\n')
                 return
 
         # Checks if tag not already exists on origin or locally
@@ -136,7 +136,7 @@ if __name__ == '__main__':
 
                 # Cancel release
                 if answer == 'n':
-                    parser.exit(1, 'Release cancelled')
+                    parser.exit(1, 'Release cancelled\n')
                     return
 
             # Remove previously existing tag
@@ -159,6 +159,6 @@ if __name__ == '__main__':
             if not args.dry:
                 run(['git', 'push', '--tags'], **run_args).check_returncode()
 
-            parser.exit(message='Release successful')
+            parser.exit(message='Release successful\n')
 
     _release()
