@@ -7,7 +7,7 @@ Headers
 drmc.h
 ~~~~~~
 
-.. doxygenfile:: drmc/metering.h
+.. doxygenfile:: drmc/wrapper.h
    :project: accelize_drm
 
 drmc/errorcode.h

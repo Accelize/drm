@@ -31,7 +31,7 @@ limitations under the License.
 #include <stdint.h>
 
 
-#define MAX_MSG_SIZE 1024
+#define MAX_MSG_SIZE 2048
 
 
 /** \brief Struct handling DRM manager.

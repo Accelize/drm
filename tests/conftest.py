@@ -684,6 +684,7 @@ class ExecFunction:
         self._slot_id = slot_id
         self._test_func_path = join('@CMAKE_BINARY_DIR@', 'tests', test_file_name)
         if not isfile(self._test_func_path):
+            print("No executable '%s' found: test skipped" % self._test_func_path)
             pytest.skip("No executable '%s' found: test skipped" % self._test_func_path)
         else:
             self._cmd_line = '%s -s %d -f %s -d %s' % (self._test_func_path, self._slot_id,

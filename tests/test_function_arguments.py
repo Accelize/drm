@@ -128,8 +128,8 @@ def test_c_unittests(accelize_drm, exec_func):
     assert 'Asynchronous error callback function must not be NULL' in exec_lib.stdout
     assert exec_lib.asyncmsg is None
 
-    # Test various types of get function
-    exec_lib.run('test_types_of_get_function')
+    # Test various types of get and set functions
+    exec_lib.run('test_types_of_get_and_set_functions')
     assert exec_lib.returncode == 0
     assert exec_lib.asyncmsg is None
 

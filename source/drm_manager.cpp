@@ -184,7 +184,7 @@ protected:
         mFrequencyInit = 0;
         mFrequencyCurr = 0;
 
-        mDebugMessageLevel = eLogLevel::QUIET;
+        mDebugMessageLevel = eLogLevel::DEBUG2;
 
         mWSRetryDeadline = cWSRetryDeadline;
         mWSRetryPeriodLong = cWSRetryPeriodLong;

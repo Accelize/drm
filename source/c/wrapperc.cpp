@@ -35,26 +35,26 @@ void checkPointer(void *p) {
 }
 
 /* Help macros TRY/CATCH to return code error */
-#define TRY                           \
-    DRM_ErrorCode __try_ret = DRM_OK; \
-    if ( m != NULL ) \
+#define TRY                                        \
+    DRM_ErrorCode __try_ret = DRM_OK;              \
+    if ( m != NULL )                               \
         memset(m->error_message, 0, MAX_MSG_SIZE); \
     try {
 
 #define CATCH_RETURN                                                                  \
     } catch( const cpp::Exception& e ) {                                              \
         int cp_size = strlen( e.what() );                                             \
-        if ( cp_size > MAX_MSG_SIZE ) {                                               \
-            cp_size = MAX_MSG_SIZE - 5;                                               \
-            strcpy( m->error_message + MAX_MSG_SIZE-5, "[...]" );                     \
+        if ( cp_size >= MAX_MSG_SIZE ) {                                              \
+            cp_size = MAX_MSG_SIZE - 6;                                               \
+            strcpy( m->error_message + cp_size, "[...]" );                            \
         }                                                                             \
         strncpy( m->error_message, e.what(), cp_size );                               \
         __try_ret = e.getErrCode();                                                   \
     } catch( const std::exception& e ) {                                              \
         int cp_size = strlen( e.what() );                                             \
-        if ( cp_size > MAX_MSG_SIZE ) {                                               \
-            cp_size = MAX_MSG_SIZE - 5;                                               \
-            strcpy( m->error_message + MAX_MSG_SIZE-5, "[...]" );                     \
+        if ( cp_size >= MAX_MSG_SIZE ) {                                              \
+            cp_size = MAX_MSG_SIZE - 6;                                               \
+            strcpy( m->error_message + cp_size, "[...]" );                            \
         }                                                                             \
         strncpy( m->error_message, e.what(), cp_size );                               \
         if ( cpp::sLogVerbosity >= cpp::eLogLevel::ERROR )                            \
@@ -236,6 +236,13 @@ DRM_ErrorCode DrmManager_set_float( DrmManager *m, const DrmParameterKey key, co
     TRY
         checkPointer(m);
         m->drm->obj->set<float>((cpp::ParameterKey)key, value);
+    CATCH_RETURN
+}
+
+DRM_ErrorCode DrmManager_set_double( DrmManager *m, const DrmParameterKey key, const double value ) {
+    TRY
+        checkPointer(m);
+        m->drm->obj->set<double>((cpp::ParameterKey)key, value);
     CATCH_RETURN
 }
 

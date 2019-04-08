@@ -126,35 +126,23 @@ private:
         return ret;
     }
 
-/*#define IF_CPP \
-    try { \
-        if (mIsCpp) {
-
-#define ELSE_C \
-        } else { \
-            int ret;
-
-#define END_IF \
-            if (ret != DRM_ErrorCode::DRM_OK) \
-                throw(cpp::Exception( (DRM_ErrorCode)ret, string(pDrmManager_c->error_message) )); \
-        } \
-    } catch( const cpp::Exception& e) { \
-        throw; \
-    }
-*/
 #define IF_CPP \
-    if (mIsCpp) {
-
+    if (mIsCpp) { \
+        try {
 #define ELSE_C \
+        } catch( const std::exception& e ) { \
+            cout << "ERROR in " << __FUNCTION__ << ": " << e.what() << endl; \
+            throw; \
+        } \
     } else { \
         int ret;
 
 #define END_IF \
         if (ret != DRM_ErrorCode::DRM_OK) { \
+            cout << "ERROR in " << __FUNCTION__ << ": " << pDrmManager_c->error_message << endl; \
             throw(cpp::Exception( (DRM_ErrorCode)ret, string(pDrmManager_c->error_message) )); \
         } \
     }
-
 
 public:
 
@@ -222,6 +210,8 @@ public:
             ret = DrmManager_deactivate( pDrmManager_c, pause_session_request );
         END_IF
     }
+
+    // get function flavors
 
     bool get_bool( const uint32_t key ) {
         bool value;
@@ -315,6 +305,80 @@ public:
                 json_string = string(val_char);
                 delete val_char;
             }
+        END_IF
+    }
+
+    // set function flavors
+
+    void set_bool( const uint32_t key, const bool& value ) {
+        IF_CPP
+            pDrmManager->set<bool>( (cpp::ParameterKey)key, value );
+        ELSE_C
+            ret = DrmManager_set_bool( pDrmManager_c, (DrmParameterKey)key, value );
+        END_IF
+    }
+
+    void set_int( const uint32_t key, const int32_t& value ) {
+        IF_CPP
+            pDrmManager->set<int32_t>( (cpp::ParameterKey)key, value );
+        ELSE_C
+            ret = DrmManager_set_int( pDrmManager_c, (DrmParameterKey)key, value );
+        END_IF
+    }
+
+    void set_uint( const uint32_t key, const uint32_t& value ) {
+        IF_CPP
+            pDrmManager->set<int32_t>( (cpp::ParameterKey)key, value );
+        ELSE_C
+            ret = DrmManager_set_uint( pDrmManager_c, (DrmParameterKey)key, value );
+        END_IF
+    }
+
+    void set_int64( const uint32_t key, const int64_t& value ) {
+        IF_CPP
+            pDrmManager->set<int64_t>( (cpp::ParameterKey)key, value );
+        ELSE_C
+            ret = DrmManager_set_int64( pDrmManager_c, (DrmParameterKey)key, value );
+        END_IF
+    }
+
+    void set_uint64( const uint32_t key, const uint64_t& value ) {
+        IF_CPP
+            pDrmManager->set<uint64_t>( (cpp::ParameterKey)key, value );
+        ELSE_C
+            ret = DrmManager_set_uint64( pDrmManager_c, (DrmParameterKey)key, value );
+        END_IF
+    }
+
+    void set_float( const uint32_t key, const float& value ) {
+        IF_CPP
+            pDrmManager->set<float>( (cpp::ParameterKey)key, value );
+        ELSE_C
+            ret = DrmManager_set_float( pDrmManager_c, (DrmParameterKey)key, value );
+        END_IF
+    }
+
+    void set_double( const uint32_t key, const double& value ) {
+        IF_CPP
+            pDrmManager->set<double>( (cpp::ParameterKey)key, value );
+        ELSE_C
+            ret = DrmManager_set_double( pDrmManager_c, (DrmParameterKey)key, value );
+        END_IF
+    }
+
+    void set_string( const uint32_t key, const string& value ) {
+        IF_CPP
+            pDrmManager->set<string>( (cpp::ParameterKey)key, value );
+        ELSE_C
+            ret = DrmManager_set_string( pDrmManager_c, (DrmParameterKey)key, value.c_str() );
+        END_IF
+    }
+
+    void set_json_string( string& json_string ) {
+        IF_CPP
+            pDrmManager->set( json_string );
+        ELSE_C
+            ret = DrmManager_set_json_string( pDrmManager_c, json_string.c_str() );
         END_IF
     }
 };
@@ -424,44 +488,59 @@ int test_null_error_callback() {
 }
 
 #define CHECK_VALUE(val, exp_val) if (val != exp_val) { \
-    cout << __FUNCTION__ << ", bad value: got " << val << " but expect " << exp_val << endl; \
+    cout << __FUNCTION__ << ", " << __LINE__ << " - ERROR - bad value: got " << val << " but expect " << exp_val << endl; \
     return -1; }
 
 #define CHECK_STRING(str, exp_str) if (str.find(exp_str) == string::npos) { \
-    cout << __FUNCTION__ << ", bad message: '" << exp_str << "' not in:\n" << str << endl; \
+    cout << __FUNCTION__ << ", " << __LINE__ << " - ERROR - bad message: '" << exp_str << "' not in:\n" << str << endl; \
     return -1; }
 
 
-// Test different types of get function
-int test_types_of_get_function() {
+// Test different types of get  and set functions
+int test_types_of_get_and_set_functions() {
     int ret = -1;
     sDrm->create();
     try {
+        sDrm->set_bool(cpp::ParameterKey::custom_field, true);
+        bool b = sDrm->get_bool(cpp::ParameterKey::custom_field);
+        CHECK_VALUE(b, true)
 
-        bool b = sDrm->get_bool(cpp::ParameterKey::license_status);
-        CHECK_VALUE(b, false)
+        sDrm->set_int(cpp::ParameterKey::custom_field, 0x12345678);
+        int32_t i32 = sDrm->get_int(cpp::ParameterKey::custom_field);
+        CHECK_VALUE(i32, 0x12345678)
 
-        int32_t i32 = sDrm->get_int(cpp::ParameterKey::key_count);
-        uint32_t ui32 = sDrm->get_uint(cpp::ParameterKey::key_count);
-        CHECK_VALUE(ui32, (uint32_t)i32)
+        sDrm->set_uint(cpp::ParameterKey::custom_field, 0x12345678);
+        uint32_t ui32 = sDrm->get_uint(cpp::ParameterKey::custom_field);
+        CHECK_VALUE(ui32, 0x12345678)
 
-        int64_t i64 = sDrm->get_int64(cpp::ParameterKey::key_count);
-        CHECK_VALUE(i64, (int64_t)i32)
+        sDrm->set_int64(cpp::ParameterKey::custom_field, 0x87654321);
+        int64_t i64 = sDrm->get_int64(cpp::ParameterKey::custom_field);
+        CHECK_VALUE(i64, 0x87654321)
 
-        uint64_t ui64 = sDrm->get_uint64(cpp::ParameterKey::key_count);
-        CHECK_VALUE(ui64, (uint64_t)i32)
+        sDrm->set_uint64(cpp::ParameterKey::custom_field, 0x87654321);
+        uint64_t ui64 = sDrm->get_uint64(cpp::ParameterKey::custom_field);
+        CHECK_VALUE(ui64, 0x87654321)
 
         float f = sDrm->get_float(cpp::ParameterKey::frequency_detection_threshold);
+        sDrm->set_float(cpp::ParameterKey::frequency_detection_threshold, f);
+        float fb = sDrm->get_float(cpp::ParameterKey::frequency_detection_threshold);
+        CHECK_VALUE(fb, f)
 
-        double d = sDrm->get_double(cpp::ParameterKey::frequency_detection_threshold);
-        CHECK_VALUE(d, (double)f)
+        double d = (double)f;
+        sDrm->set_double(cpp::ParameterKey::frequency_detection_threshold, d);
+        double db = sDrm->get_double(cpp::ParameterKey::frequency_detection_threshold);
+        CHECK_VALUE(db, d)
 
+        sDrm->set_string(cpp::ParameterKey::log_message, "My test string");
         string s = sDrm->get_string(cpp::ParameterKey::license_type);
         CHECK_STRING(s, "Floating/Metering")
 
-        string js = "{\"list_all\":0}";
-        sDrm->get_json_string(js);
-        CHECK_STRING(js, "dump_all")
+        string js = "{\"custom_field\":12345678}";
+        sDrm->set_json_string(js);
+        string jsb = "{\"custom_field\":0}";
+        sDrm->get_json_string(jsb);
+        CHECK_STRING(jsb, "custom_field")
+        CHECK_STRING(jsb, "12345678")
 
         ret = 0;
     } catch( const cpp::Exception& e ) {
@@ -484,7 +563,7 @@ int test_get_function_out_of_range() {
     return ret;
 }
 
-// Test json string with bad format
+// Test json string with bad format on get function
 int test_get_json_string_with_bad_format() {
     int ret = -1;
     sDrm->create();
@@ -499,13 +578,56 @@ int test_get_json_string_with_bad_format() {
     return ret;
 }
 
-// Test json string with empty string
+// Test json string with empty string on get function
 int test_get_json_string_with_empty_string() {
     int ret = -1;
     sDrm->create();
     try {
         string js = "";
         sDrm->get_json_string(js);
+        ret = 0;
+    } catch( const cpp::Exception& e ) {
+        ret = e.getErrCode();
+    }
+    sDrm->destroy();
+    return ret;
+}
+
+// Test out_of_range on set function
+int test_set_function_out_of_range() {
+    int ret = -1;
+    sDrm->create();
+    try {
+        sDrm->set_int(cpp::ParameterKey::key_count+1, 1);
+    } catch( const cpp::Exception& e ) {
+        ret = e.getErrCode();
+    }
+    sDrm->destroy();
+    return ret;
+}
+
+// Test json string with bad format on set function
+int test_set_json_string_with_bad_format() {
+    int ret = -1;
+    sDrm->create();
+    try {
+        string js = "{\"list_all\":0";
+        sDrm->set_json_string(js);
+        ret = 0;
+    } catch( const cpp::Exception& e ) {
+        ret = e.getErrCode();
+    }
+    sDrm->destroy();
+    return ret;
+}
+
+// Test json string with empty string on set function
+int test_set_json_string_with_empty_string() {
+    int ret = -1;
+    sDrm->create();
+    try {
+        string js = "";
+        sDrm->set_json_string(js);
         ret = 0;
     } catch( const cpp::Exception& e ) {
         ret = e.getErrCode();
@@ -596,8 +718,8 @@ int main(int argc, char **argv) {
         if (test_name == "test_null_error_callback")
             ret = test_null_error_callback();
 
-        if (test_name == "test_types_of_get_function")
-            ret = test_types_of_get_function();
+        if (test_name == "test_types_of_get_and_set_functions")
+            ret = test_types_of_get_and_set_functions();
 
         if (test_name == "test_get_function_out_of_range")
             ret = test_get_function_out_of_range();
@@ -608,6 +730,14 @@ int main(int argc, char **argv) {
         if (test_name == "test_get_json_string_with_empty_string")
             ret = test_get_json_string_with_empty_string();
 
+        if (test_name == "test_set_function_out_of_range")
+            ret = test_set_function_out_of_range();
+
+        if (test_name == "test_set_json_string_with_bad_format")
+            ret = test_set_json_string_with_bad_format();
+
+        if (test_name == "test_set_json_string_with_empty_string")
+            ret = test_set_json_string_with_empty_string();
 
     } catch( const cpp::Exception& e) {
         cerr << "Unexpected error: " << e.what() << endl;
