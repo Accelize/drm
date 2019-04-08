@@ -866,7 +866,6 @@ protected:
             }
 
             // Extract license and license timer from web service response
-
             licenseKey = JVgetRequired( dna_node, "key", Json::stringValue ).asString();
             if ( mLicenseType != LicenseType::NODE_LOCKED ) {
                 licenseTimer = JVgetRequired( dna_node, "licenseTimer", Json::stringValue ).asString();
@@ -1253,7 +1252,7 @@ protected:
         std::map<ParameterKey, std::string>::const_iterator it;
         it = mParameterKeyMap.find(key_id);
         if ( it == mParameterKeyMap.end() )
-            Throw(DRM_BadArg, "Cannot find parameter with id: ", key_id);
+            Throw(DRM_BadArg, "Cannot find parameter with ID: ", key_id);
         return it->second;
     }
 
@@ -1614,8 +1613,8 @@ public:
                                 "' (ID=", key_id, "): ", list.toStyledString() );
                         break;
                     }
-                    case ParameterKey::key_count: {
-                        uint32_t count = static_cast<int>(key_count);
+                    case ParameterKey::ParameterKeyCount: {
+                        uint32_t count = static_cast<int>(ParameterKeyCount);
                         json_value[key_str] = count;
                         Debug( "Get value of parameter '", key_str,
                                "' (ID=", key_id, "): ", count );

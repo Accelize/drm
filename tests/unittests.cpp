@@ -555,7 +555,7 @@ int test_get_function_out_of_range() {
     int ret = -1;
     sDrm->create();
     try {
-        sDrm->get_int(cpp::ParameterKey::key_count+1);
+        sDrm->get_int(cpp::ParameterKey::ParameterKeyCount+1);
     } catch( const cpp::Exception& e ) {
         ret = e.getErrCode();
     }
@@ -598,7 +598,7 @@ int test_set_function_out_of_range() {
     int ret = -1;
     sDrm->create();
     try {
-        sDrm->set_int(cpp::ParameterKey::key_count+1, 1);
+        sDrm->set_int(cpp::ParameterKey::ParameterKeyCount+1, 1);
     } catch( const cpp::Exception& e ) {
         ret = e.getErrCode();
     }

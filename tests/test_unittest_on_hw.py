@@ -48,8 +48,7 @@ _PARAM_LIST = ['license_type',
                'trigger_async_callback',
                'bad_product_id',
                'bad_oauth2_token',
-               'log_message',
-               'key_count']
+               'log_message']
 
 
 def ordered_json(obj):
@@ -980,6 +979,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     assert async_cb.errcode == accelize_drm.exceptions.DRMDebug.error_code, \
         'Asynchronous callback has not received the correct error code'
     drm_manager.deactivate()
+    async_cb.reset()
     print("Test parameter 'trigger_async_callback': PASS")
 
     # Test parameter: bad_product_id
@@ -1017,11 +1017,11 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
 #    assert_NoErrorCallback(async_cb)
 #    print("Test parameter 'log_message': PASS")
 
-    # Test parameter: key_count
+    # Test parameter: ParameterKeyCount
     # Read-only, gives number of key elements
-    assert drm_manager.get('key_count') == len(_PARAM_LIST)
+    assert drm_manager.get('ParameterKeyCount') == len(_PARAM_LIST)
     async_cb.assert_NoError()
-    print("Test parameter 'key_count': PASS")
+    print("Test parameter 'ParameterKeyCount': PASS")
 
 
 #@pytest.mark.skip(reason='Logging to file is not yet implemented')

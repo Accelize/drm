@@ -38,4 +38,3 @@ PARAMETERKEY_ITEM( trigger_async_callback )         ///< Write-only, only for te
 PARAMETERKEY_ITEM( bad_product_id )                 ///< Write-only, only for testing, uses a bad product ID
 PARAMETERKEY_ITEM( bad_oauth2_token )               ///< Write-only, only for testing, uses a bad token
 PARAMETERKEY_ITEM( log_message )                    ///< Write-only, only for testing, insert a message with the value as content
-PARAMETERKEY_ITEM( key_count )                      ///< Read-only, gives number of elements

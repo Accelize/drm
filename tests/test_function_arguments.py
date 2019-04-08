@@ -305,7 +305,25 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
     assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
     print('Test in node-locked when no license_dir is in config file: PASS')
 
-    # In nodelocked, test when license_dir in configuration file is not existing
+    # In nodelocked, test when license_dir is empty
+    conf_json.reset()
+    conf_json['licensing']['nodelocked'] = True
+    conf_json['licensing']['license_dir'] = ''
+    conf_json.save()
+    with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
+        accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+    assert "Value of parameter 'license_dir' is an empty string" in str(excinfo.value)
+    err_code = async_handler.get_error_code(str(excinfo.value))
+    assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
+    print('Test in node-locked when license_dir is empty: PASS')
+
+    # In nodelocked, test when license_dir in configuration file is not existing in file-system
     conf_json.reset()
     conf_json['licensing']['nodelocked'] = True
     conf_json['licensing']['license_dir'] = 'nodelocked_licenses'
