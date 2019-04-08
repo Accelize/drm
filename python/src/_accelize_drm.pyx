@@ -43,10 +43,7 @@ def _get_api_version():
     Returns:
         bytes: C++ library version
     """
-    try:
-        return getApiVersion()
-    except RuntimeError as exception:
-        _handle_exceptions(exception)
+    return getApiVersion()
 
 
 cdef class DrmManager:

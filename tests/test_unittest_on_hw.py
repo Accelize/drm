@@ -1017,6 +1017,13 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
 #    assert_NoErrorCallback(async_cb)
 #    print("Test parameter 'log_message': PASS")
 
+    # Test parameter: key_count
+    # Read-only, gives number of key elements
+    nb_keys = drm_manager.get(key_count)
+    assert nb_keys == len(_PARAM_LIST)
+    async_cb.assert_NoError()
+    print("Test parameter 'key_count': PASS")
+
 
 #@pytest.mark.skip(reason='Logging to file is not yet implemented')
 def test_logging(accelize_drm, conf_json, cred_json, async_handler):

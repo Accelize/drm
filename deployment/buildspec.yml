@@ -71,7 +71,7 @@ phases:
         --if git_file_changed='(?!test/utils/|doc/|LICENSE|README\\.md|\\.gitgnore)'
         --if git_branch=master,dev
         run
-        drmlib_dev=$CODEBUILD_SOURCE_VERSION drmlib_build_deps
+        drmlib_dev="${CODEBUILD_GIT_BRANCH}:${CODEBUILD_SOURCE_VERSION}" drmlib_build_deps
         drmlib_unittests_deps drmlib_cred_json drmlib_codecov_token
         aws_fpga_sdk
         --shutdown_after 30
@@ -105,7 +105,7 @@ phases:
         --if file_exists=artifacts/packages.tar.gz
         run
         docker
-        drmlib_dev=dev drmlib_cred_json
+        drmlib_dev=$CODEBUILD_SOURCE_VERSION drmlib_cred_json
         --shutdown_after 240
         -s ubuntu
         -p f1.4xlarge
