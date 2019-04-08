@@ -883,8 +883,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     val_init = drm_manager.get('custom_field')
     assert val_exp != val_init
     drm_manager.set(custom_field=val_exp)
-    val_back = drm_manager.get('custom_field')
-    assert val_exp == val_back
+    assert drm_manager.get('custom_field') == val_exp
     print("Test parameter 'custom_field': PASS")
 
 # NEED LGDN TO FIX THE ISSUE
@@ -906,8 +905,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     orig_retry_deadline = drm_manager.get('ws_retry_deadline')  # Save original value
     exp_value = orig_retry_deadline + 100
     drm_manager.set(ws_retry_deadline=exp_value)
-    value = drm_manager.get('ws_retry_deadline')
-    assert value == exp_value
+    assert drm_manager.get('ws_retry_deadline') == exp_value
     drm_manager.set(ws_retry_deadline=orig_retry_deadline)  # Restore original value
     async_cb.assert_NoError(async_cb.assert_NoError)
     print("Test parameter 'ws_retry_deadline': PASS")
@@ -924,8 +922,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
     exp_value = orig_retry_period_long + 1
     drm_manager.set(ws_retry_period_long=exp_value)
-    value = drm_manager.get('ws_retry_period_long')
-    assert value == exp_value
+    assert drm_manager.get('ws_retry_period_long') == exp_value
     drm_manager.set(ws_retry_period_long=orig_retry_period_long)  # Restore original value
     async_cb.assert_NoError(async_cb.assert_NoError)
     print("Test parameter 'ws_retry_period_long': PASS")
@@ -942,8 +939,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
     exp_value = orig_retry_period_short + 1
     drm_manager.set(ws_retry_period_short=exp_value)
-    value = drm_manager.get('ws_retry_period_short')
-    assert value == exp_value
+    assert drm_manager.get('ws_retry_period_short') == exp_value
     drm_manager.set(ws_retry_period_short=orig_retry_period_short)  # Restore original value
     async_cb.assert_NoError(async_cb.assert_NoError)
     print("Test parameter 'ws_retry_period_short': PASS")
@@ -958,8 +954,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
     exp_value = orig_response_timeout + 100
     drm_manager.set(ws_request_timeout=exp_value)
-    value = drm_manager.get('ws_request_timeout')
-    assert value == exp_value
+    assert drm_manager.get('ws_request_timeout') == exp_value
     drm_manager.set(ws_request_timeout=orig_response_timeout)  # Restore original value
     async_cb.assert_NoError(async_cb.assert_NoError)
     print("Test parameter 'ws_request_timeout': PASS")
@@ -968,11 +963,9 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     # Read-write, only for testing, read and write the log level used with log_message parameter
     # to set the message level
     level = drm_manager.get('log_message_level')
-    assert level == 0
-    exp_level = 5
+    exp_level = 5 if level!=5 else 4
     drm_manager.set(log_message_level=exp_level)
-    level = drm_manager.get('log_message_level')
-    assert level == exp_level
+    assert drm_manager.get('log_message_level') == exp_level
     async_cb.assert_NoError()
     print("Test parameter 'log_message_level': PASS")
 
