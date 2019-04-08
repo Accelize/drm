@@ -43,7 +43,7 @@ phases:
         export CODEBUILD_GIT_BRANCH=${CODEBUILD_GIT_BRANCH#remotes/origin/}
       - echo "CODEBUILD_GIT_BRANCH= ${CODEBUILD_GIT_BRANCH}"
       - |
-        if [ "${CODEBUILD_GIT_BRANCH}" == "master" ]; then
+        if [[ "$CODEBUILD_GIT_BRANCH" == "master" ]]; then
           export WS_ENV="prod"
         else
           export WS_ENV="dev"

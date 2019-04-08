@@ -684,13 +684,11 @@ class ExecFunction:
         self._slot_id = slot_id
         self._test_func_path = join('@CMAKE_BINARY_DIR@', 'tests', test_file_name)
         if not isfile(self._test_func_path):
-            print("No executable '%s' found: test skipped" % self._test_func_path)
-            pytest.skip("No executable '%s' found: test skipped" % self._test_func_path)
-        else:
-            self._cmd_line = '%s -s %d -f %s -d %s' % (self._test_func_path, self._slot_id,
-                                                       self._conf_path, self._cred_path)
-            if not self._is_cpp:
-                self._cmd_line += ' -c'
+            raise IOError("No executable '%s' found" % self._test_func_path)
+        self._cmd_line = '%s -s %d -f %s -d %s' % (self._test_func_path, self._slot_id,
+                                                   self._conf_path, self._cred_path)
+        if not self._is_cpp:
+            self._cmd_line += ' -c'
         self.returncode = None
         self.stdout = None
         self.stderr = None
@@ -732,5 +730,8 @@ class ExecFunctionFactory:
 
 @pytest.fixture
 def exec_func(accelize_drm, cred_json, conf_json):
-    is_cpp = accelize_drm.pytest_backend == 'c++'
-    return ExecFunctionFactory(conf_json.path, cred_json.path, is_cpp)
+    if 'release' in accelize_drm.pytest_build_type:
+        pytest.skip("No executable '%s' found: test skipped" % self._test_func_path)
+    else:
+        is_cpp = accelize_drm.pytest_backend == 'c++'
+        return ExecFunctionFactory(conf_json.path, cred_json.path, is_cpp)

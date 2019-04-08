@@ -519,9 +519,9 @@ if(TESTS)
     configure_file(${CMAKE_BINARY_DIR}/tests/conftest.py ${CMAKE_BINARY_DIR}/tests/conftest.py)
 
     # Compile unittest.cpp application
-    if ( NOT DEFINED ENV{SDK_DIR} )
-        message( WARNING "SDK_DIR environment variable is not defined: "
-                "Cannot compile with AWS FPGA Management driver." )
+    if ( NOT DEFINED ENV{SDK_DIR} AND (${CMAKE_BUILD_TYPE} STREQUAL "Debug") )
+        message( SEND_ERROR "SDK_DIR environment variable is not defined: "
+                "Cannot compile tests with AWS FPGA Management driver." )
     else()
         find_path(FPGAMGMTLIB_INCLUDE_DIRS
                 NAMES fpga_mgmt.h
