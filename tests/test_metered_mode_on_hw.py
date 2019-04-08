@@ -191,8 +191,7 @@ def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, asy
         assert drm_manager.get('session_id') == session_id
         assert activators.is_activated()
         # Wait right before license expiration
-        nb_lic_expired = int((datetime.now() - start).total_seconds() / lic_duration)
-        wait_period = start + timedelta(seconds=(nb_lic_expired+2)*lic_duration-2) - datetime.now()
+        wait_period = start + timedelta(seconds=2*lic_duration-2) - datetime.now()
         sleep(wait_period.total_seconds())
         assert drm_manager.get('session_status')
         assert drm_manager.get('license_status')
@@ -363,8 +362,7 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         activators[0].generate_coin(new_coins)
         assert drm_manager.get('metered_data') == new_coins
         # Wait right before expiration
-        nb_lic_expired = int((datetime.now() - start).total_seconds() / lic_duration)
-        wait_period = start + timedelta(seconds=(nb_lic_expired+3)*lic_duration-3) - datetime.now()
+        wait_period = start + timedelta(seconds=3*lic_duration-3) - datetime.now()
         sleep(wait_period.total_seconds())
         assert drm_manager.get('license_status')
         assert activators.is_activated()
