@@ -42,10 +42,10 @@ phases:
       - CODEBUILD_GIT_BRANCH="$(git branch -a --contains $CODEBUILD_SOURCE_VERSION | sed -n 2p | awk '{ printf $1 }')";
         export CODEBUILD_GIT_BRANCH=${CODEBUILD_GIT_BRANCH#remotes/origin/}
       - echo "CODEBUILD_GIT_BRANCH=${CODEBUILD_GIT_BRANCH}"
-      - if [ "${CODEBUILD_GIT_BRANCH}" == "master" ]; then
-          export WS_ENV="prod"
-        else
-          export WS_ENV="dev"
+      - if [ "${CODEBUILD_GIT_BRANCH}" == "master" ]; then \
+          export WS_ENV="prod" \
+        else \
+          export WS_ENV="dev" \
         fi
       - echo "WS_ENV=${WS_ENV}"
 
