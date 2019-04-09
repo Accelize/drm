@@ -40,7 +40,7 @@ set(CPACK_DESCRIPTION_SUMMARY "Accelize DRM C and C++ Library")
 set(CPACK_COMPONENT_DEV_DESCRIPTION "${CPACK_DESCRIPTION_SUMMARY}, headers files.")
 set(CPACK_COMPONENT_PYTHON3_DESCRIPTION "Accelize DRM Python Library")
 set(CMAKE_PROJECT_HOMEPAGE_URL https://github.com/Accelize/drmlib)
-set(PROJECT_DOCUMENTATION_URL https://accelize.s3.amazonaws.com/documentation/stable)
+set(PROJECT_DOCUMENTATION_URL http://accelize.s3-website-eu-west-1.amazonaws.com/documentation/stable)
 set(ACCELIZE_HOMEPAGE https://www.accelize.com)
 set(ACCELIZE_EMAIL info@accelize.com)
 
