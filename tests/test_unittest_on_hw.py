@@ -495,7 +495,8 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
         )
     assert search(r'ws_retry_period_long .+ must be greater than ws_retry_period_short .+',
                   str(excinfo.value)) is not None
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+    err_code = async_handler.get_error_code(str(excinfo.value))
+    assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
     async_cb.assert_NoError()
 
     async_cb.reset()
@@ -533,7 +534,8 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
         )
     assert search(r'ws_retry_period_long .+ must be greater than ws_retry_period_short .+',
                   str(excinfo.value)) is not None
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+    err_code = async_handler.get_error_code(str(excinfo.value))
+    assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
     async_cb.assert_NoError()
 
     async_cb.reset()
@@ -569,7 +571,8 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
             async_cb.callback
         )
     assert "ws_request_timeout must not be 0" in str(excinfo.value)
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+    err_code = async_handler.get_error_code(str(excinfo.value))
+    assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
 
     async_cb.reset()
     conf_json.reset()
@@ -918,7 +921,8 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         drm_manager.set(ws_retry_period_long=orig_retry_period_short)
     assert search(r'ws_retry_period_long .+ must be greater than ws_retry_period_short .+',
                   str(excinfo.value)) is not None
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+    err_code = async_handler.get_error_code(str(excinfo.value))
+    assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
     exp_value = orig_retry_period_long + 1
     drm_manager.set(ws_retry_period_long=exp_value)
     assert drm_manager.get('ws_retry_period_long') == exp_value
@@ -935,7 +939,8 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         drm_manager.set(ws_retry_period_short=orig_retry_period_long)
     assert search(r'ws_retry_period_long .+ must be greater than ws_retry_period_short .+',
                   str(excinfo.value)) is not None
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+    err_code = async_handler.get_error_code(str(excinfo.value))
+    assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
     exp_value = orig_retry_period_short + 1
     drm_manager.set(ws_retry_period_short=exp_value)
     assert drm_manager.get('ws_retry_period_short') == exp_value
@@ -950,7 +955,8 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         drm_manager.set(ws_request_timeout=0)
     assert "ws_request_timeout must not be 0" in str(excinfo.value)
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+    err_code = async_handler.get_error_code(str(excinfo.value))
+    assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
     exp_value = orig_response_timeout + 100
     drm_manager.set(ws_request_timeout=exp_value)
     assert drm_manager.get('ws_request_timeout') == exp_value
@@ -1399,31 +1405,12 @@ def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_jso
         'Unexpected error code reported by asynchronous callback'
     print('Test frequency mismatch > threshold: PASS')
 
-#    # Test web service detects a frequency underflow
-#    async_cb.reset()
-#    conf_json.reset()
-#    conf_json['drm']['frequency_mhz'] = 10
-#    conf_json.save()
-#    assert conf_json['drm']['frequency_mhz'] == 10
-#
-#    drm_manager = accelize_drm.DrmManager(
-#        conf_json.path,
-#        cred_json.path,
-#        driver.read_register_callback,
-#        driver.write_register_callback
-#    )
-#    with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
-#        drm_manager.activate()
-#    assert '???' in str(excinfo.value)
-#    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
-#    print('Test frequency underflow: PASS')
-
-    # Test web service detects a frequency overflow
+    # Test web service detects a frequency underflow
     async_cb.reset()
     conf_json.reset()
-    conf_json['drm']['frequency_mhz'] = 1000
+    conf_json['drm']['frequency_mhz'] = 40
     conf_json.save()
-    assert conf_json['drm']['frequency_mhz'] == 1000
+    assert conf_json['drm']['frequency_mhz'] == 40
 
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
@@ -1433,11 +1420,61 @@ def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_jso
     )
     with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
         drm_manager.activate()
-    print('msg=', str(excinfo.value))
     assert search(r'HTTP response code from License Web Service: 400 .*Ensure this value '
-                  r'is less than or equal to 250', str(excinfo.value)) is not None
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+                  r'is greater than or equal to ', str(excinfo.value)) is not None
+    err_code = async_handler.get_error_code(str(excinfo.value))
+    assert err_code == accelize_drm.exceptions.DRMWSReqError.error_code
+    print('Test frequency underflow: PASS')
+
+    # Test web service detects a frequency overflow
+    async_cb.reset()
+    conf_json.reset()
+    conf_json['drm']['frequency_mhz'] = 400
+    conf_json.save()
+    assert conf_json['drm']['frequency_mhz'] == 400
+
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback
+    )
+    with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+        drm_manager.activate()
+    assert search(r'HTTP response code from License Web Service: 400 .*Ensure this value '
+                  r'is less than or equal to ', str(excinfo.value)) is not None
+    err_code = async_handler.get_error_code(str(excinfo.value))
+    assert err_code == accelize_drm.exceptions.DRMWSReqError.error_code
     print('Test frequency overflow: PASS')
+
+
+def test_mailbox_write_overflow(accelize_drm, conf_json, cred_json, async_handler):
+    from random import sample
+
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+
+    # Test with a null crendential file
+    async_cb.reset()
+    cred_json.reset()
+    conf_json.reset()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    mb_size = drm_manager.get('mailbox_size')
+    assert mb_size > 0
+
+    mb_data = sample(range(0xFFFFFFFF), mb_size + 1)
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+        drm_manager.set(mailbox_data=mb_data)
+    assert 'Trying to write out of Mailbox memory space' in str(excinfo.value)
+    err_code = async_handler.get_error_code(str(excinfo.value))
+    assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
+    async_cb.assert_NoError()
 
 
 def test_configuration_file_bad_product_id(accelize_drm, conf_json, cred_json, async_handler):

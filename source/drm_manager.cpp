@@ -302,7 +302,7 @@ protected:
         if ( (uint32_t)index >= rwData.size() )
             Throw( DRM_BadArg, "Index ", index, " overflows the Mailbox memory: max index is ", rwData.size()-1 );
         if ( index + nb_elements > rwData.size() )
-            Throw( DRM_BadArg, "Trying to write over Mailbox memory: ", rwData.size() );
+            Throw( DRM_BadArg, "Trying to read out of Mailbox memory space: ", rwData.size() );
 
         auto first = rwData.cbegin() + index;
         auto last = rwData.cbegin() + index + nb_elements;
@@ -338,7 +338,7 @@ protected:
         if ( index >= rwData.size() )
             Throw( DRM_BadArg, "Index ", index, " overflows the Mailbox memory: max index is ", rwData.size()-1 );
         if ( index + value_vec.size() > rwData.size() )
-            Throw( DRM_BadArg, "Trying to write over Mailbox memory: ", rwData.size() );
+            Throw( DRM_BadArg, "Trying to write out of Mailbox memory space: ", rwData.size() );
         std::copy( std::begin(value_vec), std::end(value_vec), std::begin(rwData) + index );
         checkDRMCtlrRet( getDrmController().writeMailboxFileRegister( rwData, rwSize ) );
         Debug( "Wrote ", value_vec.size(), " elements in Mailbox from index ", index );
@@ -388,7 +388,7 @@ protected:
 
     void checkDRMCtlrRet( const unsigned int& errcode) const {
         if ( errcode )
-            Throw(DRM_CtlrError, "Error in DRMCtlrLib function call : ", errcode);
+            Throw(DRM_CtlrError, "Error in DRM Controller Library call: ", errcode);
     }
 
     void lockDrmToInstance() {
