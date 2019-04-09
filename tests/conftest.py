@@ -37,6 +37,7 @@ def get_default_conf_json(licensing_server_url):
     return {
         "licensing": {
             "url": url,
+            "nodelocked": False
         },
         "drm": {
             "frequency_mhz": 125
@@ -277,6 +278,8 @@ def accelize_drm(pytestconfig):
     hdk_version = pytestconfig.getoption("hdk_version")
 
     build_source_dir = '@CMAKE_CURRENT_SOURCE_DIR@'
+    if build_source_dir.startswith('@'):
+        build_source_dir = realpath('.')
 
     ref_designs = RefDesign(join(build_source_dir, 'tests', 'refdesigns', fpga_driver_name))
 
