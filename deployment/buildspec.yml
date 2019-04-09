@@ -115,6 +115,7 @@ phases:
         -x OS debian_stretch
         -x OS debian_testing
         -x OS fedora_latest
+        -x SERVER $WS_ENV
         -r 'cd /dev/shm &&
             sudo docker run --privileged
             -e PACKAGES_DIR=/opt/packages/~{OS}~
@@ -123,7 +124,7 @@ phases:
             bash -c "cd /opt/drmlib_dev &&
                      tox --workdir=/tmp
                      -e package-install,c-install,cpp-install
-                     -p all -- -m minimum --cred=/opt/cred.json --server=${WS_ENV}"'
+                     -p all -- -m minimum --cred=/opt/cred.json --server=~{SERVER}~"'
 
       # Upload packages to repository
       - xlz
