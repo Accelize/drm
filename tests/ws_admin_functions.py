@@ -208,5 +208,5 @@ class WSListFunction(object):
             urlsuffix = urlsuffix+"?from=drmportalpreview.accelize.com"
         else:
             urlsuffix = urlsuffix+"&from=drmportalpreview.accelize.com"
-        response, status = self._authentifed_call(method, f"/auth/objects/{api_object}/{urlsuffix}", data=data)
+        response, status = self._authentifed_call(method, "/auth/objects/%s/%s" % (api_object, urlsuffix), data=data)
         return response, status
