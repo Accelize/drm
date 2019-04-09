@@ -66,9 +66,9 @@ phases:
         drmlib_publish_doc=artifacts/doc.tar.gz
         -v
 
-      # Run Debug tests
+      # Run tests
       - xlz -v
-        --if git_file_changed='(?!test/utils/|doc/|LICENSE|README\\.md|\\.gitgnore)'
+        --if git_file_changed='(?!tests/utils/|doc/|LICENSE|README\\.md|\\.gitgnore)'
         --if git_branch=master,dev
         run
         drmlib_dev="${CODEBUILD_GIT_BRANCH}:${CODEBUILD_SOURCE_VERSION}" drmlib_build_deps
