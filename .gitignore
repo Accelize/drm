@@ -6,11 +6,15 @@
 
 # Build generated files
 docs/_build/
-build*/
+deployment/packages/*
+build_*/
 build/
 dist/
 .eggs/
 *.egg-info/
+*.key
+*.lock
+artifacts/
 
 # Python compiled files
 __pycache__/

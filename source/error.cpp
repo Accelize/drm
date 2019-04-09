@@ -19,16 +19,16 @@ limitations under the License.
 #include "accelize/drm/error.h"
 
 namespace Accelize {
-namespace DRMLib {
+namespace DRM {
 
-DRMLibErrorCode Exception::getErrCode() const {
+DRM_ErrorCode Exception::getErrCode() const {
     return errCode;
 }
 
 const char* Exception::what() const noexcept {
     std::stringstream ss;
+    ss << "[errCode=" << static_cast<unsigned int>(getErrCode()) << "] ";
     ss << std::runtime_error::what();
-    ss << " [errCode=" << static_cast<unsigned int>(getErrCode()) << "]";
     errWhat = ss.str();
     return errWhat.c_str();
 }

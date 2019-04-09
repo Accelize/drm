@@ -1,0 +1,139 @@
+# AWS CodeBuild
+version: 0.2
+
+env:
+  parameter-store:
+    # Toolbox: Retrieve encryption key
+    XLZCRYPT_KEY: "xlzcrypt_key"
+
+phases:
+  install:
+    commands:
+      # Avoid loosing connection with docker
+      - sudo apt update
+      - sudo apt install -y procps
+      - sudo /sbin/sysctl -w net.ipv4.tcp_keepalive_time=200 net.ipv4.tcp_keepalive_intvl=200 net.ipv4.tcp_keepalive_probes=5
+
+      # Toolbox: Initialize
+      - sudo $CODEBUILD_SRC_DIR_toolbox/install.py
+
+      # Artifacts output directory
+      - mkdir artifacts
+
+      # Save environment as artifact
+      - echo "CODEBUILD:" >artifacts/env.txt
+      - export | grep CODEBUILD >>artifacts/env.txt
+      - echo "" >>artifacts/env.txt
+
+      - echo "PYTHON VERSION:" >>artifacts/env.txt
+      - python3 --version >>artifacts/env.txt
+      - echo "" >>artifacts/env.txt
+
+      - echo "PYTHON PACKAGES:" >>artifacts/env.txt
+      - pip3 list >>artifacts/env.txt
+      - echo "" >>artifacts/env.txt
+
+      - echo "LINUX PACKAGES:" >>artifacts/env.txt
+      - apt list --installed >>artifacts/env.txt
+
+  build:
+    commands:
+      # Determine the branch in order to set the Web Service working environment
+      - CODEBUILD_GIT_BRANCH="$(git branch -a --contains $CODEBUILD_SOURCE_VERSION | sed -n 2p | awk '{ printf $1 }')";
+        export CODEBUILD_GIT_BRANCH=${CODEBUILD_GIT_BRANCH#remotes/origin/}
+      - echo "CODEBUILD_GIT_BRANCH=${CODEBUILD_GIT_BRANCH}"
+      - if [ "${CODEBUILD_GIT_BRANCH}" = "master" ]; then export WS_ENV="prod"; else export WS_ENV="dev"; fi
+      - echo "WS_ENV=${WS_ENV}"
+
+      # Build documentation
+      - xlz
+        --if git_file_changed='doc/|include/|python/src|python/accelize_drm'
+        --if git_branch=master,dev
+        install
+        drmlib_build_deps
+        drmlib_doc_deps
+        -r "mkdir build_doc &&
+        cd build_doc &&
+        cmake -DPYTHON3=ON -DDOC=ON .. &&
+        make -s -j &&
+        tar -zcf ../artifacts/doc.tar.gz ./doc_html"
+        -v
+
+      # Upload documentation
+      - xlz
+        --if file_exists=artifacts/doc.tar.gz
+        install
+        drmlib_publish_doc=artifacts/doc.tar.gz
+        -v
+
+      # Run tests
+      - xlz -v
+        --if git_file_changed='(?!tests/utils/|doc/|LICENSE|README\\.md|\\.gitgnore)'
+        --if git_branch=master,dev
+        run
+        drmlib_dev="${CODEBUILD_GIT_BRANCH}:${CODEBUILD_SOURCE_VERSION}" drmlib_build_deps
+        drmlib_unittests_deps drmlib_cred_json drmlib_codecov_token
+        aws_fpga_sdk
+        --shutdown_after 30
+        -p f1.4xlarge
+        -n drm_debug_tests
+        -z /dev/shm/drmlib_dev/.tox/debug/build/report artifacts/report.tar.gz
+        -r "cd /dev/shm/aws-fpga && source sdk_setup.sh && cd /dev/shm/drmlib_dev &&
+            sudo -E tox -p all -e build-debug,cpp-debug,c-debug,integration-debug,coverage-debug -- --cred=/dev/shm/cred.json --server=${WS_ENV}"
+
+      # Build packages
+      - xlz
+        --if git_head_tagged
+        run
+        drmlib_dev=$CODEBUILD_SOURCE_VERSION
+        drmlib_package_release drmlib_packages_key=/opt/src
+        docker_compose
+        --shutdown_after 15
+        -p c5.4xlarge
+        -s ubuntu
+        -n accelize_drm_packages_build
+        -z /dev/shm/drmlib_dev/deployment/packages artifacts/packages.tar.gz
+        -r "cd /dev/shm/drmlib_dev/deployment && sudo -E docker-compose pull &&
+            sudo -E docker-compose up"
+
+      # Tests packages
+        # TODO: AWS FGPA SDK do not build, wait for fixed version (Fixed on Github dev branch)
+        #-x OS ubuntu_bionic
+        #-x OS ubuntu_rolling
+        #-x OS ubuntu_xenial
+      - xlz
+        --if file_exists=artifacts/packages.tar.gz
+        run
+        docker
+        drmlib_dev=$CODEBUILD_SOURCE_VERSION drmlib_cred_json
+        --shutdown_after 240
+        -s ubuntu
+        -p f1.4xlarge
+        -n drm_packages_tests
+        --gz_upload artifacts/packages.tar.gz /dev/shm/packages
+        -x OS centos_7
+        -x OS debian_stretch
+        -x OS debian_testing
+        -x OS fedora_latest
+        -x SERVER $WS_ENV
+        -r 'cd /dev/shm &&
+            sudo docker run --privileged
+            -e PACKAGES_DIR=/opt/packages/~{OS}~
+            -v /dev/shm:/opt/
+            accelize/accelizedrm-ci:test-aws_f1-~{OS}~
+            bash -c "cd /opt/drmlib_dev &&
+                     tox --workdir=/tmp
+                     -e package-install,c-install,cpp-install
+                     -p all -- -m minimum --cred=/opt/cred.json --server=~{SERVER}~"'
+
+      # Upload packages to repository
+      - xlz
+        --if file_exists=artifacts/packages.tar.gz
+        install
+        drmlib_publish_packages=artifacts/packages.tar.gz
+        -v
+
+artifacts:
+  files:
+    - artifacts/*
+  discard-paths: yes

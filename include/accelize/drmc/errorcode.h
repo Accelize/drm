@@ -16,11 +16,11 @@ limitations under the License.
 
 /** \file accelize/drmc/errorcode.h
 
-    \brief Header defining all error codes of DRMLib
+    \brief Header defining all error codes of DRM Library
 */
 
-#ifndef _H_ACCELIZE_METERING_ERRORCODE
-#define _H_ACCELIZE_METERING_ERRORCODE
+#ifndef _H_ACCELIZE_DRM_ERRORCODE
+#define _H_ACCELIZE_DRM_ERRORCODE
 
 #ifdef  __cplusplus
     extern "C" {
@@ -28,26 +28,32 @@ limitations under the License.
 
 /** \brief Error code enum */
 typedef enum {
-    DRMLibOK               = 0, /**< Function returned successfully */
+    DRM_OK                  = 0,     /**< Function returned successfully */
 
-    DRMBadArg              = 00001, /**< Bad argument provided */
-    DRMBadFormat           = 00002, /**< Bad format of provided input or config file */
-    DRMExternFail          = 00003, /**< Fail happened in an external library */
-    DRMBadUsage            = 00004, /**< Wrong usage of the DRMLib */
+    DRM_BadArg              = 00001, /**< Bad argument provided */
+    DRM_BadFormat           = 00002, /**< Bad format of provided input or config file */
+    DRM_ExternFail          = 00003, /**< Fail happened in an external library */
+    DRM_BadUsage            = 00004, /**< Wrong usage of the DRM Library */
+    DRM_BadFrequency        = 00005, /**< Wrong value of the DRM frequency provided in the configuration file */
 
-    DRMWSRespError         = 10001, /**< A malformed response has been received from Accelize WebService */
-    DRMWSReqError          = 10002, /**< Failed during HTTP request to Accelize WebService */
-    DRMWSError             = 10003, /**< Error returned from Accelize WebService */
-    DRMWSMayRetry          = 10004, /**< Error with request to Accelize Webservice, retry advised */
+    DRM_WSRespError         = 10001, /**< A malformed response has been received from Accelize WebService */
+    DRM_WSReqError          = 10002, /**< Failed during HTTP request to Accelize WebService */
+    DRM_WSError             = 10003, /**< Error returned from Accelize WebService */
+    DRM_WSMayRetry          = 10004, /**< Error with request to Accelize Webservice, retry advised */
 
-    DRMCtlrError           = 20001, /**< An error happened on a command on the DRM controller */
+    DRM_CtlrError           = 20001, /**< An error happened on a command to the DRM controller */
 
-    DRMLibFatal            = 90001,  /**< Fatal error, unknown error (Please contact Accelize) */
-    DRMLibAssert           = 90002   /**< Assertion failed internally (Please contact Accelize) */
-} DRMLibErrorCode;
+    DRM_Fatal               = 30001, /**< Fatal error, unknown error (Please contact Accelize) */
+    DRM_Assert              = 30002, /**< Assertion failed internally (Please contact Accelize) */
+
+    DRM_Debug               = 40001, /**< Generated for debug and testing only */
+
+    DRM_Exit                = 99999  /**< Generated for debug and testing only */
+
+} DRM_ErrorCode;
 
 #ifdef  __cplusplus
 }
 #endif
 
-#endif /* _H_ACCELIZE_METERING_ERRORCODE */
+#endif /* _H_ACCELIZE_DRM_ERRORCODE */

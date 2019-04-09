@@ -14,21 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef _H_ACCELIZE_METERING_VERSION
-#define _H_ACCELIZE_METERING_VERSION
+#ifndef _H_ACCELIZE_DRM_API_VERSION
+#define _H_ACCELIZE_DRM_API_VERSION
 
-#define METERINGLIB_VERSION "@GIT_VERSION@"
+#define DRMLIB_VERSION "@ACCELIZEDRM_LONG_VERSION@"
 
-#include "accelize/drmc/common.h"
-
-namespace Accelize {
-namespace DRMLib {
-
-/** \brief Get DRMLib version
-*/
-const char* getVersion() DRMLIB_EXPORT;
-
-}
-}
-
-#endif //_H_ACCELIZE_METERING_VERSION
+#endif //_H_ACCELIZE_DRM_API_VERSION

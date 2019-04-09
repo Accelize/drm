@@ -18,15 +18,17 @@ limitations under the License.
 #define _H_ACCELIZE_METERING_UTILS
 
 #include <iostream>
-#include <jsoncpp/json/json.h>
+#include <json/json.h>
 
 namespace Accelize {
-namespace DRMLib {
+namespace DRM {
 
-static const Json::Value nullJSValue = Json::Value{};
-
-const Json::Value& JVgetRequired(const Json::Value& jval, const char* key, const Json::ValueType& type);
-const Json::Value& JVgetOptional(const Json::Value& jval, const char* key, const Json::ValueType& type, const Json::Value& defaultValue = nullJSValue);
+std::string saveJsonToString( const Json::Value& json_value, const std::string& indent = "" );
+void saveJsonToFile( const std::string& file_path, const Json::Value& json_value, const std::string& indent = "\t" );
+Json::Value parseJsonString(const std::string &json_string);
+Json::Value parseJsonFile(const std::string &file_path);
+const Json::Value& JVgetRequired( const Json::Value& json_value, const char* key, const Json::ValueType& type );
+const Json::Value& JVgetOptional( const Json::Value& json_value, const char* key, const Json::ValueType& type, const Json::Value& defaultValue = Json::nullValue );
 
 }
 }

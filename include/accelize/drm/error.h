@@ -14,36 +14,36 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef _H_ACCELIZE_METERING_ERROR
-#define _H_ACCELIZE_METERING_ERROR
+#ifndef _H_ACCELIZE_DRM_ERROR
+#define _H_ACCELIZE_DRM_ERROR
 
 #include <stdexcept>
 
 #include "accelize/drmc/errorcode.h" // enum with error codes
-
 #include "accelize/drmc/common.h"
 
 namespace Accelize {
-namespace DRMLib {
+namespace DRM {
 
-/** \brief Exception class with error code for the DRMLib
+/** \brief Exception class with error code for the DRM Library
 
-    This class is an exception that may be thrown by the DRMLib in case of synchronous error
+    This class is an exception that may be thrown by the DRM Library in case of synchronous error
 */
-class DRMLIB_EXPORT Exception : public std::runtime_error {
+class DRM_EXPORT Exception : public std::runtime_error {
 protected:
-    DRMLibErrorCode errCode; /**< error code from the DRMLibErrorCode enum */
+    DRM_ErrorCode errCode; /**< error code from the DRM_ErrorCode enum */
     mutable std::string errWhat; /**< internal error message to be accessed from what() */
 
 public:
     template <class S>
-    Exception(DRMLibErrorCode errCode, S&& errMsg) : std::runtime_error(std::forward<S>(errMsg)), errCode(errCode) {}
+    Exception(DRM_ErrorCode errCode, S&& errMsg)
+        : std::runtime_error(std::forward<S>(errMsg)), errCode(errCode) {}
     virtual ~Exception() {};
-    DRMLibErrorCode getErrCode() const;
+    DRM_ErrorCode getErrCode() const;
     virtual const char* what() const noexcept;
 };
 
-} //namespace DRMLib
+} //namespace DRM
 } //namespace Accelize
 
-#endif // _H_ACCELIZE_METERING_ERROR
+#endif // _H_ACCELIZE_DRM_ERROR

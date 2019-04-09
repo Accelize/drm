@@ -1,0 +1,110 @@
+# Build Accelize DRM library packages on a variety of OS and export result in
+# the "packages" subdirectory.
+#
+# Run using "docker-compose up" (see https://docs.docker.com/compose/)
+#
+# Define "PACKAGES_RELEASE" environment variable to set package release number
+# (Default to "1")
+#
+# Define "GPG_PRIVATE_KEY", "GPG_PUBLIC_KEY" and "GPG_PASS_PHRASE" environment
+# variables to sign packages.
+# Keys files must be installed a shared build directory
+#
+# See tox.ini for more information on theses environment variables
+#
+
+version: '3.7'
+
+x-build-service:
+  &build-service
+  working_dir: /opt/src/
+  volumes:
+    - type: bind
+      source: ./packages
+      target: /opt/packages/
+    - type: bind
+      source: ..
+      target: /opt/src/
+      read_only: true
+  command: tox --workdir /opt/build -e build-release,export-release
+
+x-build-envirnoment:
+  &build-environment
+  PACKAGES_RELEASE: ${PACKAGES_RELEASE:-1}
+  GPG_PRIVATE_KEY: ${GPG_PRIVATE_KEY}
+  GPG_PUBLIC_KEY: ${GPG_PUBLIC_KEY}
+  GPG_PASS_PHRASE: ${GPG_PASS_PHRASE}
+
+services:
+
+  # Supported LTS Linux distributions
+  build-centos_7:
+    << : *build-service
+    image: accelize/accelizedrm-ci:build-centos_7
+    build:
+      context: context
+      dockerfile: build-centos_7.Dockerfile
+    environment:
+      << : *build-environment
+      PACKAGES_DIR: /opt/packages/centos_7
+
+  build-ubuntu_bionic:
+    << : *build-service
+    image: accelize/accelizedrm-ci:build-ubuntu_bionic
+    build:
+      context: context
+      dockerfile: build-ubuntu_bionic.Dockerfile
+    environment:
+      << : *build-environment
+      PACKAGES_DIR: /opt/packages/ubuntu_bionic
+
+  build-ubuntu_xenial:
+    << : *build-service
+    image: accelize/accelizedrm-ci:build-ubuntu_xenial
+    build:
+      context: context
+      dockerfile: build-ubuntu_xenial.Dockerfile
+    environment:
+      << : *build-environment
+      PACKAGES_DIR: /opt/packages/ubuntu_xenial
+
+  build-debian_stretch:
+    << : *build-service
+    image: accelize/accelizedrm-ci:build-debian_stretch
+    build:
+      context: context
+      dockerfile: build-debian_stretch.Dockerfile
+    environment:
+      << : *build-environment
+      PACKAGES_DIR: /opt/packages/debian_stretch
+
+  # Unsupported: Run only to ensure future compatibility
+  build-fedora_latest:
+    << : *build-service
+    image: accelize/accelizedrm-ci:build-fedora_latest
+    build:
+      context: context
+      dockerfile: build-fedora_latest.Dockerfile
+    environment:
+      << : *build-environment
+      PACKAGES_DIR: /opt/packages/fedora_latest
+
+  build-debian_testing:
+    << : *build-service
+    image: accelize/accelizedrm-ci:build-debian_testing
+    build:
+      context: context
+      dockerfile: build-debian_testing.Dockerfile
+    environment:
+      << : *build-environment
+      PACKAGES_DIR: /opt/packages/debian_testing
+
+  build-ubuntu_rolling:
+    << : *build-service
+    image: accelize/accelizedrm-ci:build-ubuntu_rolling
+    build:
+      context: context
+      dockerfile: build-ubuntu_rolling.Dockerfile
+    environment:
+      << : *build-environment
+      PACKAGES_DIR: /opt/packages/ubuntu_rolling
