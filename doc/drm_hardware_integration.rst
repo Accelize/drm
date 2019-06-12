@@ -1,34 +1,54 @@
-Hardware integration
-====================
+DRM Hardware integration
+========================
 
 This section gives the main steps to generate a bitstream including the DRM
-controller and Protected IPs (including the DRM Activators). The resulting
-bitstream doesn't work standalone: the accelerator is locked, and a
-Accelize DRM library connection is required to provide the design with a valid
-license to unlock it.
+controller and the protection blocks (DRM Activators) to integrate in the FPGA design.
 
-For more information about DRM controller and activator:
+.. note:: When the bitstream is loaded in the FPGA board, the design is initially locked.
+          The Accelize DRM library API or service is then required to unlock the design with
+          a valid license. See :doc:`drm_library_integration` for more information.
 
- * :doc:`drm_hardware_ip_activator`.
- * :doc:`drm_hardware_ip_controller`.
+More details about DRM Controller and Activator logics can be found here:
+
+* :doc:`drm_hardware_ip_controller`.
+* :doc:`drm_hardware_ip_activator`.
 
 Supported hardware
 ------------------
 
-The following table lists the FPGA vendor, FPGA families and FPGA programming
-tools supported by the DRM HDK.
+Here are the FPGA vendors, families and EDA tools that are
+currently supported by the DRM HDK:
 
-Supported FPGA:
+.. list-table::
+   :header-rows: 1
 
-* Xilinx: Ultrascale+, Ultrascale, Virtex 7, Virtex 6, Spartan 6,
-  Spartan 3a DSP, Spartan 3a, Kintex 7, Artix 7
-* Intel: Cyclone V, Arria 10 [#f1]_, Arria V GZ, Arria V, Stratix V
+   * - Vendor
+     - Tools
+     - Families
+   * - Xilinx
+     - * Vivado 2017.4
+       * Vivado 2018.2
+       * Vivado 2018.2.xdf
+       * Vivado 2018.3
+     - * Ultrascale+
+       * Ultrascale
+       * Virtex 7
+       * Virtex 6
+       * Spartan 6
+       * Spartan 3a DSP
+       * Spartan 3a
+       * Kintex 7
+       * Artix 7
+   * - Intel
+     - Quartus Prime 17.1
+     - * Cyclone V
+       * Arria 10 [#f1]_
+       * Arria V GZ
+       * Arria V
+       * Stratix V
 
-.. [#f1] Node locked licensing mode not supported on
-   `Intel PAC <https://www.intel.com/content/www/us/en/programmable/products/boards_and_kits/dev-kits/altera/acceleration-card-arria-10-gx.html>`_
-   context, because Chip ID primitive is not reachable.
 
-Identify how many IP cores must be protected 
+Identify how many IP cores must be protected
 --------------------------------------------
 
 Identify how many IP cores must be protected (including IP cores that are
@@ -38,442 +58,637 @@ In the following figure, 7 IP cores must be protected (3 instances of IP core A,
 
 .. image:: _static/Bus-architecture.png
    :target: _static/Bus-architecture.png
-   :alt: alt_text
 
-Send request to Accelize 
-------------------------
+You will also need to provide the Vendor-Library-Name-Version (VLNV) information
+for each new IP core to protect.
+
+Request DRM HDK from Accelize_
+----------------------------------------------------------------------
 
 Send a request for a DRM controller and DRM activators to Accelize, with the
 following information:
 
 * How many IP cores (including multiple instances of an IP core) must be
-  protected in total
+  protected
 * How many already protected IP cores (and what IP cores) you must reuse
 * For each IP core that must be protected and that is not already protected,
   provide a VLNV (Vendor name, Library name, design Name, Version number).
   For multiple instance IP cores, only one VLNV is required.
 
-Accelize will provide you with: 
+Receive DRM HDK from Accelize
+-----------------------------
 
-* a DRM controller with as many ports as there are protected IP instances in
-  your design (including already protected IPs)
-* as many DRM activators as there are new IPs to be protected in you design
-  (a single DRM Activator will be delivered for multiple instances of an IP
-  core)
+A zip file will be sent to you. It is containing the HDK sources with in 3 folders:
 
-For example, if you consider the previous figure, you will receive a DRM
-Controller IP with 7 ports, and 2 DRM Activators (1 for IP core A, 1 for IP
-core B).
+* The ``common`` folder: contain the IP common structure for the activator and the controller.
 
-Prepare IP cores that must be protected with an activation bus
---------------------------------------------------------------
+* The ``controller`` folder: contain the controller VHDL top-level and the Verilog Wrapper.
+  The controller has the appropriate number of ports: one for each IP instance in your design
+  (already protected IPs and IPs to protect), plus the common bus.
 
-There are 2 alternatives to protect an IP core with a DRM activator. In this
-document we focus on the second option.
+* The ``activator`` folder: contain the activator VHDL top-level and the Verilog Wrapper, and
+  the *drm_activation_code_package* file which define the 128-bit activation code value.
+  A single DRM Activator is delivered per IP core type. Multiple instances of the same IP
+  core shall instantiate the same activator as many times.
+  This folder also contains the *drm_activation_code_package* file which defines the unique activation code
+  for this IP. It is accessible through the parameter ``C_DRM_ACTIVATION_CODE``.
 
-   #. you integrate the DRM activator in the IP core, therefore exposing only
-      an interface (DRM bus interface) to interact with the DRM controller
-   #. you create a wrapper, into which you instantiate a DRM activator, which
-      you bind to the IP core that must be prepared to expose the following
-      specific interface (activation bus) to interact with the DRM activator
+Considering the previous example, you will receive:
 
-.. list-table::  
-   :header-rows: 1
+* a DRM Controller IP with 7 ports,
+* 1 DRM Activator of IP core A
+* 1 DRM Activator of IP core B
 
-   * - Name
-     - Direction
-     - Size
-     - Description
-   * - IP_CORE_aCLK
-     - out
-     - 1
-     - IP Core clock domain
-   * - IP_CORE_aRSTn
-     - out
-     - 1
-     - IP Core Asynchronous Reset (active low)
-   * - DRM_EVENT
-     - out
-     - 1
-     - IP Core control to increment the Metering counter
-   * - ACTIVATION_CODE_READY
-     - in
-     - 1
-     - the Activation Code is ready (synchronous to IP_CORE_aCLK)
-   * - ACTIVATION_CODE
-     - in
-     - 128
-     - the Activation Code (synchronous to IP_CORE_aCLK)
-   * - DEMO_MODE
-     - in
-     - 1
-     - must be set to '0'
- 
-Instantiate IP core and DRM Activator in a wrapper 
---------------------------------------------------
+Protect the IP cores
+--------------------
 
-For each IP core that must be protected:
-
-* Create a wrapper
-* Instantiate the IP core (prepared with an activation bus) in the wrapper
-* Expose the original IP core I/O I/F as I/O I/F of the wrapper
-* Bind the original IP core I/O I/F with the corresponding I/O I/F of the
-  wrapper
-* Instantiate the DRM activator in the wrapper
-* Bind the activation bus I/F of the DRM activator with the activation bus
-  I/F of the IP core
-* Expose the remaining DRM bus I/F of the DRM activator as I/O I/F of the
-  wrapper
-* Bind the DRM bus I/F of the DRM activator with the corresponding I/F of
-  the wrapper
+There are different ways of doing this. In this document we propose to create a wrapper,
+in which the DRM Activator and the IP core are instantiated. The original IP core will
+have been to be slightly modified to include the activation code protection and the
+usage measurement logic.
+With this approach, managing multiple instances of the same protected IP is built-in.
 
 .. image:: _static/Protected-IP.png
    :target: _static/Protected-IP.png
-   :alt: alt_text
 
-Creating a wrapper is key since the wrapper will be encrypted so as to hide the
-activation code. In the remainder of this document, a wrapper is called
-"Protected IP".
+.. note:: Clock and reset ports of the IP core are not represented on the figure but
+          there could have a single or multiple clocks and resets ports.
 
-Using your protected IP activation code
----------------------------------------
+1. Create a wrapper
+~~~~~~~~~~~~~~~~~~~
 
-For each IP core that must be protected, please use the activation code provided
-to you by Accelize.
+The wrapper interface includes the original IP interface, plus the DRM specific
+bus used to communicate with the DRM Controller.
+Here are the Activator signals that shall be exposed on the wrapper interface
+to be later connected to the DRM Controller:
 
-The IP Core samples the 128 bits ACTIVATION_CODE when ACTIVATION_CODE_READY is
-true.
+  .. list-table::
+     :header-rows: 1
 
-The 128 bits are used to create conditions for IP features
-activation/deactivation. Individual bit, groups of bits, range of bits can be
-used in the IP Core code to gate signals, to switch FSM states, to select
-functional parts.
+     * - Name
+       - Direction
+       - Size
+       - Description
+     * - drm_arstn
+       - in
+       - 1
+       - DRM AXI4-Stream bus Asynchronous Reset (active low)
+     * - drm_aclk
+       - in
+       - 1
+       - DRM AXI4-Stream bus Clock domain
+     * - drm_to_uip_tready
+       - out
+       - 1
+       - AXI4-Stream Ready signal for DRM Controller to IP Activator Channel
+     * - drm_to_uip_tvalid
+       - in
+       - 1
+       - AXI4-Stream Valid signal for DRM Controller to IP Activator Channel
+     * - drm_to_uip_tdata
+       - in
+       - 32
+       - AXI4-Stream Data signal for DRM Controller to IP Activator Channel
+     * - uip_to_drm_tready
+       - in
+       - 1
+       - AXI4-Stream Ready signal for IP Activator to DRM Controller Channel
+     * - uip_to_drm_tvalid
+       - out
+       - 1
+       - AXI4-Stream Valid signal for IP Activator to DRM Controller Channel
+     * - uip_to_drm_tdata
+       - out
+       - 32
+       - AXI4-Stream Data signal for IP Activator to DRM Controller Channel
 
-Example using the 20 LSBs of the ACTIVATION_CODE signal:
+2. Adapt the IP core
+~~~~~~~~~~~~~~~~~~~~
 
-* 8 bits of the Activation Code are used to unlock FSMs transitions
+Modify the IP core interface
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Add the following ports to the original IP core:
+
+  .. list-table::
+     :header-rows: 1
+
+     * - Name
+       - Direction
+       - Size
+       - Description
+     * - ip_core_arstn
+       - in
+       - 1
+       - IP Core Asynchronous Reset (active low)
+     * - ip_core_aclk
+       - in
+       - 1
+       - IP Core clock domain
+     * - activation_code_ready
+       - out
+       - 1
+       - Indicate the Activation Code is ready to be evaluated (synchronous to ip_core_aclk)
+     * - activation_code
+       - out
+       - 128
+       - Expose the Activation Code corresponding the current license key (synchronous to ip_core_aclk)
+     * - metering_event
+       - in
+       - 1
+       - A 1 clock cycle pulse (synchronous to ip_core_aclk) increments the Metering data counter
+     * - metering_arst
+       - in
+       - 1
+       - Metering Counter Synchronous (to ip_core_aclk) Reset (active high)
+
+Protect relevant code of the IP core
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The most critical part is to smartly modify the original IP core so that
+piece of the IP internal logic is combined with the activation code bits
+provided by the DRM activator signal to enable or disable part or all
+of the IP functionality.
+
+The 128 bit activation code is unique and randomly generated by Accelize. It is
+accessed through the ``C_DRM_ACTIVATION_CODE`` variable defined in the *drm_activation_code_package*
+file of the HDK delivered by Accelize. Each IP core must have its own activation code.
+
+The 128 bits of the activation code are used to create conditions for IP
+activation/deactivation. There are different techniques to instrument the IP code:
+individual bit, groups of bits, range of bits can be used in the code to:
+
+* Gate signals,
+* Switch FSM states,
+* Select functional parts.
+
+For instance, we propose to implement these 3 techniques on the 12 LSBs of
+the ACTIVATION_CODE signal as follows:
+
+* 8 bits are used to unlock FSMs transitions
 * 4 bits are used to control a Data Path
-* 8 bits are used to enable the Feature 1 and Feature 2
 
 .. image:: _static/Activation-code.png
    :target: _static/Activation-code.png
-   :alt: alt_text
 
-Metering Control
-~~~~~~~~~~~~~~~~
+.. warning:: It is highly recommended to use as much as possible those techniques
+             as it increases the protection against reverse engineering attacks.
 
-The IP Core drives the DRM_EVENT signal (synchronous to IP_CORE_aCLK) to
-increment the Metering counter (64 bits length).
+.. important:: The DRM event and activation ports are synchronized on the ``ip_core_aclk``
+             clock. Make sure a clock domain crossing technique is implemented
+             when necessary.
 
-.. warning:: Please pay particular attention to the way the IP core drives the
-             DRM_EVENT signal as it is directly related to the business model
-             for this IP core: 1 coin corresponds to 1 DRM event.
 
-An IP Core reset (IP_CORE_aRSTn) resets the Metering Counter.
+Add metering logic
+^^^^^^^^^^^^^^^^^^
 
-.. warning:: The IP core reset SHALL NOT be connected to a user-controllable
-             reset as it will give the user a way to reset usage information
-             before this information is sent to the DRM web service (and thus
-             before invoicing the user).
+Even if you have not planned to monetize your IP based on a "pay-per-use" model, we strongly
+encourage to include in your IP core or wrapper some usage measurement logics to gather
+anonymously some statistics information about the IP usage: a better understanding of
+the actual IP usage might help to propose future solutions that would better
+answer your customer needs.
 
-Demo mode Control
-~~~~~~~~~~~~~~~~~
+1. First you need to determine which data metrics is the most relevant to count with regard
+to the application domain.
+Typically you would count the number of bytes processed by an encryption IP whereas
+you would count the number of frames processed by a video rescaling IP.
 
-The DEMO_MODE signal indicates that the loaded license is credit based: an
-Activation timer in the IP Activator is initialized a first time, with the
-value conveyed by the License, after the DRM Bus reset.
+2. Then instrument your code to measure your metrics. For instance count the number of
+bytes processed.
 
-The IP Core drives the DRM_EVENT signal (synchronous to IP_CORE_aCLK) to
-decrement the Activation timer (64 bits length) until exhaustion. When timeout
-is reached, the Activation Code is all 0's and the signal ACTIVATION_CODE_READY
-is '0'.
+3. When the metric unit is reached, generate a 1-clock cycle pulse (synchronized on
+``ip_core_aclk``) on the ``metering_event`` port of the DRM Activator.
+For instance, generate a pulse every 100M bytes.
 
-An IP Core reset (IP_CORE_aRSTn) is needed to enable a new initialization of
-the Activation timer.
+Each pulse on ``metering_event`` increases the metering 64-bit counter by 1.
+The value of this counter is transmitted to the DRM Web Service which converts it
+in number of usage units for this particular account.
 
-.. warning:: The IP core reset SHALL NOT be connected to a user-controllable
-             reset as it will give the user a way to reset usage information
-             before this information is sent to the DRM web service (and thus
-             before invoicing the user).
+.. note:: Pay particular attention to the way the IP core drives this
+          ``metering_event`` signal as it might be directly related to the business model.
+          ``metering_event`` input is level-sensitive and must be de-asserted after each event.
 
-Encrypt the wrapper 
--------------------
+.. warning:: The DRM event is synchronized on the ``ip_core_aclk``
+             clock. Make sure a clock domain crossing technique is implemented
+             when necessary.
 
-Encrypt each protected IP in IEEE 1735. Once encrypted, the activation bus that
-is internal to the wrapper is not visible anymore.
+.. important:: The ``metering_arst`` signal resets the metering counter.
+             Therefore, it SHALL NOT be connected to a user-controllable
+             reset as it will give the user a way to reset metering information
+             before this information is actually sent to the DRM web service.
+             If it happens, the end-user will not be charged for what he/she consumed.
 
-Instantiate the DRM Controller IP 
+3. Instantiate the adapted IP core and DRM Activator in the wrapper and connect them
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* Connect the signals of the DRM Activator listed by the table in section `Modify the IP core interface`_
+  to the adapted IP core.
+* Connect the DRM bus of the DRM Activator listed by the table in seciton `1. Create a wrapper`_
+  to the wrapper interface.
+* Connect the clock and reset of the adapted IP core to the wrapper interface.
+
+4. Encrypt the Protect IPs
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. warning:: Encrypting the Protected IP is mandatory since it contains the
+               activation code in clear text.
+
+Encrypt each protected IP in IEEE 1735 for Vivado or Ampcrypt for Quartus.
+Please contact your EDA reseller for more information about IP encryption.
+
+If your environment requires another encryption standard, please contact Accelize_.
+
+Instantiate the Protected IP
+----------------------------
+
+Once your IP protected, they can be instantiated once or multiple times in your FPGA design.
+
+Instantiate the DRM Controller IP
 ---------------------------------
 
 A single DRM Controller must be instantiated in FPGA to interact with multiple
 protected IP cores.
 
 * Instantiate the DRM controller in the top level design
-* connect the DRM controller AXI4 lite I/F with the AXI4 lite interface of the
+* Connect the DRM controller AXI4 lite interface with the AXI4 lite interface of the
   top level design
-* **make sure you use a correct offset address to access the DRM controller**
-* connect each DRM bus I/F of the DRM controller with a DRM bus I/F of a
+* **Make sure you use a correct offset address to access the DRM controller**
+* Connect each DRM bus interface of the DRM controller to a DRM bus interface of a
   protected IP core.
 
 .. image:: _static/AXI4-bus.png
    :target: _static/AXI4-bus.png
-   :alt: alt_text
 
-Implementation
---------------
+
+Synthesize and implement your design
+------------------------------------
+
+.. warning:: DRM source files (VHDL and Verilog) HAVE to be compiled
+             under "drm_library" library.
 
 Xilinx Vivado
 ~~~~~~~~~~~~~
 
-**Supported versions:** 2018.2, 2017.4, 2017.2, 2016.4, 2016.2.
+Refer to `Supported hardware` for more information on supported Vivado versions.
 
 For Vivado, GUI or TCL script can be used to synthesize the DRM controller and
-the DRM Activator. VHDL or Verilog format can be used to be integrated.
-The Verilog is a wrapper of the VHDL design.
-
-DRM controller and DRM activators are presented independently but they can be
-synthesized in the same design.
+the DRM Activator.
+The DRM IPs are in VHDL but the DRM HDK also contains a Verilog wrapper.
 
 VHDL
 ^^^^
 
 DRM Contoller
 `````````````
+The DRM Controller top-level name is **drm_controller_ip_axi4st**.
 
-GUI can be used as it in Vivado (2017.4 version) during project wizard creation:
+To add the DRM Controller source to your project, you can use:
+
+* the GUI during project wizard creation:
 
 .. image:: _static/VHDL-ctrl-vivado.png
    :target: _static/VHDL-ctrl-vivado.png
-   :alt: alt_text
 
-Or via TCL script in Vivado:
+* Or a TCL script:
 
 .. code-block:: tcl
 
    read_vhdl -library drm_library {
-      drm_controller_with_dna_inst.vhdl
-      xilinx/drm_all_components.vhdl
+      drm_hdk/common/xilinx/drm_all_components.vhdl
+      drm_hdk/contoller/drm_controller_ip.vhdl
+      drm_hdk/contoller/drm_controller_ip_axi4st.vhdl
    }
-
-The VHDL files must de compiled in "drm_library" library and the Top Level
-module is: "DRM_CONTROLLER_WITH_DNA_inst"
 
 DRM Activator
 `````````````
+The DRM Activator top-level name is **drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st**.
+0xVVVVLLLLNNNNVVVV is an hexadecimal string encoding the VLNV of this IP.
 
-GUI can be used as it in Vivado (2017.4 version) during project wizard creation:
+To add the DRM Activator source to your project, you can use:
+
+* the GUI during project wizard creation:
 
 .. image:: _static/VHDL-Activator-vivado.png
    :target: _static/VHDL-Activator-vivado.png
-   :alt: alt_text
 
-Or via TCL script in Vivado:
+Or a TCL script:
 
 .. code-block:: tcl
 
    read_vhdl -library drm_library {
-     drm_ip_activator_0x1000000200150001.vhdl
-      ../DRM_controller/xilinx/drm_all_components.vhdl
+      drm_hdk/common/xilinx/drm_all_components.vhdl
+      drm_hdk/activator_VLNV/rtl/drm_activation_code_package_0xVVVVLLLLNNNNVVVV.vhd
+      drm_hdk/activator_VLNV/rtl/drm_ip_activator_0xVVVVLLLLNNNNVVVV.vhdl
+      drm_hdk/activator_VLNV/rtl/drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st.vhdl
    }
-
-The VHDL files must de compiled in "drm_library" library and set top module is
-"DRM_IP_ACTIVATOR_0x1000000200150001". 0x1000000200150001 is corresponding to
-the hexadecimal value corresponding to the VLVN string. So it can differ
-according the VLVN provided to Accelize to generate a DRM activator
-corresponding to the desired VLVN.
 
 Verilog
 ^^^^^^^
 
 DRM Contoller
 `````````````
+The DRM Controller top-level name is **drm_controller_ip_axi4st**.
 
-GUI can be used as it in Vivado (2017.4 version) during project wizard creation:
+To add the DRM Controller sources to your project, you can use:
+
+* the GUI during project wizard creation:
 
 .. image:: _static/Verilog-ctrl-vivado.png
    :target: _static/Verilog-ctrl-vivado.png
-   :alt: alt_text
 
-Or via TCL script:
+Or a TCL script:
 
 .. code-block:: tcl
 
    read_verilog -library drm_library {
-      drm_controller_with_dna_inst.v
+      drm_hdk/controller/drm_controller_ip_axi4st.v
    }
    read_verilog -library drm_library {
-      drm_controller_with_dna_inst.vhdl
-      xilinx/drm_all_components.vhdl
+      drm_hdk/common/xilinx/drm_all_components.vhdl
+      drm_hdk/controller/drm_controller_ip.vhdl
    }
-
-The VHDL and Verilog files must be compiled in "drm_library" library and
-the Top Level module is: "DRM_CONTROLLER_WITH_DNA_inst_wrapper".
 
 DRM Activator
 `````````````
+The DRM Activator top-level name is **drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st**.
+0xVVVVLLLLNNNNVVVV is an hexadecimal string encoding the VLNV of this IP.
 
-GUI can be used as it in Vivado (2017.4 version) during project wizard creation:
+To add the DRM Activator sources to your project, you can use:
 
+* the GUI during project wizard creation:
 
 .. image:: _static/Verilog-activator-vivado.png
    :target: _static/Verilog-activator-vivado.png
-   :alt: alt_text
 
 Or via TCL script:
 
 .. code-block:: tcl
 
    read_verilog -library drm_library {
-      drm_ip_activator_0x1000000200150001.v
+      drm_hdk/activator_VLNV/rtl/drm_activation_code_package_0xVVVVLLLLNNNNVVVV.v
+      drm_hdk/activator_VLNV/rtl/drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st.vhdl
    }
    read_vhdl -library drm_library {
-      xilinx/drm_all_components.vhdl
-      ddrm_ip_activator_0x1000000200150001.vhdl
+      drm_hdk/common/xilinx/drm_all_components.vhdl
+      drm_hdk/activator_VLNV/rtl/drm_ip_activator_0xVVVVLLLLNNNNVVVV.vhdl
    }
-
-The VHDL and verilog files must be compiled in "drm_library" library and set
-top module is "DRM_IP_ACTIVATOR_0x1000000200150001_wrapper". 0x1000000200150001
-is corresponding to the hexadecimal value corresponding to the VLVN string.
-So it can differ according the VLVN provided to Accelize to generate a DRM
-activator corresponding to the desired VLVN.
 
 Intel Quartus Prime
 ~~~~~~~~~~~~~~~~~~~
 
-**Supported versions:** v18.1, v18.0, v17.1, v17.0, v16.1, v16.0
+Refer to `Supported hardware` for more information on supported Quartus versions.
+
+.. note:: In the ``common`` folder of the DRM HDK, you will find an *altera* and an
+          *alteraProprietary* subfolders. Both subfolders contain the same code but
+          encrypted in IEEE-1735 and Ampcrypt respectively. Depending on the Quartus
+          version, one or the other might not be supported.
+          Make sure to replace the path with the correct subfolder in the rest of the page.
 
 VHDL
 ^^^^
 
 DRM Contoller
 `````````````
+The DRM Controller top-level name is **drm_controller_ip_axi4st**.
 
-GUI can be used as it in Quartus (16.1 version) during project wizard creation:
+To add the DRM Controller source to your project, you can use:
 
+* the GUI during project wizard creation:
 
 .. image:: _static/VHDL-ctrl-quartus.png
    :target: _static/VHDL-ctrl-quartus.png
-   :alt: alt_text
 
-Or via TCL script:
+Or a TCL script:
 
 .. code-block:: tcl
 
-   set_global_assignement -name TOP_LEVEL_ENTITY DRM_CONTROLLER_WITH_DNA_inst
+   set_global_assignment -name SYSTEMVERILOG_FILE drm_hdk/common/alteraProprietary/altchip_id_arria10.sv -library drm_library
+   set_global_assignment -name VHDL_FILE drm_hdk/common/alteraProprietary/drm_all_components.vhdl -library drm_library
+   set_global_assignment -name VHDL_FILE drm_hdk/controller/drm_controller_ip.vhdl -library drm_library
+   set_global_assignment -name VHDL_FILE drm_hdk/controller/drm_controller_ip_axi4st.vhdl -library drm_library
 
-   set_global_assignement -name VHDL_FILE alteraProprietary/drm_all_components.vhdl -library drm_library
-
-   set_global_assignement -name VHDL_FILE src/drm_controller_with_dna_inst.vhdl -library drm_library
-
-The VHDL files must de compiled in "drm_library" library and the Top Level
-module is: "DRM_CONTROLLER_WITH_DNA_inst"
+.. note:: The ``altchip_id_arria10.sv`` file is for the Arria10 FPGA family.
+          Use the file located in the *common/sv/alteraProprietary* folder from your DRM HDK.
 
 DRM Activator
 `````````````
+The DRM Activator top-level name is **drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st**.
+0xVVVVLLLLNNNNVVVV is an hexadecimal string encoding the VLNV of this IP.
 
-GUI can be used as it in Quartus (16.1 version) during project wizard creation:
+To add the DRM Activator sources to your project, you can use:
+
+* the GUI during project wizard creation:
 
 .. image:: _static/VHDL-activator-quartus.png
    :target: _static/VHDL-activator-quartus.png
-   :alt: alt_text
 
-Or via TCL script:
+* Or a TCL script:
 
 .. code-block:: tcl
 
-   set_global_assignment -name TOP_LEVEL_ENTITY DRM_IP_ACTIVATOR_0x1000000200150001
+   set_global_assignment -name SYSTEMVERILOG_FILE drm_hdk/common/alteraProprietary/altchip_id_arria10.sv -library drm_library
+   set_global_assignment -name VHDL_FILE drm_hdl/common/alteraProprietary/drm_all_components.vhdl -library drm_library
+   set_global_assignment -name VHDL_FILE drm_hdk/activator_VLNV/rtl/drm_activation_code_package_0xVVVVLLLLNNNNVVVV.vhdl -library drm_library
+   set_global_assignment -name VHDL_FILE drm_hdl/activator_VLNV/rtl/drm_ip_activator_0xVVVVLLLLNNNNVVVV.vhdl -library drm_library
+   set_global_assignment -name VHDL_FILE drm_hdl/activator_VLNV/rtl/drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st.vhdl -library drm_library
 
-   set_global_assignment -name VHDL_FILE ../drm_controller_with_dna_inst/src/alteraProprietary/drm_all_components.vhdl -library drm_library
-
-   set_global_assignment -name VHDL_FILE drm_ip_activator_0x1000000200150001.vhdl -library drm_library
-
-The VHDL and Verilog files must be compiled in "drm_library" library and set
-top module is "DRM_IP_ACTIVATOR_0x1000000200150001". 0x1000000200150001 is
-corresponding to the hexadecimal value corresponding to the VLVN string.
-So it can differ according the VLVN provided to Accelize to generate a DRM
-activator corresponding to the desired VLVN.
+.. note:: The ``altchip_id_arria10.sv`` file is for the Arria10 FPGA family.
+          Use the file located in the *common/sv/alteraProprietary* folder from your DRM HDK.
 
 Verilog
 ^^^^^^^
 
 DRM Contoller
 `````````````
+The DRM Controller top-level name is **drm_controller_ip_axi4st**.
 
-GUI can be used as it in Quartus (16.1 version) during project wizard creation:
+To add the DRM Controller sources to your project, you can use:
+
+* the GUI during project wizard creation:
 
 .. image:: _static/Verilog-ctrl-quartus.png
    :target: _static/Verilog-ctrl-quartus.png
-   :alt: alt_text
 
-Or via TCL script:
+* Or a TCL script:
 
 .. code-block:: tcl
 
-   set_global_assignment -name TOP_LEVEL_ENTITY drm_controller_with_dna_inst_wrapper
+   set_global_assignment -name SYSTEMVERILOG_FILE drm_hdk/common/alteraProprietary/altchip_id_arria10.sv -library drm_library
+   set_global_assignment -name VHDL_FILE drm_hdk/common/alteraProprietary/drm_all_components.vhdl -library drm_library
+   set_global_assignment -name VHDL_FILE drm_hdk/controller/drm_controller_ip.vhdl -library drm_library
+   set_global_assignment -name VERILOG_FILE drm_hdk/controller/drm_controller_ip_axi4st.v -library drm_library
 
-   set_global_assignment -name VHDL_FILE ../drm_controller_with_dna_inst/src/alteraProprietary/drm_all_components.vhdl -library drm_library
+.. note:: The ``altchip_id_arria10.sv`` file is for the Arria10 FPGA family.
+          Use the file located in the *common/sv/alteraProprietary* folder from your DRM HDK.
 
-   set_global_assignment -name VHDL_FILE ../drm_controller_with_dna_inst/src/drm_controller_with_dna_inst.vhdl -library drm_library
-
-   set_global_assignment -name VERILOG_FILE ../drm_controller_with_dna_inst/src/drm_controller_with_dna_inst.v -library drm_library
-
-The VHDL and Verilog files must be compiled in "drm_library" library and the
-Top Level module is: "DRM_CONTROLLER_WITH_DNA_inst_wrapper"
 
 DRM Activator
 `````````````
+The DRM Activator top-level name is **drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st**.
+0xVVVVLLLLNNNNVVVV is an hexadecimal string encoding the VLNV of this IP.
 
-GUI can be used as it in Quartus (16.1 version) during project wizard creation:
+To add the DRM Activator sources to your project, you can use:
+
+* the GUI during project wizard creation:
 
 .. image:: _static/Verilog-activator-quartus.png
    :target: _static/Verilog-activator-quartus.png
-   :alt: alt_text
 
-Or via TCL script:
+* Or a TCL script:
 
 .. code-block:: tcl
 
-   set_global_assignment -name TOP_LEVEL_ENTITY drm_ip_activator_0x1000000200150001_wrapper
+   set_global_assignment -name SYSTEMVERILOG_FILE drm_hdk/common/alteraProprietary/altchip_id_arria10.sv -library drm_library
+   set_global_assignment -name VHDL_FILE drm_hdl/common/alteraProprietary/drm_all_components.vhdl -library drm_library
+   set_global_assignment -name VHDL_FILE drm_hdl/activator_VLNV/rtl/drm_ip_activator_0xVVVVLLLLNNNNVVVV.vhdl -library drm_library
+   set_global_assignment -name VERILOG_FILE drm_hdk/activator_VLNV/rtl/drm_activation_code_package_0xVVVVLLLLNNNNVVVV.v -library drm_library
+   set_global_assignment -name VERILOG_FILE drm_hdl/activator_VLNV/rtl/drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st.v -library drm_library
 
-   set_global_assignment -name VHDL_FILE ../drm_controller_with_dna_inst/src/alteraProprietary/drm_all_components.vhdl -library drm_library
+.. note:: The ``altchip_id_arria10.sv`` file is for the Arria10 FPGA family.
+          Use the file located in the *common/sv/alteraProprietary* folder from your DRM HDK.
 
-   set_global_assignment -name VHDL_FILE drm_ip_activator_0x1000000200150001.vhdl -library drm_library
-
-   set_global_assignment -name VERILOG_FILE drm_ip_activator_0x1000000200150001.v -library drm_library
-
-   set_global_assignment -name VERILOG_FILE drm_activation_code_package_0x1000000200150001.v -library drm_library
-
-The VHDL and Verilog files must be compiled in "drm_library" library and set
-top module is "DRM_IP_ACTIVATOR_0x1000000200150001_wrapper". 0x1000000200150001
-is corresponding to the hexadecimal value corresponding to the VLVN string.
-So it can differ according the VLVN provided to Accelize to generate a DRM
-activator corresponding to the desired VLVN.
 
 RTL Simulation
 --------------
 
-A DRM Controller bus functional model (BFM) is provided ; it instantiates the
-RTL model of the DRM Controller and implements mechanisms to load a license
-file and generate signals and messages for debug
+A DRM Controller bus functional model (BFM) is provided with the DRM HDK; it instantiates the
+RTL model of the DRM Controller and internally implements a mechanism to load a license
+file and generate signals and messages for debug.
+The provided BFM is located into the `simu` folder of the Activator HDK part. It is specific
+to each Activator. This is particularly interesting when the design instantiate multiple
+Protected IPs. By this mean you can simulate each Protected IP (IP code + Activator)
+separately from the rest of the design.
+
+I/Os
+~~~~
+
+.. code-block:: VHDL
+
+   entity drm_controller_bfm_axi4st is
+   generic (
+       LICENSE_FILE : string := ""
+   );
+   port (
+     -- System Signals
+     drm_aclk              : in  std_logic;
+     drm_arstn             : in  std_logic;
+     -- AXI4-Stream Bus to/from User IP
+     drm_to_uip_tready     : in  std_logic;
+     drm_to_uip_tvalid     : out std_logic;
+     drm_to_uip_tdata      : out std_logic_vector(31 downto 0);
+     uip_to_drm_tready     : out std_logic;
+     uip_to_drm_tvalid     : in  std_logic;
+     uip_to_drm_tdata      : in  std_logic_vector(31 downto 0);
+     -- AXI4-Lite Register Access interface
+     license_file_loaded   : out std_logic;
+     activation_cycle_done : out std_logic;
+     error_code            : out std_logic_vector(7 downto 0)
+   );
+
+.. code-block:: Verilog
+
+   module drm_controller_bfm_axi4st
+   #(
+       parameter LICENSE_FILE : string = ""
+
+   ) (
+     // System Signals
+     input  wire           drm_aclk              ,
+     input  wire           drm_arstn             ,
+     // AXI4-Stream Bus to/from User IP
+     input  wire           drm_to_uip_tready     ,
+     output wire           drm_to_uip_tvalid     ,
+     output wire [31:0]    drm_to_uip_tdata      ,
+     output wire           uip_to_drm_tready     ,
+     input  wire           uip_to_drm_tvalid     ,
+     input  wire [31:0]    uip_to_drm_tdata      ,
+     // AXI4-Lite Register Access interface
+     output wire           license_file_loaded   ,
+     output wire           activation_cycle_done ,
+     output wire [7:0]     error_code
+   );
 
 Usage
 ~~~~~
 
-* Connect the DRM Bus Port of the protected IP with the DRM Bus Port of the
+* Connect the DRM Bus port of the protected IP with the DRM Bus port of the
   DRM Controller BFM
-* A default Simulation License file is embedded in the DRM Controller BFM.
+* A default simulation license file is embedded in the DRM Controller BFM.
   It is automatically generated and delivered in the HDK, based on the IP
   registration data (first Activation Code). If a different one is needed,
-  for features level simulation for example, a new License File shall be
-  explicitly requested to the DRM SaaS and assigned to the generic parameter
-  LICENSE_FILE of the DRM Controller BFM
+  a new License File shall be explicitly requested to the DRM SaaS and assigned
+  to the generic parameter LICENSE_FILE of the DRM Controller BFM.
+  Contact Accelize_ for more details.
 * Drive the DRM bus Clock and the DRM Bus Reset
 * Observe the debug signals and messages
-* Check for the IP Core features activation
+* Check for the IP Core activation
 
 .. image:: _static/RTL-simu.png
    :target: _static/RTL-simu.png
-   :alt: alt_text
+
+ModelSim Compilation and Simulation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Create libraries
+^^^^^^^^^^^^^^^^
+
+Two libraries are required : drm_library, drm_testbench_library
+
+Library drm_library:
+
+.. code-block:: tcl
+
+   vlib drm_library
+   vmap drm_library drm_library
+
+Library drm_testbench_library:
+
+.. code-block:: tcl
+
+   vlib drm_testbench_library
+   vmap drm_testbench_library drm_testbench_library
+
+Compile the files in the following order:
+* drm_hdk/activator_VLNV/simu/modelsim/drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st.vhdl compiled in
+
+Compile drm_all_components.vhdl under *drm_library* library:
+
+.. code-block:: tcl
+
+   vcom -93 -explicit -work drm_library drm_hdk/common/vhdl/modelsim/drm_all_components.vhdl
+
+Compile drm_license_package.vhdl under *drm_testbench_library* library:
+
+.. code-block:: tcl
+
+   vcom -93 -explicit -work drm_testbench_library drm_hdk/activator_VLNV/simu/modelsim/drm_license_package.vhdl
+
+Compile drm_controller_bfm.vhdl under *drm_testbench_library* library:
+
+.. code-block:: tcl
+
+   vcom -93 -explicit -work drm_testbench_library drm_hdk/activator_VLNV/simu/modelsim/drm_controller_bfm_axi4st.vhdl
+
+Compile drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st.vhdl under *drm_library* library:
+
+.. code-block:: tcl
+
+   vcom -93 -explicit -work drm_hdk/activator_VLNV/simu/modelsim/drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st.vhdl|
+
+Run simulation
+^^^^^^^^^^^^^^
+
+Start the simulation :
+
+.. code-block:: tcl
+
+   vsim -L drm_library -L drm_testbench_library -L  -t 1ps *
+
+Run the simulation:
+
+.. code-block:: tcl
+
+   run -all
 
 Expected Behavior
 ~~~~~~~~~~~~~~~~~
@@ -496,20 +711,22 @@ Ultimately, the ERROR_CODE shall be set to x"00" after a complete Activation
 cycle following the LICENSE_FILE_LOADED set to '1'. If this does not happen,
 the error codes can help to make decisions.
 
-If OK, then the Protected IP shall receive its Activation Code and behave
-accordingly.
+If OK, then the Protected IP is ready to be implemented on hardware.
 
 .. image:: _static/behavior.png
    :target: _static/behavior.png
-   :alt: alt_text
 
-Signals for Debug (synchronous with the DRM Bus Clock)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Signals for Debug
+^^^^^^^^^^^^^^^^^
+
+Debug signals are all  synchronized on the ``drm_aclk``.
 
 * LICENSE_FILE_LOADED : when '1' indicates that the License file is
   loaded in the DRM Controller
+
 * ACTIVATION_CYCLE_DONE : when '1' indicated that the DRM Controller
   has completed the first Activation cycle on the DRM Bus
+
 * ERROR_CODE : 8 bits error code
     * x"FF" : not ready ; the DRM Controller operations are in progress
     * x"00" : no error ; the DRM Controller operations ran successfully
@@ -526,71 +743,11 @@ Signals for Debug (synchronous with the DRM Bus Clock)
       please check that the right HDK version is used when asking for the
       Simulation License
 
-Please communicate the error code to Support if assistance is needed.
+Please communicate this error code when you contact Accelize_ for assistance.
 
-ModelSim Compilation and Simulation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Create libraries
-^^^^^^^^^^^^^^^^
+.. _Accelize: https://www.accelize.com/contact-us
 
-Two libraries are required : drm_library, drm_testbench_library
-
-Library drm_library:
-
-.. code-block:: tcl
-
-   vlib drm_library
-   vmap drm_library drm_library
-
-Library drm_testbench_library:
-
-.. code-block:: tcl
-
-   vlib drm_testbench_library
-   vmap drm_testbench_library drm_testbench_library 
-
-Compile the files in the following order:
-* drm_all_components.vhdl compiled in drm_library
-* drm_license_package.vhdl compiled in drm_testbench_library
-* drm_controller_bfm.vhdl compiled in drm_testbench_library
-* drm_ip_activator_0xVVVVLLLLNNNNVVVV.vhdl compiled in any library name
- 
-Compile drm_all_components.vhdl:
-
-.. code-block:: tcl
-
-   vcom -93 -explicit -work drm_library /simu/modelsim/drm_all_components.vhdl
-
-Compile drm_license_package.vhdl:
-
-.. code-block:: tcl
-
-   vcom -93 -explicit -work drm_testbench_library /simu/modelsim/drm_license_package.vhdl
-
-Compile drm_controller_bfm.vhdl:
-
-.. code-block:: tcl
-
-   vcom -93 -explicit -work drm_testbench_library /simu/modelsim/drm_controller_bfm.vhdl
-
-Compile drm_ip_activator_0xVVVVLLLLNNNNVVVV.vhdl:
-
-.. code-block:: tcl
-
-   vcom -93 -explicit -work  /rtl/drm_ip_activator_0xVVVVLLLLNNNNVVVV.vhdl|
-
-Simulation
-^^^^^^^^^^
-
-Start the simulation :
-
-.. code-block:: tcl
-
-   vsim -L drm_library -L drm_testbench_library -L  -t 1ps *
-
-Run the simulation:
-
-.. code-block:: tcl
-
-   run -all
+.. [#f1] Node-locked licensing mode not supported on
+   `Intel PAC <https://www.intel.com/content/www/us/en/programmable/products/boards_and_kits/dev-kits/altera/acceleration-card-arria-10-gx.html>`_
+   context, because Chip ID primitive is not reachable.

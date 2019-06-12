@@ -1,8 +1,8 @@
 C API
 =====
 
-Headers
--------
+Header files
+------------
 
 drmc.h
 ~~~~~~

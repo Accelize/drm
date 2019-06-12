@@ -75,14 +75,17 @@ class DRM_LOCAL DrmManager::Impl {
 protected:
 
     // Design constants
-    const uint32_t RETROCOMPATIBLITY_LIMIT_MAJOR = 3;
-    const uint32_t RETROCOMPATIBLITY_LIMIT_MINOR = 1;
+    const uint32_t SDK_COMPATIBLITY_LIMIT_MAJOR = 3;
+    const uint32_t SDK_COMPATIBLITY_LIMIT_MINOR = 1;
+
+    const uint32_t HDK_COMPATIBLITY_LIMIT_MAJOR = 3;
+    const uint32_t HDK_COMPATIBLITY_LIMIT_MINOR = 1;
 
     const uint32_t cFrequencyDetectionPeriod = 100;     // in milliseconds
     const double cFrequencyDetectionThreshold = 2.0;    // Error in percentage
     const uint32_t cWSRequestTimeout = 10;              // In seconds
     const uint32_t cWSRetryPeriodLong = 60;             // In seconds
-    const uint32_t cWSRetryPeriodShort = 5;             // In seconds
+    const uint32_t cWSRetryPeriodShort = 2;             // In seconds
     const uint32_t cWSRetryDeadline = 5;
 
     //helper typedef
@@ -128,7 +131,6 @@ protected:
     // License related properties
     uint32_t mWSRetryPeriodLong;   ///< Time in seconds before the next request attempt to the Web Server when the time left before timeout is large
     uint32_t mWSRetryPeriodShort;   ///< Time in seconds before the next request attempt to the Web Server when the time left before timeout is short
-    uint32_t mWSRetryDeadline;      ///< Safety margin time in seconds before the timeout time during which no more retry is attempted
     uint32_t mWSRequestTimeout ;    ///< Time in seconds during which retries occur
 
     LicenseType mLicenseType = LicenseType::OTHERS;
@@ -186,7 +188,6 @@ protected:
 
         mDebugMessageLevel = eLogLevel::DEBUG2;
 
-        mWSRetryDeadline = cWSRetryDeadline;
         mWSRetryPeriodLong = cWSRetryPeriodLong;
         mWSRetryPeriodShort = cWSRetryPeriodShort;
         mWSRequestTimeout  = cWSRequestTimeout;
@@ -194,13 +195,13 @@ protected:
         mFrequencyDetectionThreshold = cFrequencyDetectionThreshold;
 
         // Parse configuration file
-        conf_json = parseJsonFile(conf_file_path);
+        conf_json = parseJsonFile( conf_file_path );
 
         try {
             Json::Value param_lib = JVgetOptional( conf_json, "settings", Json::objectValue );
             if ( param_lib != Json::nullValue ) {
                 // Logging
-                sLogVerbosity = static_cast<eLogLevel >(JVgetOptional( param_lib, "log_verbosity", Json::intValue, (int)eLogLevel::QUIET ).asInt());
+                sLogVerbosity = static_cast<eLogLevel >(JVgetOptional( param_lib, "log_verbosity", Json::intValue, (int)eLogLevel::ERROR ).asInt());
                 sLogFormat = static_cast<eLogFormat >(JVgetOptional( param_lib, "log_format", Json::intValue, (int)eLogFormat::SHORT ).asInt());
                 sLogFilePath = JVgetOptional( param_lib, "log_file", Json::stringValue ).asString();
                 // Frequency detection
@@ -211,7 +212,6 @@ protected:
                 // Others
                 mWSRetryPeriodLong = JVgetOptional( param_lib, "ws_retry_period_long", Json::uintValue, cWSRetryPeriodLong).asUInt();
                 mWSRetryPeriodShort = JVgetOptional( param_lib, "ws_retry_period_short", Json::uintValue, cWSRetryPeriodShort).asUInt();
-                mWSRetryDeadline = JVgetOptional( param_lib, "ws_retry_deadline", Json::uintValue, cWSRetryDeadline).asUInt();
                 mWSRequestTimeout = JVgetOptional( param_lib, "ws_request_timeout", Json::uintValue, cWSRequestTimeout).asUInt();
                 if ( mWSRequestTimeout == 0 )
                     Throw( DRM_BadArg, "ws_request_timeout must not be 0");
@@ -285,7 +285,9 @@ protected:
         checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
 
         if ( index >= rwData.size() )
-            Throw( DRM_BadArg, "Index ", index, " overflows the Mailbox memory: max index is ", rwData.size()-1 );
+            Unreachable( "Index ", index, " overflows the Mailbox memory; max index is ",
+                    rwData.size()-1 ); //LCOV_EXCL_LINE
+
         Debug( "Read '", rwData[index], "' in Mailbox at index ", index );
         return rwData[index];
     }
@@ -300,9 +302,10 @@ protected:
         checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
 
         if ( (uint32_t)index >= rwData.size() )
-            Throw( DRM_BadArg, "Index ", index, " overflows the Mailbox memory: max index is ", rwData.size()-1 );
+            Unreachable( "Index ", index, " overflows the Mailbox memory; max index is ",
+                    rwData.size()-1 ); //LCOV_EXCL_LINE
         if ( index + nb_elements > rwData.size() )
-            Throw( DRM_BadArg, "Trying to read out of Mailbox memory space: ", rwData.size() );
+            Throw( DRM_BadArg, "Trying to read out of Mailbox memory space; size is ", rwData.size() );
 
         auto first = rwData.cbegin() + index;
         auto last = rwData.cbegin() + index + nb_elements;
@@ -321,7 +324,7 @@ protected:
         checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
 
         if ( index >= rwData.size() )
-            Throw( DRM_BadArg, "Index ", index, " overflows the Mailbox memory: max index is ", rwData.size()-1 );
+            Unreachable( "Index ", index, " overflows the Mailbox memory: max index is ", rwData.size()-1 ); //LCOV_EXCL_LINE
         rwData[index] = value;
         checkDRMCtlrRet( getDrmController().writeMailboxFileRegister( rwData, rwSize ) );
         Debug( "Wrote '", value, "' in Mailbox at index ", index );
@@ -336,7 +339,7 @@ protected:
         checkDRMCtlrRet( getDrmController().writeMailBoxFilePageRegister() );
         checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
         if ( index >= rwData.size() )
-            Throw( DRM_BadArg, "Index ", index, " overflows the Mailbox memory: max index is ", rwData.size()-1 );
+            Unreachable( "Index ", index, " overflows the Mailbox memory: max index is ", rwData.size()-1 ); //LCOV_EXCL_LINE
         if ( index + value_vec.size() > rwData.size() )
             Throw( DRM_BadArg, "Trying to write out of Mailbox memory space: ", rwData.size() );
         std::copy( std::begin(value_vec), std::end(value_vec), std::begin(rwData) + index );
@@ -347,13 +350,13 @@ protected:
     DrmControllerLibrary::DrmControllerOperations& getDrmController() const {
         if (mDrmController)
             return *mDrmController;
-        Throw( DRM_CtlrError, "No DRM Controller available" );
+        Unreachable( "No DRM Controller available" ); //LCOV_EXCL_LINE
     }
 
     DrmWSClient& getDrmWSClient() const {
         if ( mWsClient )
             return *mWsClient;
-        Throw( DRM_BadUsage, "No Web Service has been defined" );
+        Unreachable( "No Web Service has been defined" ); //LCOV_EXCL_LINE
     }
 
     static uint32_t getDrmRegisterOffset(const std::string& regName) {
@@ -361,7 +364,7 @@ protected:
             return 0;
         if ( regName.substr(0, 15) == "DrmRegisterLine" )
             return (uint32_t)std::stoul(regName.substr(15))*4+4;
-        Unreachable( "Unsupported regName argument: " + regName );
+        Unreachable( "Unsupported regName argument: ", regName ); //LCOV_EXCL_LINE
     }
 
     unsigned int readDrmRegister(const std::string& regName, unsigned int& value) const {
@@ -388,7 +391,7 @@ protected:
 
     void checkDRMCtlrRet( const unsigned int& errcode) const {
         if ( errcode )
-            Throw(DRM_CtlrError, "Error in DRM Controller Library call: ", errcode);
+            Unreachable( "Error in DRM Controller Library call: ", errcode ); //LCOV_EXCL_LINE
     }
 
     void lockDrmToInstance() {
@@ -415,7 +418,7 @@ protected:
     }
 
     // Check compatibility of the DRM Version with Algodone version
-    void checkDrmCompatibility() const {
+    void checkHdkCompatibility() const {
         uint32_t drmVersionNum;
         std::string drmVersionDot;
         std::string drmVersion = getDrmCtrlVersion();
@@ -426,17 +429,17 @@ protected:
         auto drmMajor = (drmVersionNum >> 16) & 0xFF;
         auto drmMinor = (drmVersionNum >> 8) & 0xFF;
 
-        if (drmMajor < RETROCOMPATIBLITY_LIMIT_MAJOR) {
+        if (drmMajor < HDK_COMPATIBLITY_LIMIT_MAJOR) {
             Throw( DRM_CtlrError, "This DRM Lib ", getApiVersion()," is not compatible with the DRM HDK version ",
                     drmVersionDot,": To be compatible HDK version shall be > or equal to ",
-                    RETROCOMPATIBLITY_LIMIT_MAJOR,".",RETROCOMPATIBLITY_LIMIT_MINOR,".0" );
+                    HDK_COMPATIBLITY_LIMIT_MAJOR,".",HDK_COMPATIBLITY_LIMIT_MINOR,".0" );
         }
-        if (drmMinor < RETROCOMPATIBLITY_LIMIT_MINOR) {
+        if (drmMinor < HDK_COMPATIBLITY_LIMIT_MINOR) {
             Throw( DRM_CtlrError, "This DRM Library version ", getApiVersion()," is not compatible with the DRM HDK version ",
                     drmVersionDot,": To be compatible HDK version shall be > or equal to ",
-                    RETROCOMPATIBLITY_LIMIT_MAJOR,".",RETROCOMPATIBLITY_LIMIT_MINOR,".0" );
+                    HDK_COMPATIBLITY_LIMIT_MAJOR,".",HDK_COMPATIBLITY_LIMIT_MINOR,".0" );
         }
-        Debug( "DRM Version = ", drmVersionDot );
+        Debug( "DRM HDK Version = ", drmVersionDot );
     }
 
     void initDrmInterface() {
@@ -463,7 +466,7 @@ protected:
         Debug( "DRM Controller SDK is initialized" );
 
         // Check compatibility of the DRM Version with Algodone version
-        checkDrmCompatibility();
+        checkHdkCompatibility();
 
         // Try to lock the DRM controller to this instance, return an error is already locked.
         lockDrmToInstance();
@@ -477,7 +480,8 @@ protected:
             // Check license directory exists
             if ( !dirExists( mNodeLockLicenseDirPath ) )
                 Throw( DRM_BadArg, "License directory path '", mNodeLockLicenseDirPath,
-                       "' specified in configuration file '", mConfFilePath, "' is not existing on file system");
+                       "' specified in configuration file '", mConfFilePath,
+                       "' is not existing on file system");
 
             // If a floating/metering session is still running, try to close it gracefully.
             if ( isDrmCtrlInMetering() && isSessionRunning() ) {
@@ -503,14 +507,16 @@ protected:
     void checkSessionIDFromWS(Json::Value license_json) {
         std::string ws_sessionID = license_json["metering"]["sessionId"].asString();
         if ( !mSessionID.empty() && (mSessionID != ws_sessionID) ) {
-            Throw(DRM_Fatal, "Session ID mismatch: received '", ws_sessionID, "' from WS but expect '", mSessionID, "'");
+            Unreachable( "Session ID mismatch: received '", ws_sessionID, "' from WS but expect '",
+                    mSessionID, "'"); //LCOV_EXCL_LINE
         }
     }
 
     void checkSessionIDFromDRM(Json::Value license_json) {
         std::string ws_sessionID = license_json["sessionId"].asString();
         if ( !mSessionID.empty() && (mSessionID != ws_sessionID) ) {
-            Throw(DRM_Fatal, "Session ID mismatch: DRM gives '", ws_sessionID, "' but expect '", mSessionID, "'");
+            Unreachable( "Session ID mismatch: DRM gives '", ws_sessionID, "' but expect '",
+                    mSessionID, "'"); //LCOV_EXCL_LINE
         }
     }
 
@@ -524,7 +530,8 @@ protected:
         std::lock_guard<std::recursive_mutex> lock(mDrmControllerMutex);
         uint32_t licenseTimerCounterMsb(0), licenseTimerCounterLsb(0);
         uint64_t licenseTimerCounter;
-        checkDRMCtlrRet( getDrmController().sampleLicenseTimerCounter( licenseTimerCounterMsb, licenseTimerCounterLsb ) );
+        checkDRMCtlrRet( getDrmController().sampleLicenseTimerCounter( licenseTimerCounterMsb,
+                licenseTimerCounterLsb ) );
         licenseTimerCounter = licenseTimerCounterMsb;
         licenseTimerCounter <<= 32;
         licenseTimerCounter += licenseTimerCounterLsb;
@@ -601,8 +608,8 @@ protected:
         checkDRMCtlrRet( getDrmController().readMailboxFileRegister( readOnlyMailboxSize, readWriteMailboxSize,
                                                                      readOnlyMailboxData, readWriteMailboxData ) );
         Debug( "Mailbox sizes: read-only=", readOnlyMailboxSize, ", read-write=", readWriteMailboxSize );
+        readOnlyMailboxData.push_back(0);
         if ( readOnlyMailboxSize ) {
-            readOnlyMailboxData.push_back(0);
             mailboxReadOnly = std::string( (char*)readOnlyMailboxData.data() );
         }
         else
@@ -642,7 +649,7 @@ protected:
 
         if ( !mailboxReadOnly.empty() ) {
             try {
-                json_output["product"] = parseJsonString(mailboxReadOnly);
+                json_output["product"] = parseJsonString( mailboxReadOnly );
             } catch ( const Exception &e ) {
                 if (e.getErrCode() == DRM_BadFormat)
                     Throw( DRM_BadFormat, "Failed to parse Read-Only Mailbox in DRM Controller: ", e.what() );
@@ -869,7 +876,10 @@ protected:
             licenseKey = JVgetRequired( dna_node, "key", Json::stringValue ).asString();
             if ( mLicenseType != LicenseType::NODE_LOCKED ) {
                 licenseTimer = JVgetRequired( dna_node, "licenseTimer", Json::stringValue ).asString();
-                mLicenseDuration = JVgetRequired( metering_node, "timeoutSecond", Json::stringValue ).asUInt();
+                mLicenseDuration = JVgetRequired( metering_node, "timeoutSecond", Json::uintValue ).asUInt();
+                if ( mLicenseDuration == 0 ) {
+                    Warning( "'timeoutSecond' field sent by License WS must not be 0" );
+                }
             }
 
         } catch( Exception &e ) {
@@ -906,7 +916,7 @@ protected:
         bool is_nodelocked = isDrmCtrlInNodelock();
         bool is_metered = isDrmCtrlInMetering();
         if (is_nodelocked && is_metered)
-            Unreachable( "DRM Controller cannot be in both Node-Locked and Metering/Floating license modes" );
+            Unreachable( "DRM Controller cannot be in both Node-Locked and Metering/Floating license modes" ); //LCOV_EXCL_LINE
         if (mLicenseType != LicenseType::NODE_LOCKED) {
             if ( !is_metered )
                 Throw( DRM_CtlrError, "DRM Controller failed to switch to Metering license mode" );
@@ -967,51 +977,35 @@ protected:
         Debug ( "Looking for local node-locked license file: ", mNodeLockLicenseFilePath );
 
         try {
+            // Try to load a local license file
+            license_json = parseJsonFile( mNodeLockLicenseFilePath );
+            Debug( "Parsed Node-locked License file: ", license_json .toStyledString() );
 
-            ifs.open(mNodeLockLicenseFilePath);
-            if (ifs.good()) {
-                // A license file has already been installed locally; read its content
-                ifs >> license_json;
-                if ( !ifs.good() )
-                    Throw(DRM_ExternFail, "Cannot parse license file ",
-                          mNodeLockLicenseFilePath);
-                ifs.close();
-                Debug( "Found and loaded local node-locked license file: ",
-                      mNodeLockLicenseFilePath );
-            } else {
-                // No license has been found locally, request one:
-                Debug( "No license file found: ", mNodeLockLicenseFilePath );
-                // - Create WS access
-                mWsClient.reset( new DrmWSClient( mConfFilePath, mCredFilePath ) );
-                // - Read request file
-                ifs.open( mNodeLockRequestFilePath );
-                if ( !ifs.is_open() ) {
-                    Throw( DRM_ExternFail, "Failed to access license request file ",
-                          mNodeLockRequestFilePath );
-                }
-                Json::Value request_json;
-                ifs >> request_json;
-                if ( !ifs.good() ) {
-                    Throw( DRM_ExternFail, "Failed to parse license request file ",
-                          mNodeLockRequestFilePath );
-                }
-                ifs.close();
-                // - Send request to web service and receive the new license
+        } catch( const Exception& e ) {
+            /// No license has been found locally, request one to License WS:
+            /// - Clear Session IS
+            Debug( "Clearing session ID: ", mSessionID );
+            mSessionID = std::string("");
+            /// - Create WS access
+            mWsClient.reset( new DrmWSClient( mConfFilePath, mCredFilePath ) );
+            /// - Read request file
+            try {
+                Json::Value request_json = parseJsonFile( mNodeLockRequestFilePath );
+                Debug( "Parsed Node-locked License Request file: ", request_json .toStyledString() );
+                /// - Send request to web service and receive the new license
                 TClock::time_point deadline =
                         TClock::now() + std::chrono::seconds(mWSRequestTimeout);
                 license_json = getLicense(request_json, deadline, mWSRetryPeriodShort );
-                // - Save license to file
+                /// - Save the license to file
                 saveJsonToFile(mNodeLockLicenseFilePath, license_json);
                 Debug( "Requested and saved new node-locked license file: ", mNodeLockLicenseFilePath );
+            } catch( const Exception& e ) {
+                Throw( e.getErrCode(), "Failed to request license file: ", e.what() );
             }
-            // Install the license
-            setLicense(license_json);
-            Info( "Installed node-locked license successfully" );
-
-        } catch( const Exception& e ) {
-            if ( e.getErrCode() != DRM_Exit )
-                Throw( e.getErrCode(), "Failed to install a license: ", e.what() );
         }
+        /// Install the license
+        setLicense(license_json);
+        Info( "Installed node-locked license successfully" );
     }
 
     void detectDrmFrequency() {
@@ -1032,7 +1026,7 @@ protected:
         counterEnd = getTimerCounterValue();
         timeEnd = TClock::now();
         if ( counterEnd == 0 )
-            Unreachable( "Frequency auto-detection failed: license timeout counter is 0" );
+            Unreachable( "Frequency auto-detection failed: license timeout counter is 0" ); //LCOV_EXCL_LINE
         if ( counterEnd > counterStart ) {
             Debug( "License timeout counter has been reset: taking another sample" );
             counterStart = counterEnd;
@@ -1043,7 +1037,7 @@ protected:
             counterEnd = getTimerCounterValue();
             timeEnd = TClock::now();
             if ( counterEnd > counterStart )
-                Unreachable( "Failed to measure DRM frequency after 2 attempts" );
+                Unreachable( "Failed to measure DRM frequency after 2 attempts" ); //LCOV_EXCL_LINE
         }
         Debug( "Start time = ", timeStart.time_since_epoch().count(), " / Counter start = ", counterStart );
         Debug( "End time = ", timeEnd.time_since_epoch().count(), " / Counter end = ", counterEnd );
@@ -1133,13 +1127,9 @@ protected:
                         Json::Value request_json = getMeteringWait();
                         Json::Value license_json;
 
-                        if (mLicenseDuration == 0) {
-                            Unreachable( "mLicenseDuration is 0" );
-                        }
-
                         /// Retry Web Service request loop
                         TClock::time_point polling_deadline = TClock::now()
-                                + std::chrono::seconds( mLicenseDuration - mWSRetryDeadline );
+                                + std::chrono::seconds( mLicenseDuration );
 
                         /// Attempt to get the next license
                         license_json = getLicense( request_json, polling_deadline,
@@ -1394,7 +1384,8 @@ public:
                     case ParameterKey::license_type: {
                         auto it = LicenseTypeStringMap.find( mLicenseType );
                         if ( it == LicenseTypeStringMap.end() )
-                            Unreachable( "Missing parameter key: license_type" );
+                            Unreachable( "License_type '", (uint32_t)mLicenseType,
+                                    "' is missing in LicenseTypeStringMap" ); //LCOV_EXCL_LINE
                         std::string license_type_str = it->second;
                         json_value[key_str] = license_type_str;
                         Debug( "Get value of parameter '", key_str,
@@ -1558,12 +1549,6 @@ public:
                                 "' (ID=", key_id, "): ", json_value[key_str].toStyledString() );
                         break;
                     }
-                    case ParameterKey::ws_retry_deadline: {
-                        json_value[key_str] = mWSRetryDeadline;
-                        Debug( "Get value of parameter '", key_str,
-                                "' (ID=", key_id, "): ", mWSRetryDeadline );
-                        break;
-                    }
                     case ParameterKey::ws_retry_period_long: {
                         json_value[key_str] = mWSRetryPeriodLong;
                         Debug( "Get value of parameter '", key_str,
@@ -1616,8 +1601,9 @@ public:
                         Debug( "Get value of parameter '", key_str,
                                "' (ID=", key_id, "): ", count );
                         break;
-                    }default: {
-                        Throw( DRM_BadArg, "Cannot find parameter with ID: ", key_id );
+                    }
+                    default: {
+                        Throw( DRM_BadArg, "Parameter '", key_str, "' cannot be read" );
                         break;
                     }
                 }
@@ -1635,7 +1621,7 @@ public:
     }
 
     template<typename T> T get( const ParameterKey /*key_id*/ ) const {
-        Unreachable("Default template for get function");
+        Unreachable("Default template for get function"); //LCOV_EXCL_LINE
     }
 
     void set( const Json::Value& json_value ) {
@@ -1680,19 +1666,13 @@ public:
                     }
                     case ParameterKey::mailbox_data: {
                         if ( !(*it).isArray() )
-                            Throw( DRM_BadUsage, "Value must be an array of integer values" );
+                            Throw( DRM_BadArg, "Value must be an array of integers" );
                         std::vector<uint32_t> data_array;
                         for( Json::ValueConstIterator itr = (*it).begin(); itr != (*it).end(); itr++ )
                             data_array.push_back( (*itr).asUInt() );
                         writeMailbox( MailboxOffset::MB_USER, data_array );
                         Debug( "Set parameter '", key_str, "' (ID=", key_id, ") ",
                                 "to value: ", (*it).toStyledString());
-                        break;
-                    }
-                    case ParameterKey::ws_retry_deadline: {
-                        mWSRetryDeadline = (*it).asUInt();
-                        Debug( "Set parameter '", key_str, "' (ID=", key_id, ") ",
-                                "to value: ", mWSRetryDeadline );
                         break;
                     }
                     case ParameterKey::ws_retry_period_long: {
@@ -1745,6 +1725,11 @@ public:
                     }
                     case ParameterKey::log_message_level: {
                         int message_level = (*it).asInt();
+                        if ( ( message_level < (int)eLogLevel::ERROR )
+                            || ( message_level > (int)eLogLevel::DEBUG2 ) )
+                            Throw( DRM_BadArg, "log_message_level (", message_level,
+                                    ") is out of range [", (int)eLogLevel::ERROR, ":",
+                                    (int)eLogLevel::DEBUG2, "]" );
                         mDebugMessageLevel = static_cast<eLogLevel>(message_level);
                         Debug( "Set parameter '", key_str, "' (ID=", key_id, ") ",
                                 "to value ", message_level );
@@ -1752,18 +1737,8 @@ public:
                     }
                     case ParameterKey::log_message: {
                         std::string custom_msg = (*it).asString();
-                        if ( mDebugMessageLevel == eLogLevel::ERROR )
-                            Error(custom_msg);
-                        else if ( mDebugMessageLevel == eLogLevel::WARNING )
-                            Warning(custom_msg);
-                        else if ( mDebugMessageLevel == eLogLevel::INFO )
-                            Info(custom_msg);
-                        else if ( mDebugMessageLevel == eLogLevel::DEBUG )
-                            Debug(custom_msg);
-                        else if ( mDebugMessageLevel == eLogLevel::DEBUG2 )
-                            Debug2(custom_msg);
-                        else
-                            Unreachable( "Unsupported log level: " + std::to_string((int)mDebugMessageLevel) );
+                        if ( sLogVerbosity >= mDebugMessageLevel )
+                            logTrace( mDebugMessageLevel, __SHORT_FILE__, __LINE__, custom_msg );
                         break;
                     }
                     default:
@@ -1794,11 +1769,6 @@ public:
     std::string key_str = findParameterString( key_id ); \
     json_value[key_str] = Json::nullValue; \
     get( json_value );
-
-template<> Json::Value DrmManager::Impl::get( const ParameterKey key_id ) const {
-    IMPL_GET_BODY
-    return json_value;
-}
 
 template<> std::string DrmManager::Impl::get( const ParameterKey key_id ) const {
     IMPL_GET_BODY
@@ -1846,10 +1816,6 @@ template<> double DrmManager::Impl::get( const ParameterKey key_id ) const {
     json_value[key_str] = value; \
     set( json_value );
 
-
-template<> void DrmManager::Impl::set( const ParameterKey key_id, const Json::Value& value ) {
-    IMPL_SET_BODY
-}
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const std::string& value ) {
     IMPL_SET_BODY
@@ -1928,7 +1894,6 @@ template<typename T> T DrmManager::get( const ParameterKey key ) const {
     return pImpl->get<T>( key );
 }
 
-template<> Json::Value DrmManager::get( const ParameterKey key ) const { return pImpl->get<Json::Value>( key ); }
 template<> std::string DrmManager::get( const ParameterKey key ) const { return pImpl->get<std::string>( key ); }
 template<> bool DrmManager::get( const ParameterKey key ) const { return pImpl->get<bool>( key ); }
 template<> int32_t DrmManager::get( const ParameterKey key ) const { return pImpl->get<int32_t>( key ); }
@@ -1951,7 +1916,6 @@ void DrmManager::set( const ParameterKey key, const T& value ) {
     pImpl->set<T>( key, value );
 }
 
-template<> void DrmManager::set( const ParameterKey key, const Json::Value& value ) { pImpl->set<Json::Value>( key, value ); }
 template<> void DrmManager::set( const ParameterKey key, const std::string& value ) { pImpl->set<std::string>( key, value ); }
 template<> void DrmManager::set( const ParameterKey key, const bool& value ) { pImpl->set<bool>( key, value ); }
 template<> void DrmManager::set( const ParameterKey key, const int32_t& value ) { pImpl->set<int32_t>( key, value ); }

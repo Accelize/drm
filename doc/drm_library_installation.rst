@@ -1,17 +1,13 @@
-Installation
-============
+DRM Library installation
+========================
 
-This section explain how to install and build Accelize DRM library.
+This section explains how to install the Accelize DRM library API from packages and from source.
+
 
 Supported OS
 ------------
 
-Software requirements:
-
-* The Accelize DRM library requires a compiler with full C++11 support.
-* The Accelize DRM Python library requires Python >= 3.5.
-
-Accelize support following "long time support" OS and provides fully tested
+Accelize supports the following "long time support" OS and provides fully tested
 packages for them:
 
 * RHEL/Centos 7 [#f1]_
@@ -19,29 +15,43 @@ packages for them:
 * Ubuntu 16.04 LTS Xenial
 * Ubuntu 18.04 LTS Bionic
 
-.. [#f1] With Python 3.6 from EPEL repository for Accelize DRM Python library.
-
-Following OS are tested but not supported by Accelize:
+Following OS have been tested but are not supported by Accelize:
 
 * Debian Testing [#f2]_
-* Fedora (Last stable version) [#f3]_
-* Ubuntu (Last stable version) [#f3]_
+* Fedora (2 latest stable versions)
+* Ubuntu (2 latest stable versions)
 
-.. [#f2] No packages are provided.
-.. [#f3] Packages are only provided for the last available version.
+
+Software requirements
+---------------------
+
+* The Accelize DRM C/C++ library requires a compiler with full C++11 support.
+* The Accelize DRM Python library requires Python >= 3.5.
+
 
 Installation from packages
 --------------------------
 
-Install the Accelize repository
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The DRM library packages are available only for the **amd64** / **x86_64**
+architecture.
+
+
+Install Accelize repository
+```````````````````````````
 
 Packages are hosted on the Accelize repository.
 
 .. note:: Packages and repositories metadata are signed for security.
 
+Accelize provides *stable* and a *prerelease* channels.
+
+To install the prerelease channel simply replace ``stable`` by ``prerelease`` in the rest of this document.
+
+.. warning:: No support is provided for *prerelease* packages.
+
+
 Debian, Ubuntu: DEB repository
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::::::::::::::::::::::::::::::
 
 To install the repository, run the following commands:
 
@@ -58,14 +68,19 @@ To install the repository, run the following commands:
     sudo add-apt-repository "deb https://accelize.s3.amazonaws.com/deb $(lsb_release -cs) stable"
     sudo apt update
 
-RHEL, CentOS, Fedora: RPM repository
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To install the repository, run the following commands:
+RHEL, CentOS, Fedora: RPM repository
+::::::::::::::::::::::::::::::::::::
+
+To install the Accelize repository, run the following commands:
 
 .. code-block:: bash
     :caption: On RHEL 7, CentOS 7
 
+    # Ensure that config manager is installed
+    sudo yum install -y yum-utils
+
+     # Install Accelize repository:
     sudo yum-config-manager --add-repo https://accelize.s3.amazonaws.com/rpm/accelize_stable.repo
 
 .. code-block:: bash
@@ -77,23 +92,54 @@ To install the repository, run the following commands:
     # Install repository
     sudo dnf config-manager --add-repo https://accelize.s3.amazonaws.com/rpm/accelize_stable.repo
 
-Prerelease channel
-^^^^^^^^^^^^^^^^^^
+Python Library and systemd service package
+``````````````````````````````````````````
 
-Accelize provides *stable* and a *prerelease* channels.
+This section explains how to install the DRM library as a python module or systemd service.
+It is available for Python 3 only.
 
-Installation instructions are for the stable channel, but is it possible to use
-prerelease channel by following same instructions and replacing
-`stable` by `prerelease` in commands.
+This package provides 3 levels of integration:
 
-.. warning:: No support is provided for prerelease packages.
+* The Accelize DRM library Python
+* Cython headers to the C/C++ Accelize DRM library.
+* A systemd service that provides a generic Accelize DRM
+  implementation as a background service (the service is not started by
+  default). Refer to :doc:`drm_library_as_service` for more details,
+  especially to see the supported environments.
 
-C/C++ Library
-~~~~~~~~~~~~~
+Depending on your OS, use the following command to install the Python package:
 
-The C/C++ library are required to run application that depends on Accelize DRM.
+.. code-block:: bash
+    :caption: On Debian, Ubuntu
 
-It can be installed using package manager:
+    sudo apt install -y python3-accelize-drm
+
+.. code-block:: bash
+    :caption: On RHEL 7, CentOS 7
+
+    # Ensure EPEL repository is installed (Allow to setup Python 3.6 dependency)
+    sudo yum install -y epel-release
+
+    # Install package
+    sudo yum install -y python36-accelize-drm
+
+.. code-block:: bash
+    :caption: On Fedora
+
+    sudo dnf install -y python3-accelize-drm
+
+.. note:: The python DRM library is a wrapper of the C/C++ DRM library.
+          The package will install automatically the C/C++ library.
+
+Installation has been completed. To verify your installation,
+refer to the section 'Validate your integration' in :doc:`drm_getting_started`.
+
+C/C++ Library package
+`````````````````````
+
+This section explains how to install the DRM library as a C/C++ library API.
+
+Run the following command:
 
 .. code-block:: bash
     :caption: On Debian, Ubuntu
@@ -110,39 +156,14 @@ It can be installed using package manager:
 
     sudo dnf install -y libaccelize-drm
 
-Python Library
-~~~~~~~~~~~~~~
 
-The Python library allow to use Accelize DRM with Python 3.
-It also bundle Cython headers to the C/C++ Accelize DRM library.
+C/C++ Library Development package
+`````````````````````````````````
 
-It can be installed using package manager:
+This section explains how to install the DRM library as a C/C++ library API.
+It provides the C/C++ header files and the documentation.
 
-.. code-block:: bash
-    :caption: On Debian, Ubuntu
-
-    sudo apt install -y python3-accelize-drm
-
-.. code-block:: bash
-    :caption: On RHEL 7, CentOS 7
-
-    sudo yum install -y python3-accelize-drm
-
-.. code-block:: bash
-    :caption: On Fedora
-
-    sudo dnf install -y python3-accelize-drm
-
-.. note:: The ``libaccelize-drm`` package is automatically installed with the
-          ``python3-accelize-drm`` package.
-
-C/C++ Development package
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The development package contain C/C++ header files and documentation.
-It is required to build applications that depends on Accelize DRM.
-
-It can be installed using package manager:
+Run the following command:
 
 .. code-block:: bash
     :caption: On Debian, Ubuntu
@@ -159,30 +180,38 @@ It can be installed using package manager:
 
     sudo dnf install -y libaccelize-drm-devel
 
-.. note:: The ``libaccelize-drm`` is automatically installed with the
-          Development package.
 
 .. note:: The development package also install an offline version of this
           documentation that can be found read by opening
           ``/usr/share/accelize/drm/doc/html/index.html``.
 
-Compilation from sources
+
+Installation from source
 ------------------------
 
+The manual installation allows you to fine tune the components to generate.
+CMake options are used to select which components are generated amongst the following ones:
+
+* Documentation
+* Python wrapper
+* Testing materials
+* Reporting materials
+
+For more details about available CMake options, refer to `Build CMake configuration`_.
+
+
 Requirements
-~~~~~~~~~~~~
+````````````
 
 Utilities:
-
-* git
-* cmake >= 3.12
-* make (Or any CMake supported build tool)
-* GCC, G++ >= 4.8 (Or any compatible C++11 compiler)
+ * git
+ * cmake >= 3.12
+ * make (Or any CMake supported build tool)
+ * GCC, G++ >= 4.8 (Or any compatible C++11 compiler)
 
 Libraries:
-
-* libcurl-devel
-* jsoncpp-devel
+ * libcurl-devel
+ * jsoncpp-devel
 
 Run following commands to install requirements:
 
@@ -201,29 +230,38 @@ Run following commands to install requirements:
 
     sudo dnf install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel
 
-We recommend to install CMake as Python package to get a recent version
-(Versions packaged on some OS are too old to build the Accelize DRM library)
+.. warning:: We recommend to install CMake as Python package to get a recent version.
+             Indeed the default CMake version packaged with OS distributions
+             might be too old to build the Accelize DRM library.
 
-Run following command to install CMake as Python package:
+             To install CMake as Python package, run the following command:
 
-.. code-block:: bash
+             .. code-block:: bash
 
-    pip3 install -U cmake
+                pip3 install -U cmake
 
-.. note:: See next section for information on how to install Python3 and Pip3.
+             .. note:: See section `Python 3 option`_ for more information
+                       about Python3 and Pip3 installation.
 
-To build Python Library
-^^^^^^^^^^^^^^^^^^^^^^^
+Python 3 option
+:::::::::::::::
+
+.. warning:: This dependency is mandatory to complete the `Run tests`_ section.
+
+This step is required only if you want to:
+
+* Generate the Python3 library (using ``-DPYTHON3=ON`` option with CMake)
+* Generate the Sphinx documentation (using ``-DDOC=ON`` option with CMake)
+
+Otherwise you can jump to the next step.
 
 Packages:
-
-* Python3-devel
+ * Python3-devel
 
 Python packages:
-
-* setuptools
-* wheel
-* cython >= 0.28
+ * setuptools
+ * wheel
+ * cython >= 0.28
 
 Run following command to install requirements:
 
@@ -256,18 +294,23 @@ Run following command to install requirements:
     sudo dnf install -y python3-devel python3-pip
     pip3 install -U setuptools wheel cython
 
-To build documentation
-^^^^^^^^^^^^^^^^^^^^^^
+Documentation generation option
+:::::::::::::::::::::::::::::::
 
-Utilities (Always required):
+This step is required only if you want to:
 
-* doxygen
+* Generate the C/C++ documentation (using ``-DDOC=ON`` option with CMake)
+* Generate the full Sphinx documentation (using ``-DDOC=ON -DPYTHON3=ON`` options with CMake)
+
+Otherwise you can jump to the next step.
+
+Utilities:
+ * doxygen
 
 Python packages (Required for full documentation):
-
-* sphinx
-* breathe
-* sphinx_rtd_theme
+ * sphinx
+ * breathe
+ * sphinx_rtd_theme
 
 Run following command to install requirements:
 
@@ -289,22 +332,48 @@ Run following command to install requirements:
     sudo dnf install -y doxygen
     pip3 install -U sphinx breathe sphinx_rtd_theme
 
-To build packages
-^^^^^^^^^^^^^^^^^
+Test generation option
+::::::::::::::::::::::
 
-RPM package (For RHEL, CentOS, Fedora)
-``````````````````````````````````````
+.. warning:: This dependency is mandatory to complete the `Run tests`_ section.
 
-Required to build packages:
+This step is required only if you want to:
 
-* rpm-build
+* Run the test suite (using -DTESTS=ON` option with CMake)
 
-Required to sign packages:
+Otherwise you can jump to the next step.
 
-* rpm-sign
-* gnupg
+Python packages:
+ * pytest
 
 Run following command to install requirements:
+
+.. code-block:: bash
+
+    pip3 install -U pytest
+
+Package generation option
+:::::::::::::::::::::::::
+
+This step is required only if you want to:
+
+* Generate the installation packages (using -DPKG=ON` option with CMake)
+
+Otherwise you can jump to the next step.
+
+Before going further, make sure the section `Python 3 option`_ has been completed.
+
+RPM package (For RHEL, CentOS, Fedora)
+''''''''''''''''''''''''''''''''''''''
+
+Required to build packages:
+ * rpm-build
+
+Required to sign packages:
+ * rpm-sign
+ * gnupg
+
+To install the required utilities, run the following command:
 
 .. code-block:: bash
     :caption: On RHEL 7, CentOS 7
@@ -317,48 +386,36 @@ Run following command to install requirements:
     sudo dnf install -y rpm-build rpm-sign gnupg2
 
 DEB Packages (For Debian, Ubuntu)
-`````````````````````````````````
+'''''''''''''''''''''''''''''''''
 
 Required to build package:
-
-* pkg-config
-* dpkg-dev
-* file
+ * pkg-config
+ * dpkg-dev
+ * file
 
 Required to sign packages:
+ * dpkg-sig
+ * gnupg
 
-* dpkg-sig
-* gnupg
-
-Run following command to install requirements:
+To install required utilities, run the following command:
 
 .. code-block:: bash
 
     sudo apt install -y pkg-config dpkg-dev dpkg-sig gnupg file
 
-To run tests
-^^^^^^^^^^^^
+ABI check option
+::::::::::::::::
 
-Python packages:
+This step is required only if you want to:
 
-* pytest
+* Run the test suite in Debug mode (using -DCMAKE_BUILD_TYPE=Debug` option with CMake)
 
-Run following command to install requirements:
-
-.. code-block:: bash
-
-    pip3 install -U pytest
-
-Debug tests
-^^^^^^^^^^^
-
-.. note:: Required to run tests in Debug build mode only.
+Otherwise you can jump to the next step.
 
 Utilities:
+ * abi-compliance-checker
 
-* abi-compliance-checker
-
-Run following command to install requirements:
+To install requirements run the following command:
 
 .. code-block:: bash
     :caption: On Debian 9 or more , Ubuntu 18.04 or more
@@ -392,34 +449,23 @@ Run following command to install requirements:
 
     sudo dnf install -y abi-compliance-checker
 
-Full test scenario support
-``````````````````````````
+Coverage option
+:::::::::::::::
 
-.. note:: Required to run the full testing scenario only
+This step is required only if you want to:
 
-Python packages:
+* Compile the C/C++ with the -coverage option (using ``-DCOVERAGE=ON`` option with CMake)
+* Generate the coverage report after the test suite execution in Debug (using
+  ``-DCMAKE_BUILD_TYPE=Debug -DTEST=ON -DCOVERAGE=ON`` options with CMake)
 
-* tox
-
-Run following command to install requirements:
-
-.. code-block:: bash
-
-    pip3 install -U tox
-
-Coverage support
-````````````````
-
-.. note:: Required to run tests in Debug build mode with coverage only.
+Otherwise you can jump to the next step.
 
 Utilities:
-
-* lcov
+ * lcov
 
 Python packages:
-
-* pytest-cov
-* cython
+ * pytest-cov
+ * cython
 
 Run following command to install requirements:
 
@@ -441,145 +487,202 @@ Run following command to install requirements:
     sudo dnf install -y lcov
     pip3 install -U pytest-cov cython
 
-Building
-~~~~~~~~
+Automation with tox
+:::::::::::::::::::
 
-Clone Accelize DRM library repository:
+This step is required only if you want to use tox to automate some execution scenarios.
+Otherwise you can jump to the next step.
+
+Python packages:
+ * tox
+
+Run following command to install requirements:
+
+.. code-block:: bash
+
+    pip3 install -U tox
+
+
+Build CMake configuration
+`````````````````````````
+
+1. Clone Accelize DRM library repository and move to it:
 
 .. code-block:: bash
 
     git clone https://github.com/Accelize/drmlib.git --depth 1
+    cd drmlib
 
-Create a build directory and move to it (Example with a build directory
-relative to sources directory):
+2. Create a build directory and move to it:
 
 .. code-block:: bash
 
     mkdir build
     cd build
 
-Run CMake and compile.
+3. Run CMake to build your configuration:
 
-It is possible to specify following options to CMake to build optional
-components:
+.. code-block:: bash
 
-* ``-DPYTHON3=ON``: Build Python library.
+    cmake ..
+
+Use the following options to build optional components:
+
+* ``-DPYTHON3=ON``: Build Python library as a wrapper of the C/C++ library
 * ``-DDOC=ON``: Build documentation. The Python library is required to get the
-  full library documentation in *Sphinx* HTML format, else only the
+  full library documentation in *Sphinx* HTML format. Otherwise only the
   documentation for the C/C++ API is generated in *Doxygen* HTML format.
-* ``-DTESTS=ON``: Generates testings related files.
-* ``-DPKG=ON``: Generates packages.
-* ``-DCOVERAGE=ON``: If ``-DTESTS`` is ``ON``, compile with coverage support.
+* ``-DTESTS=ON``: Generate the testing materials and run test suite.
+* ``-DCOVERAGE=ON``: If ``-DTESTS=ON``, compile with coverage support.
+* ``-DPKG=ON``: Generate the installation packages.
+* ``-DCMAKE_BUILD_TYPE=Debug``: Compile in Debug mode.
+* ``-DAWS=ON``: Run full test suite when executed on AWS f1 instance.
 
 .. note:: Build the development package require both ``-DPYTHON3=ON`` and
           ``-DDOC=ON`` options.
 
 .. code-block:: bash
+   :caption: Build Python Library and Sphinx-like documentation
 
     cmake -DPYTHON3=ON -DDOC=ON ..
-    make -j
 
-Optionally, it is possible install libraries system wide:
+Compile CMake configuration
+```````````````````````````
 
-.. code-block:: bash
+Once the CMake configuration built, you can either:
+
+* Compile:
+
+  .. code-block:: bash
+
+    make
+
+  From here you can test your compiled library in section `Run tests`_.
+
+* or you can directly install the library on your system:
+
+  .. code-block:: bash
 
     make install
 
-Optionally, it is possible to build packages:
+  From here you can test your compiled library in section `Run tests`_.
 
-.. code-block:: bash
+* or you can build the installation packages:
+
+  .. code-block:: bash
 
     make package
 
-After built, it is possible to found following generated components in build
-directory:
 
-* C++ library as files starting by ``libaccelize_drm.``
-* C library as files starting by ``libaccelize_drmc.``
-* C/C++ headers in ``include`` directory.
-* Python library in ``python3_bdist`` directory.
-* Python library sources in ``python3_src`` directory.
-* Packages in ``packages`` directory.
-* Documentation in HTML format in ``doc_html`` directory.
+Generated output
+````````````````
 
-Running tests
-~~~~~~~~~~~~~
+Depending on your CMake configuration, the *build* directory will contain
+the following components:
 
-This chapter explain how to run Accelize DRM library tests.
+* C++ library named as ``libaccelize_drm``
+* C library named as ``libaccelize_drmc``
+* C/C++ headers located in ``include`` directory.
+* Python library located in ``python3_bdist`` directory.
+* Python library sources located in ``python3_src`` directory.
+* Packages located in ``packages`` directory.
+* Documentation in HTML format located in ``doc_html`` directory.
 
-.. warning:: Tests requires a real FPGA board and supported test driver
-             (See ``--fpga_driver`` option below).
+Run tests
+`````````
 
-Tests support following options:
+This section explains how to run Accelize DRM python library tests.
 
-* **--backend**: Select library API to use as backend
-  (Supported from pytest only). Possibles values ``c`` or ``c++``.
-  Default: ``c++``.
+.. warning:: Following tests require a real FPGA board and associated driver installed.
+             Refer to `Supported OS`_ to get the list of tested OS.
 
-* **--fpga_driver**: Select FPGA driver to use. Default: ``aws_f1``.
-  Possibles values:
+.. important:: The tests described below are based on the Python DRM library
+               and *pytest* module. So make sure sections `Python 3 option`_
+               and `Test generation option`_ have been completed and that you have
+               run the CMake command with the ``-DTESTS=ON -DPYTHON3=ON`` options.
 
-  * *aws_f1*: Amazon Web Service FPGA instances (f1.2xlarge, f1.4xlarge).
+Test command
+::::::::::::
 
-* **--fpga_slot_id**: Set FPGA slot. Default: ``0``.
+Usage
+'''''
 
-* **--drm_controller_base_address**: Set DRM Controller IP base address.
-  Default: ``0``.
-
-* **--cred**: Specify the path to a ``cred.json`` file containing valid
-  Accelize credentials to use as base to run tests. Default: ``./cred.json``.
-
-* **--server**: Specify metering server URL.
-  Default: ``https://master.metering.accelize.com``
-
-* **--library_verbosity**: Specify Accelize DRM library verbosity.
-  Possibles values: ``0`` to ``5``. Default: ``4``.
-
-* **--library_log_format**: Specify library log format.
-
-* **--fpga_image**: Select FPGA image to use for program the FPGA. By default,
-  use default FPGA image for the selected driver and last HDK version.
-  Set to empty string to not program the FPGA.
-
-* **--hdk_version**: Select FPGA image base on Accelize DRM HDK version.
-  By default, use default FPGA image for the selected driver and last HDK
-  version.
-
-* **--integration**: Run integration tests, needs 2 FPGA.
-
-Running test on previously build environment
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. note:: Prior to run tests, CMake need to be called with ``-DTESTS=ON`` &
-          ``-DPYTHON3=ON`` options.
-
-Tests run with pytest, it support previously defined options.
+Here is the test command:
 
 .. code-block:: bash
 
-    # It is required to set LD_LIBRARY_PATH to the "build" directory to
-    # Allow import of the library directly in the build environment.
+    # LD_LIBRARY_PATH must be set to the "build" directory so that
+    # the library can be directly imported in the build environment.
     export LD_LIBRARY_PATH=path_to_build_directory
 
-    # Run test tests with pytest
-    pytest --cred=~/my_application/cred.json
+    # Run tests with pytest
+    pytest --cred=path_to_cred.json [options]
+
+.. warning:: Depending on your execution platform environment and the driver requirements you
+             might need to execute the comment with `sudo`:
+
+             .. code-block:: bash
+
+                sudo LD_LIBRARY_PATH=path_to_build_directory pytest --cred=path_to_cred.json [options]
+
+``path_to_cred.json`` is the path to your credentials file.
+For more details refer to the section 'Credentials file' in :doc:`drm_configuration`
+
+Command options are:
+
+--backend=<c++|c>           Select library API to use as backend
+                            (Supported from pytest only). Default: ``c++``.
+
+--fpga_driver=key_name      Select FPGA driver to use. Default: ``aws_f1``.
+                            Possibles key_name values:
+                            * **aws_f1**: Amazon Web Service FPGA instances (f1.2xlarge, f1.4xlarge).
+
+--fpga_slot_id=integer      Set FPGA slot. Default: ``0``.
+
+--drm_controller_base_address=address
+                            Set DRM Controller IP base address.
+                            Default: ``0``.
+
+--cred=json_path            Specify the path to a ``cred.json`` file containing valid
+                            Accelize credentials to use as base to run tests.
+                            Default: ``./cred.json``.
+
+--server=url                Specify metering server URL.
+                            Default: ``https://master.metering.accelize.com``
+
+--library_verbosity=<0..4>  Specify Accelize DRM library verbosity.
+                            Possibles values: ``0`` to ``5``. Default: ``4``.
+
+--library_log_format=<0|1>  Specify library log format: 0=short format, 1=long format.
+
+--fpga_image=image          Select FPGA image to use for program the FPGA. By default,
+                            use default FPGA image for the selected driver and last HDK version.
+                            Set to empty string to not program the FPGA.
+
+--hdk_version               Select FPGA image based on Accelize DRM HDK version.
+                            By default, use default FPGA image for the selected driver
+                            and last HDK version.
+
+--integration               Run integration tests, needs 2 FPGA.
+
+--endurance                 Run endurance tests, might require 2 FPGA.
+
+--cov=accelize_drm          Run test with pytest-cov options to enable Python library coverage
+
 
 Coverage
-````````
+''''''''
 
-Coverage support can be enabled by adding ``-DCOVERAGE=ON`` &
-``-DCMAKE_BUILD_TYPE=Debug`` options.
+.. important:: To enable coverage reporting the section `Coverage option`_ must have been performed.
 
-Then, run pytest with pytest-cov options to have Python library coverage:
+Use --cov=accelize_drm option to enable the coverage with the test execution:
 
 .. code-block:: bash
 
-    export LD_LIBRARY_PATH=path_to_build_directory
+    sudo LD_LIBRARY_PATH=path_to_build_directory pytest --cred=~/my_application/cred.json --cov=accelize_drm
 
-    pytest --cred=~/my_application/cred.json --cov=accelize_drm"
-
-The C/C++ library coverage is generated using gcov and can be retrieved after
-tests using lcov:
+The C/C++ library coverage is generated using gcov and can be retrieved and gathered with python
+coverage using lcov as follows:
 
 .. code-block:: bash
 
@@ -588,23 +691,17 @@ tests using lcov:
     lcov --list coverage.info
     genhtml coverage.info -q --legend -o coverage
 
-This output an HTML report in the ``coverage`` directory.
+The result is an HTML report located in the ``coverage`` directory.
 
-Running test on installed library
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. note:: To enable coverage the CMake configuration must contain the
+         ``-DCOVERAGE=ON -DCMAKE_BUILD_TYPE=Debug`` options.
 
-This allow to test library installed with package or with ``make install``.
+.. note:: This procedure is fully and automatically managed using tox.
+          See `Run tests partially`_ for more details.
 
-From the DRM library repository library, simply run the pytest command:
 
-.. code-block:: bash
-
-    pytest --cred=~/my_application/cred.json
-
-Running full tests scenario
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-There is a full testing scenario that exists.
+Run full tests
+::::::::::::::
 
 This scenario performs following actions:
 
@@ -618,61 +715,78 @@ This scenario performs following actions:
 * Combine all tests coverage and generate Python/C/C++ coverage report
   (``debug`` mode only).
 
-Tox tests are executed directly from the DRM library repository directory
-(Directory where the ``tox.ini`` file is).
+For simplicity and efficiency the tox utility is used to execute these scenarios.
+Make sure the `Automation with tox`_ section has been performed.
 
-Tests run with tox, it support previously defined options passed after ``--``.
-The ``--backend`` option si not supported because managed by tox.
+Tox tests must be executed from the DRM library root directory where the ``tox.ini`` file is
+located.
+The usual test options can be used after the ``--`` delimiter.
 
 .. code-block:: bash
     :caption: Running the full scenario
 
-    tox -- --cred=~/my_application/cred.json
+    tox -- --cred=~/my_application/cred.json [options]
+
+.. note:: The ``--backend`` option is not supported because managed by tox.
 
 .. warning:: Running Tox with `sudo` may be required to run `build-install`
-             scenario and accessing FPGA in `c` and `cpp` scenarios.
+             scenario and to access FPGA in `c` and `cpp` scenarios.
 
-It is possible to reduce the scenario scope with the ``-e`` tox argument:
+Run tests partially
+:::::::::::::::::::
 
-.. code-block:: bash
-    :caption: Build in debug mode and run all tests with coverage
+It is possible to reduce the scenario scope with the ``-e`` tox argument.
+More information on `tox documentation`_.
 
-    tox -e build-debug,cpp-debug,c-debug,integration-debug,coverage-debug -- --cred=~/my_application/cred.json
+.. _`tox documentation`: https://tox.readthedocs.io/en/latest/config.html
 
-Coverage reports can be found in the ``report`` directory in the tox debug build
-environment (By default: ``./.tox/debug/build/report``)
 
-.. code-block:: bash
-    :caption: Build and run tests
+Some examples:
 
-    tox -e build-release,cpp-release,c-release -- --cred=~/my_application/cred.json
+ * Build and run all tests with coverage in debug mode
 
-.. code-block:: bash
-    :caption: Build and export packages
+   .. code-block:: bash
 
-    # Specify packages export directory
-    export PACKAGES_DIR="~/packages"
+        tox -e build-debug,cpp-debug,c-debug,integration-debug,coverage-debug -- --cred=~/my_application/cred.json
 
-    # Build and export
-    tox -e build-release,export-release
+   Coverage reports can be found in the ``report`` directory in the tox debug build
+   environment (By default: ``./.tox/debug/build/report``)
 
-.. code-block:: bash
-    :caption: Build, install (using "make install") and run tests
+* Build and run c and c++ tests in release mode
 
-    sudo tox -e build-install,cpp-install,c-install -- --cred=~/my_application/cred.json
+  .. code-block:: bash
 
-.. code-block:: bash
-    :caption: Install from packages and run tests
+        tox -e build-release,cpp-release,c-release -- --cred=~/my_application/cred.json
 
-    # Get packages, by example build from a previous release scenario
-    export PACKAGES_DIR="./.tox/release/build/packages"
+* Build and export packages
 
-    # Install packages and run tests
-    sudo tox -e package-install,cpp-install,c-install -- --cred=~/my_application/cred.json
+  .. code-block:: bash
 
-Tox can performs some tests in parallel with the ``-p all`` option:
+        # Specify packages export directory
+        export PACKAGES_DIR="~/packages"
 
-.. warning:: Running parallel tests requires 2 FPGA with slots ``0`` and ``1``.
+        # Build and export
+        tox -e build-release,export-release
+
+* Build, install (using "make install") and run tests
+
+  .. code-block:: bash
+
+        sudo tox -e build-install,cpp-install,c-install -- --cred=~/my_application/cred.json
+
+* Install from packages and run tests
+
+  .. code-block:: bash
+
+        # Get packages, by example build from a previous release scenario
+        export PACKAGES_DIR="./.tox/release/build/packages"
+
+        # Install packages and run tests
+        sudo tox -e package-install,cpp-install,c-install -- --cred=~/my_application/cred.json
+
+
+If your platform has 2 FPGA on 2 different PCIe slots, you can optimize the execution time
+by parallelizing some tests with the ``-p all`` option:
 
 .. note:: In this case, the ``--fpga_slot_id`` is not supported because managed
           by tox.
@@ -681,3 +795,6 @@ Tox can performs some tests in parallel with the ``-p all`` option:
     :caption: Running full scenario in parallel
 
     tox -p all -- --cred=~/my_application/cred.json
+
+.. [#f1] With Python 3.6 from EPEL repository for Accelize DRM Python library.
+.. [#f2] No packages are provided.

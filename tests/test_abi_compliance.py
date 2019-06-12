@@ -3,6 +3,7 @@
 Test ABI/API compatibility
 """
 import os
+import re
 
 import pytest
 from tests.conftest import perform_once
@@ -118,11 +119,9 @@ def get_reference_versions(tmpdir, abi_version):
     """
     tags = _run(['git', 'ls-remote', '--tags', REPOSITORY_PATH]).stdout
     versions = {
-        tag: str(tmpdir.join(tag)) for tag in (
-            tag.rsplit('/', 1)[1].strip('v/n') for tag in tags.splitlines())
-        if (tag.split('.', 1)[0] == abi_version and
-            tag.rsplit('.', 1)[1] == '0')}
-
+        tag.group(1) : str(tmpdir.join(tag.group(1))) for tag in list(map(
+                lambda x: re.search(r'v((\d+)\.\d+\.\d+)$', x), tags.splitlines()))
+            if (tag and int(tag.group(2))==abi_version) }
     return versions
 
 
@@ -135,7 +134,7 @@ def test_abi_compliance(tmpdir, accelize_drm):
     if not accelize_drm.pytest_build_environment:
         pytest.skip('This test is only performed on build environment.')
     elif not accelize_drm.pytest_build_type == 'debug':
-        pytest.xfail('This test need libraries compiled in debug mode.')
+        pytest.xfail('This test needs libraries compiled in debug mode.')
 
     # Initialize test
     from concurrent.futures import ThreadPoolExecutor, as_completed

@@ -109,7 +109,7 @@ void print_usage()
 {
     printf("\nUsage : \n");
     printf("   --help, -h               : Print this message\n");
-    printf("   -v, --verbosity          : Sepcify level of vebosity from 0 (error only) to 4 (debug),\n");
+    printf("   -v, --verbosity          : Specify level of vebosity from 0 (error only) to 4 (debug),\n");
     printf("   --cred                   : Specify path to credential file,\n");
     printf("   --conf                   : Specify path to configuration file,\n");
     printf("   --no-retry               : Disable the retry mechanism if WebService is temporarily unavailable during the start/resume and stop operations\n");
@@ -358,7 +358,7 @@ int test_custom_field( DrmManager* pDrmManager, uint32_t value ) {
         ERROR("Failed to set the custom field in FPGA design: %s", pDrmManager->error_message);
         return 1;
     }
-    INFO(COLOR_GREEN "Wrote '%u' custom field in FPGA design with", value);
+    INFO(COLOR_GREEN "Wrote '%u' custom field in FPGA design", value);
     // Read value back
     if ( DrmManager_get_uint(pDrmManager, DRM__custom_field, &rd_value) ) {
         ERROR("Failed to get the custom field in FPGA design: %s", pDrmManager->error_message);

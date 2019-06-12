@@ -89,6 +89,16 @@ services:
       << : *build-environment
       PACKAGES_DIR: /opt/packages/fedora_latest
 
+  build-fedora_previous_latest:
+    << : *build-service
+    image: accelize/accelizedrm-ci:build-fedora_previous_latest
+    build:
+      context: context
+      dockerfile: build-fedora_previous_latest.Dockerfile
+    environment:
+      << : *build-environment
+      PACKAGES_DIR: /opt/packages/fedora_previous_latest
+
   build-debian_testing:
     << : *build-service
     image: accelize/accelizedrm-ci:build-debian_testing
@@ -108,3 +118,13 @@ services:
     environment:
       << : *build-environment
       PACKAGES_DIR: /opt/packages/ubuntu_rolling
+
+  build-ubuntu_previous_rolling:
+    << : *build-service
+    image: accelize/accelizedrm-ci:build-ubuntu_previous_rolling
+    build:
+      context: context
+      dockerfile: build-ubuntu_previous_rolling.Dockerfile
+    environment:
+      << : *build-environment
+      PACKAGES_DIR: /opt/packages/ubuntu_previous_rolling

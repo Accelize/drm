@@ -102,20 +102,14 @@ namespace DRM {
     template <typename... Args>
     void logTrace(const eLogLevel& level, const std::string& file, const unsigned long noline, Args&&... args) {
         std::stringstream ss;
-    /*    ss << std::left << std::setfill(' ') << std::setw(7) << cLogLevelString[(int)level];
-        if ( sLogFormat == eLogFormat::LONG ) {
-            ss << " [DRM-Lib] " << getFormattedTime() << ", " << file << ", " << noline;
-        }
-        ss << ": [Thread " << std::this_thread::get_id() << "] ";
-    */
         if ( sLogFormat == eLogFormat::LONG ) {
             ss << getFormattedTime() << " - DRM-Lib, " << std::left << std::setfill(' ') << std::setw(16) << file;
             ss << ", " << std::right << std::setfill(' ') << std::setw(4) << noline << ": ";
         }
-        ss << "Thread " << std::this_thread::get_id() << " - ";
         ss << std::left << std::setfill(' ') << std::setw(7) << cLogLevelString[(int)level] << " - ";
+        ss << "Thread " << std::this_thread::get_id() << " - ";
+
         std::lock_guard<std::recursive_mutex> lock(mLogMutex);
-    //    if ( sLogStream.get() != nullptr ) {
         if ( sLogStream != nullptr ) {
             ssAddToStream(*sLogStream, ss.str(), std::forward<Args>(args)...);
             *sLogStream << std::endl;
@@ -144,8 +138,7 @@ namespace DRM {
 
 
     template<typename... Args>
-    static std::string stringConcat( Args&&... a_args )
-    {
+    static std::string stringConcat( Args&&... a_args ) {
         std::ostringstream ss;
         ssAddToStream(ss, std::forward<Args>(a_args)...);
         return ss.str();
@@ -170,9 +163,13 @@ namespace DRM {
 }
 
 
-#define Unreachable( msg ) \
+/*#define Unreachable( msg ) \
     Throw( DRM_Assert, "Reached an unexpected part of code in ", __SHORT_FILE__, ":", \
-            __LINE__, " (", __func__, ") because ", msg, ": Please contact support." )
+            __LINE__, " (", __func__, ") because ", msg, ": Please contact support." );
+*/
+#define Unreachable( ... ) \
+    Throw( DRM_Assert, "Reached an unexpected part of code in ", __SHORT_FILE__, ":", \
+            __LINE__, " (", __func__, ") because ", ##__VA_ARGS__, ": Please contact support." );
 
 
 #endif // _H_ACCELIZE_DRM_LOG

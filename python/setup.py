@@ -39,9 +39,11 @@ PACKAGE_INFO = dict(
     license='Apache License, Version 2.0',
     python_requires='>=3.5',
     setup_requires=['setuptools'],
-    packages=['accelize_drm'],
+    packages=['accelize_drm', 'accelize_drm.fpga_drivers'],
     package_data={'accelize_drm': '*.pxd'},
-    zip_safe=False)
+    zip_safe=False,
+    entry_points={'console_scripts': [
+        'accelize_drm=accelize_drm._systemd:run_service']})
 
 SETUP_DIR = abspath(dirname(__file__))
 

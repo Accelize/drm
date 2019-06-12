@@ -1,18 +1,12 @@
 /*  C++ Accelize DRM library utility. Intended to debug and testing. */
 
 #include <iostream>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-//#include <pthread.h>
-//#include <time.h>
 #include <getopt.h>
-#include <unistd.h>
-//#include <stdarg.h>
-//#include <sstream>
-#include <cassert>
 
-/*  AWS FPGA Management Library */
+/* JsonCPP Library */
+#include <json/json.h>
+
+/* AWS FPGA Management Library */
 #include <fpga_pci.h>
 #include <fpga_mgmt.h>
 
@@ -308,6 +302,30 @@ public:
         END_IF
     }
 
+    void get_json_value( Json::Value& json_value ) {
+        IF_CPP
+                pDrmManager->get( json_value );
+        ELSE_C
+            char *val_char = nullptr;
+            ret = DrmManager_get_json_string( pDrmManager_c, json_value.toStyledString().c_str(),
+                    &val_char );
+            if ( ret == DRM_ErrorCode::DRM_OK ) {
+                Json::CharReaderBuilder builder;
+                Json::CharReader* reader = builder.newCharReader();
+                std::string errors;
+                bool parsingSuccessful = reader->parse( val_char, val_char + strlen( val_char ),
+                        &json_value, &errors );
+                delete reader;
+                delete val_char;
+                if ( !parsingSuccessful ) {
+                    snprintf(pDrmManager_c->error_message, sizeof(pDrmManager_c->error_message),
+                            "%s", errors.c_str());
+                    ret = -1;
+                }
+            }
+        END_IF
+    }
+
     // set function flavors
 
     void set_bool( const uint32_t key, const bool& value ) {
@@ -374,13 +392,22 @@ public:
         END_IF
     }
 
-    void set_json_string( string& json_string ) {
+    void set_json_string( const string& json_string ) {
         IF_CPP
             pDrmManager->set( json_string );
         ELSE_C
             ret = DrmManager_set_json_string( pDrmManager_c, json_string.c_str() );
         END_IF
     }
+
+    void set_json_value( const Json::Value& json_value ) {
+        IF_CPP
+                pDrmManager->set( json_value );
+        ELSE_C
+            ret = DrmManager_set_json_string( pDrmManager_c, json_value.toStyledString().c_str() );
+        END_IF
+    }
+
 };
 
 
@@ -541,6 +568,17 @@ int test_types_of_get_and_set_functions() {
         sDrm->get_json_string(jsb);
         CHECK_STRING(jsb, "custom_field")
         CHECK_STRING(jsb, "12345678")
+
+        Json::Value jv;
+        jv["custom_field"] = 12345678;
+        jv["log_message_level"] = 5;
+        sDrm->set_json_value(jv);
+        Json::Value jvb;
+        jvb["custom_field"] = 0;
+        jvb["log_message_level"] = 0;
+        sDrm->get_json_value(jvb);
+        CHECK_VALUE(jvb["custom_field"].asInt(), 12345678)
+        CHECK_VALUE(jvb["log_message_level"].asInt(), 5)
 
         ret = 0;
     } catch( const cpp::Exception& e ) {

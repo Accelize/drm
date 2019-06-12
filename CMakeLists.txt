@@ -1,4 +1,4 @@
-# Copyright (C) 2018, Accelize
+# Copyright (C) 2019, Accelize
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ cmake_minimum_required(VERSION 3.12)
 # - Alpha             : 1.0.0-alpha.1
 # - Beta              : 1.0.0-beta.1
 # - Release candidate : 1.0.0-rc.1
-set(ACCELIZEDRM_VERSION 2.0.0)
+set(ACCELIZEDRM_VERSION 2.1.0)
 
 ## Define package release number (Number of time this version was packaged)
 if (NOT CPACK_PACKAGE_RELEASE)
@@ -225,6 +225,15 @@ set(PACKAGE_OUTPUT ${CMAKE_BINARY_DIR}/${CPACK_OUTPUT_FILE_PREFIX})
 option(PYTHON3 "Generates Python 3 library" OFF)
 if (PYTHON3)
     include(FindPython3)
+    find_package (Python3 COMPONENTS Interpreter Development)
+
+    if (NOT EXISTS "${Python3_SITEARCH}")
+        # Fix bad Python3_SITEARCH in some cases (Example Ubuntu)
+        execute_process(
+                COMMAND "${Python3_EXECUTABLE}" -c "import sys;print(sys.path[-1])"
+                OUTPUT_VARIABLE Python3_SITEARCH
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+    endif()
 
     ## Retrieves sources
     set(PYTHON3_BDIST_RELATIVE python3_bdist)
@@ -232,7 +241,8 @@ if (PYTHON3)
     set(PYTHON_SOURCE ${CMAKE_BINARY_DIR}/python_src)
     set(PYTHON_SETUP ${PYTHON_SOURCE}/setup.py)
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/python/ DESTINATION ${PYTHON_SOURCE}
-            FILES_MATCHING PATTERN "*.in" PATTERN "*.py*" PATTERN "*.pxd" PATTERN "*.md")
+            FILES_MATCHING PATTERN "*.in" PATTERN "*.py*" PATTERN "*.pxd"
+            PATTERN "*.md" PATTERN "*.service")
     configure_file(${PYTHON_SOURCE}/accelize_drm/__init__.py
                    ${PYTHON_SOURCE}/accelize_drm/__init__.py)
     configure_file(${PYTHON_SETUP} ${PYTHON_SETUP})
@@ -266,11 +276,25 @@ if (PYTHON3)
     add_dependencies(python3 accelize_drm)
     add_dependencies(python3 accelize_drmc)
     add_dependencies(python3 Python3::Interpreter)
-    install(DIRECTORY ${PYTHON3_BDIST}/ DESTINATION ${Python3_SITELIB}
+    install(DIRECTORY ${PYTHON3_BDIST}/ DESTINATION ${Python3_SITEARCH}
             COMPONENT python3
             PATTERN "*.pyx" EXCLUDE
             PATTERN "*.c" EXCLUDE
             PATTERN "*.cpp" EXCLUDE)
+
+    ## Install Systemd service unit file
+    set(SERVICE_UNIT ${PYTHON_SOURCE}/accelize_drm.service)
+    configure_file(${SERVICE_UNIT} ${SERVICE_UNIT})
+
+    if (EXISTS /usr/lib/systemd/system)
+        # Standard unit files path
+        set(SYSTEMD_DIR /usr/lib/systemd/system)
+    else()
+        # Legacy unit files path
+        set(SYSTEMD_DIR /lib/systemd/system)
+    endif()
+    install(FILES ${SERVICE_UNIT} DESTINATION ${SYSTEMD_DIR}
+            COMPONENT python3)
 
 endif ()
 
@@ -295,6 +319,8 @@ if (DOC)
             WORKING_DIRECTORY ${DOC_SOUCES}
             COMMENT "Generating C/C++ API documentation"
             VERBATIM)
+    message( "DOXYGEN_EXECUTABLE=${DOXYGEN_EXECUTABLE}" )
+    message( "DOC_SOUCES=${DOC_SOUCES}" )
 
     # Build full Sphinx documentation (Require built Python 3 target)
     if (PYTHON3)
@@ -302,6 +328,9 @@ if (DOC)
         set(DOC_DOXYGEN_XML_DIR ${DOC_SOUCES}/_doxygen)
         set(DOC_DOXYGEN_XML YES)
         set(DOC_DOXYGEN_HTML NO)
+        message( "DOC_DOXYGEN_XML_DIR=${DOC_DOXYGEN_XML_DIR}" )
+        message( "DOC_DOXYGEN_XML=${DOC_DOXYGEN_XML}" )
+        message( "DOC_DOXYGEN_HTML=${DOC_DOXYGEN_HTML}" )
 
         # Configure Sphinx
         configure_file(${DOC_SOUCES}/conf.py ${DOC_SOUCES}/conf.py)
@@ -310,6 +339,11 @@ if (DOC)
         find_program(SPHINX_EXECUTABLE
                 NAMES sphinx-build
                 DOC "Sphinx Documentation Builder (sphinx-doc.org)")
+        message( "DOC_SOUCES=${DOC_SOUCES}" )
+        message( "DOC_HTML_DIR=${DOC_HTML_DIR}" )
+        message( "SPHINX_EXECUTABLE=${SPHINX_EXECUTABLE}" )
+        message( "WORKING_DIRECTORY=${WORKING_DIRECTORY}" )
+        message( "CMAKE_BINARY_DIR=${CMAKE_BINARY_DIR}" )
         add_custom_command(
                 TARGET doc POST_BUILD
                 COMMAND export LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}:$LD_LIBRARY_PATH &&
@@ -511,37 +545,43 @@ endif ()
 
 # Tests
 option(TESTS "Generates tests files" OFF)
+option(AWS "Generates specific tests on AWS" OFF)
 if(TESTS)
     # Copy tests
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tests/ DESTINATION ${CMAKE_BINARY_DIR}/tests
             PATTERN __pycache__ EXCLUDE PATTERN .pyc EXCLUDE)
     file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tests/.coveragerc DESTINATION ${CMAKE_BINARY_DIR})
+    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/pytest.ini DESTINATION ${CMAKE_BINARY_DIR})
     configure_file(${CMAKE_BINARY_DIR}/tests/conftest.py ${CMAKE_BINARY_DIR}/tests/conftest.py)
 
-    # Compile unittest.cpp application
-    if ( NOT DEFINED ENV{SDK_DIR} )
-        if ( ${CMAKE_BUILD_TYPE} STREQUAL "Debug" )
-            message( SEND_ERROR "SDK_DIR environment variable is not defined: "
-                    "Cannot compile tests with AWS FPGA Management driver." )
+    if (AWS)
+        # Compile unittest.cpp application
+        if ( NOT DEFINED ENV{SDK_DIR} )
+            if ( ${CMAKE_BUILD_TYPE} STREQUAL "Debug" )
+                message( SEND_ERROR "SDK_DIR environment variable is not defined: "
+                        "Cannot compile tests with AWS FPGA Management driver." )
+            endif()
+        else()
+            find_path(FPGAMGMTLIB_INCLUDE_DIRS
+                    NAMES fpga_mgmt.h
+                    PATHS $ENV{SDK_DIR}/userspace/include /usr/local/include NO_DEFAULT_PATH
+            )
+            message( "FPGAMGMTLIB_INCLUDE_DIRS=${FPGAMGMTLIB_INCLUDE_DIRS}" )
+            find_library(FPGAMGMTLIB_LIBRARIES
+                    NAMES fpga_mgmt
+                    PATHS $ENV{SDK_DIR}/userspace/lib/so /usr/local/lib64 NO_DEFAULT_PATH
+            )
+            message( "FPGAMGMTLIB_LIBRARIES=${FPGAMGMTLIB_LIBRARIES}" )
+            add_executable( unittests ${CMAKE_CURRENT_SOURCE_DIR}/tests/unittests.cpp )
+            set_target_properties( unittests
+                PROPERTIES
+                RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+            )
+            target_include_directories( unittests PUBLIC ${FPGAMGMTLIB_INCLUDE_DIRS} )
+            target_include_directories( unittests PUBLIC ${JSONCPP_INCLUDEDIR} )
+            target_link_libraries( unittests accelize_drmc )
+            target_link_libraries( unittests ${FPGAMGMTLIB_LIBRARIES} )
+            target_link_libraries( unittests jsoncpp )
         endif()
-    else()
-        find_path(FPGAMGMTLIB_INCLUDE_DIRS
-                NAMES fpga_mgmt.h
-                PATHS $ENV{SDK_DIR}/userspace/include /usr/local/include NO_DEFAULT_PATH
-        )
-        message( "FPGAMGMTLIB_INCLUDE_DIRS=${FPGAMGMTLIB_INCLUDE_DIRS}" )
-        find_library(FPGAMGMTLIB_LIBRARIES
-                NAMES fpga_mgmt
-                PATHS $ENV{SDK_DIR}/userspace/lib/so /usr/local/lib64 NO_DEFAULT_PATH
-        )
-        message( "FPGAMGMTLIB_LIBRARIES=${FPGAMGMTLIB_LIBRARIES}" )
-        add_executable( unittests ${CMAKE_CURRENT_SOURCE_DIR}/tests/unittests.cpp )
-        set_target_properties( unittests
-            PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
-        )
-        target_include_directories(unittests PUBLIC ${FPGAMGMTLIB_INCLUDE_DIRS})
-        target_link_libraries( unittests accelize_drmc )
-        target_link_libraries( unittests ${FPGAMGMTLIB_LIBRARIES})
     endif()
 endif()

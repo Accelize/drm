@@ -1,25 +1,19 @@
-#! /usr/bin/env python3
 # coding=utf-8
 """
 FPGA driver for Accelize DRM Python library
 
-Example:
+Supported driver:
+    AWS F1 instances types
+        Require ``libfpga_mgmt`` library from AWS FPGA SDK
+        (https://github.com/aws/aws-fpga).
 
-    # Get Driver by name (Example with AWS F1 driver)
-    from tests.python_fpga_drivers import get_driver
-    driver = get_driver('aws_f1')()
-
-    # Instantiate DrmManager with driver callbacks
-    import accelize_drm
-
-    drm_manager = accelize_drm.DrmManager(
-       './conf.json', './cred.json',
-       driver.read_register_callback,
-       driver.write_register_callback)
 """
 from abc import abstractmethod as _abstractmethod
+from ctypes import c_uint32 as _c_uint32, byref as _byref
 from importlib import import_module as _import_module
 from threading import Lock as _Lock
+
+__all__ = ['get_driver', 'FpgaDriverBase']
 
 
 def get_driver(name):
@@ -27,12 +21,13 @@ def get_driver(name):
     Get a driver by name.
 
     Args:
-        name (str): Driver name.
+        name (str): Driver name. Possible values:
+            `aws_f1` (AWS F1 instances types).
 
     Returns:
         FpgaDriverBase subclass: driver class.
     """
-    return getattr(_import_module('%s.%s' % (__name__, name)), 'FpgaDriver')
+    return getattr(_import_module('%s._%s' % (__name__, name)), 'FpgaDriver')
 
 
 class FpgaDriverBase:
@@ -72,27 +67,65 @@ class FpgaDriverBase:
     @property
     def fpga_image(self):
         """
-        fpga_image
+        Programmed FPGA image.
 
         Returns:
-            str: _fpga_image
+            str: FPGA image.
         """
         return self._fpga_image
+
+    def read_register(self, register_offset):
+        """
+        Read register.
+
+        This method is intended to be called directly, use
+        "read_register_callback" to instantiate
+        "accelize_drm.DrmManager".
+
+        Args:
+            register_offset (int): Register offset.
+
+        Returns:
+            int: 32 bits register value.
+        """
+        register_value = _c_uint32(0)
+        self._read_register_callback(register_offset, _byref(register_value))
+        return register_value.value
 
     @property
     def read_register_callback(self):
         """
-        Read register callback.
+        Read register callback to pass to "accelize_drm.DrmManager".
+
+        This method is not intended to be used directly,
+        se "read_register" method for direct call.
 
         Returns:
             function: Callback
         """
         return self._read_register_callback
 
+    def write_register(self, register_offset, register_value):
+        """
+        Write register.
+
+        This method is intended to be called directly, use
+        "write_register_callback" to instantiate
+        "accelize_drm.DrmManager".
+
+        Args:
+            register_offset (int): Register offset.
+            register_value (int): 32 bits register value to write.
+        """
+        self.write_register_callback(register_offset, register_value)
+
     @property
     def write_register_callback(self):
         """
-        Write register callback.
+        Write register callback to pass to "accelize_drm.DrmManager".
+
+        This method is not intended to be used directly,
+        se "write_register" method for direct call.
 
         Returns:
             function: Callback
@@ -107,15 +140,19 @@ class FpgaDriverBase:
             fpga_image (str): FPGA image to program.
         """
         if fpga_image is None:
-            if self._fpga_image.strip() == '':
+            if not self._fpga_image:
                 raise RuntimeError('Unspecified fpga_image')
             fpga_image = self._fpga_image
+        else:
+            self._fpga_image = fpga_image
+
+        print('Programming FPGA with image ID: ', fpga_image)
         return self._program_fpga(fpga_image)
 
     @_abstractmethod
     def _get_driver(self):
         """
-        Get FPGA driver
+        Get FPGA driver.
 
         Returns:
             object: FPGA driver.
@@ -142,7 +179,7 @@ class FpgaDriverBase:
         Read register callback.
 
         The function needs to return an int and accept following arguments:
-        register_offset (int), returned_data (int).
+        register_offset (int), returned_data (int pointer).
 
         The function can't be a non static method.
 

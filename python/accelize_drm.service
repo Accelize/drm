@@ -1,0 +1,11 @@
+[Unit]
+Description=Accelize DRM service
+
+[Service]
+ExecStart=/usr/bin/python3 @Python3_SITEARCH@/accelize_drm/_systemd.py
+Restart=on-failure
+Type=notify
+Environment=PYTHONUNBUFFERED=true
+
+[Install]
+WantedBy=default.target

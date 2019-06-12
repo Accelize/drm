@@ -1,4 +1,4 @@
-FROM ubuntu:rolling
+FROM ubuntu:disco
 
 RUN apt-get update && \
 apt-get install -y --no-install-recommends \
@@ -22,7 +22,6 @@ pip3 install -U --no-cache-dir \
     breathe \
     cmake \
     cython \
-    'sphinx<2' \
     sphinx_rtd_theme \
     tox && \
 apt-get clean && \

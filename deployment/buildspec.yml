@@ -9,13 +9,8 @@ env:
 phases:
   install:
     commands:
-      # Avoid loosing connection with docker
-      - sudo apt update
-      - sudo apt install -y procps
-      - sudo /sbin/sysctl -w net.ipv4.tcp_keepalive_time=200 net.ipv4.tcp_keepalive_intvl=200 net.ipv4.tcp_keepalive_probes=5
-
       # Toolbox: Initialize
-      - sudo $CODEBUILD_SRC_DIR_toolbox/install.py
+      - $CODEBUILD_SRC_DIR_toolbox/install.py
 
       # Artifacts output directory
       - mkdir artifacts
@@ -42,13 +37,25 @@ phases:
       - CODEBUILD_GIT_BRANCH="$(git branch -a --contains $CODEBUILD_SOURCE_VERSION | sed -n 2p | awk '{ printf $1 }')";
         export CODEBUILD_GIT_BRANCH=${CODEBUILD_GIT_BRANCH#remotes/origin/}
       - echo "CODEBUILD_GIT_BRANCH=${CODEBUILD_GIT_BRANCH}"
+      - echo "CODEBUILD_SOURCE_VERSION=${CODEBUILD_SOURCE_VERSION}"
       - if [ "${CODEBUILD_GIT_BRANCH}" = "master" ]; then export WS_ENV="prod"; else export WS_ENV="dev"; fi
       - echo "WS_ENV=${WS_ENV}"
+      - echo "CODEBUILD_WEBHOOK_ACTOR_ACCOUNT_ID=${CODEBUILD_WEBHOOK_ACTOR_ACCOUNT_ID}"
+      - | # Test multiline yaml support
+        if [ -z "${CODEBUILD_WEBHOOK_ACTOR_ACCOUNT_ID}" ]; then
+          export FILTER_SOURCES=""
+          export FILTER_BRANCH=""
+        else
+          export FILTER_SOURCES="--if git_file_changed='(?!tests/utils/|doc/|LICENSE|README\\.md|\\.gitignore)'"
+          export FILTER_BRANCH="--if git_branch=master,dev"
+        fi
+      - echo "FILTER_SOURCES=${FILTER_SOURCES}"
+      - echo "FILTER_BRANCH=${FILTER_BRANCH}"
 
       # Build documentation
       - xlz
-        --if git_file_changed='doc/|include/|python/src|python/accelize_drm'
-        --if git_branch=master,dev
+        --if git_file_changed='doc/|include/|python/src|python/accelize_drm$'
+        ${FILTER_BRANCH}
         install
         drmlib_build_deps
         drmlib_doc_deps
@@ -67,19 +74,21 @@ phases:
         -v
 
       # Run tests
-      - xlz -v
-        --if git_file_changed='(?!tests/utils/|doc/|LICENSE|README\\.md|\\.gitgnore)'
-        --if git_branch=master,dev
+      - xlz
+        ${FILTER_SOURCES}
+        ${FILTER_BRANCH}
         run
         drmlib_dev="${CODEBUILD_GIT_BRANCH}:${CODEBUILD_SOURCE_VERSION}" drmlib_build_deps
         drmlib_unittests_deps drmlib_cred_json drmlib_codecov_token
         aws_fpga_sdk
+        -v
         --shutdown_after 30
         -p f1.4xlarge
         -n drm_debug_tests
         -z /dev/shm/drmlib_dev/.tox/debug/build/report artifacts/report.tar.gz
-        -r "cd /dev/shm/aws-fpga && source sdk_setup.sh && cd /dev/shm/drmlib_dev &&
-            sudo -E tox -p all -e build-debug,cpp-debug,c-debug,integration-debug,coverage-debug -- --cred=/dev/shm/cred.json --server=${WS_ENV}"
+        -a /dev/shm/drmlib_dev/run_tests.log artifacts/run_tests.log
+        -r "source /dev/shm/aws-fpga/sdk_setup.sh && cd /dev/shm/drmlib_dev &&
+            sudo -E tox -p all -e aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug -- --cred=/dev/shm/cred.json --server=${WS_ENV} -s | tee run_tests.log"
 
       # Build packages
       - xlz
@@ -97,10 +106,6 @@ phases:
             sudo -E docker-compose up"
 
       # Tests packages
-        # TODO: AWS FGPA SDK do not build, wait for fixed version (Fixed on Github dev branch)
-        #-x OS ubuntu_bionic
-        #-x OS ubuntu_rolling
-        #-x OS ubuntu_xenial
       - xlz
         --if file_exists=artifacts/packages.tar.gz
         run
@@ -114,7 +119,12 @@ phases:
         -x OS centos_7
         -x OS debian_stretch
         -x OS debian_testing
+        -x OS fedora_previous_latest
         -x OS fedora_latest
+        -x OS ubuntu_bionic
+        -x OS ubuntu_previous_rolling
+        -x OS ubuntu_rolling
+        -x OS ubuntu_xenial
         -x SERVER $WS_ENV
         -r 'cd /dev/shm &&
             sudo docker run --privileged

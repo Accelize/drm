@@ -6,6 +6,7 @@ from json import dump, load
 from copy import deepcopy
 from re import match, search
 from ctypes import c_uint32, byref
+from random import randint
 
 import pytest
 
@@ -42,18 +43,10 @@ def get_default_conf_json(licensing_server_url):
         "drm": {
             "frequency_mhz": 125
         },
-
-        # 1.X.X API compatibility
-        # TODO: Remove once expired
         "design": {
             "udid": "6AE1A700-0000-0000-0000-000000000001",
             "boardType": "DRM_125"
         },
-        "webservice": {
-            "oauth2_url": "%s/o/token/" % url,
-            "metering_url":
-                "%s/auth/metering/genlicense/" % url
-        }
     }
 
 
@@ -131,6 +124,9 @@ def pytest_addoption(parser):
         "--integration", action="store_true",
         help='Run integration tests. Theses tests may needs two FPGAs.')
     parser.addoption(
+        "--endurance", action="store_true",
+        help='Run endurance tests. Theses tests may needs two FPGAs.')
+    parser.addoption(
         "--activator_base_address", action="store", default='0x10000', type=str,
         help='Specify a list of all activator base addresses separated by coma: "0x10000,0x20000"')
 
@@ -139,12 +135,23 @@ def pytest_runtest_setup(item):
     """
     Configure test initialization
     """
+    # Check integration tests
     markers = tuple(item.iter_markers(name='no_parallel'))
     markers += tuple(item.iter_markers(name='on_2_fpga'))
     if not item.config.getoption("integration") and markers:
         pytest.skip("Don't run integration tests.")
     elif item.config.getoption("integration") and not markers:
         pytest.skip("Run only integration tests.")
+    # Check endurance tests
+    markers = tuple(item.iter_markers(name='endurance'))
+    if not item.config.getoption("endurance") and markers:
+        pytest.skip("Don't run endurance tests.")
+    elif item.config.getoption("endurance") and not markers:
+        pytest.skip("Run only endurance tests.")
+    # Check AWS execution
+    markers = tuple(item.iter_markers(name='aws'))
+    if '${AWS}'=='OFF' and markers:
+        pytest.skip("Don't run C/C++ function tests.")
 
 
 class SingleActivator:
@@ -155,16 +162,49 @@ class SingleActivator:
         self.driver = driver
         self.base_address = base_address
 
+    def autotest(self, is_activated=None):
+        """
+        Verify IP works as expected
+        """
+        # Test IP mailbox depending on activation status
+        activated = self.get_status()
+        if is_activated is not None:
+            assert activated == is_activated
+        else:
+            if activated:
+                for addr in range(4, 16, 4):
+                    val = randint(1, 0xFFFFFFFF)
+                    self.driver.write_register(self.base_address + addr, val)
+                    assert self.driver.read_register(self.base_address + addr) == val
+            else:
+                for addr in range(4, 16, 4):
+                    val = self.driver.read_register(self.base_address + addr)
+                    self.driver.write_register(self.base_address + addr, ~val)
+                    assert self.driver.read_register(self.base_address + addr) == val
+            # Test address overflow
+            assert self.driver.read_register(self.base_address + 0x14) == 0xBADC0DE0
+            # Test reading of the generate event register
+            assert self.driver.read_register(self.base_address+0x10) == 0x600DC0DE
+
+
     def generate_coin(self, coins):
-        value = c_uint32()
-        for i in range(coins):
-            self.driver.read_register_callback(self.base_address, byref(value))
+        """
+        Generate coins.
+
+        Args:
+            coins (int): Number of coins to generate.
+        """
+        for _ in range(coins):
+            self.driver.write_register(self.base_address+0x10, 1)
 
     def get_status(self):
-        regvalue = c_uint32(0)
-        self.driver.read_register_callback(self.base_address, byref(regvalue))
-        value = regvalue.value
-        return value & 1
+        """
+        Get activation status.
+
+        Returns:
+            int: Status.
+        """
+        return self.driver.read_register(self.base_address) == 7
 
 
 class ActivatorsInFPGA:
@@ -180,25 +220,29 @@ class ActivatorsInFPGA:
     def __getitem__(self, index):
         return self.activators[index]
 
-    def get_status(self, activator_indexes=None):
-        if activator_indexes is None:
-            activator_index_list = list(range(len(self.activators)))
-        elif isinstance(activator_indexes, list):
-            activator_index_list = activator_indexes
-        elif isinstance(activator_indexes, int):
-            activator_index_list = [activator_indexes]
+    def autotest(self, is_activated=None, index=None):
+        if index is None:
+            index_list = list(range(len(self.activators)))
         else:
-            raise TypeError('Unsupported type: %s' % type(activator_indexes))
-        status_list = []
-        for i in activator_index_list:
-            status_list.append(self.activators[i].get_status())
-        if isinstance(activator_indexes, int) and len(status_list) == 1:
-            return status_list[0]
-        return status_list
+            index_list = [index]
+        for i in index_list:
+            self.activators[i].autotest(is_activated)
 
-    def is_activated(self, activator_indexes=None):
-        status_list = self.get_status(activator_indexes)
-        return all(status_list)
+
+    def get_status(self, index=None):
+        if index is None:
+            index_list = list(range(len(self.activators)))
+        else:
+            index_list = [index]
+        status_list = []
+        for i in index_list:
+            status_list.append(self.activators[i].get_status())
+        if index is None:
+            return status_list
+        return status_list[0]
+
+    def is_activated(self, index=None):
+        return all(self.get_status(index))
 
 
 class RefDesign:
@@ -269,7 +313,7 @@ def accelize_drm(pytestconfig):
     import accelize_drm as _accelize_drm
 
     # Get FPGA driver
-    from python_fpga_drivers import get_driver
+    from accelize_drm.fpga_drivers import get_driver
     fpga_driver_name = pytestconfig.getoption("fpga_driver")
     fpga_driver_cls = get_driver(fpga_driver_name)
 
@@ -336,6 +380,8 @@ def accelize_drm(pytestconfig):
     _accelize_drm.pytest_build_type = build_type
     _accelize_drm.pytest_backend = backend
     _accelize_drm.pytest_fpga_driver = fpga_driver
+    _accelize_drm.pytest_fpga_driver_name = fpga_driver_name
+    _accelize_drm.pytest_fpga_slot_id = fpga_slot_id
     _accelize_drm.pytest_fpga_image = fpga_image
     _accelize_drm.pytest_hdk_version = hdk_version
     _accelize_drm.pytest_fpga_activators = fpga_activators

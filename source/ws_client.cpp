@@ -49,7 +49,7 @@ long CurlEasyPost::perform(std::string* resp, std::chrono::steady_clock::time_po
         std::string sHeader;
         for( const std::string& h: data )
             sHeader += std::string("\t") + h + std::string("\n");
-        Debug( "CURL header:\n", sHeader );
+        Debug2( "CURL header:\n", sHeader );
     }
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &CurlEasyPost::write_callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)resp);
@@ -84,8 +84,7 @@ double CurlEasyPost::getTotalTime() {
     double ret;
     if ( !curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &ret) )
         return ret;
-    else
-        return 0.0;
+    Unreachable( "Failed to get the CURLINFO_TOTAL_TIME information" ); //LCOV_EXCL_LINE
 }
 
 
@@ -96,8 +95,8 @@ DrmWSClient::DrmWSClient(const std::string &conf_file_path, const std::string &c
     mTokenValidityPeriod = 0;
     mTokenExpirationTime = TClock::now();
 
-    Json::Value conf_json = parseJsonFile(conf_file_path);
     try {
+        Json::Value conf_json = parseJsonFile(conf_file_path);
         Json::Value webservice_json = JVgetRequired(conf_json, "licensing", Json::objectValue);
         Debug2( "Web service configuration: ", webservice_json.toStyledString() );
 
@@ -107,21 +106,18 @@ DrmWSClient::DrmWSClient(const std::string &conf_file_path, const std::string &c
         Debug( "Licensing URL: ", url );
 
     } catch(Exception &e) {
-        if (e.getErrCode() != DRM_BadFormat)
-            throw;
-        Throw( DRM_BadFormat, "Error in service configuration file '", conf_file_path, "': ", e.what() );
+        Throw( e.getErrCode(), "Error with service configuration file '",
+                conf_file_path, "': ", e.what() );
     }
 
-    Json::Value cred_json = parseJsonFile(cred_file_path);
     try {
+        Json::Value cred_json = parseJsonFile(cred_file_path);
         Json::Value client_id_json = JVgetRequired(cred_json, "client_id", Json::stringValue);
         mClientId = client_id_json.asString();
         Json::Value client_secret_json = JVgetRequired(cred_json, "client_secret", Json::stringValue);
         mClientSecret = client_secret_json.asString();
     } catch(Exception &e) {
-        if (e.getErrCode() != DRM_BadFormat)
-            throw;
-        Throw(DRM_BadFormat, "Error in credential file '", cred_file_path, "': ", e.what());
+        Throw( e.getErrCode(), "Error with credential file '", cred_file_path, "': ", e.what() );
     }
 
     CurlSingleton::Init();
@@ -129,7 +125,8 @@ DrmWSClient::DrmWSClient(const std::string &conf_file_path, const std::string &c
     // Set headers of OAuth2 request
     mOAUth2Request.setURL( mOAuth2Url );
     std::stringstream ss;
-    ss << "client_id=" << mClientId << "&client_secret=" << mClientSecret << "&grant_type=client_credentials";
+    ss << "client_id=" << mClientId << "&client_secret=" << mClientSecret;
+    ss << "&grant_type=client_credentials";
     mOAUth2Request.setPostFields( ss.str() );
 }
 
@@ -172,7 +169,7 @@ void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
         formatted_response = response;
         error_msg = e.what();
     }
-    Debug( "Received code ", resp_code, " from License Web Service in ",
+    Debug( "Received code ", resp_code, " from OAuth2 Web Service in ",
            mOAUth2Request.getTotalTime() * 1000, "ms with following response:\n", formatted_response );
 
     // Analyze response
@@ -195,6 +192,11 @@ void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
             Throw(DRM_WSError, msg.str());
         }
     }
+
+    // Verify response parsing
+    if ( json_resp == Json::nullValue )
+        Throw( DRM_WSRespError, "Failed to parse response from OAuth2 Web Service: ", error_msg );
+
     mOAuth2Token = JVgetRequired( json_resp, "access_token", Json::stringValue ).asString();
     mTokenValidityPeriod = JVgetRequired( json_resp, "expires_in", Json::intValue ).asInt();
     mTokenExpirationTime = TClock::now() + std::chrono::seconds( mTokenValidityPeriod );
@@ -212,7 +214,7 @@ Json::Value DrmWSClient::requestLicense( const Json::Value& json_req, TClock::ti
     req.setPostFields( saveJsonToString(json_req) );
 
     // Send request and wait response
-    Debug( "Starting license request to ", mMeteringUrl, "with request:\n", json_req.toStyledString() );
+    Debug( "Starting license request to ", mMeteringUrl, " with request:\n", json_req.toStyledString() );
     std::string response;
     long resp_code = req.perform( &response, deadline );
 

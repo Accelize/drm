@@ -1,15 +1,18 @@
-#! /usr/bin/env python3
 # coding=utf-8
 """
 AWS F1 driver for Accelize DRM Python library
 
-Requires AWS FPGA SDK: https://github.com/aws/aws-fpga/tree/master/sdk
+Requires "libfpga_mgmt" library from AWS FPGA SDK:
+https://github.com/aws/aws-fpga/tree/master/sdk
 """
 from ctypes import (
     cdll as _cdll, POINTER as _POINTER, byref as _byref, c_uint32 as _c_uint32,
     c_uint64 as _c_uint64, c_int as _c_int)
 from subprocess import run as _run, PIPE as _PIPE, STDOUT as _STDOUT
-from python_fpga_drivers import FpgaDriverBase as _FpgaDriverBase
+
+from accelize_drm.fpga_drivers import FpgaDriverBase as _FpgaDriverBase
+
+__all__ = ['FpgaDriver']
 
 
 class FpgaDriver(_FpgaDriverBase):
@@ -105,7 +108,7 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (python_fpga_drivers.aws_f1.FpgaDriver):
                     Keep a reference to driver.
             """
-            with self._fpga_read_register_lock:
+            with driver._fpga_read_register_lock:
                 return driver._fpga_read_register(
                     driver._fpga_handle,
                     driver._drm_ctrl_base_addr + register_offset,
@@ -131,7 +134,7 @@ class FpgaDriver(_FpgaDriverBase):
 
         def write_register(register_offset, data_to_write, driver=self):
             """
-            Read register.
+            Write register.
 
             Args:
                 register_offset (int): Offset
@@ -139,7 +142,7 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (python_fpga_drivers.aws_f1.FpgaDriver):
                     Keep a reference to driver.
             """
-            with self._fpga_write_register_lock:
+            with driver._fpga_write_register_lock:
                 return driver._fpga_write_register(
                     driver._fpga_handle,
                     driver._drm_ctrl_base_addr + register_offset,

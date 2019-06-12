@@ -6,7 +6,7 @@ This document explains Accelize DRM library new release deployment
 
 The Accelize DRM library use [semantic versioning](https://semver.org/).
 
-Versions needs to match the following format:
+Versions need to match the following format:
 
 * Stable: `1.0.0`
 * Prerelease, Alpha: `1.0.0-alpha.1`
@@ -32,7 +32,7 @@ release:
 * Set `ACCELIZEDRM_VERSION` value to this release version number in the
   `./CMakeLists.txt` file.
 * For a stable release, the `./CHANGELOG` file must be completed with new
-  release changes (The changelog format must not be changed to allow proper RPM
+  release changes (the changelog format must not be changed to allow proper RPM
   package builds).
 * Commit the changes.
 * Run the release script with the specified version (Replacing `$VERSION` by the

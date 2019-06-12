@@ -25,7 +25,6 @@ pip3 install -U --no-cache-dir \
     breathe \
     cmake \
     cython \
-    'sphinx<2' \
     sphinx_rtd_theme \
     tox && \
 rm -rf /var/cache/yum/*

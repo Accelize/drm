@@ -33,7 +33,7 @@ std::ostream& operator<<(std::ostream& os, const Json::ValueType& type) {
         case Json::booleanValue : os << "Boolean"; break;
         case Json::arrayValue   : os << "Array"; break;
         case Json::objectValue  : os << "Object"; break;
-        default: Unreachable( "Unsupported Jsoncpp ValueType" );
+        default: Unreachable( "Unsupported Jsoncpp ValueType" ); //LCOV_EXCL_LINE
     }
     return os;
 }
@@ -67,32 +67,43 @@ Json::Value parseJsonString(const std::string &json_string) {
     std::string parseErr;
     Json::CharReaderBuilder builder;
     std::unique_ptr<Json::CharReader> const reader(builder.newCharReader() );
-    
+
     if ( json_string.size() == 0 )
         Throw( DRM_BadFormat, "Cannot parse an empty JSON string" );
+
     if ( !reader->parse( json_string.c_str(), json_string.c_str() + json_string.size(), &json_node, &parseErr) )
         Throw( DRM_BadFormat, "Cannot parse following JSON string because ", parseErr, "\n", json_string );
+
+    if ( json_node.empty() || json_node.isNull() )
+        Throw( DRM_BadArg, "JSON string is empty" );
+
+    Debug2( "Parsed string: ", json_string, " into JSON object: ", json_node.toStyledString() );
+
     return json_node;
 }
 
 
 Json::Value parseJsonFile( const std::string& file_path ) {
     Json::Value json_node;
-    std::string parseErr;
-    Json::CharReaderBuilder builder;
-    std::ifstream fh( file_path );
+    std::string file_content;
 
+    // Open file
+    std::ifstream fh( file_path );
     if ( !fh.good() )
         Throw( DRM_BadArg, "Cannot find JSON file: ", file_path );
-    bool ret = Json::parseFromStream( builder, fh, &json_node, &parseErr);
-    fh.close();
-
-    if ( !ret  )
-        Throw( DRM_BadFormat, "Cannot parse ", file_path, " : ", parseErr );
-
-    if ( json_node.empty() )
-        Throw( DRM_BadArg, "JSON file '", file_path, "' is empty" );
-
+    // Read file content
+    fh.seekg( 0, std::ios::end );
+    file_content.reserve( fh.tellg() );
+    fh.seekg( 0, std::ios::beg );
+    file_content.assign( (std::istreambuf_iterator<char>(fh)), std::istreambuf_iterator<char>() );
+    // Parse content as a JSON object
+    try {
+        json_node = parseJsonString(file_content);
+    } catch( const Exception& e ) {
+        Throw( e.getErrCode(), "Cannot parse JSON file ", file_path, ": ", e.what() );
+    }
+    Debug("Found and loaded JSON file: ", file_path);
+    
     return json_node;
 }
 
@@ -120,12 +131,18 @@ const Json::Value& JVgetOptional(const Json::Value& jval, const char* key, const
     bool exists = jval.isMember(key);
     const Json::Value& jvalmember = exists ? jval[key] : defaultValue;
 
-    if (exists || !jvalmember.isNull())
-        Debug( "Found parameter '", key, "' of type ", jvalmember.type());
-        if (jvalmember.type()!=type && !jvalmember.isConvertibleTo(type))
-            Throw(DRM_BadFormat, "Wrong parameter type for '", key, "' = ", jvalmember, ", expecting ", type, ", parsed as ", jvalmember.type());
+    if (jvalmember.type()!=type && !jvalmember.isConvertibleTo(type))
+        Throw(DRM_BadFormat, "Wrong parameter type for '", key, "' = ", jvalmember, ", expecting ", type, ", parsed as ", jvalmember.type());
 
-        return jvalmember;
+    std::string val = jvalmember.toStyledString();
+    val = val.erase(val.find_last_not_of("\t\n\v\f\r") + 1);
+
+    if (exists)
+        Debug( "Found parameter '", key, "' of type ", jvalmember.type(), " with value ", val );
+    else
+        Debug( "Set parameter '", key, "' of type ", jvalmember.type(), " to default value ", val );
+
+    return jvalmember;
 }
 
 }

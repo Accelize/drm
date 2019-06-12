@@ -1,19 +1,22 @@
 DRM Activator IP
 ================
 
-This section has been written for design managers or FPGA designers concerning
-the DRM IP Activator core.
+This section is for application architects and IP designers who are willing
+to protect at runtime their design and/or IP running on FPGA.
+This document presents in details, the DRM Activator IP.
+
+For information about the DRM Controller, see :doc:`drm_hardware_ip_controller`.
 
 For information about hardware integration, see :doc:`drm_hardware_integration`.
 
 Features
 --------
 
-The DRM IP Activator provides the following features:
+The main functionality of the DRM Activator IP is to:
 
-   * delivers a 128 bits Activation Code to the IP Core for behavior control
-   * maintains a credit timer for time based activation
-   * stores a metering counter for activities measurement
+   * Deliver a 128 bits Activation Code to the IP Core for behavior control
+   * Maintain a credit timer for time based activation
+   * Store a metering counter for activities measurement
 
 Block diagram
 -------------
@@ -22,41 +25,69 @@ Block diagram
    :target: _static/IP_ACTIVATOR_BLOCKDIAGRAM.png
    :alt: IP_ACTIVATOR_BLOCKDIAGRAM.png
 
-Operations
-----------
-
-All signals of the IP Core I/F are synchronized with the IP Core clock domain
-(internal CDC with the DRM Clock domain in the IP Activator).
-
-The IP Core captures the Activation Code when the Activation Code Ready output
-is '1'.
-
-The IP Core uses the 128 bits of the Activation Code output to control its
-features enabling.
-
-An internal Credit Timer is used for Demo License or Simulation License: its
-initialization is done by the DRM IPs with the value provided in the license
-file and its decrement is under the control of the IP Core by setting the input
-DRM_EVENT to '1'. The IP Core knows that a temporary Activation Code has been
-loaded in the IP Activator when the DEMO_MODE output is set to '1'. The IP Core
-detects the Activation timeout when the Activation Code Ready output is '0'
-and/or the Activation Code output is all 0’s.
-
-An internal Metering counter is used to store the activity of the IP Core: it
-is asynchronously reset upon the IP_CORE_aRSTn input and is synchronously reset
-by the DRM Controller via the DRM Bus; its increment is under the control of
-the IP Core by setting the input DRM_EVENT to '1'.
-
 Interface description
 ---------------------
 
-The communication on the DRM Bus uses a proprietary protocol where the IP
-Activator is a slave, the DRM Controller being the master.
+Reset and Clock
+~~~~~~~~~~~~~~~
 
-DRM Bus Socket connected to DRM controller
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The IP Core clock domain and the DRM Bus clock domain can be asynchronous,
+the IP Activator component implements the CDC (Clock Domain Crossing).
 
-Proprietary protocol
+The resets are active low and asynchronous with the clocks.
+
+DRM AXI4-Stream Bus connected to DRM controller
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Communication on the DRM Bus uses an AXI4-Stream protocol where the IP
+Activator is a slave and the DRM Controller is the master.
+A single Controller is always required but any number of Activators
+is supported (1 to N connections).
+
+  .. list-table::
+     :header-rows: 1
+
+     * - Name
+       - Direction
+       - Size
+       - Description
+     * - drm_arstn
+       - in
+       - 1
+       - DRM AXI4-Stream bus Asynchronous Reset (active low)
+     * - drm_aclk
+       - in
+       - 1
+       - DRM AXI4-Stream bus Clock domain
+     * - drm_to_uip_tready
+       - out
+       - 1
+       - AXI4-Stream Ready signal for DRM to IP Common Bus
+     * - drm_to_uip_tvalid
+       - in
+       - 1
+       - AXI4-Stream Valid signal for DRM to IP Common Bus
+     * - drm_to_uip_tdata
+       - in
+       - 32
+       - AXI4-Stream Data signal for DRM to IP Common Bus
+     * - uip_to_drm_tready
+       - in
+       - 1
+       - AXI4-Stream Ready signal for IP to DRM Specific Bus
+     * - uip_to_drm_tvalid
+       - out
+       - 1
+       - AXI4-Stream Valid signal for IP to DRM Specific Bus
+     * - uip_to_drm_tdata
+       - out
+       - 32
+       - AXI4-Stream Data signal for IP to DRM Specific Bus
+
+
+To ease the integration with most of the EDA tools, this bus has been wrapped on
+2 AXI4-Steam buses.
+
 
 DRM Activator interface with IP to protect
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -71,98 +102,57 @@ signals.
      - Direction
      - Size
      - Description
-   * - IP_CORE_aCLK
+   * - ip_core_aclk
      - in
      - 1
      - IP Core clock
-   * - IP_CORE_aRSTn
+   * - ip_core_arstn
      - in
      - 1
      - IP Core Asynchronous Reset (active low)
-   * - DRM_EVENT
+   * - metering_event
      - in
      - 1
-     - Decrements the Credit timer and Increments the Metering counter when set to '1'; Synchronous with IP_CORE_aCLK
-   * - ACTIVATION_CODE
+     - Level-sensitive signal synchronous to ip_core_aclk that increments the Metering counter when sampled to '1'
+   * - metering_arst
+     - in
+     - 1
+     - Active-high reset synchronous to ip_core_aclk that clear the Metering counter when sampled to '1'
+   * - activation_code
      - out
      - 128
-     - The Activation Code (synchronous to IP_CORE_aCLK)
-   * - ACTIVATION_CODE_READY
+     - Activation Code as provided by the License Key currently loaded.
+   * - activation_code_ready
      - out
      - 1
      - Tells that an Activation Code is available when set to '1'
-   * - DEMO_MODE
-     - out
-     - 1
-     - Tells that the Activation Code is temporary (synchronous to IP_CORE_aCLK)
 
-Implementation guidelines
--------------------------
+.. note:: ``activation_code`` and ``activation_code_ready`` are synchronous to ``ip_core_aclk``.
+           ``metering_event`` must be synchronous to ``ip_core_aclk``.
 
-IP core instrumentation
-~~~~~~~~~~~~~~~~~~~~~~~~
+Operations
+----------
 
-A protected IP, or DRM Enabled IP, consists of the assembly of an IP Core and
-the IP Activator:
+Signals of the IP core that are interacting with the DRM Activator shall be
+synchronized on the IP Core clock domain, ``ip_core_aclk`` signal. Internally,
+the IP core shall implement its own CDC.
 
-.. image:: _static/IP_CORE_INSTRUMENTATION.png
-   :target: _static/IP_CORE_INSTRUMENTATION.png
-   :alt: IP_CORE_INSTRUMENTATION.png
+The IP Core shall capture the Activation Code when the Activation Code Ready output
+is '1'.
 
-with the IP Activator to retrieve its activation code and to control the
-activation duration and the metering increment.
+The IP Core uses the 128 bits of the Activation Code output to control FSM transition
+and datapath gates.
 
-The IP Vendor designs the IP core behavior based on the Activation Code values
-(128 bits) and its validity.
+The DRM Activator implements an internal 64-bit Metering counter that is used
+to store the activity of the IP Core: it is asynchronously reset upon the IP_CORE_aRSTn
+input and is synchronously reset by the DRM Controller via the DRM Bus.
+Its increment is under the control of the IP Core by asserting the ``metering_event`` input
+for 1 clock cycle. ``metering_event`` is a level-sensitive signal so make sure the signal
+is de-asserted when the event has passed.
 
-Reset and Clock
-^^^^^^^^^^^^^^^
-
-The IP Core clock domain and the DRM Bus clock domain can be asynchronous,
-the IP Activator component implements the CDC (Clock Domain Crossing).
-
-The resets are active low and asynchronous with the clocks.
-
-IP Activator Interface
-^^^^^^^^^^^^^^^^^^^^^^
-
-A specific interface shall be prepared in the IP Core to further communicate
-with the IP Activator.
-
-.. list-table::
-   :header-rows: 1
-
-   * - Name
-     - Direction
-     - Size
-     - Description
-   * - IP_CORE_aCLK
-     - out
-     - 1
-     - IP Core clock domain
-   * - IP_CORE_aRSTn
-     - out
-     - 1
-     - IP Core Asynchronous Reset (active low)
-   * - DRM_EVENT
-     - out
-     - 1
-     - IP Core control to decrement an Activation timer and increment the Meterin counter
-   * - ACTIVATION_CODE
-     - in
-     - 128
-     - The Activation Code (synchronous to IP_CORE_aCLK)
-   * - ACTIVATION_CODE_READY
-     - in
-     - 1
-     - the Activation Code is ready (synchronous to IP_CORE_aCLK)
-   * - DEMO_MODE
-     - in
-     - 1
-     - the license is credit based i.e. temporary (synchronous to IP_CORE_aCLK)
 
 Implementation results
-^^^^^^^^^^^^^^^^^^^^^^
+----------------------
 
 .. list-table::
    :header-rows: 1
@@ -190,52 +180,63 @@ IP Activator HDK directories and files:
 
 .. code-block:: bash
 
-   drm_ip_activator_hdk_x.y.z/
+   drm_ip_activator_vendor_library_name_version/
    -- rtl/
-   ---- altera/
-         drm_all_components.vhdl
-   ---- xilinx/
-   -------- drm_all_components.vhdl
-   -------- drm_ip_activator_0xvvvvllllnnnnvvvv.vhdl
-   -------- drm_ip_activator_0xvvvvllllnnnnvvvv.vho
-   -------- drm_ip_activator_0xvvvvllllnnnnvvvv.veo
-   -------- drm_ip_activator_0xvvvvllllnnnnvvvv.v
-   -------- drm_ip_activator_0xvvvvllllnnnnvvvv.xml
-   -------- drm_activation_code_package_0xvvvvllllnnnnvvvv.vhdl
-   -------- drm_activation_code_package_0xvvvvllllnnnnvvvv.v
+   ----- drm_ip_activator_0xvvvvllllnnnnvvvv_axi4st.v
+   ----- drm_ip_activator_0xvvvvllllnnnnvvvv_axi4st.vhdl
+   ----- drm_ip_activator_0xvvvvllllnnnnvvvv.vhdl
+   ----- drm_ip_activator_0xvvvvllllnnnnvvvv.vho
+   ----- drm_ip_activator_0xvvvvllllnnnnvvvv.veo
+   ----- drm_ip_activator_0xvvvvllllnnnnvvvv.v
+   ----- drm_ip_activator_0xvvvvllllnnnnvvvv.xml
+   ----- drm_activation_code_package_0xvvvvllllnnnnvvvv.vhdl
+   ----- drm_activation_code_package_0xvvvvllllnnnnvvvv.v
    -- simu/
-   ---- modelsim/
-   -------- drm_all_components.vhdl
+   ----- modelsim/
    -------- drm_controller_bfm.vhdl
    -------- drm_controller_bfm.v
    -------- drm_license_package.vhdl
    -- docs/
+   common/
+   -- sv/
+   ----- altera/
+   -------- altchip_id_arria10.sv
+   ----- alteraProprietary/
+   -------- altchip_id_arria10.sv
+   -- vhdl/
+   ----- altera/
+   -------- drm_all_components.vhdl
+   ----- alteraProprietary/
+   -------- drm_all_components.vhdl
+   ----- modelsim/
+   -------- drm_all_components.vhdl
+   ----- xilinx/
+   -------- drm_all_components.vhdl
 
-The archive file name postfix x.y.z is  the version number of the HDK.
+The IP Activator top-level file is drm_ip_activator_0xvvvvllllnnnnvvvv_axi4st.
+It declares an entity named **drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st** where
+is a 64 bits hexadecimal encoding of the IP VLNV.
 
-For example "2.1.1.".
-**This version number must be specified when asking for aLicense File**.
+For example **drm_ip_activator_0x0C001020A56E0001_axi4st**
 
-The IP Activator entity name is DRM_IP_ACTIVATOR_0xVVVVLLLLNNNNVVVV with the
-postfix being a 64 bits hexadecimal encoding of the IP VLNV.
+In the above example, the *altchip_id_arria10* files correspond to the Arria 10
+FPGA family. Your `common` folder content might differ depending on the FPGA family you have
+requested.
 
-For example DRM_IP_ACTIVATOR_0x0C001020A56E0001
+Implementation guidelines
+-------------------------
 
-Release Note
-------------
+A protected IP consists of the assembly of an IP Core and an IP Activator:
 
-* 3.0.0.0:
-    * Naming convention
-* 2.3.2.4:
-    * Timing closure enhancement to work at 200 MHz
-* 2.3.2.3:
-    * Refine DRM bus logic port naming conventions in IPXact abstract bus
-      definition
-* 2.3.2.2:
-    * Usage of aes128-cbc for P1735 encrypted IPs.
-* 2.3.2.1:
-    * Split the DRM Bus IPXact abstract bus definition
-    * Define a single common DRM Bus section to connect the DRM Controller to
-      all IP Activators.
-    * Define a dedicated DRM Bus section (aka. socket) to connect the DRM
-      Controller to each IP Activator (one dedicated socket per IP Activator)
+.. image:: _static/IP_CORE_INSTRUMENTATION.png
+   :target: _static/IP_CORE_INSTRUMENTATION.png
+   :alt: IP_CORE_INSTRUMENTATION.png
+
+The IP Vendor shall modify the IP core in order to:
+
+* Protect some relevant part of the code by adding conditional logics based on the
+  Activation Code value (128 bits)
+* Count data metrics related to the IP usage (byte, frame, or any other quantity) and generate
+  a pulse on the DRM Activator event input every usage unit.
+
+For information about hardware integration, see :doc:`drm_hardware_integration`.

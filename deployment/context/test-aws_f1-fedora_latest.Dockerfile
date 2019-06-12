@@ -1,4 +1,4 @@
-FROM fedora:latest
+FROM fedora:30
 
 RUN dnf install -y --setopt=install_weak_deps=False --best \
     gcc \

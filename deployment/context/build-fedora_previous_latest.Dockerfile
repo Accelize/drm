@@ -1,10 +1,10 @@
-FROM fedora:30
+FROM fedora:29
 
 RUN dnf install -y --setopt=install_weak_deps=False --best \
     doxygen \
     gcc \
     gcc-c++ \
-    gnupg \
+    gnupg2 \
     jsoncpp-devel \
     libcurl-devel \
     make \
@@ -22,4 +22,5 @@ pip3 install -U --no-cache-dir \
     cython \
     sphinx_rtd_theme \
     tox && \
+ln -sf /usr/bin/gpg2 /usr/bin/gpg && \
 rm -rf /var/cache/dnf/*

@@ -17,6 +17,7 @@ def test_metered_start_stop_short_time(accelize_drm, conf_json, cred_json, async
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
+    activators.autotest()
     cred_json.set_user('accelize_accelerator_test_02')
 
     async_cb.reset()
@@ -30,21 +31,20 @@ def test_metered_start_stop_short_time(accelize_drm, conf_json, cred_json, async
     )
     try:
         assert not drm_manager.get('license_status')
-        assert not activators.is_activated()
+        activators.autotest(is_activated=False)
+        print(drm_manager.get('metered_data'))
+        activators[0].generate_coin(1000)
         drm_manager.activate()
         sleep(1)
-        coins = drm_manager.get('metered_data')
-        assert coins == 0
+        assert drm_manager.get('metered_data') == 0
         assert drm_manager.get('license_status')
-        assert activators.is_activated()
-        orig_coins = drm_manager.get('metered_data')
+        activators.autotest(is_activated=True)
         new_coins = 10
         activators[0].generate_coin(new_coins)
-        coins = drm_manager.get('metered_data')
-        assert coins == orig_coins + new_coins
+        assert drm_manager.get('metered_data') == new_coins
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
-        assert not activators.is_activated()
+        activators.autotest(is_activated=False)
         coins = drm_manager.get('metered_data')
         assert coins == 0
         async_cb.assert_NoError()
@@ -59,6 +59,7 @@ def test_metered_start_stop_short_time_in_debug(accelize_drm, conf_json, cred_js
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
+    activators.autotest()
     cred_json.set_user('accelize_accelerator_test_02')
 
     async_cb.reset()
@@ -74,23 +75,19 @@ def test_metered_start_stop_short_time_in_debug(accelize_drm, conf_json, cred_js
     )
     try:
         assert not drm_manager.get('license_status')
-        assert not activators.is_activated()
+        activators.autotest(is_activated=False)
         drm_manager.activate()
         sleep(1)
-        coins = drm_manager.get('metered_data')
-        assert coins == 0
+        assert drm_manager.get('metered_data') == 0
         assert drm_manager.get('license_status')
-        assert activators.is_activated()
-        orig_coins = drm_manager.get('metered_data')
+        activators.autotest(is_activated=True)
         new_coins = 10
         activators[0].generate_coin(new_coins)
-        coins = drm_manager.get('metered_data')
-        assert coins == orig_coins + new_coins
+        assert drm_manager.get('metered_data') == new_coins
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
-        assert not activators.is_activated()
-        coins = drm_manager.get('metered_data')
-        assert coins == 0
+        activators.autotest(is_activated=False)
+        assert drm_manager.get('metered_data') == 0
         async_cb.assert_NoError()
     finally:
         drm_manager.deactivate()
@@ -104,6 +101,7 @@ def test_metered_start_stop_long_time(accelize_drm, conf_json, cred_json, async_
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
+    activators.autotest()
     cred_json.set_user('accelize_accelerator_test_02')
 
     async_cb.reset()
@@ -117,32 +115,28 @@ def test_metered_start_stop_long_time(accelize_drm, conf_json, cred_json, async_
     )
     try:
         assert not drm_manager.get('license_status')
-        assert not activators.is_activated()
+        activators.autotest(is_activated=False)
         drm_manager.activate()
         start = datetime.now()
         license_duration = drm_manager.get('license_duration')
         assert drm_manager.get('license_status')
-        coins = drm_manager.get('metered_data')
-        assert coins == 0
-        assert activators.is_activated()
-        orig_coins = drm_manager.get('metered_data')
+        assert drm_manager.get('metered_data') == 0
+        activators.autotest(is_activated=True)
         new_coins = 10
         activators[0].generate_coin(10)
         coins = drm_manager.get('metered_data')
-        assert coins == orig_coins + new_coins
-        coins_ref = coins
+        assert coins == new_coins
         for i in range(3):
             wait_period = randint(license_duration-2, license_duration+2)
             sleep(wait_period)
             start += timedelta(seconds=license_duration)
             new_coins = randint(1,10)
             activators[0].generate_coin(new_coins)
-            coins = drm_manager.get('metered_data')
-            assert coins == coins_ref + new_coins
-            coins_ref = coins
+            coins += new_coins
+            assert drm_manager.get('metered_data') == coins
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
-        assert not activators.is_activated()
+        activators.autotest(is_activated=False)
         async_cb.assert_NoError()
     finally:
         drm_manager.deactivate()
@@ -156,6 +150,7 @@ def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, asy
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
+    activators.autotest()
     cred_json.set_user('accelize_accelerator_test_02')
 
     async_cb.reset()
@@ -170,7 +165,7 @@ def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, asy
     try:
         assert not drm_manager.get('session_status')
         assert not drm_manager.get('license_status')
-        assert not activators.is_activated()
+        activators.autotest(is_activated=False)
         drm_manager.activate()
         start = datetime.now()
         assert drm_manager.get('metered_data') == 0
@@ -178,40 +173,39 @@ def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, asy
         assert drm_manager.get('license_status')
         session_id = drm_manager.get('session_id')
         assert len(session_id) > 0
-        assert activators.is_activated()
+        activators.autotest(is_activated=True)
         lic_duration = drm_manager.get('license_duration')
-        orig_coins = drm_manager.get('metered_data')
+        assert drm_manager.get('metered_data') == 0
         new_coins = 10
         activators[0].generate_coin(new_coins)
-        coins = drm_manager.get('metered_data')
-        assert coins == orig_coins + new_coins
+        assert drm_manager.get('metered_data') == new_coins
         drm_manager.deactivate(True)
         assert drm_manager.get('session_status')
         assert drm_manager.get('license_status')
         assert drm_manager.get('session_id') == session_id
-        assert activators.is_activated()
+        activators.autotest(is_activated=True)
         # Wait right before license expiration
         wait_period = start + timedelta(seconds=2*lic_duration-2) - datetime.now()
         sleep(wait_period.total_seconds())
         assert drm_manager.get('session_status')
         assert drm_manager.get('license_status')
         assert drm_manager.get('session_id') == session_id
-        assert activators.is_activated()
+        activators.autotest(is_activated=True)
         # Wait expiration
         sleep(4)
         assert drm_manager.get('session_status')
         assert drm_manager.get('session_id') == session_id
         assert not drm_manager.get('license_status')
-        assert not activators.is_activated()
+        activators.autotest(is_activated=False)
         drm_manager.activate(True)
         assert drm_manager.get('session_status')
         assert drm_manager.get('session_id') == session_id
         assert drm_manager.get('license_status')
-        assert activators.is_activated()
+        activators.autotest(is_activated=True)
         drm_manager.deactivate()
         assert not drm_manager.get('session_status')
         assert not drm_manager.get('license_status')
-        assert not activators.is_activated()
+        activators.autotest(is_activated=False)
         assert drm_manager.get('session_id') != session_id
         async_cb.assert_NoError()
     finally:
@@ -226,6 +220,7 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
+    activators.autotest()
     cred_json.set_user('accelize_accelerator_test_02')
 
     async_cb.reset()
@@ -240,7 +235,7 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
     try:
         assert not drm_manager.get('session_status')
         assert not drm_manager.get('license_status')
-        assert not activators.is_activated()
+        activators.autotest(is_activated=False)
         async_cb.assert_NoError()
         drm_manager.activate()
         start = datetime.now()
@@ -250,14 +245,13 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
         session_id = drm_manager.get('session_id')
         assert len(session_id) > 0
         lic_duration = drm_manager.get('license_duration')
-        assert activators.is_activated()
-        coins_ref = drm_manager.get('metered_data')
+        activators.autotest(is_activated=True)
+        coins = drm_manager.get('metered_data')
         for i in range(3):
             new_coins = randint(1, 100)
             activators[0].generate_coin(new_coins)
-            coins = drm_manager.get('metered_data')
-            assert coins == coins_ref + new_coins
-            coins_ref = coins
+            coins += new_coins
+            assert drm_manager.get('metered_data') == coins
             drm_manager.deactivate(True)
             async_cb.assert_NoError()
             assert drm_manager.get('session_status')
@@ -273,11 +267,11 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
         assert drm_manager.get('session_status')
         assert drm_manager.get('session_id') == session_id
         assert drm_manager.get('license_status')
-        assert activators.is_activated()
+        activators.autotest(is_activated=True)
         drm_manager.deactivate()
         assert not drm_manager.get('session_status')
         assert not drm_manager.get('license_status')
-        assert not activators.is_activated()
+        activators.autotest(is_activated=False)
         assert drm_manager.get('session_id') != session_id
         async_cb.assert_NoError()
     finally:
@@ -293,6 +287,7 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
+    activators.autotest()
     cred_json.set_user('accelize_accelerator_test_03')
 
     # Test activate function call fails when limit is reached
@@ -365,17 +360,17 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         wait_period = start + timedelta(seconds=3*lic_duration-3) - datetime.now()
         sleep(wait_period.total_seconds())
         assert drm_manager.get('license_status')
-        assert activators.is_activated()
+        activators.autotest(is_activated=True)
         sleep(5)
         assert not drm_manager.get('license_status')
-        assert not activators.is_activated()
+        activators.autotest(is_activated=False)
         # Verify asynchronous callback has been called
         assert async_cb.was_called
         assert 'You reach the licensed , usage_unit  limit: 1000' in async_cb.message
         assert async_cb.errcode == accelize_drm.exceptions.DRMWSReqError.error_code
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
-        assert not activators.is_activated()
+        activators.autotest(is_activated=False)
     finally:
         drm_manager.deactivate()
     print('Test background thread stops when limit is reached: PASS')

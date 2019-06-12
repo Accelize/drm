@@ -1,28 +1,29 @@
 DRM Controller IP
 =================
 
-This section has been written for design managers or FPGA designers concerning
-the DRM IP Controller core.
+This section is for application architects and IP designers who are willing
+to protect at runtime their design and/or IP running on FPGA.
+This document presents in details, the DRM Activator IP.
+
+For information about the DRM Controller, see :doc:`drm_hardware_ip_activator`.
 
 For information about hardware integration, see :doc:`drm_hardware_integration`.
+
 
 Features
 --------
 
 The DRM Controller manages the sensitive data communication between the System
-Software (AXI4-Lite I/F) and the Protected IP Cores (DRM Bus I/F):
+Software (AXI4-Lite Status & Control interface) and the Protected IP Cores (DRM Bus interface).
+The main functionality of the DRM Controller IP is to:
 
-* The DRM Controller reads and interprets the encrypted License Key and
-  conveys securely the Activation Codes and the Credit timers to the Protected
-  IP Cores
-* The DRM Controller collects the Metering Data from the Protected IP Cores and
-  delivers an encrypted and authenticated Metering Data block to the System
+* Read and interpret the encrypted License Key and convey securely the
+  Activation Codes and the Credit timers to the Protected IP Cores.
+* Collect the Metering Data from the Protected IP Cores and deliver an encrypted
+  and authenticated Metering Data block to the System.
 
-The DRM Controller delivers to the System Software, design and chip level
-information for the License Key request:
-
-* DNA = Public Chip ID (128 bits)
-* Protected IPs VLNVs (64 bits each)
+The DRM Controller also gathers the design information (Protected IPs VLNVs, 64 bits each)
+and the chip DNA (Public Chip ID (128 bits) that are required to request the License Key.
 
 Block diagram
 -------------
@@ -34,200 +35,192 @@ Block diagram
 Interface description
 ---------------------
 
-The communication on the DRM Bus uses a private protocol where the IP Activator
-is a slave, the DRM Controller being the master. The DRM Bus I/F of the DRM
-Controller depends on the number of Protected IPs to be connected: one common
-part and one socket per Protected IP.
-
-
-DRM Bus Common Part
-~~~~~~~~~~~~~~~~~~~
-
-Proprietary protocol
-
-DRM Bus Socket per IP
-~~~~~~~~~~~~~~~~~~~~~
-
-Proprietary protocol
-
-AXI4-Lite I/F
-~~~~~~~~~~~~~~
-
-The communication with the System is done with an AXI4-Lite slave interface
-(Version: 2.0)
-
-.. list-table::
-   :header-rows: 1
-
-   * - Name
-     - Direction
-     - Size
-     - Description
-   * - **SYS_AXI4_aCLK**
-     - in
-     - 1
-     - AXI4 clock
-   * - **SYS_AXI4_aRSTn**
-     - in
-     - 1
-     - AXI4 asynchronous reset active low
-   * - **SYS_AXI4_BUS_SLAVE_I_AW_VALID**
-     - in
-     - 1
-     - AXI4 write address valid
-   * - **SYS_AXI4_BUS_SLAVE_I_AW_ADDR**
-     - in
-     - 32
-     - AXI4 write address value
-   * - **SYS_AXI4_BUS_SLAVE_I_AW_PROT**
-     - in
-     - 3
-     - AXI4 write address protection type
-   * - **SYS_AXI4_BUS_SLAVE_O_AW_READY**
-     - out
-     - 1
-     - AXI4 write address ready
-   * - **SYS_AXI4_BUS_SLAVE_I_AR_VALID**
-     - in
-     - 1
-     - AXI4 read address valid
-   * - **SYS_AXI4_BUS_SLAVE_I_AR_ADDR**
-     - in
-     - 32
-     - AXI4 read address value
-   * - **SYS_AXI4_BUS_SLAVE_I_AR_PROT**
-     - in
-     - 3
-     - AXI4 read address protection type
-   * - **SYS_AXI4_BUS_SLAVE_O_AR_READY**
-     - out
-     - 1
-     - AXI4 read address ready
-   * - **SYS_AXI4_BUS_SLAVE_I_W_VALID**
-     - in
-     - 1
-     - AXI4 write valid
-   * - **SYS_AXI4_BUS_SLAVE_I_W_DATA**
-     - in
-     - 32
-     - AXI4 write data value
-   * - **SYS_AXI4_BUS_SLAVE_I_W_STRB**
-     - in
-     - 4
-     - AXI4 write strobes
-   * - **SYS_AXI4_BUS_SLAVE_O_W_READY**
-     - out
-     - 1
-     - AXI4 write ready
-   * - **SYS_AXI4_BUS_SLAVE_I_R_READY**
-     - in
-     - 1
-     - AXI4 read ready
-   * - **SYS_AXI4_BUS_SLAVE_O_R_VALID**
-     - out
-     - 1
-     - AXI4 read valid
-   * - **SYS_AXI4_BUS_SLAVE_O_R_DATA**
-     - out
-     - 32
-     - AXI4 read data value
-   * - **SYS_AXI4_BUS_SLAVE_O_R_RESP**
-     - out
-     - 2
-     - AXI4 read response
-   * - **SYS_AXI4_BUS_SLAVE_I_B_READY**
-     - in
-     - 1
-     - AXI4 write response ready
-   * - **SYS_AXI4_BUS_SLAVE_O_B_VALID**
-     - out
-     - 1
-     - AXI4 write response valid
-   * - **SYS_AXI4_BUS_SLAVE_O_B_RESP**
-     - out
-     - 2
-     - AXI4 write response
-
-DNA Register I/F
-~~~~~~~~~~~~~~~~
-
-This interface is used only if user want access to limited Chip ID FPGA
-primitive. This latter is also used internally for the DRM Controller.
-
-The DNA can be directly read with a simple register I/F synchronous with the
-DRM bus clock:
-
-.. list-table::
-   :header-rows: 1
-
-   * - Name
-     - Direction
-     - Size
-     - Description
-   * - **CHIP_DNA**
-     - out
-     - 128
-     - DNA value
-   * - **CHIP_DNA_VALID**
-     - out
-     - 1
-     - DNA value is valid
-
-Registers
----------
-
-The DRM Controller Registers are written or read via the System Bus slave I/F.
-These registers are accessible through DRM library. Please see
-:doc:`drm_library_integration` for more information.
-
-Implementation guidelines
--------------------------
-
-Instantiation and connection
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Only one DRM Controller can be instantiated in the Chip Design to serve multiple
-Protected IPs.
-
-* Specify the number of protected IP instances and get an appropriate
-  DRM CONTROLLER; indeed, the DRM Bus I/F topology depends on the number of
-  Protected IPs to be connected.
-* Instantiate the DRM CONTROLLER at the top level of the design
-* Assign a System Bus address to the DRM Controller with the natural generic
-  parameter SYS_BUS_ADR_BEGIN
-* Assign the actual size of the System Bus Address ports with the natural
-  generic parameter SYS_BUS_ADR_SIZE
-* Connect the DRM Controller to the System Bus
-* Connect the DRM Controller and the different protected IP instances with the
-  DRM Bus
-
-Example of a DRM Environment Topology
+Example of a DRM Environment Topology:
 
 .. image:: _static/DRM_ENVIRONMENT_TOPOLOGY.png
    :target: _static/DRM_ENVIRONMENT_TOPOLOGY.png
    :alt: DRM_ENVIRONMENT_TOPOLOGY.png
 
-AXI4-Lite connection
-^^^^^^^^^^^^^^^^^^^^
+DRM bus
+~~~~~~~
 
-Standard Ports Connections
+The communication on the DRM Bus uses the AXI4-Stream protocol where the IP Activator
+is a slave and the DRM Controller is the master.
+The DRM bus size depends on the number of Protected IP cores in the design.
+For each IP connected there are 3 parts:
 
-DRM Bus connection
-^^^^^^^^^^^^^^^^^^
+* The Clock and Reset ports.
 
-* Given the number of protected IP (N) connected on the DRM Bus, a DRM
-  Controller component with N sockets DRM_BUS_MASTER_O_CS_n,
-  DRM_BUS_MASTER_I_DAT_n, DRM_BUS_MASTER_I_ACK_n, DRM_BUS_MASTER_I_INTR_n,
-  DRM_BUS_MASTER_I_STA_n, with n = 0 to N-1
-* Each protected IP is connected on the DRM Bus :
-    * Common connections : DRM_aCLK, DRM_aRSTn, DRM_BUS_MASTER_O_CYC,
-      DRM_BUS_MASTER_O_WE, DRM_BUS_MASTER_O_ADR, DRM_BUS_MASTER_O_DAT
-    * Dedicated connections to one socket : DRM_BUS_SLAVE_I_CS,
-      DRM_BUS_SLAVE_O_DAT, DRM_BUS_SLAVE_O_ACK, DRM_BUS_SLAVE_O_INTR,
-      DRM_BUS_SLAVE_O_STA
+  .. list-table::
+     :header-rows: 1
+
+     * - Name
+       - Direction
+       - Size
+       - Description
+     * - drm_aclk
+       - in
+       - 1
+       - DRM bus clock
+     * - drm_arstn
+       - in
+       - 1
+       - DRM bus asynchronous active low reset
+
+* The DRM Controller to Activator channel:
+
+  .. list-table::
+     :header-rows: 1
+
+     * - Name
+       - Direction
+       - Size
+       - Description
+     * - drm_to_uip_<IDX>_tready
+       - in
+       - 1
+       - AXI4-Stream Ready signal for DRM Controller to IP Activator Channel
+     * - drm_to_uip_<IDX>_tvalid
+       - out
+       - 1
+       - AXI4-Stream Valid signal for DRM Controller to IP Activator Channel
+     * - drm_to_uip_<IDX>_tdata
+       - out
+       - 32
+       - AXI4-Stream Data signal for DRM Controller to IP Activator Channel
+
+* The Activator to DRM Controller channel:
+
+  .. list-table::
+     :header-rows: 1
+
+     * - Name
+       - Direction
+       - Size
+       - Description
+     * - uip_<IDX>_to_drm_tready
+       - out
+       - 1
+       - AXI4-Stream Ready signal for IP Activator to DRM Controller Channel
+     * - uip_<IDX>_to_drm_tvalid
+       - in
+       - 1
+       - AXI4-Stream Valid signal for IP Activator to DRM Controller Channel
+     * - uip_<IDX>_to_drm_tdata
+       - in
+       - 32
+       - AXI4-Stream Data signal for IP Activator to DRM Controller Channel
+
+
+AXI4-Lite Register Interface
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The communication with the Software layer is performed through an AXI4-Lite slave interface:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Name
+     - Direction
+     - Size
+     - Description
+   * - drm_aclk
+     - in
+     - 1
+     - AXI4-Lite clock
+   * - drm_arstn
+     - in
+     - 1
+     - AXI4-Lite asynchronous reset active low
+   * - m_axi_awready
+     - out
+     - 1
+     - AXI4-Lite write address ready
+   * - m_axi_awvalid
+     - in
+     - 1
+     - AXI4-Lite write address valid
+   * - m_axi_awaddr
+     - in
+     - 32
+     - AXI4-Lite write address value
+   * - m_axi_awprot
+     - in
+     - 3
+     - AXI4-Lite write address protection type
+   * - m_axi_wready
+     - out
+     - 1
+     - AXI4-Lite write ready
+   * - m_axi_wvalid
+     - in
+     - 1
+     - AXI4-Lite write valid
+   * - m_axi_wdata
+     - in
+     - 32
+     - AXI4-Lite write data value
+   * - m_axi_wstrb
+     - in
+     - 4
+     - AXI4-Lite write strobes
+   * - m_axi_bready
+     - in
+     - 1
+     - AXI4-Lite write response ready
+   * - m_axi_bvalid
+     - out
+     - 1
+     - AXI4-Lite write response valid
+   * - m_axi_bresp
+     - out
+     - 2
+     - AXI4-Lite write response
+   * - m_axi_arready
+     - out
+     - 1
+     - AXI4-Lite read address ready
+   * - m_axi_arvalid
+     - in
+     - 1
+     - AXI4-Lite read address valid
+   * - m_axi_araddr
+     - in
+     - 32
+     - AXI4-Lite read address value
+   * - m_axi_arprot
+     - in
+     - 3
+     - AXI4-Lite read address protection type
+   * - m_axi_rready
+     - in
+     - 1
+     - AXI4-Lite read ready
+   * - m_axi_rvalid
+     - out
+     - 1
+     - AXI4-Lite read valid
+   * - m_axi_rdata
+     - out
+     - 32
+     - AXI4-Lite read data value
+   * - m_axi_rresp
+     - out
+     - 2
+     - AXI4-Lite read response
+
+Registers
+---------
+
+The DRM Controller maintains different pages of registers that provide status and
+allow control over the overall DRM system.
+To operate correctly, those registers must be accessible in read and write mode by
+Software layer (DRM Library).
+
+Please refer to :doc:`drm_library_integration` for more information.
 
 Implementation results
-~~~~~~~~~~~~~~~~~~~~~~
+----------------------
 
 Example for a DRM Controller supporting 10 IPs:
 
@@ -248,10 +241,9 @@ Example for a DRM Controller supporting 10 IPs:
      - 3 of 36Kbits, 20 of 18Kbits
 
 Timings
-~~~~~~~
+-------
 
-Below the table that list the performance of DRM Controller by Xilinx FPGA
-family:
+The table below lists the performance of DRM Controller for some Xilinx FPGA families:
 
 .. list-table::
    :header-rows: 1
@@ -287,8 +279,7 @@ family:
      - 100MHz
      - `ds181 <https://www.xilinx.com/support/documentation/data_sheets/ds181_Artix_7_Data_Sheet.pdf>`_
 
-Below the table that list the performance of DRM Controller by Intel FPGA
-family:
+The table below lists the performance of DRM Controller for some Intel/Altera FPGA families:
 
 .. list-table::
    :header-rows: 1
@@ -312,30 +303,51 @@ family:
      - 100MHz
      - `altchipid <https://www.intel.com/content/dam/altera-www/global/en_US/pdfs/literature/ug/altchipid.pdf>`_
 
-Not yet supported - primitive available on FPGA but no integrated in DRM
-Controller :
-
-   * **Intel**
-      * cyclone 10 gx
-      * stratix 10
 
 File structure
 --------------
 
 .. code-block:: bash
 
-   DRM_Controller/
+
+   controller/
+   -- drm_controller_ip.v
+   -- drm_controller_ip.vhdl
+   -- drm_controller_ip_axi4st.v
+   -- drm_controller_ip_axi4st.vhdl
+   common/
    -- sv/
-   ---- altera/
+   ----- altera/
    -------- altchip_id_arria10.sv
-   ---- alteraProprietary/
+   ----- alteraProprietary/
    -------- altchip_id_arria10.sv
    -- vhdl/
-   ---- altera/
+   ----- altera/
    -------- drm_all_components.vhdl
-   ---- alteraProprietary/
+   ----- alteraProprietary/
    -------- drm_all_components.vhdl
-   ---- modelsim/
+   ----- modelsim/
    -------- drm_all_components.vhdl
-   ---- xilinx/
+   ----- xilinx/
    -------- drm_all_components.vhdl
+
+
+Implementation guidelines
+-------------------------
+
+Only one DRM Controller can be instantiated in the Chip Design to serve multiple
+Protected IPs.
+
+Here is an overview of the steps needed to integrate a DRM Controller in a design:
+
+* Specify the number of protected IP instances and get an appropriate
+  DRM HDK from Accelize_.
+* Instantiate the DRM Controller at the top level of the design.
+* Connect the DRM Controller to the AXI4-Lite System Bus
+* Protect the IPs by adding the DRM interface and instantiation the DRM Activator.
+* Connect the different protected IP instances to the DRM Controller.
+
+For information about hardware integration, see :doc:`drm_hardware_integration`.
+
+
+.. _Accelize: https://www.accelize.com/contact-us

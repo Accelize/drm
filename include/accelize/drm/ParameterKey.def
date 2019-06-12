@@ -22,7 +22,6 @@ PARAMETERKEY_ITEM( custom_field )                   ///< Read-write, only for te
 PARAMETERKEY_ITEM( mailbox_data )                   ///< Read-write, only for testing, read or write values to Mailbox read-write memory in DRM Controller
 PARAMETERKEY_ITEM( ws_retry_period_long )           ///< Read-write, read and write the time in seconds before the next request attempt to the Web Server when the time left before timeout is long
 PARAMETERKEY_ITEM( ws_retry_period_short )          ///< Read-write, read and write the time in seconds before the next request attempt to the Web Server when the time left before timeout is short
-PARAMETERKEY_ITEM( ws_retry_deadline )              ///< Read-write, read and write the retry deadline in seconds from the license timeout during which no more retry is sent
 PARAMETERKEY_ITEM( ws_request_timeout )             ///< Read-write, read and write the web service request timeout in seconds during which the response is waited
 PARAMETERKEY_ITEM( log_message_level )              ///< Read-write, only for testing, read and write the log level used with log_message parameter to set the message level
 PARAMETERKEY_ITEM( list_all )                       ///< Read-only, list all parameter keys available
