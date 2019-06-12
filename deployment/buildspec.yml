@@ -99,6 +99,7 @@ phases:
         docker_compose
         --shutdown_after 15
         -p c5.4xlarge
+        --volume_size=30
         -s ubuntu
         -n accelize_drm_packages_build
         -z /dev/shm/drmlib_dev/deployment/packages artifacts/packages.tar.gz

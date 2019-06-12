@@ -119,12 +119,6 @@ Glossary
 
 
 .. toctree::
-   :maxdepth: 0
-   :caption: Overview
-
-   index
-
-.. toctree::
    :maxdepth: 3
    :caption: Getting Started
 
