@@ -42,7 +42,7 @@ phases:
       - echo "WS_ENV=${WS_ENV}"
       - echo "CODEBUILD_WEBHOOK_ACTOR_ACCOUNT_ID=${CODEBUILD_WEBHOOK_ACTOR_ACCOUNT_ID}"
       - | # Test multiline yaml support
-        if [ -z "${CODEBUILD_WEBHOOK_ACTOR_ACCOUNT_ID}" ]; then
+        if git describe --abbrev=0 --exact-match --tags HEAD || [ -z "${CODEBUILD_WEBHOOK_ACTOR_ACCOUNT_ID}" ]; then
           export FILTER_SOURCES=""
           export FILTER_BRANCH=""
         else
