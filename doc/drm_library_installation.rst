@@ -21,6 +21,9 @@ Following OS have been tested but are not supported by Accelize:
 * Fedora (2 latest stable versions)
 * Ubuntu (2 latest stable versions)
 
+.. [#f1] With Python 3.6 from EPEL repository for Accelize DRM Python library.
+.. [#f2] No packages are provided.
+
 
 Software requirements
 ---------------------
@@ -189,7 +192,9 @@ Run the following command:
 Installation from source
 ------------------------
 
-The manual installation allows you to fine tune the components to generate.
+The installation from source is only recommended if there is no package available
+for your configuration or to contribute to the DRM library.
+
 CMake options are used to select which components are generated amongst the following ones:
 
 * Documentation
@@ -202,6 +207,9 @@ For more details about available CMake options, refer to `Build CMake configurat
 
 Requirements
 ````````````
+
+Minimal requirements
+::::::::::::::::::::
 
 Utilities:
  * git
@@ -216,42 +224,57 @@ Libraries:
 Run following commands to install requirements:
 
 .. code-block:: bash
-    :caption: On Debian, Ubuntu
+    :caption: On Debian 10 and more, Ubuntu 18.10 and more
 
+    # Ensure Apt cache is up to date
+    sudo apt update
+
+    # Install packages
+    sudo apt install -y git make g++ libcurl4-openssl-dev libjsoncpp-dev cmake
+
+.. code-block:: bash
+    :caption: On Debian < 10, Ubuntu < 18.10
+
+    # Ensure Apt cache is up to date
+    sudo apt update
+
+    # Install packages
     sudo apt install -y git make g++ libcurl4-openssl-dev libjsoncpp-dev
+
+    # Ensure Pip3 is installed
+    sudo apt install -y python3-pip
+
+    # Install a recent version of Cmake using pip
+    sudo pip3 install -U cmake
 
 .. code-block:: bash
     :caption: On RHEL 7, CentOS 7
 
+    # Install EPEL repository to get jsoncpp-devel
+    sudo yum install -y epel-release
+
+    # Install packages
     sudo yum install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel
+
+    # Ensure Pip3 is installed
+    sudo yum install -y python36-pip
+
+    # Install a recent version of Cmake using pip
+    sudo pip3 install -U --prefix /usr cmake
 
 .. code-block:: bash
     :caption: On Fedora
 
-    sudo dnf install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel
+    sudo dnf install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel cmake
 
-.. warning:: We recommend to install CMake as Python package to get a recent version.
-             Indeed the default CMake version packaged with OS distributions
-             might be too old to build the Accelize DRM library.
-
-             To install CMake as Python package, run the following command:
-
-             .. code-block:: bash
-
-                pip3 install -U cmake
-
-             .. note:: See section `Python 3 option`_ for more information
-                       about Python3 and Pip3 installation.
-
-Python 3 option
-:::::::::::::::
-
-.. warning:: This dependency is mandatory to complete the `Run tests`_ section.
+Python 3 library option
+:::::::::::::::::::::::
 
 This step is required only if you want to:
 
-* Generate the Python3 library (using ``-DPYTHON3=ON`` option with CMake)
+* Generate the Python 3 library (using ``-DPYTHON3=ON`` option with CMake)
 * Generate the Sphinx documentation (using ``-DDOC=ON`` option with CMake)
+* Complete the `Run tests`_ section.
 
 Otherwise you can jump to the next step.
 
@@ -269,7 +292,7 @@ Run following command to install requirements:
     :caption: On Debian, Ubuntu
 
     sudo apt install -y python3 python3-dev python3-pip
-    pip3 install -U setuptools wheel cython
+    sudo pip3 install -U setuptools wheel cython
 
 .. code-block:: bash
     :caption: On RHEL 7, CentOS 7
@@ -278,21 +301,16 @@ Run following command to install requirements:
     sudo yum install -y epel-release
 
     # Install Python3.6
-    sudo yum install -y python36 python36-devel
-    sudo ln -s /usr/bin/python36 /usr/bin/python3
-
-    # Install Pip
-    sudo python36 -m ensurepip
-    sudo ln -s /usr/local/bin/pip3 /usr/bin/pip3
+    sudo yum install -y python36-pip python36-devel
 
     # Install Python Packages
-    pip3 install -U setuptools wheel cython
+    sudo pip3 install -U --prefix /usr  setuptools wheel cython
 
 .. code-block:: bash
     :caption: On Fedora
 
     sudo dnf install -y python3-devel python3-pip
-    pip3 install -U setuptools wheel cython
+    sudo pip3 install -U setuptools wheel cython
 
 Documentation generation option
 :::::::::::::::::::::::::::::::
@@ -318,19 +336,19 @@ Run following command to install requirements:
     :caption: On Debian, Ubuntu
 
     sudo apt install -y doxygen
-    pip3 install -U sphinx breathe sphinx_rtd_theme
+    sudo pip3 install -U sphinx breathe sphinx_rtd_theme
 
 .. code-block:: bash
     :caption: On RHEL 7, CentOS 7
 
     sudo yum install -y doxygen
-    pip3 install -U sphinx breathe sphinx_rtd_theme
+    sudo pip3 install -U --prefix /usr sphinx breathe sphinx_rtd_theme
 
 .. code-block:: bash
     :caption: On Fedora
 
     sudo dnf install -y doxygen
-    pip3 install -U sphinx breathe sphinx_rtd_theme
+    sudo pip3 install -U sphinx breathe sphinx_rtd_theme
 
 Test generation option
 ::::::::::::::::::::::
@@ -349,8 +367,14 @@ Python packages:
 Run following command to install requirements:
 
 .. code-block:: bash
+    :caption: On RHEL 7, CentOS 7
 
-    pip3 install -U pytest
+    sudo pip3 install -U --prefix /usr pytest
+
+.. code-block:: bash
+    :caption: On others
+
+    sudo pip3 install -U pytest
 
 Package generation option
 :::::::::::::::::::::::::
@@ -418,12 +442,12 @@ Utilities:
 To install requirements run the following command:
 
 .. code-block:: bash
-    :caption: On Debian 9 or more , Ubuntu 18.04 or more
+    :caption: On Debian 9 or more, Ubuntu 18.04 or more
 
     sudo apt install -y abi-compliance-checker abi-dumper
 
 .. code-block:: bash
-    :caption: On Debian < 9 , Ubuntu < 18.04
+    :caption: On Debian < 9, Ubuntu < 18.04
 
     # ABI compliance checker is not available as package for theses version and
     # needs to be installed manually.
@@ -465,7 +489,6 @@ Utilities:
 
 Python packages:
  * pytest-cov
- * cython
 
 Run following command to install requirements:
 
@@ -473,19 +496,19 @@ Run following command to install requirements:
     :caption: On Debian, Ubuntu
 
     sudo apt install -y lcov
-    pip3 install -U pytest-cov cython
+    sudo pip3 install -U pytest-cov
 
 .. code-block:: bash
     :caption: On RHEL 7, CentOS 7
 
     sudo yum install -y lcov
-    pip3 install -U pytest-cov cython
+    sudo pip3 install -U --prefix /usr pytest-cov
 
 .. code-block:: bash
     :caption: On Fedora
 
     sudo dnf install -y lcov
-    pip3 install -U pytest-cov cython
+    sudo pip3 install -U pytest-cov
 
 Automation with tox
 :::::::::::::::::::
@@ -499,8 +522,14 @@ Python packages:
 Run following command to install requirements:
 
 .. code-block:: bash
+    :caption: On RHEL 7, CentOS 7
 
-    pip3 install -U tox
+    sudo pip3 install -U --prefix /usr tox
+
+.. code-block:: bash
+    :caption: On others
+
+    sudo pip3 install -U tox
 
 
 Build CMake configuration
@@ -544,7 +573,7 @@ Use the following options to build optional components:
 .. code-block:: bash
    :caption: Build Python Library and Sphinx-like documentation
 
-    cmake -DPYTHON3=ON -DDOC=ON ..
+   cmake -DPYTHON3=ON -DDOC=ON ..
 
 Compile CMake configuration
 ```````````````````````````
@@ -555,7 +584,7 @@ Once the CMake configuration built, you can either:
 
   .. code-block:: bash
 
-    make
+    make -j
 
   From here you can test your compiled library in section `Run tests`_.
 
@@ -563,11 +592,11 @@ Once the CMake configuration built, you can either:
 
   .. code-block:: bash
 
-    make install
+    sudo make install
 
   From here you can test your compiled library in section `Run tests`_.
 
-* or you can build the installation packages:
+* or you can build the installation packages (Require cmake ``-DPKG=ON`` option):
 
   .. code-block:: bash
 
@@ -795,6 +824,3 @@ by parallelizing some tests with the ``-p all`` option:
     :caption: Running full scenario in parallel
 
     tox -p all -- --cred=~/my_application/cred.json
-
-.. [#f1] With Python 3.6 from EPEL repository for Accelize DRM Python library.
-.. [#f2] No packages are provided.

@@ -9,8 +9,8 @@ delivered to the FPGA in order to control the behavior of IP cores. In addition 
 and stores metering information about IP usage from the FPGA.
 The metering information is then used to invoice end users.
 
-.. image:: _static/platform-overview.png
-   :target: _static/platform-overview.png
+.. image:: _static/Accelize_DRM_Technology_service.png
+   :target: _static/Accelize_DRM_Technology_service.png
    :alt: DRM implementation as a service
 
 The Accelize DRM solution is built upon 3 main entities:

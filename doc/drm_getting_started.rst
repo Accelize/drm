@@ -27,7 +27,7 @@ Adapt your FPGA design
 ----------------------
 
 This paragraph offers an overview of hardware integration steps. For the
-complete documentation, refer to `DRM Hardware integration <drm_hardware_integration>`__.
+complete documentation, refer to :doc:`drm_hardware_integration`.
 
 Modify your FPGA design
 ~~~~~~~~~~~~~~~~~~~~~~~

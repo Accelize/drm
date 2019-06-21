@@ -95,6 +95,7 @@ def test_nodelock_normal_case(accelize_drm, conf_json, cred_json, async_handler,
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
+    activators.reset_coin()
 
     cred_json.set_user('accelize_accelerator_test_03')
     conf_json.addNodelock()
@@ -117,9 +118,8 @@ def test_nodelock_normal_case(accelize_drm, conf_json, cred_json, async_handler,
         assert not drm_manager.get('license_status')
         assert drm_manager.get('drm_license_type') == 'Node-Locked'
         assert drm_manager.get('license_duration') == 0
-        exp_coins = 10
-        activators[0].generate_coin(exp_coins)
-        assert drm_manager.get('metered_data') == exp_coins
+        activators[0].generate_coin(10)
+        activators[0].check_coin(drm_manager.get('metered_data'))
         drm_manager.deactivate()
         async_cb.assert_NoError()
     finally:
@@ -134,6 +134,7 @@ def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, asy
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
+    activators.reset_coin()
 
     cred_json.set_user('accelize_accelerator_test_03')
     conf_json.addNodelock()
@@ -156,12 +157,9 @@ def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, asy
         assert not drm_manager.get('license_status')
         assert drm_manager.get('drm_license_type') == 'Node-Locked'
         assert drm_manager.get('license_duration') == 0
-        coins = drm_manager.get('metered_data')
-        assert coins == 0
-        new_coins = 10
-        activators[0].generate_coin(new_coins)
-        coins += new_coins
-        assert drm_manager.get('metered_data') == coins
+        activators[0].check_coin(drm_manager.get('metered_data'))
+        activators[0].generate_coin(10)
+        activators[0].check_coin(drm_manager.get('metered_data'))
         # Stop application
         drm_manager.deactivate()
         async_cb.assert_NoError()
@@ -183,9 +181,8 @@ def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, asy
         assert not drm_manager.get('license_status')
         assert drm_manager.get('drm_license_type') == 'Node-Locked'
         assert drm_manager.get('license_duration') == 0
-        activators[0].generate_coin(new_coins)
-        coins += new_coins
-        assert drm_manager.get('metered_data') == coins
+        activators[0].generate_coin(10)
+        activators[0].check_coin(drm_manager.get('metered_data'))
         # Stop application
         drm_manager.deactivate()
         async_cb.assert_NoError()

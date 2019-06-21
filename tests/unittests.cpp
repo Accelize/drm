@@ -526,6 +526,8 @@ int test_null_error_callback() {
 // Test different types of get  and set functions
 int test_types_of_get_and_set_functions() {
     int ret = -1;
+    string str;
+
     sDrm->create();
     try {
         sDrm->set_bool(cpp::ParameterKey::custom_field, true);
@@ -559,8 +561,18 @@ int test_types_of_get_and_set_functions() {
         CHECK_VALUE(db, d)
 
         sDrm->set_string(cpp::ParameterKey::log_message, "My test string");
-        string s = sDrm->get_string(cpp::ParameterKey::license_type);
-        CHECK_STRING(s, "Floating/Metering")
+        str = sDrm->get_string(cpp::ParameterKey::license_type);
+        CHECK_STRING(str, "Floating/Metering")
+
+        str = sDrm->get_string(cpp::ParameterKey::list_all);
+        cout << str << endl;
+        CHECK_STRING(str, "license_type")
+        CHECK_STRING(str, "log_message")
+
+        str = sDrm->get_string(cpp::ParameterKey::dump_all);
+        cout << str << endl;
+        CHECK_STRING(str, "license_type")
+        CHECK_STRING(str, "log_message")
 
         string js = "{\"custom_field\":12345678}";
         sDrm->set_json_string(js);

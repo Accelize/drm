@@ -17,6 +17,7 @@ def test_metered_start_stop_short_time(accelize_drm, conf_json, cred_json, async
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
+    activators.reset_coin()
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_02')
 
@@ -32,16 +33,14 @@ def test_metered_start_stop_short_time(accelize_drm, conf_json, cred_json, async
     try:
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
-        print(drm_manager.get('metered_data'))
         activators[0].generate_coin(1000)
         drm_manager.activate()
         sleep(1)
-        assert drm_manager.get('metered_data') == 0
+        activators[0].check_coin(drm_manager.get('metered_data'))
         assert drm_manager.get('license_status')
         activators.autotest(is_activated=True)
-        new_coins = 10
-        activators[0].generate_coin(new_coins)
-        assert drm_manager.get('metered_data') == new_coins
+        activators[0].generate_coin(10)
+        activators[0].check_coin(drm_manager.get('metered_data'))
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
@@ -59,6 +58,7 @@ def test_metered_start_stop_short_time_in_debug(accelize_drm, conf_json, cred_js
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
+    activators.reset_coin()
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_02')
 
@@ -81,9 +81,8 @@ def test_metered_start_stop_short_time_in_debug(accelize_drm, conf_json, cred_js
         assert drm_manager.get('metered_data') == 0
         assert drm_manager.get('license_status')
         activators.autotest(is_activated=True)
-        new_coins = 10
-        activators[0].generate_coin(new_coins)
-        assert drm_manager.get('metered_data') == new_coins
+        activators[0].generate_coin(10)
+        activators[0].check_coin(drm_manager.get('metered_data'))
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
@@ -101,6 +100,7 @@ def test_metered_start_stop_long_time(accelize_drm, conf_json, cred_json, async_
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
+    activators.reset_coin()
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_02')
 
@@ -122,18 +122,15 @@ def test_metered_start_stop_long_time(accelize_drm, conf_json, cred_json, async_
         assert drm_manager.get('license_status')
         assert drm_manager.get('metered_data') == 0
         activators.autotest(is_activated=True)
-        new_coins = 10
         activators[0].generate_coin(10)
-        coins = drm_manager.get('metered_data')
-        assert coins == new_coins
+        activators[0].check_coin(drm_manager.get('metered_data'))
         for i in range(3):
             wait_period = randint(license_duration-2, license_duration+2)
             sleep(wait_period)
             start += timedelta(seconds=license_duration)
             new_coins = randint(1,10)
             activators[0].generate_coin(new_coins)
-            coins += new_coins
-            assert drm_manager.get('metered_data') == coins
+            activators[0].check_coin(drm_manager.get('metered_data'))
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
@@ -150,6 +147,7 @@ def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, asy
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
+    activators.reset_coin()
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_02')
 
@@ -176,9 +174,8 @@ def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, asy
         activators.autotest(is_activated=True)
         lic_duration = drm_manager.get('license_duration')
         assert drm_manager.get('metered_data') == 0
-        new_coins = 10
-        activators[0].generate_coin(new_coins)
-        assert drm_manager.get('metered_data') == new_coins
+        activators[0].generate_coin(10)
+        activators[0].check_coin(drm_manager.get('metered_data'))
         drm_manager.deactivate(True)
         assert drm_manager.get('session_status')
         assert drm_manager.get('license_status')
@@ -220,6 +217,7 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
+    activators.reset_coin()
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_02')
 
@@ -250,8 +248,7 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
         for i in range(3):
             new_coins = randint(1, 100)
             activators[0].generate_coin(new_coins)
-            coins += new_coins
-            assert drm_manager.get('metered_data') == coins
+            activators[0].check_coin(drm_manager.get('metered_data'))
             drm_manager.deactivate(True)
             async_cb.assert_NoError()
             assert drm_manager.get('session_status')
@@ -287,6 +284,7 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
+    activators.reset_coin()
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_03')
 
@@ -308,18 +306,17 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         assert drm_manager.get('drm_license_type') == 'Floating/Metering'
         assert drm_manager.get('license_status')
         assert drm_manager.get('metered_data') == 0
-        new_coins = 999
-        activators[0].generate_coin(new_coins)
-        assert drm_manager.get('metered_data') == new_coins
+        activators[0].generate_coin(999)
+        activators[0].check_coin(drm_manager.get('metered_data'))
         sleep(1)
         drm_manager.deactivate()
+        activators[0].reset_coin()
         assert not drm_manager.get('license_status')
         drm_manager.activate()
         assert drm_manager.get('license_status')
-        assert drm_manager.get('metered_data') == 0
-        new_coins = 1
-        activators[0].generate_coin(new_coins)
-        assert drm_manager.get('metered_data') == new_coins
+        activators[0].check_coin(drm_manager.get('metered_data'))
+        activators[0].generate_coin(1)
+        activators[0].check_coin(drm_manager.get('metered_data'))
         sleep(1)
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
@@ -336,6 +333,7 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
     async_cb.reset()
     conf_json.reset()
     accelize_drm.clean_metering_env(cred_json, ws_admin)
+    activators.reset_coin()
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
@@ -353,9 +351,8 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         assert drm_manager.get('metered_data') == 0
         lic_duration = drm_manager.get('license_duration')
         sleep(2)
-        new_coins = 1000
-        activators[0].generate_coin(new_coins)
-        assert drm_manager.get('metered_data') == new_coins
+        activators[0].generate_coin(1000)
+        activators[0].check_coin(drm_manager.get('metered_data'))
         # Wait right before expiration
         wait_period = start + timedelta(seconds=3*lic_duration-3) - datetime.now()
         sleep(wait_period.total_seconds())

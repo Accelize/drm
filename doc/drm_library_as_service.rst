@@ -10,6 +10,9 @@ The Accelize DRM systemd service is an implementation of a long-running applicat
 DRM library API. So if your environment is not supported yet you can easily implemented it by
 your own following the instructions in :doc:`drm_library_as_api`.
 
+.. image:: _static/Accelize_DRM_Technology_service.png
+   :target: _static/Accelize_DRM_Technology_service.png
+   :alt: DRM implementation as a service
 
 Availability
 ------------
@@ -103,7 +106,7 @@ To start the ``systemctl`` service:
 .. code-block:: bash
 
     # Start the service
-    sudo systemctl start accelize_drm_service
+    sudo systemctl start accelize_drm
 
     # Make the service automatically start on boot
-    sudo systemctl enable accelize_drm_service
+    sudo systemctl enable accelize_drm

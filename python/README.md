@@ -36,7 +36,7 @@ driver_class = get_driver('aws_f1')
 
 # Instantiate the driver and eventually configure the FPGA with a bitstream
 driver = driver_class(
-    fpga_image='agfi-03be02f29cd7e466e',
+    fpga_image='agfi-xxxxxxxxxxxxxxxxx',
     )
 
 # Instantiate Accelize DrmManager it using the FPGA driver

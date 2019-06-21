@@ -1772,7 +1772,9 @@ public:
 
 template<> std::string DrmManager::Impl::get( const ParameterKey key_id ) const {
     IMPL_GET_BODY
-    return json_value[key_str].asString();
+    if (json_value[key_str].isString())
+        return json_value[key_str].asString();
+    return json_value[key_str].toStyledString();
 }
 
 template<> bool DrmManager::Impl::get( const ParameterKey key_id ) const {

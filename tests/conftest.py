@@ -51,7 +51,7 @@ def get_default_conf_json(licensing_server_url):
 
 
 def clean_nodelock_env(drm_manager=None, driver=None,
-                       conf_json=None, cred_json=None, ws_admin=None):
+                       conf_json=None, cred_json=None, ws_admin=None,  product_name=None):
     """
     Clean nodelock related residues
     """
@@ -59,8 +59,10 @@ def clean_nodelock_env(drm_manager=None, driver=None,
     if conf_json is not None:
         conf_json.cleanNodelockDir()
     # Clear nodelock request from WS DB (not to hit the limit)
+    if product_name is None:
+        product_name = 'drm_1activator'
     if (ws_admin is not None) and (cred_json is not None):
-        ws_admin.remove_product_information(library='refdesign', name='drm_1activator',
+        ws_admin.remove_product_information(library='refdesign', name=product_name,
                                             user=cred_json.user)
     # Reprogram FPGA
     if driver is not None:
@@ -70,14 +72,16 @@ def clean_nodelock_env(drm_manager=None, driver=None,
             driver.program_fpga()
 
 
-def clean_metering_env(cred_json=None, ws_admin=None):
+def clean_metering_env(cred_json=None, ws_admin=None, product_name=None):
     """
     Clean floating related residues
     """
-    # Clear nodelock request from WS DB (not to hit the limit)
+    if product_name is None:
+        product_name = 'drm_1activator'
+    # Clear metering request from WS DB (not to hit the limit)
     if (ws_admin is not None) and (cred_json is not None):
-        ws_admin.remove_product_information(library='refdesign', name='drm_1activator',
-                                            user=cred_json.user)
+        ws_admin.remove_product_information(library='refdesign',
+            name=product_name, user=cred_json.user)
 
 
 # Pytest configuration
@@ -127,8 +131,9 @@ def pytest_addoption(parser):
         "--endurance", action="store_true",
         help='Run endurance tests. Theses tests may needs two FPGAs.')
     parser.addoption(
-        "--activator_base_address", action="store", default='0x10000', type=str,
-        help='Specify a list of all activator base addresses separated by coma: "0x10000,0x20000"')
+        "--activator_base_address", action="store", default=0x10000, type=int,
+        help=('Specify the base address of the 1st activator. '
+            'The other activators shall be separated by an address gap of 0x10000'))
 
 
 def pytest_runtest_setup(item):
@@ -161,6 +166,7 @@ class SingleActivator:
     def __init__(self, driver, base_address):
         self.driver = driver
         self.base_address = base_address
+        self.metering_data = 0
 
     def autotest(self, is_activated=None):
         """
@@ -186,6 +192,14 @@ class SingleActivator:
             # Test reading of the generate event register
             assert self.driver.read_register(self.base_address+0x10) == 0x600DC0DE
 
+    def get_status(self):
+        """
+        Get activation status.
+
+        Returns:
+            int: Status.
+        """
+        return self.driver.read_register(self.base_address) == 7
 
     def generate_coin(self, coins):
         """
@@ -196,15 +210,23 @@ class SingleActivator:
         """
         for _ in range(coins):
             self.driver.write_register(self.base_address+0x10, 1)
+        if self.get_status():
+            self.metering_data += coins
 
-    def get_status(self):
+    def reset_coin(self):
         """
-        Get activation status.
+        Reset the coins counter
+        """
+        self.metering_data = 0
 
-        Returns:
-            int: Status.
+    def check_coin(self, coins):
         """
-        return self.driver.read_register(self.base_address) == 7
+        Compare coins to the expected value.
+
+        Args:
+            coins (int): Number of coins to compare to.
+        """
+        assert self.metering_data == coins
 
 
 class ActivatorsInFPGA:
@@ -212,13 +234,28 @@ class ActivatorsInFPGA:
     Activators object
     """
     def __init__(self, driver, base_address_list):
-        self.base_address_list = base_address_list
         self.activators = list()
-        for addr in self.base_address_list:
+        for addr in base_address_list:
             self.activators.append(SingleActivator(driver, addr))
+        self.product_id = {
+            "vendor": "accelize.com",
+            "library": "refdesign",
+            "name": "drm_%dactivator" % len(base_address_list),
+            "sign": ""
+        }
 
     def __getitem__(self, index):
         return self.activators[index]
+
+    @property
+    def length(self):
+        """
+        Number of activators in design/FPGA
+
+        Returns:
+            int: Number of activators
+        """
+        return len(self.activators)
 
     def autotest(self, is_activated=None, index=None):
         if index is None:
@@ -243,6 +280,15 @@ class ActivatorsInFPGA:
 
     def is_activated(self, index=None):
         return all(self.get_status(index))
+
+    def reset_coin(self):
+        """
+        Reset the coins counter
+        """
+        for activator in self.activators:
+            activator.reset_coin()
+
+
 
 
 class RefDesign:
@@ -362,17 +408,26 @@ def accelize_drm(pytestconfig):
     print('FPGA SLOT ID:', fpga_slot_id)
     print('FPGA IMAGE:', fpga_image)
     print('HDK VERSION:', hdk_version)
-    fpga_driver = [fpga_driver_cls(
-        fpga_slot_id=slot_id,
-        fpga_image=fpga_image,
-        drm_ctrl_base_addr=pytestconfig.getoption(
-            "drm_controller_base_address"))
-        for slot_id in fpga_slot_id]
+    fpga_driver = [
+        fpga_driver_cls(
+            fpga_slot_id=slot_id,
+            fpga_image=fpga_image,
+            drm_ctrl_base_addr=pytestconfig.getoption("drm_controller_base_address")
+        ) for slot_id in fpga_slot_id ]
 
     # Define Activator access
-    base_address = [int(e,0) for e in pytestconfig.getoption("activator_base_address").split(',')]
-    fpga_activators = [ActivatorsInFPGA(fpga_driver[i], base_address)
-                       for i in range(len(fpga_driver))]
+    fpga_activators = list()
+    base_address = pytestconfig.getoption("activator_base_address")
+    for driver in fpga_driver:
+        base_addr_list = []
+        while True:
+            val = driver.read_register(base_address+0x10)
+            if val != 0x600DC0DE:
+                break
+            base_addr_list.append(base_address)
+            base_address += 0x10000
+        fpga_activators.append(ActivatorsInFPGA(driver, base_addr_list))
+        print('Found %d activator(s) on slot #%d' % (len(base_addr_list), driver._fpga_slot_id))
 
     # Store some values for access in tests
     _accelize_drm.pytest_build_environment = build_environment
@@ -386,8 +441,10 @@ def accelize_drm(pytestconfig):
     _accelize_drm.pytest_hdk_version = hdk_version
     _accelize_drm.pytest_fpga_activators = fpga_activators
     _accelize_drm.pytest_ref_designs = ref_designs
-    _accelize_drm.clean_nodelock_env = clean_nodelock_env
-    _accelize_drm.clean_metering_env = clean_metering_env
+    _accelize_drm.clean_nodelock_env = lambda *kargs, **kwargs: clean_nodelock_env(
+        *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
+    _accelize_drm.clean_metering_env = lambda *kargs, **kwargs: clean_metering_env(
+        *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
 
     return _accelize_drm
 

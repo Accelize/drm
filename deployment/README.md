@@ -83,3 +83,50 @@ If the current commit is tagged (Meaning that it is a release):
   and stable versions are uploaded on different repositories)
 * If package upload is successful, generate a GitHub release (prereleases
   versions are tagged as prereleases on GitHub).
+
+# Packages updates and OS lifecycle
+
+Supported OS evolves, new version are released and old are deprecated. Provided
+packages needs to follow this lifecycle.
+
+Supported OS release cycles:
+- CentOS: ~5 years, aligned on RHEL releases
+- Debian: Every 2 odd years in June or July
+- Fedora: Every 6 month, April/October
+- Ubuntu LTS: Every 2 even year in April
+- Ubuntu rolling: Every 6 month, April/October
+
+Supported OS version end of life:
+- CentOS: 10 years
+- Debian: 5 years
+- Fedora: 1 year
+- Ubuntu LTS: 5 years
+- Ubuntu rolling: 1 year
+
+#### Actions to perform
+
+For Fedora & Ubuntu rolling:
+- Increment `FROM <OS>:` in:
+  * `deployment/context/build-<OS>_previous_latest.Dockerfile`
+  * `deployment/context/build-<OS>_latest.Dockerfile`
+  * `deployment/context/test-aws_f1-<OS>_previous_latest.Dockerfile`
+  * `deployment/context/test-aws_f1-<OS>_latest.Dockerfile`
+
+For others :
+- Create Dockerfiles for new versions and remove end of life versions
+  Dockerfiles:
+  * `deployment/context/build-<OS>_<version>.Dockerfile`
+  * `deployment/context/test-aws_f1-<OS>_<version>.Dockerfile`
+- Update Dockerfile names in docker compose file: 
+  `deployment/docker-compose.yml`
+- Update [Docker-Hub builds](https://cloud.docker.com/u/accelize/repository/docker/accelize/accelizedrm-ci/builds)
+  with Dockerfile names
+- Update `-x OS` entries in the AWS CodeBuild buildspec:
+  `deployment/buildspec.yml`
+- Update supported OS list in documentation (And eventually installation
+  instructions): `doc/drm_library_installation.rst`
+
+In all case, if no library release planned soon, force rebuild of packages with
+updated files:
+- Commit changes in `master` branch.
+- Run `deployment/release.py` specifying the current version.

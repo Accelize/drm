@@ -657,7 +657,8 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-    activator = accelize_drm.pytest_fpga_activators[0][0]
+    activators = accelize_drm.pytest_fpga_activators[0]
+    activators.reset_coin()
 
     print()
 
@@ -682,7 +683,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     # Test when parameter is a list
     value = drm_manager.get('num_activators','license_type')
     assert isinstance(value, dict)
-    assert value['num_activators'] == 1
+    assert value['num_activators'] == activators.length
     assert value['license_type'] == 'Floating/Metering'
     async_cb.assert_NoError()
     print("Test when parameter is a list: PASS")
@@ -726,7 +727,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     # Test parameter: num_activators
     # Read-only, return uint32_t/string with the number of activators detected by the DRM controller
     nb_activator = drm_manager.get('num_activators')
-    assert nb_activator == 1, 'Unexpected number of activators'
+    assert nb_activator == activators.length, 'Unexpected number of activators'
     print("Test parameter 'num_activators': PASS")
 
     # Test parameter: session_id
@@ -764,11 +765,11 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     # Test parameter: metered_data
     # Read-only, return uint64_t or string with the current value of the metering data counter
     drm_manager.activate()
-    new_coins = 10
-    activator.generate_coin(new_coins)
-    assert drm_manager.get('metered_data') == new_coins
+    activators[0].generate_coin(10)
+    activators[0].check_coin(drm_manager.get('metered_data'))
     async_cb.assert_NoError()
     drm_manager.deactivate()
+    activators[0].reset_coin()
 
     print("Test parameter 'metered_data': PASS")
 
@@ -849,12 +850,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     # Read-only, return the product information
     from pprint import pformat
     product_id = pformat(drm_manager.get('product_info'))
-    exp_product_id = pformat(loads("""{
-            "vendor": "accelize.com",
-            "library": "refdesign",
-            "name": "drm_1activator",
-            "sign": ""
-        }"""))
+    exp_product_id = pformat(activators.product_id)
     assert product_id == exp_product_id, 'Unexpected product ID'
     print("Test parameter 'product_info': PASS")
 
@@ -1519,7 +1515,6 @@ def test_mailbox_type_error(accelize_drm, conf_json, cred_json, async_handler):
     async_cb.assert_NoError()
 
 
-@pytest.mark.skip
 def test_configuration_file_bad_product_id(accelize_drm, conf_json, cred_json, async_handler):
     """Test errors when an incorrect product ID is requested to License Web Server"""
 
@@ -2378,7 +2373,7 @@ def test_authentication_expiration(accelize_drm, conf_json, cred_json, async_han
     lic_duration = drm_manager.get('license_duration')
     assert drm_manager.get('license_status')
     activator.autotest(is_activated=True)
-    assert drm_manager.get('metered_data') == 0
+    activators[0].check_coin(drm_manager.get('metered_data'))
     start = datetime.now()
     expiration_period = 12000
     while True:
@@ -2387,9 +2382,8 @@ def test_authentication_expiration(accelize_drm, conf_json, cred_json, async_han
             break
         assert drm_manager.get('license_status')
         assert activator.generate_coin(1)
-        coins += 1
-        assert drm_manager.get('metered_data') == coins
-        print('Remaining time: ', seconds_left, ' s / current coins: ', coins)
+        activators[0].check_coin(drm_manager.get('metered_data'))
+        print('Remaining time: ', seconds_left, ' s / current coins: ', activators[0].metering_data)
         sleep(5)
     drm_manager.deactivate()
     assert not drm_manager.get('license_status')

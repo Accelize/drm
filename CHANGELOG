@@ -1,3 +1,7 @@
+* Tue Jun 21 2019 Accelize v2.1.1
+- FIX: Fix Accelize DRM Service error with bad slot ID type
+- DOC: Fix some documentation issues
+
 * Tue Jun 11 2019 Accelize v2.1.0
 - NEW: Accelize DRM Systemd service (First version only available for AWS F1)
 - NEW: Python library is now provided with some FPGA Python drivers

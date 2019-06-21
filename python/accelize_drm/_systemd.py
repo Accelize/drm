@@ -85,7 +85,7 @@ class AccelizeDrmService:
         with _ThreadPoolExecutor() as executor:
             for fpga_slot_id in self._fpga_slots:
                 futures.append(executor.submit(
-                    self._init_drm_manager, fpga_slot_id))
+                    self._init_drm_manager, int(fpga_slot_id)))
 
         with self._handle_exception((RuntimeError, OSError, _DRMException)):
             for future in _as_completed(futures):

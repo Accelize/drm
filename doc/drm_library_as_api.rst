@@ -3,8 +3,8 @@ Accelize DRM API
 
 The Accelize DRM can be integrated into an application as a library API.
 
-.. image:: _static/platform-overview.png
-   :target: _static/platform-overview.png
+.. image:: _static/Accelize_DRM_Technology_api.png
+   :target: _static/Accelize_DRM_Technology_api.png
    :alt: DRM implementation as a API library
 
 The DRM library supports the following languages:
@@ -77,7 +77,7 @@ FPGA C library driver.
 .. code-block:: c
     :caption: In C
 
-    #include <iostream>
+    #include <stdio.h>
 
     // Define functions to read and write FPGA registers to use them as
     // callbacks in DrmManager.
@@ -92,7 +92,7 @@ FPGA C library driver.
 
     // Define asynchronous error callback
     void asynch_error( const char* err_msg ) {
-        std::cerr << err_msg << std::endl;
+        fprintf( stderr, "%s", err_msg );
     }
 
     // Instantiate DrmManager with previously defined functions and
@@ -119,7 +119,7 @@ FPGA C library driver.
             &ctx ) ) {
         // In the C case, the last error message is stored inside the
         // "DrmManager"
-        fprintf( stderr, drm_manager.error_message );
+        fprintf( stderr, "%s", drm_manager->error_message );
     }
 
 .. code-block:: c++
@@ -218,7 +218,7 @@ to the Accelize Web Service.
     :caption: C
 
     if ( DrmManager_activate( drm_manager, false ) )
-        fprintf( stderr, drm_manager.error_message );
+        fprintf( stderr, "%s", drm_manager->error_message );
 
 .. code-block:: python
     :caption: Python
@@ -249,12 +249,12 @@ When this function returns, the protected IPs are guaranteed to be locked
     :caption: C
 
     if ( DrmManager_deactivate( drm_manager, false ) )
-        fprintf( stderr, drm_manager.error_message );
+        fprintf( stderr, "%s", drm_manager->error_message );
 
     // In the C case, the "DrmManager" needs also to be freed to deallocate
     // associated resources.
     if ( DrmManager_free( drm_manager ) )
-        fprintf( stderr, drm_manager.error_message );
+        fprintf( stderr, "%s", drm_manager->error_message );
 
 .. code-block:: python
     :caption: Python
@@ -353,13 +353,13 @@ Following code snippets show how to implement pause/resume functionality:
 
     // Activate the DRM and resume the existing session if any
     if ( DrmManager_activate( drm_manager, true ) )
-        fprintf( stderr, drm_manager.error_message );
+        fprintf( stderr, "%s", drm_manager->error_message );
 
     // [...]
 
     // Deactivate the DRM, but pause the session instead of closing it
     if ( DrmManager_deactivate( drm_manager, true ) )
-        fprintf( stderr, drm_manager.error_message );
+        fprintf( stderr, "%s", drm_manager->error_message );
 
 .. code-block:: python
     :caption: Python
