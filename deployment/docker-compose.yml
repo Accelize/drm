@@ -68,6 +68,16 @@ services:
       << : *build-environment
       PACKAGES_DIR: /opt/packages/ubuntu_xenial
 
+  build-debian_buster:
+    << : *build-service
+    image: accelize/accelizedrm-ci:build-debian_buster
+    build:
+      context: context
+      dockerfile: build-debian_buster.Dockerfile
+    environment:
+      << : *build-environment
+      PACKAGES_DIR: /opt/packages/debian_buster
+
   build-debian_stretch:
     << : *build-service
     image: accelize/accelizedrm-ci:build-debian_stretch

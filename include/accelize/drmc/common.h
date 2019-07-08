@@ -30,4 +30,18 @@ limitations under the License.
         #define DRM_LOCAL
     #endif /* __cplusplus */
 
+
+    #define Throw( errcode, ... ) do {                                          \
+        Accelize::DRM::Exception except( errcode, fmt::format( __VA_ARGS__ ) ); \
+        if ( errcode != DRM_Exit )                                              \
+            Fatal( __VA_ARGS__ );                                               \
+        else                                                                    \
+            Debug( __VA_ARGS__ );                                               \
+        throw except;                                                           \
+    } while(0)
+
+
+    #define Unreachable( ... ) \
+        Throw( DRM_Assert, "Reached an unexpected part of code: Please contact support." );
+
 #endif /* _H_ACCELIZE_COMMON_EXPORT */

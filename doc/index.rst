@@ -1,34 +1,24 @@
 Accelize DRM
 ============
 
-Overview
---------
+FPGA Licensing Principle
+------------------------
 
-The Accelize DRM solution is based on a licensing mechanism where activation codes are
-delivered to the FPGA in order to control the behavior of IP cores. In addition it collects
-and stores metering information about IP usage from the FPGA.
-The metering information is then used to invoice end users.
+The core licensing technology is based on a license key that unlocks at runtime
+the proper operation of an FPGA design. The license key is loaded into the FPGA
+after its configuration, usually through PCIe.
 
-.. image:: _static/Accelize_DRM_Technology_service.png
-   :target: _static/Accelize_DRM_Technology_service.png
-   :alt: DRM implementation as a service
+The license key is an encrypted container that delivers a secret Activation Code
+to each protected function inside the FPGA. Protected function can only operate
+properly when the secret activation code has been received electrically within
+the function’s digital logic. This protection is implemented into HDL, by using
+individual bits of the activation code to insert blocking points into control
+logic and masking points into datapath logic.
 
-The Accelize DRM solution is built upon 3 main entities:
-
-* The DRM HDK: a set of dedicated hardware IPs used to instrument the
-  targeted HW
-* The DRM Library: a C/C++/Python library to communicate between the
-  targeted DRM Hardware IPs and the DRM web service
-* The DRM Web service: a Web Service application with a database
-  (cloud hosted or on premise) to deliver the license keys and to store
-  hardware usage.
-
-Accelize operates the licensing/metering service for your FPGA solution
-deployed in your public Cloud, private Cloud, on-premise or hybrid multi-Cloud
-infrastructure. This allows you to implement any business model securely.
-Then you bill your customers according to their usage reported to you by
-Accelize. The following table gives an overview of the business models supported
-by Accelize.
+The encryption key for the license key is unique per FPGA, derived from a unique
+hardware identifier such as the Xilinx DNA or the Intel CHIP_ID. Thus, a license
+key can exclusively unlock the FPGA device is has been generated for; any attempt
+to load a license key into another FPGA device will fail.
 
 Here's a short `video <https://www.youtube.com/watch?v=7cb_ksLTcRk>`_ presenting
 an overview of the Accelize Platform and its integration.
@@ -36,57 +26,94 @@ an overview of the Accelize Platform and its integration.
 Licensing Modes
 ---------------
 
-Overview
-~~~~~~~~
+The Accelize licensing technology is offered in two distinct modes:
 
-The Accelize DRM enables following licensing modes:
+* Static licensing
 
-* Metering, Data usage-based:
-    Monetize your FPGA design or IP based on the data it processes
-    (# of GBytes, # of frames, # of inferences, # of API calls, ...)
+  A file-based scheme implemented by statically packaging the license key into
+  an encrypted license file, stored locally on the server that hosts the FPGA card.
 
-* Metering, Time-based:
-    Monetize your FPGA design or IP based on the operating time
-    (seconds, minutes, hours, days…)
+* Dynamic licensing
 
-* Floating:
-    Enable the use of X number of FPGA designs or IPs on a pool of FPGA boards
-    in a hybrid cloud infrastructure (distributed across multiple public/private
-    data centers)
+  A server-based scheme implemented by delivering license keys from a license
+  server. Specifically, the license server delivers a regular stream of time-limited
+  single-use license keys.
 
-* Node-locked:
-    Deploy your FPGA design in the form of an *appliance* by assigning a
-    license to a unique board id.
+Licensing Models
+----------------
 
-Technical Description
-~~~~~~~~~~~~~~~~~~~~~
+With these two licensing modes - static and dynamic -, Accelize offers 3 distinct
+licensing models:
 
-* In Metering mode:
-    A session is kept active as long as:
+* Nodelocked
+* Floating
+* Metered
 
-    #. a valid License Key and a License Timer is sent to the DRM Controller in the FPGA design, and
-    #. the authenticated Metering Data blocks can be collected from the DRM Controller in the FPGA.
+Nodelocked Licensing
+~~~~~~~~~~~~~~~~~~~~
 
-    The License Timer initialization value determines the duration of activation period and the
-    Metering Data collection frequency. When the License Timer exhausts, the DRM Controller
-    deactivates the IP Cores until a new valid License is loaded in the DRM Controller.
-    The DRM Web Service delivers a new valid license only if an authenticated Metering Data block
-    is provided within the License request. This mechanism enforces a periodic Metering Data
-    collection during the Hardware operations.
+Nodelocked licensing is a static licensing mode. A Nodelocked license is a license
+grant which allows an application to be executed on a specific FPGA card, and only
+on that card. Nodelocked licenses are granted to specific FPGA cards and are perpetual,
+transferable, and non-revocable.
 
-* In Floating mode:
-    A stream of time-based License Keys per circuit is used to provide Activation Codes and License
-    Timers to the Protected IPs. The License Key generation is based on the Public Chip ID and a random
-    seed generated at runtime after reset. The License Key cannot be provisioned and can be used
-    only during the current runtime, the DRM Controller keeping the random seed value until the
-    next reset.
 
-* In Node-locked mode:
-    A single License Key per circuit is used to provide a unique Activation Code to the Protected IPs.
-    The License Key generation is based on the Public Chip ID. The License Key can be stored locally
-    and reloaded at runtime whenever needed during the circuit lifecycle. Optionally the License Key
-    can contain a License Timer for each IP to time limit the usage like for demo or evaluation
-    licenses.
+Floating Licensing
+~~~~~~~~~~~~~~~~~~
+
+Floating licensing is a dynamic licensing mode. A Floating license is a license grant
+which allows a specified number of concurrent instances of the application to be executed
+on any FPGA card. Floating licenses are granted to authenticated users, and the DRM
+service dynamically enforces the maximum number of concurrent instances allowed.
+
+Metered Licensing
+~~~~~~~~~~~~~~~~~
+
+Metered licensing is also a dynamic licensing mode. A Metered license is a license
+grant which allows unlimited execution of an application on any FPGA card, and incurs
+post-use monthly billing based on measured usage. Metered licenses grants are bound to
+authenticated users, and the DRM service dynamically and securely collects the metering
+information generated within the FPGA. Metering metrics include time, as well as any
+measurable quantity within the FPGA, such as data volume, data type, processing requests,
+application-specific events, etc.
+
+
+Licensing Flexibility
+---------------------
+
+The Accelize licensing technology dynamically supports all licensing modes without any
+change to the FPGA application. Thus, one can build and deploy a unique FPGA bitstream
+and dynamically select the desired licensing model for each user, or even each execution.
+
+
+Get more details on `Accelize blog <https://www.accelize.com/blog/accelize-licensing-technology>`_.
+
+
+Architecture Overview
+---------------------
+
+The Accelize DRM solution comprises 3 layers:
+
+* FPGA
+  HDL IPs that must be embedded into the FPGA design. Specifically, exactly one DRM
+  Controller IP, and one or more DRM Activator IPs. The Activators must be embedded
+  within each protected function. These IPs are delivered in the DRM HDK.
+
+* Host
+  The DRM client, a lightweight service that executes on the host CPU, whose main
+  function is to connect the FPGA DRM IPs with either the DRM Web Service (dynamic
+  licensing) or a local license key file (static licensing). The DRM client is delivered
+  as a DRM Library in C/C++ and Python.
+
+* Web Service
+  A fully managed DRM Web Service operated by Accelize. The Web service is only used
+  in dynamic licensing and handles user authentication, licensing and metering. Upon
+  special request, the DRM Web Service can deployed on-premise.
+
+.. image:: _static/Accelize_DRM_Technology_service.png
+   :target: _static/Accelize_DRM_Technology_service.png
+   :alt: DRM implementation as a service
+
 
 Glossary
 --------
@@ -123,6 +150,7 @@ Glossary
    :caption: Getting Started
 
    drm_getting_started
+   drm_licensing_nodelocked
 
 
 .. toctree::
@@ -148,6 +176,7 @@ Glossary
    :maxdepth: 3
    :caption: DRM Advanced Description
 
+   drm_library_build
    drm_sw_advanced_description
 
 

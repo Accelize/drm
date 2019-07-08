@@ -66,6 +66,15 @@ file to pass following environment variables to it:
 * `ACCELIZE_DRM_IMAGE_<Slot_Number>`: FPGA image to program in the FPGA slot
   corresponding to `Slot_Number`. If not specified, nothing is programmed.
   Possible Values: AGFI or AFI image ID for AWS F1 instances.
+* `ACCELIZE_DRM_DISABLED_<Slot_Number>`: If specified, do not license the
+  specified FPGA slot. This can be used to use the Service to only program the
+  FPGA in the case the licensing is managed with the DRM library directly in the
+  application.
+* `ACCELIZE_DRM_LOG_VERBOSITY`: Log verbosity level of the DRM service log files
+  in `/var/log/accelize_drm`. A rotating log file is created in this directory
+  for each FPGA slot. The default level is 2 (Info). These detailed logs files
+  are mainly intended to be used by Accelize support team. Use `journalctl` to
+  access running service information.
 
 A slot will be licensed if at least one of corresponding environment variable
 is set.
@@ -83,7 +92,7 @@ with your configuration:
     # FPGA Slot 0 configuration.
     # This slot has all variables explicitly specified
     Environment=ACCELIZE_DRM_DRIVER_0=aws_f1
-    Environment=ACCELIZE_DRM_CRED_0=~/.my_application/cred.json
+    Environment=ACCELIZE_DRM_CRED_0=/root/.my_application/cred.json
     Environment=ACCELIZE_DRM_CONF_0=/etc/my_application/conf.json
 
     # FPGA Slot 1 configuration.
@@ -95,7 +104,7 @@ with your configuration:
     # FPGA Slot 7 configuration
     # The configuration can be specified for any required slot
     Environment=ACCELIZE_DRM_DRIVER_7=aws_f1
-    Environment=ACCELIZE_DRM_CRED_7=~/.my_application/cred.json
+    Environment=ACCELIZE_DRM_CRED_7=/root/.my_application/cred.json
     Environment=ACCELIZE_DRM_CONF_7=/etc/my_application/conf.json
 
 Service usage

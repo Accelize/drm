@@ -13,8 +13,13 @@ PARAMETERKEY_ITEM( mailbox_size )                   ///< Read-only, return the s
 PARAMETERKEY_ITEM( token_string )                   ///< Read-only, return the token string
 PARAMETERKEY_ITEM( token_validity )                 ///< Read-only, return the validity in seconds of the current token as provided by the WOAuth2 WS
 PARAMETERKEY_ITEM( token_time_left )                ///< Read-only, return the number of seconds left until the current token expires
-PARAMETERKEY_ITEM( log_file )                       ///< Read-only, read the logging file path: null=stdout, any string=path to file. Can be set only from configuration file
-PARAMETERKEY_ITEM( log_verbosity )                  ///< Read-write, read and write the logging verbosity: 0=quiet, 5=debug2
+PARAMETERKEY_ITEM( log_file_path )                  ///< Read-(write), read (or write) the logging file path: default path is "./drm_lib.log". Can be set only from configuration file (no override from C/C++ code)
+PARAMETERKEY_ITEM( log_file_type )                  ///< Read-(write), read (or write) the logging file type 0=no logging file, 1=basic file, 2=rotation file. Set only from configuration file (no override from C code)
+PARAMETERKEY_ITEM( log_file_rotating_size )         ///< Read-(write), read (or write) the logging rotating file size: default=100MB. Set only from configuration file (no override from C code)
+PARAMETERKEY_ITEM( log_file_rotating_num )          ///< Read-(write), read (or write) the logging rotating number of backup files: default=3. Set only from configuration file (no override from C code)
+PARAMETERKEY_ITEM( log_file_verbosity )             ///< Read-write, read and write the logging verbosity on the file: 0=trace, 6=quiet
+PARAMETERKEY_ITEM( log_file_format )                ///< Read-write, read and write the logging file format. Refer to spdlog reference manual (https://github.com/gabime/spdlog/wiki/3.-Custom-formatting)
+PARAMETERKEY_ITEM( log_verbosity )                  ///< Read-write, read and write the logging verbosity on the stdout/stderr: 0=trace, 6=quiet
 PARAMETERKEY_ITEM( log_format )                     ///< Read-write, read and write the logging format: 0=short, 1=long
 PARAMETERKEY_ITEM( frequency_detection_threshold )  ///< Read-write, read and write frequency gap threshold used to measure the real DRM Controller frequency
 PARAMETERKEY_ITEM( frequency_detection_period )     ///< Read-write, read and write the period of time in milliseconds used to measure the real DRM Controller frequency
@@ -26,6 +31,12 @@ PARAMETERKEY_ITEM( ws_request_timeout )             ///< Read-write, read and wr
 PARAMETERKEY_ITEM( log_message_level )              ///< Read-write, only for testing, read and write the log level used with log_message parameter to set the message level
 PARAMETERKEY_ITEM( list_all )                       ///< Read-only, list all parameter keys available
 PARAMETERKEY_ITEM( dump_all )                       ///< Read-only, read all parameter key values
+PARAMETERKEY_ITEM( log_service_path )               ///< Read-write, read or write the service logging file path: default path is "./drm_lib.log". Can be set only from configuration file (no override from C/C++ code)
+PARAMETERKEY_ITEM( log_service_type )               ///< Read-write, read or write the service logging file type 0=no logging file, 1=basic file, 2=rotation file. Set only from configuration file (no override from C code)
+PARAMETERKEY_ITEM( log_service_rotating_size )      ///< Read-write, read or write the service logging rotating file size: default=100MB. Set only from configuration file (no override from C code)
+PARAMETERKEY_ITEM( log_service_rotating_num )       ///< Read-write, read or write the service logging rotating number of backup files: default=3. Set only from configuration file (no override from C code)
+PARAMETERKEY_ITEM( log_service_verbosity )          ///< Read-write, read and write the service logging verbosity on the file: 0=trace, 6=quiet
+PARAMETERKEY_ITEM( log_service_format )             ///< Read-write, read and write the service logging file format. Refer to spdlog reference manual (https://github.com/gabime/spdlog/wiki/3.-Custom-formatting)
 PARAMETERKEY_ITEM( page_ctrlreg )                   ///< Read-only, return nothing, print all registers in the DRM Controller Registry page
 PARAMETERKEY_ITEM( page_vlnvfile )                  ///< Read-only, return nothing, print all registers in the VLNV File page
 PARAMETERKEY_ITEM( page_licfile )                   ///< Read-only, return nothing, print all registers in the License File page
@@ -33,6 +44,7 @@ PARAMETERKEY_ITEM( page_tracefile )                 ///< Read-only, return nothi
 PARAMETERKEY_ITEM( page_meteringfile )              ///< Read-only, return nothing, print all registers in the Metering File page
 PARAMETERKEY_ITEM( page_mailbox )                   ///< Read-only, return nothing, print all registers in the Mailbox page
 PARAMETERKEY_ITEM( hw_report )                      ///< Read-only, return nothing, print the Algodone HW report
+PARAMETERKEY_ITEM( log_service_create )             ///< Write-only, create the service logging file. Logging parameters must have been set before calling this parameter.
 PARAMETERKEY_ITEM( trigger_async_callback )         ///< Write-only, only for testing, call the asynchronous error callback with the given message
 PARAMETERKEY_ITEM( bad_product_id )                 ///< Write-only, only for testing, uses a bad product ID
 PARAMETERKEY_ITEM( bad_oauth2_token )               ///< Write-only, only for testing, uses a bad token

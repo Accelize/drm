@@ -1,31 +1,28 @@
-FROM python:3-slim
-
-SHELL ["/bin/bash", "-c"]
+FROM debian:buster-slim
 
 RUN apt-get update && \
 apt-get install -y --no-install-recommends \
-    createrepo \
     doxygen \
+    dpkg-dev \
+    dpkg-sig \
+    file \
     g++ \
-    git \
     gnupg \
     libcurl4-openssl-dev \
     libjsoncpp-dev \
     make \
     pkg-config \
-    reprepro \
-    sudo && \
+    python3-dev \
+    python3-pip && \
 python3 -m pip install -U --no-cache-dir \
     pip \
     setuptools \
     wheel && \
-pip3 install -U --no-cache-dir  \
-    awscli \
+pip3 install -U --no-cache-dir \
     breathe \
     cmake \
     cython \
-    pytest \
-    sphinx_rtd_theme  \
+    sphinx_rtd_theme \
     tox && \
 apt-get clean && \
 apt-get autoremove -y --purge && \

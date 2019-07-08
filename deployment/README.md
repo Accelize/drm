@@ -1,6 +1,6 @@
 # Deployment guidelines
 
-This document explains Accelize DRM library new release deployment
+This document explains Accelize DRM library new release deployment.
 
 ## Version number format
 

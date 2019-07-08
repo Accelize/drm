@@ -31,7 +31,7 @@ const char * DrmManager_getApiVersion() {
 
 void checkPointer(void *p) {
     if ( p == NULL )
-        cpp::Throw(DRM_BadArg, "Provided pointer is NULL");
+        Throw( DRM_BadArg, "Provided pointer is NULL" );
 }
 
 /* Help macros TRY/CATCH to return code error */
@@ -41,26 +41,25 @@ void checkPointer(void *p) {
         memset(m->error_message, 0, MAX_MSG_SIZE); \
     try {
 
-#define CATCH_RETURN                                                                  \
-    } catch( const cpp::Exception& e ) {                                              \
-        int cp_size = strlen( e.what() );                                             \
-        if ( cp_size >= MAX_MSG_SIZE ) {                                              \
-            cp_size = MAX_MSG_SIZE - 6;                                               \
-            strcpy( m->error_message + cp_size, "[...]" );                            \
-        }                                                                             \
-        strncpy( m->error_message, e.what(), cp_size );                               \
-        __try_ret = e.getErrCode();                                                   \
-    } catch( const std::exception& e ) {                                              \
-        int cp_size = strlen( e.what() );                                             \
-        if ( cp_size >= MAX_MSG_SIZE ) {                                              \
-            cp_size = MAX_MSG_SIZE - 6;                                               \
-            strcpy( m->error_message + cp_size, "[...]" );                            \
-        }                                                                             \
-        strncpy( m->error_message, e.what(), cp_size );                               \
-        if ( cpp::sLogVerbosity >= cpp::eLogLevel::ERROR )                            \
-            cpp::logTrace(cpp::eLogLevel::ERROR, __SHORT_FILE__, __LINE__, e.what()); \
-        __try_ret = DRM_Fatal;                                                        \
-    }                                                                                 \
+#define CATCH_RETURN                                          \
+    } catch( const cpp::Exception& e ) {                      \
+        int cp_size = strlen( e.what() );                     \
+        if ( cp_size >= MAX_MSG_SIZE ) {                      \
+            cp_size = MAX_MSG_SIZE - 6;                       \
+            strcpy( m->error_message + cp_size, "[...]" );    \
+        }                                                     \
+        strncpy( m->error_message, e.what(), cp_size );       \
+        __try_ret = e.getErrCode();                           \
+    } catch( const std::exception& e ) {                      \
+        int cp_size = strlen( e.what() );                     \
+        if ( cp_size >= MAX_MSG_SIZE ) {                      \
+            cp_size = MAX_MSG_SIZE - 6;                       \
+            strcpy( m->error_message + cp_size, "[...]" );    \
+        }                                                     \
+        strncpy( m->error_message, e.what(), cp_size );       \
+        SPDLOG_ERROR( e.what() );                             \
+        __try_ret = DRM_Fatal;                                \
+    }                                                         \
     return __try_ret;
 
 
@@ -78,11 +77,11 @@ DRM_ErrorCode DrmManager_alloc( DrmManager **p_m,
     *p_m = m;
     TRY
         if (read_register == NULL)
-            cpp::Throw( DRM_BadArg, "Read register callback function must not be NULL" );
+            Throw( DRM_BadArg, "Read register callback function must not be NULL" );
         if (write_register == NULL)
-            cpp::Throw( DRM_BadArg, "Write register callback function must not be NULL" );
+            Throw( DRM_BadArg, "Write register callback function must not be NULL" );
         if (async_error == NULL)
-            cpp::Throw( DRM_BadArg, "Asynchronous error callback function must not be NULL" );
+            Throw( DRM_BadArg, "Asynchronous error callback function must not be NULL" );
         m->drm = (decltype(m->drm))malloc(sizeof(*(m->drm)));
         m->drm->obj = NULL;
         m->drm->obj = new cpp::DrmManager(conf_file_path, cred_file_path,

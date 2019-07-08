@@ -29,12 +29,8 @@ def get_default_conf_json(licensing_server_url):
     Returns:
         dict: "conf.json" content
     """
-    if licensing_server_url in _LICENSING_SERVERS.keys():
-        url = _LICENSING_SERVERS.get(
+    url = _LICENSING_SERVERS.get(
             licensing_server_url.lower(), licensing_server_url)
-    else:
-        url = licensing_server_url
-
     return {
         "licensing": {
             "url": url,
@@ -109,11 +105,11 @@ def pytest_addoption(parser):
         "--server", action="store",
         default="prod", help='Specify the metering server to use')
     parser.addoption(
-        "--library_verbosity", action="store", default='2',
+        "--library_verbosity", action="store", type=int, choices=list(range(7)), default=2,
         help='Specify "libaccelize_drm" verbosity level')
     parser.addoption(
-        "--library_logformat", action="store", default='0',
-        help='Specify "libaccelize_drm" log format')
+        "--library_format", action="store", type=int, choices=[0,1], default=0,
+        help='Specify "libaccelize_drm" logging format: 0=short, 1=long')
     parser.addoption(
         "--fpga_image", default="default",
         help='Select FPGA image to program the FPGA with. '
@@ -590,8 +586,9 @@ def conf_json(pytestconfig, tmpdir):
     """
     Manage "conf.json" in testing environment.
     """
-    log_param = {'log_verbosity': int(pytestconfig.getoption("library_verbosity")),
-                 'log_format': int(pytestconfig.getoption("library_logformat"))}
+    log_param = {'log_verbosity': pytestconfig.getoption("library_verbosity")}
+    if pytestconfig.getoption("library_format") == 1:
+        log_param['log_format'] = '%Y-%m-%d %H:%M:%S.%e - %=6t - %18s:%-4# [%=8l] %v'
     json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param)
     json_conf.save()
     return json_conf

@@ -58,31 +58,31 @@ is supported (1 to N connections).
      * - drm_aclk
        - in
        - 1
-       - DRM AXI4-Stream bus Clock domain
+       - DRM AXI4-Stream bus Clock domain: must be identical to the DRM Controller clock
      * - drm_to_uip_tready
        - out
        - 1
-       - AXI4-Stream Ready signal for DRM to IP Common Bus
+       - AXI4-Stream Ready signal for DRM to IP
      * - drm_to_uip_tvalid
        - in
        - 1
-       - AXI4-Stream Valid signal for DRM to IP Common Bus
+       - AXI4-Stream Valid signal for DRM to IP
      * - drm_to_uip_tdata
        - in
        - 32
-       - AXI4-Stream Data signal for DRM to IP Common Bus
+       - AXI4-Stream Data signal for DRM to IP
      * - uip_to_drm_tready
        - in
        - 1
-       - AXI4-Stream Ready signal for IP to DRM Specific Bus
+       - AXI4-Stream Ready signal for IP to DRM
      * - uip_to_drm_tvalid
        - out
        - 1
-       - AXI4-Stream Valid signal for IP to DRM Specific Bus
+       - AXI4-Stream Valid signal for IP to DRM
      * - uip_to_drm_tdata
        - out
        - 32
-       - AXI4-Stream Data signal for IP to DRM Specific Bus
+       - AXI4-Stream Data signal for IP to DRM
 
 
 To ease the integration with most of the EDA tools, this bus has been wrapped on
@@ -114,7 +114,7 @@ signals.
      - in
      - 1
      - Level-sensitive signal synchronous to ip_core_aclk that increments the Metering counter when sampled to '1'
-   * - metering_arst
+   * - metering_reset
      - in
      - 1
      - Active-high reset synchronous to ip_core_aclk that clear the Metering counter when sampled to '1'
@@ -122,12 +122,9 @@ signals.
      - out
      - 128
      - Activation Code as provided by the License Key currently loaded.
-   * - activation_code_ready
-     - out
-     - 1
-     - Tells that an Activation Code is available when set to '1'
 
-.. note:: ``activation_code`` and ``activation_code_ready`` are synchronous to ``ip_core_aclk``.
+
+.. note:: ``activation_code`` is synchronous to ``ip_core_aclk``.
            ``metering_event`` must be synchronous to ``ip_core_aclk``.
 
 Operations
@@ -136,9 +133,6 @@ Operations
 Signals of the IP core that are interacting with the DRM Activator shall be
 synchronized on the IP Core clock domain, ``ip_core_aclk`` signal. Internally,
 the IP core shall implement its own CDC.
-
-The IP Core shall capture the Activation Code when the Activation Code Ready output
-is '1'.
 
 The IP Core uses the 128 bits of the Activation Code output to control FSM transition
 and datapath gates.

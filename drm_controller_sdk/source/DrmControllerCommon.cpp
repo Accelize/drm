@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerCommon.cpp
-*  \version   3.2.0.0
-*  \date      November 2018
+*  \version   3.2.2.0
+*  \date      May 2019
 *  \brief     This source file contains the common definitions.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.

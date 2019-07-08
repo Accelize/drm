@@ -2,6 +2,8 @@
 # distutils: language=c++
 # distutils: libraries=accelize_drm
 # cython: language_level=3
+import atexit
+
 """Accelize DRM Python binding"""
 from libcpp cimport bool
 from libcpp.string cimport string
@@ -155,6 +157,12 @@ cdef class DrmManager:
     def __dealloc__(self):
         with nogil:
             del self._drm_manager
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.deactivate()
 
     def activate(self, const bool resume_session_request=False):
         """

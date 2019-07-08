@@ -5,7 +5,7 @@
 
 # Accelize DRM library
 
-The Accelize DRM protects FPGA applications.
+The Accelize DRM solution protects FPGA applications.
 
 The Accelize DRM library operates the DRM from the software side of the
 application.

@@ -46,7 +46,6 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
                             'saasChallenge', 'vlnvFile', 'product']
         assert all([e in data.keys() for e in mandatory_fields])
         assert data['request'] == 'open'
-        assert drm_manager.get('drm_license_type') == 'Floating/Metering'
         drm_manager.activate()
         assert drm_manager.get('drm_license_type') == 'Node-Locked'
         drm_manager.deactivate()
@@ -112,7 +111,6 @@ def test_nodelock_normal_case(accelize_drm, conf_json, cred_json, async_handler,
         )
         assert drm_manager.get('license_type') == 'Node-Locked'
         # Start application
-        assert drm_manager.get('drm_license_type') == 'Floating/Metering'
         assert not drm_manager.get('license_status')
         drm_manager.activate()
         assert not drm_manager.get('license_status')
@@ -151,7 +149,6 @@ def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, asy
         )
         assert drm_manager.get('license_type') == 'Node-Locked'
         # Start application
-        assert drm_manager.get('drm_license_type') == 'Floating/Metering'
         assert not drm_manager.get('license_status')
         drm_manager.activate()
         assert not drm_manager.get('license_status')
@@ -165,7 +162,7 @@ def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, asy
         async_cb.assert_NoError()
         # Recrete a new object with a bad url to verify it will reuse the existing license file
         conf_json['licensing']['url'] = "http://accelize.com"
-        conf_json['settings']['log_verbosity'] = 4
+        conf_json['settings']['log_verbosity'] = 1
         conf_json.save()
         drm_manager = accelize_drm.DrmManager(
             conf_json.path,
@@ -251,7 +248,6 @@ def test_nodelock_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         assert drm_manager0.get('license_type') == 'Node-Locked'
 
         # Consume the single token available
-        assert drm_manager0.get('drm_license_type') == 'Floating/Metering'
         drm_manager0.activate()
         assert drm_manager0.get('drm_license_type') == 'Node-Locked'
         drm_manager0.deactivate()
@@ -267,7 +263,6 @@ def test_nodelock_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
             async_cb1.callback
         )
         assert drm_manager1.get('license_type') == 'Node-Locked'
-        assert drm_manager1.get('drm_license_type') == 'Floating/Metering'
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager1.activate()
         assert 'You reach the Nodelocked entitlement limit: 1' in str(excinfo.value)
@@ -303,7 +298,6 @@ def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, c
         )
         assert drm_manager.get('license_type') == 'Node-Locked'
         # Start application
-        assert drm_manager.get('drm_license_type') == 'Floating/Metering'
         drm_manager.activate()
         assert drm_manager.get('drm_license_type') == 'Node-Locked'
         drm_manager.deactivate()
@@ -375,7 +369,6 @@ def test_nodelock_after_metering_mode(accelize_drm, conf_json, cred_json, async_
             async_cb.callback
         )
         assert drm_manager.get('license_type') == 'Floating/Metering'
-        assert drm_manager.get('drm_license_type') == 'Floating/Metering'
         assert not drm_manager.get('license_status')
         assert not drm_manager.get('session_status')
         drm_manager.activate()
@@ -399,8 +392,8 @@ def test_nodelock_after_metering_mode(accelize_drm, conf_json, cred_json, async_
             driver.write_register_callback,
             async_cb.callback
         )
-        assert drm_manager.get('license_type') == 'Node-Locked'
         assert drm_manager.get('drm_license_type') == 'Floating/Metering'
+        assert drm_manager.get('license_type') == 'Node-Locked'
         assert session_id != drm_manager.get('session_id')
         assert not drm_manager.get('session_status')
         drm_manager.activate()
@@ -462,7 +455,7 @@ def test_parsing_of_nodelock_files(accelize_drm, conf_json, cred_json, async_han
             fw.write(req_json.replace(':', '='))
         with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
             drm_manager.activate()
-        assert 'Cannot parse following JSON string ' in str(excinfo.value)
+        assert 'Cannot parse JSON string ' in str(excinfo.value)
         err_code = async_handler.get_error_code(str(excinfo.value))
         assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
         async_cb.assert_NoError()

@@ -21,7 +21,7 @@ cmake_minimum_required(VERSION 3.12)
 # - Alpha             : 1.0.0-alpha.1
 # - Beta              : 1.0.0-beta.1
 # - Release candidate : 1.0.0-rc.1
-set(ACCELIZEDRM_VERSION 2.1.1)
+set(ACCELIZEDRM_VERSION 2.2.0)
 
 ## Define package release number (Number of time this version was packaged)
 if (NOT CPACK_PACKAGE_RELEASE)
@@ -145,6 +145,8 @@ set(DRM_CONTROLLER_SDK_SOURCES
         drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v3_0_0.cpp
         drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v3_1_0.cpp
         drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v3_2_0.cpp
+        drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v3_2_1.cpp
+        drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v3_2_2.cpp
 )
 include_directories(drm_controller_sdk/include)
 set_source_files_properties(${DRM_CONTROLLER_SDK_SOURCES} PROPERTIES COMPILE_FLAGS "-Wno-unused-parameter")
@@ -156,14 +158,14 @@ target_compile_options(drm_controller_lib PRIVATE -DVERSION_CHECK_DISABLED)
 execute_process(COMMAND uname -r OUTPUT_VARIABLE UNAME_R OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 set(API_HEADERS
-  include/accelize/drm/ParameterKey.def
-        include/accelize/drm/drm_manager.h
-  include/accelize/drm/error.h
-        include/accelize/drm.h
-  include/accelize/drmc/common.h
-  include/accelize/drmc/errorcode.h
-        include/accelize/drmc/wrapper.h
-  include/accelize/drmc.h
+    include/accelize/drm/ParameterKey.def
+    include/accelize/drm/drm_manager.h
+    include/accelize/drm/error.h
+    include/accelize/drm.h
+    include/accelize/drmc/common.h
+    include/accelize/drmc/errorcode.h
+    include/accelize/drmc/wrapper.h
+    include/accelize/drmc.h
 )
 
 set(API_PUBLIC_HEADERS)
@@ -183,16 +185,20 @@ set(CMAKE_INCLUDE_DIR ${CMAKE_BINARY_DIR}/include)
 include_directories(${CMAKE_INCLUDE_DIR})
 include_directories(internal_inc)
 include_directories(include)
+include_directories(spdlog/include)
 
 ## libaccelize_drm
 set(TARGET_SOURCES
-  source/ws_client.cpp
-        source/drm_manager.cpp
-  source/utils.cpp
-  source/error.cpp
-        source/log.cpp)
+    spdlog/src/spdlog.cpp
+    source/ws_client.cpp
+    source/drm_manager.cpp
+    source/utils.cpp
+    source/error.cpp
+    source/log.cpp
+)
 
 add_library(accelize_drm SHARED ${TARGET_SOURCES})
+target_compile_options(accelize_drm PRIVATE -DSPDLOG_COMPILED_LIB)
 set_target_properties(accelize_drm PROPERTIES VERSION ${ACCELIZEDRM_VERSION} SOVERSION ${ABI_VERSION})
 target_link_libraries(accelize_drm ${CURL_LIBRARIES})
 target_link_libraries(accelize_drm jsoncpp)

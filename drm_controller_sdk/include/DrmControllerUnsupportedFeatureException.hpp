@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerUnsupportedFeatureException.hpp
-*  \version   3.2.0.0
-*  \date      December 2018
+*  \version   3.2.2.0
+*  \date      May 2019
 *  \brief     Class DrmControllerUnsupportedFeatureException defines procedures
 *             for unsupported feature exceptions reporting, inherihts from std::exception.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");

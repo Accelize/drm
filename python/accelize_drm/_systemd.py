@@ -38,10 +38,16 @@ class AccelizeDrmService:
     DEFAULT_FPGA_DRIVER_NAME = 'aws_f1'
 
     #: Default FPGA slot ID
-    DEFAULT_FPGA_SLOT_ID = '0'
+    DEFAULT_FPGA_SLOT_ID = 0
 
     #: Default DRM controller base address in FPGA design
     DEFAULT_DRM_CTRL_BASE_ADDR = 0
+
+    #: Default DRM library log verbosity
+    DEFAULT_LOG_VERBOSITY = 2
+
+    #: DRM library log files directory
+    LOG_FILE_BASE_PATH = '/var/log/accelize_drm/service_slot_%d.log'
 
     def __init__(self):
         # Avoid double __exit__ / __del__ call
@@ -60,10 +66,11 @@ class AccelizeDrmService:
             for env, key in (('ACCELIZE_DRM_DRIVER_', 'fpga_driver_name'),
                              ('ACCELIZE_DRM_CRED_', 'cred_file_path'),
                              ('ACCELIZE_DRM_CONF_', 'conf_file_path'),
-                             ('ACCELIZE_DRM_IMAGE_', 'fpga_image'),):
+                             ('ACCELIZE_DRM_IMAGE_', 'fpga_image'),
+                             ('ACCELIZE_DRM_DISABLED_', 'drm_disabled')):
 
                 if env_key.startswith(env):
-                    slot = env_key.rsplit('_', maxsplit=1)[1]
+                    slot = int(env_key.rsplit('_', maxsplit=1)[1])
 
                     try:
                         slot_dict = self._fpga_slots[slot]
@@ -80,6 +87,7 @@ class AccelizeDrmService:
         # Initialize DRM manager
         self._drivers = []
         self._drm_managers = []
+        self._lisenced_slots = []
 
         futures = []
         with _ThreadPoolExecutor() as executor:
@@ -109,13 +117,6 @@ class AccelizeDrmService:
             'fpga_driver_name', self.DEFAULT_FPGA_DRIVER_NAME)
         fpga_image = slot_config.get('fpga_image')
 
-        self._sd_log('FPGA slot %s, configuration file: %s',
-                     fpga_slot_id, conf_file_path)
-        self._sd_log('FPGA slot %s, credential file: %s',
-                     fpga_slot_id, cred_file_path)
-        self._sd_log('FPGA slot %s, Driver: %s',
-                     fpga_slot_id, fpga_driver_name)
-
         # Get configuration files
         with open(conf_file_path, 'rt') as conf_file:
             conf = _load(conf_file)
@@ -134,11 +135,37 @@ class AccelizeDrmService:
         self._drivers.append(driver)
 
         # Initialize DRM manager
-        self._drm_managers.append(_DrmManager(
-            conf_file_path=conf_file_path,
-            cred_file_path=cred_file_path,
-            read_register=driver.read_register_callback,
-            write_register=driver.write_register_callback))
+        if not slot_config.get('drm_disabled'):
+            drm_manager = _DrmManager(
+                conf_file_path=conf_file_path,
+                cred_file_path=cred_file_path,
+                read_register=driver.read_register_callback,
+                write_register=driver.write_register_callback)
+
+            drm_manager.set(
+                # Set rotating log file for each slot
+                log_service_path=self.LOG_FILE_BASE_PATH % fpga_slot_id,
+                log_service_type=2,
+                log_service_verbosity=int(_environ.get(
+                    'ACCELIZE_DRM_LOG_VERBOSITY', self.DEFAULT_LOG_VERBOSITY)),
+
+                # Disable Stdout log output
+                log_verbosity=6,
+            )
+            drm_manager.set(log_service_create=True)
+
+            self._lisenced_slots.append(str(fpga_slot_id))
+            self._drm_managers.append(drm_manager)
+
+            self._sd_log('FPGA slot %s, configuration file: %s',
+                         fpga_slot_id, conf_file_path)
+            self._sd_log('FPGA slot %s, credential file: %s',
+                         fpga_slot_id, cred_file_path)
+
+        self._sd_log('FPGA slot %s, driver: %s', fpga_slot_id, fpga_driver_name)
+        self._sd_log('FPGA slot %s, image: %s', fpga_slot_id, fpga_image)
+        self._sd_log('FPGA slot %s, licensing: %s', fpga_slot_id, 'disabled'
+                     if slot_config.get('drm_disabled') else 'enabled')
 
     def __enter__(self):
         self._activated = True
@@ -155,7 +182,7 @@ class AccelizeDrmService:
 
         # Notify systemd
         self._sd_notify(b"READY=1\nSTATUS=Licensing FPGA slot(s) %s" %
-                        str(sorted(self._fpga_slots)).strip('[]').encode())
+                        ', '.join(self._lisenced_slots).encode())
 
         return self
 
@@ -279,13 +306,13 @@ def run_service():
     """
     Run the service
     """
-    with AccelizeDrmService():
-        try:
+    try:
+        with AccelizeDrmService():
             while True:
                 _sleep(1)
-        except KeyboardInterrupt:
-            # Exit Gracefully with __exit__
-            return
+    except KeyboardInterrupt:
+        # Exit Gracefully with __exit__
+        return
 
 
 if __name__ == '__main__':

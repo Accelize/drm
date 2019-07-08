@@ -18,7 +18,8 @@ Prerequisites
 
   .. note:: The DRM licensing mode is defined during the `configuration mode <drm_configuration>`_.
 
-- Request your account from `Accelize website <Accelize create account>`__ web site.
+- Create your account from `Accelize website <https://www.accelize.com/content/request-vendor-account>`_
+  web site.
 
 .. warning:: DRM API 1.x is compatible with the DRM HDK versions inferior or equal to 2.x.
              For DRM HDK superior to 3.x use exclusively DRM API 2.x.
@@ -34,9 +35,9 @@ Modify your FPGA design
 
 You need to modify your FPGA design to include the DRM HDK.
 
-1. Contact `Accelize <Accelize contact>`_ to download the DRM HDK and perform
+1. Contact `Accelize <https://www.accelize.com/contact-us>`_ to download the DRM HDK and perform
    the basic settings for you to test your FPGA design.
-#. Modify instantiate the DRM Controller in the design top-level.
+#. Instantiate the DRM Controller in the design top-level.
 #. Instantiate the DRM Activator in the IP/design to protect.
 #. Develop the piece of logic that lock and unlock your design based on
    the activation code value.
@@ -159,9 +160,7 @@ DRM controller version register:
 * Write value 0x0 in register at offset 0x0 : this will load the register Page 0
   of the DRM Controller containing the version register.
 
-* Read value in register at the version offset (refer to the DRM Register Map
-  documentation to get the exact offset value): the value should be the version
-  number of the HDK integrated in your design.
+* Read the DRM Controller version register at offset 0x70
   For instance, the HDK version 3.2.0 is stored in the register like this: 0x30200.
 
 How to check the correct license duration on Metering mode ?
@@ -186,11 +185,7 @@ your design:
 If the duration is still not correct, please contact Accelize support: :doc:`contacts`
 
 
-Some examples
--------------
+Getting Started Examples
+------------------------
 
-A list of basic example designs will come soon.
-
-
-.. _Accelize create account: https://www.accelize.com/content/request-vendor-account
-.. _Accelize contact: https://www.accelize.com/contact-us
+A list of basic example designs are available `here <https://github.com/Accelize/GettingStarted_Examples>`_.

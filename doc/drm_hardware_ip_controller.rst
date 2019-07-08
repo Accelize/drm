@@ -23,7 +23,7 @@ The main functionality of the DRM Controller IP is to:
   and authenticated Metering Data block to the System.
 
 The DRM Controller also gathers the design information (Protected IPs VLNVs, 64 bits each)
-and the chip DNA (Public Chip ID (128 bits) that are required to request the License Key.
+and the chip identifier (Public Chip ID (DNA) or PUF) that are required to request the License Key.
 
 Block diagram
 -------------
@@ -61,7 +61,7 @@ For each IP connected there are 3 parts:
      * - drm_aclk
        - in
        - 1
-       - DRM bus clock
+       - DRM bus clock: must be identical to all the DRM Activators clock
      * - drm_arstn
        - in
        - 1
@@ -76,15 +76,15 @@ For each IP connected there are 3 parts:
        - Direction
        - Size
        - Description
-     * - drm_to_uip_<IDX>_tready
+     * - drm_to_uip<IDX>_tready
        - in
        - 1
        - AXI4-Stream Ready signal for DRM Controller to IP Activator Channel
-     * - drm_to_uip_<IDX>_tvalid
+     * - drm_to_uip<IDX>_tvalid
        - out
        - 1
        - AXI4-Stream Valid signal for DRM Controller to IP Activator Channel
-     * - drm_to_uip_<IDX>_tdata
+     * - drm_to_uip<IDX>_tdata
        - out
        - 32
        - AXI4-Stream Data signal for DRM Controller to IP Activator Channel
@@ -98,15 +98,15 @@ For each IP connected there are 3 parts:
        - Direction
        - Size
        - Description
-     * - uip_<IDX>_to_drm_tready
+     * - uip<IDX>_to_drm_tready
        - out
        - 1
        - AXI4-Stream Ready signal for IP Activator to DRM Controller Channel
-     * - uip_<IDX>_to_drm_tvalid
+     * - uip<IDX>_to_drm_tvalid
        - in
        - 1
        - AXI4-Stream Valid signal for IP Activator to DRM Controller Channel
-     * - uip_<IDX>_to_drm_tdata
+     * - uip<IDX>_to_drm_tdata
        - in
        - 32
        - AXI4-Stream Data signal for IP Activator to DRM Controller Channel
@@ -124,11 +124,11 @@ The communication with the Software layer is performed through an AXI4-Lite slav
      - Direction
      - Size
      - Description
-   * - drm_aclk
+   * - m_axi_aclk
      - in
      - 1
      - AXI4-Lite clock
-   * - drm_arstn
+   * - m_axi_arstn
      - in
      - 1
      - AXI4-Lite asynchronous reset active low
@@ -208,6 +208,30 @@ The communication with the Software layer is performed through an AXI4-Lite slav
      - out
      - 2
      - AXI4-Lite read response
+
+Chip DNA Interface
+~~~~~~~~~~~~~~~~~~
+
+Chip DNA is internally instantiated by the DRM Controller. It is exposed to
+the user for his/her convenience.
+
+
+.. list-table::
+   :header-rows: 1
+
+   * - Name
+     - Direction
+     - Size
+     - Description
+   * - chip_dna_valid
+     - out
+     - 1
+     - Indicate the validity of the DNA value: 0=DNA not valid, 1=DNA valid
+   * - chip_dna
+     - out
+     - 96
+     - DNA as exposed by the chip
+
 
 Registers
 ---------

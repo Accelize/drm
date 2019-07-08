@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegisters.cpp
-*  \version   3.2.0.0
-*  \date      November 2018
+*  \version   3.2.2.0
+*  \date      May 2019
 *  \brief     Class DrmControllerRegisters defines low level procedures
 *             for access to all registers.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
@@ -1155,8 +1155,8 @@ unsigned int DrmControllerRegisters::writeMailboxFileRegister(const std::vector<
 void DrmControllerRegisters::throwLicenseTimerResetedException(const bool &expectedStatus, const bool &actualStatus,
                                                                const unsigned char &expectedError, const unsigned char &actualError) const {
   mDrmControllerRegistersStrategyInterface->throwLicenseTimerResetedException(expectedStatus, actualStatus, expectedError, actualError,
-                                                                              std::string(mDrmControllerRegistersStrategyInterface->getDrmErrorRegisterMessage(expectedError)),
-                                                                              std::string(mDrmControllerRegistersStrategyInterface->getDrmErrorRegisterMessage(actualError)));
+                                                                              mDrmControllerRegistersStrategyInterface->getDrmErrorRegisterMessage(expectedError),
+                                                                              mDrmControllerRegistersStrategyInterface->getDrmErrorRegisterMessage(actualError));
 }
 
 /** throwTimeoutException
@@ -1287,7 +1287,6 @@ DrmControllerRegistersStrategyInterface* DrmControllerRegisters::selectRegisters
   // dictionaries of strategies
   tDrmControllerRegistersStrategyDictionary strategies(createRegistersStrategies(readRegisterFunction, writeRegisterFunction));
   // get and parse existing version
-
   std::string parsedStrategiesVersion(parseStrategiesDrmVersion((readStrategiesDrmVersion(strategies))));
   // final check
   if (parsedStrategiesVersion.empty() == true) {
@@ -1314,6 +1313,8 @@ DrmControllerRegisters::tDrmControllerRegistersStrategyDictionary DrmControllerR
   strategies[DRM_CONTROLLER_V3_0_0_SUPPORTED_VERSION] = new DrmControllerRegistersStrategy_v3_0_0(readRegisterFunction, writeRegisterFunction);
   strategies[DRM_CONTROLLER_V3_1_0_SUPPORTED_VERSION] = new DrmControllerRegistersStrategy_v3_1_0(readRegisterFunction, writeRegisterFunction);
   strategies[DRM_CONTROLLER_V3_2_0_SUPPORTED_VERSION] = new DrmControllerRegistersStrategy_v3_2_0(readRegisterFunction, writeRegisterFunction);
+  strategies[DRM_CONTROLLER_V3_2_1_SUPPORTED_VERSION] = new DrmControllerRegistersStrategy_v3_2_1(readRegisterFunction, writeRegisterFunction);
+  strategies[DRM_CONTROLLER_V3_2_2_SUPPORTED_VERSION] = new DrmControllerRegistersStrategy_v3_2_2(readRegisterFunction, writeRegisterFunction);
   return strategies;
 }
 

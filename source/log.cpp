@@ -14,51 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <fstream>
-
+#include <iostream>
+#include <cstddef>
 #include "log.h"
+
 
 namespace Accelize {
     namespace DRM {
 
-        eLogLevel sLogVerbosity = eLogLevel::ERROR;
-        eLogFormat sLogFormat = eLogFormat::SHORT;
-        std::string sLogFilePath = std::string("");
-        //std::unique_ptr<std::ostream> sLogStream;
-        //std::ostream* sLogStream = nullptr;
-        std::ostream* sLogStream = &std::cout;
+        std::shared_ptr<spdlog::logger> sLogger;
 
-
-        void initLog() {
-            /*
-            std::lock_guard<std::recursive_mutex> lock(mLogMutex);
-            if ( sLogFilePath.size() ) {
-                //std::unique_ptr<std::ofstream> ofs( new std::ofstream( sLogFilePath ) );
-                std::ofstream* ofs = new std::ofstream( sLogFilePath );
-                if (!ofs->is_open()) {
-                    Throw(DRM_ExternFail, "Unable to access file: ", sLogFilePath);
-                }
-                //sLogStream = std::move(ofs);
-                sLogStream = ofs;
-                Debug( "Init logger to file ", sLogFilePath );
-                //sLogStream = std::unique_ptr<std::ostream>(&std::cout);
-            }
-            else {
-                //sLogStream = std::unique_ptr<std::ostream>(&std::cout);
-                sLogStream = &std::cout;
-                Debug( "Init logger to stdout" );
-            }*/
-        }
-
-        void uninitLog() {
-            /*
-            Debug( "Uninit logger" );
-            if ( sLogFilePath.size() ) {
-                std::lock_guard<std::recursive_mutex> lock(mLogMutex);
-                //sLogStream.release();
-                delete sLogStream;
-                sLogStream = nullptr;
-            }*/
-        }
     }
 }

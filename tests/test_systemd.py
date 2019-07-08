@@ -16,7 +16,7 @@ def test_systemd(conf_json, cred_json, tmpdir):
     from accelize_drm._systemd import AccelizeDrmService
 
     # Set FPGA slot
-    fpga_slot_id = "1"
+    fpga_slot_id = 1
 
     # Set configuration files
     conf_env_var = 'ACCELIZE_DRM_CONF_%s' % fpga_slot_id
@@ -68,7 +68,7 @@ def test_systemd(conf_json, cred_json, tmpdir):
     class Driver:
         """Mocked accelize_drm.fpga_drivers Driver"""
         def __init__(self, **kwargs):
-            assert kwargs['fpga_slot_id'] == fpga_slot_id, \
+            assert kwargs['fpga_slot_id'] == int(fpga_slot_id), \
                 "Driver: Slot ID"
             assert 'drm_ctrl_base_addr' in kwargs, "Driver: Base address"
 
@@ -96,6 +96,10 @@ def test_systemd(conf_json, cred_json, tmpdir):
 
         @staticmethod
         def deactivate():
+            """Do nothing"""
+
+        @staticmethod
+        def set(*_, **__):
             """Do nothing"""
 
     systemd_get_driver = systemd._get_driver

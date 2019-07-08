@@ -23,6 +23,11 @@ limitations under the License.
 namespace Accelize {
 namespace DRM {
 
+std::string getDirName( const std::string& full_path );
+bool isDir( const std::string& dir_path );
+bool isFile( const std::string& file_path );
+bool makeDirs( const std::string& dir_path, mode_t mode = 744 );
+
 std::string saveJsonToString( const Json::Value& json_value, const std::string& indent = "" );
 void saveJsonToFile( const std::string& file_path, const Json::Value& json_value, const std::string& indent = "\t" );
 Json::Value parseJsonString(const std::string &json_string);

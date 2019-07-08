@@ -19,13 +19,11 @@ Tel:
 
 **Sales**
 
-For sales questions, please contact
-`Accelize <https://www.accelize.com/contact-us>`_.
+For sales questions, please contact us at `sales@accelize.com <mailto:sales@accelize.com>`_.
 
 **Technical Support**
 
-For technical support questions, please contact Accelize Support at:
-`support@accelize.com <mailto:support@accelize.com>`_.
+For technical support questions, please contact us at `support@accelize.com <mailto:support@accelize.com>`_.
 
 Feedbacks
 ---------

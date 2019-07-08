@@ -64,7 +64,7 @@ def test_metered_start_stop_short_time_in_debug(accelize_drm, conf_json, cred_js
 
     async_cb.reset()
     conf_json.reset()
-    conf_json['settings']['log_verbosity'] = 4
+    conf_json['settings']['log_verbosity'] = 1
     conf_json.save()
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,

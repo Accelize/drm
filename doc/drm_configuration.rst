@@ -32,9 +32,10 @@ Download the credential files (`cred.json`) which looks like this:
       "client_secret": "Your client secret from Accelize DRM portal"
    }
 
-.. note:: In node-locked licensing mode, the credentials configuration file is
-          required only once, when the license is provisioned the first time.
-          Then it can be omitted.
+.. note:: Even in node-locked licensing mode, assuming an internet connection is valid,
+          the license file can be automatically requested from the License Web Service.
+          All you need is a credentials file. Once the license file is saved locally, the
+          credential file can be omitted.
 
 
 .. _configuration-file:
@@ -125,7 +126,8 @@ the configuration file:
 Other parameters
 ~~~~~~~~~~~~~~~~
 
-The DRM Library can display the list of available parameters with the following call:
+Various parameters are accessible from software in read and/or write mode.
+To list these parameters use the following code:
 
 .. code-block:: c++
     :caption: C++
@@ -144,6 +146,10 @@ The DRM Library can display the list of available parameters with the following 
     drm_manager.get('list_all')
 
 Some of these parameters are better explained in the :doc:`drm_sw_advanced_description`.
+
+.. warning:: Most of these parameters are critical for a proper functioning of the system.
+             It is highly recommended not to modify them. Contact the support team for
+             additional information.
 
 
 Configuration files storage
@@ -166,5 +172,5 @@ running the DRM protected application.
              containing the file ``cred.json`` is only allowed to appropriate
              users only.
 
-.. _Accelize portal registration: https://drmportal.accelize.com/user/register
-.. _Accelize portal account: https://drmportal.accelize.com/front/customer/apicredential
+.. _Accelize portal registration: https://portal.accelize.com/user/register
+.. _Accelize portal account: https://portal.accelize.com/front/customer/apicredential

@@ -46,8 +46,8 @@ phases:
           export FILTER_SOURCES=""
           export FILTER_BRANCH=""
         else
-          export FILTER_SOURCES="--if git_file_changed='(?!tests/utils/|doc/|LICENSE|README\\.md|\\.gitignore)'"
-          export FILTER_BRANCH="--if git_branch=master,dev"
+          export FILTER_SOURCES='--if git_file_changed=(?!tests/utils/|doc/|LICENSE|README\.md|\.gitignore)'
+          export FILTER_BRANCH='--if git_branch=master,dev'
         fi
       - echo "FILTER_SOURCES=${FILTER_SOURCES}"
       - echo "FILTER_BRANCH=${FILTER_BRANCH}"
@@ -86,9 +86,8 @@ phases:
         -p f1.4xlarge
         -n drm_debug_tests
         -z /dev/shm/drmlib_dev/.tox/debug/build/report artifacts/report.tar.gz
-        -a /dev/shm/drmlib_dev/run_tests.log artifacts/run_tests.log
         -r "source /dev/shm/aws-fpga/sdk_setup.sh && cd /dev/shm/drmlib_dev &&
-            sudo -E tox -p all -e aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug -- --cred=/dev/shm/cred.json --server=${WS_ENV} -s | tee run_tests.log"
+            sudo -E TOX_PARALLEL_NO_SPINNER=1 tox -p all -e aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug -- --cred=/dev/shm/cred.json --server=${WS_ENV} -s"
 
       # Build packages
       - xlz
@@ -118,6 +117,7 @@ phases:
         -n drm_packages_tests
         --gz_upload artifacts/packages.tar.gz /dev/shm/packages
         -x OS centos_7
+        -x OS debian_buster
         -x OS debian_stretch
         -x OS debian_testing
         -x OS fedora_previous_latest
@@ -133,7 +133,7 @@ phases:
             -v /dev/shm:/opt/
             accelize/accelizedrm-ci:test-aws_f1-~{OS}~
             bash -c "cd /opt/drmlib_dev &&
-                     tox --workdir=/tmp
+                     TOX_PARALLEL_NO_SPINNER=1 tox --workdir=/tmp
                      -e package-install,c-install,cpp-install
                      -p all -- -m minimum --cred=/opt/cred.json --server=~{SERVER}~"'
 

@@ -30,7 +30,6 @@ def _run(*command, **kwargs):
         result.check_returncode()
     except CalledProcessError as exception:
         print(exception.stdout, exception.stderr, sep='\n')
-        raise
     return result
 
 

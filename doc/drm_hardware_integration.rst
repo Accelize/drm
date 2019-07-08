@@ -30,6 +30,7 @@ currently supported by the DRM HDK:
        * Vivado 2018.2
        * Vivado 2018.2.xdf
        * Vivado 2018.3
+       * Vivado 2019.1
      - * Ultrascale+
        * Ultrascale
        * Virtex 7
@@ -83,8 +84,8 @@ A zip file will be sent to you. It is containing the HDK sources with in 3 folde
 * The ``common`` folder: contain the IP common structure for the activator and the controller.
 
 * The ``controller`` folder: contain the controller VHDL top-level and the Verilog Wrapper.
-  The controller has the appropriate number of ports: one for each IP instance in your design
-  (already protected IPs and IPs to protect), plus the common bus.
+  The controller has the appropriate number of ports: a pair of AXI4-Stream interfaces for each 
+  IP instance in your design (already protected IPs and IPs to protect).
 
 * The ``activator`` folder: contain the activator VHDL top-level and the Verilog Wrapper, and
   the *drm_activation_code_package* file which define the 128-bit activation code value.
@@ -185,10 +186,6 @@ Add the following ports to the original IP core:
        - in
        - 1
        - IP Core clock domain
-     * - activation_code_ready
-       - out
-       - 1
-       - Indicate the Activation Code is ready to be evaluated (synchronous to ip_core_aclk)
      * - activation_code
        - out
        - 128
@@ -197,7 +194,7 @@ Add the following ports to the original IP core:
        - in
        - 1
        - A 1 clock cycle pulse (synchronous to ip_core_aclk) increments the Metering data counter
-     * - metering_arst
+     * - metering_reset
        - in
        - 1
        - Metering Counter Synchronous (to ip_core_aclk) Reset (active high)
@@ -272,7 +269,7 @@ in number of usage units for this particular account.
              clock. Make sure a clock domain crossing technique is implemented
              when necessary.
 
-.. important:: The ``metering_arst`` signal resets the metering counter.
+.. important:: The ``metering_reset`` signal resets the metering counter.
              Therefore, it SHALL NOT be connected to a user-controllable
              reset as it will give the user a way to reset metering information
              before this information is actually sent to the DRM web service.
@@ -316,8 +313,11 @@ protected IP cores.
 * Connect each DRM bus interface of the DRM controller to a DRM bus interface of a
   protected IP core.
 
-.. image:: _static/AXI4-bus.png
-   :target: _static/AXI4-bus.png
+.. image:: _static/DRM_ENVIRONMENT_TOPOLOGY.png
+   :target: _static/DRM_ENVIRONMENT_TOPOLOGY.png
+
+.. warning:: The ``drm_aclk``clock of the DRM Controller and the DRM Activators MUST
+             be the same clock.
 
 
 Synthesize and implement your design
@@ -400,10 +400,10 @@ Or a TCL script:
 
 .. code-block:: tcl
 
-   read_verilog -library drm_library {
+   read_verilog {
       drm_hdk/controller/drm_controller_ip_axi4st.v
    }
-   read_verilog -library drm_library {
+   read_verilog {
       drm_hdk/common/xilinx/drm_all_components.vhdl
       drm_hdk/controller/drm_controller_ip.vhdl
    }
@@ -424,7 +424,7 @@ Or via TCL script:
 
 .. code-block:: tcl
 
-   read_verilog -library drm_library {
+   read_verilog {
       drm_hdk/activator_VLNV/rtl/drm_activation_code_package_0xVVVVLLLLNNNNVVVV.v
       drm_hdk/activator_VLNV/rtl/drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st.vhdl
    }
@@ -462,7 +462,7 @@ Or a TCL script:
 
 .. code-block:: tcl
 
-   set_global_assignment -name SYSTEMVERILOG_FILE drm_hdk/common/alteraProprietary/altchip_id_arria10.sv -library drm_library
+   set_global_assignment -name SYSTEMVERILOG_FILE drm_hdk/common/alteraProprietary/altchip_id_arria10.sv
    set_global_assignment -name VHDL_FILE drm_hdk/common/alteraProprietary/drm_all_components.vhdl -library drm_library
    set_global_assignment -name VHDL_FILE drm_hdk/controller/drm_controller_ip.vhdl -library drm_library
    set_global_assignment -name VHDL_FILE drm_hdk/controller/drm_controller_ip_axi4st.vhdl -library drm_library
@@ -486,7 +486,7 @@ To add the DRM Activator sources to your project, you can use:
 
 .. code-block:: tcl
 
-   set_global_assignment -name SYSTEMVERILOG_FILE drm_hdk/common/alteraProprietary/altchip_id_arria10.sv -library drm_library
+   set_global_assignment -name SYSTEMVERILOG_FILE drm_hdk/common/alteraProprietary/altchip_id_arria10.sv
    set_global_assignment -name VHDL_FILE drm_hdl/common/alteraProprietary/drm_all_components.vhdl -library drm_library
    set_global_assignment -name VHDL_FILE drm_hdk/activator_VLNV/rtl/drm_activation_code_package_0xVVVVLLLLNNNNVVVV.vhdl -library drm_library
    set_global_assignment -name VHDL_FILE drm_hdl/activator_VLNV/rtl/drm_ip_activator_0xVVVVLLLLNNNNVVVV.vhdl -library drm_library
@@ -513,7 +513,7 @@ To add the DRM Controller sources to your project, you can use:
 
 .. code-block:: tcl
 
-   set_global_assignment -name SYSTEMVERILOG_FILE drm_hdk/common/alteraProprietary/altchip_id_arria10.sv -library drm_library
+   set_global_assignment -name SYSTEMVERILOG_FILE drm_hdk/common/alteraProprietary/altchip_id_arria10.sv
    set_global_assignment -name VHDL_FILE drm_hdk/common/alteraProprietary/drm_all_components.vhdl -library drm_library
    set_global_assignment -name VHDL_FILE drm_hdk/controller/drm_controller_ip.vhdl -library drm_library
    set_global_assignment -name VERILOG_FILE drm_hdk/controller/drm_controller_ip_axi4st.v -library drm_library
@@ -538,11 +538,11 @@ To add the DRM Activator sources to your project, you can use:
 
 .. code-block:: tcl
 
-   set_global_assignment -name SYSTEMVERILOG_FILE drm_hdk/common/alteraProprietary/altchip_id_arria10.sv -library drm_library
+   set_global_assignment -name SYSTEMVERILOG_FILE drm_hdk/common/alteraProprietary/altchip_id_arria10.sv
    set_global_assignment -name VHDL_FILE drm_hdl/common/alteraProprietary/drm_all_components.vhdl -library drm_library
    set_global_assignment -name VHDL_FILE drm_hdl/activator_VLNV/rtl/drm_ip_activator_0xVVVVLLLLNNNNVVVV.vhdl -library drm_library
-   set_global_assignment -name VERILOG_FILE drm_hdk/activator_VLNV/rtl/drm_activation_code_package_0xVVVVLLLLNNNNVVVV.v -library drm_library
-   set_global_assignment -name VERILOG_FILE drm_hdl/activator_VLNV/rtl/drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st.v -library drm_library
+   set_global_assignment -name VERILOG_FILE drm_hdk/activator_VLNV/rtl/drm_activation_code_package_0xVVVVLLLLNNNNVVVV.v
+   set_global_assignment -name VERILOG_FILE drm_hdl/activator_VLNV/rtl/drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st.v
 
 .. note:: The ``altchip_id_arria10.sv`` file is for the Arria10 FPGA family.
           Use the file located in the *common/sv/alteraProprietary* folder from your DRM HDK.
@@ -632,48 +632,48 @@ ModelSim Compilation and Simulation
 Create libraries
 ^^^^^^^^^^^^^^^^
 
-Two libraries are required : drm_library, drm_testbench_library
+Two libraries are required :
 
-Library drm_library:
+  * Library **drm_library**:
 
-.. code-block:: tcl
+    .. code-block:: tcl
 
-   vlib drm_library
-   vmap drm_library drm_library
+       vlib drm_library
+       vmap drm_library drm_library
 
-Library drm_testbench_library:
+  * Library **drm_testbench_library**:
 
-.. code-block:: tcl
+    .. code-block:: tcl
 
-   vlib drm_testbench_library
-   vmap drm_testbench_library drm_testbench_library
+       vlib drm_testbench_library
+       vmap drm_testbench_library drm_testbench_library
+
 
 Compile the files in the following order:
-* drm_hdk/activator_VLNV/simu/modelsim/drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st.vhdl compiled in
 
-Compile drm_all_components.vhdl under *drm_library* library:
+1. Compile drm_all_components.vhdl under *drm_library* library:
 
-.. code-block:: tcl
+   .. code-block:: tcl
 
-   vcom -93 -explicit -work drm_library drm_hdk/common/vhdl/modelsim/drm_all_components.vhdl
+      vcom -93 -explicit -work drm_library drm_hdk/common/vhdl/modelsim/drm_all_components.vhdl
 
-Compile drm_license_package.vhdl under *drm_testbench_library* library:
+#. Compile drm_license_package.vhdl under *drm_testbench_library* library:
 
-.. code-block:: tcl
+   .. code-block:: tcl
 
-   vcom -93 -explicit -work drm_testbench_library drm_hdk/activator_VLNV/simu/modelsim/drm_license_package.vhdl
+      vcom -93 -explicit -work drm_testbench_library drm_hdk/activator_VLNV/simu/modelsim/drm_license_package.vhdl
 
-Compile drm_controller_bfm.vhdl under *drm_testbench_library* library:
+#. Compile drm_controller_bfm.vhdl under *drm_testbench_library* library:
 
-.. code-block:: tcl
+   .. code-block:: tcl
 
-   vcom -93 -explicit -work drm_testbench_library drm_hdk/activator_VLNV/simu/modelsim/drm_controller_bfm_axi4st.vhdl
+      vcom -93 -explicit -work drm_testbench_library drm_hdk/activator_VLNV/simu/modelsim/drm_controller_bfm_axi4st.vhdl
 
-Compile drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st.vhdl under *drm_library* library:
+#. Compile drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st.vhdl under *drm_library* library:
 
-.. code-block:: tcl
+   .. code-block:: tcl
 
-   vcom -93 -explicit -work drm_hdk/activator_VLNV/simu/modelsim/drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st.vhdl|
+      vcom -93 -explicit -work drm_hdk/activator_VLNV/simu/modelsim/drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st.vhdl|
 
 Run simulation
 ^^^^^^^^^^^^^^

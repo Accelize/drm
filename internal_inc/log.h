@@ -26,7 +26,17 @@ limitations under the License.
 #include <thread>
 #include <mutex>
 
+// SPDLOG_ACTIVE_LEVEL must be declared before the spdlog.h include
+#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
+
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
+#include "spdlog/sinks/null_sink.h"
+#include "spdlog/sinks/basic_file_sink.h"       // support for basic file logging
+#include "spdlog/sinks/rotating_file_sink.h"    // support for rotating file logging
+
 #include "accelize/drm/error.h"
+
 
 namespace Accelize {
 namespace DRM {
@@ -38,138 +48,21 @@ namespace DRM {
     #define __SHORT_FILE__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
     #endif
 
-    #define STRINGIFY( name ) #name
+    extern std::shared_ptr<spdlog::logger> sLogger;
 
-    enum class eLogLevel: int {
-        QUIET = 0,
-        ERROR,
-        WARNING,
-        INFO,
-        DEBUG,
-        DEBUG2,
-        __SIZE
-    };
+    #define Debug2(...) SPDLOG_TRACE( __VA_ARGS__ )
 
-    static const char* cLogLevelString[] = {
-            STRINGIFY( QUIET ),
-            STRINGIFY( ERROR ),
-            STRINGIFY( WARNING ),
-            STRINGIFY( INFO ),
-            STRINGIFY( DEBUG ),
-            STRINGIFY( DEBUG2 )
-    };
+    #define Debug(...) SPDLOG_DEBUG( __VA_ARGS__ )
 
-    enum class eLogFormat {
-        SHORT = 0,
-        LONG = 1,
-        __SIZE
-    };
+    #define Info(...) SPDLOG_INFO( __VA_ARGS__ )
 
+    #define Warning(...) SPDLOG_WARN( __VA_ARGS__ )
 
-    extern eLogLevel sLogVerbosity;
-    extern eLogFormat sLogFormat;
-    extern std::string sLogFilePath;
-    //extern std::unique_ptr<std::ostream> sLogStream;
-    extern std::ostream* sLogStream;
+    #define Error(...) SPDLOG_ERROR( __VA_ARGS__ )
 
-    static std::recursive_mutex mLogMutex;
-
-
-
-    static std::string getFormattedTime() {
-
-        time_t rawtime;
-        struct tm* timeinfo;
-        char _retval[32];
-
-        time(&rawtime);
-        timeinfo = localtime(&rawtime);
-        strftime(_retval, sizeof(_retval), "%Y-%m-%d, %H:%M:%S", timeinfo);
-
-        return std::string( _retval );
-    }
-
-
-    __attribute__((unused)) static void ssAddToStream(std::ostream& a_stream) { (void)a_stream; }
-
-    template<typename T, typename... Args>
-    static void ssAddToStream(std::ostream& a_stream, T&& a_value, Args&&... a_args)
-    {
-        a_stream << std::forward<T>(a_value);
-        ssAddToStream(a_stream, std::forward<Args>(a_args)...);
-    }
-
-    template <typename... Args>
-    void logTrace(const eLogLevel& level, const std::string& file, const unsigned long noline, Args&&... args) {
-        std::stringstream ss;
-        if ( sLogFormat == eLogFormat::LONG ) {
-            ss << getFormattedTime() << " - DRM-Lib, " << std::left << std::setfill(' ') << std::setw(16) << file;
-            ss << ", " << std::right << std::setfill(' ') << std::setw(4) << noline << ": ";
-        }
-        ss << std::left << std::setfill(' ') << std::setw(7) << cLogLevelString[(int)level] << " - ";
-        ss << "Thread " << std::this_thread::get_id() << " - ";
-
-        std::lock_guard<std::recursive_mutex> lock(mLogMutex);
-        if ( sLogStream != nullptr ) {
-            ssAddToStream(*sLogStream, ss.str(), std::forward<Args>(args)...);
-            *sLogStream << std::endl;
-        }
-    }
-
-    #define Debug2(...) \
-        do { if ( sLogVerbosity >= eLogLevel::DEBUG2 ) \
-            logTrace( eLogLevel::DEBUG2, __SHORT_FILE__, __LINE__, ##__VA_ARGS__ ); } while(0)
-
-    #define Debug(...) \
-        do { if ( sLogVerbosity >= eLogLevel::DEBUG ) \
-            logTrace( eLogLevel::DEBUG, __SHORT_FILE__, __LINE__, ##__VA_ARGS__ ); } while(0)
-
-    #define Info(...) \
-        do { if ( sLogVerbosity >= eLogLevel::INFO ) \
-            logTrace( eLogLevel::INFO, __SHORT_FILE__, __LINE__, ##__VA_ARGS__ ); } while(0)
-
-    #define Warning(...) \
-        do { if ( sLogVerbosity >= eLogLevel::WARNING ) \
-            logTrace( eLogLevel::WARNING, __SHORT_FILE__, __LINE__, ##__VA_ARGS__ ); } while(0)
-
-    #define Error(...) \
-        do { if ( sLogVerbosity >= eLogLevel::ERROR ) \
-            logTrace( eLogLevel::ERROR, __SHORT_FILE__, __LINE__, ##__VA_ARGS__ ); } while(0)
-
-
-    template<typename... Args>
-    static std::string stringConcat( Args&&... a_args ) {
-        std::ostringstream ss;
-        ssAddToStream(ss, std::forward<Args>(a_args)...);
-        return ss.str();
-    }
-
-
-    template <typename... Args>
-    [[noreturn]] void Throw( DRM_ErrorCode errcode, Args&&... args ) {
-        Exception e(errcode, stringConcat(std::forward<Args>( args )...));
-        if ( e.getErrCode() != DRM_Exit )
-            Error(e.what());
-        else
-            Debug(e.what());
-        throw e;
-    }
-
-
-    void initLog();
-    void uninitLog();
+    #define Fatal(...) SPDLOG_CRITICAL( __VA_ARGS__ )
 
 }
 }
-
-
-/*#define Unreachable( msg ) \
-    Throw( DRM_Assert, "Reached an unexpected part of code in ", __SHORT_FILE__, ":", \
-            __LINE__, " (", __func__, ") because ", msg, ": Please contact support." );
-*/
-#define Unreachable( ... ) \
-    Throw( DRM_Assert, "Reached an unexpected part of code in ", __SHORT_FILE__, ":", \
-            __LINE__, " (", __func__, ") because ", ##__VA_ARGS__, ": Please contact support." );
-
 
 #endif // _H_ACCELIZE_DRM_LOG
