@@ -2545,7 +2545,7 @@ def test_directory_creation(accelize_drm, conf_json, cred_json, async_handler):
         # Test error when creating directory
 
         # Create immutable folder
-        check_call(f'sudo chattr +i {log_dir}', shell=True)
+        check_call('sudo chattr +i %s' % log_dir, shell=True)
         try:
             assert not access(log_dir, W_OK)
             log_path = join(log_dir, "tmp", "drmservice-%d.log" % getpid())
@@ -2565,7 +2565,7 @@ def test_directory_creation(accelize_drm, conf_json, cred_json, async_handler):
                     )
             assert "Failed to create log file %s" % log_path in str(excinfo.value)
         finally:
-            check_call(f'sudo chattr -i {log_dir}', shell=True)
+            check_call('sudo chattr -i %s' % log_dir, shell=True)
             assert access(log_dir, W_OK)
             if isfile(log_path):
                 remove(log_path)
