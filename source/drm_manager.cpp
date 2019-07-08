@@ -1125,13 +1125,21 @@ protected:
         Debug( "Detecting DRM frequency for {} ms", mFrequencyDetectionPeriod );
 
         counterStart = getTimerCounterValue();
-        timeStart = TClock::now();
+        // Wait until counter starts decrementing
+        while (1) {
+            if ( getTimerCounterValue() != counterStart ) {
+                counterStart = getTimerCounterValue();
+                timeStart = TClock::now();
+                break;
+            }
+        }
 
         /// Wait a fixed period of time
         sleepOrExit( wait_duration );
 
         counterEnd = getTimerCounterValue();
         timeEnd = TClock::now();
+
         if ( counterEnd == 0 )
             Unreachable( "Frequency auto-detection failed: license timeout counter is 0" ); //LCOV_EXCL_LINE
         if ( counterEnd > counterStart ) {
