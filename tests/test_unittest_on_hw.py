@@ -2527,7 +2527,6 @@ def test_authentication_expiration(accelize_drm, conf_json, cred_json, async_han
     activator.autotest(is_activated=False)
 
 
-@pytest.mark.minimum
 def test_directory_creation(accelize_drm, conf_json, cred_json, async_handler):
     from shutil import rmtree
     from subprocess import check_call

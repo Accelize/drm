@@ -133,7 +133,7 @@ phases:
             -v /dev/shm:/opt/
             accelize/accelizedrm-ci:test-aws_f1-~{OS}~
             bash -c "cd /opt/drmlib_dev &&
-                     TOX_PARALLEL_NO_SPINNER=1 tox --workdir=/tmp
+                     export TOX_PARALLEL_NO_SPINNER=1 && tox --workdir=/tmp
                      -e package-install,c-install,cpp-install
                      -p all -- -m minimum --cred=/opt/cred.json --server=~{SERVER}~"'
 
