@@ -95,7 +95,7 @@ def make_tag(version, path):
     """
     # Clone sources
     os.mkdir(path)
-    _run(['git', 'clone', '-q', '-b', 'v%s' % version, '--depth', '1',
+    _run(['git', 'clone', '-q', '--recursive', '-b', 'v%s' % version, '--depth', '1',
           REPOSITORY_PATH, '%s/src' % path])
 
     # Make
