@@ -588,7 +588,9 @@ def conf_json(pytestconfig, tmpdir):
     """
     log_param = {'log_verbosity': pytestconfig.getoption("library_verbosity")}
     if pytestconfig.getoption("library_format") == 1:
-        log_param['log_format'] = '%Y-%m-%d %H:%M:%S.%e - %=6t - %18s:%-4# [%=8l] %v'
+        log_param['log_format'] = '%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v'
+    else:
+        log_param['log_format'] = '[%^%=8l%$] %-6t, %v'
     json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param)
     json_conf.save()
     return json_conf

@@ -113,14 +113,15 @@ the configuration file:
     {
         "settings": {
             "log_verbosity": 3,
-            "log_format": 0
+            "log_format": "*** [%H:%M:%S %z] [thread %t] %v ***"
         }
     }
 
 * `log_verbosity`: Set the level of verbosity: 0=quiet, 1=error (default), 2=warning,
   3= information, 4=debug.
 
-* `log_format`: Set the format of trace message: 0=short (default), 1=long
+* `log_format`: Set the format of trace message as a string pattern: refer to the `SPDLOG
+  documentation <https://github.com/gabime/spdlog/wiki/3.-Custom-formatting>`_.
 
 
 Other parameters
@@ -132,12 +133,12 @@ To list these parameters use the following code:
 .. code-block:: c++
     :caption: C++
 
-    drm_manager.get( "list_all" );
+    drm_manager.get<std::string>( Accelize::DRMParameterKey::list_all );
 
 .. code-block:: c
     :caption: C
 
-    if ( DrmManager_get_string( "list_all" ) )
+    if ( DrmManager_get_string( Accelize::DRMParameterKey::list_all ) )
         fprintf( stderr, drm_manager.error_message );
 
 .. code-block:: python
