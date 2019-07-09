@@ -40,8 +40,7 @@ def get_default_conf_json(licensing_server_url):
             "frequency_mhz": 125
         },
         "design": {
-            "udid": "6AE1A700-0000-0000-0000-000000000001",
-            "boardType": "DRM_125"
+            "boardType": "Running on AWS"
         },
     }
 

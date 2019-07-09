@@ -335,6 +335,12 @@ For Vivado, GUI or TCL script can be used to synthesize the DRM controller and
 the DRM Activator.
 The DRM IPs are in VHDL but the DRM HDK also contains a Verilog wrapper.
 
+.. important:: The DRM Controller IP shall be able to access a DNA_PORTE2 primitive.
+
+.. note:: To ease the design routage, the DRM Controller IP could be constrained
+             to be close to the DNA_PORTE2 primitive that optimizes the best the
+             placement of your design.
+
 VHDL
 ^^^^
 

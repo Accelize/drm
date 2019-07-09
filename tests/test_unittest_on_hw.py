@@ -1670,13 +1670,16 @@ def test_configuration_file_bad_product_id(accelize_drm, conf_json, cred_json, a
         driver.write_register_callback,
         async_cb.callback
     )
-    drm_manager.get('custom_field')
     drm_manager.set(bad_product_id=1)
-    drm_manager.get('product_info')
+    product_id = drm_manager.get('product_info')
+    pid_string = '{vendor}/{library}/{name}'.format(**product_id)
+    assert pid_string == 'accelize.com/refdesign/BAD_NAME_JUST_FOR_TEST'
     with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
         drm_manager.activate()
     assert 'License Web Service error 400' in str(excinfo.value)
-    assert 'Server has detected an incoherency related to the product object' in str(excinfo.value)
+    assert 'DRM WS request failed' in str(excinfo.value)
+    assert search(r'\\"Unknown Product ID\\" \s*%s for' % pid_string, str(excinfo.value)) is not None
+    assert search(r'Product ID \s*%s from license request is unknown' % pid_string, str(excinfo.value)) is not None
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
     async_cb.assert_NoError()
     print('Test Web Service when an unexisting product ID is provided: PASS')
@@ -1697,7 +1700,9 @@ def test_configuration_file_bad_product_id(accelize_drm, conf_json, cred_json, a
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
         assert 'License Web Service error 400' in str(excinfo.value)
-        assert 'Server has detected an incoherency related to the product object' in str(excinfo.value)
+        assert 'DRM WS request failed' in str(excinfo.value)
+        assert search(r'\\"Unknown Product ID\\" for ', str(excinfo.value)) is not None
+        assert 'Product ID from license request is not set' in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_NoError()
         print('Test Web Service when an empty product ID is provided: PASS')

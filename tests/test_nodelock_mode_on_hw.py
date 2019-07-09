@@ -78,7 +78,9 @@ def test_nodelock_license_is_not_given_to_inactive_user(accelize_drm, conf_json,
         assert not drm_manager.get('license_status')
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
-        assert 'No valid entitlement found for your account' in str(excinfo.value)
+        assert 'License Web Service error 400' in str(excinfo.value)
+        assert '\\"No Entitlement\\" with PT DRM Ref Design 2 Activators for accelize_accelerator_test_01@accelize.com' in str(excinfo.value)
+        assert 'User account has no entitlement. Purchase additional licenses via your portal.' in str(excinfo.value)
         err_code = async_handler.get_error_code(str(excinfo.value))
         assert err_code == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_NoError()

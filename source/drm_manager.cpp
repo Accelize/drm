@@ -644,14 +644,14 @@ protected:
     }
 
     uint64_t getTimerCounterValue() const {
-        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
         uint32_t licenseTimerCounterMsb(0), licenseTimerCounterLsb(0);
-        uint64_t licenseTimerCounter;
+        uint64_t licenseTimerCounter(0);
+        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
         checkDRMCtlrRet( getDrmController().sampleLicenseTimerCounter( licenseTimerCounterMsb,
                 licenseTimerCounterLsb ) );
         licenseTimerCounter = licenseTimerCounterMsb;
         licenseTimerCounter <<= 32;
-        licenseTimerCounter += licenseTimerCounterLsb;
+        licenseTimerCounter |= licenseTimerCounterLsb;
         return licenseTimerCounter;
     }
 
@@ -1119,59 +1119,61 @@ protected:
         TClock::time_point timeStart, timeEnd;
         uint64_t counterStart, counterEnd;
         TClock::duration wait_duration = std::chrono::milliseconds( mFrequencyDetectionPeriod );
+        int max_attempts = 3;
 
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
 
         Debug( "Detecting DRM frequency for {} ms", mFrequencyDetectionPeriod );
 
-        counterStart = getTimerCounterValue();
-        // Wait until counter starts decrementing
-        while (1) {
-            if ( getTimerCounterValue() != counterStart ) {
-                counterStart = getTimerCounterValue();
-                timeStart = TClock::now();
-                break;
+        while ( max_attempts > 0 ) {
+
+            counterStart = getTimerCounterValue();
+            // Wait until counter starts decrementing
+            while (1) {
+                if (getTimerCounterValue() < counterStart) {
+                    counterStart = getTimerCounterValue();
+                    timeStart = TClock::now();
+                    break;
+                }
             }
-        }
 
-        /// Wait a fixed period of time
-        sleepOrExit( wait_duration );
-
-        counterEnd = getTimerCounterValue();
-        timeEnd = TClock::now();
-
-        if ( counterEnd == 0 )
-            Unreachable( "Frequency auto-detection failed: license timeout counter is 0" ); //LCOV_EXCL_LINE
-        if ( counterEnd > counterStart ) {
-            Debug( "License timeout counter has been reset: taking another sample" );
-            counterStart = counterEnd;
-            timeStart = timeEnd;
             /// Wait a fixed period of time
-            sleepOrExit( wait_duration );
-            /// Take new sample of license timeout counter
+            sleepOrExit(wait_duration);
+
             counterEnd = getTimerCounterValue();
             timeEnd = TClock::now();
-            if ( counterEnd > counterStart )
-                Unreachable( "Failed to measure DRM frequency after 2 attempts" ); //LCOV_EXCL_LINE
+
+            if (counterEnd == 0)
+                Unreachable(
+                        "Frequency auto-detection failed: license timeout counter is 0"); //LCOV_EXCL_LINE
+            if (counterEnd > counterStart)
+                Debug("License timeout counter has been reset: taking another sample");
+            else
+                break;
+            max_attempts--;
         }
+        if ( max_attempts == 0 )
+            Unreachable("Failed to estimate DRM frequency after 3 attempts"); //LCOV_EXCL_LINE
+
         Debug( "Start time = {} / Counter start = {}", timeStart.time_since_epoch().count(), counterStart );
         Debug( "End time = {} / Counter end = {}", timeEnd.time_since_epoch().count(), counterEnd );
 
+        // Compute estimated DRM frequency
         TClock::duration timeSpan = timeEnd - timeStart;
         double seconds = double( timeSpan.count() ) * TClock::period::num / TClock::period::den;
         auto ticks = (uint32_t)(counterStart - counterEnd);
-        Debug( "Duration = {} s   /   ticks = {}", seconds, ticks );
-
-        // Estimate DRM frequency
         auto measuredFrequency = (int32_t)(std::ceil((double)ticks / seconds / 1000000));
+        Debug( "Duration = {} s   /   ticks = {}   =>   estimated frequency = {} MHz", seconds, ticks, measuredFrequency );
+
+        // Compuate precision error compared to config file
         double precisionError = 100.0 * abs( measuredFrequency - mFrequencyCurr ) / mFrequencyCurr ; // At that point mFrequencyCurr = mFrequencyInit
         if ( precisionError >= mFrequencyDetectionThreshold ) {
             mFrequencyCurr = measuredFrequency;
             Throw( DRM_BadFrequency,
-                    "Detected DRM frequency ({} MHz) differs from the value ({} MHz) defined in the configuration file '{}' by more than {}%: From now on the considered frequency is {} MHz",
+                    "Estimated DRM frequency ({} MHz) differs from the value ({} MHz) defined in the configuration file '{}' by more than {}%: From now on the considered frequency is {} MHz",
                     mFrequencyCurr, mFrequencyInit, mConfFilePath, mFrequencyDetectionThreshold, mFrequencyCurr);
         } else {
-            Debug( "Detected frequency = {} MHz, config frequency = {} MHz: gap = {}%",
+            Debug( "Estimated DRM frequency = {} MHz, config frequency = {} MHz: gap = {}%",
                     measuredFrequency, mFrequencyInit, precisionError );
         }
     }
