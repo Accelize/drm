@@ -313,7 +313,8 @@ When a session is open, a call to the Accelize Web Service is performed to:
 * get a new license key to unlock the hardware design
 * get a new session ID
 
-When a session is close, a call to the Accelize Web Service is performed to:
+When a session is closed, the metering counter is reset and a call to the Accelize
+Web Service is performed to:
 
 * send the last metering data
 * close the current session
