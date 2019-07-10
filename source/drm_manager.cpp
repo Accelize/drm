@@ -1115,7 +1115,7 @@ protected:
         Info( "Installed node-locked license successfully" );
     }
 
-    void detectDrmFrequency() {
+    int32_t detectDrmFrequency() {
         TClock::time_point timeStart, timeEnd;
         uint64_t counterStart, counterEnd;
         TClock::duration wait_duration = std::chrono::milliseconds( mFrequencyDetectionPeriod );
@@ -1163,18 +1163,31 @@ protected:
         double seconds = double( timeSpan.count() ) * TClock::period::num / TClock::period::den;
         auto ticks = (uint32_t)(counterStart - counterEnd);
         auto measuredFrequency = (int32_t)(std::ceil((double)ticks / seconds / 1000000));
-        Debug( "Duration = {} s   /   ticks = {}   =>   estimated frequency = {} MHz", seconds, ticks, measuredFrequency );
+        Fatal( "Duration = {} s   /   ticks = {}   =>   estimated frequency = {} MHz", seconds, ticks, measuredFrequency );
+
+        return measuredFrequency;
+    }
+
+    void checkDrmFrequency() {
+        std::vector<int32_t> frequency_list;
+
+        frequency_list.push_back( detectDrmFrequency() );
+        frequency_list.push_back( detectDrmFrequency() );
+        frequency_list.push_back( detectDrmFrequency() );
+
+        std::sort( frequency_list.begin(), frequency_list.end());
+        int32_t measuredFrequency = frequency_list[1];
 
         // Compuate precision error compared to config file
         double precisionError = 100.0 * abs( measuredFrequency - mFrequencyCurr ) / mFrequencyCurr ; // At that point mFrequencyCurr = mFrequencyInit
         if ( precisionError >= mFrequencyDetectionThreshold ) {
             mFrequencyCurr = measuredFrequency;
             Throw( DRM_BadFrequency,
-                    "Estimated DRM frequency ({} MHz) differs from the value ({} MHz) defined in the configuration file '{}' by more than {}%: From now on the considered frequency is {} MHz",
-                    mFrequencyCurr, mFrequencyInit, mConfFilePath, mFrequencyDetectionThreshold, mFrequencyCurr);
+                   "Estimated DRM frequency ({} MHz) differs from the value ({} MHz) defined in the configuration file '{}' by more than {}%: From now on the considered frequency is {} MHz",
+                   mFrequencyCurr, mFrequencyInit, mConfFilePath, mFrequencyDetectionThreshold, mFrequencyCurr);
         } else {
             Debug( "Estimated DRM frequency = {} MHz, config frequency = {} MHz: gap = {}%",
-                    measuredFrequency, mFrequencyInit, precisionError );
+                   measuredFrequency, mFrequencyInit, precisionError );
         }
     }
 
@@ -1219,7 +1232,7 @@ protected:
         mThreadKeepAlive = std::async( std::launch::async, [ this ]() {
             try {
                 /// Detecting DRM controller frequency
-                detectDrmFrequency();
+                checkDrmFrequency();
 
                 /// Starting license request loop
                 while( 1 ) {
