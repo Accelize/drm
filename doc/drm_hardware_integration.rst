@@ -660,14 +660,21 @@ Generated warnings
 
 While runing synthesis and implementation you may face the following warnings:
 
-* *WARNING: A LUT 'WRAPPER_INST/[...]' is driving clock pin of 32 registers.
-  This could lead to large hold time violations:*
+* *CRITICAL WARNING: '[...]drm_controller_ip_inst/DRM_DNA_INSTANCE/[...]' of type 'FDCPE'
+  cannot be timed accurately. Hardware behavior may be unpredictable* :
+
   The DRM Controller uses TRNGs for security reasons. The TRNGs are based on ring
-  oscillators (a chain of inverters) driving a LFSR which causes the warning but
-  this is completely expected behavior.
+  oscillators (a chain of inverters) that is driving a LFSR clock but the frequency cannot
+  be evaluated by Vivado which causes the warning.
+  You can safely ignore this message.
 
 
+* *WARNING: A LUT '[...]/drm_controller_ip_inst/DRM_CONTROLLER_INSTANCE/[...]' is driving
+  clock pin of 32 registers. This could lead to large hold time violations* :
 
+  Like the previous message, this warning occurs because of the TRNGs which is based on ring
+  oscillators (a chain of inverters) that is driving a LFSR clock.
+  You can safely ignore this message.
 
 
 Intel Quartus Prime
