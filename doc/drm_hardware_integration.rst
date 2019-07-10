@@ -500,15 +500,18 @@ Signals for Debug
 
 Debug signals are all  synchronized on the ``drm_aclk``.
 
-* LICENSE_FILE_LOADED:
-  * when '1' indicates that the License file is
-    loaded in the DRM Controller
+* LICENSE_FILE_LOADED
 
-* ACTIVATION_CYCLE_DONE:
-  * when '1' indicated that the DRM Controller
-    has completed the first Activation cycle on the DRM Bus
+  A '1' indicates that the License file is loaded in the DRM Controller
 
-* ERROR_CODE: 8 bits error code:
+
+* ACTIVATION_CYCLE_DONE
+
+  '1' indicated that the DRM Controller has completed the first Activation
+  cycle on the DRM Bus
+
+* ERROR_CODE: 8 bits error code
+
   * x"FF" : not ready ; the DRM Controller operations are in progress
   * x"00" : no error ; the DRM Controller operations ran successfully
   * x"0B" : the License file is not conformed ; please ask for a new license
