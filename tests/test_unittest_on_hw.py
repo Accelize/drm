@@ -200,7 +200,10 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
     drmLicType = drm_manager.get('drm_license_type')
     with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
         drm_manager.activate()
-    assert "No valid entitlement found for your account." in str(excinfo.value)
+    assert "License Web Service error 400" in str(excinfo.value)
+    assert "DRM WS request failed" in str(excinfo.value)
+    assert search(r'\\"No Entitlement\\" with .+ for accelize_accelerator_test_01@accelize.com', str(excinfo.value))
+    assert "User account has no entitlement. Purchase additional licenses via your portal" in str(excinfo.value)
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
     async_cb.assert_NoError()
     # Request nodelock license
@@ -220,7 +223,10 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
         assert drm_manager.get('drm_license_type') == drmLicType
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
-        assert "No valid entitlement found for your account." in str(excinfo.value)
+        assert "License Web Service error 400" in str(excinfo.value)
+        assert "DRM WS request failed" in str(excinfo.value)
+        assert search(r'\\"No Entitlement\\" with .+ for accelize_accelerator_test_01@accelize.com', str(excinfo.value))
+        assert "User account has no entitlement. Purchase additional licenses via your portal" in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_NoError()
     finally:
@@ -261,7 +267,10 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
         assert drm_manager.get('drm_license_type') == 'Floating/Metering'
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
-        assert 'No valid Nodelock entitlement found for your account' in str(excinfo.value)
+        assert "License Web Service error 400" in str(excinfo.value)
+        assert "DRM WS request failed" in str(excinfo.value)
+        assert search(r'\\"No Entitlement\\" with .+ for accelize_accelerator_test_02@accelize.com', str(excinfo.value))
+        assert 'No valid NodeLocked entitlement found for your account' in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_NoError()
     finally:
@@ -346,7 +355,10 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
         assert drm_manager.get('drm_license_type') == 'Floating/Metering'
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
-        assert "No valid Nodelock entitlement found for your account." in str(excinfo.value)
+        assert "License Web Service error 400" in str(excinfo.value)
+        assert "DRM WS request failed" in str(excinfo.value)
+        assert search(r'\\"No Entitlement\\" with .+ for accelize_accelerator_test_04@accelize.com', str(excinfo.value))
+        assert 'No valid NodeLocked entitlement found for your account' in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_NoError()
     finally:
@@ -1670,13 +1682,16 @@ def test_configuration_file_bad_product_id(accelize_drm, conf_json, cred_json, a
         driver.write_register_callback,
         async_cb.callback
     )
-    drm_manager.get('custom_field')
     drm_manager.set(bad_product_id=1)
-    drm_manager.get('product_info')
+    product_id = drm_manager.get('product_info')
+    pid_string = '{vendor}/{library}/{name}'.format(**product_id)
+    assert pid_string == 'accelize.com/refdesign/BAD_NAME_JUST_FOR_TEST'
     with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
         drm_manager.activate()
     assert 'License Web Service error 400' in str(excinfo.value)
-    assert 'Server has detected an incoherency related to the product object' in str(excinfo.value)
+    assert 'DRM WS request failed' in str(excinfo.value)
+    assert search(r'\\"Unknown Product ID\\" \s*%s for' % pid_string, str(excinfo.value)) is not None
+    assert search(r'Product ID \s*%s from license request is unknown' % pid_string, str(excinfo.value)) is not None
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
     async_cb.assert_NoError()
     print('Test Web Service when an unexisting product ID is provided: PASS')
@@ -1697,7 +1712,9 @@ def test_configuration_file_bad_product_id(accelize_drm, conf_json, cred_json, a
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
         assert 'License Web Service error 400' in str(excinfo.value)
-        assert 'Server has detected an incoherency related to the product object' in str(excinfo.value)
+        assert 'DRM WS request failed' in str(excinfo.value)
+        assert search(r'\\"Unknown Product ID\\" for ', str(excinfo.value)) is not None
+        assert 'Product ID from license request is not set' in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_NoError()
         print('Test Web Service when an empty product ID is provided: PASS')
@@ -2369,7 +2386,9 @@ def test_retry_function(accelize_drm, conf_json, cred_json, async_handler):
         end = datetime.now()
         assert (end - start).total_seconds() < 1
         assert 'License Web Service error 470' in str(excinfo.value)
-        assert 'You reach the Floating limit' in str(excinfo.value)
+        assert 'DRM WS request failed' in str(excinfo.value)
+        assert search(r'\\"Entitlement Limit Reached\\" with .+ for accelize_accelerator_test_04@accelize.com', str(excinfo.value)) is not None
+        assert 'You have reached the maximum quantity of 1 seat(s) for floating entitlement' in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
     finally:
         drm_manager0.deactivate()

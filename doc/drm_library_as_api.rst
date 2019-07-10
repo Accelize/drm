@@ -91,7 +91,7 @@ FPGA C library driver.
     }
 
     // Define asynchronous error callback
-    void asynch_error( const char* err_msg ) {
+    void asynch_error( const char* err_msg, void* user_p ) {
         fprintf( stderr, "%s", err_msg );
     }
 
@@ -253,7 +253,7 @@ When this function returns, the protected IPs are guaranteed to be locked
 
     // In the C case, the "DrmManager" needs also to be freed to deallocate
     // associated resources.
-    if ( DrmManager_free( drm_manager ) )
+    if ( DrmManager_free( &drm_manager ) )
         fprintf( stderr, "%s", drm_manager->error_message );
 
 .. code-block:: python
@@ -313,7 +313,8 @@ When a session is open, a call to the Accelize Web Service is performed to:
 * get a new license key to unlock the hardware design
 * get a new session ID
 
-When a session is close, a call to the Accelize Web Service is performed to:
+When a session is closed, the metering counter is reset and a call to the Accelize
+Web Service is performed to:
 
 * send the last metering data
 * close the current session

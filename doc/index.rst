@@ -151,6 +151,7 @@ Glossary
 
    drm_getting_started
    drm_licensing_nodelocked
+   drm_troubleshooting
 
 
 .. toctree::

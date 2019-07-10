@@ -138,9 +138,6 @@ public:
     void requestOAuth2token(TClock::time_point deadline);
     Json::Value requestLicense( const Json::Value& json_req, TClock::time_point deadline );
 
-protected:
-    void parse_configuration(const std::string &conf_file_path, Json::Reader &reader, Json::Value &conf_json);
-
 };
 
 }

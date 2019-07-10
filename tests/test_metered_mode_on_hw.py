@@ -322,7 +322,10 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         assert not drm_manager.get('license_status')
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
-        assert 'You reach the licensed , usage_unit  limit: 1000' in str(excinfo.value)
+        assert 'License Web Service error 400' in str(excinfo.value)
+        assert 'DRM WS request failed' in str(excinfo.value)
+        assert search(r'\\"Entitlement Limit Reached\\" with .+ for accelize_accelerator_test_03@accelize.com', str(excinfo.value))
+        assert 'You have reached the maximum quantity of 1000. usage_unit for metered entitlement (licensed)' in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_NoError()
     finally:
@@ -363,7 +366,10 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         activators.autotest(is_activated=False)
         # Verify asynchronous callback has been called
         assert async_cb.was_called
-        assert 'You reach the licensed , usage_unit  limit: 1000' in async_cb.message
+        assert 'License Web Service error 400' in async_cb.message
+        assert 'DRM WS request failed' in async_cb.message
+        assert search(r'\\"Entitlement Limit Reached\\" with .+ for accelize_accelerator_test_03@accelize.com', async_cb.message)
+        assert 'You have reached the maximum quantity of 1000. usage_unit for metered entitlement (licensed)' in async_cb.message
         assert async_cb.errcode == accelize_drm.exceptions.DRMWSReqError.error_code
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')

@@ -109,7 +109,8 @@ signals.
    * - ip_core_arstn
      - in
      - 1
-     - IP Core Asynchronous Reset (active low)
+     - IP Core Asynchronous Reset (active low): asynchronous reset of the activation code
+       and the metering counter
    * - metering_event
      - in
      - 1
@@ -138,9 +139,13 @@ The IP Core uses the 128 bits of the Activation Code output to control FSM trans
 and datapath gates.
 
 The DRM Activator implements an internal 64-bit Metering counter that is used
-to store the activity of the IP Core: it is asynchronously reset upon the IP_CORE_aRSTn
-input and is synchronously reset by the DRM Controller via the DRM Bus.
-Its increment is under the control of the IP Core by asserting the ``metering_event`` input
+to store the activity of the IP Core: it is reset:
+
+* asynchronously upon the ``IP_CORE_aRSTn`` input
+* synchronously upon the ``metering_reset`` input
+* synchronously via the DRM Bus protocl when the session is closed.
+
+It is incremented under the control of the IP Core by asserting the ``metering_event`` input
 for 1 clock cycle. ``metering_event`` is a level-sensitive signal so make sure the signal
 is de-asserted when the event has passed.
 

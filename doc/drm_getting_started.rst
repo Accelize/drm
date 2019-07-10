@@ -143,48 +143,6 @@ Node-locked
   * The design must still run.
 
 
-Troubleshooting
----------------
-
-How to check the read/write register callbacks ?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-If you are facing an issue with the read/write register callbacks you should get
-the following kind of error message:
-
-"Failed to initialize DRM Controller"
-
-You can perform a basic check of the read DRM register callback by reading the
-DRM controller version register:
-
-* Write value 0x0 in register at offset 0x0 : this will load the register Page 0
-  of the DRM Controller containing the version register.
-
-* Read the DRM Controller version register at offset 0x70
-  For instance, the HDK version 3.2.0 is stored in the register like this: 0x30200.
-
-How to check the correct license duration on Metering mode ?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-To be sure that the license duration is in line with the frequency applied in
-your design:
-
-* Launch your FPGA application (Using ``DrmManager.activate`` from the Accelize
-  DRM library).
-
-* Then, disconnect the network. The next license will not be provided to the
-  Hardware.
-
-* Check that the FPGA application is locked after 2 license durations (when the
-  activate function is called 2 licenses are provisioned).
-
-* If the duration is not correct, you should see in the log a message informing
-  the detected frequency differs from value in the configuration file. You should
-  also get a DRM_BadFrequency error code.
-
-If the duration is still not correct, please contact Accelize support: :doc:`contacts`
-
-
 Getting Started Examples
 ------------------------
 
