@@ -153,8 +153,8 @@ protected:
     // Design parameters
     int32_t mFrequencyInit;
     int32_t mFrequencyCurr;
-    uint32_t mFrequencyDetectionPeriod = 100;  // in milliseconds
-    double mFrequencyDetectionThreshold = 2.0;      // Error in percentage
+    uint32_t mFrequencyDetectionPeriod = 200;  // in milliseconds
+    double mFrequencyDetectionThreshold = 2.0; // Error in percentage
 
     // Session state
     std::string mSessionID;
