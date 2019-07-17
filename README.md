@@ -36,6 +36,22 @@ Specifically, the license server delivers a regular stream of time-limited singl
 
 Take a look at our [documentation](http://accelize.s3-website-eu-west-1.amazonaws.com/documentation/stable/#licensing-modes) for more information !
 
+# Accelize Architecture Overview :wrench:
+
+The Accelize DRM solution comprises 3 layers:
+
+* FPGA HDL IPs that must be embedded into the FPGA design. Specifically, exactly one DRM Controller IP, 
+and one or more DRM Activator IPs. The Activators must be embedded within each protected function. 
+These IPs are delivered in the DRM HDK.
+* Host The DRM client, a lightweight service that executes on the host CPU, whose main function is to connect 
+the FPGA DRM IPs with either the DRM Web Service (dynamic licensing) or a local license key file (static licensing). 
+The DRM client is delivered as a DRM Library in C/C++ and Python.
+* Web Service A fully managed DRM Web Service operated by Accelize. The Web service is only used in dynamic 
+licensing and handles user authentication, licensing and metering. Upon special request, 
+the DRM Web Service can deployed on-premise.
+
+More information in our [documentation](http://accelize.s3-website-eu-west-1.amazonaws.com/documentation/stable/#licensing-modes) !
+
 ## Accelize Distribution Platform :computer:
 
 For a quick tour about the Accelize Platform integration steps, please watch [this video](https://youtu.be/7cb_ksLTcRk)
