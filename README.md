@@ -36,7 +36,7 @@ Specifically, the license server delivers a regular stream of time-limited singl
 
 Take a look at our [documentation](http://accelize.s3-website-eu-west-1.amazonaws.com/documentation/stable/#licensing-modes) for more information !
 
-## Accelize Distribution Platform
+## Accelize Distribution Platform :computer:
 
 For a quick tour about the Accelize Platform integration steps, please watch [this video](https://youtu.be/7cb_ksLTcRk)
 
