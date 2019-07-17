@@ -26,6 +26,6 @@ Interested in AccelDRM ? Checkout our [Documentation](http://accelize.s3-website
 
 Please consult [license](LICENSE)
 
-## Changelog
+## Changelog ![Screenshot](images/Changelog_icon.png)
 
 Please consult [CHANGELOG](CHANGELOG)
