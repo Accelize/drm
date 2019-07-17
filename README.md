@@ -17,7 +17,7 @@ Accelize web service and managing metering sessions.
 
 This library provides C/C++/Python API.
 
-For more information see [Documentation](http://accelize.s3-website-eu-west-1.amazonaws.com/documentation/stable).
+Interested in AccelDRM ? Checkout our [Documentation](http://accelize.s3-website-eu-west-1.amazonaws.com/documentation/stable). !
 
 ## License
 
