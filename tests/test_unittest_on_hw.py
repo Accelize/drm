@@ -1520,9 +1520,10 @@ def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_jso
     drm_manager.deactivate()
 
     # Test no error is returned by asynchronous error callback when the frequency
-    # in configuration file differs from the DRM frequency by less than threshold
+    # in configuration file differs from the DRM frequency by less than the threshold
     async_cb.reset()
     conf_json.reset()
+    conf_json['settings']['log_verbosity'] = 1
     conf_json['drm']['frequency_mhz'] = int(floor(frequency * (100.0 + freq_threshold - 1) / 100.0))
     assert abs(conf_json['drm']['frequency_mhz'] - frequency) * 100.0 / frequency < freq_threshold
     conf_json.save()
@@ -1542,9 +1543,10 @@ def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_jso
     print('Test frequency mismatch < threshold: PASS')
 
     # Test a BADFrequency error is returned by asynchronous error callback when the frequency
-    # in configuration file differs from the DRM frequency by more than 2%
+    # in configuration file differs from the DRM frequency by more than the threshold
     async_cb.reset()
     conf_json.reset()
+    conf_json['settings']['log_verbosity'] = 1
     conf_json['drm']['frequency_mhz'] = int(ceil(frequency * (100.0 + freq_threshold + 1) / 100.0))
     assert abs(conf_json['drm']['frequency_mhz'] - frequency) * 100.0 / frequency > freq_threshold
     conf_json.save()
@@ -1571,6 +1573,7 @@ def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_jso
     # Test web service detects a frequency underflow
     async_cb.reset()
     conf_json.reset()
+    conf_json['settings']['log_verbosity'] = 1
     conf_json['drm']['frequency_mhz'] = 40
     conf_json.save()
     assert conf_json['drm']['frequency_mhz'] == 40
@@ -1592,6 +1595,7 @@ def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_jso
     # Test web service detects a frequency overflow
     async_cb.reset()
     conf_json.reset()
+    conf_json['settings']['log_verbosity'] = 1
     conf_json['drm']['frequency_mhz'] = 400
     conf_json.save()
     assert conf_json['drm']['frequency_mhz'] == 400
