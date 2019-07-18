@@ -1123,7 +1123,7 @@ protected:
 
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
 
-        Debug( "Detecting DRM frequency for {} ms", mFrequencyDetectionPeriod );
+        Debug( "Detecting DRM frequency in {} ms", mFrequencyDetectionPeriod );
 
         while ( max_attempts > 0 ) {
 

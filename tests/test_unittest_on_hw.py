@@ -1524,7 +1524,7 @@ def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_jso
     async_cb.reset()
     conf_json.reset()
     conf_json['settings']['log_verbosity'] = 1
-    conf_json['drm']['frequency_mhz'] = int(floor(frequency * (100.0 + freq_threshold - 1) / 100.0))
+    conf_json['drm']['frequency_mhz'] = int(floor(frequency * (100.0 + freq_threshold/2) / 100.0))
     assert abs(conf_json['drm']['frequency_mhz'] - frequency) * 100.0 / frequency < freq_threshold
     conf_json.save()
 
@@ -1547,7 +1547,7 @@ def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_jso
     async_cb.reset()
     conf_json.reset()
     conf_json['settings']['log_verbosity'] = 1
-    conf_json['drm']['frequency_mhz'] = int(ceil(frequency * (100.0 + freq_threshold + 1) / 100.0))
+    conf_json['drm']['frequency_mhz'] = int(ceil(frequency * (100.0 + 2*freq_threshold) / 100.0))
     assert abs(conf_json['drm']['frequency_mhz'] - frequency) * 100.0 / frequency > freq_threshold
     conf_json.save()
 
