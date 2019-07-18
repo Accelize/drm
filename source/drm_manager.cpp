@@ -153,8 +153,8 @@ protected:
     // Design parameters
     int32_t mFrequencyInit;
     int32_t mFrequencyCurr;
-    uint32_t mFrequencyDetectionPeriod = 200;  // in milliseconds
-    double mFrequencyDetectionThreshold = 12.0; // Error in percentage
+    uint32_t mFrequencyDetectionPeriod = 100;  // in milliseconds
+    double mFrequencyDetectionThreshold = 12.0;      // Error in percentage
 
     // Session state
     std::string mSessionID;
@@ -1127,27 +1127,27 @@ protected:
 
         while ( max_attempts > 0 ) {
 
-            counterStart = getTimerCounterValue();
-            // Wait until counter starts decrementing
-            while (1) {
+        counterStart = getTimerCounterValue();
+        // Wait until counter starts decrementing
+        while (1) {
                 if (getTimerCounterValue() < counterStart) {
-                    counterStart = getTimerCounterValue();
-                    timeStart = TClock::now();
-                    break;
-                }
+                counterStart = getTimerCounterValue();
+                timeStart = TClock::now();
+                break;
             }
+        }
 
-            /// Wait a fixed period of time
-            sleepOrExit(wait_duration);
+        /// Wait a fixed period of time
+        sleepOrExit( wait_duration );
 
-            counterEnd = getTimerCounterValue();
-            timeEnd = TClock::now();
+        counterEnd = getTimerCounterValue();
+        timeEnd = TClock::now();
 
-            if (counterEnd == 0)
+        if ( counterEnd == 0 )
                 Unreachable(
                         "Frequency auto-detection failed: license timeout counter is 0"); //LCOV_EXCL_LINE
             if (counterEnd > counterStart)
-                Debug("License timeout counter has been reset: taking another sample");
+            Debug( "License timeout counter has been reset: taking another sample" );
             else
                 break;
             max_attempts--;
@@ -1163,7 +1163,7 @@ protected:
         double seconds = double( timeSpan.count() ) * TClock::period::num / TClock::period::den;
         auto ticks = (uint32_t)(counterStart - counterEnd);
         auto measuredFrequency = (int32_t)(std::ceil((double)ticks / seconds / 1000000));
-        Fatal( "Duration = {} s   /   ticks = {}   =>   estimated frequency = {} MHz", seconds, ticks, measuredFrequency );
+        Debug( "Duration = {} s   /   ticks = {}   =>   estimated frequency = {} MHz", seconds, ticks, measuredFrequency );
 
         return measuredFrequency;
     }
@@ -1184,10 +1184,10 @@ protected:
             mFrequencyCurr = measuredFrequency;
             Throw( DRM_BadFrequency,
                    "Estimated DRM frequency ({} MHz) differs from the value ({} MHz) defined in the configuration file '{}' by more than {}%: From now on the considered frequency is {} MHz",
-                   mFrequencyCurr, mFrequencyInit, mConfFilePath, mFrequencyDetectionThreshold, mFrequencyCurr);
+                    mFrequencyCurr, mFrequencyInit, mConfFilePath, mFrequencyDetectionThreshold, mFrequencyCurr);
         } else {
             Debug( "Estimated DRM frequency = {} MHz, config frequency = {} MHz: gap = {}%",
-                   measuredFrequency, mFrequencyInit, precisionError );
+                    measuredFrequency, mFrequencyInit, precisionError );
         }
     }
 
