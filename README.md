@@ -5,7 +5,7 @@
 * On **Dev** branch: ![Build Status](https://codebuild.eu-west-1.amazonaws.com/badges?uuid=eyJlbmNyeXB0ZWREYXRhIjoiVXRTOGxGaW5hZ1BzVGtoa0pBODhPanFlL3RpbFJPeGo5dHNxN3Uwb1ZuUmZOc1VkejBOeGk2WGVodzZPK2NvdS9WWVZUSlJhZXFMbEgrejN1VDN6TE13PSIsIml2UGFyYW1ldGVyU3BlYyI6IkhtMFRSeW1aRzVWVUpZcVQiLCJtYXRlcmlhbFNldFNlcmlhbCI6MX0%3D&branch=dev)
   [![codecov](https://codecov.io/gh/Accelize/drmlib/branch/dev/graph/badge.svg)](https://codecov.io/gh/Accelize/drmlib)
 
-# Accelize DRM library : AccelDRM :closed_lock_with_key:
+# :closed_lock_with_key: Accelize DRM library : AccelDRM
 
 The Accelize DRM solution protects FPGA applications.
 
@@ -22,7 +22,7 @@ This library provides **API** for :
 
 Interested in AccelDRM ? Checkout our [Documentation](http://accelize.s3-website-eu-west-1.amazonaws.com/documentation/stable)!
 
-# Accelize licensing solution :key:
+# :key: Accelize licensing solution
 
 The Accelize licensing technology is offered in two distinct modes:
 
@@ -36,7 +36,7 @@ Specifically, the license server delivers a regular stream of time-limited singl
 
 Take a look at our [documentation](http://accelize.s3-website-eu-west-1.amazonaws.com/documentation/stable/#licensing-modes) for more information !
 
-# Accelize Architecture Overview :wrench:
+# :wrench: Accelize Architecture Overview
 
 The Accelize DRM solution comprises 3 layers:
 
@@ -52,19 +52,19 @@ the DRM Web Service can deployed on-premise.
 
 More information in our [documentation](http://accelize.s3-website-eu-west-1.amazonaws.com/documentation/stable/#licensing-modes) !
 
-## Accelize Distribution Platform :computer:
+## :computer: Accelize Distribution Platform
 
 For a quick tour about the Accelize Platform integration steps, please watch [this video](https://youtu.be/7cb_ksLTcRk)
 
-## Prerequisites :heavy_exclamation_mark:
+## :heavy_exclamation_mark: Prerequisites
 
 To access the Accelize Web Service you need an Internet connection which allows 
 outbound HTTPS connection to Accelize [server](https://master.metering.accelize.com)
 
-## License :registered:
+## :registered: License
 
 Please consult [license](LICENSE)
 
-## Changelog :floppy_disk:
+## :floppy_disk: Changelog
 
 Please consult [CHANGELOG](CHANGELOG)
