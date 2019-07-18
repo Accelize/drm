@@ -341,6 +341,8 @@ separately from the rest of the design.
 I/Os
 ----
 
+VHDL
+^^^^
 .. code-block:: VHDL
 
    entity drm_controller_bfm_axi4st is
@@ -364,6 +366,8 @@ I/Os
      error_code            : out std_logic_vector(7 downto 0)
    );
 
+Verilog
+^^^^^^^
 .. code-block:: Verilog
 
    module drm_controller_bfm_axi4st
@@ -461,13 +465,18 @@ Start the simulation :
 
 .. code-block:: tcl
 
-   vsim -L drm_library -L drm_testbench_library -L  -t 1ps *
+   vsim -L drm_library -L drm_testbench_library -L  -t 1ps
 
 Run the simulation:
 
 .. code-block:: tcl
 
    run -all
+
+.. important:: Note that the BFM takes approximately 30 us to load the default license file.
+               Make sure your simulation starts after the ``LICENSE_FILE_LOADED`` signal is
+               asserted.
+
 
 Expected Behavior
 -----------------
