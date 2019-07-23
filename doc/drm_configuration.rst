@@ -56,7 +56,7 @@ basic ``conf.json`` file content:
         },
         "drm": {
             "frequency_mhz": 125,
-            "drm_ctrl_base_addr": 0,
+            "drm_ctrl_base_addr": 0
         },
         "design": {
             "boardType": "ISV custom data"
@@ -65,7 +65,7 @@ basic ``conf.json`` file content:
 
 * `frequency_mhz`: Must be set to the effective frequency in MHz of the DRM Controller IP.
 * `drm_ctrl_base_addr`: DRM controller base address. Must be set if the the
-  application is intended to work with the Accelize DRM serviceDefault to `0`.
+  application is intended to work with the Accelize DRM service. Default to `0`.
 * `boardType`: Store any string information that the ISV (IP/App vendor) might want to save
   on his/her portal database.
 
