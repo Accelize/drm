@@ -45,6 +45,7 @@ public:
 // RAII for Curl easy
 class CurlEasyPost {
 private:
+    const ulong cConnectionTimeout = 4000L;  // In milliseconds
     CURL *curl;
     struct curl_slist *headers = nullptr;
     std::list<std::string> data; // keep data until request performed
