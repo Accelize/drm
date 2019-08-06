@@ -10,10 +10,21 @@ def test_systemd(conf_json, cred_json, tmpdir):
 
     from os import environ
     from socket import socket, AF_UNIX, SOCK_DGRAM
+    from signal import SIGINT
+    from subprocess import Popen, PIPE, STDOUT
+    from sys import executable
     from threading import Thread
     from time import sleep, time
+
+    # Move cache and logs in tmpdir
+    var_cache = tmpdir.join('var_cache')
+    environ['ACCELIZE_DRM_CACHE_DIR'] = str(var_cache)
+    environ['ACCELIZE_DRM_LOG_DIR'] = str(tmpdir.join('var_log'))
+
+    # Import service
     import accelize_drm._systemd as systemd
-    from accelize_drm._systemd import AccelizeDrmService
+    from accelize_drm._systemd import (
+        AccelizeDrmService, __file__ as service_file)
 
     # Set FPGA slot
     fpga_slot_id = 1
@@ -71,6 +82,9 @@ def test_systemd(conf_json, cred_json, tmpdir):
             assert kwargs['fpga_slot_id'] == int(fpga_slot_id), \
                 "Driver: Slot ID"
             assert 'drm_ctrl_base_addr' in kwargs, "Driver: Base address"
+
+        def reset_fpga(self):
+            """Do nothing."""
 
         read_register_callback = None
         write_register_callback = None
@@ -158,10 +172,26 @@ def test_systemd(conf_json, cred_json, tmpdir):
         # Test: Broken socket should not break service
         AccelizeDrmService()
 
+        # Test: Only program FPGA with image cache
+        url = 'raw.githubusercontent.com/Accelize/drmlib/master/LICENSE'
+        image_env_var = 'ACCELIZE_DRM_IMAGE_%s' % fpga_slot_id
+        disabled_env_var = 'ACCELIZE_DRM_DISABLED_%s' % fpga_slot_id
+        environ[image_env_var] = 'https://' + url
+        environ[disabled_env_var] = "True"
+
+        try:
+            AccelizeDrmService()
+            assert var_cache.join(url).check(file=1)
+
+            AccelizeDrmService()  # Use cached value
+        finally:
+            del environ[image_env_var]
+            del environ[disabled_env_var]
+
         # Test: Default values
         for key in (conf_env_var, cred_env_var, driver_env_var):
             del environ[key]
-        fpga_slot_id = AccelizeDrmService.DEFAULT_FPGA_SLOT_ID
+        fpga_slot_id = int(AccelizeDrmService.DEFAULT_FPGA_SLOT_ID)
         fpga_driver_name = AccelizeDrmService.DEFAULT_FPGA_DRIVER_NAME
         AccelizeDrmService.DEFAULT_CONF_FILE_PATH = conf_file_path
         AccelizeDrmService.DEFAULT_CRED_FILE_PATH = cred_file_path
@@ -170,6 +200,17 @@ def test_systemd(conf_json, cred_json, tmpdir):
             # Checks some parameters
             assert list(service._fpga_slots) == [fpga_slot_id]
             assert service._fpga_slots[fpga_slot_id] == {}
+
+        # Test: Call as subprocess (Disable un-mockable default slot)
+        environ['ACCELIZE_DRM_DEFAULT_FPGA_SLOT_ID'] = ''
+        try:
+            process = Popen([executable, service_file],
+                            stdout=PIPE, stderr=STDOUT, universal_newlines=True)
+            sleep(1.2)
+            process.send_signal(SIGINT)
+            assert not process.returncode, process.communicate()[0]
+        finally:
+            del environ['ACCELIZE_DRM_DEFAULT_FPGA_SLOT_ID']
 
     except KeyboardInterrupt:
         pytest.fail('Service stopped by "KeyboardInterrupt"')

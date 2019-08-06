@@ -20,6 +20,7 @@ Availability
 This service currently supports the following FPGA environments:
 
 * AWS F1 instances.
+* Xilinx XRT.
 
 If your configuration is not supported, contact `Accelize support <mailto:support@accelize.com>`_
 for mode information.
@@ -45,7 +46,7 @@ The default service configuration is the following:
 * Only FPGA slot `0` is licensed.
 * The configuration file is waited in ``/etc/accelize_drm/conf.json``.
 * The credentials file in is waited in ``~/.accelize_drm/cred.json``
-* The FPGA driver is AWS F1 instance types (`aws_f1`)
+* The FPGA driver is Xilinx XRT (`xilinx_xrt`)
 
 .. note:: If the service is running system-wide, it will search for
           the credential file in the home directory of the ``root`` user.
@@ -62,10 +63,11 @@ file to pass following environment variables to it:
   the FPGA slot corresponding to `Slot_Number`.
 * `ACCELIZE_DRM_DRIVER_<Slot_Number>`: FPGA driver name to use for
   the FPGA slot corresponding to `Slot_Number`.
-  Possible values: `aws_f1` for AWS F1 instances.
+  Possible values: `aws_f1` for AWS F1 instances, `xilinx_xrt` for Xilinx XRT.
 * `ACCELIZE_DRM_IMAGE_<Slot_Number>`: FPGA image to program in the FPGA slot
   corresponding to `Slot_Number`. If not specified, nothing is programmed.
-  Possible Values: AGFI or AFI image ID for AWS F1 instances.
+  Possible Values: AGFI or AFI image ID for AWS F1 instances,
+  path or URL to a *.xclbin* file for Xilinx XRT.
 * `ACCELIZE_DRM_DISABLED_<Slot_Number>`: If specified, do not license the
   specified FPGA slot. This can be used to use the Service to only program the
   FPGA in the case the licensing is managed with the DRM library directly in the
