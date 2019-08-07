@@ -61,7 +61,7 @@ The default service configuration is the following:
 
 .. note:: If the service is running system-wide, it will search for
           the credential file in the home directory of the ``root`` user
-          (``/root/.accelize_drm/cred.jso``).
+          (``/root/.accelize_drm/cred.json``).
 
 Configuration customization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
