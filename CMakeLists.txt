@@ -434,9 +434,8 @@ if (PKG)
     endif ()
 
     # RPM Packages
-    find_program(PACKAGE_MANAGER_YUM yum)
-    find_program(PACKAGE_MANAGER_DNF dnf)
-    if (PACKAGE_MANAGER_YUM OR PACKAGE_MANAGER_DNF)
+    find_program(RPMBUILD rpmbuild)
+    if (RPMBUILD)
         set(CPACK_GENERATOR "RPM")
         set(CPACK_RPM_COMPONENT_INSTALL ON)
 
@@ -494,8 +493,8 @@ if (PKG)
     endif ()
 
     # DEB Packages
-    find_program(PACKAGE_MANAGER_APT apt-get)
-    if (PACKAGE_MANAGER_APT)
+    find_program(DPKGBUILD dpkg-buildpackage)
+    if (DPKGBUILD)
         set(CPACK_PACKAGE_VERSION "${ACCELIZEDRM_VERSION}-${CPACK_PACKAGE_RELEASE}+${DIST_CODENAME}")
         set(CPACK_GENERATOR "DEB")
         set(CPACK_DEB_COMPONENT_INSTALL ON)
