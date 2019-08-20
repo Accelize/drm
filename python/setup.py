@@ -40,7 +40,7 @@ PACKAGE_INFO = dict(
     python_requires='>=3.5',
     setup_requires=['setuptools'],
     packages=['accelize_drm', 'accelize_drm.fpga_drivers'],
-    package_data={'accelize_drm': '*.pxd'},
+    package_data={'accelize_drm': ['*.pxd']},
     zip_safe=False,
     entry_points={'console_scripts': [
         'accelize_drm=accelize_drm._systemd:run_service']})
@@ -78,7 +78,7 @@ if __name__ == '__main__':
                  splitext(dst)[0] + '.pyx')
             src_files.append(dst)
 
-        PACKAGE_INFO['package_data'] = {'accelize_drm': '*'}
+        PACKAGE_INFO['package_data'] = {'accelize_drm': ['*']}
 
         # Debug compiler options
         compile_args = ["-g3", "-O0"]
