@@ -789,6 +789,12 @@ int main(int argc, char **argv) {
 
     INFO("Using DRM Lib API version: %s", DrmManager_getApiVersion());
 
+    /* initialize the fpga_mgmt library */
+    if (fpga_mgmt_init()) {
+        ERROR("Unable to initialize the fpga_mgmt library");
+        return -1;
+    }
+
     /* initialize the fpga_pci library so we could have access to FPGA PCIe from this applications */
     if(fpga_pci_init()) {
         ERROR("Unable to initialize the fpga_pci library");

@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerOperations.cpp
-*  \version   3.2.2.0
-*  \date      May 2019
+*  \version   4.0.0.0
+*  \date      July 2019
 *  \brief     Class DrmControllerOperations is an abstraction level to execute operations.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 **/
 
 #include <cstdlib>
+
 #include <HAL/DrmControllerOperations.hpp>
 
 using namespace DrmControllerLibrary;
@@ -40,8 +41,8 @@ DrmControllerOperations::DrmControllerOperations(tDrmReadRegisterFunction readRe
   waitAutonomousControllerDone();
 
   // Set the operation timeout from environment variable if existing or use default value otherwise.
-  std::string timeout( std::getenv("DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS") );
-  mTimeoutInMicroSeconds = timeout.empty() ? DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS : std::stoul(timeout);
+  const char* timeout = std::getenv("DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS");
+  mTimeoutInMicroSeconds = (timeout == NULL) ? DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS : std::stoul(std::string(timeout));
 }
 
 /** ~DrmController

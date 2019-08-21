@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegisters.hpp
-*  \version   3.2.2.0
-*  \date      May 2019
+*  \version   4.0.0.0
+*  \date      July 2019
 *  \brief     Class DrmControllerRegisters defines low level procedures
 *             for access to all registers.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,6 +32,7 @@
 #include <HAL/DrmControllerRegistersStrategy_v3_2_0.hpp>
 #include <HAL/DrmControllerRegistersStrategy_v3_2_1.hpp>
 #include <HAL/DrmControllerRegistersStrategy_v3_2_2.hpp>
+#include <HAL/DrmControllerRegistersStrategy_v4_0_0.hpp>
 
 /**
 *   \namespace DrmControllerLibrary
@@ -1122,23 +1123,23 @@ namespace DrmControllerLibrary {
       /** readStrategiesDrmVersion
       *   \brief Read the drm version of each strategy.
       *   \param[in] strategies is the dictionary of register strategies.
-      *   \return Returns a dictionary of supported drm version and read drm version.
+      *   \return Returns a list of string containing the supported drm version.
       **/
-      tDrmControllerRegistersVersionDictionary readStrategiesDrmVersion(const tDrmControllerRegistersStrategyDictionary &strategies) const;
+      std::vector<std::string> readStrategiesDrmVersion(const tDrmControllerRegistersStrategyDictionary &strategies) const;
 
       /** filterStrategiesDrmVersion
       *   \brief Filter the strategies drm version dictionary.
       *   \param[in] strategiesVersion is the dictionary of strategies version.
-      *   \return Returns an updated dictionary of supported drm version and read drm version.
+      *   \return Returns a list of string containing the supported drm version.
       **/
-      tDrmControllerRegistersVersionDictionary filterStrategiesDrmVersion(const tDrmControllerRegistersVersionDictionary &strategiesVersion) const;
+      std::vector<std::string> filterStrategiesDrmVersion(const tDrmControllerRegistersVersionDictionary &strategiesVersion) const;
 
       /** parseStrategiesDrmVersion
       *   \brief Parse the drm version of each strategy.
-      *   \param[in] strategiesVersion is the dictionary of strategies version.
+      *   \param[in] filteredVersion is list of string containing the supported drm version.
       *   \return Returns a string of the supported drm version.
       **/
-      std::string parseStrategiesDrmVersion(const tDrmControllerRegistersVersionDictionary &strategiesVersion) const;
+      std::string parseStrategiesDrmVersion(const std::vector<std::string> &filteredVersion) const;
 
       /** checkSupportedDrmVersion
       *   \brief Check the drm version is supported.

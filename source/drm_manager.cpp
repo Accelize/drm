@@ -543,12 +543,11 @@ protected:
 
         if ( drmMajor < HDK_COMPATIBLITY_LIMIT_MAJOR ) {
             Throw( DRM_CtlrError,
-                    "This DRM Lib {} is not compatible with the DRM HDK version {}: To be compatible HDK version shall be > or equal to {}.{}.0",
+                    "This DRM Lib {} is not compatible with the DRM HDK version {}: To be compatible HDK version shall be > or equal to {}.{}.x",
                     DRMLIB_VERSION, drmVersionDot, HDK_COMPATIBLITY_LIMIT_MAJOR, HDK_COMPATIBLITY_LIMIT_MINOR );
-        }
-        if ( drmMinor < HDK_COMPATIBLITY_LIMIT_MINOR ) {
+        } else if ( ( drmMajor == HDK_COMPATIBLITY_LIMIT_MAJOR ) && ( drmMinor < HDK_COMPATIBLITY_LIMIT_MINOR ) ) {
             Throw( DRM_CtlrError,
-                    "This DRM Library version {} is not compatible with the DRM HDK version {}: To be compatible HDK version shall be > or equal to {}.{}.0",
+                    "This DRM Library version {} is not compatible with the DRM HDK version {}: To be compatible HDK version shall be > or equal to {}.{}.x",
                     DRMLIB_VERSION, drmVersionDot, HDK_COMPATIBLITY_LIMIT_MAJOR, HDK_COMPATIBLITY_LIMIT_MINOR );
         }
         Debug( "DRM HDK Version: {}", drmVersionDot );

@@ -146,6 +146,11 @@ public:
         mConfFilePath = string(conf_file);
         mCredFilePath = string(cred_file);
 
+        /* initialize the fpga_mgmt library */
+        if (fpga_mgmt_init()) {
+            throw runtime_error("Unable to initialize the fpga_mgmt library");
+        }
+
         /* initialize the fpga_pci library so we could have access to FPGA PCIe from this applications */
         if (fpga_pci_init()) {
             throw runtime_error("Unable to initialize the fpga_pci library");
