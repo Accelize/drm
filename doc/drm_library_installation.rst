@@ -11,6 +11,7 @@ Accelize supports the following "long time support" OS and provides fully tested
 packages for them:
 
 * RHEL/Centos 7 [#f1]_
+* RHEL/Centos 8
 * Debian 9 Stretch
 * Debian 10 Buster
 * Ubuntu 16.04 LTS Xenial
@@ -88,7 +89,7 @@ To install the Accelize repository, run the following commands:
     sudo yum-config-manager --add-repo https://accelize.s3.amazonaws.com/rpm/accelize_stable.repo
 
 .. code-block:: bash
-    :caption: On Fedora
+    :caption: On Fedora, RHEL 8, CentOS 8
 
     # Ensure config manager is installed
     sudo dnf install -y 'dnf-command(config-manager)'
@@ -128,7 +129,7 @@ Depending on your OS, use the following command to install the Python package:
     sudo yum install -y python36-accelize-drm
 
 .. code-block:: bash
-    :caption: On Fedora
+    :caption: On Fedora, RHEL 8, CentOS 8
 
     sudo dnf install -y python3-accelize-drm
 
@@ -156,7 +157,7 @@ Run the following command:
     sudo yum install -y libaccelize-drm
 
 .. code-block:: bash
-    :caption: On Fedora
+    :caption: On Fedora, RHEL 8, CentOS 8
 
     sudo dnf install -y libaccelize-drm
 
@@ -180,7 +181,7 @@ Run the following command:
     sudo yum install -y libaccelize-drm-devel
 
 .. code-block:: bash
-    :caption: On Fedora
+    :caption: On Fedora, RHEL 8, CentOS 8
 
     sudo dnf install -y libaccelize-drm-devel
 
@@ -256,7 +257,7 @@ Run following commands to install all requirements:
     pip3 install --user -U setuptools wheel cython
 
 .. code-block:: bash
-    :caption: On Fedora
+    :caption: On Fedora, RHEL 8, CentOS 8
 
     # Minimal requirements
     sudo dnf install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel cmake
@@ -307,7 +308,7 @@ Run following commands to install requirements:
     sudo yum install -y rpm-build
 
 .. code-block:: bash
-    :caption: On Fedora
+    :caption: On Fedora, RHEL 8, CentOS 8
 
     sudo dnf install -y rpm-build
 
@@ -319,4 +320,3 @@ install commands but replace "`sudo make install`" by:
     make package
 
 Packages will be generated in the `drmlib/build/packages` directory.
-

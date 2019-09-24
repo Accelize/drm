@@ -1,4 +1,4 @@
-FROM ubuntu:cosmic
+FROM ubuntu:disco
 
 RUN apt-get update && \
 apt-get install -y --no-install-recommends \

@@ -1,4 +1,4 @@
-FROM ubuntu:cosmic
+FROM ubuntu:disco
 
 SHELL ["/bin/bash", "-c"]
 

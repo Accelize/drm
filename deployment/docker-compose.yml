@@ -48,6 +48,16 @@ services:
       << : *build-environment
       PACKAGES_DIR: /opt/packages/centos_7
 
+  build-centos_8:
+    << : *build-service
+    image: accelize/accelizedrm-ci:build-centos_8
+    build:
+      context: context
+      dockerfile: build-centos_8.Dockerfile
+    environment:
+      << : *build-environment
+      PACKAGES_DIR: /opt/packages/centos_8
+
   build-ubuntu_bionic:
     << : *build-service
     image: accelize/accelizedrm-ci:build-ubuntu_bionic

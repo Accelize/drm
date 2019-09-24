@@ -1,4 +1,4 @@
-FROM fedora:31
+FROM centos:8
 
 RUN dnf install -y --setopt=install_weak_deps=False --best \
     doxygen \

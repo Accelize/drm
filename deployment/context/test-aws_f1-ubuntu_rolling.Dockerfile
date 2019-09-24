@@ -1,4 +1,4 @@
-FROM ubuntu:disco
+FROM ubuntu:eoan
 
 SHELL ["/bin/bash", "-c"]
 

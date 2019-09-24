@@ -73,7 +73,7 @@ Run following commands to install requirements:
     sudo pip3 install -U --prefix /usr cmake
 
 .. code-block:: bash
-    :caption: On Fedora
+    :caption: On Fedora, RHEL 8, CentOS 8
 
     sudo dnf install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel cmake
 
@@ -117,7 +117,7 @@ Run following command to install requirements:
     sudo pip3 install -U --prefix /usr  setuptools wheel cython
 
 .. code-block:: bash
-    :caption: On Fedora
+    :caption: On Fedora, RHEL 8, CentOS 8
 
     sudo dnf install -y python3-devel python3-pip
     sudo pip3 install -U setuptools wheel cython
@@ -155,7 +155,7 @@ Run following command to install requirements:
     sudo pip3 install -U --prefix /usr sphinx breathe sphinx_rtd_theme
 
 .. code-block:: bash
-    :caption: On Fedora
+    :caption: On Fedora, RHEL 8, CentOS 8
 
     sudo dnf install -y doxygen
     sudo pip3 install -U sphinx breathe sphinx_rtd_theme
@@ -215,9 +215,9 @@ To install the required utilities, run the following command:
     sudo yum install -y rpm-build rpm-sign gnupg
 
 .. code-block:: bash
-    :caption: On Fedora
+    :caption: On Fedora, RHEL 8, CentOS 8
 
-    sudo dnf install -y rpm-build rpm-sign gnupg2
+    sudo dnf install -y rpm-build rpm-sign gnupg
 
 DEB Packages (For Debian, Ubuntu)
 '''''''''''''''''''''''''''''''''
@@ -279,7 +279,7 @@ To install requirements run the following command:
     sudo yum install -y abi-compliance-checker
 
 .. code-block:: bash
-    :caption: On Fedora
+    :caption: On Fedora, RHEL 8, CentOS 8
 
     sudo dnf install -y abi-compliance-checker
 
@@ -315,7 +315,7 @@ Run following command to install requirements:
     sudo pip3 install -U --prefix /usr pytest-cov
 
 .. code-block:: bash
-    :caption: On Fedora
+    :caption: On Fedora, RHEL 8, CentOS 8
 
     sudo dnf install -y lcov
     sudo pip3 install -U pytest-cov
