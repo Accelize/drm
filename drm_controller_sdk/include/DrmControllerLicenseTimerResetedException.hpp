@@ -1,6 +1,6 @@
 /**
 *  \file      DrmControllerLicenseTimerResetedException.hpp
-*  \version   4.0.0.0
+*  \version   4.0.0.1
 *  \date      July 2019
 *  \brief     Class DrmControllerLicenseTimerResetedException defines procedures
 *             for time out exceptions reporting, inherihts from std::exception.

@@ -1,6 +1,6 @@
 /**
 *  \file      DrmControllerRegistersStrategyInterface.hpp
-*  \version   4.0.0.0
+*  \version   4.0.0.1
 *  \date      July 2019
 *  \brief     Class DrmControllerRegistersStrategyInterface defines strategy interface for register access.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");

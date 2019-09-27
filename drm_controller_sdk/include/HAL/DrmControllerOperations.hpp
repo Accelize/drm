@@ -1,6 +1,6 @@
 /**
 *  \file      DrmControllerOperations.hpp
-*  \version   4.0.0.0
+*  \version   4.0.0.1
 *  \date      July 2019
 *  \brief     Class DrmControllerOperations is an abstraction level to execute operations.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,7 @@
 #ifndef __DRM_CONTROLLER_OPERATIONS_HPP__
 #define __DRM_CONTROLLER_OPERATIONS_HPP__
 
+#include <cstdlib>
 #include <HAL/DrmControllerRegisters.hpp>
 
 /**
@@ -494,11 +495,11 @@ namespace DrmControllerLibrary {
       const unsigned char mDrmErrorNoError;  /**<!Error code value.*/
       const unsigned char mDrmErrorNotReady; /**<!Error code value.*/
 
-      bool mHeartBeatModeEnabled; /**<Tell whether the heart beat mode is enabled on hardware**/
+      bool mHeartBeatModeEnabled; /**<Tell wether the heart beat mode is enabled on hardware**/
       // we suppose the heart beat mode to be disabled by default
       // it will be set if it is not the case during the wait auto controller function
       
-      bool mLicenseTimerWasLoaded; /**<Tell whether the license timer was loaded at least one time.**/
+      bool mLicenseTimerWasLoaded; /**<Tell wether the license timer was loaded at least one time.**/
 
       unsigned int mTimeoutInMicroSeconds; /**<Store the timeout in microseconds to complete internal operation.**/
 

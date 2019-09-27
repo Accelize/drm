@@ -1,6 +1,6 @@
 /**
 *  \file      DrmControllerFunctionalityDisabledException.hpp
-*  \version   4.0.0.0
+*  \version   4.0.0.1
 *  \date      July 2019
 *  \brief     Class DrmControllerFunctionalityDisabledException defines procedures
 *             for functionality disabled exceptions reporting, inherihts from std::exception.
