@@ -315,7 +315,7 @@ protected IP cores.
 * Instantiate the DRM controller in the top level design
 * Connect the DRM controller AXI4 lite interface with the AXI4 lite interface of the
   top level design
-* **Make sure you use a correct offset address to access the DRM controller**
+* **Make sure you use the correct offset address to access the DRM controller**
 * Connect each DRM bus interface of the DRM controller to a DRM bus interface of a
   protected IP core.
 

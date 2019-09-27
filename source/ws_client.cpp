@@ -40,6 +40,22 @@ CurlEasyPost::~CurlEasyPost() {
     curl_easy_cleanup( curl );
 }
 
+void CurlEasyPost::setResolves( const Json::Value& resolves ) {
+    if ( resolves != Json::nullValue ) {
+        struct curl_slist *host = nullptr;
+        for( Json::ValueConstIterator it = resolves.begin(); it != resolves.end(); it++ ) {
+            std::string key = it.key().asString();
+            std::string val = (*it).asString();
+            std::string host_str = fmt::format( "{}:{}", key, val );
+            host = curl_slist_append( host, host_str.c_str() );
+        }
+        if ( curl_easy_setopt(curl, CURLOPT_RESOLVE, host) == CURLE_UNKNOWN_OPTION )
+            Warning( "Could not set the CURL resolves: {}", resolves.toStyledString() );
+        else
+            Debug( "Set the following CURL resolves: {}", resolves.toStyledString() );
+    }
+}
+
 long CurlEasyPost::perform( std::string* resp, std::chrono::steady_clock::time_point deadline ) {
     CURLcode res;
     long resp_code;
@@ -106,6 +122,9 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
         mMeteringUrl = url + std::string("/auth/metering/genlicense/");
         Debug( "Licensing URL: {}", url );
 
+        mCurlResolves = JVgetOptional( webservice_json, "curl_resolves", Json::objectValue );
+        Debug2( "Curl resolves: {}", mCurlResolves.toStyledString() );
+
     } catch( Exception &e ) {
         Throw( e.getErrCode(), "Error with service configuration file '{}': {}",
                 conf_file_path, e.what() );
@@ -124,6 +143,7 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
     CurlSingleton::Init();
 
     // Set headers of OAuth2 request
+    mOAUth2Request.setResolves( mCurlResolves );
     mOAUth2Request.setURL( mOAuth2Url );
     std::stringstream ss;
     ss << "client_id=" << mClientId << "&client_secret=" << mClientSecret;
@@ -199,6 +219,7 @@ Json::Value DrmWSClient::requestLicense( const Json::Value& json_req, TClock::ti
 
     // Create new request
     CurlEasyPost req;
+    req.setResolves( mCurlResolves );
     req.setURL( mMeteringUrl );
     req.appendHeader( "Accept: application/json" );
     req.appendHeader( "Content-Type: application/json" );
