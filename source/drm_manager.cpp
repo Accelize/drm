@@ -346,7 +346,8 @@ protected:
         sLogger->sinks().push_back( log_sink );
         if ( level < sLogger->level() )
             sLogger->set_level( level );
-        Debug( "Created log file '{}' of type {}, with verbosity {}", file_path, (int)type, (int)level );
+        if ( type != eLogFileType::NONE )
+            Debug( "Created log file '{}' of type {}, with verbosity {}", file_path, (int)type, (int)level );
     }
 
     void updateLog() {
