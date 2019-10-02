@@ -10,12 +10,12 @@ Supported OS
 Accelize supports the following "long time support" OS and provides fully tested
 packages for them:
 
-* RHEL/Centos 7 [#f1]_
 * RHEL/Centos 8
-* Debian 9 Stretch
-* Debian 10 Buster
-* Ubuntu 16.04 LTS Xenial
+* RHEL/Centos 7 [#f1]_
 * Ubuntu 18.04 LTS Bionic
+* Ubuntu 16.04 LTS Xenial
+* Debian 10 Buster
+* Debian 9 Stretch
 
 Following OS have been tested but are not supported by Accelize:
 
@@ -80,6 +80,15 @@ RHEL, CentOS, Fedora: RPM repository
 To install the Accelize repository, run the following commands:
 
 .. code-block:: bash
+    :caption: On Fedora, RHEL 8, CentOS 8
+
+    # Ensure config manager is installed
+    sudo dnf install -y 'dnf-command(config-manager)'
+
+    # Install repository
+    sudo dnf config-manager --add-repo https://accelize.s3.amazonaws.com/rpm/accelize_stable.repo
+
+.. code-block:: bash
     :caption: On RHEL 7, CentOS 7
 
     # Ensure that config manager is installed
@@ -88,14 +97,6 @@ To install the Accelize repository, run the following commands:
      # Install Accelize repository:
     sudo yum-config-manager --add-repo https://accelize.s3.amazonaws.com/rpm/accelize_stable.repo
 
-.. code-block:: bash
-    :caption: On Fedora, RHEL 8, CentOS 8
-
-    # Ensure config manager is installed
-    sudo dnf install -y 'dnf-command(config-manager)'
-
-    # Install repository
-    sudo dnf config-manager --add-repo https://accelize.s3.amazonaws.com/rpm/accelize_stable.repo
 
 Python Library and systemd service package
 ``````````````````````````````````````````
@@ -286,17 +287,20 @@ Run following commands to install all requirements:
     sudo dnf install -y epel-release
 
     # Minimal requirements
-    sudo dnf install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel cmake
+    sudo dnf install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel python3-pip
+    pip3 install --user -U cmake
 
     # Python library requirements
-    sudo dnf install -y python3-devel python3-pip
+    sudo dnf install -y python3-devel
     pip3 install --user -U setuptools wheel cython
 
 .. code-block:: bash
     :caption: On RHEL 7, CentOS 7
 
-    # Minimal requirements
+    # Ensure EPEL repository is installed
     sudo yum install -y epel-release
+
+    # Minimal requirements
     sudo yum install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel python36-pip
     pip3 install --user -U cmake
 
@@ -351,14 +355,14 @@ Run following commands to install requirements:
     sudo apt install -y pkg-config dpkg-dev file
 
 .. code-block:: bash
-    :caption: On RHEL 7, CentOS 7
-
-    sudo yum install -y rpm-build
-
-.. code-block:: bash
     :caption: On Fedora, RHEL 8, CentOS 8
 
     sudo dnf install -y rpm-build
+
+.. code-block:: bash
+    :caption: On RHEL 7, CentOS 7
+
+    sudo yum install -y rpm-build
 
 Once dependencies are installed, simply run the previous section build and
 install commands but replace "`sudo make install`" by:
