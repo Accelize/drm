@@ -58,9 +58,18 @@ Run following commands to install requirements:
     sudo pip3 install -U cmake
 
 .. code-block:: bash
+    :caption: On RHEL 8, CentOS 8
+
+    # Ensure EPEL repository is installed
+    sudo dnf install -y epel-release
+
+    # Install packages
+    sudo dnf install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel cmake
+
+.. code-block:: bash
     :caption: On RHEL 7, CentOS 7
 
-    # Install EPEL repository to get jsoncpp-devel
+    # Ensure EPEL repository is installed
     sudo yum install -y epel-release
 
     # Install packages
@@ -73,7 +82,7 @@ Run following commands to install requirements:
     sudo pip3 install -U --prefix /usr cmake
 
 .. code-block:: bash
-    :caption: On Fedora, RHEL 8, CentOS 8
+    :caption: On Fedora
 
     sudo dnf install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel cmake
 
@@ -149,13 +158,19 @@ Run following command to install requirements:
     sudo pip3 install -U sphinx breathe sphinx_rtd_theme
 
 .. code-block:: bash
+    :caption: On RHEL 8, CentOS 8
+
+    sudo dnf install -y --enablerepo=PowerTools doxygen
+    sudo pip3 install -U sphinx breathe sphinx_rtd_theme
+
+.. code-block:: bash
     :caption: On RHEL 7, CentOS 7
 
     sudo yum install -y doxygen
     sudo pip3 install -U --prefix /usr sphinx breathe sphinx_rtd_theme
 
 .. code-block:: bash
-    :caption: On Fedora, RHEL 8, CentOS 8
+    :caption: On Fedora
 
     sudo dnf install -y doxygen
     sudo pip3 install -U sphinx breathe sphinx_rtd_theme

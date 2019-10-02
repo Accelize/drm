@@ -120,16 +120,25 @@ Depending on your OS, use the following command to install the Python package:
     sudo apt install -y python3-accelize-drm
 
 .. code-block:: bash
+    :caption: On RHEL 8, CentOS 8
+
+    # Ensure EPEL repository is installed
+    sudo dnf install -y epel-release
+
+    # Install package
+    sudo dnf install -y python3-accelize-drm
+
+.. code-block:: bash
     :caption: On RHEL 7, CentOS 7
 
-    # Ensure EPEL repository is installed (Allow to setup Python 3.6 dependency)
+    # Ensure EPEL repository is installed
     sudo yum install -y epel-release
 
     # Install package
     sudo yum install -y python36-accelize-drm
 
 .. code-block:: bash
-    :caption: On Fedora, RHEL 8, CentOS 8
+    :caption: On Fedora
 
     sudo dnf install -y python3-accelize-drm
 
@@ -152,12 +161,25 @@ Run the following command:
     sudo apt install -y libaccelize-drm
 
 .. code-block:: bash
+    :caption: On RHEL 8, CentOS 8
+
+    # Ensure EPEL repository is installed
+    sudo dnf install -y epel-release
+
+    # Install package
+    sudo dnf install -y libaccelize-drm
+
+.. code-block:: bash
     :caption: On RHEL 7, CentOS 7
 
+    # Ensure EPEL repository is installed
+    sudo yum install -y epel-release
+
+    # Install package
     sudo yum install -y libaccelize-drm
 
 .. code-block:: bash
-    :caption: On Fedora, RHEL 8, CentOS 8
+    :caption: On Fedora
 
     sudo dnf install -y libaccelize-drm
 
@@ -176,12 +198,25 @@ Run the following command:
     sudo apt install -y libaccelize-drm-dev
 
 .. code-block:: bash
+    :caption: On RHEL 8, CentOS 8
+
+    # Ensure EPEL repository is installed
+    sudo dnf install -y epel-release
+
+    # Install package
+    sudo dnf install -y libaccelize-drm-devel
+
+.. code-block:: bash
     :caption: On RHEL 7, CentOS 7
 
+    # Ensure EPEL repository is installed
+    sudo yum install -y epel-release
+
+    # Install package
     sudo yum install -y libaccelize-drm-devel
 
 .. code-block:: bash
-    :caption: On Fedora, RHEL 8, CentOS 8
+    :caption: On Fedora
 
     sudo dnf install -y libaccelize-drm-devel
 
@@ -245,6 +280,19 @@ Run following commands to install all requirements:
     pip3 install --user -U cmake setuptools wheel cython
 
 .. code-block:: bash
+    :caption: On RHEL 8, CentOS 8
+
+    # Ensure EPEL repository is installed
+    sudo dnf install -y epel-release
+
+    # Minimal requirements
+    sudo dnf install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel cmake
+
+    # Python library requirements
+    sudo dnf install -y python3-devel python3-pip
+    pip3 install --user -U setuptools wheel cython
+
+.. code-block:: bash
     :caption: On RHEL 7, CentOS 7
 
     # Minimal requirements
@@ -257,7 +305,7 @@ Run following commands to install all requirements:
     pip3 install --user -U setuptools wheel cython
 
 .. code-block:: bash
-    :caption: On Fedora, RHEL 8, CentOS 8
+    :caption: On Fedora
 
     # Minimal requirements
     sudo dnf install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel cmake

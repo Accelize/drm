@@ -13,11 +13,11 @@ yum install -y \
     python36-devel \
     rpm-build \
     rpm-sign && \
-python3 -m pip install -U --prefix='/usr' --no-cache-dir \
+python3 -m pip install -U --prefix='/usr' --no-cache-dir --disable-pip-version-check \
     pip \
     setuptools \
     wheel && \
-pip3 install -U --prefix='/usr' --no-cache-dir \
+pip3 install -U --prefix='/usr' --no-cache-dir --disable-pip-version-check \
     breathe \
     cmake \
     cython \

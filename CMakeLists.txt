@@ -469,7 +469,10 @@ if (PKG)
                 set (PYTHON3_PACKAGE "${CMAKE_MATCH_1}")
             endif ()
 
-            if (PYTHON3_PACKAGE MATCHES "is not owned by any package" OR NOT PYTHON3_PACKAGE)
+            if (VERSION_ID MATCHES "8")
+                # RHEL/CentOS 8 package is named "python36", but python libraries packages are named using "python3-"
+                set(PYTHON3_PACKAGE "python3")
+            elseif(PYTHON3_PACKAGE MATCHES "is not owned by any package" OR NOT PYTHON3_PACKAGE)
                 # Python3 is not from a Package, define package name
                 set(PYTHON3_PACKAGE "python${Python3_VERSION_MAJOR}${Python3_VERSION_MINOR}")
             else()
