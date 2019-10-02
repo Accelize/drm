@@ -158,7 +158,6 @@ class FpgaDriverBase:
         else:
             self._fpga_image = fpga_image
 
-        self.reset_fpga()
         with self._augment_exception('program'):
             return self._program_fpga(fpga_image)
 

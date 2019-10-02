@@ -21,6 +21,8 @@ the DRM library (See :doc:`drm_library_as_api`).
 * The application must never program the bitstream.
 * The application must never reset the bitstream.
 
+Typically an OpenCL application is not compatible with this service.
+
 .. note:: The service can still be used to program the FPGA on system start by
           disabling the licensing. See configuration bellow.
 

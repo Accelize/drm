@@ -346,7 +346,8 @@ protected:
         sLogger->sinks().push_back( log_sink );
         if ( level < sLogger->level() )
             sLogger->set_level( level );
-        Debug( "Created log file '{}' of type {}, with verbosity {}", file_path, (int)type, (int)level );
+        if ( type != eLogFileType::NONE )
+            Debug( "Created log file '{}' of type {}, with verbosity {}", file_path, (int)type, (int)level );
     }
 
     void updateLog() {
@@ -1082,12 +1083,19 @@ protected:
 
         Debug ( "Looking for local node-locked license file: {}", mNodeLockLicenseFilePath );
 
-        try {
-            // Try to load a local license file
-            license_json = parseJsonFile( mNodeLockLicenseFilePath );
-            Debug( "Parsed Node-locked License file: {}", license_json .toStyledString() );
-
-        } catch( const Exception& e ) {
+        // Check if license file exists
+        if ( isFile( mNodeLockLicenseFilePath ) ) {
+            try {
+                // Try to load the local license file
+                license_json = parseJsonFile( mNodeLockLicenseFilePath );
+                Debug( "Parsed Node-locked License file: {}", license_json .toStyledString() );
+            } catch( const Exception& e ) {
+                Throw( e.getErrCode(), "Invalid local license file {} because {}. "
+                     "If this machine is connected to the License server network, rename the file and retry. "
+                     "Otherwise request a new Node-Locked license from your supplier.",
+                     mNodeLockLicenseFilePath, e.what() );
+            }
+        } else {
             /// No license has been found locally, request one to License WS:
             /// - Clear Session IS
             Debug( "Clearing session ID: {}", mSessionID );

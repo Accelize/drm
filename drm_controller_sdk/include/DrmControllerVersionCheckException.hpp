@@ -1,6 +1,6 @@
 /**
 *  \file      DrmControllerVersionCheckException.hpp
-*  \version   4.0.0.0
+*  \version   4.0.0.1
 *  \date      July 2019
 *  \brief     Class DrmControllerVersionCheckException defines procedures
 *             for version check exceptions reporting, inherihts from std::exception.
