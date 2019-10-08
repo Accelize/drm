@@ -18,6 +18,8 @@ _LICENSING_SERVERS = dict(
     dev='https://master.devmetering.accelize.com',
     prod='https://master.metering.accelize.com')
 
+INC_EVENT_REG_OFFSET = 0x08
+
 
 def get_default_conf_json(licensing_server_url):
     """
@@ -182,10 +184,10 @@ class SingleActivator:
                     val = self.driver.read_register(self.base_address + addr)
                     self.driver.write_register(self.base_address + addr, ~val)
                     assert self.driver.read_register(self.base_address + addr) == val
-            # Test address overflow
-            assert self.driver.read_register(self.base_address + 0x14) == 0xBADC0DE0
             # Test reading of the generate event register
-            assert self.driver.read_register(self.base_address+0x10) == 0x600DC0DE
+            assert self.driver.read_register(self.base_address + INC_EVENT_REG_OFFSET) == 0x600DC0DE
+            # Test address overflow
+            assert self.driver.read_register(self.base_address + INC_EVENT_REG_OFFSET + 0x4) == 0xDEADDEAD
 
     def get_status(self):
         """
@@ -194,7 +196,7 @@ class SingleActivator:
         Returns:
             int: Status.
         """
-        return self.driver.read_register(self.base_address) == 7
+        return self.driver.read_register(self.base_address) == 3
 
     def generate_coin(self, coins):
         """
@@ -204,7 +206,7 @@ class SingleActivator:
             coins (int): Number of coins to generate.
         """
         for _ in range(coins):
-            self.driver.write_register(self.base_address+0x10, 1)
+            self.driver.write_register(self.base_address+INC_EVENT_REG_OFFSET, 0)
         if self.get_status():
             self.metering_data += coins
 
@@ -403,12 +405,17 @@ def accelize_drm(pytestconfig):
     print('FPGA SLOT ID:', fpga_slot_id)
     print('FPGA IMAGE:', fpga_image)
     print('HDK VERSION:', hdk_version)
-    fpga_driver = [
-        fpga_driver_cls(
-            fpga_slot_id=slot_id,
-            fpga_image=fpga_image,
-            drm_ctrl_base_addr=pytestconfig.getoption("drm_controller_base_address")
-        ) for slot_id in fpga_slot_id ]
+    fpga_driver = list()
+    for slot_id in fpga_slot_id:
+        try:
+            fpga_driver.append(
+                fpga_driver_cls( fpga_slot_id=slot_id,
+                    fpga_image=fpga_image,
+                    drm_ctrl_base_addr=pytestconfig.getoption("drm_controller_base_address")
+                )
+            )
+        except:
+            raise IOError("Failed to load driver on slot %d" % slot_id)
 
     # Define Activator access
     fpga_activators = list()
@@ -416,7 +423,7 @@ def accelize_drm(pytestconfig):
     for driver in fpga_driver:
         base_addr_list = []
         while True:
-            val = driver.read_register(base_address+0x10)
+            val = driver.read_register(base_address + INC_EVENT_REG_OFFSET)
             if val != 0x600DC0DE:
                 break
             base_addr_list.append(base_address)
