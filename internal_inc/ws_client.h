@@ -76,7 +76,7 @@ public:
     CurlEasyPost();
     ~CurlEasyPost();
 
-    void setResolves( const Json::Value& resolves );
+    void setHostResolves(const Json::Value& resolves );
 
     long perform(std::string* resp, std::chrono::steady_clock::time_point deadline);
     double getTotalTime();
@@ -123,7 +123,7 @@ protected:
     std::string mOAuth2Url;
     std::string mMeteringUrl;
     std::string mOAuth2Token;
-    Json::Value mCurlResolves;
+    Json::Value mHostResolves;
     uint32_t mTokenValidityPeriod;
     TClock::time_point mTokenExpirationTime;
     CurlEasyPost mOAUth2Request;

@@ -1185,7 +1185,7 @@ protected:
         std::sort( frequency_list.begin(), frequency_list.end());
         int32_t measuredFrequency = frequency_list[1];
 
-        // Compuate precision error compared to config file
+        // Compute precision error compared to config file
         double precisionError = 100.0 * abs( measuredFrequency - mFrequencyCurr ) / mFrequencyCurr ; // At that point mFrequencyCurr = mFrequencyInit
         if ( precisionError >= mFrequencyDetectionThreshold ) {
             mFrequencyCurr = measuredFrequency;
