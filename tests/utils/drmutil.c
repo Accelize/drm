@@ -50,7 +50,7 @@
 #define DRM_NB_PAGES    6
 #define MAX_BATCH_CMD   32
 
-#define DRM_STATUS_REG_OFFSET
+#define INC_EVENT_REG_OFFSET 0x8
 
 #define PCI_VENDOR_ID   0x1D0F /* Amazon PCI Vendor ID */
 #define PCI_DEVICE_ID   0xF000 /* PCI Device ID preassigned by Amazon for F1 applications */
@@ -233,12 +233,11 @@ void print_drm_error( const char* errmsg, void* user_p ){
 
 /** Thread functions that push and pull random data to/from FPGA streams **/
 int generate_coin(pci_bar_handle_t* pci_bar_handle, uint32_t ip_index, uint32_t coins) {
-    uint32_t value;
     uint32_t c;
 
     for(c=0; c < coins; c++) {
-        if (read_drm_reg32(ACTIVATOR_0_BASE_ADDR + ip_index * ACTIVATOR_RANGE_ADDR, &value, pci_bar_handle)) {
-            ERROR("Failed to read register offset 0x%X of activator #%u.", ACTIVATOR_0_BASE_ADDR, ip_index);
+        if (write_drm_reg32(ACTIVATOR_0_BASE_ADDR + INC_EVENT_REG_OFFSET + ip_index * ACTIVATOR_RANGE_ADDR, 0, pci_bar_handle)) {
+            ERROR("Failed to increment event counter on activator #%u.", ip_index);
             return -1;
         }
     }
