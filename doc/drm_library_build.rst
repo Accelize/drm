@@ -58,9 +58,24 @@ Run following commands to install requirements:
     sudo pip3 install -U cmake
 
 .. code-block:: bash
+    :caption: On RHEL 8, CentOS 8
+
+    # Ensure EPEL repository is installed
+    sudo dnf install -y epel-release
+
+    # Install packages
+    sudo dnf install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel
+
+    # Ensure Pip3 is installed
+    sudo dnf install -y python3-pip
+
+    # Install a recent version of Cmake using pip
+    sudo pip3 install -U cmake
+
+.. code-block:: bash
     :caption: On RHEL 7, CentOS 7
 
-    # Install EPEL repository to get jsoncpp-devel
+    # Ensure EPEL repository is installed
     sudo yum install -y epel-release
 
     # Install packages
@@ -105,6 +120,12 @@ Run following command to install requirements:
     sudo pip3 install -U setuptools wheel cython
 
 .. code-block:: bash
+    :caption: On Fedora, RHEL 8, CentOS 8
+
+    sudo dnf install -y python3-devel python3-pip
+    sudo pip3 install -U setuptools wheel cython
+
+.. code-block:: bash
     :caption: On RHEL 7, CentOS 7
 
     # Install EPEL repository to get a recent Python version
@@ -116,11 +137,6 @@ Run following command to install requirements:
     # Install Python Packages
     sudo pip3 install -U --prefix /usr  setuptools wheel cython
 
-.. code-block:: bash
-    :caption: On Fedora
-
-    sudo dnf install -y python3-devel python3-pip
-    sudo pip3 install -U setuptools wheel cython
 
 Documentation generation option
 :::::::::::::::::::::::::::::::
@@ -146,6 +162,12 @@ Run following command to install requirements:
     :caption: On Debian, Ubuntu
 
     sudo apt install -y doxygen
+    sudo pip3 install -U sphinx breathe sphinx_rtd_theme
+
+.. code-block:: bash
+    :caption: On RHEL 8, CentOS 8
+
+    sudo dnf install -y --enablerepo=PowerTools doxygen
     sudo pip3 install -U sphinx breathe sphinx_rtd_theme
 
 .. code-block:: bash
@@ -210,14 +232,14 @@ Required to sign packages:
 To install the required utilities, run the following command:
 
 .. code-block:: bash
+    :caption: On Fedora, RHEL 8, CentOS 8
+
+    sudo dnf install -y rpm-build rpm-sign gnupg
+
+.. code-block:: bash
     :caption: On RHEL 7, CentOS 7
 
     sudo yum install -y rpm-build rpm-sign gnupg
-
-.. code-block:: bash
-    :caption: On Fedora
-
-    sudo dnf install -y rpm-build rpm-sign gnupg2
 
 DEB Packages (For Debian, Ubuntu)
 '''''''''''''''''''''''''''''''''
@@ -274,14 +296,14 @@ To install requirements run the following command:
     cd ..
 
 .. code-block:: bash
+    :caption: On Fedora, RHEL 8, CentOS 8
+
+    sudo dnf install -y abi-compliance-checker
+
+.. code-block:: bash
     :caption: On RHEL 7, CentOS 7
 
     sudo yum install -y abi-compliance-checker
-
-.. code-block:: bash
-    :caption: On Fedora
-
-    sudo dnf install -y abi-compliance-checker
 
 Coverage option
 :::::::::::::::
@@ -309,16 +331,16 @@ Run following command to install requirements:
     sudo pip3 install -U pytest-cov
 
 .. code-block:: bash
+    :caption: On Fedora, RHEL 8, CentOS 8
+
+    sudo dnf install -y lcov
+    sudo pip3 install -U pytest-cov
+
+.. code-block:: bash
     :caption: On RHEL 7, CentOS 7
 
     sudo yum install -y lcov
     sudo pip3 install -U --prefix /usr pytest-cov
-
-.. code-block:: bash
-    :caption: On Fedora
-
-    sudo dnf install -y lcov
-    sudo pip3 install -U pytest-cov
 
 Automation with tox
 :::::::::::::::::::

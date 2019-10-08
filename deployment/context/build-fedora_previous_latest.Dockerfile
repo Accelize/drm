@@ -1,10 +1,10 @@
-FROM fedora:29
+FROM fedora:30
 
 RUN dnf install -y --setopt=install_weak_deps=False --best \
     doxygen \
     gcc \
     gcc-c++ \
-    gnupg2 \
+    gnupg \
     jsoncpp-devel \
     libcurl-devel \
     make \
@@ -12,15 +12,14 @@ RUN dnf install -y --setopt=install_weak_deps=False --best \
     python3-devel \
     rpm-build \
     rpm-sign && \
-python3 -m pip install -U --no-cache-dir \
+python3 -m pip install -U --no-cache-dir --disable-pip-version-check \
     pip \
     setuptools \
     wheel && \
-pip3 install -U --no-cache-dir \
+pip3 install -U --no-cache-dir --disable-pip-version-check \
     breathe \
     cmake \
     cython \
     sphinx_rtd_theme \
     tox && \
-ln -sf /usr/bin/gpg2 /usr/bin/gpg && \
 rm -rf /var/cache/dnf/*

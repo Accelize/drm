@@ -1,11 +1,14 @@
-FROM fedora:31
+FROM centos:8
 
-RUN dnf install -y --setopt=install_weak_deps=False --best \
-    doxygen \
+RUN dnf install -y epel-release && \
+dnf install -y --setopt=install_weak_deps=False --enablerepo=PowerTools --best \
+    doxygen && \
+dnf install -y --setopt=install_weak_deps=False --enablerepo=epel-playground --best \
+    jsoncpp-devel && \
+dnf install -y --setopt=install_weak_deps=False  --best \
     gcc \
     gcc-c++ \
     gnupg \
-    jsoncpp-devel \
     libcurl-devel \
     make \
     python3-pip \
