@@ -40,7 +40,7 @@ CurlEasyPost::~CurlEasyPost() {
     curl_easy_cleanup( curl );
 }
 
-void CurlEasyPost::setHostResolves(const Json::Value& resolves ) {
+void CurlEasyPost::setHostResolves( const Json::Value& resolves ) {
     if ( resolves != Json::nullValue ) {
         struct curl_slist *host = nullptr;
         for( Json::ValueConstIterator it = resolves.begin(); it != resolves.end(); it++ ) {
@@ -48,7 +48,6 @@ void CurlEasyPost::setHostResolves(const Json::Value& resolves ) {
             std::string val = (*it).asString();
             std::string host_str = fmt::format( "{}:{}", key, val );
             host = curl_slist_append( host, host_str.c_str() );
-            host = curl_slist_append(NULL, "example.com:80:127.0.0.1");
         }
         if ( curl_easy_setopt(curl, CURLOPT_RESOLVE, host) == CURLE_UNKNOWN_OPTION )
             Warning( "Could not set the CURL Host resolve option: {}", resolves.toStyledString() );
@@ -122,8 +121,8 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
         mMeteringUrl = url + std::string("/auth/metering/genlicense/");
         Debug( "Licensing URL: {}", url );
 
-        mHostResolves = JVgetOptional(webservice_json, "host_resolves", Json::objectValue );
-        Debug2("Host resolves: {}", mHostResolves.toStyledString() );
+        mHostResolves = JVgetOptional( webservice_json, "host_resolves", Json::objectValue );
+        Debug2( "Host resolves: {}", mHostResolves.toStyledString() );
 
     } catch( Exception &e ) {
         Throw( e.getErrCode(), "Error with service configuration file '{}': {}",
@@ -143,7 +142,7 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
     CurlSingleton::Init();
 
     // Set headers of OAuth2 request
-    mOAUth2Request.setHostResolves(mHostResolves);
+    mOAUth2Request.setHostResolves( mHostResolves );
     mOAUth2Request.setURL( mOAuth2Url );
     std::stringstream ss;
     ss << "client_id=" << mClientId << "&client_secret=" << mClientSecret;
@@ -219,7 +218,7 @@ Json::Value DrmWSClient::requestLicense( const Json::Value& json_req, TClock::ti
 
     // Create new request
     CurlEasyPost req;
-    req.setHostResolves(mHostResolves);
+    req.setHostResolves( mHostResolves );
     req.setURL( mMeteringUrl );
     req.appendHeader( "Accept: application/json" );
     req.appendHeader( "Content-Type: application/json" );

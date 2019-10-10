@@ -76,7 +76,7 @@ public:
     CurlEasyPost();
     ~CurlEasyPost();
 
-    void setHostResolves(const Json::Value& resolves );
+    void setHostResolves( const Json::Value& resolves );
 
     long perform(std::string* resp, std::chrono::steady_clock::time_point deadline);
     double getTotalTime();
