@@ -2648,3 +2648,30 @@ def test_directory_creation(accelize_drm, conf_json, cred_json, async_handler):
     finally:
         if isdir(log_dir):
             rmtree(log_dir)
+
+
+@pytest.mark.minimum
+@pytest.mark.skip(reason='Need port from ACA')
+def test_curl_host_resolve(accelize_drm, conf_json, cred_json, async_handler):
+    """Test host resolve information is taken into account by DRM Library"""
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+
+    conf_json.reset()
+    url = conf_json['licensing']['url']
+    conf_json['licensing']['url'] = 'toto.accelize.com'
+    conf_json['licensing']['host_resolves'] = {'toto.accelize.com:458': url.replace('https://', '')}
+    conf_json.save()
+
+    with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
+        async_cb.reset()
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+    assert 'MESSAGE TO COMPLETE' in str(excinfo.value)
+    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
+    async_cb.assert_NoError()
