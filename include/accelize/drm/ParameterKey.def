@@ -13,6 +13,7 @@ PARAMETERKEY_ITEM( mailbox_size )                   ///< Read-only, return the s
 PARAMETERKEY_ITEM( token_string )                   ///< Read-only, return the token string
 PARAMETERKEY_ITEM( token_validity )                 ///< Read-only, return the validity in seconds of the current token as provided by the WOAuth2 WS
 PARAMETERKEY_ITEM( token_time_left )                ///< Read-only, return the number of seconds left until the current token expires
+PARAMETERKEY_ITEM( frequency_detection_method )     ///< Read-only, return the method index used to detect the DRM frequency
 PARAMETERKEY_ITEM( log_file_path )                  ///< Read-(write), read (or write) the logging file path: default path is "./drm_lib.log". Can be set only from configuration file (no override from C/C++ code)
 PARAMETERKEY_ITEM( log_file_type )                  ///< Read-(write), read (or write) the logging file type 0=no logging file, 1=basic file, 2=rotation file. Set only from configuration file (no override from C code)
 PARAMETERKEY_ITEM( log_file_rotating_size )         ///< Read-(write), read (or write) the logging rotating file size: default=100MB. Set only from configuration file (no override from C code)

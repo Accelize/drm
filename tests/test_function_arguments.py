@@ -104,7 +104,7 @@ def test_drm_manager_constructor_with_bad_arguments(accelize_drm, conf_json, cre
     print('Test when asynchronous error function is not a callable: PASS')
 
 
-def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_json, async_handler):
+def test_drm_manager_with_bad_configuration_file_with_method1(accelize_drm, conf_json, cred_json, async_handler):
     """Test errors when missing arguments are given to DRM Controller Constructor"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -319,48 +319,38 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
     assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
     print('Test in node-locked when license_dir in config file is not a directory: PASS')
 
-    # Test when no DRM section is not specified
+    # Test when no DRM section is specified
     conf_json.reset()
     del conf_json['drm']
     conf_json.save()
     with pytest.raises(KeyError) as excinfo:
         assert conf_json['drm']
     assert 'drm' in str(excinfo.value)
-
-    with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
-        accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-    assert "Missing parameter 'drm' of type Object" in str(excinfo.value)
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
+    accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
     print('Test no DRM section in config file: PASS')
 
-    # Test when no DRM section is empty
+    # Test when DRM section is empty
     conf_json.reset()
     del conf_json['drm']
     conf_json['drm'] = {}
     conf_json.save()
     assert conf_json['drm'] is not None
-
-    with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
-        accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-    assert "Value of parameter 'drm' is empty" in str(excinfo.value)
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
+    accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
     print('Test empty DRM section in config file: PASS')
 
-    # Test when no DRM frequency is not specified
+    # Test when no DRM frequency is specified
     conf_json.reset()
     del conf_json['drm']['frequency_mhz']
     conf_json['drm']['dummy'] = 0    # Add this node to be sure the drm node is not empty
@@ -368,36 +358,14 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
     with pytest.raises(KeyError) as excinfo:
         assert conf_json['drm']['frequency_mhz']
     assert 'frequency_mhz' in str(excinfo.value)
-
-    with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
-        accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-    assert "Missing parameter 'frequency_mhz' of type Integer" in str(excinfo.value)
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
+    accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
     print('Test no DRM frequency in config file: PASS')
-
-    # Test when DRM frequency is a wrong type
-    conf_json.reset()
-    conf_json['drm']['frequency_mhz'] = 'this is wrong type'
-    conf_json.save()
-    with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
-        accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-    assert "Wrong parameter type for 'frequency_mhz' = " in str(excinfo.value)
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
-    print('Test DRM frequency is a wrong type: PASS')
 
     # Test when settings is a wrong type
     conf_json.reset()
@@ -415,6 +383,104 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
     err_code = async_handler.get_error_code(str(excinfo.value))
     assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
     print('Test settings is a wrong type: PASS')
+
+
+def test_drm_manager_with_bad_configuration_file_specific_to_method2(accelize_drm, conf_json, cred_json, async_handler):
+    """Test errors when missing arguments are given to DRM Controller Constructor"""
+
+    refdesign = accelize_drm.pytest_ref_designs
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+
+    # Get fpga image with frequency detection method 2
+    fpga_image_bkp = driver.fpga_image
+    hdk = list(filter(lambda x: x.startswith('3.'), refdesign.hdk_versions))[-1]
+    assert hdk.startswith('3.')
+    image_id = refdesign.get_image_id(hdk)
+    try:
+        # Program FPGA with HDK 3.x.x (with frequency detection method 2)
+        driver.program_fpga(image_id)
+
+        # Test when no DRM section is specified
+        conf_json.reset()
+        del conf_json['drm']
+        conf_json.save()
+        with pytest.raises(KeyError) as excinfo:
+            assert conf_json['drm']
+        assert 'drm' in str(excinfo.value)
+        with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
+            accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            )
+        assert "Missing valid parameter 'drm/frequency_mhz' of type unsigned integer in configuration file" in str(excinfo.value)
+        err_code = async_handler.get_error_code(str(excinfo.value))
+        assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
+        print('Test no DRM section in config file: PASS')
+
+        # Test when DRM section is empty
+        conf_json.reset()
+        del conf_json['drm']
+        conf_json['drm'] = {}
+        conf_json.save()
+        assert conf_json['drm'] is not None
+        with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
+            accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            )
+        assert "Missing valid parameter 'drm/frequency_mhz' of type unsigned integer in configuration file" in str(excinfo.value)
+        err_code = async_handler.get_error_code(str(excinfo.value))
+        assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
+        print('Test empty DRM section in config file: PASS')
+
+        # Test when no DRM frequency is specified
+        conf_json.reset()
+        del conf_json['drm']['frequency_mhz']
+        conf_json['drm']['dummy'] = 0    # Add this node to be sure the drm node is not empty
+        conf_json.save()
+        with pytest.raises(KeyError) as excinfo:
+            assert conf_json['drm']['frequency_mhz']
+        assert 'frequency_mhz' in str(excinfo.value)
+        with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
+            accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            )
+        assert "Missing valid parameter 'drm/frequency_mhz' of type unsigned integer in configuration file" in str(excinfo.value)
+        err_code = async_handler.get_error_code(str(excinfo.value))
+        assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
+        print('Test no DRM frequency in config file: PASS')
+
+        # Test when DRM frequency is a wrong type
+        conf_json.reset()
+        conf_json['drm']['frequency_mhz'] = 'this is wrong type'
+        conf_json.save()
+        with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
+            accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            )
+        assert "Wrong parameter type for 'frequency_mhz' = " in str(excinfo.value)
+        err_code = async_handler.get_error_code(str(excinfo.value))
+        assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
+        print('Test DRM frequency is a wrong type: PASS')
+
+    finally:
+        # Reprogram FPGA with original image
+        driver.program_fpga(fpga_image_bkp)
 
 
 def test_drm_manager_with_bad_credential_file(accelize_drm, conf_json, cred_json, async_handler):

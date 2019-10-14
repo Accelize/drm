@@ -87,7 +87,7 @@ A zip file will be sent to you. It is containing the HDK sources with in 3 folde
 * The ``common`` folder: contain the IP common structure for the activator and the controller.
 
 * The ``controller`` folder: contain the controller VHDL top-level and the Verilog Wrapper.
-  The controller has the appropriate number of ports: a pair of AXI4-Stream interfaces for each 
+  The controller has the appropriate number of ports: a pair of AXI4-Stream interfaces for each
   IP instance in your design (already protected IPs and IPs to protect).
 
 * The ``activator`` folder: contain the activator VHDL top-level and the Verilog Wrapper, and
@@ -330,87 +330,32 @@ protected IP cores.
 Simulate your design
 ====================
 
-A DRM Controller bus functional model (BFM) is provided with the DRM HDK; it instantiates the
-RTL model of the DRM Controller and internally implements a mechanism to load a license
-file and generate signals and messages for debug.
-The provided BFM is located into the `simu` folder of the Activator HDK part. It is specific
-to each Activator. This is particularly interesting when the design instantiate multiple
-Protected IPs. By this mean you can simulate each Protected IP (IP code + Activator)
-separately from the rest of the design.
+The user can find a simulation model of the DRM Activator, drm_activator_0xVVVVLLLLNNNNVVVV_sim.(sv,vhdl),
+in the `sim` folder of the DRM HDK.
+It instantiates a DRM Controller Bus Functional Model (BFM) in addition to the RTL model of the
+DRM Controller and internally implements a mechanism to load a license file, generate signals and
+messages for debugging.
+This simulation model is specific to each Activator. This is particularly interesting when the
+design instantiate multiple Protected IPs. By this mean you can simulate each Protected IP
+(IP code + Activator) separately from the rest of the design.
 
-I/Os
-----
+In addition to the simulation top-level, you'll find in the `sim` folder the following files:
 
-VHDL
-^^^^
-.. code-block:: VHDL
-
-   entity drm_controller_bfm_axi4st is
-   generic (
-       LICENSE_FILE : string := ""
-   );
-   port (
-     -- System Signals
-     drm_aclk              : in  std_logic;
-     drm_arstn             : in  std_logic;
-     -- AXI4-Stream Bus to/from User IP
-     drm_to_uip_tready     : in  std_logic;
-     drm_to_uip_tvalid     : out std_logic;
-     drm_to_uip_tdata      : out std_logic_vector(31 downto 0);
-     uip_to_drm_tready     : out std_logic;
-     uip_to_drm_tvalid     : in  std_logic;
-     uip_to_drm_tdata      : in  std_logic_vector(31 downto 0);
-     -- AXI4-Lite Register Access interface
-     license_file_loaded   : out std_logic;
-     activation_cycle_done : out std_logic;
-     error_code            : out std_logic_vector(7 downto 0)
-   );
-
-Verilog
-^^^^^^^
-.. code-block:: Verilog
-
-   module drm_controller_bfm_axi4st
-   #(
-       parameter LICENSE_FILE : string = ""
-
-   ) (
-     // System Signals
-     input  wire           drm_aclk              ,
-     input  wire           drm_arstn             ,
-     // AXI4-Stream Bus to/from User IP
-     input  wire           drm_to_uip_tready     ,
-     output wire           drm_to_uip_tvalid     ,
-     output wire [31:0]    drm_to_uip_tdata      ,
-     output wire           uip_to_drm_tready     ,
-     input  wire           uip_to_drm_tvalid     ,
-     input  wire [31:0]    uip_to_drm_tdata      ,
-     // AXI4-Lite Register Access interface
-     output wire           license_file_loaded   ,
-     output wire           activation_cycle_done ,
-     output wire [7:0]     error_code
-   );
-
-Usage
------
-
-* Connect the DRM Bus port of the protected IP with the DRM Bus port of the
-  DRM Controller BFM
-* A default simulation license file is embedded in the DRM Controller BFM.
-  It is automatically generated and delivered in the HDK, based on the IP
-  registration data (first Activation Code). If a different one is needed,
-  a new License File shall be explicitly requested to the DRM SaaS and assigned
-  to the generic parameter LICENSE_FILE of the DRM Controller BFM.
-  Contact Accelize_ for more details.
-* Drive the DRM bus Clock and the DRM Bus Reset
-* Observe the debug signals and messages
-* Check for the IP Core activation
+* xilinx_sim, modelsim                               : Each folder contains the BFM core encrypted for the specific tool.
+    |- drm_controller_bfm.(sv,vhdl)                    The BFM core is instantiated by the drm_activator_0xVVVVLLLLNNNNVVVV_sim.
+* drm_activator_0xVVVVLLLLNNNNVVVV_sim_pkg.(sv,vhdl) : Package containing simulation parameters (see details below)
+* drm_license_package.vhdl                           : Generic license file
+* drm_activator_0xVVVVLLLLNNNNVVVV_license_file.xml  : Specific license file
 
 .. image:: _static/RTL-simu.png
    :target: _static/RTL-simu.png
 
 ModelSim Compilation and Simulation
 -----------------------------------
+
+.. important:: DRM source files (VHDL and Verilog) HAVE to be compiled
+               under "drm_library" library and "drm_0xVVVVLLLLNNNNVVVV_library" library with
+               multiple activators.
 
 Create libraries
 ^^^^^^^^^^^^^^^^
@@ -424,7 +369,7 @@ Two libraries are required :
        vlib drm_library
        vmap drm_library drm_library
 
-  * Library **drm_testbench_library**:
+  * Library **drm_0xVVVVLLLLNNNNVVVV_library**:
 
     .. code-block:: tcl
 
@@ -433,6 +378,11 @@ Two libraries are required :
 
 
 Compile the files in the following order:
+cd $(SIM_DIR) && xvhdl $(XVHDL_OPTIONS) --work drm_0x1003000b00010001_library ${CL_ROOT}/design/drm_hdk/accelize.com_refdesign_ip1_1.0.0/core/drm_ip_activator_0x1003000b00010001.vhdl
+cd $(SIM_DIR) && xvhdl $(XVHDL_OPTIONS) --work drm_0x1003000b00010001_library ${CL_ROOT}/design/drm_hdk/accelize.com_refdesign_ip1_1.0.0/sim/drm_license_package.vhdl
+cd $(SIM_DIR) && xvhdl $(XVHDL_OPTIONS) --work drm_0x1003000b00010001_library ${CL_ROOT}/design/drm_hdk/accelize.com_refdesign_ip1_1.0.0/sim/xilinx_sim/drm_controller_bfm.vhdl
+cd $(SIM_DIR) && xvlog $(XVLOG_OPTIONS) --work xil_defaultlib ${CL_ROOT}/design/drm_hdk/accelize.com_refdesign_ip1_1.0.0/sim/drm_activator_0x1003000b00010001_sim_pkg.sv
+cd $(SIM_DIR) && xvlog $(XVLOG_OPTIONS) --work xil_defaultlib ${CL_ROOT}/design/drm_hdk/accelize.com_refdesign_ip1_1.0.0/sim/drm_activator_0x1003000b00010001_sim.sv
 
 1. Compile drm_all_components.vhdl under *drm_library* library:
 
@@ -440,23 +390,35 @@ Compile the files in the following order:
 
       vcom -93 -explicit -work drm_library drm_hdk/common/vhdl/modelsim/drm_all_components.vhdl
 
-#. Compile drm_license_package.vhdl under *drm_testbench_library* library:
+#. Compile drm_ip_activator_0xVVVVLLLLNNNNVVVV.vhdl under *drm_0xVVVVLLLLNNNNVVVV_library* library:
 
    .. code-block:: tcl
 
-      vcom -93 -explicit -work drm_testbench_library drm_hdk/activator_VLNV/simu/modelsim/drm_license_package.vhdl
+      vcom -93 -explicit -work drm_0xVVVVLLLLNNNNVVVV_library drm_hdk/activator_VLNV/core/drm_ip_activator_0xVVVVLLLLNNNNVVVV.vhdl
 
-#. Compile drm_controller_bfm.vhdl under *drm_testbench_library* library:
-
-   .. code-block:: tcl
-
-      vcom -93 -explicit -work drm_testbench_library drm_hdk/activator_VLNV/simu/modelsim/drm_controller_bfm_axi4st.vhdl
-
-#. Compile drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st.vhdl under *drm_library* library:
+#. Compile drm_license_package.vhdl under *drm_0xVVVVLLLLNNNNVVVV_library* library:
 
    .. code-block:: tcl
 
-      vcom -93 -explicit -work drm_hdk/activator_VLNV/simu/modelsim/drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st.vhdl|
+      vcom -93 -explicit -work drm_0xVVVVLLLLNNNNVVVV_library drm_hdk/activator_VLNV/sim/drm_license_package.vhdl
+
+#. Compile drm_controller_bfm.vhdl under *drm_0xVVVVLLLLNNNNVVVV_library* library:
+
+   .. code-block:: tcl
+
+      vcom -93 -explicit -work drm_0xVVVVLLLLNNNNVVVV_library drm_hdk/activator_VLNV/sim/modelsim/drm_controller_bfm.vhdl
+
+#. Compile drm_activator_0xVVVVLLLLNNNNVVVV_sim_pkg.vhdl:
+
+   .. code-block:: tcl
+
+      vcom -93 -explicit -work work drm_hdk/activator_VLNV/sim/drm_activator_0xVVVVLLLLNNNNVVVV_sim_pkg.vhdl
+
+#. Compile drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st.vhdl:
+
+   .. code-block:: tcl
+
+      vcom -93 -explicit -work work drm_hdk/activator_VLNV/sim/drm_activator_0xVVVVLLLLNNNNVVVV.vhdl
 
 Run simulation
 ^^^^^^^^^^^^^^
@@ -542,8 +504,9 @@ Please communicate this error code when you contact Accelize_ for assistance.
 Synthesize and implement your design
 ====================================
 
-.. warning:: DRM source files (VHDL and Verilog) HAVE to be compiled
-             under "drm_library" library.
+.. important:: DRM source files (VHDL and Verilog) HAVE to be compiled
+               under "drm_library" library and "drm_0xVVVVLLLLNNNNVVVV_library" library with
+               multiple activators.
 
 Xilinx Vivado
 -------------

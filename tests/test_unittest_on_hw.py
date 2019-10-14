@@ -43,6 +43,7 @@ _PARAM_LIST = ['license_type',
                'log_file_type',
                'log_file_rotating_size',
                'log_file_rotating_num',
+               'frequency_detection_method',
                'frequency_detection_threshold',
                'frequency_detection_period',
                'custom_field',
@@ -635,6 +636,19 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     async_cb.assert_NoError()
     print("Test parameter 'log_service_rotating_num': PASS")
 
+    # Test parameter: frequency_detection_method
+    async_cb.reset()
+    conf_json.reset()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    assert drm_manager.get('frequency_detection_method') == 1
+    print("Test parameter 'frequency_detection_method': PASS")
+
     # Test parameter: drm_frequency
     async_cb.reset()
     conf_json.reset()
@@ -648,8 +662,10 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
         driver.write_register_callback,
         async_cb.callback
     )
-    value = drm_manager.get('drm_frequency')
-    assert value == exp_value
+    if drm_manager.get('frequency_detection_method') == 1:
+        assert drm_manager.get('drm_frequency') == orig_frequency_mhz
+    else:
+        assert drm_manager.get('drm_frequency') == exp_value
     async_cb.assert_NoError()
     print("Test parameter 'frequency_mhz': PASS")
 
@@ -1128,10 +1144,10 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     # Test parameter: drm_frequency
     freq_period = drm_manager.get('frequency_detection_period')    # Save original period
     drm_manager.activate()
-    sleep(2.0*freq_period/1000)
+    #sleep(2.0*freq_period/1000)
     freq_drm = drm_manager.get('drm_frequency')
     drm_manager.deactivate()
-    assert freq_drm == 125, 'Unexpected frequency gap threshold'
+    assert 125 <= freq_drm <= 126, 'Unexpected frequency gap threshold'
     print("Test parameter 'drm_frequency': PASS")
 
     # Test parameter: product_info
@@ -1556,17 +1572,18 @@ def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_jso
         driver.write_register_callback,
         async_cb.callback
     )
-    drm_manager.activate()
-    sleep(1)
-    drm_manager.deactivate()
+    if drm_manager.get('frequency_detection_method') == 2:
+        drm_manager.activate()
+        sleep(1)
+        drm_manager.deactivate()
 
-    assert async_cb.was_called, 'Asynchronous callback NOT called'
-    assert async_cb.message is not None, 'Asynchronous callback did not report any message'
-    assert search(r'DRM frequency .* differs from .* configuration file',
-        async_cb.message) is not None, 'Unexpected message reported by asynchronous callback'
-    assert async_cb.errcode == accelize_drm.exceptions.DRMBadFrequency.error_code, \
-        'Unexpected error code reported by asynchronous callback'
-    print('Test frequency mismatch > threshold: PASS')
+        assert async_cb.was_called, 'Asynchronous callback NOT called'
+        assert async_cb.message is not None, 'Asynchronous callback did not report any message'
+        assert search(r'DRM frequency .* differs from .* configuration file',
+            async_cb.message) is not None, 'Unexpected message reported by asynchronous callback'
+        assert async_cb.errcode == accelize_drm.exceptions.DRMBadFrequency.error_code, \
+            'Unexpected error code reported by asynchronous callback'
+        print('Test frequency mismatch > threshold: PASS')
 
     # Test web service detects a frequency underflow
     async_cb.reset()
@@ -1581,13 +1598,14 @@ def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_jso
         driver.read_register_callback,
         driver.write_register_callback
     )
-    with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
-        drm_manager.activate()
-    assert 'License Web Service error 400' in str(excinfo.value)
-    assert 'Ensure this value is greater than or equal to 50' in str(excinfo.value)
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMWSReqError.error_code
-    print('Test frequency underflow: PASS')
+    if drm_manager.get('frequency_detection_method') == 2:
+        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+            drm_manager.activate()
+        assert 'License Web Service error 400' in str(excinfo.value)
+        assert 'Ensure this value is greater than or equal to 50' in str(excinfo.value)
+        err_code = async_handler.get_error_code(str(excinfo.value))
+        assert err_code == accelize_drm.exceptions.DRMWSReqError.error_code
+        print('Test frequency underflow: PASS')
 
     # Test web service detects a frequency overflow
     async_cb.reset()
@@ -1602,13 +1620,14 @@ def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_jso
         driver.read_register_callback,
         driver.write_register_callback
     )
-    with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
-        drm_manager.activate()
-    assert 'License Web Service error 400' in str(excinfo.value)
-    assert 'Ensure this value is less than or equal to 320' in str(excinfo.value)
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMWSReqError.error_code
-    print('Test frequency overflow: PASS')
+    if drm_manager.get('frequency_detection_method') == 2:
+        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+            drm_manager.activate()
+        assert 'License Web Service error 400' in str(excinfo.value)
+        assert 'Ensure this value is less than or equal to 320' in str(excinfo.value)
+        err_code = async_handler.get_error_code(str(excinfo.value))
+        assert err_code == accelize_drm.exceptions.DRMWSReqError.error_code
+        print('Test frequency overflow: PASS')
 
 
 def test_mailbox_write_overflow(accelize_drm, conf_json, cred_json, async_handler):
@@ -2651,7 +2670,6 @@ def test_directory_creation(accelize_drm, conf_json, cred_json, async_handler):
 
 
 @pytest.mark.minimum
-@pytest.mark.skip(reason='Need port from ACA')
 def test_curl_host_resolve(accelize_drm, conf_json, cred_json, async_handler):
     """Test host resolve information is taken into account by DRM Library"""
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -2659,12 +2677,71 @@ def test_curl_host_resolve(accelize_drm, conf_json, cred_json, async_handler):
 
     conf_json.reset()
     url = conf_json['licensing']['url']
-    conf_json['licensing']['url'] = 'toto.accelize.com'
-    conf_json['licensing']['host_resolves'] = {'toto.accelize.com:458': url.replace('https://', '')}
+    conf_json['licensing']['host_resolves'] = {'%s:443' % url.replace('https://',''): '78.153.251.226'}
     conf_json.save()
+    async_cb.reset()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    with pytest.raises(accelize_drm.exceptions.DRMExternFail) as excinfo:
+        drm_manager.activate()
+    assert 'SSL peer certificate or SSH remote key was not OK' in str(excinfo.value)
+    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMExternFail.error_code
+    async_cb.assert_NoError()
 
-    with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
-        async_cb.reset()
+
+def test_drm_manager_frequency_detection_method1(accelize_drm, conf_json, cred_json, async_handler):
+    """Test method1 (based on dedicated counter in AXI wrapper) to estimate drm frequency is working"""
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+
+    conf_json.reset()
+    logpath = realpath("./drmlib.%d.log" % getpid())
+    conf_json['settings']['log_file_verbosity'] = 1
+    conf_json['settings']['log_file_type'] = 1
+    conf_json['settings']['log_file_path'] = logpath
+    conf_json.save()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    assert drm_manager.get('frequency_detection_method') == 1
+    del drm_manager
+    gc.collect()
+    assert isfile(logpath)
+    with open(logpath, 'rt') as f:
+        log_content = f.read()
+    assert "Use dedicated counter to compute DRM frequency (method 1)" in log_content
+
+
+@pytest.mark.minimum
+def test_drm_manager_frequency_detection_method2(accelize_drm, conf_json, cred_json, async_handler):
+    """Test method2 (based on license timer) to estimate drm frequency is still working"""
+
+    refdesign = accelize_drm.pytest_ref_designs
+    driver = accelize_drm.pytest_fpga_driver[0]
+    fpga_image_bkp = driver.fpga_image
+    async_cb = async_handler.create()
+
+    # Program FPGA with HDK 3.x.x (with frequency detection method 2)
+    hdk = list(filter(lambda x: x.startswith('3.'), refdesign.hdk_versions))[-1]
+    assert hdk.startswith('3.')
+    image_id = refdesign.get_image_id(hdk)
+    try:
+        driver.program_fpga(image_id)
+        conf_json.reset()
+        logpath = realpath("./drmlib.%d.log" % getpid())
+        conf_json['settings']['log_file_verbosity'] = 1
+        conf_json['settings']['log_file_type'] = 1
+        conf_json['settings']['log_file_path'] = logpath
+        conf_json.save()
         drm_manager = accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
@@ -2672,6 +2749,42 @@ def test_curl_host_resolve(accelize_drm, conf_json, cred_json, async_handler):
             driver.write_register_callback,
             async_cb.callback
         )
-    assert 'MESSAGE TO COMPLETE' in str(excinfo.value)
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
+        assert drm_manager.get('frequency_detection_method') == 2
+        drm_manager.activate()
+        assert drm_manager.get('frequency_detection_method') == 2
+        drm_manager.deactivate()
+        del drm_manager
+        gc.collect()
+        assert isfile(logpath)
+        with open(logpath, 'rt') as f:
+            log_content = f.read()
+        assert "Use license timer counter to compute DRM frequency (method 2)" in log_content
+    finally:
+        if isfile(logpath):
+            remove(logpath)
+        # Reprogram FPGA with original image
+        driver.program_fpga(fpga_image_bkp)
+
+
+def test_drm_manager_frequency_detection_method1_exception(accelize_drm, conf_json, cred_json, async_handler):
+    """Test method1 (based on dedicated counter in AXI wrapper) to estimate drm frequency is working"""
+
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+
+    conf_json.reset()
+    logpath = realpath("./drmlib.%d.log" % getpid())
+    conf_json['settings']['frequency_detection_period'] = (int)(2**32 / 125000000 * 1000) + 2
+    conf_json.save()
+    with pytest.raises(accelize_drm.exceptions.DRMBadFrequency) as excinfo:
+        drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    assert search(r'Frequency auto-detection failed: frequency_detection_period parameter \([^)]+\) is too long',
+                  str(excinfo.value)) is not None
+    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadFrequency.error_code
     async_cb.assert_NoError()

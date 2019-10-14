@@ -48,7 +48,12 @@ limitations under the License.
 #include "HAL/DrmControllerOperations.hpp"
 #pragma GCC diagnostic pop
 
-#define NB_MAX_REGISTER 32
+#define NB_MAX_REGISTER  32
+
+#define REG_FREQ_DETECTION_VERSION  0xFFF8
+#define REG_FREQ_DETECTION_COUNTER  0xFFFC
+
+#define FREQ_DETECTION_VERSION_EXPECTED	 0x60DC0DE0
 
 #define TRY try {
 
@@ -155,6 +160,7 @@ protected:
     int32_t mFrequencyCurr;
     uint32_t mFrequencyDetectionPeriod = 100;  // in milliseconds
     double mFrequencyDetectionThreshold = 12.0;      // Error in percentage
+    bool mIsFreqDetectionMethod1 = false;
 
     // Session state
     std::string mSessionID;
@@ -286,8 +292,9 @@ protected:
             } else {
                 Debug( "Configuration file specifies a floating/metered license" );
                 // Get DRM frequency
-                Json::Value conf_drm = JVgetRequired( conf_json, "drm", Json::objectValue );
-                mFrequencyInit = JVgetRequired( conf_drm, "frequency_mhz", Json::intValue ).asUInt();
+                Json::Value conf_drm = JVgetOptional( conf_json, "drm", Json::objectValue );
+                if ( !conf_drm.empty() )
+                    mFrequencyInit = JVgetOptional( conf_drm, "frequency_mhz", Json::intValue, mFrequencyInit ).asUInt();
                 mFrequencyCurr = mFrequencyInit;
             }
 
@@ -588,6 +595,15 @@ protected:
 
         // Try to lock the DRM controller to this instance, return an error is already locked.
         lockDrmToInstance();
+
+        // Determine frequency detection method
+        getFrequencyDetectionMethod();
+        if ( mIsFreqDetectionMethod1 ) {
+            detectDrmFrequencyMethod1();
+        } else if ( mFrequencyInit == 0 ) {
+            Throw( DRM_BadFormat, "Missing valid parameter 'drm/frequency_mhz' of type unsigned integer in configuration file '{}'.",
+                mConfFilePath );
+        }
 
         // Save header information
         mHeaderJsonRequest = getMeteringHeader();
@@ -1122,7 +1138,68 @@ protected:
         Info( "Installed node-locked license successfully" );
     }
 
-    int32_t detectDrmFrequency() {
+    void getFrequencyDetectionMethod() {
+        uint32_t reg;
+        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+        int ret = f_read_register( REG_FREQ_DETECTION_VERSION, &reg );
+        if ( ret != 0 ) {
+            Unreachable( "Failed to read DRM frequency detection version register, errcode = {}", ret );
+        }
+        if ( reg == FREQ_DETECTION_VERSION_EXPECTED ) {
+            // Use Method 1
+            Debug( "Use dedicated counter to compute DRM frequency (method 1)" );
+            mIsFreqDetectionMethod1 = true;
+        } else {
+            // Use Method 2
+            Debug( "Use license timer counter to compute DRM frequency (method 2)" );
+            mIsFreqDetectionMethod1 = false;
+        }
+    }
+
+    void detectDrmFrequencyMethod1() {
+        int ret;
+        uint32_t counter;
+        TClock::duration wait_duration = std::chrono::milliseconds( mFrequencyDetectionPeriod );
+
+        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+
+        // Start detection counter
+        ret = f_write_register( REG_FREQ_DETECTION_COUNTER, 0 );
+        if ( ret != 0 )
+            Unreachable( "Failed to start DRM frequency detection counter, errcode = {}", ret );
+
+        // Wait a fixed period of time
+        sleepOrExit( wait_duration );
+
+        // Sample counter
+        ret = f_read_register( REG_FREQ_DETECTION_COUNTER, &counter );
+        if ( ret != 0 ) {
+            Unreachable( "Failed to read DRM frequency detection counter register, errcode = {}", ret );
+        }
+
+        if ( counter == 0xFFFFFFFF )
+            Throw( DRM_BadFrequency, "Frequency auto-detection failed: frequency_detection_period parameter ({} ms) is too long.",
+                   mFrequencyDetectionPeriod );
+
+        // Compute estimated DRM frequency
+        mFrequencyCurr = (int32_t)(std::ceil((double)counter / mFrequencyDetectionPeriod / 1000));
+        Debug( "Frequency detection counter after {:f} ms is 0x{:08x}  => estimated frequency = {} MHz",
+            (double)mFrequencyDetectionPeriod/1000, counter, mFrequencyCurr );
+    }
+
+    void detectDrmFrequencyMethod2() {
+        std::vector<int32_t> frequency_list;
+
+        frequency_list.push_back( detectDrmFrequencyFromLicenseTimer() );
+        frequency_list.push_back( detectDrmFrequencyFromLicenseTimer() );
+        frequency_list.push_back( detectDrmFrequencyFromLicenseTimer() );
+        std::sort( frequency_list.begin(), frequency_list.end());
+
+        mFrequencyCurr = frequency_list[1];
+        checkDrmFrequency( mFrequencyCurr );
+    }
+
+    int32_t detectDrmFrequencyFromLicenseTimer() {
         TClock::time_point timeStart, timeEnd;
         uint64_t counterStart, counterEnd;
         TClock::duration wait_duration = std::chrono::milliseconds( mFrequencyDetectionPeriod );
@@ -1134,25 +1211,25 @@ protected:
 
         while ( max_attempts > 0 ) {
 
-        counterStart = getTimerCounterValue();
-        // Wait until counter starts decrementing
-        while (1) {
+            counterStart = getTimerCounterValue();
+
+            // Wait until counter starts decrementing
+            while (1) {
                 if (getTimerCounterValue() < counterStart) {
-                counterStart = getTimerCounterValue();
-                timeStart = TClock::now();
-                break;
+                    counterStart = getTimerCounterValue();
+                    timeStart = TClock::now();
+                    break;
+                }
             }
-        }
 
-        /// Wait a fixed period of time
-        sleepOrExit( wait_duration );
+            // Wait a fixed period of time
+            sleepOrExit( wait_duration );
 
-        counterEnd = getTimerCounterValue();
-        timeEnd = TClock::now();
+            counterEnd = getTimerCounterValue();
+            timeEnd = TClock::now();
 
-        if ( counterEnd == 0 )
-                Unreachable(
-                        "Frequency auto-detection failed: license timeout counter is 0"); //LCOV_EXCL_LINE
+            if ( counterEnd == 0 )
+                Unreachable( "Frequency auto-detection failed: license timeout counter is 0" ); //LCOV_EXCL_LINE
             if (counterEnd > counterStart)
             Debug( "License timeout counter has been reset: taking another sample" );
             else
@@ -1175,15 +1252,7 @@ protected:
         return measuredFrequency;
     }
 
-    void checkDrmFrequency() {
-        std::vector<int32_t> frequency_list;
-
-        frequency_list.push_back( detectDrmFrequency() );
-        frequency_list.push_back( detectDrmFrequency() );
-        frequency_list.push_back( detectDrmFrequency() );
-
-        std::sort( frequency_list.begin(), frequency_list.end());
-        int32_t measuredFrequency = frequency_list[1];
+    void checkDrmFrequency( int32_t measuredFrequency ) {
 
         // Compute precision error compared to config file
         double precisionError = 100.0 * abs( measuredFrequency - mFrequencyCurr ) / mFrequencyCurr ; // At that point mFrequencyCurr = mFrequencyInit
@@ -1239,7 +1308,8 @@ protected:
         mThreadKeepAlive = std::async( std::launch::async, [ this ]() {
             try {
                 /// Detecting DRM controller frequency
-                checkDrmFrequency();
+                if ( !mIsFreqDetectionMethod1 )
+                    detectDrmFrequencyMethod2();
 
                 /// Starting license request loop
                 while( 1 ) {
@@ -1689,6 +1759,15 @@ public:
                         json_value[key_str] = status;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                status );
+                        break;
+                    }
+                    case ParameterKey::frequency_detection_method: {
+                        int method_index = 2;
+                        if ( mIsFreqDetectionMethod1 )
+                            method_index = 1;
+                        json_value[key_str] = method_index;
+                        Debug( "Get value of parameter '{}' (ID={}): Method {}", key_str, key_id,
+                               method_index );
                         break;
                     }
                     case ParameterKey::frequency_detection_threshold: {
