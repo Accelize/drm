@@ -185,10 +185,6 @@ Add the following ports to the original IP core:
        - Direction
        - Size
        - Description
-     * - ip_core_arstn
-       - in
-       - 1
-       - IP Core Asynchronous Reset (active low)
      * - ip_core_aclk
        - in
        - 1
@@ -201,10 +197,6 @@ Add the following ports to the original IP core:
        - in
        - 1
        - A 1 clock cycle pulse (synchronous to ip_core_aclk) increments the Metering data counter
-     * - metering_reset
-       - in
-       - 1
-       - Metering Counter Synchronous (to ip_core_aclk) Reset (active high)
 
 #. Protect relevant code of the IP core
 
@@ -272,12 +264,6 @@ in number of usage units for this particular account.
 .. warning:: The DRM event is synchronized on the ``ip_core_aclk``
              clock. Make sure a clock domain crossing technique is implemented
              when necessary.
-
-.. important:: The ``metering_reset`` signal resets the metering counter.
-             Therefore, it SHALL NOT be connected to a user-controllable
-             reset as it will give the user a way to reset metering information
-             before this information is actually sent to the DRM web service.
-             If it happens, the end-user will not be charged for what he/she consumed.
 
 Instantiate the adapted IP core and DRM Activator in the wrapper and connect them
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -353,9 +339,9 @@ In addition to the simulation top-level, you'll find in the `sim` folder the fol
 ModelSim Compilation and Simulation
 -----------------------------------
 
-.. important:: DRM source files (VHDL and Verilog) HAVE to be compiled
-               under "drm_library" library and "drm_0xVVVVLLLLNNNNVVVV_library" library with
-               multiple activators.
+.. important:: DRM VHDL source files HAVE to be compiled under "drm_library" library.
+               When the design instantiates multiple different activators, they must also
+               be compiled in their own library, for example "drm_0xVVVVLLLLNNNNVVVV_library".
 
 Create libraries
 ^^^^^^^^^^^^^^^^
@@ -369,7 +355,7 @@ Two libraries are required :
        vlib drm_library
        vmap drm_library drm_library
 
-  * Library **drm_0xVVVVLLLLNNNNVVVV_library**:
+  * Library **drm_0xVVVVLLLLNNNNVVVV_library** when multiple different activators exist in the design:
 
     .. code-block:: tcl
 
@@ -378,11 +364,6 @@ Two libraries are required :
 
 
 Compile the files in the following order:
-cd $(SIM_DIR) && xvhdl $(XVHDL_OPTIONS) --work drm_0x1003000b00010001_library ${CL_ROOT}/design/drm_hdk/accelize.com_refdesign_ip1_1.0.0/core/drm_ip_activator_0x1003000b00010001.vhdl
-cd $(SIM_DIR) && xvhdl $(XVHDL_OPTIONS) --work drm_0x1003000b00010001_library ${CL_ROOT}/design/drm_hdk/accelize.com_refdesign_ip1_1.0.0/sim/drm_license_package.vhdl
-cd $(SIM_DIR) && xvhdl $(XVHDL_OPTIONS) --work drm_0x1003000b00010001_library ${CL_ROOT}/design/drm_hdk/accelize.com_refdesign_ip1_1.0.0/sim/xilinx_sim/drm_controller_bfm.vhdl
-cd $(SIM_DIR) && xvlog $(XVLOG_OPTIONS) --work xil_defaultlib ${CL_ROOT}/design/drm_hdk/accelize.com_refdesign_ip1_1.0.0/sim/drm_activator_0x1003000b00010001_sim_pkg.sv
-cd $(SIM_DIR) && xvlog $(XVLOG_OPTIONS) --work xil_defaultlib ${CL_ROOT}/design/drm_hdk/accelize.com_refdesign_ip1_1.0.0/sim/drm_activator_0x1003000b00010001_sim.sv
 
 1. Compile drm_all_components.vhdl under *drm_library* library:
 
@@ -413,12 +394,16 @@ cd $(SIM_DIR) && xvlog $(XVLOG_OPTIONS) --work xil_defaultlib ${CL_ROOT}/design/
    .. code-block:: tcl
 
       vcom -93 -explicit -work work drm_hdk/activator_VLNV/sim/drm_activator_0xVVVVLLLLNNNNVVVV_sim_pkg.vhdl
+      or
+      vlog -sv -explicit -work work drm_hdk/activator_VLNV/sim/drm_activator_0xVVVVLLLLNNNNVVVV_sim_pkg.sv
 
-#. Compile drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st.vhdl:
+#. Compile drm_activator_0xVVVVLLLLNNNNVVVV top-level:
 
    .. code-block:: tcl
 
-      vcom -93 -explicit -work work drm_hdk/activator_VLNV/sim/drm_activator_0xVVVVLLLLNNNNVVVV.vhdl
+      vcom -93 -explicit -work work drm_hdk/activator_VLNV/sim/drm_activator_0xVVVVLLLLNNNNVVVV_sim.vhdl
+      or:
+      vlog -sv -explicit -work work drm_hdk/activator_VLNV/sim/drm_activator_0xVVVVLLLLNNNNVVVV_sim.sv
 
 Run simulation
 ^^^^^^^^^^^^^^
@@ -427,7 +412,7 @@ Start the simulation :
 
 .. code-block:: tcl
 
-   vsim -L drm_library -L drm_testbench_library -L  -t 1ps
+   vsim -L drm_library -L drm_0xVVVVLLLLNNNNVVVV_library -L work -t 1ps
 
 Run the simulation:
 
@@ -435,9 +420,9 @@ Run the simulation:
 
    run -all
 
-.. important:: Note that the BFM takes approximately 30 us to load the default license file.
-               Make sure your simulation starts after the ``LICENSE_FILE_LOADED`` signal is
-               asserted.
+.. warning:: Note that the BFM takes approximately 30 us to load the license file.
+             Make sure your stimuli signals start after the ``LICENSE_FILE_LOADED`` signal is
+             asserted.
 
 
 Expected Behavior
@@ -459,9 +444,7 @@ cycle start.
 
 Ultimately, the ERROR_CODE shall be set to x"00" after a complete Activation
 cycle following the LICENSE_FILE_LOADED set to '1'. If this does not happen,
-the error codes can help to make decisions.
-
-If OK, then the Protected IP is ready to be implemented on hardware.
+the error codes can help to debug (see error table below).
 
 .. image:: _static/behavior.png
    :target: _static/behavior.png
@@ -469,7 +452,7 @@ If OK, then the Protected IP is ready to be implemented on hardware.
 Signals for Debug
 -----------------
 
-Debug signals are all  synchronized on the ``drm_aclk``.
+Debug signals are all synchronized on the ``drm_aclk``.
 
 * LICENSE_FILE_LOADED
 
@@ -504,14 +487,14 @@ Please communicate this error code when you contact Accelize_ for assistance.
 Synthesize and implement your design
 ====================================
 
-.. important:: DRM source files (VHDL and Verilog) HAVE to be compiled
-               under "drm_library" library and "drm_0xVVVVLLLLNNNNVVVV_library" library with
-               multiple activators.
+.. important:: DRM VHDL source files HAVE to be compiled under "drm_library" library.
+               When the design instantiates multiple different activators, they must also
+               be compiled in their own library, for example "drm_0xVVVVLLLLNNNNVVVV_library".
 
 Xilinx Vivado
 -------------
 
-Refer to `Supported hardware` for more information on supported Vivado versions.
+Refer to `Supported hardware`_ for more information on supported Vivado versions.
 
 For Vivado, GUI or TCL script can be used to synthesize the DRM controller and
 the DRM Activator.
@@ -530,7 +513,7 @@ VHDL
 DRM Contoller
 """""""""""""
 
-The DRM Controller top-level name is **drm_controller_ip_axi4st**.
+The DRM Controller top-level name is **drm_controller**.
 
 To add the DRM Controller source to your project, you can use:
 
@@ -545,14 +528,14 @@ To add the DRM Controller source to your project, you can use:
 
    read_vhdl -library drm_library {
       drm_hdk/common/xilinx/drm_all_components.vhdl
-      drm_hdk/contoller/drm_controller_ip.vhdl
-      drm_hdk/contoller/drm_controller_ip_axi4st.vhdl
+      drm_hdk/contoller/rtl/core/drm_controller_ip.vhdl
+      drm_hdk/contoller/rtl/syn/drm_controller.vhdl
    }
 
 DRM Activator
 """""""""""""
 
-The DRM Activator top-level name is **drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st**.
+The DRM Activator top-level name is **drm_activator_0xVVVVLLLLNNNNVVVV**.
 0xVVVVLLLLNNNNVVVV is an hexadecimal string encoding the VLNV of this IP.
 
 To add the DRM Activator source to your project, you can use:
@@ -568,10 +551,14 @@ Or a TCL script:
 
    read_vhdl -library drm_library {
       drm_hdk/common/xilinx/drm_all_components.vhdl
-      drm_hdk/activator_VLNV/rtl/drm_activation_code_package_0xVVVVLLLLNNNNVVVV.vhd
-      drm_hdk/activator_VLNV/rtl/drm_ip_activator_0xVVVVLLLLNNNNVVVV.vhdl
-      drm_hdk/activator_VLNV/rtl/drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st.vhdl
    }
+   read_vhdl -library drm_0xVVVVLLLLNNNNVVVV_library {
+      drm_hdk/activator_VLNV/core/drm_activation_code_package_0xVVVVLLLLNNNNVVVV.vhd
+      drm_hdk/activator_VLNV/core/drm_ip_activator_0xVVVVLLLLNNNNVVVV.vhdl
+      drm_hdk/activator_VLNV/syn/drm_activator_0xVVVVLLLLNNNNVVVV.vhdl
+   }
+
+.. note:: In a single activator design all activator source files can be compled under `drm_library`.
 
 Verilog
 ^^^^^^^
@@ -579,7 +566,9 @@ Verilog
 DRM Contoller
 """""""""""""
 
-The DRM Controller top-level name is **drm_controller_ip_axi4st**.
+The DRM Controller top-level name is **drm_controller**.
+
+.. note:: `drm_all_components` and `drm_controller_ip` entities are available in VHDL only.
 
 To add the DRM Controller sources to your project, you can use:
 
@@ -592,19 +581,22 @@ Or a TCL script:
 
 .. code-block:: tcl
 
-   read_verilog {
-      drm_hdk/controller/drm_controller_ip_axi4st.v
-   }
-   read_verilog {
+   read_vhdl -library drm_library {
       drm_hdk/common/xilinx/drm_all_components.vhdl
-      drm_hdk/controller/drm_controller_ip.vhdl
+      drm_hdk/controller/rtl/core/drm_controller_ip.vhdl
    }
+   read_verilog {
+      drm_hdk/controller/rtl/syn/drm_controller.sv
+   }
+
 
 DRM Activator
 """""""""""""
 
 The DRM Activator top-level name is **drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st**.
 0xVVVVLLLLNNNNVVVV is an hexadecimal string encoding the VLNV of this IP.
+
+.. note:: `drm_all_components` and `drm_controller_ip` entities are available in VHDL only.
 
 To add the DRM Activator sources to your project, you can use:
 
@@ -617,13 +609,12 @@ Or via TCL script:
 
 .. code-block:: tcl
 
-   read_verilog {
-      drm_hdk/activator_VLNV/rtl/drm_activation_code_package_0xVVVVLLLLNNNNVVVV.v
-      drm_hdk/activator_VLNV/rtl/drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st.vhdl
-   }
    read_vhdl -library drm_library {
       drm_hdk/common/xilinx/drm_all_components.vhdl
-      drm_hdk/activator_VLNV/rtl/drm_ip_activator_0xVVVVLLLLNNNNVVVV.vhdl
+      drm_hdk/activator_VLNV/core/drm_ip_activator_0xVVVVLLLLNNNNVVVV.vhdl
+   }
+   read_verilog -include drm_hdk/activator_VLNV/core {
+      drm_hdk/activator_VLNV/syn/drm_activator_0xVVVVLLLLNNNNVVVV.sv
    }
 
 
@@ -645,14 +636,52 @@ While runing synthesis and implementation you may face the following warnings:
   clock pin of 32 registers. This could lead to large hold time violations* :
 
   Like the previous message, this warning occurs because of the TRNGs which is based on ring
-  oscillators (a chain of inverters) that is driving a LFSR clock.
+  oscillators driving a LFSR clock.
   You can safely ignore this message.
 
+
+Xilinx SDAccel/Vitis
+--------------------
+
+Below is an overview of the interaction between Sw and Hw layers when desiging with SDAccel.
+
+.. image:: _static/DRM_Sw_and_Hw_interactions_under_SDAccel.png
+   :target: _static/DRM_Sw_and_Hw_interactions_under_SDAccel.png
+
+In this description, the DRM Controller has its own kernel and the DRM ACtivator is instantiated
+with the User's logic in a separate kernel. But the user may prefer to group all together the
+DRM Controller and Activator into the same SDAccel kernel.
+However,to simply the integration, Accelize provides in the DRM HDK a makefile that generates automatically the .XO package
+for the DRM Controller kernel.
+
+DRM Contoller Kernel
+""""""""""""""""""""
+
+To generate the DRM Controller kernel for SDAccel:
+
+.. code-block:: bash
+    :caption: Generate DRM Controller XO package
+
+    cd drm_hdk/controller/sdaccel
+    make
+
+You can now include the .xo file in your SDAccel project.
+
+DRM ACtivator Kernel
+""""""""""""""""""""
+
+Proceed as in a usual Xilinx Vivado flow: modify your original design to prepare, instantiate and connect
+the DRM Activator IP.
+For more detals refer to `Modify your design`_.
+
+
+Xilinx Vitis
+------------
 
 Intel Quartus Prime
 -------------------
 
-Refer to `Supported hardware` for more information on supported Quartus versions.
+Refer to `Supported hardware`_ for more information on supported Quartus versions.
 
 .. note:: In the ``common`` folder of the DRM HDK, you will find an *altera* and an
           *alteraProprietary* subfolders. Both subfolders contain the same code but
@@ -666,7 +695,7 @@ VHDL
 DRM Contoller
 """""""""""""
 
-The DRM Controller top-level name is **drm_controller_ip_axi4st**.
+The DRM Controller top-level name is **drm_controller**.
 
 To add the DRM Controller source to your project, you can use:
 
@@ -766,6 +795,14 @@ To add the DRM Activator sources to your project, you can use:
 
 .. note:: The ``altchip_id_arria10.sv`` file is for the Arria10 FPGA family.
           Use the file located in the *common/sv/alteraProprietary* folder from your DRM HDK.
+
+
+Constrain your design
+=====================
+
+A CDC mechanism is implemented in the DRM Activator IP to handle different clocks on `drm_aclk` and `ip_core_aclk`.
+The associated CDC constraints shall be defined in your project. Because the sources are encrypted
+you will find in the SDC files in the `syn/contraints` folder of the activator the names of the CDC elements.
 
 
 .. _Accelize: https://www.accelize.com/contact-us
