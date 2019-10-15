@@ -417,11 +417,11 @@ def accelize_drm(pytestconfig):
         except:
             raise IOError("Failed to load driver on slot %d" % slot_id)
 
-    # Define Activator access
+    # Define Activator access per slot
     fpga_activators = list()
-    base_address = pytestconfig.getoption("activator_base_address")
     for driver in fpga_driver:
         base_addr_list = []
+        base_address = pytestconfig.getoption("activator_base_address")
         while True:
             val = driver.read_register(base_address + INC_EVENT_REG_OFFSET)
             if val != 0x600DC0DE:
