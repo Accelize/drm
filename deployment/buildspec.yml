@@ -34,15 +34,17 @@ phases:
   build:
     commands:
       # Determine the branch in order to set the Web Service working environment
-      - CODEBUILD_GIT_BRANCH="$(git branch -a --contains $CODEBUILD_SOURCE_VERSION | sed -n 2p | awk '{ printf $1 }')";
-        export CODEBUILD_GIT_BRANCH=${CODEBUILD_GIT_BRANCH#remotes/origin/}
-      - echo "CODEBUILD_GIT_BRANCH=${CODEBUILD_GIT_BRANCH}"
-      - echo "CODEBUILD_SOURCE_VERSION=${CODEBUILD_SOURCE_VERSION}"
-      - if [ "${CODEBUILD_GIT_BRANCH}" = "master" ]; then export WS_ENV="prod"; else export WS_ENV="dev"; fi
+      - |
+        if git describe --tags --exact-match $CODEBUILD_RESOLVED_SOURCE_VERSION; then
+          export WS_ENV="prod"
+        elif git rev-list master | grep -q $CODEBUILD_RESOLVED_SOURCE_VERSION; then
+          export WS_ENV="prod"
+        else
+          export WS_ENV="dev"
+        fi
       - echo "WS_ENV=${WS_ENV}"
-      - echo "CODEBUILD_WEBHOOK_ACTOR_ACCOUNT_ID=${CODEBUILD_WEBHOOK_ACTOR_ACCOUNT_ID}"
-      - | # Test multiline yaml support
-        if git describe --abbrev=0 --exact-match --tags HEAD || [ -z "${CODEBUILD_WEBHOOK_ACTOR_ACCOUNT_ID}" ]; then
+      - |
+        if git describe --tags --exact-match $CODEBUILD_RESOLVED_SOURCE_VERSION || [ -z "${CODEBUILD_WEBHOOK_ACTOR_ACCOUNT_ID}" ]; then
           export FILTER_SOURCES=""
           export FILTER_BRANCH=""
         else
@@ -78,7 +80,7 @@ phases:
         ${FILTER_SOURCES}
         ${FILTER_BRANCH}
         run
-        drmlib_dev="${CODEBUILD_GIT_BRANCH}:${CODEBUILD_SOURCE_VERSION}" drmlib_build_deps
+        drmlib_dev=${CODEBUILD_RESOLVED_SOURCE_VERSION} drmlib_build_deps
         drmlib_unittests_deps drmlib_cred_json drmlib_codecov_token
         aws_fpga_sdk
         -v
@@ -93,7 +95,7 @@ phases:
       - xlz
         --if git_head_tagged
         run
-        drmlib_dev=$CODEBUILD_SOURCE_VERSION
+        drmlib_dev=$CODEBUILD_RESOLVED_SOURCE_VERSION
         drmlib_package_release drmlib_packages_key=/opt/src
         docker_compose
         --shutdown_after 15
@@ -110,7 +112,7 @@ phases:
         --if file_exists=artifacts/packages.tar.gz
         run
         docker
-        drmlib_dev=$CODEBUILD_SOURCE_VERSION drmlib_cred_json
+        drmlib_dev=$CODEBUILD_RESOLVED_SOURCE_VERSION drmlib_cred_json
         --shutdown_after 240
         -s ubuntu
         -p f1.4xlarge

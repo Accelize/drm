@@ -373,3 +373,26 @@ install commands but replace "`sudo make install`" by:
     make package
 
 Packages will be generated in the `drmlib/build/packages` directory.
+
+
+Installation with Ansible
+-------------------------
+
+We provides an Ansible role to install the Accelize DRM. The role is available
+on Ansible galaxy and can be installed using the following command:
+
+.. code-block:: bash
+
+    ansible-galaxy install accelize.accelize_drm
+
+Once installed, the role can be used in your Ansible playbooks:
+
+.. code-block:: yaml
+
+    - hosts: servers
+      become: true
+      roles:
+         - role: accelize.accelize_drm
+
+For more information on the role and its variables. See the
+`role Ansible Galaxy page <https://galaxy.ansible.com/accelize/accelize_drm>`_.
