@@ -36,7 +36,15 @@ phases:
       # Determine the branch in order to set the Web Service working environment
       - |
         if git describe --exact-match $CODEBUILD_RESOLVED_SOURCE_VERSION; then
-          export WS_ENV="prod"
+          TAG_NAME=$(git describe --exact-match $CODEBUILD_RESOLVED_SOURCE_VERSION)
+          BRANCH_NAME=$(git branch --contains tags/$TAG_NAME)
+          echo "TAG_NAME=${TAG_NAME}"
+          echo "BRANCH_NAME=${BRANCH_NAME}"
+          if [ "${BRANCH_NAME}" = "master" ]; then
+            export WS_ENV="prod"
+          else
+            export WS_ENV="dev"
+          fi
         elif git rev-list master | grep -q $CODEBUILD_RESOLVED_SOURCE_VERSION; then
           export WS_ENV="prod"
         else
