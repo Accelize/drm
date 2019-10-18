@@ -35,8 +35,8 @@ phases:
     commands:
       # Determine the branch in order to set the Web Service working environment
       - |
-        if git describe --exact-match $CODEBUILD_RESOLVED_SOURCE_VERSION; then
-          TAG_NAME=$(git describe --exact-match $CODEBUILD_RESOLVED_SOURCE_VERSION)
+        if git describe --tags --exact-match $CODEBUILD_RESOLVED_SOURCE_VERSION; then
+          TAG_NAME=$(git describe --tags --exact-match $CODEBUILD_RESOLVED_SOURCE_VERSION)
           BRANCH_NAME=$(git branch --contains tags/$TAG_NAME)
           echo "TAG_NAME=${TAG_NAME}"
           echo "BRANCH_NAME=${BRANCH_NAME}"
@@ -52,7 +52,7 @@ phases:
         fi
       - echo "WS_ENV=${WS_ENV}"
       - |
-        if git describe --exact-match $CODEBUILD_RESOLVED_SOURCE_VERSION || [ -z "${CODEBUILD_WEBHOOK_ACTOR_ACCOUNT_ID}" ]; then
+        if git describe --tags --exact-match $CODEBUILD_RESOLVED_SOURCE_VERSION || [ -z "${CODEBUILD_WEBHOOK_ACTOR_ACCOUNT_ID}" ]; then
           export FILTER_SOURCES=""
           export FILTER_BRANCH=""
         else
