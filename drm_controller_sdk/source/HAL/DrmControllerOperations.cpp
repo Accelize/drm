@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerOperations.cpp
-*  \version   3.2.2.0
-*  \date      May 2019
+*  \version   4.0.0.1
+*  \date      July 2019
 *  \brief     Class DrmControllerOperations is an abstraction level to execute operations.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.
@@ -37,6 +37,10 @@ DrmControllerOperations::DrmControllerOperations(tDrmReadRegisterFunction readRe
 {
   // wait controller done for heart beat mode detection
   waitAutonomousControllerDone();
+
+  // Set the operation timeout from environment variable if existing or use default value otherwise.
+  const char* timeout = std::getenv("DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS");
+  mTimeoutInMicroSeconds = (timeout == NULL) ? DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS : std::stoul(std::string(timeout));
 }
 
 /** ~DrmController
@@ -73,7 +77,7 @@ unsigned int DrmControllerOperations::waitAutonomousControllerDone(bool &heartBe
     if (autoEnabled == true) {
       try {
         bool activationDone(false);
-        errorCode = waitActivationDoneStatusRegister(DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS, true, activationDone);
+        errorCode = waitActivationDoneStatusRegister(mTimeoutInMicroSeconds, true, activationDone);
       }
       catch (DrmControllerTimeOutException const &e) {
         throwTimeoutException("DRM Controller Initialization After Reset is in timeout");
@@ -95,11 +99,11 @@ unsigned int DrmControllerOperations::waitAutonomousControllerDone(bool &heartBe
         // activation done status
         bool activationDone(false);
         autoBusy = true;
-        errorCode = waitActivationDoneStatusRegister(DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS, true, activationDone);
+        errorCode = waitActivationDoneStatusRegister(mTimeoutInMicroSeconds, true, activationDone);
       } // heartBeatModeEnabled == true
       else if (autoEnabled == true) {
         // wait autonomous controller not busy if autocontroller is enabled
-        errorCode = waitAutonomousControllerBusyStatusRegister(DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS, false, autoBusy);
+        errorCode = waitAutonomousControllerBusyStatusRegister(mTimeoutInMicroSeconds, false, autoBusy);
       }
     }
     catch (DrmControllerTimeOutException const &e) {
@@ -168,9 +172,9 @@ unsigned int DrmControllerOperations::extractDna(std::string &dna, bool &dnaRead
   }
   try {
     // wait dna ready status
-    errorCode = waitDnaReadyStatusRegister(DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS, true, dnaReady);
+    errorCode = waitDnaReadyStatusRegister(mTimeoutInMicroSeconds, true, dnaReady);
     if (errorCode != mDrmApi_NO_ERROR) return errorCode;
-    errorCode = waitExtractDnaErrorRegister(DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS, mDrmErrorNoError, dnaErrorCode);
+    errorCode = waitExtractDnaErrorRegister(mTimeoutInMicroSeconds, mDrmErrorNoError, dnaErrorCode);
     if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   }
   catch (DrmControllerTimeOutException const &e) {
@@ -228,9 +232,9 @@ unsigned int DrmControllerOperations::extractVlnvFile(unsigned int &numberOfDete
   }
   try {
     // wait vlnv extract status and error
-    errorCode = waitVlnvReadyStatusRegister(DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS, true, vlnvReady);
+    errorCode = waitVlnvReadyStatusRegister(mTimeoutInMicroSeconds, true, vlnvReady);
     if (errorCode != mDrmApi_NO_ERROR) return errorCode;
-    errorCode = waitExtractVlnvErrorRegister(DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS, mDrmErrorNoError, vlnvErrorCode);
+    errorCode = waitExtractVlnvErrorRegister(mTimeoutInMicroSeconds, mDrmErrorNoError, vlnvErrorCode);
     if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   }
   catch (DrmControllerTimeOutException const &e) {
@@ -393,9 +397,9 @@ unsigned int DrmControllerOperations::activate(const std::string &licenseFile, b
   } // mHeartBeatModeEnabled == false
   try {
     // wait activation status and error
-    errorCode = waitActivationDoneStatusRegister(DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS, true, activationDone);
+    errorCode = waitActivationDoneStatusRegister(mTimeoutInMicroSeconds, true, activationDone);
     if (errorCode != mDrmApi_NO_ERROR) return errorCode;
-    errorCode = waitActivationErrorRegister(DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS, mDrmErrorNoError, activationErrorCode);
+    errorCode = waitActivationErrorRegister(mTimeoutInMicroSeconds, mDrmErrorNoError, activationErrorCode);
     if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   }
   catch (DrmControllerTimeOutException const &e) {
@@ -682,7 +686,7 @@ unsigned int DrmControllerOperations::asynchronousExtractMeteringFile(unsigned i
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   try {
     // wait asynchronous metering ready status
-    errorCode = waitAsynchronousMeteringReadyStatusRegister(DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS, true, asynchronousMeteringReady);
+    errorCode = waitAsynchronousMeteringReadyStatusRegister(mTimeoutInMicroSeconds, true, asynchronousMeteringReady);
   }
   catch (DrmControllerTimeOutException const &e) {
     throwTimeoutException("DRM Controller Asynchronous Metering Extract is in timeout", "Expected Asynchronous Metering Ready Status Bit",
@@ -698,7 +702,7 @@ unsigned int DrmControllerOperations::asynchronousExtractMeteringFile(unsigned i
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   // wait not asynchronous metering ready status
   try {
-    errorCode = waitAsynchronousMeteringReadyStatusRegister(DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS, false, asynchronousMeteringReady);
+    errorCode = waitAsynchronousMeteringReadyStatusRegister(mTimeoutInMicroSeconds, false, asynchronousMeteringReady);
   }
   catch (DrmControllerTimeOutException const &e) {
     throwTimeoutException("DRM Controller Asynchronous Metering Extract is in timeout", "Expected Asynchronous Metering Ready Status Bit",
@@ -756,7 +760,7 @@ unsigned int DrmControllerOperations::endSessionAndExtractMeteringFile(unsigned 
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   try {
     // wait end session metering ready status
-    errorCode = waitEndSessionMeteringReadyStatusRegister(DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS, true, endSessionMeteringReady);
+    errorCode = waitEndSessionMeteringReadyStatusRegister(mTimeoutInMicroSeconds, true, endSessionMeteringReady);
   }
   catch (DrmControllerTimeOutException const &e) {
     throwTimeoutException("DRM Controller End Session Metering Extract is in timeout", "Expected End Session Metering Ready Status Bit",
@@ -772,7 +776,7 @@ unsigned int DrmControllerOperations::endSessionAndExtractMeteringFile(unsigned 
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   try {
     // wait not end session metering ready status
-    errorCode = waitEndSessionMeteringReadyStatusRegister(DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS, false, endSessionMeteringReady);
+    errorCode = waitEndSessionMeteringReadyStatusRegister(mTimeoutInMicroSeconds, false, endSessionMeteringReady);
   }
   catch (DrmControllerTimeOutException const &e) {
     throwTimeoutException("DRM Controller End Session Metering Extract is in timeout", "Expected End Session Metering Ready Status Bit",
@@ -823,7 +827,7 @@ unsigned int DrmControllerOperations::sampleLicenseTimerCounter(unsigned int &li
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   try {
     // wait license timer sample ready status
-    errorCode = waitLicenseTimerSampleReadyStatusRegister(DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS, true, licenseTimerSampleReady);
+    errorCode = waitLicenseTimerSampleReadyStatusRegister(mTimeoutInMicroSeconds, true, licenseTimerSampleReady);
   }
   catch (DrmControllerTimeOutException const &e) {
     throwTimeoutException("DRM Controller License Timer Counter Sample is in timeout", "Expected License Timer Sample Ready Status Bit",
@@ -842,7 +846,7 @@ unsigned int DrmControllerOperations::sampleLicenseTimerCounter(unsigned int &li
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   try {
     // wait not license timer sample ready status
-    errorCode = waitLicenseTimerSampleReadyStatusRegister(DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS, false, licenseTimerSampleReady);
+    errorCode = waitLicenseTimerSampleReadyStatusRegister(mTimeoutInMicroSeconds, false, licenseTimerSampleReady);
   }
   catch (DrmControllerTimeOutException const &e) {
     throwTimeoutException("DRM Controller License Timer Counter Sample is in timeout", "Expected License Timer Sample Ready Status Bit",
@@ -916,7 +920,7 @@ unsigned int DrmControllerOperations::extractMeteringFile(unsigned int &numberOf
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   try {
     // wait metering ready status
-    errorCode = waitMeteringReadyStatusRegister(DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS, true, meteringReady);
+    errorCode = waitMeteringReadyStatusRegister(mTimeoutInMicroSeconds, true, meteringReady);
   }
   catch (DrmControllerTimeOutException const &e) {
     throwTimeoutException("DRM Controller Metering Extract is in timeout", "Expected Metering Ready Status Bit",
@@ -944,7 +948,7 @@ unsigned int DrmControllerOperations::extractSaasChallenge(std::string &saasChal
   unsigned int errorCode(mDrmApi_NO_ERROR);
   try {
     // wait saas challenge ready status
-    errorCode = waitSaasChallengeReadyStatusRegister(DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS, true, saasChallengeReady);
+    errorCode = waitSaasChallengeReadyStatusRegister(mTimeoutInMicroSeconds, true, saasChallengeReady);
   }
   catch (DrmControllerTimeOutException const &e) {
     throwTimeoutException("DRM Controller Saas Challenge Extract is in timeout", "Expected Saas Challenge Ready Status Bit",

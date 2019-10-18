@@ -1,12 +1,11 @@
-FROM debian:buster-slim
+FROM centos:8
 
-SHELL ["/bin/bash", "-c"]
-
-RUN apt-get update && \
-apt-get install -y --no-install-recommends \
+RUN dnf install -y epel-release && \
+dnf install -y 'dnf-command(config-manager)' && \
+dnf config-manager --set-enabled epel-playground && \
+dnf install -y --setopt=install_weak_deps=False --best \
     gcc \
     git \
-    libc-dev \
     make \
     python3-pip \
     sudo && \
@@ -21,11 +20,5 @@ pip3 install -U --no-cache-dir --disable-pip-version-check \
 git clone https://github.com/aws/aws-fpga /tmp/aws-fpga --depth 1 && \
 source /tmp/aws-fpga/sdk_setup.sh && \
 rm -Rf /tmp/aws-fpga && \
-apt-get remove -y --purge \
-    gcc \
-    git \
-    libc-dev \
-    make && \
-apt-get clean && \
-apt-get autoremove -y --purge && \
-rm -rf /var/lib/apt/lists/*
+dnf erase -y make gcc git && \
+rm -Rf /var/cache/dnf/*

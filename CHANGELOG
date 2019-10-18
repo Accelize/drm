@@ -1,3 +1,17 @@
+* Fri Oct 18 2019 Accelize v2.3.0
+- NEW: Added host name resolving for China Mainland
+- NEW: Support new frequency detection method based on internal counter
+- NEW: Added parameter to disabled frequency detection mechanism
+- NEW: Include LGDN SDK v4.0.0
+- NEW: The Accelize DRM Systemd service now support Xilinx XRT.
+- NEW: The Accelize DRM Systemd service now reset the FPGA on start and stop.
+- NEW: The Python library now provides a Xilinx XRT Python FPGA driver.
+- NEW: The Python library drivers now provides a "reset_fpga" method.
+- FIX: Build issue with setuptools v41.1.0.
+- FIX: DEB/RPM packages build is now triggered on the build tools instead of the package manager.
+- DOC: Updated to match new DRM HDK file organization.
+- DOC: Updated simulation chapter and added SDAccel/Vitis paragraph.
+
 * Wed Jul 10 2019 Accelize v2.2.1
 - DOC: Enhance documentation: hardware integration
 

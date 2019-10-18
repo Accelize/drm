@@ -6,11 +6,16 @@ Supported driver:
     AWS F1 instances types
         Require ``libfpga_mgmt`` library from AWS FPGA SDK
         (https://github.com/aws/aws-fpga).
+    Xilinx XRT
+        Require XRT (https://github.com/Xilinx/XRT).
 
 """
 from abc import abstractmethod as _abstractmethod
+from contextlib import contextmanager
 from ctypes import c_uint32 as _c_uint32, byref as _byref
 from importlib import import_module as _import_module
+from os import fsdecode as _fsdecode
+from os.path import realpath as _realpath
 from threading import Lock as _Lock
 
 __all__ = ['get_driver', 'FpgaDriverBase']
@@ -22,7 +27,8 @@ def get_driver(name):
 
     Args:
         name (str): Driver name. Possible values:
-            `aws_f1` (AWS F1 instances types).
+            `aws_f1` (AWS F1 instances types),
+            `xilinx_xrt` (Xilinx XRT).
 
     Returns:
         FpgaDriverBase subclass: driver class.
@@ -38,12 +44,16 @@ class FpgaDriverBase:
         fpga_slot_id (int): FPGA slot ID.
         fpga_image (str): FPGA image to use to program FPGA.
         drm_ctrl_base_addr (int): DRM Controller base address.
+        log_dir (path-like object): Some drivers may output logs files in this
+            directory. Default to current directory.
     """
 
-    def __init__(self, fpga_slot_id=0, fpga_image=None, drm_ctrl_base_addr=0):
+    def __init__(self, fpga_slot_id=0, fpga_image=None, drm_ctrl_base_addr=0,
+                 log_dir='.'):
         self._fpga_slot_id = fpga_slot_id
         self._fpga_image = fpga_image
         self._drm_ctrl_base_addr = drm_ctrl_base_addr
+        self._log_dir = _realpath(_fsdecode(log_dir))
 
         # FPGA read/write low level functions ans associated locks
         self._fpga_read_register = None
@@ -57,8 +67,10 @@ class FpgaDriverBase:
 
         # Initialize FPGA
         if fpga_image:
-            self._program_fpga(fpga_image)
-        self._init_fpga()
+            self.program_fpga(fpga_image)
+
+        with self._augment_exception('initialize'):
+            self._init_fpga()
 
         # Call backs
         self._read_register_callback = self._get_read_register_callback()
@@ -146,8 +158,30 @@ class FpgaDriverBase:
         else:
             self._fpga_image = fpga_image
 
-        print('Programming FPGA with image ID: ', fpga_image)
-        return self._program_fpga(fpga_image)
+        with self._augment_exception('program'):
+            return self._program_fpga(fpga_image)
+
+    def reset_fpga(self):
+        """
+        Reset FPGA including FPGA image.
+        """
+        with self._augment_exception('reset'):
+            return self._reset_fpga()
+
+    @contextmanager
+    def _augment_exception(self, action):
+        """
+        Augment exception message.
+
+        Args:
+            action (str): Action performed on FPGA.
+        """
+        try:
+            yield
+        except RuntimeError as exception:
+            exception.args = (
+                f'Unable to {action} FPGA: {exception.args[0].strip()}', )
+            raise
 
     @_abstractmethod
     def _get_driver(self):
@@ -165,6 +199,12 @@ class FpgaDriverBase:
 
         Args:
             fpga_image (str): FPGA image.
+        """
+
+    @_abstractmethod
+    def _reset_fpga(self):
+        """
+        Reset FPGA including FPGA image.
         """
 
     @_abstractmethod

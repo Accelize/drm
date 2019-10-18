@@ -209,16 +209,16 @@ to the Accelize Web Service.
 .. warning:: The activate method call may take few seconds.
              Especially on the first call due to internet and network delay.
 
-.. code-block:: c++
-    :caption: C++
-
-    drm_manager.activate();
-
 .. code-block:: c
     :caption: C
 
     if ( DrmManager_activate( drm_manager, false ) )
         fprintf( stderr, "%s", drm_manager->error_message );
+
+.. code-block:: c++
+    :caption: C++
+
+    drm_manager.activate();
 
 .. code-block:: python
     :caption: Python
@@ -240,11 +240,6 @@ When this function returns, the protected IPs are guaranteed to be locked
 .. warning:: In Floating or Metering mode, the deactivate method call may take some seconds due to
              internet or network delay.
 
-.. code-block:: c++
-    :caption: C++
-
-    drm_manager.deactivate();
-
 .. code-block:: c
     :caption: C
 
@@ -255,6 +250,11 @@ When this function returns, the protected IPs are guaranteed to be locked
     // associated resources.
     if ( DrmManager_free( &drm_manager ) )
         fprintf( stderr, "%s", drm_manager->error_message );
+
+.. code-block:: c++
+    :caption: C++
+
+    drm_manager.deactivate();
 
 .. code-block:: python
     :caption: Python
@@ -338,17 +338,6 @@ Pausing/resuming a DRM session
 
 Following code snippets show how to implement pause/resume functionality:
 
-.. code-block:: c++
-    :caption: C++
-
-    // Activate the DRM and resume the existing session if any
-    drm_manager.activate( true );
-
-    // [...]
-
-    // Deactivate the DRM, but pause the session instead of closing it
-    drm_manager.deactivate( true );
-
 .. code-block:: c
     :caption: C
 
@@ -361,6 +350,17 @@ Following code snippets show how to implement pause/resume functionality:
     // Deactivate the DRM, but pause the session instead of closing it
     if ( DrmManager_deactivate( drm_manager, true ) )
         fprintf( stderr, "%s", drm_manager->error_message );
+
+.. code-block:: c++
+    :caption: C++
+
+    // Activate the DRM and resume the existing session if any
+    drm_manager.activate( true );
+
+    // [...]
+
+    // Deactivate the DRM, but pause the session instead of closing it
+    drm_manager.deactivate( true );
 
 .. code-block:: python
     :caption: Python

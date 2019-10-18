@@ -212,9 +212,8 @@ const Json::Value& JVgetRequired( const Json::Value& jval,
         Throw( DRM_BadFormat, "Missing parameter '{}' of type {}", key, typeToString( type ) );
 
     const Json::Value& jvalmember = jval[key];
-    Debug( "Found parameter '{}' of type {}", key, typeToString( jvalmember.type() ) );
 
-    if ( ( jvalmember.type() != type) && !jvalmember.isConvertibleTo( type ) )
+    if ( ( jvalmember.type() != type ) && !jvalmember.isConvertibleTo( type ) )
         Throw( DRM_BadFormat, "Wrong parameter type for '{}' = {}, expecting {}, parsed as {}",
               key, jvalmember.toStyledString(), typeToString( type ), typeToString( jvalmember.type() ) );
 
@@ -223,6 +222,11 @@ const Json::Value& JVgetRequired( const Json::Value& jval,
 
     if ( ( jvalmember.type() == Json::stringValue ) && ( jvalmember.asString().empty() ) )
         Throw( DRM_BadFormat, "Value of parameter '{}' is an empty string", key );
+
+    std::string val = jvalmember.toStyledString();
+    val = val.erase( val.find_last_not_of("\t\n\v\f\r") + 1 );
+    Debug( "Found parameter '{}' of type {} with value {}", key, typeToString( jvalmember.type() ), val );
+
     return jvalmember;
 }
 

@@ -267,7 +267,13 @@ Example for a DRM Controller supporting 10 IPs:
 Timings
 -------
 
-The table below lists the performance of DRM Controller for some Xilinx FPGA families:
+The DRM Controller performance is directly related to the DNA primitive frequency.
+Tables below summarize the maximum frequency for few FPGA families.
+
+.. warning:: It is your responsibility to ensure your design is not violating the limitation of
+             your target.
+
+The table below lists the performance of DRM Controller for some Xilinx FPGA families.
 
 .. list-table::
    :header-rows: 1

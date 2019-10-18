@@ -21,7 +21,8 @@ def detect_package_manager():
             ('apt-get', 'apt-get -qq update && '
                         'apt-get install -y --no-install-recommends '),
             ('dnf', 'dnf install -y '),
-            ('yum', 'yum install -y ')):
+            ('yum', 'yum install -y '),
+            ('rpm', 'rpm -i ')):
         try:
             if not _run([utility, '--help'],
                         stdout=_DEVNULL, stderr=_DEVNULL).returncode:

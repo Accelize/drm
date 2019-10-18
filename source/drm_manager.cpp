@@ -48,7 +48,12 @@ limitations under the License.
 #include "HAL/DrmControllerOperations.hpp"
 #pragma GCC diagnostic pop
 
-#define NB_MAX_REGISTER 32
+#define NB_MAX_REGISTER  32
+
+#define REG_FREQ_DETECTION_VERSION  0xFFF8
+#define REG_FREQ_DETECTION_COUNTER  0xFFFC
+
+#define FREQ_DETECTION_VERSION_EXPECTED	 0x60DC0DE0
 
 #define TRY try {
 
@@ -154,7 +159,9 @@ protected:
     int32_t mFrequencyInit;
     int32_t mFrequencyCurr;
     uint32_t mFrequencyDetectionPeriod = 100;  // in milliseconds
-    double mFrequencyDetectionThreshold = 2.0;      // Error in percentage
+    double mFrequencyDetectionThreshold = 12.0;      // Error in percentage
+    bool mIsFreqDetectionMethod1 = false;
+    bool mBypassFrequencyDetection = false;
 
     // Session state
     std::string mSessionID;
@@ -285,10 +292,12 @@ protected:
                 Debug( "Configuration file specifies a Node-locked license" );
             } else {
                 Debug( "Configuration file specifies a floating/metered license" );
-                // Get DRM frequency
+                // Get DRM frequency related parameters
                 Json::Value conf_drm = JVgetRequired( conf_json, "drm", Json::objectValue );
                 mFrequencyInit = JVgetRequired( conf_drm, "frequency_mhz", Json::intValue ).asUInt();
                 mFrequencyCurr = mFrequencyInit;
+                mBypassFrequencyDetection = JVgetOptional( conf_drm, "bypass_frequency_detection", Json::booleanValue,
+                        mBypassFrequencyDetection ).asBool();
             }
 
         } catch( Exception &e ) {
@@ -346,7 +355,8 @@ protected:
         sLogger->sinks().push_back( log_sink );
         if ( level < sLogger->level() )
             sLogger->set_level( level );
-        Debug( "Created log file '{}' of type {}, with verbosity {}", file_path, (int)type, (int)level );
+        if ( type != eLogFileType::NONE )
+            Debug( "Created log file '{}' of type {}, with verbosity {}", file_path, (int)type, (int)level );
     }
 
     void updateLog() {
@@ -543,12 +553,11 @@ protected:
 
         if ( drmMajor < HDK_COMPATIBLITY_LIMIT_MAJOR ) {
             Throw( DRM_CtlrError,
-                    "This DRM Lib {} is not compatible with the DRM HDK version {}: To be compatible HDK version shall be > or equal to {}.{}.0",
+                    "This DRM Lib {} is not compatible with the DRM HDK version {}: To be compatible HDK version shall be > or equal to {}.{}.x",
                     DRMLIB_VERSION, drmVersionDot, HDK_COMPATIBLITY_LIMIT_MAJOR, HDK_COMPATIBLITY_LIMIT_MINOR );
-        }
-        if ( drmMinor < HDK_COMPATIBLITY_LIMIT_MINOR ) {
+        } else if ( ( drmMajor == HDK_COMPATIBLITY_LIMIT_MAJOR ) && ( drmMinor < HDK_COMPATIBLITY_LIMIT_MINOR ) ) {
             Throw( DRM_CtlrError,
-                    "This DRM Library version {} is not compatible with the DRM HDK version {}: To be compatible HDK version shall be > or equal to {}.{}.0",
+                    "This DRM Library version {} is not compatible with the DRM HDK version {}: To be compatible HDK version shall be > or equal to {}.{}.x",
                     DRMLIB_VERSION, drmVersionDot, HDK_COMPATIBLITY_LIMIT_MAJOR, HDK_COMPATIBLITY_LIMIT_MINOR );
         }
         Debug( "DRM HDK Version: {}", drmVersionDot );
@@ -588,6 +597,12 @@ protected:
 
         // Try to lock the DRM controller to this instance, return an error is already locked.
         lockDrmToInstance();
+
+        // Determine frequency detection method
+        determineFrequencyDetectionMethod();
+        if ( mIsFreqDetectionMethod1 ) {
+            detectDrmFrequencyMethod1();
+        }
 
         // Save header information
         mHeaderJsonRequest = getMeteringHeader();
@@ -1083,12 +1098,19 @@ protected:
 
         Debug ( "Looking for local node-locked license file: {}", mNodeLockLicenseFilePath );
 
-        try {
-            // Try to load a local license file
-            license_json = parseJsonFile( mNodeLockLicenseFilePath );
-            Debug( "Parsed Node-locked License file: {}", license_json .toStyledString() );
-
-        } catch( const Exception& e ) {
+        // Check if license file exists
+        if ( isFile( mNodeLockLicenseFilePath ) ) {
+            try {
+                // Try to load the local license file
+                license_json = parseJsonFile( mNodeLockLicenseFilePath );
+                Debug( "Parsed Node-locked License file: {}", license_json .toStyledString() );
+            } catch( const Exception& e ) {
+                Throw( e.getErrCode(), "Invalid local license file {} because {}. "
+                     "If this machine is connected to the License server network, rename the file and retry. "
+                     "Otherwise request a new Node-Locked license from your supplier.",
+                     mNodeLockLicenseFilePath, e.what() );
+            }
+        } else {
             /// No license has been found locally, request one to License WS:
             /// - Clear Session IS
             Debug( "Clearing session ID: {}", mSessionID );
@@ -1115,7 +1137,85 @@ protected:
         Info( "Installed node-locked license successfully" );
     }
 
-    void detectDrmFrequency() {
+    void determineFrequencyDetectionMethod() {
+        uint32_t reg;
+
+        if ( mBypassFrequencyDetection ) {
+            Debug( "Frequency detection sequence is disabled." );
+            return;
+        }
+
+        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+        int ret = f_read_register( REG_FREQ_DETECTION_VERSION, &reg );
+        if ( ret != 0 ) {
+            Unreachable( "Failed to read DRM frequency detection version register, errcode = {}", ret ); //LCOV_EXCL_LINE
+        }
+        if ( reg == FREQ_DETECTION_VERSION_EXPECTED ) {
+            // Use Method 1
+            Debug( "Use dedicated counter to compute DRM frequency (method 1)" );
+            mIsFreqDetectionMethod1 = true;
+        } else {
+            // Use Method 2
+            Debug( "Use license timer counter to compute DRM frequency (method 2)" );
+            mIsFreqDetectionMethod1 = false;
+        }
+    }
+
+    void detectDrmFrequencyMethod1() {
+        int ret;
+        uint32_t counter;
+        TClock::duration wait_duration = std::chrono::milliseconds( mFrequencyDetectionPeriod );
+
+        if ( mBypassFrequencyDetection ) {
+            return;
+        }
+
+        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+
+        // Start detection counter
+        ret = f_write_register( REG_FREQ_DETECTION_COUNTER, 0 );
+        if ( ret != 0 )
+            Unreachable( "Failed to start DRM frequency detection counter, errcode = {}", ret ); //LCOV_EXCL_LINE
+
+        // Wait a fixed period of time
+        sleepOrExit( wait_duration );
+
+        // Sample counter
+        ret = f_read_register( REG_FREQ_DETECTION_COUNTER, &counter );
+        if ( ret != 0 ) {
+            Unreachable( "Failed to read DRM frequency detection counter register, errcode = {}", ret ); //LCOV_EXCL_LINE
+        }
+
+        if ( counter == 0xFFFFFFFF )
+            Throw( DRM_BadFrequency, "Frequency auto-detection failed: frequency_detection_period parameter ({} ms) is too long.",
+                   mFrequencyDetectionPeriod );
+
+        // Compute estimated DRM frequency
+        //mFrequencyCurr = (int32_t)(std::ceil((double)counter / mFrequencyDetectionPeriod / 1000));
+        int32_t measured_frequency = (int32_t)((double)counter / mFrequencyDetectionPeriod / 1000);
+        Debug( "Frequency detection counter after {:f} ms is 0x{:08x}  => estimated frequency = {} MHz",
+            (double)mFrequencyDetectionPeriod/1000, counter, measured_frequency );
+
+        checkDrmFrequency( measured_frequency );
+    }
+
+    void detectDrmFrequencyMethod2() {
+        std::vector<int32_t> frequency_list;
+
+        if ( mBypassFrequencyDetection ) {
+            return;
+        }
+
+        frequency_list.push_back( detectDrmFrequencyFromLicenseTimer() );
+        frequency_list.push_back( detectDrmFrequencyFromLicenseTimer() );
+        frequency_list.push_back( detectDrmFrequencyFromLicenseTimer() );
+        std::sort( frequency_list.begin(), frequency_list.end());
+
+        int32_t measured_frequency = frequency_list[1];
+        checkDrmFrequency( measured_frequency );
+    }
+
+    int32_t detectDrmFrequencyFromLicenseTimer() {
         TClock::time_point timeStart, timeEnd;
         uint64_t counterStart, counterEnd;
         TClock::duration wait_duration = std::chrono::milliseconds( mFrequencyDetectionPeriod );
@@ -1123,11 +1223,12 @@ protected:
 
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
 
-        Debug( "Detecting DRM frequency for {} ms", mFrequencyDetectionPeriod );
+        Debug( "Detecting DRM frequency in {} ms", mFrequencyDetectionPeriod );
 
         while ( max_attempts > 0 ) {
 
             counterStart = getTimerCounterValue();
+
             // Wait until counter starts decrementing
             while (1) {
                 if (getTimerCounterValue() < counterStart) {
@@ -1137,17 +1238,16 @@ protected:
                 }
             }
 
-            /// Wait a fixed period of time
-            sleepOrExit(wait_duration);
+            // Wait a fixed period of time
+            sleepOrExit( wait_duration );
 
             counterEnd = getTimerCounterValue();
             timeEnd = TClock::now();
 
-            if (counterEnd == 0)
-                Unreachable(
-                        "Frequency auto-detection failed: license timeout counter is 0"); //LCOV_EXCL_LINE
+            if ( counterEnd == 0 )
+                Unreachable( "Frequency auto-detection failed: license timeout counter is 0" ); //LCOV_EXCL_LINE
             if (counterEnd > counterStart)
-                Debug("License timeout counter has been reset: taking another sample");
+                Debug( "License timeout counter has been reset: taking another sample" );
             else
                 break;
             max_attempts--;
@@ -1165,12 +1265,16 @@ protected:
         auto measuredFrequency = (int32_t)(std::ceil((double)ticks / seconds / 1000000));
         Debug( "Duration = {} s   /   ticks = {}   =>   estimated frequency = {} MHz", seconds, ticks, measuredFrequency );
 
-        // Compuate precision error compared to config file
+        return measuredFrequency;
+    }
+
+    void checkDrmFrequency( int32_t measuredFrequency ) {
+
+        // Compute precision error compared to config file
         double precisionError = 100.0 * abs( measuredFrequency - mFrequencyCurr ) / mFrequencyCurr ; // At that point mFrequencyCurr = mFrequencyInit
         if ( precisionError >= mFrequencyDetectionThreshold ) {
-            mFrequencyCurr = measuredFrequency;
             Throw( DRM_BadFrequency,
-                    "Estimated DRM frequency ({} MHz) differs from the value ({} MHz) defined in the configuration file '{}' by more than {}%: From now on the considered frequency is {} MHz",
+                   "Estimated DRM frequency ({} MHz) differs from the value ({} MHz) defined in the configuration file '{}' by more than {}%: From now on the considered frequency is {} MHz",
                     mFrequencyCurr, mFrequencyInit, mConfFilePath, mFrequencyDetectionThreshold, mFrequencyCurr);
         } else {
             Debug( "Estimated DRM frequency = {} MHz, config frequency = {} MHz: gap = {}%",
@@ -1218,8 +1322,9 @@ protected:
 
         mThreadKeepAlive = std::async( std::launch::async, [ this ]() {
             try {
-                /// Detecting DRM controller frequency
-                detectDrmFrequency();
+                /// Detecting DRM controller frequency if needed
+                if ( !mIsFreqDetectionMethod1 )
+                    detectDrmFrequencyMethod2();
 
                 /// Starting license request loop
                 while( 1 ) {
@@ -1669,6 +1774,21 @@ public:
                         json_value[key_str] = status;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                status );
+                        break;
+                    }
+                    case ParameterKey::bypass_frequency_detection: {
+                        json_value[key_str] = mBypassFrequencyDetection;
+                        Debug( "Get value of parameter '{}' (ID={}): Method {}", key_str, key_id,
+                               mBypassFrequencyDetection );
+                        break;
+                    }
+                    case ParameterKey::frequency_detection_method: {
+                        int method_index = 2;
+                        if ( mIsFreqDetectionMethod1 )
+                            method_index = 1;
+                        json_value[key_str] = method_index;
+                        Debug( "Get value of parameter '{}' (ID={}): Method {}", key_str, key_id,
+                               method_index );
                         break;
                     }
                     case ParameterKey::frequency_detection_threshold: {

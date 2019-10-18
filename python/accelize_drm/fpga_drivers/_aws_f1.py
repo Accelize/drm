@@ -23,6 +23,7 @@ class FpgaDriver(_FpgaDriverBase):
         fpga_slot_id (int): FPGA slot ID.
         fpga_image (str): AGFI or AFI to use to program FPGA.
         drm_ctrl_base_addr (int): DRM Controller base address.
+        log_dir (path-like object): Unused with this driver.
     """
 
     def _get_driver(self):
@@ -55,6 +56,17 @@ class FpgaDriver(_FpgaDriverBase):
             universal_newlines=True)
         if load_image.returncode:
             raise RuntimeError(load_image.stdout)
+        print('Programmed AWS F1 slot #%d with FPGA image %s' % (self._fpga_slot_id, fpga_image))
+
+    def _reset_fpga(self):
+        """
+        Reset FPGA including FPGA image.
+        """
+        reset_image = _run([
+            'fpga-clear-local-image', '-S', str(self._fpga_slot_id),
+            '-H'], stderr=_STDOUT, stdout=_PIPE, universal_newlines=True)
+        if reset_image.returncode:
+            raise RuntimeError(reset_image.stdout)
 
     def _init_fpga(self):
         """
@@ -105,7 +117,7 @@ class FpgaDriver(_FpgaDriverBase):
             Args:
                 register_offset (int): Offset
                 returned_data (int pointer): Return data.
-                driver (python_fpga_drivers.aws_f1.FpgaDriver):
+                driver (accelize_drm.fpga_drivers._aws_f1.FpgaDriver):
                     Keep a reference to driver.
             """
             with driver._fpga_read_register_lock:
@@ -139,7 +151,7 @@ class FpgaDriver(_FpgaDriverBase):
             Args:
                 register_offset (int): Offset
                 data_to_write (int): Data to write.
-                driver (python_fpga_drivers.aws_f1.FpgaDriver):
+                driver (accelize_drm.fpga_drivers._aws_f1.FpgaDriver):
                     Keep a reference to driver.
             """
             with driver._fpga_write_register_lock:

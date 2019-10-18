@@ -110,6 +110,8 @@ The Accelize DRM solution comprises 3 layers:
   in dynamic licensing and handles user authentication, licensing and metering. Upon
   special request, the DRM Web Service can deployed on-premise.
 
+.. important:: 1 FPGA image = 1 DRM Controller = 1 DRM Client process
+
 .. image:: _static/Accelize_DRM_Technology_service.png
    :target: _static/Accelize_DRM_Technology_service.png
    :alt: DRM implementation as a service

@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegisters.cpp
-*  \version   3.2.2.0
-*  \date      May 2019
+*  \version   4.0.0.1
+*  \date      July 2019
 *  \brief     Class DrmControllerRegisters defines low level procedures
 *             for access to all registers.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
@@ -1315,6 +1315,7 @@ DrmControllerRegisters::tDrmControllerRegistersStrategyDictionary DrmControllerR
   strategies[DRM_CONTROLLER_V3_2_0_SUPPORTED_VERSION] = new DrmControllerRegistersStrategy_v3_2_0(readRegisterFunction, writeRegisterFunction);
   strategies[DRM_CONTROLLER_V3_2_1_SUPPORTED_VERSION] = new DrmControllerRegistersStrategy_v3_2_1(readRegisterFunction, writeRegisterFunction);
   strategies[DRM_CONTROLLER_V3_2_2_SUPPORTED_VERSION] = new DrmControllerRegistersStrategy_v3_2_2(readRegisterFunction, writeRegisterFunction);
+  strategies[DRM_CONTROLLER_V4_0_0_SUPPORTED_VERSION] = new DrmControllerRegistersStrategy_v4_0_0(readRegisterFunction, writeRegisterFunction);
   return strategies;
 }
 
@@ -1346,9 +1347,9 @@ DrmControllerRegistersStrategyInterface* DrmControllerRegisters::getRegistersStr
 /** readStrategiesDrmVersion
 *   \brief Read the drm version of each strategy.
 *   \param[in] strategies is the dictionary of register strategies.
-*   \return Returns a dictionary of supported drm version and read drm version.
+*   \return Returns a list of string containing the supported drm version.
 **/
-DrmControllerRegisters::tDrmControllerRegistersVersionDictionary DrmControllerRegisters::readStrategiesDrmVersion(const tDrmControllerRegistersStrategyDictionary &strategies) const {
+std::vector<std::string> DrmControllerRegisters::readStrategiesDrmVersion(const tDrmControllerRegistersStrategyDictionary &strategies) const {
   // get the version of each strategy
   tDrmControllerRegistersVersionDictionary strategiesVersion;
   for (tDrmControllerRegistersStrategyConstIterator it = strategies.rbegin(); it != strategies.rend(); it++) {
@@ -1362,30 +1363,36 @@ DrmControllerRegisters::tDrmControllerRegistersVersionDictionary DrmControllerRe
 /** filterStrategiesDrmVersion
 *   \brief Filter the strategies drm version dictionary.
 *   \param[in] strategiesVersion is the dictionary of strategies version.
-*   \return Returns an updated dictionary of supported drm version and read drm version.
+*   \return Returns a list of string containing the supported drm version.
 **/
-DrmControllerRegisters::tDrmControllerRegistersVersionDictionary DrmControllerRegisters::filterStrategiesDrmVersion(const tDrmControllerRegistersVersionDictionary &strategiesVersion) const {
-  tDrmControllerRegistersVersionDictionary selectedStrategiesVersion;
+std::vector<std::string> DrmControllerRegisters::filterStrategiesDrmVersion(const tDrmControllerRegistersVersionDictionary &strategiesVersion) const {
+  std::vector<std::string> filteredVersion;
   for (tDrmControllerRegistersVersionConstIterator it = strategiesVersion.rbegin(); it != strategiesVersion.rend(); it++) {
     if (checkSupportedDrmVersion(it->first, it->second) == true)
-      selectedStrategiesVersion[it->first] = it->second;
+      filteredVersion.push_back(it->first);
   }
-  return selectedStrategiesVersion;
+  return filteredVersion;
 }
 
 /** parseStrategiesDrmVersion
 *   \brief Parse the drm version of each strategy.
-*   \param[in] strategiesVersion is the dictionary of strategies version.
+*   \param[in] filteredVersion is list of string containing the supported drm version.
 *   \return Returns a string of the supported drm version.
 **/
-std::string DrmControllerRegisters::parseStrategiesDrmVersion(const tDrmControllerRegistersVersionDictionary &strategiesVersion) const {
+std::string DrmControllerRegisters::parseStrategiesDrmVersion(const std::vector<std::string> &filteredVersion) const {
   // check for supported version
-  tDrmControllerRegistersVersionDictionary selectedStrategiesVersion;
-  for (tDrmControllerRegistersVersionConstIterator it = strategiesVersion.rbegin(); it != strategiesVersion.rend(); it++) {
-    if (checkSupportedDrmVersion(it->first, it->second) == true)
-      return it->first;
+  unsigned int selectedBugFix = 0;
+  std::string selectedVersion = "";
+  for (std::vector<std::string>::const_iterator it = filteredVersion.begin(); it != filteredVersion.end(); it++) {
+    std::string drmVersionMajor, drmVersionMinor, drmVersionBug;
+    DrmControllerVersion::getVersionElements(*it, drmVersionMajor, drmVersionMinor, drmVersionBug);
+    unsigned int currentBugFix = (unsigned int)strtoul(drmVersionBug.c_str(), NULL, 10);
+    if (currentBugFix >= selectedBugFix) {
+      selectedBugFix = currentBugFix;
+      selectedVersion = *it;
+    }
   }
-  return "";
+  return selectedVersion;
 }
 
 /** checkSupportedDrmVersion

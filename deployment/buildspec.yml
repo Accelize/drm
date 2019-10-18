@@ -117,6 +117,7 @@ phases:
         -n drm_packages_tests
         --gz_upload artifacts/packages.tar.gz /dev/shm/packages
         -x OS centos_7
+        -x OS centos_8
         -x OS debian_buster
         -x OS debian_stretch
         -x OS debian_testing

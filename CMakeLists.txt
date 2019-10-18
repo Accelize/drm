@@ -21,7 +21,7 @@ cmake_minimum_required(VERSION 3.12)
 # - Alpha             : 1.0.0-alpha.1
 # - Beta              : 1.0.0-beta.1
 # - Release candidate : 1.0.0-rc.1
-set(ACCELIZEDRM_VERSION 2.2.1)
+set(ACCELIZEDRM_VERSION 2.3.0)
 
 ## Define package release number (Number of time this version was packaged)
 if (NOT CPACK_PACKAGE_RELEASE)
@@ -147,6 +147,7 @@ set(DRM_CONTROLLER_SDK_SOURCES
         drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v3_2_0.cpp
         drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v3_2_1.cpp
         drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v3_2_2.cpp
+        drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v4_0_0.cpp
 )
 include_directories(drm_controller_sdk/include)
 set_source_files_properties(${DRM_CONTROLLER_SDK_SOURCES} PROPERTIES COMPILE_FLAGS "-Wno-unused-parameter")
@@ -434,9 +435,8 @@ if (PKG)
     endif ()
 
     # RPM Packages
-    find_program(PACKAGE_MANAGER_YUM yum)
-    find_program(PACKAGE_MANAGER_DNF dnf)
-    if (PACKAGE_MANAGER_YUM OR PACKAGE_MANAGER_DNF)
+    find_program(RPMBUILD rpmbuild)
+    if (RPMBUILD)
         set(CPACK_GENERATOR "RPM")
         set(CPACK_RPM_COMPONENT_INSTALL ON)
 
@@ -469,7 +469,10 @@ if (PKG)
                 set (PYTHON3_PACKAGE "${CMAKE_MATCH_1}")
             endif ()
 
-            if (PYTHON3_PACKAGE MATCHES "is not owned by any package" OR NOT PYTHON3_PACKAGE)
+            if (VERSION_ID MATCHES "8")
+                # RHEL/CentOS 8 package is named "python36", but python libraries packages are named using "python3-"
+                set(PYTHON3_PACKAGE "python3")
+            elseif(PYTHON3_PACKAGE MATCHES "is not owned by any package" OR NOT PYTHON3_PACKAGE)
                 # Python3 is not from a Package, define package name
                 set(PYTHON3_PACKAGE "python${Python3_VERSION_MAJOR}${Python3_VERSION_MINOR}")
             else()
@@ -494,8 +497,8 @@ if (PKG)
     endif ()
 
     # DEB Packages
-    find_program(PACKAGE_MANAGER_APT apt-get)
-    if (PACKAGE_MANAGER_APT)
+    find_program(DPKGBUILD dpkg-buildpackage)
+    if (DPKGBUILD)
         set(CPACK_PACKAGE_VERSION "${ACCELIZEDRM_VERSION}-${CPACK_PACKAGE_RELEASE}+${DIST_CODENAME}")
         set(CPACK_GENERATOR "DEB")
         set(CPACK_DEB_COMPONENT_INSTALL ON)

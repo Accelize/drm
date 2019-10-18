@@ -319,14 +319,13 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
     assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
     print('Test in node-locked when license_dir in config file is not a directory: PASS')
 
-    # Test when no DRM section is not specified
+    # Test when no DRM section is specified
     conf_json.reset()
     del conf_json['drm']
     conf_json.save()
     with pytest.raises(KeyError) as excinfo:
         assert conf_json['drm']
     assert 'drm' in str(excinfo.value)
-
     with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
         accelize_drm.DrmManager(
             conf_json.path,
@@ -340,13 +339,12 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
     assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
     print('Test no DRM section in config file: PASS')
 
-    # Test when no DRM section is empty
+    # Test when DRM section is empty
     conf_json.reset()
     del conf_json['drm']
     conf_json['drm'] = {}
     conf_json.save()
     assert conf_json['drm'] is not None
-
     with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
         accelize_drm.DrmManager(
             conf_json.path,
@@ -360,7 +358,7 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
     assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
     print('Test empty DRM section in config file: PASS')
 
-    # Test when no DRM frequency is not specified
+    # Test when no DRM frequency is specified
     conf_json.reset()
     del conf_json['drm']['frequency_mhz']
     conf_json['drm']['dummy'] = 0    # Add this node to be sure the drm node is not empty
@@ -368,7 +366,6 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
     with pytest.raises(KeyError) as excinfo:
         assert conf_json['drm']['frequency_mhz']
     assert 'frequency_mhz' in str(excinfo.value)
-
     with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
         accelize_drm.DrmManager(
             conf_json.path,

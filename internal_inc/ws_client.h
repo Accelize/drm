@@ -23,7 +23,6 @@ limitations under the License.
 #include <json/json.h>
 #include <curl/curl.h>
 
-//#include "log.h"
 
 namespace Accelize {
 namespace DRM {
@@ -45,6 +44,7 @@ public:
 // RAII for Curl easy
 class CurlEasyPost {
 private:
+    const ulong cConnectionTimeout = 4000L;  // In milliseconds
     CURL *curl;
     struct curl_slist *headers = nullptr;
     std::list<std::string> data; // keep data until request performed
@@ -75,6 +75,8 @@ public:
 
     CurlEasyPost();
     ~CurlEasyPost();
+
+    void setHostResolves( const Json::Value& resolves );
 
     long perform(std::string* resp, std::chrono::steady_clock::time_point deadline);
     double getTotalTime();
@@ -121,6 +123,7 @@ protected:
     std::string mOAuth2Url;
     std::string mMeteringUrl;
     std::string mOAuth2Token;
+    Json::Value mHostResolves;
     uint32_t mTokenValidityPeriod;
     TClock::time_point mTokenExpirationTime;
     CurlEasyPost mOAUth2Request;

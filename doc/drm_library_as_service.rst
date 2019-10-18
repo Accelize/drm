@@ -5,14 +5,26 @@ The advantage of the systemd approach is that:
 
 * it runs in background, keeping the FPGA licensed at all time and independently from your application.
 * it removes the ``activate`` call delay penalty on the first call by doing it at OS startup.
-
-The Accelize DRM systemd service is an implementation of a long-running application using the
-DRM library API. So if your environment is not supported yet you can easily implemented it by
-your own following the instructions in :doc:`drm_library_as_api`.
+* this does not require any code change in your software application.
 
 .. image:: _static/Accelize_DRM_Technology_service.png
    :target: _static/Accelize_DRM_Technology_service.png
    :alt: DRM implementation as a service
+
+Application requirements
+------------------------
+
+If your application cannot fit the following requirements, you cannot use the
+systemd service and you must implement the licensing in your application using
+the DRM library (See :doc:`drm_library_as_api`).
+
+* The application must never program the bitstream.
+* The application must never reset the bitstream.
+
+Typically an OpenCL application is not compatible with this service.
+
+.. note:: The service can still be used to program the FPGA on system start by
+          disabling the licensing. See configuration bellow.
 
 Availability
 ------------
@@ -20,9 +32,11 @@ Availability
 This service currently supports the following FPGA environments:
 
 * AWS F1 instances.
+* Xilinx XRT.
 
-If your configuration is not supported, contact `Accelize support <mailto:support@accelize.com>`_
-for mode information.
+The Accelize DRM systemd service is an implementation of a long-running application using the
+DRM library API. So if your environment is not supported yet you can easily implemented it by
+your own following the instructions in :doc:`drm_library_as_api`.
 
 This is an open-source project that accepts external contributions. So feel free to implement
 your own configuration and if you're happy to share it with others please submit it to us.
@@ -45,10 +59,11 @@ The default service configuration is the following:
 * Only FPGA slot `0` is licensed.
 * The configuration file is waited in ``/etc/accelize_drm/conf.json``.
 * The credentials file in is waited in ``~/.accelize_drm/cred.json``
-* The FPGA driver is AWS F1 instance types (`aws_f1`)
+* The FPGA driver is Xilinx XRT (`xilinx_xrt`)
 
 .. note:: If the service is running system-wide, it will search for
-          the credential file in the home directory of the ``root`` user.
+          the credential file in the home directory of the ``root`` user
+          (``/root/.accelize_drm/cred.json``).
 
 Configuration customization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -62,10 +77,11 @@ file to pass following environment variables to it:
   the FPGA slot corresponding to `Slot_Number`.
 * `ACCELIZE_DRM_DRIVER_<Slot_Number>`: FPGA driver name to use for
   the FPGA slot corresponding to `Slot_Number`.
-  Possible values: `aws_f1` for AWS F1 instances.
+  Possible values: `aws_f1` for AWS F1 instances, `xilinx_xrt` for Xilinx XRT.
 * `ACCELIZE_DRM_IMAGE_<Slot_Number>`: FPGA image to program in the FPGA slot
   corresponding to `Slot_Number`. If not specified, nothing is programmed.
-  Possible Values: AGFI or AFI image ID for AWS F1 instances.
+  Possible Values: AGFI for AWS F1 instances, path or URL to a *.xclbin* file
+  for Xilinx XRT.
 * `ACCELIZE_DRM_DISABLED_<Slot_Number>`: If specified, do not license the
   specified FPGA slot. This can be used to use the Service to only program the
   FPGA in the case the licensing is managed with the DRM library directly in the

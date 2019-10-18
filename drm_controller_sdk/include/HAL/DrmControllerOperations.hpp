@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerOperations.hpp
-*  \version   3.2.2.0
-*  \date      May 2019
+*  \version   4.0.0.1
+*  \date      July 2019
 *  \brief     Class DrmControllerOperations is an abstraction level to execute operations.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 #ifndef __DRM_CONTROLLER_OPERATIONS_HPP__
 #define __DRM_CONTROLLER_OPERATIONS_HPP__
 
+#include <cstdlib>
 #include <HAL/DrmControllerRegisters.hpp>
 
 /**
@@ -499,6 +500,8 @@ namespace DrmControllerLibrary {
       // it will be set if it is not the case during the wait auto controller function
       
       bool mLicenseTimerWasLoaded; /**<Tell wether the license timer was loaded at least one time.**/
+
+      unsigned int mTimeoutInMicroSeconds; /**<Store the timeout in microseconds to complete internal operation.**/
 
       /** extractMeteringFile
       *   \brief Extract the metering file.
