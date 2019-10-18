@@ -1,3 +1,4 @@
+========================
 DRM library build & test
 ========================
 
@@ -16,10 +17,10 @@ For more details about available CMake options, refer to `Build CMake configurat
 
 
 Requirements
-````````````
+============
 
 Minimal requirements
-::::::::::::::::::::
+--------------------
 
 Utilities:
  * git
@@ -93,7 +94,7 @@ Run following commands to install requirements:
     sudo dnf install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel cmake
 
 Python 3 library option
-:::::::::::::::::::::::
+-----------------------
 
 This step is required only if you want to:
 
@@ -139,7 +140,7 @@ Run following command to install requirements:
 
 
 Documentation generation option
-:::::::::::::::::::::::::::::::
+-------------------------------
 
 This step is required only if you want to:
 
@@ -183,13 +184,13 @@ Run following command to install requirements:
     sudo pip3 install -U sphinx breathe sphinx_rtd_theme
 
 Test generation option
-::::::::::::::::::::::
+----------------------
 
 .. warning:: This dependency is mandatory to complete the `Run tests`_ section.
 
 This step is required only if you want to:
 
-* Run the test suite (using -DTESTS=ON` option with CMake)
+* Run the test suite (using ``-DTESTS=ON`` option with CMake)
 
 Otherwise you can jump to the next step.
 
@@ -209,18 +210,18 @@ Run following command to install requirements:
     sudo pip3 install -U pytest
 
 Package generation option
-:::::::::::::::::::::::::
+-------------------------
 
 This step is required only if you want to:
 
-* Generate the installation packages (using -DPKG=ON` option with CMake)
+* Generate the installation packages (using ``-DPKG=ON`` option with CMake)
 
 Otherwise you can jump to the next step.
 
-Before going further, make sure the section `Python 3 option`_ has been completed.
+Before going further, make sure the section `Python 3 library option`_ has been completed.
 
 RPM package (For RHEL, CentOS, Fedora)
-''''''''''''''''''''''''''''''''''''''
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Required to build packages:
  * rpm-build
@@ -242,7 +243,7 @@ To install the required utilities, run the following command:
     sudo yum install -y rpm-build rpm-sign gnupg
 
 DEB Packages (For Debian, Ubuntu)
-'''''''''''''''''''''''''''''''''
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Required to build package:
  * pkg-config
@@ -260,11 +261,11 @@ To install required utilities, run the following command:
     sudo apt install -y pkg-config dpkg-dev dpkg-sig gnupg file
 
 ABI check option
-::::::::::::::::
+----------------
 
 This step is required only if you want to:
 
-* Run the test suite in Debug mode (using -DCMAKE_BUILD_TYPE=Debug` option with CMake)
+* Run the test suite in Debug mode (using ``-DCMAKE_BUILD_TYPE=Debug`` option with CMake)
 
 Otherwise you can jump to the next step.
 
@@ -306,7 +307,7 @@ To install requirements run the following command:
     sudo yum install -y abi-compliance-checker
 
 Coverage option
-:::::::::::::::
+---------------
 
 This step is required only if you want to:
 
@@ -343,7 +344,7 @@ Run following command to install requirements:
     sudo pip3 install -U --prefix /usr pytest-cov
 
 Automation with tox
-:::::::::::::::::::
+-------------------
 
 This step is required only if you want to use tox to automate some execution scenarios.
 Otherwise you can jump to the next step.
@@ -365,7 +366,7 @@ Run following command to install requirements:
 
 
 Build CMake configuration
-`````````````````````````
+=========================
 
 1. Clone Accelize DRM library repository and move to it:
 
@@ -408,7 +409,7 @@ Use the following options to build optional components:
    cmake -DPYTHON3=ON -DDOC=ON ..
 
 Compile CMake configuration
-```````````````````````````
+===========================
 
 Once the CMake configuration built, you can either:
 
@@ -436,7 +437,7 @@ Once the CMake configuration built, you can either:
 
 
 Generated output
-````````````````
+================
 
 Depending on your CMake configuration, the *build* directory will contain
 the following components:
@@ -450,23 +451,24 @@ the following components:
 * Documentation in HTML format located in ``doc_html`` directory.
 
 Run tests
-`````````
+=========
 
 This section explains how to run Accelize DRM python library tests.
 
 .. warning:: Following tests require a real FPGA board and associated driver installed.
-             Refer to `Supported OS`_ to get the list of tested OS.
+             Refer to `supported_os` paragraph in :doc:`drm_library_installation` to get
+             the list of tested OS.
 
 .. important:: The tests described below are based on the Python DRM library
-               and *pytest* module. So make sure sections `Python 3 option`_
+               and *pytest* module. So make sure sections `Python 3 library option`_
                and `Test generation option`_ have been completed and that you have
                run the CMake command with the ``-DTESTS=ON -DPYTHON3=ON`` options.
 
 Test command
-::::::::::::
+------------
 
 Usage
-'''''
+^^^^^
 
 Here is the test command:
 
@@ -480,7 +482,7 @@ Here is the test command:
     pytest --cred=path_to_cred.json [options]
 
 .. warning:: Depending on your execution platform environment and the driver requirements you
-             might need to execute the comment with `sudo`:
+             might need to execute the comment with ``sudo``:
 
              .. code-block:: bash
 
@@ -532,7 +534,7 @@ Command options are:
 
 
 Coverage
-''''''''
+^^^^^^^^
 
 .. important:: To enable coverage reporting the section `Coverage option`_ must have been performed.
 
@@ -562,7 +564,7 @@ The result is an HTML report located in the ``coverage`` directory.
 
 
 Run full tests
-::::::::::::::
+--------------
 
 This scenario performs following actions:
 
@@ -590,11 +592,11 @@ The usual test options can be used after the ``--`` delimiter.
 
 .. note:: The ``--backend`` option is not supported because managed by tox.
 
-.. warning:: Running Tox with `sudo` may be required to run `build-install`
-             scenario and to access FPGA in `c` and `cpp` scenarios.
+.. warning:: Running Tox with ``sudo`` may be required to run ``build-install``
+             scenario and to access FPGA in ``c`` and ``cpp`` scenarios.
 
 Run tests partially
-:::::::::::::::::::
+-------------------
 
 It is possible to reduce the scenario scope with the ``-e`` tox argument.
 More information on `tox documentation`_.

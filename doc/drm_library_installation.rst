@@ -3,6 +3,7 @@ DRM Library installation
 
 This section explains how to install the Accelize DRM library API from packages and from source.
 
+.. _supported_os:
 
 Supported OS
 ------------

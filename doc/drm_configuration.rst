@@ -23,7 +23,7 @@ To create Accelize account and get credentials:
 * Create an account on `Accelize portal registration`_.
 * Create an access key from your `Accelize portal account`_.
 
-Download the credential files (`cred.json`) which looks like this:
+Download the credential files (``cred.json``) which looks like this:
 
 .. code-block:: json
 
@@ -63,11 +63,25 @@ basic ``conf.json`` file content:
         }
     }
 
-* `frequency_mhz`: Must be set to the effective frequency in MHz of the DRM Controller IP.
-* `drm_ctrl_base_addr`: DRM controller base address. Must be set if the the
-  application is intended to work with the Accelize DRM service. Default to `0`.
-* `boardType`: Store any string information that the ISV (IP/App vendor) might want to save
+* ``url``: URL to Accelize DRM Web Service.
+
+  .. important:: For Chinese mainland, url must be set to ``https://alibaba.metering.accelize.com``.
+
+* ``frequency_mhz``: Must be set to the effective frequency in MHz of the DRM Controller IP.
+* ``drm_ctrl_base_addr``: DRM controller base address. Must be set if the the
+  application is intended to work with the Accelize DRM service. Default to ``0``.
+* ``boardType``: Store any string information that the ISV (IP/App vendor) might want to save
   on his/her portal database.
+
+DRM Controller IP Frequency
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+From the precision of the DRM Controller frequency depends the correctness of the license timer.
+The DRM Controller is embedding a frequency self-check that returns en error if the seld-evaluated
+frequency differ from the one provided in the configuraiton file through the ``frequency_mhz``
+parameter.
+You can disable this frequency self-check by creating an additional ``bypass_frequency_detection`` in
+the ``drm`` section with the value ``true``.
 
 Node-locked parameters
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -117,10 +131,10 @@ the configuration file:
         }
     }
 
-* `log_verbosity`: Set the level of verbosity: 0=quiet, 1=error (default), 2=warning,
+* ``log_verbosity``: Set the level of verbosity: 0=quiet, 1=error (default), 2=warning,
   3= information, 4=debug.
 
-* `log_format`: Set the format of trace message as a string pattern: refer to the `SPDLOG
+* ``log_format``: Set the format of trace message as a string pattern: refer to the `SPDLOG
   documentation <https://github.com/gabime/spdlog/wiki/3.-Custom-formatting>`_.
 
 

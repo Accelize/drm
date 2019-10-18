@@ -242,16 +242,16 @@ the actual IP usage might help to propose future solutions that would better
 answer your customer needs.
 
    a. First you need to determine which data metrics is the most relevant to count with regard
-to the application domain.
-Typically you would count the number of bytes processed by an encryption IP whereas
-you would count the number of frames processed by a video rescaling IP.
+      to the application domain.
+      Typically you would count the number of bytes processed for an encryption IP but
+      you would count the number of frames processed for a video rescaling IP.
 
    #. Then instrument your code to measure your metrics. For instance count the number of
-bytes processed.
+      bytes processed.
 
    #. When the metric unit is reached, generate a 1-clock cycle pulse (synchronized on
-``ip_core_aclk``) on the ``metering_event`` port of the DRM Activator.
-For instance, generate a pulse every 100M bytes.
+      ``ip_core_aclk``) on the ``metering_event`` port of the DRM Activator.
+      For instance, generate a pulse every 100M bytes.
 
 Each pulse on ``metering_event`` increases the metering 64-bit counter by 1.
 The value of this counter is transmitted to the DRM Web Service which converts it
@@ -279,7 +279,7 @@ Encrypt the Protect IPs
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 .. warning:: Encrypting the Protected IP is mandatory since it contains the
-               activation code in clear text.
+             activation code in clear text.
 
 Encrypt each protected IP in IEEE 1735 for Vivado or Ampcrypt for Quartus.
 Please contact your EDA reseller for more information about IP encryption.
@@ -307,17 +307,16 @@ protected IP cores.
 
 .. image:: _static/DRM_ENVIRONMENT_TOPOLOGY.png
    :target: _static/DRM_ENVIRONMENT_TOPOLOGY.png
-   :alt: DRM_ENVIRONMENT_TOPOLOGY.png
 
-.. warning:: The ``drm_aclk``clock of the DRM Controller and the DRM Activators MUST
-             be the same clock.
+.. warning:: The ``drm_aclk`` clock of the DRM Controller and the DRM Activators
+             MUST be the same clock.
 
 
 Simulate your design
 ====================
 
 The user can find a simulation model of the DRM Activator, drm_activator_0xVVVVLLLLNNNNVVVV_sim.(sv,vhdl),
-in the `sim` folder of the DRM HDK.
+in the ``sim`` folder of the DRM HDK.
 It instantiates a DRM Controller Bus Functional Model (BFM) in addition to the RTL model of the
 DRM Controller and internally implements a mechanism to load a license file, generate signals and
 messages for debugging.
@@ -325,10 +324,10 @@ This simulation model is specific to each Activator. This is particularly intere
 design instantiate multiple Protected IPs. By this mean you can simulate each Protected IP
 (IP code + Activator) separately from the rest of the design.
 
-In addition to the simulation top-level, you'll find in the `sim` folder the following files:
+In addition to the simulation top-level, you'll find in the ``sim`` folder the following files:
 
-* xilinx_sim, modelsim                               : Each folder contains the BFM core encrypted for the specific tool.
-    |- drm_controller_bfm.(sv,vhdl)                    The BFM core is instantiated by the drm_activator_0xVVVVLLLLNNNNVVVV_sim.
+* xilinx_sim, modelsim (with drm_controller_bfm)     : Each folder contains the BFM core encrypted for the specific tool.
+                                                       The BFM core is instantiated by the drm_activator_0xVVVVLLLLNNNNVVVV_sim.
 * drm_activator_0xVVVVLLLLNNNNVVVV_sim_pkg.(sv,vhdl) : Package containing simulation parameters (see details below)
 * drm_license_package.vhdl                           : Generic license file
 * drm_activator_0xVVVVLLLLNNNNVVVV_license_file.xml  : Specific license file
@@ -559,7 +558,7 @@ Or a TCL script:
    }
 
 .. note:: When there is a single activator in your design, you can compile
-          all VHDL source files under a single library `drm_library`.
+          all VHDL source files under a single library ``drm_library``.
 
 Verilog
 ^^^^^^^
@@ -569,7 +568,7 @@ DRM Contoller
 
 The DRM Controller top-level name is **drm_controller**.
 
-.. note:: `drm_all_components` and `drm_ip_controller` entities are available in VHDL only.
+.. note:: ``drm_all_components`` and ``drm_ip_controller`` entities are available in VHDL only.
 
 To add the DRM Controller sources to your project, you can use:
 
@@ -597,7 +596,7 @@ DRM Activator
 The DRM Activator top-level name is **drm_activator_0xVVVVLLLLNNNNVVVV**.
 0xVVVVLLLLNNNNVVVV is an hexadecimal string encoding the VLNV of this IP.
 
-.. note:: `drm_all_components` and `drm_ip_activator_0xVVVVLLLLNNNNVVVV` entities are
+.. note:: ``drm_all_components`` and ``drm_ip_activator_0xVVVVLLLLNNNNVVVV`` entities are
           available in VHDL only.
 
 To add the DRM Activator sources to your project, you can use:
@@ -622,7 +621,7 @@ Or via TCL script:
    }
 
 .. note:: When there is a single activator in your design, you can compile
-          all VHDL source files under a single library `drm_library`.
+          all VHDL source files under a single library ``drm_library``.
 
 Generated warnings
 ^^^^^^^^^^^^^^^^^^
@@ -657,11 +656,11 @@ Below is an overview of the interaction between Sw and Hw layers when desiging w
 In this description, the DRM Controller has its own kernel and the DRM ACtivator is instantiated
 with the User's logic in a separate kernel. But the user may prefer to group all together the
 DRM Controller and Activator into the same SDAccel kernel.
-However,to simply the integration, Accelize provides in the DRM HDK a makefile that generates automatically the .XO package
-for the DRM Controller kernel.
+However,to simply the integration, Accelize provides in the DRM HDK a makefile that generates
+automatically the .XO package for the DRM Controller kernel.
 
 DRM Contoller Kernel
-""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^
 
 To generate the DRM Controller kernel for SDAccel:
 
@@ -674,7 +673,7 @@ To generate the DRM Controller kernel for SDAccel:
 You can now include the .xo file in your SDAccel project.
 
 DRM Activator Kernel
-""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^
 
 Proceed as in a usual Xilinx Vivado flow: modify your original design to prepare, instantiate and connect
 the DRM Activator IP.
@@ -753,7 +752,7 @@ DRM Contoller
 
 The DRM Controller top-level name is **drm_controller**.
 
-.. note:: `drm_all_components` and `drm_ip_controller` entities are available in VHDL only.
+.. note:: ``drm_all_components`` and ``drm_ip_controller`` entities are available in VHDL only.
 
 To add the DRM Controller sources to your project, you can use:
 
@@ -781,7 +780,7 @@ DRM Activator
 The DRM Activator top-level name is **drm_activator_0xVVVVLLLLNNNNVVVV**.
 0xVVVVLLLLNNNNVVVV is an hexadecimal string encoding the VLNV of this IP.
 
-.. note:: `drm_all_components` and `drm_ip_activator_0xVVVVLLLLNNNNVVVV` entities are
+.. note:: ``drm_all_components`` and ``drm_ip_activator_0xVVVVLLLLNNNNVVVV`` entities are
           available in VHDL only.
 
 To add the DRM Activator sources to your project, you can use:
@@ -807,9 +806,9 @@ To add the DRM Activator sources to your project, you can use:
 Constrain your design
 =====================
 
-A CDC mechanism is implemented in the DRM Activator IP to handle different clocks on `drm_aclk` and `ip_core_aclk`.
+A CDC mechanism is implemented in the DRM Activator IP to handle different clocks on ``drm_aclk`` and ``ip_core_aclk``.
 The associated CDC constraints shall be defined in your project. Because the sources are encrypted
-you will find in the names of the CDC elements to constrain in the SDC files in the `syn/contraints` folder.
+you will find in the names of the CDC elements to constrain in the SDC files in the ``syn/contraints`` folder.
 
 
 .. _Accelize: https://www.accelize.com/contact-us
