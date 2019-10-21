@@ -41,10 +41,12 @@ def test_changelog_and_version(accelize_drm):
 
     # Checks tag format using library version
     lib_ver = accelize_drm.get_api_version()
-    assert tag == 'v%s' % (lib_ver.version.split('+')[0])
+    if accelize_drm.pytest_server == 'prod':
+        assert tag == 'v%s' % (lib_ver.version.split('+')[0])
+    else:
+        assert tag.startswith('v%s' % (lib_ver.version.split('+')[0]))
 
     # Check tag format match semantic versioning
-
     if not fullmatch(r'^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)'
                      r'(-(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)'
                      r'(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?'

@@ -330,7 +330,7 @@ def accelize_drm(pytestconfig):
                 else 'release')
 
         # Add Build environment to Python import hook
-        # NOTE: It is not possible to setup "LD_LIBRARY_PATH" once Python is run
+        # NOTE: It is not possible to setup "LD_LIBRARY_PATH" once Python is running
         #       this value need to be set prior to run "pytest" to allow
         #       python importing shared libraries.
         import sys
@@ -434,6 +434,7 @@ def accelize_drm(pytestconfig):
         print('Found %d activator(s) on slot #%d' % (len(base_addr_list), driver._fpga_slot_id))
 
     # Store some values for access in tests
+    _accelize_drm.pytest_server = pytestconfig.getoption("server")
     _accelize_drm.pytest_build_environment = build_environment
     _accelize_drm.pytest_build_source_dir = build_source_dir
     _accelize_drm.pytest_build_type = build_type
