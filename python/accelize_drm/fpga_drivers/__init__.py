@@ -180,7 +180,7 @@ class FpgaDriverBase:
             yield
         except RuntimeError as exception:
             exception.args = (
-                f'Unable to {action} FPGA: {exception.args[0].strip()}', )
+                'Unable to %s FPGA: %s' % (action, exception.args[0].strip()))
             raise
 
     @_abstractmethod
