@@ -36,23 +36,29 @@ CurlEasyPost::CurlEasyPost() {
 }
 
 CurlEasyPost::~CurlEasyPost() {
-    curl_slist_free_all( headers );
     curl_easy_cleanup( curl );
+    curl_slist_free_all( headers );
+    curl_slist_free_all( host_resolve_list );
+    headers = NULL;
+    host_resolve_list = NULL;
 }
 
-void CurlEasyPost::setHostResolves( const Json::Value& resolves ) {
-    if ( resolves != Json::nullValue ) {
-        struct curl_slist *host = nullptr;
-        for( Json::ValueConstIterator it = resolves.begin(); it != resolves.end(); it++ ) {
+void CurlEasyPost::setHostResolves( const Json::Value& host_json ) {
+    if ( host_json != Json::nullValue ) {
+        if ( host_resolve_list != NULL ) {
+            curl_slist_free_all( host_resolve_list );
+            host_resolve_list = NULL;
+        }
+        for( Json::ValueConstIterator it = host_json.begin(); it != host_json.end(); it++ ) {
             std::string key = it.key().asString();
             std::string val = (*it).asString();
             std::string host_str = fmt::format( "{}:{}", key, val );
-            host = curl_slist_append( host, host_str.c_str() );
+            host_resolve_list = curl_slist_append( host_resolve_list, host_str.c_str() );
         }
-        if ( curl_easy_setopt(curl, CURLOPT_RESOLVE, host) == CURLE_UNKNOWN_OPTION )
-            Warning( "Could not set the CURL Host resolve option: {}", resolves.toStyledString() );
+        if ( curl_easy_setopt(curl, CURLOPT_RESOLVE, host_resolve_list) == CURLE_UNKNOWN_OPTION )
+            Warning( "Could not set the CURL Host resolve option: {}", host_json.toStyledString() );
         else
-            Debug( "Set the following CURL Host resolve option: {}", resolves.toStyledString() );
+            Debug( "Set the following CURL Host resolve option: {}", host_json.toStyledString() );
     }
 }
 
@@ -62,10 +68,6 @@ long CurlEasyPost::perform( std::string* resp, std::chrono::steady_clock::time_p
 
     if ( headers ) {
         curl_easy_setopt( curl, CURLOPT_HTTPHEADER, headers );
-        std::string sHeader;
-        for( const std::string& h: data )
-            sHeader += std::string("\t") + h + std::string("\n");
-        Debug2( "CURL header:\n{}", sHeader );
     }
     curl_easy_setopt( curl, CURLOPT_WRITEFUNCTION, &CurlEasyPost::write_callback );
     curl_easy_setopt( curl, CURLOPT_WRITEDATA, (void*)resp );
@@ -105,7 +107,10 @@ double CurlEasyPost::getTotalTime() {
 }
 
 
+
 DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &cred_file_path ) {
+
+    std::string url;
 
     mOAuth2Token = std::string("");
     mTokenValidityPeriod = 0;
@@ -116,13 +121,11 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
         Json::Value webservice_json = JVgetRequired( conf_json, "licensing", Json::objectValue );
         Debug2( "Web service configuration: {}", webservice_json.toStyledString() );
 
-        std::string url = JVgetRequired( webservice_json, "url", Json::stringValue ).asString();
-        mOAuth2Url = url + std::string("/o/token/");
-        mMeteringUrl = url + std::string("/auth/metering/genlicense/");
-        Debug( "Licensing URL: {}", url );
+        mHostResolvesJson = JVgetOptional( webservice_json, "host_resolves", Json::objectValue );
 
-        mHostResolves = JVgetOptional( webservice_json, "host_resolves", Json::objectValue );
-        Debug2( "Host resolves: {}", mHostResolves.toStyledString() );
+        url = JVgetRequired( webservice_json, "url", Json::stringValue ).asString();
+        Debug( "Licensing URL: {}", url );
+        mMeteringUrl = url + std::string("/auth/metering/genlicense/");
 
     } catch( Exception &e ) {
         Throw( e.getErrCode(), "Error with service configuration file '{}': {}",
@@ -141,9 +144,9 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
 
     CurlSingleton::Init();
 
-    // Set headers of OAuth2 request
-    mOAUth2Request.setHostResolves( mHostResolves );
-    mOAUth2Request.setURL( mOAuth2Url );
+    // Set header of OAuth2 request
+    mOAUth2Request.setHostResolves( mHostResolvesJson );
+    mOAUth2Request.setURL( url + std::string("/o/token/") );
     std::stringstream ss;
     ss << "client_id=" << mClientId << "&client_secret=" << mClientSecret;
     ss << "&grant_type=client_credentials";
@@ -174,7 +177,7 @@ void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
     }
 
     // Request a new token and wait response
-    Debug( "Requesting a new authentication token from {}", mOAuth2Url );
+    Debug( "Requesting a new authentication token" );
     std::string response;
     long resp_code = mOAUth2Request.perform( &response, deadline );
 
@@ -218,7 +221,7 @@ Json::Value DrmWSClient::requestLicense( const Json::Value& json_req, TClock::ti
 
     // Create new request
     CurlEasyPost req;
-    req.setHostResolves( mHostResolves );
+    req.setHostResolves( mHostResolvesJson );
     req.setURL( mMeteringUrl );
     req.appendHeader( "Accept: application/json" );
     req.appendHeader( "Content-Type: application/json" );

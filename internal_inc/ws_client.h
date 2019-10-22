@@ -45,8 +45,9 @@ public:
 class CurlEasyPost {
 private:
     const ulong cConnectionTimeout = 4000L;  // In milliseconds
-    CURL *curl;
-    struct curl_slist *headers = nullptr;
+    CURL *curl = NULL;
+    struct curl_slist *headers = NULL;
+    struct curl_slist *host_resolve_list = NULL;
     std::list<std::string> data; // keep data until request performed
     std::array<char, CURL_ERROR_SIZE> errbuff;
 
@@ -76,10 +77,10 @@ public:
     CurlEasyPost();
     ~CurlEasyPost();
 
-    void setHostResolves( const Json::Value& resolves );
-
     long perform(std::string* resp, std::chrono::steady_clock::time_point deadline);
     double getTotalTime();
+
+    void setHostResolves( const Json::Value& host_json );
 
     template<class T>
     void setURL(T&& url) {
@@ -90,12 +91,14 @@ public:
     template<class T>
     void appendHeader(T&& header) {
         data.push_back(std::forward<T>(header));
+        Debug2( "Add {} to CURL header", std::forward<T>(header) );
         headers = curl_slist_append(headers, data.back().c_str());
     }
 
     template<class T>
     void setPostFields(T&& postfields) {
         data.push_back(std::forward<T>(postfields));
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, data.back().size());
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.back().c_str());
     }
 
@@ -120,10 +123,9 @@ protected:
 
     std::string mClientId;
     std::string mClientSecret;
-    std::string mOAuth2Url;
     std::string mMeteringUrl;
     std::string mOAuth2Token;
-    Json::Value mHostResolves;
+    Json::Value mHostResolvesJson;
     uint32_t mTokenValidityPeriod;
     TClock::time_point mTokenExpirationTime;
     CurlEasyPost mOAUth2Request;

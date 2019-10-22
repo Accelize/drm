@@ -916,6 +916,7 @@ def test_c_unittests(accelize_drm, exec_func):
     assert exec_lib.asyncmsg is None
 
 
+@pytest.mark.minimum
 def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_json, async_handler,
                                                  ws_admin):
     """Test accesses to parameter"""
