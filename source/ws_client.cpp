@@ -36,6 +36,7 @@ CurlEasyPost::CurlEasyPost() {
 }
 
 CurlEasyPost::~CurlEasyPost() {
+    data.clear();
     curl_easy_cleanup( curl );
     curl_slist_free_all( headers );
     curl_slist_free_all( host_resolve_list );
