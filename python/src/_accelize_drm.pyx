@@ -2,8 +2,6 @@
 # distutils: language=c++
 # distutils: libraries=accelize_drm
 # cython: language_level=3
-import atexit
-
 """Accelize DRM Python binding"""
 from libcpp cimport bool
 from libcpp.string cimport string

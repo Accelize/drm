@@ -94,4 +94,17 @@ Usually, it means that either:
 
 #. Comparison:
 
-   a. Comparing the IDs between steps 1 & 2 should help you find the issue. If not, please send all this information to support@accelize.com for investigation.
+   * Comparing the IDs between steps 1 & 2 should help you find the issue. If not, please
+     send all this information to support@accelize.com for investigation.
+
+
+
+Known issues
+------------
+
+* **When using Python API with host_resolves option in the configuration file you might get a segmentation fault with latest version of OS**
+
+  Issue seems to be related to the deallocation of the DRM Manager object by the Garbage Collector.
+  As a workaround you must explicitly delete the DRM Manager object: ``del drm_manager``
+
+
