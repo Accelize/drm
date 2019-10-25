@@ -402,6 +402,7 @@ def accelize_drm(pytestconfig):
         fpga_slot_id = [pytestconfig.getoption("fpga_slot_id")]
 
     # Initialize FPGA
+    drm_ctrl_base_addr = pytestconfig.getoption("drm_controller_base_address")
     print('FPGA SLOT ID:', fpga_slot_id)
     print('FPGA IMAGE:', fpga_image)
     print('HDK VERSION:', hdk_version)
@@ -411,7 +412,7 @@ def accelize_drm(pytestconfig):
             fpga_driver.append(
                 fpga_driver_cls( fpga_slot_id=slot_id,
                     fpga_image=fpga_image,
-                    drm_ctrl_base_addr=pytestconfig.getoption("drm_controller_base_address")
+                    drm_ctrl_base_addr=drm_ctrl_base_addr
                 )
             )
         except:
@@ -434,6 +435,7 @@ def accelize_drm(pytestconfig):
         print('Found %d activator(s) on slot #%d' % (len(base_addr_list), driver._fpga_slot_id))
 
     # Store some values for access in tests
+    _accelize_drm.pytest_new_freq_method_supported = fpga_driver[0].read_register(drm_ctrl_base_addr + 0xFFF8) == 0x60DC0DE0
     _accelize_drm.pytest_server = pytestconfig.getoption("server")
     _accelize_drm.pytest_build_environment = build_environment
     _accelize_drm.pytest_build_source_dir = build_source_dir

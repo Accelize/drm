@@ -190,7 +190,11 @@ include_directories(spdlog/include)
 
 ## libaccelize_drm
 set(TARGET_SOURCES
+    spdlog/src/fmt.cpp
     spdlog/src/spdlog.cpp
+    spdlog/src/async.cpp
+    spdlog/src/color_sinks.cpp
+    spdlog/src/file_sinks.cpp
     source/ws_client.cpp
     source/drm_manager.cpp
     source/utils.cpp
