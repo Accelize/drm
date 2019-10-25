@@ -2837,7 +2837,6 @@ def test_drm_manager_frequency_detection_method2(accelize_drm, conf_json, cred_j
         with open(logpath, 'rt') as f:
             log_content = f.read()
         assert "Use license timer counter to compute DRM frequency (method 2)" in log_content
-        del drm_manager
     finally:
         if isfile(logpath):
             remove(logpath)
