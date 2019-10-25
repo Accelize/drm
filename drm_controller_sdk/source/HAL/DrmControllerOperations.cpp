@@ -35,12 +35,12 @@ DrmControllerOperations::DrmControllerOperations(tDrmReadRegisterFunction readRe
     mHeartBeatModeEnabled(false),
     mLicenseTimerWasLoaded(false)
 {
-  // wait controller done for heart beat mode detection
-  waitAutonomousControllerDone();
-
   // Set the operation timeout from environment variable if existing or use default value otherwise.
   const char* timeout = std::getenv("DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS");
   mTimeoutInMicroSeconds = (timeout == NULL) ? DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS : std::stoul(std::string(timeout));
+
+  // wait controller done for heart beat mode detection
+  waitAutonomousControllerDone();
 }
 
 /** ~DrmController
