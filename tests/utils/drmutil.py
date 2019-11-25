@@ -12,7 +12,7 @@ import sys, os
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 
 # Get DRM library
-sys.path.insert(0, os.path.join(DIR_PATH,os.pardir,'build/python3_bdist'))
+sys.path.insert(0, os.path.join(DIR_PATH,os.pardir,os.pardir,'.tox/debug/build/python3_bdist'))
 import accelize_drm
 
 # Get Driver

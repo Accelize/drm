@@ -81,8 +81,28 @@ def clean_metering_env(cred_json=None, ws_admin=None, product_name=None):
             name=product_name, user=cred_json.user)
 
 
-# Pytest configuration
+def param2dict(param_list):
+    if param_list is None:
+        return None
+    d = dict()
+    for e in param_list.split(','):
+        k,v = e.split('=')
+        try:
+            d[k] = int(v)
+        except ValueError:
+            pass
+        else:
+            continue
+        try:
+            d[k] = float(v)
+        except ValueError:
+            pass
+        else:
+            continue
+    return d
 
+
+# Pytest configuration
 def pytest_addoption(parser):
     """
     Add command lines arguments
@@ -131,6 +151,10 @@ def pytest_addoption(parser):
         "--activator_base_address", action="store", default=0x10000, type=int,
         help=('Specify the base address of the 1st activator. '
             'The other activators shall be separated by an address gap of 0x10000'))
+    parser.addoption(
+        "--params", action="store", default=None,
+        help='Specify a list of parameter=value pairs separated by a coma used for one or multiple tests: "--params key1=value1,key2=value2,..."')
+
 
 
 def pytest_runtest_setup(item):
@@ -452,6 +476,9 @@ def accelize_drm(pytestconfig):
         *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
     _accelize_drm.clean_metering_env = lambda *kargs, **kwargs: clean_metering_env(
         *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
+    print('pytestconfig.getoption("params")=', pytestconfig.getoption("params"))
+    _accelize_drm.pytest_params = param2dict(pytestconfig.getoption("params"))
+    print('_accelize_drm.pytest_params=', _accelize_drm.pytest_params)
 
     return _accelize_drm
 
