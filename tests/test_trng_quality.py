@@ -261,7 +261,7 @@ def test_inter_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
     try:
         for e in range(num_sessions):
             print('Running session #%d/%d...' % (e, num_sessions))
-            for e in range(num_samples):
+            try:
                 activators.autotest(is_activated=False)
                 assert not drm_manager.get('license_status')
                 drm_manager.activate()
@@ -270,10 +270,11 @@ def test_inter_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
                 license_duration = drm_manager.get('license_duration')
                 print('Waiting %d seconds (license duration=%d)' % (num_samples*license_duration + 1, license_duration))
                 sleep(num_samples*license_duration + 1)
+            finally:
                 drm_manager.deactivate()
                 assert not drm_manager.get('license_status')
                 activators.autotest(is_activated=False)
-        async_cb.assert_NoError()
+                async_cb.assert_NoError()
     finally:
         del drm_manager
         gc.collect()
