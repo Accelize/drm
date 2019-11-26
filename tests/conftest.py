@@ -156,7 +156,6 @@ def pytest_addoption(parser):
         help='Specify a list of parameter=value pairs separated by a coma used for one or multiple tests: "--params key1=value1,key2=value2,..."')
 
 
-
 def pytest_runtest_setup(item):
     """
     Configure test initialization
@@ -178,6 +177,10 @@ def pytest_runtest_setup(item):
     markers = tuple(item.iter_markers(name='aws'))
     if '${AWS}'=='OFF' and markers:
         pytest.skip("Don't run C/C++ function tests.")
+    # Skip 'security' test if not explicitly marked
+    for marker in item.iter_markers():
+        if 'security' == marker.name and 'security' not in item.config.option.markexpr:
+            pytest.skip('"security" marker not selected')
 
 
 class SingleActivator:
@@ -476,9 +479,7 @@ def accelize_drm(pytestconfig):
         *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
     _accelize_drm.clean_metering_env = lambda *kargs, **kwargs: clean_metering_env(
         *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
-    print('pytestconfig.getoption("params")=', pytestconfig.getoption("params"))
     _accelize_drm.pytest_params = param2dict(pytestconfig.getoption("params"))
-    print('_accelize_drm.pytest_params=', _accelize_drm.pytest_params)
 
     return _accelize_drm
 
