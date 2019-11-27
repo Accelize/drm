@@ -243,8 +243,8 @@ Json::Value DrmWSClient::requestLicense( const Json::Value& json_req, TClock::ti
         json_resp = Json::nullValue;
         error_msg = e.what();
     }
-    Debug( "Received code {} from License Web Service in {}ms",
-            resp_code, req.getTotalTime() * 1000 );
+    Debug( "Received code {} from License Web Service in {}ms:\n{}",
+            resp_code, req.getTotalTime() * 1000, json_resp.toStyledString() );
 
     // Analyze response
     if ( resp_code != 200 ) {

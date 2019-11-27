@@ -457,8 +457,8 @@ def accelize_drm(pytestconfig):
             base_addr_list.append(base_address)
             base_address += 0x10000
         fpga_activators.append(ActivatorsInFPGA(driver, base_addr_list))
-        if len(base_addr_list) == 0:
-            raise IOError('No activator found on slot #%d' % driver._fpga_slot_id)
+#        if len(base_addr_list) == 0:
+#            raise IOError('No activator found on slot #%d' % driver._fpga_slot_id)
         print('Found %d activator(s) on slot #%d' % (len(base_addr_list), driver._fpga_slot_id))
 
     # Store some values for access in tests
