@@ -158,7 +158,7 @@ def test_first_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
         gc.collect()
 
     # Parse log file
-    request_json = parse_and_save_challenge(logpath, 'challenge', 'test_first_challenge_duplication.json')
+    request_json = parse_and_save_challenge(logpath, 'challenge', 'test_first_challenge_duplication_%d.json' % getpid())
     # Keep only the 'open' requests
     request_json['requests'] = list(filter(lambda x: x['request'] == 'open', request_json['requests']))
     # Check validity
@@ -216,7 +216,7 @@ def test_intra_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
         gc.collect()
 
     # Parse log file
-    request_json = parse_and_save_challenge(logpath, 'challenge', 'test_intra_challenge_duplication.json')
+    request_json = parse_and_save_challenge(logpath, 'challenge', 'test_intra_challenge_duplication_%d.json' % getpid())
     # Remove close request because they repeat the last challenge
     request_json['requests'] = list(filter(lambda x: x['request'] != 'close', request_json['requests']))
     # Check validity
@@ -280,7 +280,7 @@ def test_inter_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
         gc.collect()
 
     # Parse log file
-    request_json = parse_and_save_challenge(logpath, 'challenge', 'test_inter_challenge_duplication.json')
+    request_json = parse_and_save_challenge(logpath, 'challenge', 'test_inter_challenge_duplication_%d.json' % getpid())
     # Remove close request because they repeat the last challenge
     request_json['requests'] = list(filter(lambda x: x['request'] != 'close', request_json['requests']))
     # Check validity
