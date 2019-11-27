@@ -16,17 +16,22 @@ from datetime import datetime, timedelta
 SAMPLES_DUPLICATE_THRESHOLD = 1
 SAMPLES_DISPERSION_THRESHOLD = 10
 DUPLICATE_THRESHOLD = 1.0/10000
-DISPERSION_THRESHOLD = 0.5
+DISPERSION_THRESHOLD = 0.1
+
+LOG_FORMAT_LONG = "%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v"
+
+REGEX_PATTERN = r'Starting license request to \S+ with request:\n(^{.+?\n}$)'
 
 
 def parse_and_save_challenge(logpath, pattern, save_path=None):
     # Parse log file
     with open(logpath, 'rt') as f:
         text = f.read()
+    #print('text=', text)
     request_json = dict()
     request_json['requests'] = list()
-    for challenge in finditer(r'^({.*?%s.*?\n})$' % pattern, text, re.I | re.MULTILINE | re.DOTALL):
-        request_json['requests'].append(loads(challenge.group(0)))
+    for challenge in finditer(pattern, text, re.I | re.MULTILINE | re.DOTALL):
+        request_json['requests'].append(loads(challenge.group(1)))
     # Save to file
     if save_path is not None:
         with open(save_path, 'wt') as f:
@@ -74,25 +79,30 @@ def check_bit_dispersion(value_list):
         for bit in range(value_len):
             count_per_bit[bit] += int(value[bit])
     if list_size < value_len:
-        disp_per_bit = list(filter(lambda x: x!=0 and x!=list_size, count_per_bit))
-    disp_per_bit = list(map(lambda x: float(x)/list_size, disp_per_bit))
+        count_per_bit = list(filter(lambda x: x!=0 and x!=list_size, count_per_bit))
+    disp_per_bit = list(map(lambda x: float(x)/list_size, count_per_bit))
     err = 0
     gap = 0.0
     for i, disp in enumerate(disp_per_bit):
         gap += abs(disp-0.5)
-        if 0.4 < disp < 0.6:
-            res = "OK"
-        else:
-            res = "KO !!!"
+        if 0.4 > disp or disp > 0.6:
             err += 1
-        print('#%d: %f => %s' %(i, disp, res))
+            print('Bad bit #%d: %f' % (i, disp))
     bit_tested_percent = float(len(disp_per_bit)) / value_len * 100
     print('Processed %d values' % list_size)
     print('Percentage of tested bits: %0.1f%%' % bit_tested_percent)
-    print('Number of bad bits: %d' % err)
+    print('Percentage of bad bits: %0.3f%% (%d)' % (float(err)/value_len*100, err))
     score = gap/len(disp_per_bit)
     print('=> Dispersion score: %f' % score)
     return score
+
+
+@pytest.mark.security
+@pytest.mark.first
+def test_global_cleanup():
+    for filename in glob("./*.json"):
+        print('Removing file: %s' % filename)
+        remove(filename)
 
 
 @pytest.mark.security
@@ -106,7 +116,7 @@ def test_global_challenge_quality():
             res_json = loads(f.read())
         value_json['requests'].extend(res_json['requests'])
         print('... adding %d more requests' % len(res_json['requests']))
-    value_list = [e['saasChallenge'] for e in res_json['requests'] if e['request']!='close']
+    value_list = [e['saasChallenge'] for e in value_json['requests'] if e['request']!='close']
     # Check duplicates
     dupl_score = check_duplicates(value_list)
     if dupl_score:
@@ -137,6 +147,7 @@ def test_first_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
     conf_json['settings']['log_file_verbosity'] = 1
     conf_json['settings']['log_file_type'] = 1
     conf_json['settings']['log_file_path'] = logpath
+    conf_json['settings']['log_file_format'] = LOG_FORMAT_LONG
     conf_json.save()
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
@@ -158,7 +169,7 @@ def test_first_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
         gc.collect()
 
     # Parse log file
-    request_json = parse_and_save_challenge(logpath, 'challenge', 'test_first_challenge_duplication_%d.json' % getpid())
+    request_json = parse_and_save_challenge(logpath, REGEX_PATTERN, 'test_first_challenge_duplication_%d.json' % getpid())
     # Keep only the 'open' requests
     request_json['requests'] = list(filter(lambda x: x['request'] == 'open', request_json['requests']))
     # Check validity
@@ -191,6 +202,7 @@ def test_intra_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
     conf_json['settings']['log_file_verbosity'] = 1
     conf_json['settings']['log_file_type'] = 1
     conf_json['settings']['log_file_path'] = logpath
+    conf_json['settings']['log_file_format'] = LOG_FORMAT_LONG
     conf_json.save()
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
@@ -216,7 +228,7 @@ def test_intra_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
         gc.collect()
 
     # Parse log file
-    request_json = parse_and_save_challenge(logpath, 'challenge', 'test_intra_challenge_duplication_%d.json' % getpid())
+    request_json = parse_and_save_challenge(logpath, REGEX_PATTERN, 'test_intra_challenge_duplication_%d.json' % getpid())
     # Remove close request because they repeat the last challenge
     request_json['requests'] = list(filter(lambda x: x['request'] != 'close', request_json['requests']))
     # Check validity
@@ -228,6 +240,7 @@ def test_intra_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
         assert dupl_score < DUPLICATE_THRESHOLD
 
 
+@pytest.mark.skip
 @pytest.mark.security
 def test_inter_challenge_duplication(accelize_drm, conf_json, cred_json, async_handler):
     """Run multiple runs of drmlib application to generate 'num_sessions' sessions of 'num_samples' license requests to License WS.
@@ -250,6 +263,7 @@ def test_inter_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
     conf_json['settings']['log_file_verbosity'] = 1
     conf_json['settings']['log_file_type'] = 1
     conf_json['settings']['log_file_path'] = logpath
+    conf_json['settings']['log_file_format'] = LOG_FORMAT_LONG
     conf_json.save()
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
@@ -260,7 +274,7 @@ def test_inter_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
     )
     try:
         for e in range(num_sessions):
-            print('Running session #%d/%d...' % (e, num_sessions))
+            print('Running session #%d/%d...' % (e+1, num_sessions))
             try:
                 activators.autotest(is_activated=False)
                 assert not drm_manager.get('license_status')
@@ -280,7 +294,7 @@ def test_inter_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
         gc.collect()
 
     # Parse log file
-    request_json = parse_and_save_challenge(logpath, 'challenge', 'test_inter_challenge_duplication_%d.json' % getpid())
+    request_json = parse_and_save_challenge(logpath, REGEX_PATTERN, 'test_inter_challenge_duplication_%d.json' % getpid())
     # Remove close request because they repeat the last challenge
     request_json['requests'] = list(filter(lambda x: x['request'] != 'close', request_json['requests']))
     # Check validity
