@@ -98,14 +98,7 @@ def check_bit_dispersion(value_list):
 
 
 @pytest.mark.security
-@pytest.mark.first
-def test_global_cleanup():
-    for filename in glob("./*.json"):
-        print('Removing file: %s' % filename)
-        remove(filename)
-
-
-@pytest.mark.security
+@pytest.mark.no_parallel
 @pytest.mark.last
 def test_global_challenge_quality():
     print()
@@ -137,9 +130,15 @@ def test_first_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_05')
     try:
-        num_samples = accelize_drm.pytest_params['num_samples']
+        num_sessions = accelize_drm.pytest_params['open_num_sessions']
     except:
-        raise Exception('Missing argument: num_samples')
+        num_sessions = 100
+        print('Warning: Missing argument "open_num_sessions". Using default value %d' % num_sessions)
+    try:
+        num_samples = accelize_drm.pytest_params['open_num_samples']
+    except:
+        num_samples = 4
+        print('Warning: Missing argument "open_num_samples". Using default value %d' % num_samples)
 
     async_cb.reset()
     conf_json.reset()
@@ -157,14 +156,18 @@ def test_first_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
         async_cb.callback
     )
     try:
-        for e in range(num_samples):
+        for e in range(num_sessions):
             activators.autotest(is_activated=False)
             drm_manager.activate()
             activators.autotest(is_activated=True)
+            license_duration = drm_manager.get('license_duration')
+            wait_period = num_samples*license_duration + 1
+            sleep(wait_period)
+            print('license duration=%d and num of samples=%d => waiting %d seconds' % (license_duration, num_samples, wait_period))
             drm_manager.deactivate()
             activators.autotest(is_activated=False)
-            async_cb.assert_NoError()
     finally:
+        async_cb.assert_NoError()
         del drm_manager
         gc.collect()
 
@@ -192,9 +195,10 @@ def test_intra_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_05')
     try:
-        num_samples = accelize_drm.pytest_params['num_samples']
+        num_samples = accelize_drm.pytest_params['intra_num_samples']
     except:
-        raise Exception('Missing argument: num_samples')
+        num_samples = 100
+        print('Warning: Missing argument "intra_num_samples". Using default value %d' % num_samples)
 
     async_cb.reset()
     conf_json.reset()

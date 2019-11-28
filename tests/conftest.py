@@ -18,7 +18,8 @@ _LICENSING_SERVERS = dict(
     dev='https://master.devmetering.accelize.com',
     prod='https://master.metering.accelize.com')
 
-INC_EVENT_REG_OFFSET = 0x08
+ACT_STATUS_REG_OFFSET = 0x38
+INC_EVENT_REG_OFFSET = 0x40
 
 
 def get_default_conf_json(licensing_server_url):
@@ -223,7 +224,7 @@ class SingleActivator:
         Returns:
             int: Status.
         """
-        return self.driver.read_register(self.base_address) == 3
+        return self.driver.read_register(self.base_address+ACT_STATUS_REG_OFFSET) == 3
 
     def generate_coin(self, coins):
         """
