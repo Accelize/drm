@@ -157,17 +157,17 @@ def test_first_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
     )
     try:
         for e in range(num_sessions):
+            print('Starting session #%d/%d ...' % (e+1,num_sessions))
             activators.autotest(is_activated=False)
             drm_manager.activate()
             activators.autotest(is_activated=True)
             license_duration = drm_manager.get('license_duration')
             wait_period = num_samples*license_duration + 1
+            print('Waiting %d seconds (license duration=%d, num of samples=%d)' % (wait_period, license_duration, num_samples))
             sleep(wait_period)
-            print('license duration=%d and num of samples=%d => waiting %d seconds' % (license_duration, num_samples, wait_period))
             drm_manager.deactivate()
             activators.autotest(is_activated=False)
     finally:
-        async_cb.assert_NoError()
         del drm_manager
         gc.collect()
 
@@ -182,6 +182,7 @@ def test_first_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
     dupl_score = check_duplicates(challenge_list)
     if dupl_score:
         assert dupl_score < DUPLICATE_THRESHOLD
+    async_cb.assert_NoError()
 
 
 @pytest.mark.security
@@ -221,13 +222,13 @@ def test_intra_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
         assert drm_manager.get('license_status')
         activators.autotest(is_activated=True)
         license_duration = drm_manager.get('license_duration')
-        print('Waiting %d seconds (license duration=%d)' % (num_samples*license_duration + 1, license_duration))
-        sleep(num_samples*license_duration + 1)
+        wait_period = num_samples*license_duration + 1
+        print('Waiting %d seconds (license duration=%d, num_samples=%d)' % (wait_period, license_duration, num_samples))
+        sleep(wait_period)
     finally:
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
-        async_cb.assert_NoError()
         del drm_manager
         gc.collect()
 
@@ -242,6 +243,7 @@ def test_intra_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
     dupl_score = check_duplicates(challenge_list)
     if dupl_score:
         assert dupl_score < DUPLICATE_THRESHOLD
+    async_cb.assert_NoError()
 
 
 @pytest.mark.skip
