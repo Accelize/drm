@@ -1147,7 +1147,7 @@ protected:
         uint32_t reg;
 
         if ( mBypassFrequencyDetection ) {
-            Debug( "Frequency detection sequence is disabled." );
+            Debug( "Frequency detection sequence is bypassed." );
             return;
         }
 
