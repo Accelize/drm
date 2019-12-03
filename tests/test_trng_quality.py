@@ -128,15 +128,15 @@ def test_first_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_05')
     try:
-        num_sessions = accelize_drm.pytest_params['open_num_sessions']
+        num_sessions = accelize_drm.pytest_params['num_open_sessions']
     except:
         num_sessions = 100
-        print('Warning: Missing argument "open_num_sessions". Using default value %d' % num_sessions)
+        print('Warning: Missing argument "num_open_sessions". Using default value %d' % num_sessions)
     try:
-        num_samples = accelize_drm.pytest_params['open_num_samples']
+        num_samples = accelize_drm.pytest_params['num_open_samples']
     except:
         num_samples = 4
-        print('Warning: Missing argument "open_num_samples". Using default value %d' % num_samples)
+        print('Warning: Missing argument "num_open_samples". Using default value %d' % num_samples)
 
     async_cb.reset()
     conf_json.reset()
@@ -194,10 +194,10 @@ def test_intra_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_05')
     try:
-        num_samples = accelize_drm.pytest_params['intra_num_samples']
+        num_samples = accelize_drm.pytest_params['num_intra_samples']
     except:
         num_samples = 100
-        print('Warning: Missing argument "intra_num_samples". Using default value %d' % num_samples)
+        print('Warning: Missing argument "num_intra_samples". Using default value %d' % num_samples)
 
     async_cb.reset()
     conf_json.reset()
@@ -256,10 +256,15 @@ def test_inter_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_05')
     try:
-        num_samples = accelize_drm.pytest_params['num_samples']
-        num_sessions = accelize_drm.pytest_params['num_sessions']
+        num_samples = accelize_drm.pytest_params['num_inter_samples']
     except:
-        raise Exception('Missing argument: num_samples')
+        num_samples = 100
+        print('Warning: Missing argument "num_inter_samples". Using default value %d' % num_samples)
+    try:
+        num_samples = accelize_drm.pytest_params['num_inter_samples']
+    except:
+        num_samples = 100
+        print('Warning: Missing argument "num_inter_samples". Using default value %d' % num_samples)
 
     async_cb.reset()
     conf_json.reset()
@@ -321,10 +326,10 @@ def test_dna_duplication(accelize_drm, conf_json, cred_json, async_handler):
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_05')
     try:
-        num_samples = accelize_drm.pytest_params['dna_samples']
+        num_samples = accelize_drm.pytest_params['num_dna_samples']
     except:
         num_samples = 50
-        print('Warning: Missing argument "dna_samples". Using default value %d' % num_samples)
+        print('Warning: Missing argument "num_dna_samples". Using default value %d' % num_samples)
 
     async_cb.reset()
     conf_json.reset()
