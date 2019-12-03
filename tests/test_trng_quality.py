@@ -7,7 +7,7 @@ import gc
 import re
 from glob import glob
 from os import remove, getpid
-from os.path import getsize, isfile, dirname, join, realpath
+from os.path import getsize, isfile, dirname, join, realpath, basename
 from re import search, findall, finditer, MULTILINE
 from time import sleep, time
 from json import loads, dumps
@@ -102,7 +102,9 @@ def check_bit_dispersion(value_list):
 def test_global_challenge_quality():
     print()
     value_json = {'results' : list()}
-    for filename in glob("./*.json"):
+    for filename in glob("./test_*.json"):
+        if basename(filename).startswith('test_dna'):
+            continue
         print('Analyzing file: %s ...' % filename)
         with open(filename, 'rt') as f:
             res_json = loads(f.read())
@@ -155,27 +157,39 @@ def test_first_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
         async_cb.callback
     )
     try:
-        for e in range(num_sessions):
-            print('Starting session #%d/%d ...' % (e+1,num_sessions))
-            activators.autotest(is_activated=False)
-            drm_manager.activate()
-            activators.autotest(is_activated=True)
-            license_duration = drm_manager.get('license_duration')
-            wait_period = num_samples*license_duration + 1
-            print('Waiting %d seconds (license duration=%d, num of samples=%d)' % (wait_period, license_duration, num_samples))
-            sleep(wait_period)
-            drm_manager.deactivate()
-            activators.autotest(is_activated=False)
+        session_cnt = 0
+        while session_cnt < num_sessions:
+            try:
+                print('Starting session #%d/%d ...' % (session_cnt+1,num_sessions))
+                activators.autotest(is_activated=False)
+                drm_manager.activate()
+                activators.autotest(is_activated=True)
+                license_duration = drm_manager.get('license_duration')
+                session_cnt += 1
+                sleep(1)
+                sample_cnt = 0
+                for s in range(num_samples):
+                    print('Waiting %d seconds' % license_duration)
+                    sleep(license_duration)
+                    if async_cb.was_called:
+                        print('Error occurred:', async_cb.message)
+                        break
+            except:
+                print('Session #%d/%d failed: retrying!' % (session_cnt+1,num_sessions))
+            finally:
+                drm_manager.deactivate()
+                activators.autotest(is_activated=False)
     finally:
+        # Check validity
+        assert session_cnt >= num_sessions
         del drm_manager
         gc.collect()
-
     # Parse log file
     request_json = parse_and_save_challenge(logpath, REGEX_PATTERN, 'test_first_challenge_duplication_%d.json' % getpid())
     # Keep only the 'open' requests
     request_json['results'] = list(filter(lambda x: x['request'] == 'open', request_json['results']))
     # Check validity
-    assert len(request_json['results']) >= num_samples
+    assert len(request_json['results']) >= num_sessions
     # Check duplicates
     challenge_list = [e['saasChallenge'] for e in request_json['results']]
     dupl_score = check_duplicates(challenge_list)
@@ -218,19 +232,29 @@ def test_intra_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
     try:
         activators.autotest(is_activated=False)
         drm_manager.activate()
-        assert drm_manager.get('license_status')
         activators.autotest(is_activated=True)
         license_duration = drm_manager.get('license_duration')
-        wait_period = num_samples*license_duration + 1
-        print('Waiting %d seconds (license duration=%d, num_samples=%d)' % (wait_period, license_duration, num_samples))
-        sleep(wait_period)
+        print('License duration=%d, num of samples=%d' % (license_duration, num_samples))
+        sleep(1)
+        sample_cnt = 0
+        while sample_cnt < num_samples:
+            sleep(license_duration)
+            if async_cb.was_called:
+                print('Error occurred:', async_cb.message)
+                drm_manager.deactivate()
+                activators.autotest(is_activated=False)
+                drm_manager.activate()
+                activators.autotest(is_activated=True)
+            else:
+                sample_cnt += 1
+                print('Num of samples=', sample_cnt)
     finally:
         drm_manager.deactivate()
-        assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
+        # Check validity
+        assert sample_cnt >= num_samples
         del drm_manager
         gc.collect()
-
     # Parse log file
     request_json = parse_and_save_challenge(logpath, REGEX_PATTERN, 'test_intra_challenge_duplication_%d.json' % getpid())
     # Remove close request because they repeat the last challenge
@@ -243,77 +267,6 @@ def test_intra_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
     if dupl_score:
         assert dupl_score < DUPLICATE_THRESHOLD
     async_cb.assert_NoError()
-
-
-@pytest.mark.skip
-@pytest.mark.security
-def test_inter_challenge_duplication(accelize_drm, conf_json, cred_json, async_handler):
-    """Run multiple runs of drmlib application to generate 'num_sessions' sessions of 'num_samples' license requests to License WS.
-    Purpose is to evaluate the quality of the SAAS Challenge.
-    """
-    driver = accelize_drm.pytest_fpga_driver[0]
-    async_cb = async_handler.create()
-    activators = accelize_drm.pytest_fpga_activators[0]
-    activators.autotest()
-    cred_json.set_user('accelize_accelerator_test_05')
-    try:
-        num_samples = accelize_drm.pytest_params['num_inter_samples']
-    except:
-        num_samples = 100
-        print('Warning: Missing argument "num_inter_samples". Using default value %d' % num_samples)
-    try:
-        num_samples = accelize_drm.pytest_params['num_inter_samples']
-    except:
-        num_samples = 100
-        print('Warning: Missing argument "num_inter_samples". Using default value %d' % num_samples)
-
-    async_cb.reset()
-    conf_json.reset()
-    logpath = realpath("./drmlib.%d.log" % getpid())
-    conf_json['settings']['log_file_verbosity'] = 1
-    conf_json['settings']['log_file_type'] = 1
-    conf_json['settings']['log_file_path'] = logpath
-    conf_json['settings']['log_file_format'] = LOG_FORMAT_LONG
-    conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    try:
-        for e in range(num_sessions):
-            print('Running session #%d/%d...' % (e+1, num_sessions))
-            try:
-                activators.autotest(is_activated=False)
-                assert not drm_manager.get('license_status')
-                drm_manager.activate()
-                assert drm_manager.get('license_status')
-                activators.autotest(is_activated=True)
-                license_duration = drm_manager.get('license_duration')
-                print('Waiting %d seconds (license duration=%d)' % (num_samples*license_duration + 1, license_duration))
-                sleep(num_samples*license_duration + 1)
-            finally:
-                drm_manager.deactivate()
-                assert not drm_manager.get('license_status')
-                activators.autotest(is_activated=False)
-                async_cb.assert_NoError()
-    finally:
-        del drm_manager
-        gc.collect()
-
-    # Parse log file
-    request_json = parse_and_save_challenge(logpath, REGEX_PATTERN, 'test_inter_challenge_duplication_%d.json' % getpid())
-    # Remove close request because they repeat the last challenge
-    request_json['results'] = list(filter(lambda x: x['request'] != 'close', request_json['results']))
-    # Check validity
-    assert len(request_json['results']) >= num_samples
-    # Check duplicates
-    challenge_list = [e['saasChallenge'] for e in request_json['results']]
-    dupl_score = check_duplicates(challenge_list)
-    if dupl_score:
-        assert dupl_score < DUPLICATE_THRESHOLD
 
 
 @pytest.mark.security
@@ -361,7 +314,7 @@ def test_dna_duplication(accelize_drm, conf_json, cred_json, async_handler):
                 log = f.read()
             dna_list.append(search(r'-\s*dna\s*\.+\s*:\s*0x([0-9A-F]+)', log, re.I).group(1))
         except:
-            print('Last reset failed: retrying')
+            print('Last reset failed: retrying!')
     request_json = {'results': dna_list}
     # Check validity
     assert len(request_json['results']) >= num_samples
