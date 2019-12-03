@@ -13,7 +13,7 @@ from time import sleep, time
 from json import loads, dumps
 from datetime import datetime, timedelta
 
-SAMPLES_DUPLICATE_THRESHOLD = 1
+SAMPLES_DUPLICATE_THRESHOLD = 2
 SAMPLES_DISPERSION_THRESHOLD = 10
 DUPLICATE_THRESHOLD = 1.0/10000
 DISPERSION_THRESHOLD = 0.1
@@ -27,11 +27,10 @@ def parse_and_save_challenge(logpath, pattern, save_path=None):
     # Parse log file
     with open(logpath, 'rt') as f:
         text = f.read()
-    #print('text=', text)
     request_json = dict()
-    request_json['requests'] = list()
+    request_json['results'] = list()
     for challenge in finditer(pattern, text, re.I | re.MULTILINE | re.DOTALL):
-        request_json['requests'].append(loads(challenge.group(1)))
+        request_json['results'].append(loads(challenge.group(1)))
     # Save to file
     if save_path is not None:
         with open(save_path, 'wt') as f:
@@ -57,7 +56,7 @@ def check_duplicates(value_list):
     for v,d in count_by_value.items():
         if d > 1:
             print("\t%s appears %d times" % (v,d))
-    duplication_percent = float(list_size - len(count_by_value))/ list_size * 100
+    duplication_percent = float(list_size - len(count_by_value) + 1)/ list_size * 100
     print("=> Percentage of duplicates: %0.1f%%" % duplication_percent)
     return duplication_percent
 
@@ -68,7 +67,6 @@ def check_bit_dispersion(value_list):
     # Convert to binary string
     value_list = list(map(lambda x: bin(int(x, 16))[2:], value_list))
     value_len = max(map(lambda x: len(x), value_list))
-    print('value_len=', value_len)
     if list_size < SAMPLES_DISPERSION_THRESHOLD:
         print('Not enough samples to compute bit dispersion')
         return None
@@ -102,14 +100,14 @@ def check_bit_dispersion(value_list):
 @pytest.mark.last
 def test_global_challenge_quality():
     print()
-    value_json = {'requests' : list()}
+    value_json = {'results' : list()}
     for filename in glob("./*.json"):
         print('Analyzing file: %s ...' % filename)
         with open(filename, 'rt') as f:
             res_json = loads(f.read())
-        value_json['requests'].extend(res_json['requests'])
-        print('... adding %d more requests' % len(res_json['requests']))
-    value_list = [e['saasChallenge'] for e in value_json['requests'] if e['request']!='close']
+        value_json['results'].extend(res_json['results'])
+        print('... adding %d more results' % len(res_json['results']))
+    value_list = [e['saasChallenge'] for e in value_json['results'] if e['request']!='close']
     # Check duplicates
     dupl_score = check_duplicates(value_list)
     if dupl_score:
@@ -174,11 +172,11 @@ def test_first_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
     # Parse log file
     request_json = parse_and_save_challenge(logpath, REGEX_PATTERN, 'test_first_challenge_duplication_%d.json' % getpid())
     # Keep only the 'open' requests
-    request_json['requests'] = list(filter(lambda x: x['request'] == 'open', request_json['requests']))
+    request_json['results'] = list(filter(lambda x: x['request'] == 'open', request_json['results']))
     # Check validity
-    assert len(request_json['requests']) >= num_samples
+    assert len(request_json['results']) >= num_samples
     # Check duplicates
-    challenge_list = [e['saasChallenge'] for e in request_json['requests']]
+    challenge_list = [e['saasChallenge'] for e in request_json['results']]
     dupl_score = check_duplicates(challenge_list)
     if dupl_score:
         assert dupl_score < DUPLICATE_THRESHOLD
@@ -235,11 +233,11 @@ def test_intra_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
     # Parse log file
     request_json = parse_and_save_challenge(logpath, REGEX_PATTERN, 'test_intra_challenge_duplication_%d.json' % getpid())
     # Remove close request because they repeat the last challenge
-    request_json['requests'] = list(filter(lambda x: x['request'] != 'close', request_json['requests']))
+    request_json['results'] = list(filter(lambda x: x['request'] != 'close', request_json['results']))
     # Check validity
-    assert len(request_json['requests']) >= num_samples
+    assert len(request_json['results']) >= num_samples
     # Check duplicates
-    challenge_list = [e['saasChallenge'] for e in request_json['requests']]
+    challenge_list = [e['saasChallenge'] for e in request_json['results']]
     dupl_score = check_duplicates(challenge_list)
     if dupl_score:
         assert dupl_score < DUPLICATE_THRESHOLD
@@ -302,12 +300,71 @@ def test_inter_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
     # Parse log file
     request_json = parse_and_save_challenge(logpath, REGEX_PATTERN, 'test_inter_challenge_duplication_%d.json' % getpid())
     # Remove close request because they repeat the last challenge
-    request_json['requests'] = list(filter(lambda x: x['request'] != 'close', request_json['requests']))
+    request_json['results'] = list(filter(lambda x: x['request'] != 'close', request_json['results']))
     # Check validity
-    assert len(request_json['requests']) >= num_samples
+    assert len(request_json['results']) >= num_samples
     # Check duplicates
-    challenge_list = [e['saasChallenge'] for e in request_json['requests']]
+    challenge_list = [e['saasChallenge'] for e in request_json['results']]
     dupl_score = check_duplicates(challenge_list)
     if dupl_score:
         assert dupl_score < DUPLICATE_THRESHOLD
+
+
+@pytest.mark.security
+def test_dna_duplication(accelize_drm, conf_json, cred_json, async_handler):
+    """Reprogram FPGA and display DNA.
+    Purpose is to evaluate the quality of the DNA Challenge.
+    """
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    activators = accelize_drm.pytest_fpga_activators[0]
+    activators.autotest()
+    cred_json.set_user('accelize_accelerator_test_05')
+    try:
+        num_samples = accelize_drm.pytest_params['dna_samples']
+    except:
+        num_samples = 50
+        print('Warning: Missing argument "dna_samples". Using default value %d' % num_samples)
+
+    async_cb.reset()
+    conf_json.reset()
+    logpath = realpath("./drmlib.%d.log" % getpid())
+    conf_json['settings']['log_verbosity'] = 4
+    conf_json['settings']['log_file_verbosity'] = 2
+    conf_json['settings']['log_file_type'] = 1
+    conf_json['settings']['log_file_path'] = logpath
+    conf_json.save()
+
+    image_bkp = driver.fpga_image
+    dna_list = list()
+    while len(dna_list) < num_samples:
+        try:
+            print('Reset #%d/%d...' % (len(dna_list)+1, num_samples))
+            driver.program_fpga(image_bkp)
+            drm_manager = accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            )
+            drm_manager.get('hw_report')
+            del drm_manager
+            gc.collect()
+            with open(logpath, 'rt') as f:
+                log = f.read()
+            dna_list.append(search(r'-\s*dna\s*\.+\s*:\s*0x([0-9A-F]+)', log, re.I).group(1))
+        except:
+            print('Last reset failed: retrying')
+    request_json = {'results': dna_list}
+    # Check validity
+    assert len(request_json['results']) >= num_samples
+    # Save to file
+    with open('test_dna_duplication_%d.json' % getpid(), 'wt') as f:
+        f.write(dumps(request_json, indent=4, sort_keys=True))
+    # Check duplicates
+    dupl_score = check_duplicates(dna_list)
+    if dupl_score:
+        assert dupl_score < DUPLICATE_THRESHOLD
+    async_cb.assert_NoError()
 
