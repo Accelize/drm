@@ -56,7 +56,8 @@ def check_duplicates(value_list):
     for v,d in count_by_value.items():
         if d > 1:
             print("\t%s appears %d times" % (v,d))
-    duplication_percent = float(list_size - len(count_by_value) + 1)/ list_size * 100
+    num_duplicates = len(list(filter(lambda x: x>1, count_by_value.values())))
+    duplication_percent = float(num_duplicates)/ list_size * 100
     print("=> Percentage of duplicates: %0.1f%%" % duplication_percent)
     return duplication_percent
 
