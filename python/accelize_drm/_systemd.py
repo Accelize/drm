@@ -10,7 +10,8 @@ Global configuration environment variables:
     ACCELIZE_DRM_LOG_FILE_BASE_PATH: Template path for log files. must contain
         one "%d" that will be replaced by slot ID. Default to
         "/var/log/accelize_drm/service_slot_%d.log"
-    ACCELIZE_DRM_CACHE_DIR: Service cache dir. Used to store cached FPGA images.
+    ACCELIZE_DRM_CACHE_DIR: Service cache dir.
+        Used to store cached FPGA images.
         Default to "/var/cache/accelize_drm".
 """
 from concurrent.futures import (
@@ -235,7 +236,8 @@ class AccelizeDrmService:
             self._sd_log('FPGA slot %s, credential file: %s',
                          fpga_slot_id, cred_file_path)
 
-        self._sd_log('FPGA slot %s, driver: %s', fpga_slot_id, fpga_driver_name)
+        self._sd_log('FPGA slot %s, driver: %s', fpga_slot_id,
+                     fpga_driver_name)
         self._sd_log('FPGA slot %s, image: %s', fpga_slot_id, fpga_image)
         self._sd_log('FPGA slot %s, licensing: %s', fpga_slot_id, 'disabled'
                      if slot_config.get('drm_disabled') else 'enabled')
@@ -309,17 +311,17 @@ class AccelizeDrmService:
         raise KeyboardInterrupt()
 
     @_contextmanager
-    def _handle_exception(self, exception_types):
+    def _handle_exception(self, exc_types):
         """
         Handle exception and exit with parser.
 
         Args:
-            exception_types (Exception subclass or tuple of Exception subclass):
+            exc_types (Exception subclass or tuple of Exception subclass):
                 Exceptions types to handle.
         """
         try:
             yield
-        except exception_types as exception:
+        except exc_types as exception:
             self._sd_notify(b"STATUS=Error")
             self._sd_log(str(exception), level=3)
             self._interrupt()

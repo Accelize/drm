@@ -176,12 +176,66 @@ def test_fpga_drivers_base():
     assert driver.read_register(register_offset=0x12) == 1
 
 
+@pytest.mark.packages
+def test_packages_import(pytestconfig):
+    """
+    Test if the Python "accelize_drm" package is imported correctly.
+
+    This also indirectly check if the C/C++ libraries are correctly installed.
+    """
+    # Set the backend to use and import
+    backend = pytestconfig.getoption("backend")
+    if backend == 'c':
+        from os import environ
+        environ['ACCELIZE_DRM_PYTHON_USE_C'] = '1'
+
+    import accelize_drm
+    api_version = accelize_drm.get_api_version()
+
+    # Check correct the backend is imported and the C/C++ library is correctly
+    # installed
+
+    assert api_version.backend == (
+        'libaccelize_drmc' if backend == 'c' else 'libaccelize_drm')
+
+    # Test the Python package import the C/C++ library with the good version.
+    assert api_version.major == api_version.py_major
+    assert api_version.minor == api_version.py_minor
+    assert api_version.revision == api_version.py_revision
+    assert api_version.prerelease == api_version.py_prerelease
+    assert api_version.build == api_version.py_build
+
+
+@pytest.mark.packages
 def test_get_driver():
     """
     Test accelize_drm.fpga_drivers.get_driver.
     """
     from accelize_drm.fpga_drivers import get_driver
 
-    # Test driver import.
-    from accelize_drm.fpga_drivers._aws_f1 import FpgaDriver
-    assert get_driver('aws_f1') is FpgaDriver
+    from accelize_drm.fpga_drivers._aws_f1 import FpgaDriver as AwsDriver
+    assert get_driver('aws_f1') is AwsDriver
+
+    from accelize_drm.fpga_drivers._xilinx_xrt import FpgaDriver as XrtDriver
+    assert get_driver('xilinx_xrt') is XrtDriver
+
+
+def test_python_lint():
+    """
+    Static code lint to detect errors and reach code quality standard.
+    """
+    from subprocess import run, PIPE, STDOUT
+    run_kwargs = dict(universal_newlines=True, stderr=STDOUT, stdout=PIPE)
+
+    stdouts = []
+    for command in (
+            ('flake8', 'python'),
+            ('flake8', 'python/src/*.pyx',
+             # Cython specific
+             '--ignore', 'E211,E225,E226,E227,E999')):
+        stdouts.append(run(command, **run_kwargs).stdout.strip())
+
+    result = '\n'.join(stdout for stdout in stdouts if stdout)
+    if result:
+        print(result)
+        pytest.fail('Lint error')

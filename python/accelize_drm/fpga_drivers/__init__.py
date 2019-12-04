@@ -168,8 +168,9 @@ class FpgaDriverBase:
         with self._augment_exception('reset'):
             return self._reset_fpga()
 
+    @staticmethod
     @contextmanager
-    def _augment_exception(self, action):
+    def _augment_exception(action):
         """
         Augment exception message.
 

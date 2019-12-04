@@ -26,7 +26,8 @@ class FpgaDriver(_FpgaDriverBase):
         log_dir (path-like object): Unused with this driver.
     """
 
-    def _get_driver(self):
+    @staticmethod
+    def _get_driver():
         """
         Get FPGA driver
 
@@ -50,21 +51,21 @@ class FpgaDriver(_FpgaDriverBase):
         Args:
             fpga_image (str): FPGA image.
         """
-        load_image = _run([
-            'fpga-load-local-image', '-S', str(self._fpga_slot_id),
-            '-I', fpga_image], stderr=_STDOUT, stdout=_PIPE,
-            universal_newlines=True)
+        load_image = _run(
+            ['fpga-load-local-image', '-S', str(self._fpga_slot_id),
+             '-I', fpga_image],
+            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if load_image.returncode:
             raise RuntimeError(load_image.stdout)
-        print('Programmed AWS F1 slot #%d with FPGA image %s' % (self._fpga_slot_id, fpga_image))
 
     def _reset_fpga(self):
         """
         Reset FPGA including FPGA image.
         """
-        reset_image = _run([
-            'fpga-clear-local-image', '-S', str(self._fpga_slot_id),
-            '-H'], stderr=_STDOUT, stdout=_PIPE, universal_newlines=True)
+        reset_image = _run(
+            ['fpga-clear-local-image', '-S', str(self._fpga_slot_id),
+             '-H'],
+            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if reset_image.returncode:
             raise RuntimeError(reset_image.stdout)
 

@@ -195,12 +195,12 @@ Run following command to install requirements:
 .. code-block:: bash
     :caption: On RHEL 7, CentOS 7
 
-    sudo pip3 install -U --prefix /usr pytest
+    sudo pip3 install -U --prefix /usr pytest flake8
 
 .. code-block:: bash
     :caption: On others
 
-    sudo pip3 install -U pytest
+    sudo pip3 install -U pytest flake8
 
 Package generation option
 -------------------------

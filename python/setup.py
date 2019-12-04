@@ -59,7 +59,7 @@ if __name__ == '__main__':
     # Check environment.
     if PACKAGE_INFO['version'].startswith('@'):
         raise RuntimeError(
-            "Please, build using projects's CMake instead of directly setup.py")
+            "Please, build using CMake instead of directly setup.py")
 
     # Sources files
     src_names = ('_accelize_drm.cpp', '_accelize_drmc.c')
@@ -119,7 +119,7 @@ if __name__ == '__main__':
 
     # Check if Cython if available
     try:
-        import Cython
+        import Cython  # noqa
         USE_CYTHON = True
     except ImportError:
         USE_CYTHON = False

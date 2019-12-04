@@ -60,11 +60,10 @@ class FpgaDriver(_FpgaDriverBase):
             fpga_image (str): FPGA image.
         """
         fpga_image = _realpath(_fsdecode(fpga_image))
-        load_image = _run([
-            _join(self._xrt_prefix, 'bin/xbutil'), 'program',
-            '-d', str(self._fpga_slot_id),
-            '-p', fpga_image], stderr=_STDOUT, stdout=_PIPE,
-            universal_newlines=True)
+        load_image = _run(
+            [_join(self._xrt_prefix, 'bin/xbutil'), 'program',
+             '-d', str(self._fpga_slot_id), '-p', fpga_image],
+            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if load_image.returncode:
             raise RuntimeError(load_image.stdout)
 
@@ -72,10 +71,10 @@ class FpgaDriver(_FpgaDriverBase):
         """
         Reset FPGA including FPGA image.
         """
-        reset_image = _run([
-            _join(self._xrt_prefix, 'bin/xbutil'), 'reset',
-            '-d', str(self._fpga_slot_id)], stderr=_STDOUT, stdout=_PIPE,
-            universal_newlines=True)
+        reset_image = _run(
+            [_join(self._xrt_prefix, 'bin/xbutil'), 'reset', '-d',
+             str(self._fpga_slot_id)],
+            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if reset_image.returncode:
             raise RuntimeError(reset_image.stdout)
 
