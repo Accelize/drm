@@ -1,4 +1,4 @@
-# Copyright (C) 2019, Accelize
+# Copyright (C) 2018, Accelize
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 # limitations under the License.
 cmake_minimum_required(VERSION 3.12)
 
-# CONFIGURE VERSION AND COMMON INFORMATIONS
+# CONFIGURE VERSION AND COMMON INFORMATION
 
 ## Define package version
 # Expected format:
@@ -32,7 +32,7 @@ endif()
 
 ## Note: Python package version is synchronised with ACCELIZEDRM_VERSION
 
-## Configure common informations
+## Configure common information
 set(CPACK_PACKAGE_VENDOR "Accelize")
 set(CPACK_PACKAGE_CONTACT "https://www.accelize.com/contact")
 set(CPACK_PACKAGE_MAINTAINER "accelize.com")
@@ -376,9 +376,6 @@ if (DOC)
     # Configure Doxygen
     configure_file(${DOC_SOUCES}/Doxyfile ${DOC_SOUCES}/Doxyfile)
 
-    # Install documentation
-    install(DIRECTORY ${DOC_HTML_DIR}/ DESTINATION ${CMAKE_INSTALL_DOCDIR}/html COMPONENT doc)
-
 endif ()
 
 # Packages
@@ -464,28 +461,13 @@ if (PKG)
             # Package Dependencies (Without Python)
             set(CPACK_RPM_PYTHON3_PACKAGE_REQUIRES "${CPACK_PACKAGE_NAME} >= ${VERSION_MAJOR}.${VERSION_MINOR}")
 
-            # Find Python3 base package
-            execute_process(COMMAND rpm -qf ${Python3_EXECUTABLE} --queryformat '%{NAME}'
-                    OUTPUT_VARIABLE PYTHON3_PACKAGE
-                    OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-            if (PYTHON3_PACKAGE MATCHES "^['](.*)[']\$")
-                # Remove eventual ' from result
-                set (PYTHON3_PACKAGE "${CMAKE_MATCH_1}")
-            endif ()
-
-            if (VERSION_ID MATCHES "8")
-                # RHEL/CentOS 8 package is named "python36", but python libraries packages are named using "python3-"
-                set(PYTHON3_PACKAGE "python3")
-            elseif(PYTHON3_PACKAGE MATCHES "is not owned by any package" OR NOT PYTHON3_PACKAGE)
-                # Python3 is not from a Package, define package name
-                set(PYTHON3_PACKAGE "python${Python3_VERSION_MAJOR}${Python3_VERSION_MINOR}")
-            else()
-                # Python3 is from a package, add it as dependency
-                set(CPACK_RPM_PYTHON3_PACKAGE_REQUIRES "${CPACK_RPM_PYTHON3_PACKAGE_REQUIRES}, ${PYTHON3_PACKAGE}")
+            # RHEL/CentOS 7 package was renamed from "python36"
+            if (VERSION_ID MATCHES "7")
+                set(CPACK_RPM_PACKAGE_OBSOLETES "python36-accelize-drm")
             endif ()
 
             # Configure package
-            set(CPACK_RPM_PYTHON3_PACKAGE_NAME "${PYTHON3_PACKAGE}-accelize-drm")
+            set(CPACK_RPM_PYTHON3_PACKAGE_NAME "python3-accelize-drm")
             set(CPACK_RPM_PYTHON3_FILE_NAME "${CPACK_RPM_PYTHON3_PACKAGE_NAME}-${ACCELIZEDRM_VERSION}-${CPACK_PACKAGE_RELEASE}${CPACK_RPM_PACKAGE_RELEASE_DIST}.${CMAKE_SYSTEM_PROCESSOR}.rpm")
             set(CPACK_RPM_PYTHON3_PACKAGE_SUMMARY ${CPACK_COMPONENT_PYTHON3_DESCRIPTION})
             set(CPACK_RPM_PYTHON3_PACKAGE_GROUP "Development/Libraries/Python")
@@ -547,7 +529,6 @@ if (PKG)
     # Dev/Devel package
     cpack_add_component_group(DEV)
     cpack_add_component(headers GROUP DEV)
-    cpack_add_component(doc GROUP DEV)
 
     # Python package
     if (PYTHON3)
