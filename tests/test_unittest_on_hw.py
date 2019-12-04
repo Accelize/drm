@@ -2890,3 +2890,10 @@ def test_drm_manager_frequency_detection_bypass(accelize_drm, conf_json, cred_js
     async_cb.assert_NoError()
     print('Test bypass_frequency_detection=true: PASS')
 
+
+def test_drm_manager_bist(accelize_drm, conf_json, cred_json, async_handler):
+    """Test register access BIST"""
+
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+
