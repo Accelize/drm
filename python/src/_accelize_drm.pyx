@@ -17,11 +17,12 @@ from accelize_drm.libaccelize_drm cimport (
     ReadRegisterCallback, WriteRegisterCallback, AsynchErrorCallback)
 
 from accelize_drm.exceptions import (
-    _async_error_callback,_raise_from_error, DRMBadArg as _DRMBadArg)
+    _async_error_callback, _raise_from_error, DRMBadArg as _DRMBadArg)
 
 _ASYNC_ERROR_CFUNCTYPE = _CFUNCTYPE(_c_void_p, _c_void_p)
 _READ_REGISTER_CFUNCTYPE = _CFUNCTYPE(_c_int, _c_uint32, _POINTER(_c_uint32))
 _WRITE_REGISTER_CFUNCTYPE = _CFUNCTYPE(_c_int, _c_uint32, _c_uint32)
+
 
 def _handle_exceptions(exception):
     """
@@ -94,7 +95,6 @@ cdef class DrmManager:
     cdef string _conf_file_path
     cdef string _cred_file_path
 
-
     def __cinit__(self, conf_file_path, cred_file_path,
                   read_register, write_register, async_error=None):
 
@@ -118,7 +118,7 @@ cdef class DrmManager:
             self._read_register_c))[0]
 
         self._write_register = write_register
-        self._write_register_c  = _WRITE_REGISTER_CFUNCTYPE(write_register)
+        self._write_register_c = _WRITE_REGISTER_CFUNCTYPE(write_register)
         self._write_register_p = (<WriteRegisterCallback*><size_t>_addressof(
             self._write_register_c))[0]
 
@@ -138,7 +138,7 @@ cdef class DrmManager:
             async_error(error_message_char)
 
         self._async_error = async_error_char
-        self._async_error_c  = _ASYNC_ERROR_CFUNCTYPE(async_error_char)
+        self._async_error_c = _ASYNC_ERROR_CFUNCTYPE(async_error_char)
         self._async_error_p = (<AsynchErrorCallback*><size_t>_addressof(
             self._async_error_c))[0]
 
@@ -249,7 +249,8 @@ cdef class DrmManager:
         """
         keys_dict = {key: None for key in filter(lambda x: x, keys)}
         if len(keys_dict) == 0:
-            _raise_from_error('keys argument is empty', error_code=_DRMBadArg.error_code)
+            _raise_from_error('keys argument is empty',
+                              error_code=_DRMBadArg.error_code)
         keys_json = _dumps(keys_dict).encode()
         cdef string json_string = keys_json
         try:

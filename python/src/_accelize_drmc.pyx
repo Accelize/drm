@@ -11,11 +11,11 @@ from ctypes import (
 from json import dumps as _dumps, loads as _loads
 
 from accelize_drm.libaccelize_drmc cimport (
-DrmManager as C_DrmManager,
-ReadRegisterCallback, WriteRegisterCallback, AsynchErrorCallback,
-DrmManager_alloc, DrmManager_free, DrmManager_activate,
-DrmManager_deactivate, DrmManager_get_json_string, DrmManager_set_json_string,
-DrmManager_getApiVersion)
+    DrmManager as C_DrmManager,
+    ReadRegisterCallback, WriteRegisterCallback, AsynchErrorCallback,
+    DrmManager_alloc, DrmManager_free, DrmManager_activate,
+    DrmManager_deactivate, DrmManager_get_json_string,
+    DrmManager_set_json_string, DrmManager_getApiVersion)
 
 from accelize_drm.exceptions import (
     _raise_from_error, _async_error_callback, DRMBadArg as _DRMBadArg)
@@ -26,6 +26,7 @@ _READ_REGISTER_CFUNCTYPE = _CFUNCTYPE(
 _WRITE_REGISTER_CFUNCTYPE = _CFUNCTYPE(
     _c_int, _c_uint32, _c_uint32, _c_void_p)
 
+
 def _get_api_version():
     """
     Return "libaccelize_drmc" API version.
@@ -34,6 +35,7 @@ def _get_api_version():
         bytes: C library version
     """
     return DrmManager_getApiVersion()
+
 
 cdef class DrmManager:
     """
@@ -230,7 +232,8 @@ cdef class DrmManager:
 
         cdef int return_code
         with nogil:
-            return_code = DrmManager_set_json_string(self._drm_manager, json_in)
+            return_code = DrmManager_set_json_string(
+                self._drm_manager, json_in)
         if return_code:
             _raise_from_error(self._drm_manager.error_message, return_code)
 
@@ -247,7 +250,8 @@ cdef class DrmManager:
         """
         keys_dict = {key: None for key in filter(lambda x: x, keys)}
         if len(keys_dict) == 0:
-            _raise_from_error('keys argument is empty', error_code=_DRMBadArg.error_code)
+            _raise_from_error('keys argument is empty',
+                              error_code=_DRMBadArg.error_code)
         keys_json = _dumps(keys_dict).encode()
         cdef char*json_in = keys_json
         cdef char*json_out

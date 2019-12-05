@@ -83,7 +83,7 @@ Run following commands to install requirements:
     sudo yum install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel
 
     # Ensure Pip3 is installed
-    sudo yum install -y python36-pip
+    sudo yum install -y python3-pip
 
     # Install a recent version of Cmake using pip
     sudo pip3 install -U --prefix /usr cmake
@@ -129,15 +129,8 @@ Run following command to install requirements:
 .. code-block:: bash
     :caption: On RHEL 7, CentOS 7
 
-    # Install EPEL repository to get a recent Python version
-    sudo yum install -y epel-release
-
-    # Install Python3.6
-    sudo yum install -y python36-pip python36-devel
-
-    # Install Python Packages
-    sudo pip3 install -U --prefix /usr  setuptools wheel cython
-
+    sudo yum install -y python3-pip python3-devel
+    sudo pip3 install -U --prefix /usr setuptools wheel cython
 
 Documentation generation option
 -------------------------------
@@ -202,12 +195,12 @@ Run following command to install requirements:
 .. code-block:: bash
     :caption: On RHEL 7, CentOS 7
 
-    sudo pip3 install -U --prefix /usr pytest
+    sudo pip3 install -U --prefix /usr pytest flake8 pytest-ordering
 
 .. code-block:: bash
     :caption: On others
 
-    sudo pip3 install -U pytest
+    sudo pip3 install -U pytest flake8 pytest-ordering
 
 Package generation option
 -------------------------
