@@ -587,8 +587,8 @@ protected:
         if ( badData.size() ) {
             std::string msg = "Read/Write callbacks auto-test failed:\n";
             msg += badData;
-            msg += "Please verify your read/write register callbacks implementation and the DRM Controller IP instantiation in your design. ";
-            msg += "For instance, verify the DRM Controller IP offset address, the full 16 bit address range is connected, ...";
+            msg += "Please verify your read/write callbacks implementation in your application and the DRM Controller IP instantiation in your design. ";
+            msg += "In particular, verify the DRM Controller offset address in the callbacks and the correctness of 16-bit address received by the AXI-Lite port of the DRM Controller.";
             Throw( DRM_BadArg, msg );
         }
         // Then, write none-zero values to User Mailbox

@@ -2897,3 +2897,35 @@ def test_drm_manager_bist(accelize_drm, conf_json, cred_json, async_handler):
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
+    # Test read callback error
+    def my_wrong_read_callback(register_offset, returned_data):
+        addr = register_offset
+        if register_offset > 0 and register_offset <= 0x40:
+            addr += 0x4
+        return driver.read_register_callback(addr, returned_data, driver)
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            my_wrong_read_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+    assert 'Read/Write callbacks auto-test failed' in str(excinfo.value)
+    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+    async_cb.assert_NoError()
+
+    # Test write callback error
+    def my_wrong_write_callback(register_offset, data_to_write):
+        return driver.write_register_callback(register_offset*2, data_to_write, driver)
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            my_wrong_write_callback,
+            async_cb.callback
+        )
+    assert 'Read/Write callbacks auto-test failed' in str(excinfo.value)
+    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+    async_cb.assert_NoError()
