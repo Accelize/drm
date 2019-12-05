@@ -392,8 +392,13 @@ protected:
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
         checkDRMCtlrRet( getDrmController().writeMailBoxFilePageRegister() );
         checkDRMCtlrRet( getDrmController().readMailboxFileSizeRegister( roSize, rwSize ) );
-        Debug2( "Read Mailbox size: {}", rwSize );
         return rwSize;
+    }
+
+    uint32_t getUserMailboxSize() const {
+        uint32_t mbSize = getMailboxSize() - (uint32_t)eMailboxOffset::MB_USER;
+        Debug( "User Mailbox size: {}", mbSize );
+        return mbSize;
     }
 
     uint32_t readMailbox( const eMailboxOffset offset ) const {
@@ -563,6 +568,51 @@ protected:
         Debug( "DRM HDK Version: {}", drmVersionDot );
     }
 
+    /* Run BIST to check register accesses
+     * This test write and read mailbox registers to verify the read and write callbacks are working correctly.
+     */
+    void runRegisterAccessBIST() const {
+        uint32_t mbSize = getUserMailboxSize();
+
+        // First, write 0 to User Mailbox
+        std::vector<uint32_t> wrData( mbSize, 0 );
+        writeMailbox( eMailboxOffset::MB_USER, wrData );
+        // Read back the mailbox and verify it has been set correctly
+        std::vector<uint32_t> rdData = readMailbox( eMailboxOffset::MB_USER, mbSize );
+        std::string badData;
+        for( uint32_t i = 0; i < mbSize; i++ ) {
+            if ( rdData[i] != wrData[i] )
+                badData += fmt::format( "\tMailbox[{}]=0x{:08X} != 0x{:08X}\n", i, rdData[i], wrData[i]);
+        }
+        if ( badData.size() ) {
+            std::string msg = "Read/Write callbacks auto-test failed:\n";
+            msg += badData;
+            msg += "Please verify your read/write callbacks implementation in your application and the DRM Controller IP instantiation in your design. ";
+            msg += "In particular, verify the DRM Controller offset address in the callbacks and the correctness of 16-bit address received by the AXI-Lite port of the DRM Controller.";
+            Throw( DRM_BadArg, msg );
+        }
+        // Then, write none-zero values to User Mailbox
+        wrData[0] = 0x11111111; wrData[1] = 0x22222222;
+        wrData[2] = 0x44444444; wrData[3] = 0x88888888;
+        wrData[4] = 0x55555555; wrData[5] = 0xAAAAAAAA;
+        wrData[6] = 0xFFFFFFFF;
+        writeMailbox( eMailboxOffset::MB_USER, wrData );
+        // Read back the mailbox and verify it has been set correctly
+        rdData = readMailbox( eMailboxOffset::MB_USER, mbSize );
+        badData.clear();
+        for( uint32_t i = 0; i < mbSize; i++ ) {
+            if ( rdData[i] != wrData[i] )
+                badData += fmt::format( "\tMailbox[{}]=0x{:08X} != 0x{:08X}\n", i, rdData[i], wrData[i]);
+        }
+        if ( badData.size() ) {
+            std::string msg = "Read/Write callbacks auto-test failed:\n";
+            msg += badData;
+            msg += "Please verify your read/write register callbacks implementation and the DRM Controller IP instantiation in your design. ";
+            msg += "For instance, verify the DRM Controller IP offset address, the full 16 bit address range is connected, ...";
+            Throw( DRM_BadArg, msg );
+        }
+    }
+
     bool isNodeLockedMode() const {
         return mLicenseType == eLicenseType::NODE_LOCKED;
     }
@@ -601,6 +651,9 @@ protected:
 
         // Try to lock the DRM controller to this instance, return an error is already locked.
         lockDrmToInstance();
+
+        // Run auto-test of register accesses
+        runRegisterAccessBIST();
 
         // Determine frequency detection method if metering/floating mode is active
         if ( !isNodeLockedMode() ) {
@@ -1837,14 +1890,14 @@ public:
                         break;
                     }
                     case ParameterKey::mailbox_size: {
-                        uint32_t mbSize = getMailboxSize() - (uint32_t)eMailboxOffset::MB_USER;
+                        uint32_t mbSize = getUserMailboxSize();
                         json_value[key_str] = mbSize;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                mbSize );
                         break;
                     }
                     case ParameterKey::mailbox_data: {
-                        uint32_t mbSize = getMailboxSize() - (uint32_t)eMailboxOffset::MB_USER;
+                        uint32_t mbSize = getUserMailboxSize();
                         std::vector<uint32_t> data_array = readMailbox( eMailboxOffset::MB_USER, mbSize );
                         for( const auto& val: data_array )
                             json_value[key_str].append( val );
