@@ -149,7 +149,7 @@ def test_first_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
 
     async_cb.reset()
     conf_json.reset()
-    logpath = realpath("./drmlib.%d.%d.log" % (time(), randrange()))
+    logpath = realpath("./drmlib.%d.%d.log" % (time(), randrange(0xFFFFFFFF)))
     conf_json['settings']['log_file_verbosity'] = 1
     conf_json['settings']['log_file_type'] = 1
     conf_json['settings']['log_file_path'] = logpath
@@ -198,7 +198,7 @@ def test_first_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
         del drm_manager
         gc.collect()
     # Parse log file
-    request_json = parse_and_save_challenge(logpath, REGEX_PATTERN, 'test_first_challenge_duplication.%d.%d.json' % (time(), randrange()))
+    request_json = parse_and_save_challenge(logpath, REGEX_PATTERN, 'test_first_challenge_duplication.%d.%d.json' % (time(), randrange(0xFFFFFFFF)))
     # Keep only the 'open' requests
     request_json['results'] = list(filter(lambda x: x['request'] == 'open', request_json['results']))
     # Check validity
@@ -230,7 +230,7 @@ def test_intra_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
 
     async_cb.reset()
     conf_json.reset()
-    logpath = realpath("./drmlib.%d.%d.log" % (time(), randrange()))
+    logpath = realpath("./drmlib.%d.%d.log" % (time(), randrange(0xFFFFFFFF)))
     conf_json['settings']['log_file_verbosity'] = 1
     conf_json['settings']['log_file_type'] = 1
     conf_json['settings']['log_file_path'] = logpath
@@ -273,7 +273,7 @@ def test_intra_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
         del drm_manager
         gc.collect()
     # Parse log file
-    request_json = parse_and_save_challenge(logpath, REGEX_PATTERN, 'test_intra_challenge_duplication.%d.%d.json' % (time(), randrange()))
+    request_json = parse_and_save_challenge(logpath, REGEX_PATTERN, 'test_intra_challenge_duplication.%d.%d.json' % (time(), randrange(0xFFFFFFFF)))
     # Remove close request because they repeat the last challenge
     request_json['results'] = list(filter(lambda x: x['request'] != 'close', request_json['results']))
     # Check validity
@@ -305,7 +305,7 @@ def test_dna_duplication(accelize_drm, conf_json, cred_json, async_handler):
 
     async_cb.reset()
     conf_json.reset()
-    logpath = realpath("./drmlib.%d.%d.log" % (time(), randrange()))
+    logpath = realpath("./drmlib.%d.%d.log" % (time(), randrange(0xFFFFFFFF)))
     conf_json['settings']['log_verbosity'] = 4
     conf_json['settings']['log_file_verbosity'] = 2
     conf_json['settings']['log_file_type'] = 1
@@ -338,7 +338,7 @@ def test_dna_duplication(accelize_drm, conf_json, cred_json, async_handler):
     # Check validity
     assert len(request_json['results']) >= num_samples
     # Save to file
-    with open('test_dna_duplication.%d.%d.json' % (time(), randrange()), 'wt') as f:
+    with open('test_dna_duplication.%d.%d.json' % (time(), randrange(0xFFFFFFFF)), 'wt') as f:
         f.write(dumps(request_json, indent=4, sort_keys=True))
     # Check duplicates
     dupl_score = check_duplicates(dna_list)
