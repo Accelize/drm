@@ -5,6 +5,7 @@ env:
   parameter-store:
     # Toolbox: Retrieve encryption key
     XLZCRYPT_KEY: "xlzcrypt_key"
+    ARTIFACTS_DIR: "HWT"
 
 phases:
   install:
@@ -13,30 +14,35 @@ phases:
       - $CODEBUILD_SRC_DIR_toolbox/install.py
 
       # Artifacts output directory
-      - mkdir -p artifacts
+      - mkdir -p $ARTIFACTS_DIR
 
       # Save environment as artifact
       - DATETIME=$(date +%F_%Hh%Mm%Ss)
-      - echo "DATE-TIME ${DATETIME}" > artifacts/env.txt
-      - echo "" >> artifacts/env.txt
+      - echo "DATE-TIME ${DATETIME}" > $ARTIFACTS_DIR/env.txt
+      - echo "" >> $ARTIFACTS_DIR/env.txt
 
-      - cat /etc/*-release >> artifacts/env.txt
-      - echo "" >> artifacts/env.txt
+      - ARTIFACTS_NAME=${XLZ_REFDESIGN_TARGET}_${XLZ_REFDESIGN_NAME}_${DATETIME}_${CODEBUILD_RESOLVED_SOURCE_VERSION}
+      - echo "ARTIFACTS_NAME:" >> $ARTIFACTS_DIR/env.txt
+      - echo "${ARTIFACTS_NAME}" >> $ARTIFACTS_DIR/env.txt
+      - echo "" >> $ARTIFACTS_DIR/env.txt
 
-      - echo "CODEBUILD:" >> artifacts/env.txt
-      - export | grep CODEBUILD >> artifacts/env.txt
-      - echo "" >> artifacts/env.txt
+      - cat /etc/*-release >> $ARTIFACTS_DIR/env.txt
+      - echo "" >> $ARTIFACTS_DIR/env.txt
 
-      - echo "PYTHON VERSION:" >> artifacts/env.txt
-      - python3 --version >> artifacts/env.txt
-      - echo "" >> artifacts/env.txt
+      - echo "CODEBUILD:" >> $ARTIFACTS_DIR/env.txt
+      - export | grep CODEBUILD >> $ARTIFACTS_DIR/env.txt
+      - echo "" >> $ARTIFACTS_DIR/env.txt
 
-      - echo "PYTHON PACKAGES:" >> artifacts/env.txt
-      - pip3 list >> artifacts/env.txt
-      - echo "" >> artifacts/env.txt
+      - echo "PYTHON VERSION:" >> $ARTIFACTS_DIR/env.txt
+      - python3 --version >> $ARTIFACTS_DIR/env.txt
+      - echo "" >> $ARTIFACTS_DIR/env.txt
 
-      - echo "LINUX PACKAGES:" >> artifacts/env.txt
-      - apt list --installed >> artifacts/env.txt
+      - echo "PYTHON PACKAGES:" >> $ARTIFACTS_DIR/env.txt
+      - pip3 list >> $ARTIFACTS_DIR/env.txt
+      - echo "" >> $ARTIFACTS_DIR/env.txt
+
+      - echo "LINUX PACKAGES:" >> $ARTIFACTS_DIR/env.txt
+      - apt list --installed >> $ARTIFACTS_DIR/env.txt
 
       - head -80 $ARTIFACTS_DIR/env.txt
 
@@ -81,14 +87,14 @@ phases:
         cd build_doc &&
         cmake -DPYTHON3=ON -DDOC=ON .. &&
         make -s -j &&
-        tar -zcf ../artifacts/doc.tar.gz ./doc_html"
+        tar -zcf ../${ARTIFACTS_DIR}/doc.tar.gz ./doc_html"
         -v
 
       # Upload documentation
       - xlz
-        --if file_exists=artifacts/doc.tar.gz
+        --if file_exists=$ARTIFACTS_DIR/doc.tar.gz
         install
-        drmlib_publish_doc=artifacts/doc.tar.gz
+        drmlib_publish_doc=$ARTIFACTS_DIR/doc.tar.gz
         -v
 
       # Run tests
@@ -103,7 +109,7 @@ phases:
         --shutdown_after 30
         -p f1.4xlarge
         -n drm_debug_tests
-        -z /dev/shm/drmlib_dev/.tox/debug/build/report artifacts/report.tar.gz
+        -z /dev/shm/drmlib_dev/.tox/debug/build/report $ARTIFACTS_DIR/report.tar.gz
         -r "source /dev/shm/aws-fpga/sdk_setup.sh && cd /dev/shm/drmlib_dev &&
             sudo -E TOX_PARALLEL_NO_SPINNER=1 tox -p all -e aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug -- --cred=/dev/shm/cred.json --server=${WS_ENV} -x -s ${PYTEST_ARGS_OPTION}"
 
@@ -119,13 +125,13 @@ phases:
         --volume_size=30
         -s ubuntu
         -n accelize_drm_packages_build
-        -z /dev/shm/drmlib_dev/deployment/packages artifacts/packages.tar.gz
+        -z /dev/shm/drmlib_dev/deployment/packages $ARTIFACTS_DIR/packages.tar.gz
         -r "cd /dev/shm/drmlib_dev/deployment && sudo -E docker-compose pull &&
             sudo -E docker-compose up"
 
       # Tests packages
       - xlz
-        --if file_exists=artifacts/packages.tar.gz
+        --if file_exists=$ARTIFACTS_DIR/packages.tar.gz
         run
         docker
         drmlib_dev=$CODEBUILD_RESOLVED_SOURCE_VERSION drmlib_cred_json
@@ -133,7 +139,7 @@ phases:
         -s ubuntu
         -p f1.4xlarge
         -n drm_packages_tests
-        --gz_upload artifacts/packages.tar.gz /dev/shm/packages
+        --gz_upload $ARTIFACTS_DIR/packages.tar.gz /dev/shm/packages
         -x OS centos_7
         -x OS centos_8
         -x OS debian_buster
@@ -158,12 +164,12 @@ phases:
 
       # Upload packages to repository
       - xlz
-        --if file_exists=artifacts/packages.tar.gz
+        --if file_exists=$ARTIFACTS_DIR/packages.tar.gz
         install
-        drmlib_publish_packages=artifacts/packages.tar.gz
+        drmlib_publish_packages=$ARTIFACTS_DIR/packages.tar.gz
         -v
 
 artifacts:
   files:
     - artifacts/*
-  discard-paths: yes
+  name: ${ARTIFACTS_NAME}

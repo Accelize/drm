@@ -176,7 +176,7 @@ def test_first_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
                 sample_cnt = 0
                 for s in range(num_samples):
                     print('Waiting %d seconds' % license_duration)
-                    sleep(license_duration)
+                    sleep(license_duration+1)
                     if async_cb.was_called:
                         print('Error occurred in %s: background thread failed with message: %s' % (sys._getframe().f_code.co_name, async_cb.message))
                         break
@@ -252,7 +252,7 @@ def test_intra_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
         sleep(1)
         sample_cnt = 0
         while sample_cnt < num_samples:
-            sleep(license_duration)
+            sleep(license_duration+1)
             if async_cb.was_called:
                 print('Error occurred in %s: background thread failed with message: %s' % (sys._getframe().f_code.co_name, async_cb.message))
                 async_cb.reset()
