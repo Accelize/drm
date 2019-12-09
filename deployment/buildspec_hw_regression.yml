@@ -92,9 +92,9 @@ phases:
 
       # Upload documentation
       - xlz
-        --if file_exists=$ARTIFACTS_DIR/doc.tar.gz
+        --if file_exists=${ARTIFACTS_DIR}/doc.tar.gz
         install
-        drmlib_publish_doc=$ARTIFACTS_DIR/doc.tar.gz
+        drmlib_publish_doc=${ARTIFACTS_DIR}/doc.tar.gz
         -v
 
       # Run tests
@@ -109,7 +109,7 @@ phases:
         --shutdown_after 30
         -p f1.4xlarge
         -n drm_debug_tests
-        -z /dev/shm/drmlib_dev/.tox/debug/build/report $ARTIFACTS_DIR/report.tar.gz
+        -z /dev/shm/drmlib_dev/.tox/debug/build/report ${ARTIFACTS_DIR}/report.tar.gz
         -r "source /dev/shm/aws-fpga/sdk_setup.sh && cd /dev/shm/drmlib_dev &&
             sudo -E TOX_PARALLEL_NO_SPINNER=1 tox -p all -e aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug -- --cred=/dev/shm/cred.json --server=${WS_ENV} -x -s ${PYTEST_ARGS_OPTION}"
 
@@ -125,13 +125,13 @@ phases:
         --volume_size=30
         -s ubuntu
         -n accelize_drm_packages_build
-        -z /dev/shm/drmlib_dev/deployment/packages $ARTIFACTS_DIR/packages.tar.gz
+        -z /dev/shm/drmlib_dev/deployment/packages ${ARTIFACTS_DIR}/packages.tar.gz
         -r "cd /dev/shm/drmlib_dev/deployment && sudo -E docker-compose pull &&
             sudo -E docker-compose up"
 
       # Tests packages
       - xlz
-        --if file_exists=$ARTIFACTS_DIR/packages.tar.gz
+        --if file_exists=${ARTIFACTS_DIR}/packages.tar.gz
         run
         docker
         drmlib_dev=$CODEBUILD_RESOLVED_SOURCE_VERSION drmlib_cred_json
@@ -139,7 +139,7 @@ phases:
         -s ubuntu
         -p f1.4xlarge
         -n drm_packages_tests
-        --gz_upload $ARTIFACTS_DIR/packages.tar.gz /dev/shm/packages
+        --gz_upload ${ARTIFACTS_DIR}/packages.tar.gz /dev/shm/packages
         -x OS centos_7
         -x OS centos_8
         -x OS debian_buster
@@ -164,9 +164,9 @@ phases:
 
       # Upload packages to repository
       - xlz
-        --if file_exists=$ARTIFACTS_DIR/packages.tar.gz
+        --if file_exists=${ARTIFACTS_DIR}/packages.tar.gz
         install
-        drmlib_publish_packages=$ARTIFACTS_DIR/packages.tar.gz
+        drmlib_publish_packages=${ARTIFACTS_DIR}/packages.tar.gz
         -v
 
 artifacts:
