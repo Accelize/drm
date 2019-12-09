@@ -171,5 +171,5 @@ phases:
 
 artifacts:
   files:
-    - '**/*'
+    - 'HWT/**/*'
   name: ${ARTIFACTS_NAME}
