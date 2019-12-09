@@ -3,19 +3,22 @@
 Test node-locked behavior of DRM Library.
 """
 import pytest
+import sys
 import gc
 import re
 from glob import glob
-from os import remove, getpid
+from os import remove
 from os.path import getsize, isfile, dirname, join, realpath, basename
 from re import search, findall, finditer, MULTILINE
 from time import sleep, time
 from json import loads, dumps
 from datetime import datetime, timedelta
+from random import randrange
+
 
 SAMPLES_DUPLICATE_THRESHOLD = 2
 SAMPLES_DISPERSION_THRESHOLD = 10
-DUPLICATE_THRESHOLD = 1.0/10000
+DUPLICATE_THRESHOLD = 1/10000*100.0
 DISPERSION_THRESHOLD = 0.1
 
 LOG_FORMAT_LONG = "%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v"
@@ -25,6 +28,7 @@ REGEX_PATTERN = r'Starting license request to \S+ with request:\n(^{.+?\n}$)'
 
 def parse_and_save_challenge(logpath, pattern, save_path=None):
     # Parse log file
+    print(f'Parsing requests from log file: {logpath}')
     with open(logpath, 'rt') as f:
         text = f.read()
     request_json = dict()
@@ -58,7 +62,7 @@ def check_duplicates(value_list):
             print("\t%s appears %d times" % (v,d))
     num_duplicates = len(list(filter(lambda x: x>1, count_by_value.values())))
     duplication_percent = float(num_duplicates)/ list_size * 100
-    print("=> Percentage of duplicates: %0.1f%%" % duplication_percent)
+    print("=> Percentage of duplicates: %f%%" % duplication_percent)
     return duplication_percent
 
 
@@ -140,10 +144,12 @@ def test_first_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
     except:
         num_samples = 4
         print('Warning: Missing argument "num_open_samples". Using default value %d' % num_samples)
+    print('num_open_sessions=', num_sessions)
+    print('num_open_samples=', num_samples)
 
     async_cb.reset()
     conf_json.reset()
-    logpath = realpath("./drmlib.%d.log" % getpid())
+    logpath = realpath("./drmlib.%d.%d.log" % (time(), randrange(0xFFFFFFFF)))
     conf_json['settings']['log_file_verbosity'] = 1
     conf_json['settings']['log_file_type'] = 1
     conf_json['settings']['log_file_path'] = logpath
@@ -172,20 +178,27 @@ def test_first_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
                     print('Waiting %d seconds' % license_duration)
                     sleep(license_duration)
                     if async_cb.was_called:
-                        print('Error occurred:', async_cb.message)
+                        print('Error occurred in %s: background thread failed with message: %s' % (sys._getframe().f_code.co_name, async_cb.message))
                         break
             except:
                 print('Session #%d/%d failed: retrying!' % (session_cnt+1,num_sessions))
             finally:
-                drm_manager.deactivate()
+                while True:
+                    try:
+                        drm_manager.deactivate()
+                        break
+                    except:
+                        print('Error occurred in %s: deactivate failed with message: %s' % (sys._getframe().f_code.co_name, async_cb.message))
+                        sleep(1)
                 activators.autotest(is_activated=False)
+                async_cb.reset()
     finally:
         # Check validity
         assert session_cnt >= num_sessions
         del drm_manager
         gc.collect()
     # Parse log file
-    request_json = parse_and_save_challenge(logpath, REGEX_PATTERN, 'test_first_challenge_duplication_%d.json' % getpid())
+    request_json = parse_and_save_challenge(logpath, REGEX_PATTERN, 'test_first_challenge_duplication.%d.%d.json' % (time(), randrange(0xFFFFFFFF)))
     # Keep only the 'open' requests
     request_json['results'] = list(filter(lambda x: x['request'] == 'open', request_json['results']))
     # Check validity
@@ -213,10 +226,11 @@ def test_intra_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
     except:
         num_samples = 100
         print('Warning: Missing argument "num_intra_samples". Using default value %d' % num_samples)
+    print('num_intra_samples=', num_samples)
 
     async_cb.reset()
     conf_json.reset()
-    logpath = realpath("./drmlib.%d.log" % getpid())
+    logpath = realpath("./drmlib.%d.%d.log" % (time(), randrange(0xFFFFFFFF)))
     conf_json['settings']['log_file_verbosity'] = 1
     conf_json['settings']['log_file_type'] = 1
     conf_json['settings']['log_file_path'] = logpath
@@ -240,23 +254,26 @@ def test_intra_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
         while sample_cnt < num_samples:
             sleep(license_duration)
             if async_cb.was_called:
-                print('Error occurred:', async_cb.message)
-                drm_manager.deactivate()
-                activators.autotest(is_activated=False)
-                drm_manager.activate()
-                activators.autotest(is_activated=True)
+                print('Error occurred in %s: background thread failed with message: %s' % (sys._getframe().f_code.co_name, async_cb.message))
+                async_cb.reset()
             else:
                 sample_cnt += 1
                 print('Num of samples=', sample_cnt)
     finally:
-        drm_manager.deactivate()
+        while True:
+            try:
+                drm_manager.deactivate()
+                break
+            except:
+                print('Error occurred in %s: deactivate failed with message: %s' % (sys._getframe().f_code.co_name, async_cb.message))
+                sleep(1)
         activators.autotest(is_activated=False)
         # Check validity
         assert sample_cnt >= num_samples
         del drm_manager
         gc.collect()
     # Parse log file
-    request_json = parse_and_save_challenge(logpath, REGEX_PATTERN, 'test_intra_challenge_duplication_%d.json' % getpid())
+    request_json = parse_and_save_challenge(logpath, REGEX_PATTERN, 'test_intra_challenge_duplication.%d.%d.json' % (time(), randrange(0xFFFFFFFF)))
     # Remove close request because they repeat the last challenge
     request_json['results'] = list(filter(lambda x: x['request'] != 'close', request_json['results']))
     # Check validity
@@ -284,10 +301,11 @@ def test_dna_duplication(accelize_drm, conf_json, cred_json, async_handler):
     except:
         num_samples = 50
         print('Warning: Missing argument "num_dna_samples". Using default value %d' % num_samples)
+    print('num_dna_samples=', num_samples)
 
     async_cb.reset()
     conf_json.reset()
-    logpath = realpath("./drmlib.%d.log" % getpid())
+    logpath = realpath("./drmlib.%d.%d.log" % (time(), randrange(0xFFFFFFFF)))
     conf_json['settings']['log_verbosity'] = 4
     conf_json['settings']['log_file_verbosity'] = 2
     conf_json['settings']['log_file_type'] = 1
@@ -310,6 +328,7 @@ def test_dna_duplication(accelize_drm, conf_json, cred_json, async_handler):
             drm_manager.get('hw_report')
             del drm_manager
             gc.collect()
+            print(f'Parsing requests from log file: {logpath}')
             with open(logpath, 'rt') as f:
                 log = f.read()
             dna_list.append(search(r'-\s*dna\s*\.+\s*:\s*0x([0-9A-F]+)', log, re.I).group(1))
@@ -319,7 +338,7 @@ def test_dna_duplication(accelize_drm, conf_json, cred_json, async_handler):
     # Check validity
     assert len(request_json['results']) >= num_samples
     # Save to file
-    with open('test_dna_duplication_%d.json' % getpid(), 'wt') as f:
+    with open('test_dna_duplication.%d.%d.json' % (time(), randrange(0xFFFFFFFF)), 'wt') as f:
         f.write(dumps(request_json, indent=4, sort_keys=True))
     # Check duplicates
     dupl_score = check_duplicates(dna_list)
