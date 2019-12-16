@@ -3,7 +3,7 @@ version: 0.2
 
 env:
   variables:
-    SYN_LOG_FILE: "hwtest.log"
+    HWT_LOG_FILE: "hwtest.log"
     ARTIFACTS_DIR: "HWT"
   parameter-store:
     # Toolbox: Retrieve encryption key
@@ -95,7 +95,8 @@ phases:
         -z /dev/shm/drmlib_dev/.tox/debug/build/report ${ARTIFACTS_DIR}/report.tar.gz
         -r "source /dev/shm/aws-fpga/sdk_setup.sh && cd /dev/shm/drmlib_dev &&
             sudo -E TOX_PARALLEL_NO_SPINNER=1 tox -p all -e aws-build-debug,cpp-debug,c-debug,integration-debug -- --cred=/dev/shm/cred.json --server=${WS_ENV} -x -s -m minimum ${PYTEST_ARGS_OPTION}"
-
+        - tar -xzf ${ARTIFACTS_DIR}/report.tar.gz ${ARTIFACTS_DIR}
+        - rm ${ARTIFACTS_DIR}/report.tar.gz
 
 artifacts:
   files:
