@@ -16,35 +16,35 @@ phases:
       # Artifacts output directory
       - mkdir -p $ARTIFACTS_DIR
 
-      # Save environment as artifact
-      - DATETIME=$(date +%F_%Hh%Mm%Ss)
-      - echo "DATE-TIME ${DATETIME}" > $ARTIFACTS_DIR/env.txt
-      - echo "" >> $ARTIFACTS_DIR/env.txt
-
-      - ARTIFACTS_NAME=${XLZ_REFDESIGN_TARGET}_${XLZ_REFDESIGN_NAME}_${DATETIME}_${CODEBUILD_RESOLVED_SOURCE_VERSION}
-      - echo "ARTIFACTS_NAME:" >> $ARTIFACTS_DIR/env.txt
-      - echo "${ARTIFACTS_NAME}" >> $ARTIFACTS_DIR/env.txt
-      - echo "" >> $ARTIFACTS_DIR/env.txt
-
-      - cat /etc/*-release >> $ARTIFACTS_DIR/env.txt
-      - echo "" >> $ARTIFACTS_DIR/env.txt
-
-      - echo "CODEBUILD:" >> $ARTIFACTS_DIR/env.txt
-      - export | grep CODEBUILD >> $ARTIFACTS_DIR/env.txt
-      - echo "" >> $ARTIFACTS_DIR/env.txt
-
-      - echo "PYTHON VERSION:" >> $ARTIFACTS_DIR/env.txt
-      - python3 --version >> $ARTIFACTS_DIR/env.txt
-      - echo "" >> $ARTIFACTS_DIR/env.txt
-
-      - echo "PYTHON PACKAGES:" >> $ARTIFACTS_DIR/env.txt
-      - pip3 list >> $ARTIFACTS_DIR/env.txt
-      - echo "" >> $ARTIFACTS_DIR/env.txt
-
-      - echo "LINUX PACKAGES:" >> $ARTIFACTS_DIR/env.txt
-      - apt list --installed >> $ARTIFACTS_DIR/env.txt
-
-      - head -80 $ARTIFACTS_DIR/env.txt
+      ## Save environment as artifact
+      #- DATETIME=$(date +%F_%Hh%Mm%Ss)
+      #- echo "DATE-TIME ${DATETIME}" > $ARTIFACTS_DIR/env.txt
+      #- echo "" >> $ARTIFACTS_DIR/env.txt
+      #
+      #- ARTIFACTS_NAME=${XLZ_REFDESIGN_TARGET}_${XLZ_REFDESIGN_NAME}_${DATETIME}_${CODEBUILD_RESOLVED_SOURCE_VERSION}
+      #- echo "ARTIFACTS_NAME:" >> $ARTIFACTS_DIR/env.txt
+      #- echo "${ARTIFACTS_NAME}" >> $ARTIFACTS_DIR/env.txt
+      #- echo "" >> $ARTIFACTS_DIR/env.txt
+      #
+      #- cat /etc/*-release >> $ARTIFACTS_DIR/env.txt
+      #- echo "" >> $ARTIFACTS_DIR/env.txt
+      #
+      #- echo "CODEBUILD:" >> $ARTIFACTS_DIR/env.txt
+      #- export | grep CODEBUILD >> $ARTIFACTS_DIR/env.txt
+      #- echo "" >> $ARTIFACTS_DIR/env.txt
+      #
+      #- echo "PYTHON VERSION:" >> $ARTIFACTS_DIR/env.txt
+      #- python3 --version >> $ARTIFACTS_DIR/env.txt
+      #- echo "" >> $ARTIFACTS_DIR/env.txt
+      #
+      #- echo "PYTHON PACKAGES:" >> $ARTIFACTS_DIR/env.txt
+      #- pip3 list >> $ARTIFACTS_DIR/env.txt
+      #- echo "" >> $ARTIFACTS_DIR/env.txt
+      #
+      #- echo "LINUX PACKAGES:" >> $ARTIFACTS_DIR/env.txt
+      #- apt list --installed >> $ARTIFACTS_DIR/env.txt
+      #
+      #- head -80 $ARTIFACTS_DIR/env.txt
 
   build:
     commands:
