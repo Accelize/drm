@@ -109,17 +109,17 @@ def check_bit_dispersion(value_list):
 @pytest.mark.last
 def test_global_challenge_quality():
     print()
-    value_json = {'results' : list()}
+    value_json = {'requests' : list()}
     for filename in glob("./test_*.json"):
         print('Analyzing file: %s ...' % filename)
         with open(filename, 'rt') as f:
             res_json = loads(f.read())
-        value_json['results'].extend(res_json['results'])
-        print('... adding %d more results' % len(res_json['results']))
+        value_json['requests'].extend(res_json['requests'])
+        print('... adding %d more requests' % len(res_json['requests']))
 
     # CHECK CHALLENGE QUALITY
     value_list = list()
-    for e in value_json['results']:
+    for e in value_json['requests']:
         try:
             if e['request']!='close' and 'saasChallenge' in e.keys():
                 value_list.append(e['saasChallenge'])
@@ -136,9 +136,9 @@ def test_global_challenge_quality():
         assert disp_score < DISPERSION_THRESHOLD
 
     # CHECK DNA QUALITY
-    value_list = [e['dna'] for e in value_json['results'] if e['request']=='open']
+    value_list = [e['dna'] for e in value_json['requests'] if e['request']=='open']
     value_list = list()
-    for e in value_json['results']:
+    for e in value_json['requests']:
         try:
             if e['request']=='open' and 'dna' in e.keys():
                 value_list.append(e['dna'])
@@ -229,7 +229,7 @@ def test_first_challenge_duplication(accelize_drm, conf_json, cred_json, async_h
     # Parse log file
     request_list = parse_and_save_challenge(logpath, REGEX_PATTERN, 'test_first_challenge_duplication.%d.%d.json' % (time(), randrange(0xFFFFFFFF)))
     # Keep only the 'open' requests
-    request_json['results'] = list(filter(lambda x: x['request'] == 'open', request_list))
+    request_json['requests'] = list(filter(lambda x: x['request'] == 'open', request_list))
     # Check validity
     assert len(request_list) >= num_sessions
     # Check duplicates
@@ -374,7 +374,7 @@ def test_dna_duplication(accelize_drm, conf_json, cred_json, async_handler):
     assert len(dna_list) >= num_samples
     # Save to file
     with open('test_dna_duplication.%d.%d.json' % (time(), randrange(0xFFFFFFFF)), 'wt') as f:
-        f.write(dumps({'results': dna_list}, indent=4, sort_keys=True))
+        f.write(dumps({'requests': dna_list}, indent=4, sort_keys=True))
     # Check duplicates
     dna_list = [e['dna'] for e in dna_list]
     dupl_score = check_duplicates(dna_list)
