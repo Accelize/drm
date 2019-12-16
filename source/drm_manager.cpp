@@ -1451,8 +1451,6 @@ protected:
     }
 
     void startSession() {
-        Info( "Starting a new metering session..." );
-
         // Build start request message for new license
         Json::Value request_json = getMeteringStart();
 
@@ -1461,11 +1459,11 @@ protected:
         setLicense( license_json );
 
         startLicenseContinuityThread();
+
+        Info( "New DRM session started." );
     }
 
     void resumeSession() {
-        Info( "Resuming DRM session..." );
-
         if ( isReadyForNewLicense() ) {
 
             // Create JSON license request
@@ -1478,11 +1476,10 @@ protected:
             setLicense( license_json );
         }
         startLicenseContinuityThread();
+        Info( "DRM session resumed." );
     }
 
     void stopSession() {
-        Info( "Stopping DRM session..." );
-
         // Stop background thread
         stopThread();
 
@@ -1492,17 +1489,19 @@ protected:
         // Send last metering information
         Json::Value license_json = getLicense( request_json, mWSRequestTimeout, mWSRetryPeriodShort );
         checkSessionIDFromWS( license_json );
-        Info( "Session ID {} stopped and last metering data uploaded", mSessionID );
+        Debug( "Session ID {} stopped and last metering data uploaded", mSessionID );
 
         /// Clear Session IS
         Debug( "Clearing session ID: {}", mSessionID );
         mSessionID = std::string("");
+
+        Info( "DRM session stopped." );
     }
 
     void pauseSession() {
-        Info( "Pausing DRM session..." );
         stopThread();
         mSecurityStop = false;
+        Info( "DRM session paused." );
     }
 
     ParameterKey findParameterKey( const std::string& key_string ) const {
