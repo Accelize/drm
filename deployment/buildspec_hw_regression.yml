@@ -5,7 +5,7 @@ env:
   parameter-store:
     # Toolbox: Retrieve encryption key
     XLZCRYPT_KEY: "xlzcrypt_key"
-    ARTIFACTS_DIR: "HWT"
+    ARTIFACTS_DIR: "RUN"
 
 phases:
   install:
