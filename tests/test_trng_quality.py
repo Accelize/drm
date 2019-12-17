@@ -130,7 +130,6 @@ def test_global_challenge_quality():
     if dupl_score:
         assert dupl_score < DUPLICATE_THRESHOLD
     # Check dispersion
-    print("nb of value to compute dispersion=", len(value_list))
     disp_score = check_bit_dispersion(value_list)
     if disp_score:
         assert disp_score < DISPERSION_THRESHOLD
@@ -392,7 +391,8 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
     activators.autotest()
-    cred_json.set_user('accelize_accelerator_test_05_chipid_only')
+    #cred_json.set_user('accelize_accelerator_test_05_chipid_only')
+    cred_json.set_user('accelize_accelerator_test_05_dna_challenge')
     try:
         num_sessions = accelize_drm.pytest_params['num_sessions']
     except:
@@ -417,6 +417,7 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
     test_file_path = 'test_dna_and_challenge_duplication.%d.%d.json' % (time(), randrange(0xFFFFFFFF))
     session_cnt = 0
     while session_cnt < num_sessions:
+        no_err = False
         try:
             print('Reseting #%d/%d...' % (session_cnt+1, num_sessions))
             driver.program_fpga(image_bkp)
@@ -444,6 +445,7 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
                     print('%d/%d licenses passed' % (sample_cnt, num_samples))
             # Check validity
             assert sample_cnt >= num_samples
+            no_err = True
         except:
             print('Session #%d/%d failed: retrying!' % (session_cnt+1,num_sessions))
         finally:
@@ -454,17 +456,16 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
                     break
                 except:
                     print('Error occurred in %s: deactivate failed with message: %s' % (sys._getframe().f_code.co_name, async_cb.message))
+                    async_cb.reset()
                     sleep(1)
             activators.autotest(is_activated=False)
-            async_cb.reset()
             del drm_manager
             gc.collect()
+            if no_err:
+                session_cnt += 1
+        async_cb.assert_NoError()
         # Parse log file
         parse_and_save_challenge(logpath, REGEX_PATTERN, test_file_path)
-        # Check validity
-        assert sample_cnt >= num_samples
-        session_cnt += 1
-        async_cb.assert_NoError()
 
     # Check validity
     assert session_cnt >= num_sessions
