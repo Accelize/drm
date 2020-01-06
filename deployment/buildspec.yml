@@ -13,10 +13,17 @@ phases:
       - $CODEBUILD_SRC_DIR_toolbox/install.py
 
       # Artifacts output directory
-      - mkdir artifacts
+      - mkdir -p artifacts
 
       # Save environment as artifact
-      - echo "CODEBUILD:" > artifacts/env.txt
+      - DATETIME=$(date +%F_%Hh%Mm%Ss)
+      - echo "DATE-TIME ${DATETIME}" > artifacts/env.txt
+      - echo "" >> artifacts/env.txt
+
+      - cat /etc/*-release >> artifacts/env.txt
+      - echo "" >> artifacts/env.txt
+
+      - echo "CODEBUILD:" >> artifacts/env.txt
       - export | grep CODEBUILD >> artifacts/env.txt
       - echo "" >> artifacts/env.txt
 
@@ -30,6 +37,8 @@ phases:
 
       - echo "LINUX PACKAGES:" >> artifacts/env.txt
       - apt list --installed >> artifacts/env.txt
+
+      - head -80 $ARTIFACTS_DIR/env.txt
 
   build:
     commands:
