@@ -116,7 +116,7 @@ def test_global_challenge_quality():
         print('... adding %d more requests' % len(res_json['requests']))
 
     # CHECK CHALLENGE QUALITY
-    print('Check Challenge quality')
+    print('*** Check global Challenge quality ***')
     value_list = list()
     for e in value_json['requests']:
         try:
@@ -132,7 +132,7 @@ def test_global_challenge_quality():
     print('=> Global Challenge dispersion score: %f' % chlg_disp_score)
 
     # CHECK DNA QUALITY
-    print('Check DNA quality')
+    print('*** Check global DNA quality ***')
     value_list = [e['dna'] for e in value_json['requests'] if e['request']=='open']
     value_list = list()
     for e in value_json['requests']:
