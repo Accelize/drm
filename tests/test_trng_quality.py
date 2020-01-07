@@ -125,15 +125,11 @@ def test_global_challenge_quality():
         except:
             print("Bad format for following request: %s" % str(e))
     # Check duplicates
-    dupl_score = check_duplicates(value_list)
-    print("=> Percentage of global Challenge duplicates: %f%%" % dupl_score)
-    if dupl_score:
-        assert dupl_score < DUPLICATE_THRESHOLD
+    chlg_dupl_score = check_duplicates(value_list)
+    print("=> Percentage of global Challenge duplicates: %f%%" % chlg_dupl_score)
     # Check dispersion
-    disp_score = check_bit_dispersion(value_list)
-    print('=> Global Challenge dispersion score: %f' % disp_score)
-    if disp_score:
-        assert disp_score < DISPERSION_THRESHOLD
+    chlg_disp_score = check_bit_dispersion(value_list)
+    print('=> Global Challenge dispersion score: %f' % chlg_disp_score)
 
     # CHECK DNA QUALITY
     print('Check DNA quality')
@@ -146,14 +142,20 @@ def test_global_challenge_quality():
         except:
             print("Bad format for following request: %s" % str(e))
     # Check duplicates
-    dupl_score = check_duplicates(value_list)
-    print("=> Percentage of global DNA duplicates: %f%%" % dupl_score)
-    if dupl_score:
-        assert dupl_score < DUPLICATE_THRESHOLD
+    dna_dupl_score = check_duplicates(value_list)
+    print("=> Percentage of global DNA duplicates: %f%%" % dna_dupl_score)
     # Check dispersion
-    disp_score = check_bit_dispersion(value_list)
-    if disp_score:
-        assert disp_score < DISPERSION_THRESHOLD
+    dna_disp_score = check_bit_dispersion(value_list)
+    print('=> Global DNA dispersion score: %f' % chlg_disp_score)
+    # Check assertion
+    if chlg_dupl_score:
+        assert chlg_dupl_score < DUPLICATE_THRESHOLD
+    if chlg_disp_score:
+        assert chlg_disp_score < DISPERSION_THRESHOLD
+    if dna_dupl_score:
+        assert dna_dupl_score < DUPLICATE_THRESHOLD
+    if dna_disp_score:
+        assert dna_disp_score < DISPERSION_THRESHOLD
 
 
 @pytest.mark.security
