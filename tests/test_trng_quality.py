@@ -66,7 +66,6 @@ def check_duplicates(value_list):
             if d > 0:
                 print("\t%s appears %d times" % (v,d+1))
     duplication_percent = float(num_duplicates)/ list_size * 100
-    print("=> Percentage of duplicates: %f%%" % duplication_percent)
     return duplication_percent
 
 
@@ -100,7 +99,6 @@ def check_bit_dispersion(value_list):
     print('Percentage of tested bits: %0.1f%%' % bit_tested_percent)
     print('Percentage of bad bits: %0.3f%% (%d)' % (float(err)/value_len*100, err))
     score = gap/len(disp_per_bit)
-    print('=> Dispersion score: %f' % score)
     return score
 
 
@@ -118,6 +116,7 @@ def test_global_challenge_quality():
         print('... adding %d more requests' % len(res_json['requests']))
 
     # CHECK CHALLENGE QUALITY
+    print('Check Challenge quality')
     value_list = list()
     for e in value_json['requests']:
         try:
@@ -127,14 +126,17 @@ def test_global_challenge_quality():
             print("Bad format for following request: %s" % str(e))
     # Check duplicates
     dupl_score = check_duplicates(value_list)
+    print("=> Percentage of global Challenge duplicates: %f%%" % dupl_score)
     if dupl_score:
         assert dupl_score < DUPLICATE_THRESHOLD
     # Check dispersion
     disp_score = check_bit_dispersion(value_list)
+    print('=> Global Challenge dispersion score: %f' % disp_score)
     if disp_score:
         assert disp_score < DISPERSION_THRESHOLD
 
     # CHECK DNA QUALITY
+    print('Check DNA quality')
     value_list = [e['dna'] for e in value_json['requests'] if e['request']=='open']
     value_list = list()
     for e in value_json['requests']:
@@ -145,6 +147,7 @@ def test_global_challenge_quality():
             print("Bad format for following request: %s" % str(e))
     # Check duplicates
     dupl_score = check_duplicates(value_list)
+    print("=> Percentage of global DNA duplicates: %f%%" % dupl_score)
     if dupl_score:
         assert dupl_score < DUPLICATE_THRESHOLD
     # Check dispersion
@@ -411,7 +414,7 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
         access_key = accelize_drm.pytest_params['access_key']
     except:
         access_key = "exploration_test_05"
-        print('Warning: Missing argument "access_key". Using default value %d' % access_key)
+        print('Warning: Missing argument "access_key". Using default value %s' % access_key)
 
     print('num_sessions=', num_sessions)
     print('num_samples=', num_samples)
@@ -491,9 +494,11 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
     # Compute duplicates challenges
     challenge_list = [e['saasChallenge'] for e in request_list]
     challenge_score = check_duplicates(challenge_list)
+    print("=> Percentage of Challenge duplicates for current test: %f%%" % challenge_score)
     # Compute duplicates DNA
     dna_list = [e['dna'] for e in request_list]
     dna_score = check_duplicates(dna_list)
+    print("=> Percentage of DNA duplicates for current test: %f%%" % dna_score)
     # Check duplicate
     if challenge_score:
         assert challenge_score < DUPLICATE_THRESHOLD
