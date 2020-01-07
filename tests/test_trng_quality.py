@@ -392,21 +392,33 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
     activators = accelize_drm.pytest_fpga_activators[0]
     activators.autotest()
     #cred_json.set_user('accelize_accelerator_test_05_chipid_only')
-    cred_json.set_user('accelize_accelerator_test_05_dna_challenge')
+    #cred_json.set_user('accelize_accelerator_test_05_dna_challenge')
+
+    # Get number of sessions parameter
     try:
         num_sessions = accelize_drm.pytest_params['num_sessions']
     except:
         num_sessions = 100
         print('Warning: Missing argument "num_sessions". Using default value %d' % num_sessions)
+    # Get number of samples parameter
     try:
         num_samples = accelize_drm.pytest_params['num_samples']
     except:
         num_samples = 4
         print('Warning: Missing argument "num_samples". Using default value %d' % num_samples)
+    # Get access key parameter
+    try:
+        access_key = accelize_drm.pytest_params['access_key']
+    except:
+        access_key = "exploration_test_05"
+        print('Warning: Missing argument "access_key". Using default value %d' % access_key)
+
     print('num_sessions=', num_sessions)
     print('num_samples=', num_samples)
+    print('access_key=', access_key)
 
     async_cb.reset()
+    cred_json.set_user(access_key)
     conf_json.reset()
     logpath = realpath("./drmlib.%d.%d.log" % (time(), randrange(0xFFFFFFFF)))
     conf_json['settings']['log_file_verbosity'] = 1
