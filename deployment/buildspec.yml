@@ -38,7 +38,7 @@ phases:
       - echo "LINUX PACKAGES:" >> artifacts/env.txt
       - apt list --installed >> artifacts/env.txt
 
-      - head -80 $ARTIFACTS_DIR/env.txt
+      - head -80 artifacts/env.txt
 
   build:
     commands:
