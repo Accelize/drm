@@ -491,14 +491,14 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
         request_list = loads(f.read())['requests']
     # Remove 'close' requests
     request_list = list(filter(lambda x: x['request'] != 'close', request_list))
-    # Check validity
     assert len(request_list) >= num_sessions * num_samples
-    # Compute duplicates challenges
+    # Compute Challenges duplicates
     challenge_list = [e['saasChallenge'] for e in request_list]
     challenge_score = check_duplicates(challenge_list)
     print("=> Percentage of Challenge duplicates for current test: %f%%" % challenge_score)
-    # Compute duplicates DNA
-    dna_list = [e['dna'] for e in request_list]
+    # Compute DNA duplicates
+    dna_list = [e['dna'] for e in request_list if e['request']=='open']
+    assert len(dna_list) >= num_sessions
     dna_score = check_duplicates(dna_list)
     print("=> Percentage of DNA duplicates for current test: %f%%" % dna_score)
     # Check duplicate
