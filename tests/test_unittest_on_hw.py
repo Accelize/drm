@@ -1774,8 +1774,8 @@ def test_configuration_file_bad_product_id(accelize_drm, conf_json, cred_json, a
         async_cb.assert_NoError()
         print('Test Web Service when an empty product ID is provided: PASS')
 
-        # Test Web Service when a misformatted product ID is provided
-        driver.program_fpga('agfi-0876d61418c835f02')
+        # Test when a misformatted product ID is provided
+        driver.program_fpga('agfi-0735f0fc5c620cffa')
         async_cb.reset()
         with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
             drm_manager = accelize_drm.DrmManager(
