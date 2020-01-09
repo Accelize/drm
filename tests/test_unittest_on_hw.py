@@ -1754,7 +1754,7 @@ def test_configuration_file_bad_product_id(accelize_drm, conf_json, cred_json, a
     try:
 
         # Test Web Service when an empty product ID is provided
-        driver.program_fpga('agfi-0869caf14db9a8145')
+        driver.program_fpga('agfi-0b065c24b100d7539')
         async_cb.reset()
         drm_manager = accelize_drm.DrmManager(
             conf_json.path,
@@ -1775,7 +1775,7 @@ def test_configuration_file_bad_product_id(accelize_drm, conf_json, cred_json, a
         print('Test Web Service when an empty product ID is provided: PASS')
 
         # Test Web Service when a misformatted product ID is provided
-        driver.program_fpga('agfi-05a1def1a40ce7f52')
+        driver.program_fpga('agfi-0876d61418c835f02')
         async_cb.reset()
         with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
             drm_manager = accelize_drm.DrmManager(
