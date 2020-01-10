@@ -100,6 +100,7 @@ def param2dict(param_list):
             pass
         else:
             continue
+        d[k] = str(v)
     return d
 
 
