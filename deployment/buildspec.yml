@@ -89,7 +89,7 @@ phases:
         -n drm_debug_tests
         -z /dev/shm/drmlib_dev/.tox/debug/build/report artifacts/report.tar.gz
         -r "source /dev/shm/aws-fpga/sdk_setup.sh && cd /dev/shm/drmlib_dev &&
-            sudo -E TOX_PARALLEL_NO_SPINNER=1 tox -p all -e aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug -- --cred=/dev/shm/cred.json --server=${WS_ENV} -x -s"
+            sudo -E TOX_PARALLEL_NO_SPINNER=1 tox -p all -e aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug -- --cred=/dev/shm/cred.json --server=${WS_ENV} -x "
 
       # Build packages
       - xlz
