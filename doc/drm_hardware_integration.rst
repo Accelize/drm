@@ -26,7 +26,7 @@ currently supported by the DRM HDK:
    * - Vendor
      - Tools
      - Families
-   * - Xilinx
+   * - Xilinx(R)
      - * Vivado 2017.4
        * Vivado 2018.2
        * Vivado 2018.2.xdf
@@ -41,13 +41,19 @@ currently supported by the DRM HDK:
        * Spartan 3a
        * Kintex 7
        * Artix 7
-   * - Intel
-     - Quartus Prime 17.1
+   * - Intel(R)
+     - * Quartus Prime 17.1
+       * Quartus Prime Pro Edition 17.1
      - * Cyclone V
        * Arria 10 [#f1]_
        * Arria V GZ
        * Arria V
        * Stratix V
+       * Stratix 10
+
+.. warning:: As long as Intel(R) OPAE is not exposing the Chip ID, node-locked mode can not be implemented.
+
+
 
 Request DRM HDK
 ===============
@@ -490,7 +496,7 @@ Synthesize and implement your design
                When the design instantiates multiple different activators, they must also
                be compiled in their own library, for example "drm_0xVVVVLLLLNNNNVVVV_library".
 
-Xilinx Vivado
+Xilinx(R) Vivado
 -------------
 
 Refer to `Supported hardware`_ for more information on supported Vivado versions.
@@ -645,7 +651,7 @@ While runing synthesis and implementation you may face the following warnings:
   You can safely ignore this message.
 
 
-Xilinx SDAccel/Vitis
+Xilinx(R) SDAccel/Vitis
 --------------------
 
 Below is an overview of the interaction between Sw and Hw layers when desiging with SDAccel.
@@ -675,13 +681,13 @@ You can now include the .xo file in your SDAccel project.
 DRM Activator Kernel
 ^^^^^^^^^^^^^^^^^^^^
 
-Proceed as in a usual Xilinx Vivado flow: modify your original design to prepare, instantiate and connect
+Proceed as in a usual Xilinx(R) Vivado flow: modify your original design to prepare, instantiate and connect
 the DRM Activator IP.
 For more detals refer to `Modify your design`_.
 
 
-Intel Quartus Prime
--------------------
+Intel(R) Quartus Prime
+----------------------
 
 Refer to `Supported hardware`_ for more information on supported Quartus versions.
 

@@ -67,6 +67,7 @@ class FpgaDriver(_FpgaDriverBase):
             universal_newlines=True)
         if load_image.returncode:
             raise RuntimeError(load_image.stdout)
+        print('Programmed AWS F1 slot #%d with FPGA image %s' % (self._fpga_slot_id, fpga_image))
 
     def _reset_fpga(self):
         """
