@@ -1,8 +1,8 @@
 /**
-*  \file      DrmControllerRegistersStrategy_v3_1_0.hpp
+*  \file      DrmControllerRegistersStrategy_v4_0_1.hpp
 *  \version   4.0.1.0
 *  \date      January 2020
-*  \brief     Class DrmControllerRegistersStrategy_v3_1_0 defines strategy for register access of drm controller v3.1.0.
+*  \brief     Class DrmControllerRegistersStrategy_v4_0_1 defines strategy for register access of drm controller v4.0.1.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.
 *             You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -13,8 +13,8 @@
 *             limitations under the License.
 **/
 
-#ifndef __DRM_CONTROLLER_REGISTERS_STRATEGY_V3_1_0_HPP__
-#define __DRM_CONTROLLER_REGISTERS_STRATEGY_V3_1_0_HPP__
+#ifndef __DRM_CONTROLLER_REGISTERS_STRATEGY_V4_0_1_HPP__
+#define __DRM_CONTROLLER_REGISTERS_STRATEGY_V4_0_1_HPP__
 
 #include <iostream>
 #include <string>
@@ -27,38 +27,43 @@
 #include <HAL/DrmControllerRegistersStrategyInterface.hpp>
 
 // version of the DRM Controller supported by this class
-#define DRM_CONTROLLER_V3_1_0_SUPPORTED_VERSION "3.1.0" /**<Definition of the version of the supported DRM Controller.**/
+#define DRM_CONTROLLER_V4_0_1_SUPPORTED_VERSION "4.0.1" /**<Definition of the version of the supported DRM Controller.**/
 
 // Name of the registers.
-#define DRM_CONTROLLER_V3_1_0_PAGE_REGISTER_NAME    "DrmPageRegister" /**<Definition of the name of the page register.**/
-#define DRM_CONTROLLER_V3_1_0_INDEXED_REGISTER_NAME "DrmRegisterLine" /**<Definition of the base name of indexed registers.**/
+#define DRM_CONTROLLER_V4_0_1_PAGE_REGISTER_NAME    "DrmPageRegister" /**<Definition of the name of the page register.**/
+#define DRM_CONTROLLER_V4_0_1_INDEXED_REGISTER_NAME "DrmRegisterLine" /**<Definition of the base name of indexed registers.**/
 
 // Size of registers
-#define DRM_CONTROLLER_V3_1_0_COMMAND_SIZE               9   /**<Definition of the register size for the command register.**/
-#define DRM_CONTROLLER_V3_1_0_LICENSE_START_ADDRESS_SIZE 64  /**<Definition of the register size for the license start address register.**/
-#define DRM_CONTROLLER_V3_1_0_LICENSE_TIMER_SIZE         384 /**<Definition of the register size for the license timer register.**/
-#define DRM_CONTROLLER_V3_1_0_STATUS_SIZE                32  /**<Definition of the register size for the status register.**/
-#define DRM_CONTROLLER_V3_1_0_ERROR_SIZE                 32  /**<Definition of the register size for the error register.**/
-#define DRM_CONTROLLER_V3_1_0_DEVICE_DNA_SIZE            128 /**<Definition of the register size for the device dna register.**/
-#define DRM_CONTROLLER_V3_1_0_SAAS_CHALLENGE_SIZE        128 /**<Definition of the register size for the saas challenge register.**/
-#define DRM_CONTROLLER_V3_1_0_LICENSE_TIMER_COUNTER_SIZE 64  /**<Definition of the register size for the license timer counter register.**/
-#define DRM_CONTROLLER_V3_1_0_VERSION_SIZE               24  /**<Definition of the register size for the version register.**/
-#define DRM_CONTROLLER_V3_1_0_VLNV_WORD_SIZE             64  /**<Definition of the register size for the vlnv word.**/
-#define DRM_CONTROLLER_V3_1_0_LICENSE_WORD_SIZE          128 /**<Definition of the register size for the license word.**/
-#define DRM_CONTROLLER_V3_1_0_TRACE_WORD_SIZE            64  /**<Definition of the register size for the trace word.**/
-#define DRM_CONTROLLER_V3_1_0_METERING_WORD_SIZE         128 /**<Definition of the register size for the metering word.**/
-#define DRM_CONTROLLER_V3_1_0_MAILBOX_WORD_SIZE          32  /**<Definition of the register size for the mailbox word.**/
+#define DRM_CONTROLLER_V4_0_1_COMMAND_SIZE               9   /**<Definition of the register size for the command register.**/
+#define DRM_CONTROLLER_V4_0_1_LICENSE_START_ADDRESS_SIZE 64  /**<Definition of the register size for the license start address register.**/
+#define DRM_CONTROLLER_V4_0_1_LICENSE_TIMER_SIZE         384 /**<Definition of the register size for the license timer register.**/
+#define DRM_CONTROLLER_V4_0_1_STATUS_SIZE                32  /**<Definition of the register size for the status register.**/
+#define DRM_CONTROLLER_V4_0_1_ERROR_SIZE                 32  /**<Definition of the register size for the error register.**/
+#define DRM_CONTROLLER_V4_0_1_DEVICE_DNA_SIZE            128 /**<Definition of the register size for the device dna register.**/
+#define DRM_CONTROLLER_V4_0_1_SAAS_CHALLENGE_SIZE        128 /**<Definition of the register size for the saas challenge register.**/
+#define DRM_CONTROLLER_V4_0_1_LICENSE_TIMER_COUNTER_SIZE 64  /**<Definition of the register size for the license timer counter register.**/
+#define DRM_CONTROLLER_V4_0_1_VERSION_SIZE               24  /**<Definition of the register size for the version register.**/
+#define DRM_CONTROLLER_V4_0_1_VLNV_WORD_SIZE             64  /**<Definition of the register size for the vlnv word.**/
+#define DRM_CONTROLLER_V4_0_1_LICENSE_WORD_SIZE          128 /**<Definition of the register size for the license word.**/
+#define DRM_CONTROLLER_V4_0_1_TRACE_WORD_SIZE            64  /**<Definition of the register size for the trace word.**/
+#define DRM_CONTROLLER_V4_0_1_METERING_WORD_SIZE         128 /**<Definition of the register size for the metering word.**/
+#define DRM_CONTROLLER_V4_0_1_MAILBOX_WORD_SIZE          32  /**<Definition of the register size for the mailbox word.**/
 
-#define DRM_CONTROLLER_V3_1_0_NUMBER_OF_TRACES_PER_IP 3 /**<Definition of the number of traces per ip.**/
+#define DRM_CONTROLLER_V4_0_1_NUMBER_OF_TRACES_PER_IP 3 /**<Definition of the number of traces per ip.**/
 
-#define DRM_CONTROLLER_V3_1_0_VLNV_NUMBER_OF_ADDITIONAL_WORDS     1 /**<Definition of the number of additional words for the vlnv file.**/
-#define DRM_CONTROLLER_V3_1_0_METERING_NUMBER_OF_ADDITIONAL_WORDS 2 /**<Definition of the number of additional words for the metering file.**/
-#define DRM_CONTROLLER_V3_1_0_MAILBOX_NUMBER_OF_ADDITIONAL_WORDS  1 /**<Definition of the number of additional words for the mailbox file.**/
+#define DRM_CONTROLLER_V4_0_1_VLNV_NUMBER_OF_ADDITIONAL_WORDS     1 /**<Definition of the number of additional words for the vlnv file.**/
+#define DRM_CONTROLLER_V4_0_1_METERING_NUMBER_OF_ADDITIONAL_WORDS 3 /**<Definition of the number of additional words for the metering file.**/
+#define DRM_CONTROLLER_V4_0_1_MAILBOX_NUMBER_OF_ADDITIONAL_WORDS  1 /**<Definition of the number of additional words for the mailbox file.**/
 
-#define DRM_CONTROLLER_V3_1_0_LICENSE_HEADER_BLOCK_SIZE 7 /**<Definition of the number of license word used for the header block.**/
-#define DRM_CONTROLLER_V3_1_0_LICENSE_IP_BLOCK_SIZE     4 /**<Definition of the number of license word used for an ip block.**/
+#define DRM_CONTROLLER_V4_0_1_LICENSE_HEADER_BLOCK_SIZE 7 /**<Definition of the number of license word used for the header block.**/
+#define DRM_CONTROLLER_V4_0_1_LICENSE_IP_BLOCK_SIZE     4 /**<Definition of the number of license word used for an ip block.**/
 
-#define DRM_CONTROLLER_V3_1_0_NUMBER_OF_ERROR_CODES     22 /**<Definition of the number of error codes.**/
+#define DRM_CONTROLLER_V4_0_1_NUMBER_OF_ERROR_CODES     22 /**<Definition of the number of error codes.**/
+
+#define DRM_CONTROLLER_V4_0_1_METERING_FILE_HEADER_POSITION                 0 /**<Definition of the position of the metering file header.**/
+#define DRM_CONTROLLER_V4_0_1_METERING_FILE_LICENSE_TIMER_COUNT_POSITION    1 /**<Definition of the position of the license timer in the metering file.**/
+#define DRM_CONTROLLER_V4_0_1_METERING_FILE_FIRST_IP_METERING_DATA_POSITION 2 /**<Definition of the position of the first metering data in the metering file.**/
+#define DRM_CONTROLLER_V4_0_1_METERING_FILE_MAC_FROM_END_POSITION           0 /**<Definition of the position of the mac from the end of the metering file.**/
 
 /**
 *   \namespace DrmControllerLibrary
@@ -66,26 +71,27 @@
 namespace DrmControllerLibrary {
 
   /**
-  *   \class    DrmControllerRegistersStrategy_v3_1_0 DrmControllerRegistersStrategy_v3_1_0.hpp "include/HAL/DrmControllerRegistersStrategy_v3_1_0.hpp"
-  *   \brief    Class DrmControllerRegistersStrategy_v3_1_0 defines strategy for register access of drm controller v3.1.0.
+  *   \class    DrmControllerRegistersStrategy_v4_0_1 DrmControllerRegistersStrategy_v4_0_1.hpp "include/HAL/DrmControllerRegistersStrategy_v4_0_1.hpp"
+  *   \brief    Class DrmControllerRegistersStrategy_v4_0_1 defines strategy for register access of drm controller v4.0.1.
   **/
-  class DrmControllerRegistersStrategy_v3_1_0: public DrmControllerRegistersStrategyInterface {
+  class DrmControllerRegistersStrategy_v4_0_1: public DrmControllerRegistersStrategyInterface {
 
     // public members, functions ...
     public:
 
-      /** DrmControllerRegistersStrategy_v3_1_0
+      /** DrmControllerRegistersStrategy_v4_0_1
+      *   \brief Class constructor.
       *   \param[in] readRegisterFunction function pointer to read 32 bits register.
       *              The function pointer shall have the following prototype "unsigned int f(const std::string&, unsigned int&)".
       *   \param[in] writeRegisterFunction function pointer to write 32 bits register.
       *              The function pointer shall have the following prototype "unsigned int f(const std::string&, unsigned int)".
       **/
-      DrmControllerRegistersStrategy_v3_1_0(tDrmReadRegisterFunction readRegisterFunction, tDrmWriteRegisterFunction writeRegisterFunction);
+      DrmControllerRegistersStrategy_v4_0_1(tDrmReadRegisterFunction readRegisterFunction, tDrmWriteRegisterFunction writeRegisterFunction);
 
-      /** ~DrmControllerRegistersStrategy_v3_1_0
+      /** ~DrmControllerRegistersStrategy_v4_0_1
       *   \brief Class destructor.
       **/
-      virtual ~DrmControllerRegistersStrategy_v3_1_0();
+      virtual ~DrmControllerRegistersStrategy_v4_0_1();
 
       /** writeRegistersPageRegister
       *   \brief Write the page register to select the registers page.
@@ -1070,6 +1076,69 @@ namespace DrmControllerLibrary {
       **/
       virtual void printMailBoxFileHwReport(std::ostream &file) const;
 
+      /** getMeteringFileHeader
+      *   \brief Get the header of the metering file.
+      *   \param[in] meteringFile is a list containing the metering file to retrieve the header from.
+      *   \return Returns a list containing the metering file header.
+      **/
+      std::vector<unsigned int> getMeteringFileHeader(const std::vector<unsigned int> &meteringFile) const;
+
+      /** getMeteringFileHeaderSessionId
+      *   \brief Get the session id from the metering file header.
+      *   \param[in] meteringFileHeader is a list containing the metering file header to retrieve the session id from.
+      *   \return Returns a list containing the metering file session id.
+      **/
+      std::vector<unsigned int> getMeteringFileHeaderSessionId(const std::vector<unsigned int> &meteringFileHeader) const;
+
+      /** getMeteringFileHeaderEncryptedMeteringFlag
+      *   \brief Get the encrypted metering flag from the metering file header.
+      *   \param[in] meteringFileHeader is a list containing the metering file header to retrieve the encrypted metering flag from.
+      *   \return Returns true if the metering file is encrypted, false otherwize.
+      **/
+      bool getMeteringFileHeaderEncryptedMeteringFlag(const std::vector<unsigned int> &meteringFileHeader) const;
+
+      /** getMeteringFileHeaderEndSessionMeteringFlag
+      *   \brief Get the end session metering flag from the metering file header.
+      *   \param[in] meteringFileHeader is a list containing the metering file header to retrieve the end session metering flag from.
+      *   \return Returns true if the metering file is for an end session, false otherwize.
+      **/
+      bool getMeteringFileHeaderEndSessionMeteringFlag(const std::vector<unsigned int> &meteringFileHeader) const;
+
+      /** getMeteringFileHeaderEnvironmentId
+      *   \brief Get the environment id from the metering file header.
+      *   \param[in] meteringFileHeader is a list containing the metering file header to retrieve the environment id from.
+      *   \return Returns the environment id.
+      **/
+      unsigned int getMeteringFileHeaderEnvironmentId(const std::vector<unsigned int> &meteringFileHeader) const;
+
+      /** getMeteringFileHeaderSegmentIndex
+      *   \brief Get the segment index from the metering file header.
+      *   \param[in] meteringFileHeader is a list containing the metering file header to retrieve the segment index from.
+      *   \return Returns the segment index.
+      **/
+      unsigned int getMeteringFileHeaderSegmentIndex(const std::vector<unsigned int> &meteringFileHeader) const;
+
+      /** getMeteringFileLicenseTimer
+      *   \brief Get the license timer from the metering file.
+      *   \param[in] meteringFile is a list containing the metering file to retrieve the license timer from.
+      *   \return Returns a list containing the license timer retrieved from metering file.
+      **/
+      std::vector<unsigned int> getMeteringFileLicenseTimer(const std::vector<unsigned int> &meteringFile) const;
+
+      /** getMeteringFileIpMeteringData
+      *   \brief Get the ip metering data from the metering file.
+      *   \param[in] meteringFile is a list containing the metering file to retrieve the ip metering data from.
+      *   \return Returns a list containing the ip metering retrieved from metering file.
+      **/
+      std::vector<unsigned int> getMeteringFileIpMeteringData(const std::vector<unsigned int> &meteringFile) const;
+
+      /** getMeteringFileMac
+      *   \brief Get the mac from the metering file.
+      *   \param[in] meteringFile is a list containing the metering file to retrieve the mac from.
+      *   \return Returns a list containing the mac retrieved from metering file.
+      **/
+      std::vector<unsigned int> getMeteringFileMac(const std::vector<unsigned int> &meteringFile) const;
+
       // number of words per registers
       const unsigned int mCommandRegisterWordNumber;
       const unsigned int mLicenseStartAddressRegisterWordNumber;
@@ -1115,6 +1184,12 @@ namespace DrmControllerLibrary {
       const unsigned int mLicenseFileHeaderWordNumber;
       const unsigned int mLicenseFileIpBlockWordNumber;
       const unsigned int mLicenseFileMinimumWordNumber;
+
+      // metering file words positions
+      const unsigned int mMeteringFileHeaderWordPosition;
+      const unsigned int mMeteringFileLicenseTimerCountWordPosition;
+      const unsigned int mMeteringFileFirstIpMeteringDataWordPosition;
+      const unsigned int mMeteringFileMacWordFromEndPosition;
 
       /**
       *   \enum  tDrmPageRegisterEnumValues
@@ -1284,10 +1359,10 @@ namespace DrmControllerLibrary {
       } tDrmErrorRegisterMessages;
 
       const unsigned int mDrmErrorRegisterMessagesArraySize ;
-      const tDrmErrorRegisterMessages mDrmErrorRegisterMessagesArray[DRM_CONTROLLER_V3_1_0_NUMBER_OF_ERROR_CODES];
+      const tDrmErrorRegisterMessages mDrmErrorRegisterMessagesArray[DRM_CONTROLLER_V4_0_1_NUMBER_OF_ERROR_CODES];
 
-  }; // class DrmControllerRegistersStrategy_v3_1_0
+  }; // class DrmControllerRegistersStrategy_v4_0_1
 
 } // namespace DrmControllerLibrary
 
-#endif // __DRM_CONTROLLER_REGISTERS_STRATEGY_V3_1_0_HPP__
+#endif // __DRM_CONTROLLER_REGISTERS_STRATEGY_V4_0_1_HPP__
