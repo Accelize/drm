@@ -12,7 +12,7 @@ from os import environ as _environ, fsdecode as _fsdecode
 from os.path import isfile as _isfile, join as _join, realpath as _realpath
 from subprocess import run as _run, PIPE as _PIPE, STDOUT as _STDOUT
 
-from accelize_drm.fpga_drivers import FpgaDriverBase as _FpgaDriverBase
+from tests.fpga_drivers import FpgaDriverBase as _FpgaDriverBase
 
 __all__ = ['FpgaDriver']
 

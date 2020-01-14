@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.join(DIR_PATH,os.pardir,os.pardir,'.tox/debug/build/p
 import accelize_drm
 
 # Get Driver
-from accelize_drm.fpga_drivers import get_driver
+from tests.fpga_drivers import get_driver
 driver_class = get_driver('aws_f1')
 driver = driver_class()
 

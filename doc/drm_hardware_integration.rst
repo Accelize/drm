@@ -6,7 +6,7 @@ This section gives the main steps to generate a bitstream including the DRM
 controller and the protection blocks (DRM Activators) to integrate in the FPGA design.
 
 .. note:: When the bitstream is loaded in the FPGA board, the design is initially locked.
-          The Accelize DRM library API or service is then required to unlock the design with
+          The Accelize DRM library is then required to unlock the design with
           a valid license. See :doc:`drm_library_integration` for more information.
 
 More details about DRM Controller and Activator logics can be found here:

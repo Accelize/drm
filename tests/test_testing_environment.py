@@ -72,6 +72,114 @@ def test_credentials(cred_json, conf_json):
     assert loads(response.read()).get('access_token')
 
 
+def test_fpga_drivers_base():
+    """
+    Test accelize_drm.fpga_drivers.FpgaDriverBase.
+    """
+    from tests.fpga_drivers import FpgaDriverBase
+    from ctypes import c_uint32
+
+    library = 'fpga_library.so'
+    fpga_slot_id = 5
+    base_address = 0x10
+    fpga_image = 'fpga_image'
+
+    class Fpga:
+        """Fake FPGA"""
+        fpga_image = None
+        initialized = False
+        register = {}
+
+        @classmethod
+        def read_register(cls, register_offset, returned_data):
+            """Read register."""
+            address = int(str(returned_data).rstrip('>)').split('(', 1)[1], 16)
+            c_uint32.from_address(address).value = cls.register.get(
+                register_offset)
+
+        @classmethod
+        def write_register(cls, register_offset, data_to_write):
+            """Write register."""
+            cls.register[register_offset] = data_to_write
+
+    class FpgaDriver(FpgaDriverBase):
+        """Fake FPGA driver"""
+
+        def _get_driver(self):
+            """Get FPGA driver"""
+            return library
+
+        def _program_fpga(self, fpga_image):
+            """Program the FPGA """
+            Fpga.fpga_image = fpga_image
+
+        def _init_fpga(self):
+            """Initialize FPGA"""
+            Fpga.initialized = True
+
+        def _get_read_register_callback(self):
+            """Read register callback."""
+            return Fpga.read_register
+
+        def _get_write_register_callback(self):
+            """Write register callback."""
+            return Fpga.write_register
+
+    # Test instantiation without programming image
+    assert not Fpga.initialized
+
+    driver = FpgaDriver(
+        fpga_slot_id=fpga_slot_id, drm_ctrl_base_addr=base_address)
+    assert driver._fpga_slot_id == fpga_slot_id
+    assert driver._drm_ctrl_base_addr == base_address
+    assert driver.fpga_image is None
+    assert driver._fpga_library == library
+    assert driver.read_register_callback == Fpga.read_register
+    assert driver.write_register_callback == Fpga.write_register
+    assert Fpga.fpga_image is None
+    assert Fpga.initialized
+
+    # Test: program image with unspecified image
+    with pytest.raises(RuntimeError):
+        driver.program_fpga()
+
+    # Test: program image
+    driver.program_fpga(fpga_image=fpga_image)
+    assert driver.fpga_image == fpga_image
+    assert Fpga.fpga_image == fpga_image
+
+    # Test instantiate and program image
+    Fpga.fpga_image = None
+    driver = FpgaDriver(
+        fpga_slot_id=fpga_slot_id, drm_ctrl_base_addr=base_address,
+        fpga_image=fpga_image)
+    assert driver.fpga_image == fpga_image
+    assert Fpga.fpga_image == fpga_image
+
+    # Test: Reprogram default image
+    Fpga.fpga_image = None
+    driver.program_fpga()
+    assert Fpga.fpga_image == fpga_image
+
+    # Test Write and read register
+    driver.write_register(register_offset=0x12, register_value=1)
+    assert Fpga.register[0x12] == 1
+    assert driver.read_register(register_offset=0x12) == 1
+
+
+def test_get_driver():
+    """
+    Test accelize_drm.fpga_drivers.get_driver.
+    """
+    from tests.fpga_drivers import get_driver
+
+    from tests.fpga_drivers._aws_f1 import FpgaDriver as AwsDriver
+    assert get_driver('aws_f1') is AwsDriver
+
+    from tests.fpga_drivers._xilinx_xrt import FpgaDriver as XrtDriver
+    assert get_driver('xilinx_xrt') is XrtDriver
+
+
 def test_fpga_driver(accelize_drm, cred_json, conf_json):
     """
     Test the driver used to perform tests.

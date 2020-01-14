@@ -294,20 +294,6 @@ if (PYTHON3)
 	    PATTERN "*.c" EXCLUDE
 	    PATTERN "*.cpp" EXCLUDE)
 
-    ## Install Systemd service unit file
-    set(SERVICE_UNIT ${PYTHON_SOURCE}/accelize_drm.service)
-    configure_file(${SERVICE_UNIT} ${SERVICE_UNIT})
-
-    if (EXISTS /usr/lib/systemd/system)
-	# Standard unit files path
-	set(SYSTEMD_DIR /usr/lib/systemd/system)
-    else()
-	# Legacy unit files path
-	set(SYSTEMD_DIR /lib/systemd/system)
-    endif()
-    install(FILES ${SERVICE_UNIT} DESTINATION ${SYSTEMD_DIR}
-	    COMPONENT python3)
-
 endif ()
 
 # Documentation

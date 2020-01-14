@@ -385,7 +385,7 @@ def accelize_drm(pytestconfig):
     import accelize_drm as _accelize_drm
 
     # Get FPGA driver
-    from accelize_drm.fpga_drivers import get_driver
+    from tests.fpga_drivers import get_driver
     fpga_driver_name = pytestconfig.getoption("fpga_driver")
     fpga_driver_cls = get_driver(fpga_driver_name)
 

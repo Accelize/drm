@@ -10,7 +10,7 @@ from ctypes import (
     c_uint64 as _c_uint64, c_int as _c_int)
 from subprocess import run as _run, PIPE as _PIPE, STDOUT as _STDOUT
 
-from accelize_drm.fpga_drivers import FpgaDriverBase as _FpgaDriverBase
+from tests.fpga_drivers import FpgaDriverBase as _FpgaDriverBase
 
 __all__ = ['FpgaDriver']
 
