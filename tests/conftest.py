@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Configure Pytest"""
-from os import environ, listdir, remove
-from os.path import realpath, isfile, isdir, expanduser, splitext, join, dirname
+from os import environ, listdir, remove, getpid
+from os.path import realpath, isfile, isdir, expanduser, splitext, join, dirname, basename
 from json import dump, load
 from copy import deepcopy
 from re import match, search
@@ -19,7 +19,12 @@ _LICENSING_SERVERS = dict(
     prod='https://master.metering.accelize.com')
 
 ACT_STATUS_REG_OFFSET = 0x38
+MAILBOX_REG_OFFSET = 0x3C
 INC_EVENT_REG_OFFSET = 0x40
+
+
+def bit_not(n, numbits=32):
+    return (1 << numbits) - 1 - n
 
 
 def get_default_conf_json(licensing_server_url):
@@ -134,6 +139,10 @@ def pytest_addoption(parser):
         "--library_format", action="store", type=int, choices=[0,1], default=0,
         help='Specify "libaccelize_drm" logging format: 0=short, 1=long')
     parser.addoption(
+        "--clear_fpga", action="store_true", help='Clear FPGA at start-up')
+    parser.addoption(
+        "--logfile", action="store_true", help='Save log to file')
+    parser.addoption(
         "--fpga_image", default="default",
         help='Select FPGA image to program the FPGA with. '
              'By default, use default FPGA image for the selected driver and '
@@ -204,15 +213,25 @@ class SingleActivator:
             assert activated == is_activated
         else:
             if activated:
+                # If unlocked writing the mailbox should succeed
                 for addr in range(4, 16, 4):
                     val = randint(1, 0xFFFFFFFF)
                     self.driver.write_register(self.base_address + addr, val)
                     assert self.driver.read_register(self.base_address + addr) == val
             else:
+                # If locked writing the mailbox should fail
+                val = self.driver.read_register(self.base_address + MAILBOX_REG_OFFSET)
+                not_val = bit_not(val)
+                self.driver.write_register(self.base_address + MAILBOX_REG_OFFSET, not_val)
+                assert self.driver.read_register(self.base_address + MAILBOX_REG_OFFSET) == val
+                '''
                 for addr in range(4, 16, 4):
                     val = self.driver.read_register(self.base_address + addr)
-                    self.driver.write_register(self.base_address + addr, ~val)
+                    print("read %08X= %08X" % (self.base_address + addr, val))
+                    not_val = bit_not(val)
+                    self.driver.write_register(self.base_address + addr, not_val)
                     assert self.driver.read_register(self.base_address + addr) == val
+                '''
             # Test reading of the generate event register
             assert self.driver.read_register(self.base_address + INC_EVENT_REG_OFFSET) == 0x600DC0DE
             # Test address overflow
@@ -431,9 +450,10 @@ def accelize_drm(pytestconfig):
         fpga_slot_id = [pytestconfig.getoption("fpga_slot_id")]
 
     # Initialize FPGA
+    clear_fpga = pytestconfig.getoption("clear_fpga")
     drm_ctrl_base_addr = pytestconfig.getoption("drm_controller_base_address")
     print('FPGA SLOT ID:', fpga_slot_id)
-    print('FPGA IMAGE:', fpga_image)
+    print('FPGA IMAGE:', basename(fpga_image))
     print('HDK VERSION:', hdk_version)
     fpga_driver = list()
     for slot_id in fpga_slot_id:
@@ -441,7 +461,8 @@ def accelize_drm(pytestconfig):
             fpga_driver.append(
                 fpga_driver_cls( fpga_slot_id=slot_id,
                     fpga_image=fpga_image,
-                    drm_ctrl_base_addr=drm_ctrl_base_addr
+                    drm_ctrl_base_addr=drm_ctrl_base_addr,
+                    clear_fpga=clear_fpga
                 )
             )
         except:
@@ -632,6 +653,10 @@ def conf_json(pytestconfig, tmpdir):
         log_param['log_format'] = '%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v'
     else:
         log_param['log_format'] = '[%^%=8l%$] %-6t, %v'
+    if pytestconfig.getoption("logfile"):
+        log_param['log_file_type'] = 1
+        log_param['log_file_path'] = realpath("./drmlib.%d.log" % getpid())
+        log_param['log_file_verbosity'] = pytestconfig.getoption("library_verbosity")
     json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param)
     json_conf.save()
     return json_conf

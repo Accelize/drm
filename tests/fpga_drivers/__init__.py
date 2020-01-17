@@ -49,7 +49,7 @@ class FpgaDriverBase:
     """
 
     def __init__(self, fpga_slot_id=0, fpga_image=None, drm_ctrl_base_addr=0,
-                 log_dir='.'):
+                 log_dir='.', clear_fpga=False):
         self._fpga_slot_id = fpga_slot_id
         self._fpga_image = fpga_image
         self._drm_ctrl_base_addr = drm_ctrl_base_addr
@@ -64,6 +64,10 @@ class FpgaDriverBase:
         # Device and library handles
         self._fpga_handle = None
         self._fpga_library = self._get_driver()
+
+        # Clear FPGA
+        if clear_fpga:
+            self.clear_fpga(fpga_slot_id)
 
         # Initialize FPGA
         if fpga_image:
@@ -143,6 +147,17 @@ class FpgaDriverBase:
             function: Callback
         """
         return self._write_register_callback
+
+    def clear_fpga(self, fpga_slot_id):
+        """
+        Clear FPGA
+
+        Args:
+            fpga_slot_id (int): FPGA slot ID.
+
+        """
+        with self._augment_exception('program'):
+            return self._clear_fpga(fpga_slot_id)
 
     def program_fpga(self, fpga_image=None):
         """

@@ -35,7 +35,11 @@ class FpgaDriver(_FpgaDriverBase):
         Returns:
             ctypes.CDLL: FPGA driver.
         """
-        return _cdll.LoadLibrary(_join(self._xrt_prefix, "lib/libxrt_core.so"))
+        if _isfile(_join(self._xrt_prefix, "lib/libxrt_aws.so")):
+            return _cdll.LoadLibrary(_join(self._xrt_prefix, "lib/libxrt_aws.so"))
+        if _isfile(_join(self._xrt_prefix, "lib/libxrt_aws.so")):
+            return _cdll.LoadLibrary(_join(self._xrt_prefix, "lib/libxrt_core.so"))
+        raise RuntimeError('Unable to find Xilinx XRT Library')
 
     @property
     def _xrt_prefix(self):
@@ -52,6 +56,30 @@ class FpgaDriver(_FpgaDriverBase):
 
         raise RuntimeError('Unable to find Xilinx XRT')
 
+    @property
+    def _xbutil(self):
+        _xbutil_path = _join(self._xrt_prefix, 'bin/awssak')
+        if not _isfile(_xbutil_path):
+            _xbutil_path = _join(self._xrt_prefix, 'bin/xbutil')
+        if not _isfile(_xbutil_path):
+            raise RuntimeError('Unable to find Xilinx XRT Board Utility')
+        return _xbutil_path
+
+    def _clear_fpga(self, fpga_slot_id):
+        """
+        Clear FPGA
+
+        Args:
+            fpga_slot_id (int): FPGA slot ID.
+
+        """
+        clear_fpga = _run(
+            ['fpga-clear-local-image', '-S', str(fpga_slot_id)],
+            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
+        if clear_fpga.returncode:
+            raise RuntimeError(clear_fpga.stdout)
+        print('Cleared FPGA')
+
     def _program_fpga(self, fpga_image):
         """
         Program the FPGA with the specified image.
@@ -61,7 +89,7 @@ class FpgaDriver(_FpgaDriverBase):
         """
         fpga_image = _realpath(_fsdecode(fpga_image))
         load_image = _run(
-            [_join(self._xrt_prefix, 'bin/xbutil'), 'program',
+            [self._xbutil, 'program',
              '-d', str(self._fpga_slot_id), '-p', fpga_image],
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if load_image.returncode:
@@ -73,7 +101,7 @@ class FpgaDriver(_FpgaDriverBase):
         Reset FPGA including FPGA image.
         """
         reset_image = _run(
-            [_join(self._xrt_prefix, 'bin/xbutil'), 'reset', '-d',
+            [self._xbutil, 'reset', '-d',
              str(self._fpga_slot_id)],
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if reset_image.returncode:

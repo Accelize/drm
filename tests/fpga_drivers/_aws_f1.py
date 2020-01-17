@@ -44,6 +44,21 @@ class FpgaDriver(_FpgaDriverBase):
 
         return fpga_library
 
+    def _clear_fpga(self, fpga_slot_id):
+        """
+        Clear FPGA
+
+        Args:
+            fpga_slot_id (int): FPGA slot ID.
+
+        """
+        clear_fpga = _run(
+            ['fpga-clear-local-image', '-S', str(fpga_slot_id)],
+            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
+        if clear_fpga.returncode:
+            raise RuntimeError(clear_fpga.stdout)
+        print('Cleared FPGA')
+
     def _program_fpga(self, fpga_image):
         """
         Program the FPGA with the specified image.

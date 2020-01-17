@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <stdlib.h>
 #include <iostream>
 #include <iomanip>
 #include <cstddef>
@@ -54,6 +55,10 @@ limitations under the License.
 #define REG_FREQ_DETECTION_COUNTER  0xFFFC
 
 #define FREQ_DETECTION_VERSION_EXPECTED	 0x60DC0DE0
+
+static const std::string DRM_SELF_TEST_ERROR_MESSAGE( "Please verify:\n"
+                        "\t-The read/write callbacks implementation in the SW application: verify it uses the correct offset address of DRM Controller IP in the design address space.\n"
+                        "\t-The DRM Controller IP instantiation in the FPGA design: verify the correctness of 16-bit address received by the AXI-Lite port of the DRM Controller." );
 
 #define TRY try {
 
@@ -267,12 +272,12 @@ protected:
                 if ( mWSRequestTimeout == 0 )
                     Throw( DRM_BadArg, "ws_request_timeout must not be 0");
             }
+            // Customize logging configuration
+            updateLog();
+
             if ( mWSRetryPeriodLong <= mWSRetryPeriodShort )
                 Throw( DRM_BadArg, "ws_retry_period_long ({}) must be greater than ws_retry_period_short ({})",
                         mWSRetryPeriodLong, mWSRetryPeriodShort );
-
-            // Customize logging configuration
-            updateLog();
 
             // Design configuration
             Json::Value conf_design = JVgetOptional( conf_json, "design", Json::objectValue );
@@ -568,13 +573,37 @@ protected:
         Debug( "DRM HDK Version: {}", drmVersionDot );
     }
 
+    /* Run BIST to check Page register access
+     * This test write and read DRM Page register to verify the page switch is working
+     */
+    void runBistLevel1() const {
+        unsigned int reg;
+        for(unsigned int i=0; i<5; i++) {
+            if ( writeDrmRegister( "DrmPageRegister", 1 ) != 0 )
+                Unreachable( "DRM Communication Self-Test 1 failed: Could not write DRM page register" ); //LCOV_EXCL_LINE
+            if ( readDrmRegister( "DrmPageRegister", reg ) != 0 )
+                Unreachable( "DRM Communication Self-Test 1 failed: Could not read DRM page register" ); //LCOV_EXCL_LINE
+            if ( reg != i ) {
+                Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not switch DRM register page.\n" + DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
+            }
+        }
+        Debug( "DRM Communication Self-Test 1 succeeded" );
+    }
+
     /* Run BIST to check register accesses
      * This test write and read mailbox registers to verify the read and write callbacks are working correctly.
      */
-    void runRegisterAccessBIST() const {
+    void runBistLevel2() const {
+        // Get mailbox size
         uint32_t mbSize = getUserMailboxSize();
 
-        // First, write 0 to User Mailbox
+        // Check mailbox size
+        if ( mbSize >= 0x10000 ) {
+            Debug( "DRM Communication Self-Test 2 failed: bad size {}", mbSize );
+            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Could not access DRM Controller registers.\n" + DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
+        }
+
+        // Write 0 to User Mailbox
         std::vector<uint32_t> wrData( mbSize, 0 );
         writeMailbox( eMailboxOffset::MB_USER, wrData );
         // Read back the mailbox and verify it has been set correctly
@@ -585,17 +614,13 @@ protected:
                 badData += fmt::format( "\tMailbox[{}]=0x{:08X} != 0x{:08X}\n", i, rdData[i], wrData[i]);
         }
         if ( badData.size() ) {
-            std::string msg = "Read/Write callbacks auto-test failed:\n";
-            msg += badData;
-            msg += "Please verify your read/write callbacks implementation in your application and the DRM Controller IP instantiation in your design. ";
-            msg += "In particular, verify the DRM Controller offset address in the callbacks and the correctness of 16-bit address received by the AXI-Lite port of the DRM Controller.";
-            Throw( DRM_BadArg, msg );
+            Debug( "DRM Communication Self-Test 2 failed: writing zeros!\n" + badData );
+            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Could not access DRM Controller registers.\n" + DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
         }
-        // Then, write none-zero values to User Mailbox
-        wrData[0] = 0x11111111; wrData[1] = 0x22222222;
-        wrData[2] = 0x44444444; wrData[3] = 0x88888888;
-        wrData[4] = 0x55555555; wrData[5] = 0xAAAAAAAA;
-        wrData[6] = 0xFFFFFFFF;
+
+        // Write 1 to User Mailbox
+        for( uint32_t i = 0; i < mbSize; i++ )
+            wrData[i] = 0xFFFFFFFF;
         writeMailbox( eMailboxOffset::MB_USER, wrData );
         // Read back the mailbox and verify it has been set correctly
         rdData = readMailbox( eMailboxOffset::MB_USER, mbSize );
@@ -605,12 +630,28 @@ protected:
                 badData += fmt::format( "\tMailbox[{}]=0x{:08X} != 0x{:08X}\n", i, rdData[i], wrData[i]);
         }
         if ( badData.size() ) {
-            std::string msg = "Read/Write callbacks auto-test failed:\n";
-            msg += badData;
-            msg += "Please verify your read/write register callbacks implementation and the DRM Controller IP instantiation in your design. ";
-            msg += "For instance, verify the DRM Controller IP offset address, the full 16 bit address range is connected, ...";
-            Throw( DRM_BadArg, msg );
+            Debug( "DRM Communication Self-Test 2 failed: writing ones!\n" + badData );
+            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Could not access DRM Controller registers.\n" + DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
         }
+
+        // Then, write random values to User Mailbox
+        srand (time(NULL)); // initialize random seed:
+        for( uint32_t i = 0; i < mbSize; i++ )
+            wrData[i] = rand();
+        writeMailbox( eMailboxOffset::MB_USER, wrData );
+        // Read back the mailbox and verify it has been set correctly
+        rdData = readMailbox( eMailboxOffset::MB_USER, mbSize );
+        badData.clear();
+        for( uint32_t i = 0; i < mbSize; i++ ) {
+            if ( rdData[i] != wrData[i] )
+                badData += fmt::format( "\tMailbox[{}]=0x{:08X} != 0x{:08X}\n", i, rdData[i], wrData[i]);
+        }
+        if ( badData.size() ) {
+            Debug( "DRM Communication Self-Test 2 failed: writing randoms!\n" + badData );
+            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Could not access DRM Controller registers.\n" + DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
+        }
+
+        Debug( "DRM Communication Self-Test 2 succeeded" );
     }
 
     bool isNodeLockedMode() const {
@@ -639,12 +680,13 @@ protected:
             std::string err_msg(e.what());
             if ( err_msg.find( "Unable to select a register strategy that is compatible with the DRM Controller" )
                     != std::string::npos )
-                Throw( DRM_CtlrError, "Unable to find DRM Controller registers. Please check:\n"
-                                      "\t- The DRM offset in your read/write callback implementation,\n"
-                                      "\t- The compatibility between the SDK and DRM HDK in use");
+                Throw( DRM_CtlrError, "Unable to find DRM Controller registers.\n" + DRM_SELF_TEST_ERROR_MESSAGE );
             Throw( DRM_CtlrError, "Failed to initialize DRM Controller: {}", e.what() );
         }
         Debug( "DRM Controller SDK is initialized" );
+
+        // Run auto-test level 1
+//        runBistLevel1();
 
         // Check compatibility of the DRM Version with Algodone version
         checkHdkCompatibility();
@@ -653,7 +695,7 @@ protected:
         lockDrmToInstance();
 
         // Run auto-test of register accesses
-        runRegisterAccessBIST();
+//        runBistLevel2();
 
         // Determine frequency detection method if metering/floating mode is active
         if ( !isNodeLockedMode() ) {
