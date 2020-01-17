@@ -6,6 +6,7 @@ import pytest
 import sys
 import gc
 import re
+import logging
 from glob import glob
 from os import remove
 from os.path import getsize, isfile, dirname, join, realpath, basename
@@ -51,7 +52,7 @@ def check_duplicates(value_list):
     list_size = len(value_list)
     if list_size < SAMPLES_DUPLICATE_THRESHOLD:
         print('Not enough samples to compute duplicates')
-        return None
+        return -1
     count_by_value = dict()
     for value in value_list:
         if value not in count_by_value.keys():
@@ -77,7 +78,7 @@ def check_bit_dispersion(value_list):
     value_len = max(map(lambda x: len(x), value_list))
     if list_size < SAMPLES_DISPERSION_THRESHOLD:
         print('Not enough samples to compute bit dispersion')
-        return None
+        return -1
     value_list = list(map(lambda x: x.zfill(value_len), value_list))
     # Compute dispersion
     count_per_bit = [0]*value_len
@@ -438,6 +439,7 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
         try:
             print('Reseting #%d/%d...' % (session_cnt+1, num_sessions))
             driver.program_fpga(image_bkp)
+            logging.info("Reset FPGA")
             print('Starting session #%d/%d ...' % (session_cnt+1,num_sessions))
             drm_manager = accelize_drm.DrmManager(
                 conf_json.path,
@@ -447,6 +449,7 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
                 async_cb.callback
             )
             activators.autotest(is_activated=False)
+            logging.info("Starting DRM")
             drm_manager.activate()
             activators.autotest(is_activated=True)
             license_duration = drm_manager.get('license_duration')

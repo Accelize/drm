@@ -193,7 +193,7 @@ class FpgaDriver(_FpgaDriverBase):
         xcl_write.argtypes = (
             _c_void_p,  # handle
             _c_int,  # space
-            _c_uint64,  # offset
+            _c_uint,  # offset
             _c_char_p,  # hostBuf
             _c_size_t  # size
         )

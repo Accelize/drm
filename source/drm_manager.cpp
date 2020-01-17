@@ -416,8 +416,8 @@ protected:
         checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
 
         if ( index >= rwData.size() )
-            Unreachable( "Index ", index, " overflows the Mailbox memory; max index is ",
-                    rwData.size()-1 ); //LCOV_EXCL_LINE
+            Unreachable( "Index {} overflows the Mailbox memory; max index is {}",
+                index, rwData.size()-1 ); //LCOV_EXCL_LINE
 
         Debug( "Read '{}' in Mailbox at index {}", rwData[index], index );
         return rwData[index];
@@ -455,7 +455,8 @@ protected:
         checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
 
         if ( index >= rwData.size() )
-            Unreachable( "Index ", index, " overflows the Mailbox memory: max index is ", rwData.size()-1 ); //LCOV_EXCL_LINE
+            Unreachable( "Index {} overflows the Mailbox memory: max index is {}",
+                index, rwData.size()-1 ); //LCOV_EXCL_LINE
         rwData[index] = value;
         checkDRMCtlrRet( getDrmController().writeMailboxFileRegister( rwData, rwSize ) );
         Debug( "Wrote '{}' in Mailbox at index {}", value, index );
@@ -496,34 +497,56 @@ protected:
             return 0;
         if ( regName.substr( 0, 15 ) == "DrmRegisterLine" )
             return (uint32_t)std::stoul( regName.substr( 15 ) ) * 4 + 4;
-        Unreachable( "Unsupported regName argument: ", regName ); //LCOV_EXCL_LINE
+        Unreachable( "Unsupported regName argument: {}", regName ); //LCOV_EXCL_LINE
     }
 
-    unsigned int readDrmRegister( const std::string& regName, unsigned int& value ) const {
+    unsigned int readDrmRegister( const std::string& regName, uint32_t& value ) const {
         int ret = 0;
         ret = f_read_register( getDrmRegisterOffset( regName ), &value );
         if ( ret != 0 ) {
-            Error( "Error in read register callback, errcode = {}", ret );
+            Error( "Error in read register callback, errcode = {}: failed to read register {}", ret, regName );
             return (uint32_t)(-1);
         }
-        Debug2( "Read DRM register @{} = 0x{:08x}", regName, value );
+        Debug2( "Read DRM register {} = 0x{:08x}", regName, value );
         return 0;
     }
 
-    unsigned int writeDrmRegister( const std::string& regName, unsigned int value ) const {
+    unsigned int writeDrmRegister( const std::string& regName, uint32_t value ) const {
         int ret = 0;
         ret = f_write_register( getDrmRegisterOffset( regName ), value );
         if ( ret ) {
-            Error( "Error in write register callback, errcode = {}", ret );
+            Error( "Error in write register callback, errcode = {}: failed to write {} to register {}", ret, value, regName );
             return (uint32_t)(-1);
         }
-        Debug2( "Write DRM register @{} = {:08x}", regName, value );
+        Debug2( "Write DRM register {} = 0x{:08x}", regName, value );
+        return 0;
+    }
+
+    unsigned int readDrmAddress( const uint32_t address, uint32_t& value ) const {
+        int ret = 0;
+        ret = f_read_register( address, &value );
+        if ( ret != 0 ) {
+            Error( "Error in read register callback, errcode = {}: failed to read address {}", ret, address );
+            return (uint32_t)(-1);
+        }
+        Debug2( "Read DRM address 0x{:x} = 0x{:08x}", address, value );
+        return 0;
+    }
+
+    unsigned int writeDrmAddress( const uint32_t address, uint32_t value ) const {
+        int ret = 0;
+        ret = f_write_register( address, value );
+        if ( ret ) {
+            Error( "Error in write register callback, errcode = {}: failed to write {} to address {}", ret, value, address );
+            return (uint32_t)(-1);
+        }
+        Debug2( "Wrote DRM address 0x{:x} = 0x{:08x}", address, value );
         return 0;
     }
 
     void checkDRMCtlrRet( const unsigned int& errcode ) const {
         if ( errcode )
-            Unreachable( "Error in DRM Controller library call: ", errcode ); //LCOV_EXCL_LINE
+            Unreachable( "Error {} from DRM Controller library", errcode ); //LCOV_EXCL_LINE
     }
 
     void lockDrmToInstance() {
@@ -578,8 +601,8 @@ protected:
      */
     void runBistLevel1() const {
         unsigned int reg;
-        for(unsigned int i=0; i<5; i++) {
-            if ( writeDrmRegister( "DrmPageRegister", 1 ) != 0 )
+        for(unsigned int i=0; i<=5; i++) {
+            if ( writeDrmRegister( "DrmPageRegister", i ) != 0 )
                 Unreachable( "DRM Communication Self-Test 1 failed: Could not write DRM page register" ); //LCOV_EXCL_LINE
             if ( readDrmRegister( "DrmPageRegister", reg ) != 0 )
                 Unreachable( "DRM Communication Self-Test 1 failed: Could not read DRM page register" ); //LCOV_EXCL_LINE
@@ -602,6 +625,7 @@ protected:
             Debug( "DRM Communication Self-Test 2 failed: bad size {}", mbSize );
             Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Could not access DRM Controller registers.\n" + DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
         }
+        Debug( "DRM Communication Self-Test 2: test size of mailbox passed" );
 
         // Write 0 to User Mailbox
         std::vector<uint32_t> wrData( mbSize, 0 );
@@ -617,6 +641,7 @@ protected:
             Debug( "DRM Communication Self-Test 2 failed: writing zeros!\n" + badData );
             Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Could not access DRM Controller registers.\n" + DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
         }
+        Debug( "DRM Communication Self-Test 2 failed: test all to 0 passed" );
 
         // Write 1 to User Mailbox
         for( uint32_t i = 0; i < mbSize; i++ )
@@ -633,6 +658,7 @@ protected:
             Debug( "DRM Communication Self-Test 2 failed: writing ones!\n" + badData );
             Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Could not access DRM Controller registers.\n" + DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
         }
+        Debug( "DRM Communication Self-Test 2 failed: test all to 1 passed" );
 
         // Then, write random values to User Mailbox
         srand (time(NULL)); // initialize random seed:
@@ -650,6 +676,7 @@ protected:
             Debug( "DRM Communication Self-Test 2 failed: writing randoms!\n" + badData );
             Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Could not access DRM Controller registers.\n" + DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
         }
+        Debug( "DRM Communication Self-Test 2 failed: test random passed" );
 
         Debug( "DRM Communication Self-Test 2 succeeded" );
     }
@@ -685,17 +712,17 @@ protected:
         }
         Debug( "DRM Controller SDK is initialized" );
 
-        // Run auto-test level 1
-//        runBistLevel1();
-
         // Check compatibility of the DRM Version with Algodone version
         checkHdkCompatibility();
 
         // Try to lock the DRM controller to this instance, return an error is already locked.
         lockDrmToInstance();
 
+        // Run auto-test level 1
+        runBistLevel1();
+
         // Run auto-test of register accesses
-//        runBistLevel2();
+        runBistLevel2();
 
         // Determine frequency detection method if metering/floating mode is active
         if ( !isNodeLockedMode() ) {
@@ -740,16 +767,16 @@ protected:
     void checkSessionIDFromWS( const Json::Value license_json ) {
         std::string ws_sessionID = license_json["metering"]["sessionId"].asString();
         if ( !mSessionID.empty() && ( mSessionID != ws_sessionID ) ) {
-            Unreachable( "Session ID mismatch: received '", ws_sessionID, "' from WS but expect '",
-                    mSessionID, "'"); //LCOV_EXCL_LINE
+            Unreachable( "Session ID mismatch: received '{}' from WS but expect '{}'",
+                ws_sessionID, mSessionID ); //LCOV_EXCL_LINE
         }
     }
 
     void checkSessionIDFromDRM( const Json::Value license_json ) {
         std::string ws_sessionID = license_json["sessionId"].asString();
         if ( !mSessionID.empty() && ( mSessionID != ws_sessionID ) ) {
-            Unreachable( "Session ID mismatch: DRM gives '", ws_sessionID, "' but expect '",
-                    mSessionID, "'"); //LCOV_EXCL_LINE
+            Unreachable( "Session ID mismatch: DRM gives '{}' but expect '{}'",
+                ws_sessionID, mSessionID ); //LCOV_EXCL_LINE
         }
     }
 
@@ -777,7 +804,7 @@ protected:
         writeDrmRegister( "DrmPageRegister", page_index );
         std::string str = fmt::format( "DRM Page {}  registry:\n", page_index );
         for( uint32_t r=0; r < NB_MAX_REGISTER; r++ ) {
-            f_read_register( r*4, &value );
+            readDrmAddress( r*4, value );
             str += fmt::format( "\tRegister @0x{:02X}: 0x{:08X} ({:d})\n", r*4, value, value );
         }
         return str;
@@ -1247,7 +1274,7 @@ protected:
         }
 
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        int ret = f_read_register( REG_FREQ_DETECTION_VERSION, &reg );
+        int ret = readDrmAddress( REG_FREQ_DETECTION_VERSION, reg );
         if ( ret != 0 ) {
             Unreachable( "Failed to read DRM frequency detection version register, errcode = {}", ret ); //LCOV_EXCL_LINE
         }
@@ -1274,7 +1301,7 @@ protected:
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
 
         // Start detection counter
-        ret = f_write_register( REG_FREQ_DETECTION_COUNTER, 0 );
+        ret = writeDrmAddress( REG_FREQ_DETECTION_COUNTER, 0 );
         if ( ret != 0 )
             Unreachable( "Failed to start DRM frequency detection counter, errcode = {}", ret ); //LCOV_EXCL_LINE
 
@@ -1282,7 +1309,7 @@ protected:
         sleepOrExit( wait_duration );
 
         // Sample counter
-        ret = f_read_register( REG_FREQ_DETECTION_COUNTER, &counter );
+        ret = readDrmAddress( REG_FREQ_DETECTION_COUNTER, counter );
         if ( ret != 0 ) {
             Unreachable( "Failed to read DRM frequency detection counter register, errcode = {}", ret ); //LCOV_EXCL_LINE
         }
@@ -1768,8 +1795,8 @@ public:
                     case ParameterKey::license_type: {
                         auto it = LicenseTypeStringMap.find( mLicenseType );
                         if ( it == LicenseTypeStringMap.end() )
-                            Unreachable( "License_type '", (uint32_t)mLicenseType,
-                                    "' is missing in LicenseTypeStringMap" ); //LCOV_EXCL_LINE
+                            Unreachable( "License_type '{}' is missing in LicenseTypeStringMap",
+                                (uint32_t)mLicenseType ); //LCOV_EXCL_LINE
                         std::string license_type_str = it->second;
                         json_value[key_str] = license_type_str;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
