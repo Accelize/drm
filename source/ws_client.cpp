@@ -82,8 +82,10 @@ long CurlEasyPost::perform( std::string* resp, std::chrono::steady_clock::time_p
             Throw( DRM_WSMayRetry, "Did not perform HTTP request to Accelize webservice because deadline is already reached." );
         curl_easy_setopt( curl, CURLOPT_TIMEOUT_MS, timeout.count() );
     }
-
-    res = curl_easy_perform( curl );
+    {
+        std::lock_guard<std::mutex> lock( mLicenseRequestMutex );
+        res = curl_easy_perform( curl );
+    }
     if ( res != CURLE_OK ) {
         if ( res == CURLE_COULDNT_RESOLVE_PROXY
           || res == CURLE_COULDNT_RESOLVE_HOST
