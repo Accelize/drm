@@ -14,7 +14,31 @@ from subprocess import run as _run, PIPE as _PIPE, STDOUT as _STDOUT
 
 from tests.fpga_drivers import FpgaDriverBase as _FpgaDriverBase
 
-__all__ = ['FpgaDriver']
+__all__ = ['FpgaDriver', 'XrtLocker']
+
+
+class XrtLocker():
+    def __init__(self, driver):
+        self.driver = driver
+        # Define Lock function
+        self.xcl_lock = driver._fpga_library.xclLockDevice
+        self.xcl_lock.restype = _c_int
+        self.xcl_lock.argtype = _c_void_p
+        # Define Unlock function
+        self.xcl_unlock = driver._fpga_library.xclLockDevice
+        self.xcl_unlock.restype = _c_int
+        self.xcl_unlock.argtype = _c_void_p
+
+    def __enter__(self):
+        if self.driver._fpga_handle is None:
+            raise RuntimeError('Null device handle')
+        self.xcl_lock(self.driver._fpga_handle)
+        return
+
+    def __exit__(self, *kargs):
+        if self.driver._fpga_handle is None:
+            raise RuntimeError('Null device handle')
+        self.xcl_unlock(self.driver._fpga_handle)
 
 
 class FpgaDriver(_FpgaDriverBase):
@@ -40,6 +64,12 @@ class FpgaDriver(_FpgaDriverBase):
         if _isfile(_join(self._xrt_prefix, "lib/libxrt_aws.so")):
             return _cdll.LoadLibrary(_join(self._xrt_prefix, "lib/libxrt_core.so"))
         raise RuntimeError('Unable to find Xilinx XRT Library')
+
+    def _get_locker(self):
+        """
+        Get a locker on the FPGA driver
+        """
+        return XrtLocker
 
     @property
     def _xrt_prefix(self):
@@ -167,7 +197,7 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (accelize_drm.fpga_drivers._xilinx_xrt.FpgaDriver):
                     Keep a reference to driver.
             """
-            with driver._fpga_read_register_lock:
+            with driver._fpga_read_register_lock(driver):
                 size_or_error = driver._fpga_read_register(
                     driver._fpga_handle,
                     2,  # XCL_ADDR_KERNEL_CTRL
@@ -177,7 +207,7 @@ class FpgaDriver(_FpgaDriverBase):
                 )
 
             # Return 0 return code if read size else return error code
-            return size_or_error if size_or_error <= 0 else 0
+            return size_or_error if size_or_error != 4 else 0
 
         return read_register
 
@@ -193,7 +223,7 @@ class FpgaDriver(_FpgaDriverBase):
         xcl_write.argtypes = (
             _c_void_p,  # handle
             _c_int,  # space
-            _c_uint,  # offset
+            _c_uint64,  # offset
             _c_char_p,  # hostBuf
             _c_size_t  # size
         )
@@ -209,7 +239,7 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (accelize_drm.fpga_drivers._xilinx_xrt.FpgaDriver):
                     Keep a reference to driver.
             """
-            with driver._fpga_write_register_lock:
+            with driver._fpga_write_register_lock(driver):
                 size_or_error = driver._fpga_write_register(
                     driver._fpga_handle,
                     2,  # XCL_ADDR_KERNEL_CTRL
@@ -219,6 +249,6 @@ class FpgaDriver(_FpgaDriverBase):
                 )
 
             # Return 0 return code if written size else return error code
-            return size_or_error if size_or_error <= 0 else 0
+            return size_or_error if size_or_error != 4 else 0
 
         return write_register

@@ -16,7 +16,7 @@ from ctypes import c_uint32 as _c_uint32, byref as _byref
 from importlib import import_module as _import_module
 from os import fsdecode as _fsdecode
 from os.path import realpath as _realpath
-from threading import Lock as _Lock
+
 
 __all__ = ['get_driver', 'FpgaDriverBase']
 
@@ -55,15 +55,16 @@ class FpgaDriverBase:
         self._drm_ctrl_base_addr = drm_ctrl_base_addr
         self._log_dir = _realpath(_fsdecode(log_dir))
 
-        # FPGA read/write low level functions ans associated locks
-        self._fpga_read_register = None
-        self._fpga_write_register = None
-        self._fpga_read_register_lock = _Lock()
-        self._fpga_write_register_lock = _Lock()
-
         # Device and library handles
         self._fpga_handle = None
         self._fpga_library = self._get_driver()
+
+        # FPGA read/write low level functions ans associated locks
+        self._fpga_read_register = None
+        self._fpga_write_register = None
+        self._fpga_read_register_lock = self._get_locker()
+        self._fpga_write_register_lock = self._fpga_read_register_lock
+        #self._fpga_write_register_lock = self._get_locker()
 
         # Clear FPGA
         if clear_fpga:
@@ -105,7 +106,8 @@ class FpgaDriverBase:
             int: 32 bits register value.
         """
         register_value = _c_uint32(0)
-        self._read_register_callback(register_offset, _byref(register_value))
+        if self._read_register_callback(register_offset, _byref(register_value)):
+            raise RuntimeError('Failed to read register at offset %08X' % register_offset)
         return register_value.value
 
     @property
@@ -133,7 +135,8 @@ class FpgaDriverBase:
             register_offset (int): Register offset.
             register_value (int): 32 bits register value to write.
         """
-        self.write_register_callback(register_offset, register_value)
+        if self.write_register_callback(register_offset, register_value):
+            raise RuntimeError('Failed to write register at offset %08X' % register_offset)
 
     @property
     def write_register_callback(self):

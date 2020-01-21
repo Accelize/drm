@@ -344,22 +344,25 @@ class RefDesign:
         if not isdir(path):
             raise IOError("Following path must be a valid directory: %s" % path)
         self._path = path
-        self.hdk_versions = sorted([splitext(file_name)[0].strip('v')
-                                    for file_name in listdir(self._path)
-                                    if file_name.endswith('.json')])
+        self.image_files = {splitext(file_name)[0].strip('v'):realpath(join(self._path, file_name))
+                                    for file_name in listdir(self._path)}
+        self.hdk_versions = sorted(self.image_files.keys())
 
     def get_image_id(self, hdk_version=None):
         if hdk_version is None:
             hdk_version = self.hdk_versions[-1]
-        with open(join(self._path, 'v%s.json' % hdk_version)) as hdk_json_file:
-            hdk_json = load(hdk_json_file)
-        for key in ('fpga_image', 'FpgaImageGlobalId', 'FpgaImageId'):
-            try:
-                return hdk_json[key]
-            except KeyError:
-                continue
-        else:
-            raise ValueError('No FPGA image found for %s.' % hdk_version)
+        filename = join(self._path, self.image_files[hdk_version])
+        ext = splitext(filename)[1]
+        try:
+            if ext == '.json':
+                with open(filename, 'rt') as fp:
+                    return load(fp)['FpgaImageGlobalId']
+            elif ext == '.awsxclbin':
+                return self.image_files[hdk_version]
+                with open(filename, 'rb') as fp:
+                    return search(r'(agfi-[0-9a-fA-F]+)', str(fp.read())).group(1)
+        except Exception as e:
+            raise Exception('No FPGA image found for %s: %s' % (hdk_version, str(e)))
 
 
 # Pytest Fixtures

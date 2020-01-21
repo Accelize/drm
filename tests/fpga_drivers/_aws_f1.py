@@ -9,10 +9,24 @@ from ctypes import (
     cdll as _cdll, POINTER as _POINTER, byref as _byref, c_uint32 as _c_uint32,
     c_uint64 as _c_uint64, c_int as _c_int)
 from subprocess import run as _run, PIPE as _PIPE, STDOUT as _STDOUT
+from threading import Lock as _Lock
 
 from tests.fpga_drivers import FpgaDriverBase as _FpgaDriverBase
 
-__all__ = ['FpgaDriver']
+__all__ = ['FpgaDriver', 'AwsLocker']
+
+
+class AwsLocker():
+    def __init__(self, *kargs):
+        self.locker = _Lock()
+
+    def __enter__(self):
+        self.locker.acquire()
+        return
+
+    def __exit__(self, *kargs):
+        self.locker.release()
+
 
 
 class FpgaDriver(_FpgaDriverBase):
@@ -43,6 +57,13 @@ class FpgaDriver(_FpgaDriverBase):
             raise RuntimeError('Unable to initialize the "fpga_pci" library')
 
         return fpga_library
+
+    @staticmethod
+    def _get_locker(self):
+        """
+        Get a locker on the FPGA driver
+        """
+        return AwsLocker
 
     def _clear_fpga(self, fpga_slot_id):
         """
@@ -137,7 +158,7 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (accelize_drm.fpga_drivers._aws_f1.FpgaDriver):
                     Keep a reference to driver.
             """
-            with driver._fpga_read_register_lock:
+            with driver._fpga_read_register_lock(driver):
                 return driver._fpga_read_register(
                     driver._fpga_handle,
                     driver._drm_ctrl_base_addr + register_offset,
@@ -171,7 +192,7 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (accelize_drm.fpga_drivers._aws_f1.FpgaDriver):
                     Keep a reference to driver.
             """
-            with driver._fpga_write_register_lock:
+            with driver._fpga_write_register_lock(driver):
                 return driver._fpga_write_register(
                     driver._fpga_handle,
                     driver._drm_ctrl_base_addr + register_offset,

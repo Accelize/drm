@@ -603,11 +603,11 @@ protected:
         unsigned int reg;
         for(unsigned int i=0; i<=5; i++) {
             if ( writeDrmRegister( "DrmPageRegister", i ) != 0 )
-                Unreachable( "DRM Communication Self-Test 1 failed: Could not write DRM page register" ); //LCOV_EXCL_LINE
+                Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not write DRM page register\n" + DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
             if ( readDrmRegister( "DrmPageRegister", reg ) != 0 )
-                Unreachable( "DRM Communication Self-Test 1 failed: Could not read DRM page register" ); //LCOV_EXCL_LINE
+                Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not read DRM page register\n" + DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
             if ( reg != i ) {
-                Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not switch DRM register page.\n" + DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
+                Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not switch DRM register page.\n" + DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
             }
         }
         Debug( "DRM Communication Self-Test 1 succeeded" );
