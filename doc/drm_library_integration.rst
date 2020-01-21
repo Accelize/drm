@@ -38,7 +38,8 @@ Include DRM API
     :caption: In C++
 
     #include "accelize/drm.h"
-    using namespace Accelize::DRM;
+    namespace drm = Accelize::DRM;
+
 
 .. code-block:: python
     :caption: In Python
@@ -132,7 +133,7 @@ FPGA C library driver.
     // callbacks to instantiate the DrmManager.
     // Note: This example use C++11 Lambda function.
 
-    DrmManager drm_manager(
+    drm::DrmManager drm_manager(
         // Configuration files paths
         "./conf.json",
         "./cred.json",
@@ -149,6 +150,7 @@ FPGA C library driver.
         // Asynchronous error callback
         [&](const std::string &err_msg) {
             std::cerr << err_msg << std::endl;
+            GlobalDrmError = true; // Any global machanism to warn the other threads of a DRM error
         }
     );
 
@@ -218,7 +220,11 @@ to the Accelize Web Service.
 .. code-block:: c++
     :caption: C++
 
-    drm_manager.activate();
+    try {
+        drm_manager.activate();
+    } catch( const drm::Exception& e ) {
+        cerr << "DRM error: " << e.what() << endl;
+    }
 
 .. code-block:: python
     :caption: Python
@@ -254,7 +260,11 @@ When this function returns, the protected IPs are guaranteed to be locked
 .. code-block:: c++
     :caption: C++
 
-    drm_manager.deactivate();
+    try {
+        drm_manager.deactivate();
+    } catch( const drm::Exception& e ) {
+        cerr << "DRM error: " << e.what() << endl;
+    }
 
 .. code-block:: python
     :caption: Python
@@ -355,12 +365,17 @@ Following code snippets show how to implement pause/resume functionality:
     :caption: C++
 
     // Activate the DRM and resume the existing session if any
-    drm_manager.activate( true );
+    try {
+        drm_manager.activate( true );
 
-    // [...]
+        // [...]
 
-    // Deactivate the DRM, but pause the session instead of closing it
-    drm_manager.deactivate( true );
+        // Deactivate the DRM, but pause the session instead of closing it
+        drm_manager.deactivate( true );
+
+    } catch( const drm::Exception& e ) {
+        cerr << "DRM error: " << e.what() << endl;
+    }
 
 .. code-block:: python
     :caption: Python
