@@ -7,7 +7,7 @@ import gc
 from glob import glob
 from os import remove, getpid
 from os.path import getsize, isfile, dirname, join, realpath
-from re import search, finditer, MULTILINE
+from re import match, search, finditer, MULTILINE
 from time import sleep, time
 from json import loads
 from datetime import datetime, timedelta
@@ -86,55 +86,49 @@ def ordered_json(obj):
 
 @pytest.mark.minimum
 def test_backward_compatibility(accelize_drm, conf_json, cred_json, async_handler):
+    from itertools import groupby
     """Test API is not compatible with DRM HDK < 3.0"""
     refdesign = accelize_drm.pytest_ref_designs
+    hdk_version = accelize_drm.pytest_hdk_version
+    current_major = int(match(r'^(\d+)\.', hdk_version).group(1))
     driver = accelize_drm.pytest_fpga_driver[0]
     fpga_image_bkp = driver.fpga_image
     async_cb = async_handler.create()
     drm_manager = None
 
-    try:
-        # Program FPGA with old HDK 2.x.x
-        hdk = list(filter(lambda x: x.startswith('2.'), refdesign.hdk_versions))[0]
-        assert hdk.startswith('2.')
-        image_id = refdesign.get_image_id(hdk)
-        driver.program_fpga(image_id)
-        # Test compatibility issue
-        with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
-            async_cb.reset()
-            drm_manager = accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            )
-        assert 'Unable to find DRM Controller registers. Please check:' in str(excinfo.value)
-        assert 'The DRM offset in your read/write callback implementation' in str(excinfo.value)
-        assert 'The compatibility between the SDK and DRM HDK in use' in str(excinfo.value)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
-        async_cb.assert_NoError()
+    if hdk_version is None:
+        pytest.skip("FPGA image is not corresponding to a known HDK version")
 
-        # Program FPGA with old HDK 3.0.x
-        hdk = list(filter(lambda x: x.startswith('3.0'), refdesign.hdk_versions))[0]
-        assert hdk.startswith('3.0.')
-        image_id = refdesign.get_image_id(hdk)
-        driver.program_fpga(image_id)
-        # Test compatibility issue
-        async_cb = async_handler.create()
-        with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
-            async_cb.reset()
-            drm_manager = accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            )
-        assert search(r'This DRM Library version .* is not compatible with the DRM HDK version .*',
-                      str(excinfo.value)) is not None
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
-        async_cb.assert_NoError()
+    try:
+        refdesignByMajor = ((int(match(r'^(\d+)\.', x).group(1)), x) for x in refdesign.hdk_versions)
+
+        for major, versions in groupby(refdesignByMajor, lambda x: x[0]):
+            if major >= current_major:
+                continue
+
+            hdk = sorted((e[1] for e in versions))[0]
+            # Program FPGA with older HDK
+            image_id = refdesign.get_image_id(hdk)
+            driver.program_fpga(image_id)
+            # Test compatibility issue
+            with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
+                async_cb.reset()
+                drm_manager = accelize_drm.DrmManager(
+                    conf_json.path,
+                    cred_json.path,
+                    driver.read_register_callback,
+                    driver.write_register_callback,
+                    async_cb.callback
+                )
+            hit = False
+            if 'Unable to find DRM Controller registers' in str(excinfo.value):
+                hit =True
+            if search(r'This DRM Library version \S+ is not compatible with the DRM HDK version', str(excinfo.value)):
+                hit =True
+            assert hit
+            assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
+            async_cb.assert_NoError()
+            print('Test compatibility with %s: PASS' % hdk)
 
     finally:
         if drm_manager:
@@ -168,14 +162,14 @@ def test_wrong_drm_controller_address(accelize_drm, conf_json, cred_json, async_
                 driver.write_register_callback,
                 async_cb.callback
             )
-        assert 'Unable to find DRM Controller registers. Please check:' in str(excinfo.value)
-        assert 'The DRM offset in your read/write callback implementation' in str(excinfo.value)
-        assert 'The compatibility between the SDK and DRM HDK in use' in str(excinfo.value)
+        assert 'Unable to find DRM Controller registers.' in str(excinfo.value)
+        assert 'Please verify' in str(excinfo.value)
     finally:
         driver._drm_ctrl_base_addr = ctrl_base_addr_backup
 
 
 @pytest.mark.minimum
+@pytest.mark.hwtst
 @pytest.mark.no_parallel
 def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
     """
@@ -872,8 +866,10 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
 @pytest.mark.aws
 def test_c_unittests(accelize_drm, exec_func):
     """Test errors when missing arguments are given to DRM Controller Constructor"""
-
     driver = accelize_drm.pytest_fpga_driver[0]
+    if driver.name != 'aws':
+        pytest.skip("C unit-tests are only supported with AWS driver.")
+
     exec_lib = exec_func.load('unittests', driver._fpga_slot_id)
 
     # Test when read register callback is null
@@ -1720,9 +1716,10 @@ def test_mailbox_type_error(accelize_drm, conf_json, cred_json, async_handler):
     async_cb.assert_NoError()
 
 
-def test_configuration_file_bad_product_id(accelize_drm, conf_json, cred_json, async_handler):
+def test_configuration_file_wrong_product_id(accelize_drm, conf_json, cred_json, async_handler):
     """Test errors when an incorrect product ID is requested to License Web Server"""
 
+    refdesign = accelize_drm.pytest_ref_designs
     driver = accelize_drm.pytest_fpga_driver[0]
     fpga_image_bkp = driver.fpga_image
     async_cb = async_handler.create()
@@ -1749,12 +1746,24 @@ def test_configuration_file_bad_product_id(accelize_drm, conf_json, cred_json, a
     assert search(r'Product ID \s*%s from license request is unknown' % pid_string, str(excinfo.value)) is not None
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
     async_cb.assert_NoError()
-    print('Test Web Service when an unexisting product ID is provided: PASS')
+
+
+def test_configuration_file_empty_and_corrupted_product_id(accelize_drm, conf_json, cred_json, async_handler):
+    """Test errors when an incorrect product ID is requested to License Web Server"""
+
+    refdesign = accelize_drm.pytest_ref_designs
+    driver = accelize_drm.pytest_fpga_driver[0]
+    fpga_image_bkp = driver.fpga_image
+    async_cb = async_handler.create()
+    cred_json.set_user('accelize_accelerator_test_02')
 
     try:
-
         # Test Web Service when an empty product ID is provided
-        driver.program_fpga('agfi-0b065c24b100d7539')
+        empty_fpga_image = refdesign.get_image_id('empty_product_id')
+        print('empty_fpga_image=', empty_fpga_image)
+        if empty_fpga_image is None:
+            pytest.skip("No FPGA image found for 'empty_product_id'")
+        driver.program_fpga(empty_fpga_image)
         async_cb.reset()
         drm_manager = accelize_drm.DrmManager(
             conf_json.path,
@@ -1775,7 +1784,10 @@ def test_configuration_file_bad_product_id(accelize_drm, conf_json, cred_json, a
         print('Test Web Service when an empty product ID is provided: PASS')
 
         # Test when a misformatted product ID is provided
-        driver.program_fpga('agfi-0735f0fc5c620cffa')
+        bad_fpga_image = refdesign.get_image_id('bad_product_id')
+        if bad_fpga_image is None:
+            pytest.skip("No FPGA image found for 'bad_product_id'")
+        driver.program_fpga(bad_fpga_image)
         async_cb.reset()
         with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
             drm_manager = accelize_drm.DrmManager(
@@ -1827,6 +1839,7 @@ def test_2_drm_manager_concurrently(accelize_drm, conf_json, cred_json, async_ha
 
 
 @pytest.mark.long_run
+@pytest.mark.hwtst
 def test_activation_and_license_status(accelize_drm, conf_json, cred_json, async_handler):
     """Test status of IP activators"""
 
@@ -1973,6 +1986,7 @@ def test_activation_and_license_status(accelize_drm, conf_json, cred_json, async
 
 
 @pytest.mark.long_run
+@pytest.mark.hwtst
 def test_session_status(accelize_drm, conf_json, cred_json, async_handler):
     """Test status of session"""
 
@@ -2177,6 +2191,7 @@ def test_session_status(accelize_drm, conf_json, cred_json, async_handler):
 
 
 @pytest.mark.long_run
+@pytest.mark.hwtst
 def test_license_expiration(accelize_drm, conf_json, cred_json, async_handler):
     """Test license expiration"""
 
@@ -2298,6 +2313,7 @@ def test_license_expiration(accelize_drm, conf_json, cred_json, async_handler):
             drm_manager.deactivate()
 
 
+@pytest.mark.hwtst
 def test_multiple_call(accelize_drm, conf_json, cred_json, async_handler):
     """Test multiple calls to activate and deactivate"""
 
@@ -2564,6 +2580,7 @@ def test_readonly_and_writeonly_parameters(accelize_drm, conf_json, cred_json, a
 
 
 @pytest.mark.endurance
+@pytest.mark.hwtst
 def test_authentication_expiration(accelize_drm, conf_json, cred_json, async_handler):
     from random import sample
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -2891,6 +2908,7 @@ def test_drm_manager_frequency_detection_bypass(accelize_drm, conf_json, cred_js
     print('Test bypass_frequency_detection=true: PASS')
 
 
+@pytest.mark.hwtst
 def test_drm_manager_bist(accelize_drm, conf_json, cred_json, async_handler):
     """Test register access BIST"""
 
@@ -2911,7 +2929,8 @@ def test_drm_manager_bist(accelize_drm, conf_json, cred_json, async_handler):
             driver.write_register_callback,
             async_cb.callback
         )
-    assert 'Read/Write callbacks auto-test failed' in str(excinfo.value)
+    assert 'DRM Communication Self-Test 2 failed: Could not access DRM Controller registers' in str(excinfo.value)
+    assert 'Please verify' in str(excinfo.value)
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
     async_cb.assert_NoError()
 
@@ -2926,6 +2945,7 @@ def test_drm_manager_bist(accelize_drm, conf_json, cred_json, async_handler):
             my_wrong_write_callback,
             async_cb.callback
         )
-    assert 'Read/Write callbacks auto-test failed' in str(excinfo.value)
+    assert 'DRM Communication Self-Test 2 failed: Could not access DRM Controller registers' in str(excinfo.value)
+    assert 'Please verify' in str(excinfo.value)
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
     async_cb.assert_NoError()

@@ -50,7 +50,6 @@ private:
     struct curl_slist *host_resolve_list = NULL;
     std::list<std::string> data; // keep data until request performed
     std::array<char, CURL_ERROR_SIZE> errbuff;
-    std::mutex mLicenseRequestMutex;
 
 public:
 

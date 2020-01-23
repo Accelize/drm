@@ -10,6 +10,7 @@ import pytest
 
 
 @pytest.mark.minimum
+@pytest.mark.hwtst
 def test_metered_start_stop_short_time(accelize_drm, conf_json, cred_json, async_handler):
     """
     Test no error occurs in normal start/stop metering mode during a short period of time
@@ -93,6 +94,7 @@ def test_metered_start_stop_short_time_in_debug(accelize_drm, conf_json, cred_js
 
 
 @pytest.mark.long_run
+@pytest.mark.hwtst
 def test_metered_start_stop_long_time(accelize_drm, conf_json, cred_json, async_handler):
     """
     Test no error occurs in normal start/stop metering mode during a long period of time
@@ -140,6 +142,7 @@ def test_metered_start_stop_long_time(accelize_drm, conf_json, cred_json, async_
 
 
 @pytest.mark.minimum
+@pytest.mark.hwtst
 def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, async_handler):
     """
     Test no error occurs in normal pause/resume metering mode during a short period of time
@@ -210,6 +213,7 @@ def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, asy
 
 
 @pytest.mark.long_run
+@pytest.mark.hwtst
 def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, async_handler):
     """
     Test no error occurs in normal start/stop metering mode during a long period of time
@@ -277,6 +281,7 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
 
 @pytest.mark.minimum
 @pytest.mark.no_parallel
+@pytest.mark.hwtst
 def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
     """
     Test an error is returned and the design is locked when the limit is reached.
@@ -381,6 +386,7 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
 
 @pytest.mark.on_2_fpga
 @pytest.mark.minimum
+@pytest.mark.hwtst
 def test_floating_limits(accelize_drm, conf_json, cred_json, async_handler):
     """
     Test an error is returned when the floating limit is reached

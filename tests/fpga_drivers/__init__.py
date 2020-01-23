@@ -68,7 +68,7 @@ class FpgaDriverBase:
 
         # Clear FPGA
         if clear_fpga:
-            self.clear_fpga(fpga_slot_id)
+            self.clear_fpga()
 
         # Initialize FPGA
         if fpga_image:
@@ -151,7 +151,7 @@ class FpgaDriverBase:
         """
         return self._write_register_callback
 
-    def clear_fpga(self, fpga_slot_id):
+    def clear_fpga(self):
         """
         Clear FPGA
 
@@ -159,8 +159,9 @@ class FpgaDriverBase:
             fpga_slot_id (int): FPGA slot ID.
 
         """
+        print('Clearing FPGA on slot #%d' % self._fpga_slot_id)
         with self._augment_exception('program'):
-            return self._clear_fpga(fpga_slot_id)
+            return self._clear_fpga()
 
     def program_fpga(self, fpga_image=None):
         """
@@ -176,6 +177,7 @@ class FpgaDriverBase:
         else:
             self._fpga_image = fpga_image
 
+        print('Programming FPGA on slot #%d with FPGA image %s' % (self._fpga_slot_id, fpga_image))
         with self._augment_exception('program'):
             return self._program_fpga(fpga_image)
 
@@ -209,6 +211,15 @@ class FpgaDriverBase:
 
         Returns:
             object: FPGA driver.
+        """
+
+    @_abstractmethod
+    def _get_locker(self):
+        """
+        Get FPGA driver locker.
+
+        Returns:
+            object: FPGA driver locker.
         """
 
     @_abstractmethod

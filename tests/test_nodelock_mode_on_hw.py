@@ -90,6 +90,7 @@ def test_nodelock_license_is_not_given_to_inactive_user(accelize_drm, conf_json,
 
 @pytest.mark.minimum
 @pytest.mark.no_parallel
+@pytest.mark.hwtst
 def test_nodelock_normal_case(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
     """Test normal nodelock license usage"""
 
@@ -127,6 +128,7 @@ def test_nodelock_normal_case(accelize_drm, conf_json, cred_json, async_handler,
 
 
 @pytest.mark.no_parallel
+@pytest.mark.hwtst
 def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, async_handler,
                                          ws_admin):
     """Test normal nodelock license usage"""
@@ -191,6 +193,7 @@ def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, asy
 
 
 @pytest.mark.no_parallel
+@pytest.mark.hwtst
 def test_nodelock_without_server_access(accelize_drm, conf_json, cred_json, async_handler,
                                         ws_admin):
     """Test error is returned when no url is provided"""
@@ -223,6 +226,7 @@ def test_nodelock_without_server_access(accelize_drm, conf_json, cred_json, asyn
 
 @pytest.mark.on_2_fpga
 @pytest.mark.minimum
+@pytest.mark.hwtst
 def test_nodelock_limits(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
     """
     Test behavior when limits are reached. 2 FPGA are required.
@@ -280,6 +284,7 @@ def test_nodelock_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
 
 
 @pytest.mark.no_parallel
+@pytest.mark.hwtst
 def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, cred_json,
                                                       async_handler, ws_admin):
     """
@@ -353,6 +358,7 @@ def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, c
 
 
 @pytest.mark.no_parallel
+@pytest.mark.hwtst
 def test_nodelock_after_metering_mode(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
     """Test metering session is stopped when switching to nodelock mode"""
 
@@ -412,6 +418,7 @@ def test_nodelock_after_metering_mode(accelize_drm, conf_json, cred_json, async_
 
 
 @pytest.mark.no_parallel
+@pytest.mark.hwtst
 def test_parsing_of_nodelock_files(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
     """Test metering session is stopped when switching to nodelock mode"""
 

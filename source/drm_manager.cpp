@@ -105,6 +105,7 @@ protected:
             {eLicenseType::NODE_LOCKED, "Node-Locked"}
     };
 
+
 #ifdef _WIN32
     const char path_sep = '\\';
 # else
@@ -159,6 +160,9 @@ protected:
     eLicenseType mLicenseType = eLicenseType::METERED;
     uint32_t mLicenseCounter;
     uint32_t mLicenseDuration;
+
+    // To protect access to the metering data (to securize the segment ID check in HW)
+    mutable std::mutex mMeteringAccessMutex;
 
     // Design parameters
     int32_t mFrequencyInit;
@@ -392,6 +396,11 @@ protected:
             sLogger->flush();
     }
 
+    void checkDRMCtlrRet( const unsigned int& errcode ) const {
+        if ( errcode )
+            Unreachable( "Error {} from DRM Controller library. ", errcode ); //LCOV_EXCL_LINE
+    }
+
     uint32_t getMailboxSize() const {
         uint32_t roSize, rwSize;
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
@@ -416,7 +425,7 @@ protected:
         checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
 
         if ( index >= rwData.size() )
-            Unreachable( "Index {} overflows the Mailbox memory; max index is {}",
+            Unreachable( "Index {} overflows the Mailbox memory; max index is {}. ",
                 index, rwData.size()-1 ); //LCOV_EXCL_LINE
 
         Debug( "Read '{}' in Mailbox at index {}", rwData[index], index );
@@ -433,7 +442,7 @@ protected:
         checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
 
         if ( (uint32_t)index >= rwData.size() )
-            Unreachable( "Index {} overflows the Mailbox memory; max index is {}",
+            Unreachable( "Index {} overflows the Mailbox memory; max index is {}. ",
                     index, rwData.size()-1 ); //LCOV_EXCL_LINE
         if ( index + nb_elements > rwData.size() )
             Throw( DRM_BadArg, "Trying to read out of Mailbox memory space; size is {}", rwData.size() );
@@ -455,7 +464,7 @@ protected:
         checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
 
         if ( index >= rwData.size() )
-            Unreachable( "Index {} overflows the Mailbox memory: max index is {}",
+            Unreachable( "Index {} overflows the Mailbox memory: max index is {}. ",
                 index, rwData.size()-1 ); //LCOV_EXCL_LINE
         rwData[index] = value;
         checkDRMCtlrRet( getDrmController().writeMailboxFileRegister( rwData, rwSize ) );
@@ -471,7 +480,7 @@ protected:
         checkDRMCtlrRet( getDrmController().writeMailBoxFilePageRegister() );
         checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
         if ( index >= rwData.size() )
-            Unreachable( "Index {} overflows the Mailbox memory: max index is {}",
+            Unreachable( "Index {} overflows the Mailbox memory: max index is {}. ",
                     index, rwData.size()-1 ); //LCOV_EXCL_LINE
         if ( index + value_vec.size() > rwData.size() )
             Throw( DRM_BadArg, "Trying to write out of Mailbox memory space: {}", rwData.size() );
@@ -483,13 +492,13 @@ protected:
     DrmControllerLibrary::DrmControllerOperations& getDrmController() const {
         if ( mDrmController )
             return *mDrmController;
-        Unreachable( "No DRM Controller available" ); //LCOV_EXCL_LINE
+        Unreachable( "No DRM Controller available. " ); //LCOV_EXCL_LINE
     }
 
     DrmWSClient& getDrmWSClient() const {
         if ( mWsClient )
             return *mWsClient;
-        Unreachable( "No Web Service has been defined" ); //LCOV_EXCL_LINE
+        Unreachable( "No Web Service has been defined. " ); //LCOV_EXCL_LINE
     }
 
     static uint32_t getDrmRegisterOffset( const std::string& regName ) {
@@ -497,7 +506,7 @@ protected:
             return 0;
         if ( regName.substr( 0, 15 ) == "DrmRegisterLine" )
             return (uint32_t)std::stoul( regName.substr( 15 ) ) * 4 + 4;
-        Unreachable( "Unsupported regName argument: {}", regName ); //LCOV_EXCL_LINE
+        Unreachable( "Unsupported regName argument: {}. ", regName ); //LCOV_EXCL_LINE
     }
 
     unsigned int readDrmRegister( const std::string& regName, uint32_t& value ) const {
@@ -542,11 +551,6 @@ protected:
         }
         Debug2( "Wrote DRM address 0x{:x} = 0x{:08x}", address, value );
         return 0;
-    }
-
-    void checkDRMCtlrRet( const unsigned int& errcode ) const {
-        if ( errcode )
-            Unreachable( "Error {} from DRM Controller library", errcode ); //LCOV_EXCL_LINE
     }
 
     void lockDrmToInstance() {
@@ -767,7 +771,7 @@ protected:
     void checkSessionIDFromWS( const Json::Value license_json ) {
         std::string ws_sessionID = license_json["metering"]["sessionId"].asString();
         if ( !mSessionID.empty() && ( mSessionID != ws_sessionID ) ) {
-            Unreachable( "Session ID mismatch: received '{}' from WS but expect '{}'",
+            Unreachable( "Session ID mismatch: received '{}' from WS but expect '{}'. ",
                 ws_sessionID, mSessionID ); //LCOV_EXCL_LINE
         }
     }
@@ -775,9 +779,17 @@ protected:
     void checkSessionIDFromDRM( const Json::Value license_json ) {
         std::string ws_sessionID = license_json["sessionId"].asString();
         if ( !mSessionID.empty() && ( mSessionID != ws_sessionID ) ) {
-            Unreachable( "Session ID mismatch: DRM gives '{}' but expect '{}'",
+            Unreachable( "Session ID mismatch: DRM gives '{}' but expect '{}'. ",
                 ws_sessionID, mSessionID ); //LCOV_EXCL_LINE
         }
+    }
+
+    // Get DRM HDK version
+    std::string getDrmCtrlVersion() const {
+        std::string drmVersion;
+        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+        checkDRMCtlrRet( getDrmController().extractDrmVersion( drmVersion ) );
+        return drmVersion;
     }
 
     void getNumActivator( uint32_t& value ) const {
@@ -815,62 +827,6 @@ protected:
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
         getDrmController().printHwReport( ss );
         return ss.str();
-    }
-
-    uint64_t getMeteringData() const {
-        uint32_t numberOfDetectedIps;
-        std::string saasChallenge;
-        std::vector<std::string> meteringFile;
-        uint64_t meteringData = 0;
-
-        Debug2( "Get metering data from session on DRM controller" );
-
-        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        if ( isNodeLockedMode() || isLicenseActive() ) {
-            checkDRMCtlrRet( getDrmController().asynchronousExtractMeteringFile(
-                    numberOfDetectedIps, saasChallenge, meteringFile ) );
-            std::string meteringDataStr = meteringFile[2].substr( 16, 16 );
-            errno = 0;
-            meteringData = strtoull( meteringDataStr.c_str(), nullptr, 16 );
-            if ( errno )
-                Throw( DRM_CtlrError, "Could not convert string '{}' to unsigned long long.",
-                        meteringDataStr );
-            return meteringData;
-        } else {
-            return 0;
-        }
-    }
-
-    // Get DRM HDK version
-    std::string getDrmCtrlVersion() const {
-        std::string drmVersion;
-        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        checkDRMCtlrRet( getDrmController().extractDrmVersion( drmVersion ) );
-        return drmVersion;
-    }
-
-    // Get common info
-    void getDesignInfo( std::string &drmVersion,
-                        std::string &dna,
-                        std::vector<std::string> &vlnvFile,
-                        std::string &mailboxReadOnly ) {
-        uint32_t nbOfDetectedIps;
-        uint32_t readOnlyMailboxSize, readWriteMailboxSize;
-        std::vector<uint32_t> readOnlyMailboxData, readWriteMailboxData;
-
-        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        checkDRMCtlrRet( getDrmController().extractDrmVersion( drmVersion ) );
-        checkDRMCtlrRet( getDrmController().extractDna( dna ) );
-        checkDRMCtlrRet( getDrmController().extractVlnvFile( nbOfDetectedIps, vlnvFile ) );
-        checkDRMCtlrRet( getDrmController().readMailboxFileRegister( readOnlyMailboxSize, readWriteMailboxSize,
-                                                                     readOnlyMailboxData, readWriteMailboxData ) );
-        Debug( "Mailbox sizes: read-only={}, read-write={}", readOnlyMailboxSize, readWriteMailboxSize );
-        readOnlyMailboxData.push_back( 0 );
-        if ( readOnlyMailboxSize ) {
-            mailboxReadOnly = std::string( (char*)readOnlyMailboxData.data() );
-        }
-        else
-            mailboxReadOnly = std::string("");
     }
 
     Json::Value getMeteringHeader() {
@@ -965,7 +921,8 @@ protected:
 
         Debug( "Build web request to stop current session" );
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        checkDRMCtlrRet( getDrmController().endSessionAndExtractMeteringFile( numberOfDetectedIps, saasChallenge, meteringFile ) );
+        checkDRMCtlrRet( getDrmController().endSessionAndExtractMeteringFile(
+                numberOfDetectedIps, saasChallenge, meteringFile ) );
         json_request["saasChallenge"] = saasChallenge;
         json_request["sessionId"] = meteringFile[0].substr( 0, 16 );
         checkSessionIDFromDRM( json_request );
@@ -974,6 +931,55 @@ protected:
         json_request["meteringFile"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
         json_request["request"] = "close";
         return json_request;
+    }
+
+    uint64_t getMeteringData() const {
+        uint32_t numberOfDetectedIps;
+        std::string saasChallenge;
+        std::vector<std::string> meteringFile;
+        uint64_t meteringData = 0;
+
+        std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
+
+        Debug( "Get metering data from current session on DRM controller" );
+        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+        if ( isNodeLockedMode() || isLicenseActive() ) {
+            checkDRMCtlrRet( getDrmController().asynchronousExtractMeteringFile(
+                    numberOfDetectedIps, saasChallenge, meteringFile ) );
+            std::string meteringDataStr = meteringFile[2].substr( 16, 16 );
+            errno = 0;
+            meteringData = strtoull( meteringDataStr.c_str(), nullptr, 16 );
+            if ( errno )
+                Throw( DRM_CtlrError, "Could not convert string '{}' to unsigned long long.",
+                        meteringDataStr );
+            return meteringData;
+        } else {
+            return 0;
+        }
+    }
+
+    // Get common info
+    void getDesignInfo( std::string &drmVersion,
+                        std::string &dna,
+                        std::vector<std::string> &vlnvFile,
+                        std::string &mailboxReadOnly ) {
+        uint32_t nbOfDetectedIps;
+        uint32_t readOnlyMailboxSize, readWriteMailboxSize;
+        std::vector<uint32_t> readOnlyMailboxData, readWriteMailboxData;
+
+        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+        checkDRMCtlrRet( getDrmController().extractDrmVersion( drmVersion ) );
+        checkDRMCtlrRet( getDrmController().extractDna( dna ) );
+        checkDRMCtlrRet( getDrmController().extractVlnvFile( nbOfDetectedIps, vlnvFile ) );
+        checkDRMCtlrRet( getDrmController().readMailboxFileRegister( readOnlyMailboxSize, readWriteMailboxSize,
+                                                                     readOnlyMailboxData, readWriteMailboxData ) );
+        Debug( "Mailbox sizes: read-only={}, read-write={}", readOnlyMailboxSize, readWriteMailboxSize );
+        readOnlyMailboxData.push_back( 0 );
+        if ( readOnlyMailboxSize ) {
+            mailboxReadOnly = std::string( (char*)readOnlyMailboxData.data() );
+        }
+        else
+            mailboxReadOnly = std::string("");
     }
 
     bool isSessionRunning()const  {
@@ -1106,6 +1112,7 @@ protected:
     }
 
     void setLicense( const Json::Value& license_json ) {
+
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
 
         Debug( "Installing next license on DRM controller" );
@@ -1163,7 +1170,6 @@ protected:
                       "Failed to load license timer on DRM controller, licenseTimerEnabled: 0x{:x}",
                       licenseTimerEnabled );
             }
-
             Debug( "Set license #{} of session ID {} for a duration of {} seconds",
                     ++mLicenseCounter, mSessionID, mLicenseDuration );
         }
@@ -1172,7 +1178,7 @@ protected:
         bool is_nodelocked = isDrmCtrlInNodelock();
         bool is_metered = isDrmCtrlInMetering();
         if ( is_nodelocked && is_metered )
-            Unreachable( "DRM Controller cannot be in both Node-Locked and Metering/Floating license modes" ); //LCOV_EXCL_LINE
+            Unreachable( "DRM Controller cannot be in both Node-Locked and Metering/Floating license modes. " ); //LCOV_EXCL_LINE
         if ( !isNodeLockedMode() ) {
             if ( !is_metered )
                 Throw( DRM_CtlrError, "DRM Controller failed to switch to Metering license mode" );
@@ -1184,6 +1190,7 @@ protected:
             else
                 Debug( "DRM Controller is in Node-Locked license mode" );
         }
+        Debug( "Installed next license on DRM controller" );
     }
 
     std::string getDesignHash() {
@@ -1276,7 +1283,7 @@ protected:
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
         int ret = readDrmAddress( REG_FREQ_DETECTION_VERSION, reg );
         if ( ret != 0 ) {
-            Unreachable( "Failed to read DRM frequency detection version register, errcode = {}", ret ); //LCOV_EXCL_LINE
+            Unreachable( "Failed to read DRM frequency detection version register, errcode = {}. ", ret ); //LCOV_EXCL_LINE
         }
         if ( reg == FREQ_DETECTION_VERSION_EXPECTED ) {
             // Use Method 1
@@ -1303,7 +1310,7 @@ protected:
         // Start detection counter
         ret = writeDrmAddress( REG_FREQ_DETECTION_COUNTER, 0 );
         if ( ret != 0 )
-            Unreachable( "Failed to start DRM frequency detection counter, errcode = {}", ret ); //LCOV_EXCL_LINE
+            Unreachable( "Failed to start DRM frequency detection counter, errcode = {}. ", ret ); //LCOV_EXCL_LINE
 
         // Wait a fixed period of time
         sleepOrExit( wait_duration );
@@ -1311,7 +1318,7 @@ protected:
         // Sample counter
         ret = readDrmAddress( REG_FREQ_DETECTION_COUNTER, counter );
         if ( ret != 0 ) {
-            Unreachable( "Failed to read DRM frequency detection counter register, errcode = {}", ret ); //LCOV_EXCL_LINE
+            Unreachable( "Failed to read DRM frequency detection counter register, errcode = {}. ", ret ); //LCOV_EXCL_LINE
         }
 
         if ( counter == 0xFFFFFFFF )
@@ -1373,7 +1380,7 @@ protected:
             timeEnd = TClock::now();
 
             if ( counterEnd == 0 )
-                Unreachable( "Frequency auto-detection failed: license timeout counter is 0" ); //LCOV_EXCL_LINE
+                Unreachable( "Frequency auto-detection failed: license timeout counter is 0. " ); //LCOV_EXCL_LINE
             if (counterEnd > counterStart)
                 Debug( "License timeout counter has been reset: taking another sample" );
             else
@@ -1381,7 +1388,7 @@ protected:
             max_attempts--;
         }
         if ( max_attempts == 0 )
-            Unreachable("Failed to estimate DRM frequency after 3 attempts"); //LCOV_EXCL_LINE
+            Unreachable("Failed to estimate DRM frequency after 3 attempts. "); //LCOV_EXCL_LINE
 
         Debug( "Start time = {} / Counter start = {}", timeStart.time_since_epoch().count(), counterStart );
         Debug( "End time = {} / Counter end = {}", timeEnd.time_since_epoch().count(), counterEnd );
@@ -1471,20 +1478,23 @@ protected:
                             return;
 
                         Debug( "Requesting a new license now" );
+                        {
+                            std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
 
-                        Json::Value request_json = getMeteringWait();
-                        Json::Value license_json;
+                            Json::Value request_json = getMeteringWait();
+                            Json::Value license_json;
 
-                        /// Retry Web Service request loop
-                        TClock::time_point polling_deadline = TClock::now()
-                                + std::chrono::seconds( mLicenseDuration );
+                            /// Retry Web Service request loop
+                            TClock::time_point polling_deadline = TClock::now()
+                                    + std::chrono::seconds( mLicenseDuration );
 
-                        /// Attempt to get the next license
-                        license_json = getLicense( request_json, polling_deadline,
-                                mWSRetryPeriodShort, mWSRetryPeriodLong );
+                            /// Attempt to get the next license
+                            license_json = getLicense( request_json, polling_deadline,
+                                    mWSRetryPeriodShort, mWSRetryPeriodLong );
 
-                        /// New license has been received: now send it to the DRM Controller
-                        setLicense( license_json );
+                            /// New license has been received: now send it to the DRM Controller
+                            setLicense( license_json );
+                        }
                     }
                 }
             } catch( const Exception& e ) {
@@ -1520,13 +1530,16 @@ protected:
     }
 
     void startSession() {
-        // Build start request message for new license
-        Json::Value request_json = getMeteringStart();
+        {
+            std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
 
-        // Send request and receive new license
-        Json::Value license_json = getLicense( request_json, mWSRequestTimeout, mWSRetryPeriodShort );
-        setLicense( license_json );
+            // Build start request message for new license
+            Json::Value request_json = getMeteringStart();
 
+            // Send request and receive new license
+            Json::Value license_json = getLicense( request_json, mWSRequestTimeout, mWSRetryPeriodShort );
+            setLicense( license_json );
+        }
         startLicenseContinuityThread();
 
         Info( "New DRM session started." );
@@ -1534,6 +1547,8 @@ protected:
 
     void resumeSession() {
         if ( isReadyForNewLicense() ) {
+
+            std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
 
             // Create JSON license request
             Json::Value request_json = getMeteringWait();
@@ -1549,11 +1564,16 @@ protected:
     }
 
     void stopSession() {
+        Json::Value request_json;
+
         // Stop background thread
         stopThread();
 
-        // Get and send metering data to web service
-        Json::Value request_json = getMeteringStop();
+        {
+            // Get and send metering data to web service
+            std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
+            request_json = getMeteringStop();
+        }
 
         // Send last metering information
         Json::Value license_json = getLicense( request_json, mWSRequestTimeout, mWSRetryPeriodShort );
@@ -1795,7 +1815,7 @@ public:
                     case ParameterKey::license_type: {
                         auto it = LicenseTypeStringMap.find( mLicenseType );
                         if ( it == LicenseTypeStringMap.end() )
-                            Unreachable( "License_type '{}' is missing in LicenseTypeStringMap",
+                            Unreachable( "License_type '{}' is missing in LicenseTypeStringMap. ",
                                 (uint32_t)mLicenseType ); //LCOV_EXCL_LINE
                         std::string license_type_str = it->second;
                         json_value[key_str] = license_type_str;
@@ -2045,7 +2065,7 @@ public:
     }
 
     template<typename T> T get( const ParameterKey /*key_id*/ ) const {
-        Unreachable( "Default template for get function" ); //LCOV_EXCL_LINE
+        Unreachable( "Default template for get function. " ); //LCOV_EXCL_LINE
     }
 
     void set( const Json::Value& json_value ) {

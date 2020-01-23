@@ -6,6 +6,7 @@ import pytest
 from tests.conftest import perform_once
 
 
+@pytest.mark.hwtst
 def test_versions_matches(accelize_drm):
     """
     Checks that the C/C++ library and the Python libraries versions matches.
@@ -18,6 +19,7 @@ def test_versions_matches(accelize_drm):
     assert api_version.build == api_version.py_build
 
 
+@pytest.mark.hwtst
 def test_python_backend_library(accelize_drm, pytestconfig):
     """
     Checks that the Python library use the good C or C++ library as backend.
@@ -33,6 +35,7 @@ def test_python_backend_library(accelize_drm, pytestconfig):
         assert backend == 'libaccelize_drm'
 
 
+@pytest.mark.hwtst
 def test_credentials(cred_json, conf_json):
     """
     Tests if credentials in "cred.json" are valid.
@@ -72,6 +75,7 @@ def test_credentials(cred_json, conf_json):
     assert loads(response.read()).get('access_token')
 
 
+@pytest.mark.hwtst
 def test_fpga_drivers_base():
     """
     Test accelize_drm.fpga_drivers.FpgaDriverBase.
@@ -108,6 +112,10 @@ def test_fpga_drivers_base():
         def _get_driver(self):
             """Get FPGA driver"""
             return library
+
+        def _get_locker(self):
+            """Get FPGA driver"""
+            return None
 
         def _program_fpga(self, fpga_image):
             """Program the FPGA """
@@ -167,6 +175,7 @@ def test_fpga_drivers_base():
     assert driver.read_register(register_offset=0x12) == 1
 
 
+@pytest.mark.hwtst
 def test_get_driver():
     """
     Test accelize_drm.fpga_drivers.get_driver.
@@ -180,6 +189,7 @@ def test_get_driver():
     assert get_driver('xilinx_xrt') is XrtDriver
 
 
+@pytest.mark.hwtst
 def test_fpga_driver(accelize_drm, cred_json, conf_json):
     """
     Test the driver used to perform tests.

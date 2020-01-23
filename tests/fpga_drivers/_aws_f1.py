@@ -8,8 +8,10 @@ https://github.com/aws/aws-fpga/tree/master/sdk
 from ctypes import (
     cdll as _cdll, POINTER as _POINTER, byref as _byref, c_uint32 as _c_uint32,
     c_uint64 as _c_uint64, c_int as _c_int)
+from os.path import basename as _basename
 from subprocess import run as _run, PIPE as _PIPE, STDOUT as _STDOUT
 from threading import Lock as _Lock
+from re import match as _match
 
 from tests.fpga_drivers import FpgaDriverBase as _FpgaDriverBase
 
@@ -39,6 +41,7 @@ class FpgaDriver(_FpgaDriverBase):
         drm_ctrl_base_addr (int): DRM Controller base address.
         log_dir (path-like object): Unused with this driver.
     """
+    name = _match(r'_(.+)\.py', _basename(__file__)).group(1)
 
     @staticmethod
     def _get_driver():
@@ -58,14 +61,13 @@ class FpgaDriver(_FpgaDriverBase):
 
         return fpga_library
 
-    @staticmethod
     def _get_locker(self):
         """
         Get a locker on the FPGA driver
         """
         return AwsLocker
 
-    def _clear_fpga(self, fpga_slot_id):
+    def _clear_fpga(self):
         """
         Clear FPGA
 
@@ -74,11 +76,10 @@ class FpgaDriver(_FpgaDriverBase):
 
         """
         clear_fpga = _run(
-            ['fpga-clear-local-image', '-S', str(fpga_slot_id)],
+            ['fpga-clear-local-image', '-S', str(self._fpga_slot_id)],
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if clear_fpga.returncode:
             raise RuntimeError(clear_fpga.stdout)
-        print('Cleared FPGA')
 
     def _program_fpga(self, fpga_image):
         """
@@ -93,7 +94,6 @@ class FpgaDriver(_FpgaDriverBase):
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if load_image.returncode:
             raise RuntimeError(load_image.stdout)
-        print('Programmed AWS F1 slot #%d with FPGA image %s' % (self._fpga_slot_id, fpga_image))
 
     def _reset_fpga(self):
         """

@@ -340,11 +340,6 @@ File structure
 .. code-block:: bash
 
 
-   controller/
-   -- drm_controller_ip.v
-   -- drm_controller_ip.vhdl
-   -- drm_controller_ip_axi4st.v
-   -- drm_controller_ip_axi4st.vhdl
    common/
    -- sv/
    ----- altera/
@@ -360,6 +355,25 @@ File structure
    -------- drm_all_components.vhdl
    ----- xilinx/
    -------- drm_all_components.vhdl
+   controller/
+   -- rtl/
+   ---- core/
+   ------ drm_ip_controller.vhdl
+   ------ drm_ip_controller.v
+   ---- sim/
+   ------ drm_controller_sim.vhdl
+   ------ drm_controller_sim.sv
+   ---- syn/
+   ------ drm_controller.vhdl
+   ------ drm_controller.sv
+   -- sdaccel/
+   ---- scr/
+   ------ drm_controller_kernel.sv
+   ------ drm_controller_kernel.xml
+   ---- scripts/
+   ------ gen_drmctrl_xo.tcl
+   ------ package_drmctrl_stage.tcl
+   ---- Makefile
 
 
 Implementation guidelines

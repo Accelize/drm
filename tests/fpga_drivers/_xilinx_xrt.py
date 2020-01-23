@@ -9,8 +9,9 @@ from ctypes import (
     c_uint as _c_uint, c_uint64 as _c_uint64, c_int as _c_int,
     c_void_p as _c_void_p, c_size_t as _c_size_t)
 from os import environ as _environ, fsdecode as _fsdecode
-from os.path import isfile as _isfile, join as _join, realpath as _realpath
+from os.path import isfile as _isfile, join as _join, realpath as _realpath, basename as _basename
 from subprocess import run as _run, PIPE as _PIPE, STDOUT as _STDOUT
+from re import match as _match
 
 from tests.fpga_drivers import FpgaDriverBase as _FpgaDriverBase
 
@@ -51,6 +52,7 @@ class FpgaDriver(_FpgaDriverBase):
         drm_ctrl_base_addr (int): DRM Controller base address.
         log_dir (path-like object): directory where XRT will output log file.
     """
+    name = _match(r'_(.+)\.py', _basename(__file__)).group(1)
 
     def _get_driver(self):
         """
@@ -95,20 +97,15 @@ class FpgaDriver(_FpgaDriverBase):
             raise RuntimeError('Unable to find Xilinx XRT Board Utility')
         return _xbutil_path
 
-    def _clear_fpga(self, fpga_slot_id):
+    def _clear_fpga(self):
         """
         Clear FPGA
-
-        Args:
-            fpga_slot_id (int): FPGA slot ID.
-
         """
         clear_fpga = _run(
-            ['fpga-clear-local-image', '-S', str(fpga_slot_id)],
+            ['fpga-clear-local-image', '-S', str(self._fpga_slot_id)],
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if clear_fpga.returncode:
             raise RuntimeError(clear_fpga.stdout)
-        print('Cleared FPGA')
 
     def _program_fpga(self, fpga_image):
         """
@@ -124,7 +121,6 @@ class FpgaDriver(_FpgaDriverBase):
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if load_image.returncode:
             raise RuntimeError(load_image.stdout)
-        print('Programmed AWS F1 slot #%d with FPGA image %s' % (self._fpga_slot_id, fpga_image))
 
     def _reset_fpga(self):
         """

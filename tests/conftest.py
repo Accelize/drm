@@ -346,11 +346,13 @@ class RefDesign:
         self._path = path
         self.image_files = {splitext(file_name)[0].strip('v'):realpath(join(self._path, file_name))
                                     for file_name in listdir(self._path)}
-        self.hdk_versions = sorted(self.image_files.keys())
+        self.hdk_versions = sorted(filter(lambda x: match(r'^\d+', x), self.image_files.keys()))
 
     def get_image_id(self, hdk_version=None):
         if hdk_version is None:
             hdk_version = self.hdk_versions[-1]
+        elif hdk_version not in self.image_files.keys():
+            return None
         filename = join(self._path, self.image_files[hdk_version])
         ext = splitext(filename)[1]
         try:
