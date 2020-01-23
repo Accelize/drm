@@ -55,12 +55,6 @@ _PARAM_LIST = ['license_type',
                'log_message_level',
                'list_all',
                'dump_all',
-               'log_service_verbosity',
-               'log_service_format',
-               'log_service_path',
-               'log_service_type',
-               'log_service_rotating_size',
-               'log_service_rotating_num',
                'page_ctrlreg',
                'page_vlnvfile',
                'page_licfile',
@@ -68,7 +62,6 @@ _PARAM_LIST = ['license_type',
                'page_meteringfile',
                'page_mailbox',
                'hw_report',
-               'log_service_create',
                'trigger_async_callback',
                'bad_product_id',
                'bad_oauth2_token',
@@ -529,108 +522,6 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     async_cb.assert_NoError()
     print("Test parameter 'log_file_rotating_num': PASS")
 
-    # Test parameter: log_service_verbosity
-    async_cb.reset()
-    conf_json.reset()
-    exp_value = 0
-    conf_json['settings']['log_service_verbosity'] = exp_value
-    conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    assert drm_manager.get('log_service_verbosity') == exp_value
-    async_cb.assert_NoError()
-    print("Test parameter 'log_service_verbosity': PASS")
-
-    # Test parameter: log_service_format
-    async_cb.reset()
-    conf_json.reset()
-    exp_value = LOG_FORMAT_SHORT
-    conf_json['settings']['log_service_format'] = exp_value
-    conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    assert drm_manager.get('log_service_format') == exp_value
-    async_cb.assert_NoError()
-    print("Test parameter 'log_service_format': PASS")
-
-    # Test parameter: log_service_path
-    async_cb.reset()
-    conf_json.reset()
-    exp_value = realpath("./drmservice.%d.log" % getpid())
-    conf_json['settings']['log_service_path'] = exp_value
-    conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    assert drm_manager.get('log_service_path') == exp_value
-    async_cb.assert_NoError()
-    print("Test parameter 'log_service_path': PASS")
-
-    # Test parameter: log_service_type
-    async_cb.reset()
-    conf_json.reset()
-    exp_value = 1
-    conf_json['settings']['log_service_type'] = exp_value
-    conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    assert drm_manager.get('log_service_type') == exp_value
-    async_cb.assert_NoError()
-    print("Test parameter 'log_service_type': PASS")
-
-    # Test parameter: log_service_rotating_size
-    async_cb.reset()
-    conf_json.reset()
-    exp_value = 1024
-    conf_json['settings']['log_service_rotating_size'] = exp_value
-    conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    assert drm_manager.get('log_service_rotating_size') == exp_value
-    async_cb.assert_NoError()
-    print("Test parameter 'log_service_rotating_size': PASS")
-
-    # Test parameter: log_service_rotating_num
-    async_cb.reset()
-    conf_json.reset()
-    exp_value = 10
-    conf_json['settings']['log_service_rotating_num'] = exp_value
-    conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    assert drm_manager.get('log_service_rotating_num') == exp_value
-    async_cb.assert_NoError()
-    print("Test parameter 'log_service_rotating_num': PASS")
-
     # Test parameter: frequency_detection_method
     if accelize_drm.pytest_new_freq_method_supported:
         async_cb.reset()
@@ -991,65 +882,6 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
 
     # Test parameter: log_file_path, log_file_type, log_file_rotating_size, log_file_rotating_num
     # => Cannot be written programmatically
-
-    # Test parameter: log_service_verbosity
-    orig_val = drm_manager.get('log_service_verbosity')
-    exp_val = 1 if orig_val == 0 else 0
-    drm_manager.set(log_service_verbosity=exp_val)
-    assert drm_manager.get('log_service_verbosity') == exp_val
-    drm_manager.set(log_service_verbosity=orig_val)
-    async_cb.assert_NoError()
-    print("Test parameter 'log_service_verbosity': PASS")
-
-    # Test parameter: log_service_format
-    orig_val = drm_manager.get('log_service_format')
-    assert orig_val == LOG_FORMAT_LONG
-    exp_val = LOG_FORMAT_SHORT
-    drm_manager.set(log_service_format=exp_val)
-    assert drm_manager.get('log_service_format') == exp_val
-    drm_manager.set(log_service_format=orig_val)
-    async_cb.assert_NoError()
-    print("Test parameter 'log_service_format': PASS")
-
-    # Test parameter: log_service_path
-    orig_val = drm_manager.get('log_service_path')
-    assert search(r'accelize_drmservice_\d+\.log', orig_val)
-    exp_path = 'test.log'
-    drm_manager.set(log_service_path=exp_path)
-    assert drm_manager.get('log_service_path') == exp_path
-    drm_manager.set(log_service_path=orig_val)
-    async_cb.assert_NoError()
-    print("Test parameter 'log_service_path': PASS")
-
-    # Test parameter: log_service_type
-    orig_val = drm_manager.get('log_service_type')
-    assert orig_val == 0
-    exp_type = 2
-    drm_manager.set(log_service_type=exp_type)
-    assert drm_manager.get('log_service_type') == exp_type
-    drm_manager.set(log_service_type=orig_val)
-    async_cb.assert_NoError()
-    print("Test parameter 'log_service_type': PASS")
-
-    # Test parameter: log_service_rotating_size
-    orig_val = drm_manager.get('log_service_rotating_size')
-    assert orig_val == 100*1024*1024
-    exp_type = 10*1024
-    drm_manager.set(log_service_rotating_size=exp_type)
-    assert drm_manager.get('log_service_rotating_size') == exp_type
-    drm_manager.set(log_service_rotating_size=orig_val)
-    async_cb.assert_NoError()
-    print("Test parameter 'log_service_rotating_size': PASS")
-
-    # Test parameter: log_service_rotating_num
-    orig_val = drm_manager.get('log_service_rotating_num')
-    assert orig_val == 3
-    exp_type = 5
-    drm_manager.set(log_service_rotating_num=exp_type)
-    assert drm_manager.get('log_service_rotating_num') == exp_type
-    drm_manager.set(log_service_rotating_num=orig_val)
-    async_cb.assert_NoError()
-    print("Test parameter 'log_service_rotating_num': PASS")
 
     # Test parameter: license_type in metering
     assert drm_manager.get('license_type') == 'Floating/Metering'

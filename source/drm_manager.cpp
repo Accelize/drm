@@ -131,13 +131,6 @@ protected:
     size_t       sLogFileRotatingSize = 100*1024*1024;
     size_t       sLogFileRotatingNum  = 3;
 
-    spdlog::level::level_enum sLogServiceVerbosity = spdlog::level::info;
-    std::string  sLogServiceFormat       = std::string("%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v");
-    eLogFileType sLogServiceType         = eLogFileType::NONE;
-    std::string  sLogServicePath         = fmt::format( "accelize_drmservice_{}.log", getpid() );
-    size_t       sLogServiceRotatingSize = 100*1024*1024;
-    size_t       sLogServiceRotatingNum  = 3;
-
     // Function callbacks
     DrmManager::ReadRegisterCallback  f_read_register;
     DrmManager::WriteRegisterCallback f_write_register;
@@ -245,20 +238,6 @@ protected:
                         Json::intValue, (int)sLogFileRotatingSize ).asInt();
                 sLogFileRotatingNum = JVgetOptional( param_lib, "log_file_rotating_num",
                         Json::intValue, (int)sLogFileRotatingNum ).asInt();
-
-                // Service File logging
-                sLogServiceVerbosity = static_cast<spdlog::level::level_enum>( JVgetOptional(
-                        param_lib, "log_service_verbosity", Json::intValue, (int)sLogServiceVerbosity ).asInt() );
-                sLogServiceFormat = JVgetOptional(
-                        param_lib, "log_service_format", Json::stringValue, sLogServiceFormat ).asString();
-                sLogServicePath = JVgetOptional(
-                        param_lib, "log_service_path", Json::stringValue, sLogServicePath ).asString();
-                sLogServiceType = static_cast<eLogFileType>( JVgetOptional(
-                        param_lib, "log_service_type", Json::intValue, (int)sLogServiceType ).asInt() );
-                sLogServiceRotatingSize = JVgetOptional( param_lib, "log_service_rotating_size",
-                        Json::intValue, (int)sLogServiceRotatingSize ).asInt();
-                sLogServiceRotatingNum = JVgetOptional( param_lib, "log_service_rotating_num",
-                        Json::intValue, (int)sLogServiceRotatingNum ).asInt();
 
                 // Frequency detection
                 mFrequencyDetectionPeriod = JVgetOptional( param_lib, "frequency_detection_period",
@@ -379,12 +358,6 @@ protected:
             // File logging
             createFileLog( sLogFilePath, sLogFileType, sLogFileVerbosity, sLogFileFormat,
                     sLogFileRotatingSize, sLogFileRotatingNum );
-
-            // Service logging
-            if ( sLogServiceType != eLogFileType::NONE ) {
-                createFileLog( sLogServicePath, sLogServiceType, sLogServiceVerbosity,
-                               sLogServiceFormat, sLogServiceRotatingSize, sLogServiceRotatingNum );
-            }
         }
         catch( const spdlog::spdlog_ex& ex ) {
             std::cout << "Failed to update logging settings: " << ex.what() << std::endl;
@@ -1775,43 +1748,6 @@ public:
                                sLogFileRotatingSize );
                         break;
                     }
-                    case ParameterKey::log_service_verbosity: {
-                        int logVerbosity = static_cast<int>( sLogServiceVerbosity );
-                        json_value[key_str] = logVerbosity;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
-                               logVerbosity );
-                        break;
-                    }
-                    case ParameterKey::log_service_format: {
-                        json_value[key_str] = sLogServiceFormat;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
-                               sLogServiceFormat );
-                        break;
-                    }
-                    case ParameterKey::log_service_path: {
-                        json_value[key_str] = sLogServicePath;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
-                               sLogServicePath );
-                        break;
-                    }
-                    case ParameterKey::log_service_type: {
-                        json_value[key_str] = (int)sLogServiceType;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
-                               (int)sLogServiceType );
-                        break;
-                    }
-                    case ParameterKey::log_service_rotating_num: {
-                        json_value[key_str] = (int)sLogServiceRotatingNum;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
-                               sLogServiceRotatingNum );
-                        break;
-                    }
-                    case ParameterKey::log_service_rotating_size: {
-                        json_value[key_str] = (int)sLogServiceRotatingSize;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
-                               sLogServiceRotatingSize );
-                        break;
-                    }
                     case ParameterKey::license_type: {
                         auto it = LicenseTypeStringMap.find( mLicenseType );
                         if ( it == LicenseTypeStringMap.end() )
@@ -2111,80 +2047,6 @@ public:
                                sLogFileFormat );
                         break;
                     }
-                    case ParameterKey::log_service_verbosity: {
-                        int verbosityInt = (*it).asInt();
-                        sLogServiceVerbosity = static_cast<spdlog::level::level_enum>( verbosityInt );
-                        if ( sLogger->sinks().size() == 3 ) {
-                            sLogger->sinks()[2]->set_level( sLogServiceVerbosity );
-                            if ( sLogServiceVerbosity < sLogger->level() )
-                                sLogger->set_level( sLogServiceVerbosity );
-                        }
-                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id, verbosityInt );
-                        break;
-                    }
-                    case ParameterKey::log_service_format: {
-                        sLogServiceFormat = (*it).asString();
-                        if ( sLogger->sinks().size() == 3 ) {
-                            sLogger->sinks()[2]->set_pattern( sLogServiceFormat );
-                        }
-                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
-                               sLogServiceFormat );
-                        break;
-                    }
-                    case ParameterKey::log_service_path: {
-                        if ( sLogger->sinks().size() < 3 ) {
-                            sLogServicePath = (*it).asString();
-                            Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
-                                   sLogServicePath );
-                        } else {
-                            Warning( "A service logging is already in use: cannot change its settings" );
-                        }
-                        break;
-                    }
-                    case ParameterKey::log_service_type: {
-                        if ( sLogger->sinks().size() < 3 ) {
-                            int logType = (*it).asInt();
-                            sLogServiceType = static_cast<eLogFileType>( logType  );
-                            Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
-                                   (int)sLogServiceType );
-                        } else {
-                            Warning( "A service logging is already in use" );
-                        }
-                        break;
-                    }
-                    case ParameterKey::log_service_rotating_size: {
-                        if ( sLogger->sinks().size() < 3 ) {
-                            sLogServiceRotatingSize = (*it).asUInt();
-                            Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
-                                   sLogServiceRotatingSize );
-                        } else {
-                            Warning( "A service logging is already in use" );
-                        }
-                        break;
-                    }
-                    case ParameterKey::log_service_rotating_num: {
-                        if ( sLogger->sinks().size() < 3 ) {
-                            sLogServiceRotatingNum = (*it).asUInt();
-                            Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
-                                   sLogServiceRotatingNum );
-                        } else {
-                            Warning( "A service logging is already in use" );
-                        }
-                        break;
-                    }
-                    case ParameterKey::log_service_create: {
-                        if ( sLogger->sinks().size() < 3 ) {
-                            std::string dummy = (*it).asString();
-                            createFileLog( sLogServicePath, sLogServiceType, sLogServiceVerbosity,
-                                    sLogServiceFormat, sLogServiceRotatingSize, sLogServiceRotatingNum );
-                            Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
-                                   dummy );
-                        } else {
-                            Warning( "A service logging is already in use" );
-                        }
-                        break;
-                    }
-
                     case ParameterKey::frequency_detection_threshold: {
                         mFrequencyDetectionThreshold = (*it).asDouble();
                         Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
