@@ -49,7 +49,7 @@ class FpgaDriverBase:
     """
 
     def __init__(self, fpga_slot_id=0, fpga_image=None, drm_ctrl_base_addr=0,
-                 log_dir='.', clear_fpga=False):
+                 log_dir='.', no_clear_fpga=False):
         self._fpga_slot_id = fpga_slot_id
         self._fpga_image = fpga_image
         self._drm_ctrl_base_addr = drm_ctrl_base_addr
@@ -67,7 +67,7 @@ class FpgaDriverBase:
         #self._fpga_write_register_lock = self._get_locker()
 
         # Clear FPGA
-        if clear_fpga:
+        if not no_clear_fpga:
             self.clear_fpga()
 
         # Initialize FPGA

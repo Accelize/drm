@@ -139,7 +139,7 @@ def pytest_addoption(parser):
         "--library_format", action="store", type=int, choices=[0,1], default=0,
         help='Specify "libaccelize_drm" logging format: 0=short, 1=long')
     parser.addoption(
-        "--clear_fpga", action="store_true", help='Clear FPGA at start-up')
+        "--no_clear_fpga", action="store_true", help='PRevent from clearing FPGA at start-up')
     parser.addoption(
         "--logfile", action="store_true", help='Save log to file')
     parser.addoption(
@@ -455,7 +455,7 @@ def accelize_drm(pytestconfig):
         fpga_slot_id = [pytestconfig.getoption("fpga_slot_id")]
 
     # Initialize FPGA
-    clear_fpga = pytestconfig.getoption("clear_fpga")
+    no_clear_fpga = pytestconfig.getoption("no_clear_fpga")
     drm_ctrl_base_addr = pytestconfig.getoption("drm_controller_base_address")
     print('FPGA SLOT ID:', fpga_slot_id)
     print('FPGA IMAGE:', basename(fpga_image))
@@ -467,7 +467,7 @@ def accelize_drm(pytestconfig):
                 fpga_driver_cls( fpga_slot_id=slot_id,
                     fpga_image=fpga_image,
                     drm_ctrl_base_addr=drm_ctrl_base_addr,
-                    clear_fpga=clear_fpga
+                    no_clear_fpga=no_clear_fpga
                 )
             )
         except:
@@ -813,7 +813,11 @@ class AsyncErrorHandlerList(list):
     @staticmethod
     def get_error_code(msg):
         from re import search
+        print('msg=', msg)
         m = search(r'\[errCode=(\d+)\]', msg)
+        if m:
+            return int(m.group(1))
+        return None
         assert m, "Could not find 'errCode' in exception message: %s" % msg
         return int(m.group(1))
 

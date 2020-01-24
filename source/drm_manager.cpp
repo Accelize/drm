@@ -371,7 +371,7 @@ protected:
 
     void checkDRMCtlrRet( const unsigned int& errcode ) const {
         if ( errcode )
-            Unreachable( "Error {} from DRM Controller library. ", errcode ); //LCOV_EXCL_LINE
+            Throw( DRM_CtlrError, "Error {} from DRM Controller library. ", errcode ); //LCOV_EXCL_LINE
     }
 
     uint32_t getMailboxSize() const {
@@ -618,7 +618,7 @@ protected:
             Debug( "DRM Communication Self-Test 2 failed: writing zeros!\n" + badData );
             Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Could not access DRM Controller registers.\n" + DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
         }
-        Debug( "DRM Communication Self-Test 2 failed: test all to 0 passed" );
+        Debug( "DRM Communication Self-Test 2 failed: all 0 test passed" );
 
         // Write 1 to User Mailbox
         for( uint32_t i = 0; i < mbSize; i++ )
@@ -635,7 +635,7 @@ protected:
             Debug( "DRM Communication Self-Test 2 failed: writing ones!\n" + badData );
             Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Could not access DRM Controller registers.\n" + DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
         }
-        Debug( "DRM Communication Self-Test 2 failed: test all to 1 passed" );
+        Debug( "DRM Communication Self-Test 2 failed: all 1 test passed" );
 
         // Then, write random values to User Mailbox
         srand (time(NULL)); // initialize random seed:
@@ -653,7 +653,7 @@ protected:
             Debug( "DRM Communication Self-Test 2 failed: writing randoms!\n" + badData );
             Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Could not access DRM Controller registers.\n" + DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
         }
-        Debug( "DRM Communication Self-Test 2 failed: test random passed" );
+        Debug( "DRM Communication Self-Test 2 failed: random test passed" );
 
         Debug( "DRM Communication Self-Test 2 succeeded" );
     }
@@ -912,23 +912,26 @@ protected:
         std::vector<std::string> meteringFile;
         uint64_t meteringData = 0;
 
-        std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
+        {
+            Debug( "Waiting metering access mutex from getMeteringData" );
+            std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
+            Debug( "Acquired metering access mutex from getMeteringData" );
 
-        Debug( "Get metering data from current session on DRM controller" );
-        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        if ( isNodeLockedMode() || isLicenseActive() ) {
-            checkDRMCtlrRet( getDrmController().asynchronousExtractMeteringFile(
-                    numberOfDetectedIps, saasChallenge, meteringFile ) );
-            std::string meteringDataStr = meteringFile[2].substr( 16, 16 );
-            errno = 0;
-            meteringData = strtoull( meteringDataStr.c_str(), nullptr, 16 );
-            if ( errno )
-                Throw( DRM_CtlrError, "Could not convert string '{}' to unsigned long long.",
-                        meteringDataStr );
-            return meteringData;
-        } else {
-            return 0;
+            Debug( "Get metering data from current session on DRM controller" );
+            std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+            if ( isNodeLockedMode() || isLicenseActive() ) {
+                checkDRMCtlrRet( getDrmController().asynchronousExtractMeteringFile(
+                        numberOfDetectedIps, saasChallenge, meteringFile ) );
+                std::string meteringDataStr = meteringFile[2].substr( 16, 16 );
+                errno = 0;
+                meteringData = strtoull( meteringDataStr.c_str(), nullptr, 16 );
+                if ( errno )
+                    Throw( DRM_CtlrError, "Could not convert string '{}' to unsigned long long.",
+                            meteringDataStr );
+            }
         }
+        Debug( "Released metering access mutex from getMeteringData" );
+        return meteringData;
     }
 
     // Get common info
@@ -1452,7 +1455,9 @@ protected:
 
                         Debug( "Requesting a new license now" );
                         {
+                            Debug( "Waiting metering access mutex from licensing thread" );
                             std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
+                            Debug( "Acquired metering access mutex from licensing thread" );
 
                             Json::Value request_json = getMeteringWait();
                             Json::Value license_json;
@@ -1468,6 +1473,7 @@ protected:
                             /// New license has been received: now send it to the DRM Controller
                             setLicense( license_json );
                         }
+                        Debug( "Released metering access mutex from licensing thread" );
                     }
                 }
             } catch( const Exception& e ) {
@@ -1479,6 +1485,7 @@ protected:
                 Error( e.what() );
                 f_asynch_error( std::string( e.what() ) );
             }
+            Debug( "Exiting background thread which maintains licensing" );
         });
     }
 
@@ -1504,7 +1511,9 @@ protected:
 
     void startSession() {
         {
+            Debug( "Waiting metering access mutex from startSession" );
             std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
+            Debug( "Acquired metering access mutex from startSession" );
 
             // Build start request message for new license
             Json::Value request_json = getMeteringStart();
@@ -1513,6 +1522,8 @@ protected:
             Json::Value license_json = getLicense( request_json, mWSRequestTimeout, mWSRetryPeriodShort );
             setLicense( license_json );
         }
+        Debug( "Released metering access mutex from startSession" );
+
         startLicenseContinuityThread();
 
         Info( "New DRM session started." );
@@ -1521,7 +1532,9 @@ protected:
     void resumeSession() {
         if ( isReadyForNewLicense() ) {
 
+            Debug( "Waiting metering access mutex from resumeSession" );
             std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
+            Debug( "Acquired metering access mutex from resumeSession" );
 
             // Create JSON license request
             Json::Value request_json = getMeteringWait();
@@ -1532,7 +1545,10 @@ protected:
             // Install license on DRM controller
             setLicense( license_json );
         }
+        Debug( "Released metering access mutex from resumeSession" );
+
         startLicenseContinuityThread();
+
         Info( "DRM session resumed." );
     }
 
@@ -1544,9 +1560,12 @@ protected:
 
         {
             // Get and send metering data to web service
+            Debug( "Waiting metering access mutex from stopSession" );
             std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
+            Debug( "Acquired metering access mutex from stopSession" );
             request_json = getMeteringStop();
         }
+        Debug( "Released metering access mutex from stopSession" );
 
         // Send last metering information
         Json::Value license_json = getLicense( request_json, mWSRequestTimeout, mWSRetryPeriodShort );
