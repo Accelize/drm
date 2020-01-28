@@ -117,6 +117,10 @@ def test_fpga_drivers_base():
             """Get FPGA driver"""
             return None
 
+        def _clear_fpga(self):
+            """Program the FPGA """
+            return
+
         def _program_fpga(self, fpga_image):
             """Program the FPGA """
             Fpga.fpga_image = fpga_image
