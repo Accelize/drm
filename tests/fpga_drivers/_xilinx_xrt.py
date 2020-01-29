@@ -58,7 +58,6 @@ class FpgaDriver(_FpgaDriverBase):
     _name = _match(r'_(.+)\.py', _basename(__file__)).group(1)
     _reglock = _Lock()
 
-    @staticmethod
     def _get_driver(self):
         """
         Get FPGA driver
@@ -73,11 +72,11 @@ class FpgaDriver(_FpgaDriverBase):
         raise RuntimeError('Unable to find Xilinx XRT Library')
 
     @staticmethod
-    def _get_lock(self):
+    def _get_lock():
         """
         Get a lock on the FPGA driver
         """
-        return XrtLocker
+        return XrtLock
 
     @property
     def _xrt_prefix(self):

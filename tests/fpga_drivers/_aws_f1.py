@@ -11,6 +11,7 @@ from ctypes import (
 from subprocess import run as _run, PIPE as _PIPE, STDOUT as _STDOUT
 from os.path import basename as _basename
 from re import match as _match
+from threading import Lock as _Lock
 
 from tests.fpga_drivers import FpgaDriverBase as _FpgaDriverBase
 
@@ -60,7 +61,7 @@ class FpgaDriver(_FpgaDriverBase):
         return fpga_library
 
     @staticmethod
-    def _get_lock(self):
+    def _get_lock():
         """
         Get a lock on the FPGA driver
         """
