@@ -10,15 +10,16 @@ from ctypes import (
     c_void_p as _c_void_p, c_size_t as _c_size_t)
 from os import environ as _environ, fsdecode as _fsdecode
 from os.path import isfile as _isfile, join as _join, realpath as _realpath, basename as _basename
-from subprocess import run as _run, PIPE as _PIPE, STDOUT as _STDOUT
 from re import match as _match
+from subprocess import run as _run, PIPE as _PIPE, STDOUT as _STDOUT
+from threading import Lock as _Lock
 
 from tests.fpga_drivers import FpgaDriverBase as _FpgaDriverBase
 
-__all__ = ['FpgaDriver', 'XrtLocker']
+__all__ = ['FpgaDriver', 'XrtLock']
 
 
-class XrtLocker():
+class XrtLock():
     def __init__(self, driver):
         self.driver = driver
         # Define Lock function
@@ -33,6 +34,7 @@ class XrtLocker():
     def __enter__(self):
         if self.driver._fpga_handle is None:
             raise RuntimeError('Null device handle')
+        self.driver._reglock.acquire()
         self.xcl_lock(self.driver._fpga_handle)
         return
 
@@ -40,6 +42,7 @@ class XrtLocker():
         if self.driver._fpga_handle is None:
             raise RuntimeError('Null device handle')
         self.xcl_unlock(self.driver._fpga_handle)
+        self.driver._reglock.release()
 
 
 class FpgaDriver(_FpgaDriverBase):
@@ -53,7 +56,9 @@ class FpgaDriver(_FpgaDriverBase):
         log_dir (path-like object): directory where XRT will output log file.
     """
     _name = _match(r'_(.+)\.py', _basename(__file__)).group(1)
+    _reglock = _Lock()
 
+    @staticmethod
     def _get_driver(self):
         """
         Get FPGA driver
@@ -67,9 +72,10 @@ class FpgaDriver(_FpgaDriverBase):
             return _cdll.LoadLibrary(_join(self._xrt_prefix, "lib/libxrt_core.so"))
         raise RuntimeError('Unable to find Xilinx XRT Library')
 
-    def _get_locker(self):
+    @staticmethod
+    def _get_lock(self):
         """
-        Get a locker on the FPGA driver
+        Get a lock on the FPGA driver
         """
         return XrtLocker
 
@@ -100,23 +106,11 @@ class FpgaDriver(_FpgaDriverBase):
         """
         Clear FPGA
         """
-        #if self._fpga_library is not None:
-        #    # Close device
-        #    xcl_close = self._fpga_library.xclClose
-        #    xcl_close.restype = None
-        #    xcl_close.argtype = _c_void_p
-        #    xcl_close()
-
-        lsmod = _run('lsmod | grep xocl', shell=True,
-            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
-        print('lsmod.stdout=', lsmod.stdout)
-
         clear_fpga = _run(
             ['fpga-clear-local-image', '-S', str(self._fpga_slot_id)],
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if clear_fpga.returncode:
             raise RuntimeError(clear_fpga.stdout)
-
 
     def _program_fpga(self, fpga_image):
         """
@@ -125,8 +119,6 @@ class FpgaDriver(_FpgaDriverBase):
         Args:
             fpga_image (str): FPGA image.
         """
-        #self._clear_fpga()
-
         fpga_image = _realpath(_fsdecode(fpga_image))
         load_image = _run(
             [self._xbutil, 'program',
@@ -150,7 +142,6 @@ class FpgaDriver(_FpgaDriverBase):
         """
         Initialize FPGA handle with driver library.
         """
-        print('self._fpga_library=', self._fpga_library)
         # Find all devices
         xcl_probe = self._fpga_library.xclProbe
         xcl_probe.restype = _c_uint  # Devices count
@@ -166,26 +157,14 @@ class FpgaDriver(_FpgaDriverBase):
             _c_char_p,  # logFileName
             _c_int,  # level
         )
-
-        lsmod = _run('lsmod | grep xocl', shell=True,
-            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
-        print('lsmod.stdout=', lsmod.stdout)
-
         log_file = _join(self._log_dir, 'slot_%d_xrt.log' % self._fpga_slot_id)
         device_handle = xcl_open(
             self._fpga_slot_id,
             log_file.encode(),
             3  # XCL_ERROR
         )
-
-        lsmod = _run('lsmod | grep xocl', shell=True,
-            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
-        print('lsmod.stdout=', lsmod.stdout)
-
-
         if not device_handle:
             raise RuntimeError("xclOpen failed to open device")
-
         self._fpga_handle = device_handle
 
     def _get_read_register_callback(self):

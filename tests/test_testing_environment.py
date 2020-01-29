@@ -113,8 +113,8 @@ def test_fpga_drivers_base():
             """Get FPGA driver"""
             return library
 
-        def _get_locker(self):
-            """Get FPGA driver"""
+        def _get_lock(self):
+            """Get FPGA driver lock"""
             return None
 
         def _clear_fpga(self):

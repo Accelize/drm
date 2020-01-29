@@ -16,7 +16,6 @@ from ctypes import c_uint32 as _c_uint32, byref as _byref
 from importlib import import_module as _import_module
 from os import fsdecode as _fsdecode
 from os.path import realpath as _realpath
-from threading import Lock as _Lock
 
 __all__ = ['get_driver', 'FpgaDriverBase']
 
@@ -58,8 +57,8 @@ class FpgaDriverBase:
         # FPGA read/write low level functions ans associated locks
         self._fpga_read_register = None
         self._fpga_write_register = None
-        self._fpga_read_register_lock = _Lock()
-        self._fpga_write_register_lock = _Lock()
+        self._fpga_read_register_lock = self._get_lock()
+        self._fpga_write_register_lock = self._get_lock()
 
         if not no_clear_fpga:
            self.clear_fpga()
@@ -153,6 +152,7 @@ class FpgaDriverBase:
         """
         Clear FPGA including FPGA image.
         """
+        print('Clearing FPGA on slot #%d' % self._fpga_slot_id)
         with self._augment_exception('clear'):
             return self._clear_fpga()
 
@@ -204,6 +204,15 @@ class FpgaDriverBase:
 
         Returns:
             object: FPGA driver.
+        """
+
+    @_abstractmethod
+    def _get_lock(self):
+        """
+        Get FPGA driver lock.
+
+        Returns:
+            object: FPGA driver lock.
         """
 
     @_abstractmethod

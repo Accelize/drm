@@ -18,7 +18,7 @@ limitations under the License.
 """
 
 __version__ = "@ACCELIZEDRM_LONG_VERSION@"
-__copyright__ = "Copyright 2019 Accelize"
+__copyright__ = "Copyright 2018 Accelize"
 __licence__ = "Apache 2.0"
 __all__ = ['DrmManager', 'exceptions', 'get_api_version']
 
@@ -26,7 +26,7 @@ from os import environ as _environ
 from collections import namedtuple as _namedtuple
 
 
-import accelize_drm.exceptions
+import accelize_drm.exceptions  # noqa
 
 if _environ.get('ACCELIZE_DRM_PYTHON_USE_C'):
     # Bind Python Accelize DRM on libaccelize_drmc (C variant)

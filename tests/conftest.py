@@ -117,6 +117,8 @@ def pytest_addoption(parser):
         "--library_format", action="store", type=int, choices=[0,1], default=0,
         help='Specify "libaccelize_drm" logging format: 0=short, 1=long')
     parser.addoption(
+        "--no_clear_fpga", action="store_true", help='Bypass clearing of FPGA at start-up')
+    parser.addoption(
         "--logfile", action="store_true", help='Save log to file')
     parser.addoption(
         "--fpga_image", default="default",
@@ -374,7 +376,7 @@ def accelize_drm(pytestconfig):
     import accelize_drm as _accelize_drm
 
     # Get FPGA driver
-    from accelize_drm.fpga_drivers import get_driver
+    from tests.fpga_drivers import get_driver
     fpga_driver_name = pytestconfig.getoption("fpga_driver")
     fpga_driver_cls = get_driver(fpga_driver_name)
 
@@ -420,9 +422,10 @@ def accelize_drm(pytestconfig):
         fpga_slot_id = [pytestconfig.getoption("fpga_slot_id")]
 
     # Initialize FPGA
+    no_clear_fpga = pytestconfig.getoption("no_clear_fpga")
     drm_ctrl_base_addr = pytestconfig.getoption("drm_controller_base_address")
     print('FPGA SLOT ID:', fpga_slot_id)
-    print('FPGA IMAGE:', fpga_image)
+    print('FPGA IMAGE:', basename(fpga_image))
     print('HDK VERSION:', hdk_version)
     fpga_driver = list()
     for slot_id in fpga_slot_id:
@@ -430,7 +433,8 @@ def accelize_drm(pytestconfig):
             fpga_driver.append(
                 fpga_driver_cls( fpga_slot_id=slot_id,
                     fpga_image=fpga_image,
-                    drm_ctrl_base_addr=drm_ctrl_base_addr
+                    drm_ctrl_base_addr=drm_ctrl_base_addr,
+                    no_clear_fpga=no_clear_fpga
                 )
             )
         except:

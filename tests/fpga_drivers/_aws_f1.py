@@ -8,13 +8,25 @@ https://github.com/aws/aws-fpga/tree/master/sdk
 from ctypes import (
     cdll as _cdll, POINTER as _POINTER, byref as _byref, c_uint32 as _c_uint32,
     c_uint64 as _c_uint64, c_int as _c_int)
-from os.path import basename as _basename
 from subprocess import run as _run, PIPE as _PIPE, STDOUT as _STDOUT
+from os.path import basename as _basename
 from re import match as _match
 
 from tests.fpga_drivers import FpgaDriverBase as _FpgaDriverBase
 
-__all__ = ['FpgaDriver']
+__all__ = ['FpgaDriver', 'AwsLock']
+
+
+class AwsLock():
+    def __init__(self, *kargs):
+        self.locker = _Lock()
+
+    def __enter__(self):
+        self.locker.acquire()
+        return
+
+    def __exit__(self, *kargs):
+        self.locker.release()
 
 
 class FpgaDriver(_FpgaDriverBase):
@@ -47,6 +59,23 @@ class FpgaDriver(_FpgaDriverBase):
 
         return fpga_library
 
+    @staticmethod
+    def _get_lock(self):
+        """
+        Get a lock on the FPGA driver
+        """
+        return AwsLock
+
+    def _clear_fpga(self):
+        """
+        Clear FPGA
+        """
+        clear_fpga = _run(
+            ['fpga-clear-local-image', '-S', str(self._fpga_slot_id)],
+            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
+        if clear_fpga.returncode:
+            raise RuntimeError(clear_fpga.stdout)
+
     def _program_fpga(self, fpga_image):
         """
         Program the FPGA with the specified image.
@@ -60,7 +89,6 @@ class FpgaDriver(_FpgaDriverBase):
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if load_image.returncode:
             raise RuntimeError(load_image.stdout)
-        print('Programmed AWS F1 slot #%d with FPGA image %s' % (self._fpga_slot_id, fpga_image))
 
     def _reset_fpga(self):
         """
@@ -125,7 +153,7 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (accelize_drm.fpga_drivers._aws_f1.FpgaDriver):
                     Keep a reference to driver.
             """
-            with driver._fpga_read_register_lock:
+            with driver._fpga_read_register_lock(driver):
                 return driver._fpga_read_register(
                     driver._fpga_handle,
                     driver._drm_ctrl_base_addr + register_offset,
@@ -159,7 +187,7 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (accelize_drm.fpga_drivers._aws_f1.FpgaDriver):
                     Keep a reference to driver.
             """
-            with driver._fpga_write_register_lock:
+            with driver._fpga_write_register_lock(driver):
                 return driver._fpga_write_register(
                     driver._fpga_handle,
                     driver._drm_ctrl_base_addr + register_offset,
