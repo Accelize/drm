@@ -16,7 +16,7 @@ from ctypes import c_uint32 as _c_uint32, byref as _byref
 from importlib import import_module as _import_module
 from os import fsdecode as _fsdecode
 from os.path import realpath as _realpath
-
+from threading import Lock as _Lock
 
 __all__ = ['get_driver', 'FpgaDriverBase']
 
@@ -55,20 +55,18 @@ class FpgaDriverBase:
         self._drm_ctrl_base_addr = drm_ctrl_base_addr
         self._log_dir = _realpath(_fsdecode(log_dir))
 
-        # Device and library handles
-        self._fpga_handle = None
-        self._fpga_library = self._get_driver()
-
         # FPGA read/write low level functions ans associated locks
         self._fpga_read_register = None
         self._fpga_write_register = None
-        self._fpga_read_register_lock = self._get_locker()
-        self._fpga_write_register_lock = self._fpga_read_register_lock
-        #self._fpga_write_register_lock = self._get_locker()
+        self._fpga_read_register_lock = _Lock()
+        self._fpga_write_register_lock = _Lock()
 
-        # Clear FPGA
         if not no_clear_fpga:
-            self.clear_fpga()
+           self.clear_fpga()
+
+        # Device and library handles
+        self._fpga_handle = None
+        self._fpga_library = self._get_driver()
 
         # Initialize FPGA
         if fpga_image:
@@ -153,14 +151,9 @@ class FpgaDriverBase:
 
     def clear_fpga(self):
         """
-        Clear FPGA
-
-        Args:
-            fpga_slot_id (int): FPGA slot ID.
-
+        Clear FPGA including FPGA image.
         """
-        print('Clearing FPGA on slot #%d' % self._fpga_slot_id)
-        with self._augment_exception('program'):
+        with self._augment_exception('clear'):
             return self._clear_fpga()
 
     def program_fpga(self, fpga_image=None):
@@ -214,12 +207,9 @@ class FpgaDriverBase:
         """
 
     @_abstractmethod
-    def _get_locker(self):
+    def _clear_fpga(self):
         """
-        Get FPGA driver locker.
-
-        Returns:
-            object: FPGA driver locker.
+        Clear the FPGA.
         """
 
     @_abstractmethod

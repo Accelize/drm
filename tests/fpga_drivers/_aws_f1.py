@@ -10,25 +10,11 @@ from ctypes import (
     c_uint64 as _c_uint64, c_int as _c_int)
 from os.path import basename as _basename
 from subprocess import run as _run, PIPE as _PIPE, STDOUT as _STDOUT
-from threading import Lock as _Lock
 from re import match as _match
 
 from tests.fpga_drivers import FpgaDriverBase as _FpgaDriverBase
 
-__all__ = ['FpgaDriver', 'AwsLocker']
-
-
-class AwsLocker():
-    def __init__(self, *kargs):
-        self.locker = _Lock()
-
-    def __enter__(self):
-        self.locker.acquire()
-        return
-
-    def __exit__(self, *kargs):
-        self.locker.release()
-
+__all__ = ['FpgaDriver']
 
 
 class FpgaDriver(_FpgaDriverBase):
@@ -41,7 +27,7 @@ class FpgaDriver(_FpgaDriverBase):
         drm_ctrl_base_addr (int): DRM Controller base address.
         log_dir (path-like object): Unused with this driver.
     """
-    name = _match(r'_(.+)\.py', _basename(__file__)).group(1)
+    _name = _match(r'_(.+)\.py', _basename(__file__)).group(1)
 
     @staticmethod
     def _get_driver():
@@ -61,26 +47,6 @@ class FpgaDriver(_FpgaDriverBase):
 
         return fpga_library
 
-    def _get_locker(self):
-        """
-        Get a locker on the FPGA driver
-        """
-        return AwsLocker
-
-    def _clear_fpga(self):
-        """
-        Clear FPGA
-
-        Args:
-            fpga_slot_id (int): FPGA slot ID.
-
-        """
-        clear_fpga = _run(
-            ['fpga-clear-local-image', '-S', str(self._fpga_slot_id)],
-            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
-        if clear_fpga.returncode:
-            raise RuntimeError(clear_fpga.stdout)
-
     def _program_fpga(self, fpga_image):
         """
         Program the FPGA with the specified image.
@@ -94,6 +60,7 @@ class FpgaDriver(_FpgaDriverBase):
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if load_image.returncode:
             raise RuntimeError(load_image.stdout)
+        print('Programmed AWS F1 slot #%d with FPGA image %s' % (self._fpga_slot_id, fpga_image))
 
     def _reset_fpga(self):
         """
@@ -158,7 +125,7 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (accelize_drm.fpga_drivers._aws_f1.FpgaDriver):
                     Keep a reference to driver.
             """
-            with driver._fpga_read_register_lock(driver):
+            with driver._fpga_read_register_lock:
                 return driver._fpga_read_register(
                     driver._fpga_handle,
                     driver._drm_ctrl_base_addr + register_offset,
@@ -192,7 +159,7 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (accelize_drm.fpga_drivers._aws_f1.FpgaDriver):
                     Keep a reference to driver.
             """
-            with driver._fpga_write_register_lock(driver):
+            with driver._fpga_write_register_lock:
                 return driver._fpga_write_register(
                     driver._fpga_handle,
                     driver._drm_ctrl_base_addr + register_offset,

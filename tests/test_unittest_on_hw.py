@@ -83,14 +83,14 @@ def test_backward_compatibility(accelize_drm, conf_json, cred_json, async_handle
     """Test API is not compatible with DRM HDK < 3.0"""
     refdesign = accelize_drm.pytest_ref_designs
     hdk_version = accelize_drm.pytest_hdk_version
+    if hdk_version is None:
+        pytest.skip("FPGA image is not corresponding to a known HDK version")
+
     current_major = int(match(r'^(\d+)\.', hdk_version).group(1))
     driver = accelize_drm.pytest_fpga_driver[0]
     fpga_image_bkp = driver.fpga_image
     async_cb = async_handler.create()
     drm_manager = None
-
-    if hdk_version is None:
-        pytest.skip("FPGA image is not corresponding to a known HDK version")
 
     try:
         refdesignByMajor = ((int(match(r'^(\d+)\.', x).group(1)), x) for x in refdesign.hdk_versions)
@@ -758,7 +758,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
 def test_c_unittests(accelize_drm, exec_func):
     """Test errors when missing arguments are given to DRM Controller Constructor"""
     driver = accelize_drm.pytest_fpga_driver[0]
-    if driver.name != 'aws':
+    if driver._name != 'aws':
         pytest.skip("C unit-tests are only supported with AWS driver.")
 
     exec_lib = exec_func.load('unittests', driver._fpga_slot_id)

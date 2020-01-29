@@ -131,6 +131,7 @@ def test_metered_start_stop_long_time(accelize_drm, conf_json, cred_json, async_
             sleep(wait_period)
             start += timedelta(seconds=license_duration)
             new_coins = randint(1,10)
+            activators.autotest(is_activated=True)
             activators[0].generate_coin(new_coins)
             activators[0].check_coin(drm_manager.get('metered_data'))
         drm_manager.deactivate()

@@ -52,7 +52,7 @@ class FpgaDriver(_FpgaDriverBase):
         drm_ctrl_base_addr (int): DRM Controller base address.
         log_dir (path-like object): directory where XRT will output log file.
     """
-    name = _match(r'_(.+)\.py', _basename(__file__)).group(1)
+    _name = _match(r'_(.+)\.py', _basename(__file__)).group(1)
 
     def _get_driver(self):
         """
@@ -63,7 +63,7 @@ class FpgaDriver(_FpgaDriverBase):
         """
         if _isfile(_join(self._xrt_prefix, "lib/libxrt_aws.so")):
             return _cdll.LoadLibrary(_join(self._xrt_prefix, "lib/libxrt_aws.so"))
-        if _isfile(_join(self._xrt_prefix, "lib/libxrt_aws.so")):
+        if _isfile(_join(self._xrt_prefix, "lib/libxrt_core.so")):
             return _cdll.LoadLibrary(_join(self._xrt_prefix, "lib/libxrt_core.so"))
         raise RuntimeError('Unable to find Xilinx XRT Library')
 
@@ -85,7 +85,6 @@ class FpgaDriver(_FpgaDriverBase):
                        '/usr', '/usr/local'):
             if _isfile(_join(prefix, 'bin/xbutil')):
                 return prefix
-
         raise RuntimeError('Unable to find Xilinx XRT')
 
     @property
@@ -101,11 +100,23 @@ class FpgaDriver(_FpgaDriverBase):
         """
         Clear FPGA
         """
+        #if self._fpga_library is not None:
+        #    # Close device
+        #    xcl_close = self._fpga_library.xclClose
+        #    xcl_close.restype = None
+        #    xcl_close.argtype = _c_void_p
+        #    xcl_close()
+
+        lsmod = _run('lsmod | grep xocl', shell=True,
+            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
+        print('lsmod.stdout=', lsmod.stdout)
+
         clear_fpga = _run(
             ['fpga-clear-local-image', '-S', str(self._fpga_slot_id)],
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if clear_fpga.returncode:
             raise RuntimeError(clear_fpga.stdout)
+
 
     def _program_fpga(self, fpga_image):
         """
@@ -114,6 +125,8 @@ class FpgaDriver(_FpgaDriverBase):
         Args:
             fpga_image (str): FPGA image.
         """
+        #self._clear_fpga()
+
         fpga_image = _realpath(_fsdecode(fpga_image))
         load_image = _run(
             [self._xbutil, 'program',
@@ -137,6 +150,7 @@ class FpgaDriver(_FpgaDriverBase):
         """
         Initialize FPGA handle with driver library.
         """
+        print('self._fpga_library=', self._fpga_library)
         # Find all devices
         xcl_probe = self._fpga_library.xclProbe
         xcl_probe.restype = _c_uint  # Devices count
@@ -153,12 +167,21 @@ class FpgaDriver(_FpgaDriverBase):
             _c_int,  # level
         )
 
+        lsmod = _run('lsmod | grep xocl', shell=True,
+            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
+        print('lsmod.stdout=', lsmod.stdout)
+
         log_file = _join(self._log_dir, 'slot_%d_xrt.log' % self._fpga_slot_id)
         device_handle = xcl_open(
             self._fpga_slot_id,
             log_file.encode(),
             3  # XCL_ERROR
         )
+
+        lsmod = _run('lsmod | grep xocl', shell=True,
+            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
+        print('lsmod.stdout=', lsmod.stdout)
+
 
         if not device_handle:
             raise RuntimeError("xclOpen failed to open device")

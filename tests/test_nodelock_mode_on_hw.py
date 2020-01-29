@@ -54,15 +54,15 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         accelize_drm.clean_nodelock_env(drm_manager, driver, conf_json, cred_json, ws_admin)
 
 
+@pytest.mark.minimum
 def test_nodelock_license_is_not_given_to_inactive_user(accelize_drm, conf_json, cred_json,
                                                         async_handler, ws_admin):
-    """Test an user who has not bought a valid nodelocked license cannot get a license"""
+    """Test a user who has not bought a valid nodelocked license cannot get a license"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-
-    conf_json.addNodelock()
     cred_json.set_user('accelize_accelerator_test_01')
+    conf_json.addNodelock()
 
     try:
         # Start application
@@ -98,6 +98,7 @@ def test_nodelock_normal_case(accelize_drm, conf_json, cred_json, async_handler,
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
     activators.reset_coin()
+    activators[0].autotest()
 
     cred_json.set_user('accelize_accelerator_test_03')
     conf_json.addNodelock()
@@ -115,10 +116,13 @@ def test_nodelock_normal_case(accelize_drm, conf_json, cred_json, async_handler,
         assert drm_manager.get('license_type') == 'Node-Locked'
         # Start application
         assert not drm_manager.get('license_status')
+        activators[0].autotest()
         drm_manager.activate()
+        activators[0].autotest()
         assert not drm_manager.get('license_status')
         assert drm_manager.get('drm_license_type') == 'Node-Locked'
         assert drm_manager.get('license_duration') == 0
+        activators[0].check_coin(drm_manager.get('metered_data'))
         activators[0].generate_coin(10)
         activators[0].check_coin(drm_manager.get('metered_data'))
         drm_manager.deactivate()
@@ -140,6 +144,7 @@ def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, asy
 
     cred_json.set_user('accelize_accelerator_test_03')
     conf_json.addNodelock()
+    activators[0].autotest()
 
     try:
         # Load a user who has a valid nodelock license
@@ -154,6 +159,7 @@ def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, asy
         assert drm_manager.get('license_type') == 'Node-Locked'
         # Start application
         assert not drm_manager.get('license_status')
+        activators[0].check_coin(drm_manager.get('metered_data'))
         drm_manager.activate()
         assert not drm_manager.get('license_status')
         assert drm_manager.get('drm_license_type') == 'Node-Locked'

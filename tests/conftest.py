@@ -87,28 +87,6 @@ def clean_metering_env(cred_json=None, ws_admin=None, product_name=None):
             name=product_name, user=cred_json.user)
 
 
-def param2dict(param_list):
-    if param_list is None:
-        return None
-    d = dict()
-    for e in param_list.split(','):
-        k,v = e.split('=')
-        try:
-            d[k] = int(v)
-        except ValueError:
-            pass
-        else:
-            continue
-        try:
-            d[k] = float(v)
-        except ValueError:
-            pass
-        else:
-            continue
-        d[k] = str(v)
-    return d
-
-
 # Pytest configuration
 def pytest_addoption(parser):
     """
@@ -139,8 +117,6 @@ def pytest_addoption(parser):
         "--library_format", action="store", type=int, choices=[0,1], default=0,
         help='Specify "libaccelize_drm" logging format: 0=short, 1=long')
     parser.addoption(
-        "--no_clear_fpga", action="store_true", help='PRevent from clearing FPGA at start-up')
-    parser.addoption(
         "--logfile", action="store_true", help='Save log to file')
     parser.addoption(
         "--fpga_image", default="default",
@@ -162,9 +138,6 @@ def pytest_addoption(parser):
         "--activator_base_address", action="store", default=0x10000, type=int,
         help=('Specify the base address of the 1st activator. '
             'The other activators shall be separated by an address gap of 0x10000'))
-    parser.addoption(
-        "--params", action="store", default=None,
-        help='Specify a list of parameter=value pairs separated by a coma used for one or multiple tests: "--params key1=value1,key2=value2,..."')
 
 
 def pytest_runtest_setup(item):
@@ -214,24 +187,16 @@ class SingleActivator:
         else:
             if activated:
                 # If unlocked writing the mailbox should succeed
-                for addr in range(4, 16, 4):
-                    val = randint(1, 0xFFFFFFFF)
-                    self.driver.write_register(self.base_address + addr, val)
-                    assert self.driver.read_register(self.base_address + addr) == val
+                val = self.driver.read_register(self.base_address + MAILBOX_REG_OFFSET)
+                not_val = bit_not(val)
+                self.driver.write_register(self.base_address + MAILBOX_REG_OFFSET, not_val)
+                assert self.driver.read_register(self.base_address + MAILBOX_REG_OFFSET) == not_val
             else:
                 # If locked writing the mailbox should fail
                 val = self.driver.read_register(self.base_address + MAILBOX_REG_OFFSET)
                 not_val = bit_not(val)
                 self.driver.write_register(self.base_address + MAILBOX_REG_OFFSET, not_val)
                 assert self.driver.read_register(self.base_address + MAILBOX_REG_OFFSET) == val
-                '''
-                for addr in range(4, 16, 4):
-                    val = self.driver.read_register(self.base_address + addr)
-                    print("read %08X= %08X" % (self.base_address + addr, val))
-                    not_val = bit_not(val)
-                    self.driver.write_register(self.base_address + addr, not_val)
-                    assert self.driver.read_register(self.base_address + addr) == val
-                '''
             # Test reading of the generate event register
             assert self.driver.read_register(self.base_address + INC_EVENT_REG_OFFSET) == 0x600DC0DE
             # Test address overflow
@@ -409,7 +374,7 @@ def accelize_drm(pytestconfig):
     import accelize_drm as _accelize_drm
 
     # Get FPGA driver
-    from tests.fpga_drivers import get_driver
+    from accelize_drm.fpga_drivers import get_driver
     fpga_driver_name = pytestconfig.getoption("fpga_driver")
     fpga_driver_cls = get_driver(fpga_driver_name)
 
@@ -455,10 +420,9 @@ def accelize_drm(pytestconfig):
         fpga_slot_id = [pytestconfig.getoption("fpga_slot_id")]
 
     # Initialize FPGA
-    no_clear_fpga = pytestconfig.getoption("no_clear_fpga")
     drm_ctrl_base_addr = pytestconfig.getoption("drm_controller_base_address")
     print('FPGA SLOT ID:', fpga_slot_id)
-    print('FPGA IMAGE:', basename(fpga_image))
+    print('FPGA IMAGE:', fpga_image)
     print('HDK VERSION:', hdk_version)
     fpga_driver = list()
     for slot_id in fpga_slot_id:
@@ -466,8 +430,7 @@ def accelize_drm(pytestconfig):
             fpga_driver.append(
                 fpga_driver_cls( fpga_slot_id=slot_id,
                     fpga_image=fpga_image,
-                    drm_ctrl_base_addr=drm_ctrl_base_addr,
-                    no_clear_fpga=no_clear_fpga
+                    drm_ctrl_base_addr=drm_ctrl_base_addr
                 )
             )
         except:
@@ -507,7 +470,6 @@ def accelize_drm(pytestconfig):
         *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
     _accelize_drm.clean_metering_env = lambda *kargs, **kwargs: clean_metering_env(
         *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
-    _accelize_drm.pytest_params = param2dict(pytestconfig.getoption("params"))
 
     return _accelize_drm
 
@@ -813,11 +775,7 @@ class AsyncErrorHandlerList(list):
     @staticmethod
     def get_error_code(msg):
         from re import search
-        print('msg=', msg)
         m = search(r'\[errCode=(\d+)\]', msg)
-        if m:
-            return int(m.group(1))
-        return None
         assert m, "Could not find 'errCode' in exception message: %s" % msg
         return int(m.group(1))
 
