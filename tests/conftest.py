@@ -880,3 +880,5 @@ def exec_func(accelize_drm, cred_json, conf_json):
     is_cpp = accelize_drm.pytest_backend == 'c++'
     is_release_build = 'release' in accelize_drm.pytest_build_type
     return ExecFunctionFactory(conf_json.path, cred_json.path, is_cpp, is_release_build)
+
+
