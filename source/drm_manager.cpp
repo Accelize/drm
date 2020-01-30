@@ -1632,6 +1632,7 @@ public:
           AsynchErrorCallback f_user_asynch_error )
         : Impl( conf_file_path, cred_file_path )
     {
+        Debug( "Entering Impl public constructor" );
         if ( !f_user_read_register )
             Throw( DRM_BadArg, "Read register callback function must not be NULL" );
         if ( !f_user_write_register )
@@ -1642,18 +1643,20 @@ public:
         f_write_register = f_user_write_register;
         f_asynch_error = f_user_asynch_error;
         initDrmInterface();
+        Debug( "Exiting Impl public constructor" );
     }
 
     ~Impl() {
-        if ( mSecurityStop ) {
-            if ( isSessionRunning() ) {
-                Debug( "Security stop triggered: stopping current session" );
-                stopSession();
-            }
+        Debug( "Entering Impl destructor" );
+        if ( mSecurityStop && isSessionRunning() ) {
+            Debug( "Security stop triggered: stopping current session" );
+            stopSession();
+        } else {
+            stopThread();
         }
-        stopThread();
         unlockDrmToInstance();
         uninitLog();
+        Debug( "Exiting Impl destructor" );
     }
 
     // Non copyable non movable as we create closure with "this"

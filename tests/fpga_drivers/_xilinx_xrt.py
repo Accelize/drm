@@ -16,7 +16,7 @@ from threading import Lock as _Lock
 
 from tests.fpga_drivers import FpgaDriverBase as _FpgaDriverBase
 
-__all__ = ['FpgaDriver', 'XrtLock']
+__all__ = ['FpgaDriver']
 
 
 class XrtLock():
@@ -71,12 +71,13 @@ class FpgaDriver(_FpgaDriverBase):
             return _cdll.LoadLibrary(_join(self._xrt_prefix, "lib/libxrt_core.so"))
         raise RuntimeError('Unable to find Xilinx XRT Library')
 
-    @staticmethod
-    def _get_lock():
+    def _get_lock(self):
         """
         Get a lock on the FPGA driver
         """
-        return XrtLock
+        def create_lock():
+            return XrtLock(self)
+        return create_lock
 
     @property
     def _xrt_prefix(self):
@@ -194,7 +195,7 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (accelize_drm.fpga_drivers._xilinx_xrt.FpgaDriver):
                     Keep a reference to driver.
             """
-            with driver._fpga_read_register_lock(driver):
+            with driver._fpga_read_register_lock():
                 size_or_error = driver._fpga_read_register(
                     driver._fpga_handle,
                     2,  # XCL_ADDR_KERNEL_CTRL
@@ -236,7 +237,7 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (accelize_drm.fpga_drivers._xilinx_xrt.FpgaDriver):
                     Keep a reference to driver.
             """
-            with driver._fpga_write_register_lock(driver):
+            with driver._fpga_write_register_lock():
                 size_or_error = driver._fpga_write_register(
                     driver._fpga_handle,
                     2,  # XCL_ADDR_KERNEL_CTRL

@@ -159,7 +159,6 @@ def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, asy
         assert drm_manager.get('license_type') == 'Node-Locked'
         # Start application
         assert not drm_manager.get('license_status')
-        activators[0].check_coin(drm_manager.get('metered_data'))
         drm_manager.activate()
         assert not drm_manager.get('license_status')
         assert drm_manager.get('drm_license_type') == 'Node-Locked'

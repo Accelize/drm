@@ -11,6 +11,7 @@ from re import match, search, finditer, MULTILINE
 from time import sleep, time
 from json import loads
 from datetime import datetime, timedelta
+from time import time
 
 
 LOG_FORMAT_SHORT = "[%^%=8l%$] %-6t, %v"
@@ -457,7 +458,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     # Test parameter: log_file_path
     async_cb.reset()
     conf_json.reset()
-    exp_value = realpath("./drmlib.%d.log" % getpid())
+    exp_value = realpath("./drmlib.%d.%s.log" % (getpid(), time()))
     conf_json['settings']['log_file_path'] = exp_value
     conf_json.save()
     drm_manager = accelize_drm.DrmManager(
@@ -1150,12 +1151,11 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     async_cb.assert_NoError()
     print("Test parameter 'ParameterKeyCount': PASS")
 
-        # Test parameter: log_message
-    from time import time
+    # Test parameter: log_message
     from os.path import isfile
     async_cb.reset()
     conf_json.reset()
-    logpath = realpath("./drmlib.%d.log" % getpid())
+    logpath = realpath("./drmlib.%d.%s.log" % (getpid(), time()))
     verbosity = 5
     conf_json['settings']['log_file_verbosity'] = verbosity
     conf_json['settings']['log_file_type'] = 1
@@ -1592,7 +1592,6 @@ def test_configuration_file_empty_and_corrupted_product_id(accelize_drm, conf_js
     try:
         # Test Web Service when an empty product ID is provided
         empty_fpga_image = refdesign.get_image_id('empty_product_id')
-        print('empty_fpga_image=', empty_fpga_image)
         if empty_fpga_image is None:
             pytest.skip("No FPGA image found for 'empty_product_id'")
         driver.program_fpga(empty_fpga_image)
@@ -1630,7 +1629,7 @@ def test_configuration_file_empty_and_corrupted_product_id(accelize_drm, conf_js
                 async_cb.callback
             )
         assert 'Failed to parse Read-Only Mailbox in DRM Controller:' in str(excinfo.value)
-        assert 'Cannot parse JSON string because ' in str(excinfo.value)
+        assert search(r'Cannot parse JSON string .* because ', str(excinfo.value))
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadFormat.error_code
         async_cb.assert_NoError()
         print('Test Web Service when a misformatted product ID is provided: PASS')
@@ -2459,19 +2458,18 @@ def test_directory_creation(accelize_drm, conf_json, cred_json, async_handler):
     async_cb = async_handler.create()
 
     log_type = 1
-    log_dir = realpath(expanduser('~/tmp_log_dir'))
+    log_dir = realpath(expanduser('~/tmp_log_dir.%s' % str(time())))
     if not isdir(log_dir):
         makedirs(log_dir)
 
     try:
-
         # Test error when creating directory
 
         # Create immutable folder
         check_call('sudo chattr +i %s' % log_dir, shell=True)
+        assert not access(log_dir, W_OK)
         try:
-            assert not access(log_dir, W_OK)
-            log_path = join(log_dir, "tmp", "drmservice-%d.log" % getpid())
+            log_path = join(log_dir, "tmp", "drmlib.%d.%s.log" % (getpid(), str(time())))
             assert not isdir(dirname(log_path))
             async_cb.reset()
             conf_json.reset()
@@ -2498,7 +2496,7 @@ def test_directory_creation(accelize_drm, conf_json, cred_json, async_handler):
 
         assert isdir(log_dir)
         assert access(log_dir, W_OK)
-        log_path = join(log_dir, "drmservice-%d.log" % getpid())
+        log_path = join(log_dir, "drmlib.%d.%s.log" % (getpid(), time()))
         assert not isfile(log_path)
         async_cb.reset()
         conf_json.reset()
@@ -2527,7 +2525,7 @@ def test_directory_creation(accelize_drm, conf_json, cred_json, async_handler):
         assert access(log_dir, W_OK)
         intermediate_dir = join(log_dir, 'tmp')
         assert not isdir(intermediate_dir)
-        log_path = join(intermediate_dir, "drmservice-%d.log" % getpid())
+        log_path = join(intermediate_dir, "drmlib.%d.%s.log" % (getpid(), time()))
         async_cb.reset()
         conf_json.reset()
         conf_json['settings']['log_file_path'] = log_path
@@ -2592,7 +2590,7 @@ def test_drm_manager_frequency_detection_method1(accelize_drm, conf_json, cred_j
     async_cb = async_handler.create()
 
     conf_json.reset()
-    logpath = realpath("./drmlib.%d.log" % getpid())
+    logpath = realpath("./drmlib.%d.%s.log" % (getpid(), time()))
     conf_json['settings']['log_file_verbosity'] = 1
     conf_json['settings']['log_file_type'] = 1
     conf_json['settings']['log_file_path'] = logpath
@@ -2631,7 +2629,7 @@ def test_drm_manager_frequency_detection_method1_exception(accelize_drm, conf_js
         async_cb.callback
     )
     conf_json.reset()
-    logpath = realpath("./drmlib.%d.log" % getpid())
+    logpath = realpath("./drmlib.%d.%s.log" % (getpid(), time()))
     conf_json['settings']['frequency_detection_period'] = (int)(2**32 / 125000000 * 1000) + 2
     conf_json.save()
     with pytest.raises(accelize_drm.exceptions.DRMBadFrequency) as excinfo:
@@ -2664,7 +2662,7 @@ def test_drm_manager_frequency_detection_method2(accelize_drm, conf_json, cred_j
     try:
         driver.program_fpga(image_id)
         conf_json.reset()
-        logpath = realpath("./drmlib.%d.log" % getpid())
+        logpath = realpath("./drmlib.%d.%s.log" % (getpid(), time()))
         conf_json['settings']['log_file_verbosity'] = 1
         conf_json['settings']['log_file_type'] = 1
         conf_json['settings']['log_file_path'] = logpath

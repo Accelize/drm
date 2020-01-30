@@ -4,9 +4,10 @@ from os import environ, listdir, remove, getpid
 from os.path import realpath, isfile, isdir, expanduser, splitext, join, dirname, basename
 from json import dump, load
 from copy import deepcopy
-from re import match, search
+from re import match, search, IGNORECASE
 from ctypes import c_uint32, byref
 from random import randint
+from flask import Flask, Response
 
 import pytest
 
@@ -96,7 +97,7 @@ def pytest_addoption(parser):
         "--backend", action="store", default="c++",
         help='Use specified Accelize DRM library API as backend: "c" or "c++"')
     parser.addoption(
-        "--fpga_driver", action="store", default="aws_f1",
+        "--fpga_driver", action="store", default=None,
         help='Specify FPGA driver to use with DRM library')
     parser.addoption(
         "--fpga_slot_id", action="store", default=0, type=int,
@@ -126,7 +127,7 @@ def pytest_addoption(parser):
              'By default, use default FPGA image for the selected driver and '
              'last HDK version.')
     parser.addoption(
-        "--hdk_version",
+        "--hdk_version", default=None,
         help='Select FPGA image base on Accelize DRM HDK version. By default, '
              'use default FPGA image for the selected driver and last HDK '
              'version.')
@@ -335,7 +336,6 @@ class RefDesign:
 
 
 # Pytest Fixtures
-
 @pytest.fixture(scope='session')
 def accelize_drm(pytestconfig):
     """
@@ -373,28 +373,37 @@ def accelize_drm(pytestconfig):
     elif backend != 'c++':
         raise ValueError('Invalid value for "--backend"')
 
-    import accelize_drm as _accelize_drm
-
-    # Get FPGA driver
-    from tests.fpga_drivers import get_driver
-    fpga_driver_name = pytestconfig.getoption("fpga_driver")
-    fpga_driver_cls = get_driver(fpga_driver_name)
-
     # Get FPGA image
     fpga_image = pytestconfig.getoption("fpga_image")
     hdk_version = pytestconfig.getoption("hdk_version")
+    if hdk_version and fpga_image.lower() != 'default':
+        raise ValueError(
+            'Mutually exclusive options: Please set "hdk_version" or "fpga_image", but not both')
 
+    # Get FPGA driver
+    fpga_driver_name = pytestconfig.getoption("fpga_driver")
+    if fpga_driver_name and fpga_image.lower() != 'default':
+        raise ValueError(
+            'Mutually exclusive options: Please set "fpga_driver" or "fpga_image", but not both')
+    if fpga_image.lower() != 'default':
+        if fpga_image.endswith('.awsxclbin'):
+            fpga_driver_name = 'xilinx_xrt'
+        elif search(r'agfi-[0-9a-f]+', fpga_image, IGNORECASE):
+            fpga_driver_name = 'aws_f1'
+        else:
+            raise ValueError("Unsupported 'fpga_image' option")
+    elif fpga_driver_name is None:
+        fpga_driver_name = 'aws_f1'
+
+    # Get cmake building directory
     build_source_dir = '@CMAKE_CURRENT_SOURCE_DIR@'
     if build_source_dir.startswith('@'):
         build_source_dir = realpath('.')
 
+    # Get Ref Designs available
     ref_designs = RefDesign(join(build_source_dir, 'tests', 'refdesigns', fpga_driver_name))
 
-    if hdk_version and fpga_image.lower() != 'default':
-        raise ValueError(
-            'Please set "hdk_version" or "fpga_image" but not both')
-
-    elif fpga_image.lower() == 'default' or hdk_version:
+    if fpga_image.lower() == 'default' or hdk_version:
         # Use specified HDK version
         if hdk_version:
             hdk_version = hdk_version.strip('v')
@@ -406,7 +415,6 @@ def accelize_drm(pytestconfig):
         # Get last HDK version as default
         else:
             hdk_version = ref_designs.hdk_versions[-1]
-
         # Get FPGA image from HDK version
         fpga_image = ref_designs.get_image_id(hdk_version)
 
@@ -420,6 +428,10 @@ def accelize_drm(pytestconfig):
     else:
         # Use user defined slot
         fpga_slot_id = [pytestconfig.getoption("fpga_slot_id")]
+
+    # Get FPGA driver
+    from tests.fpga_drivers import get_driver
+    fpga_driver_cls = get_driver(fpga_driver_name)
 
     # Initialize FPGA
     no_clear_fpga = pytestconfig.getoption("no_clear_fpga")
@@ -457,6 +469,7 @@ def accelize_drm(pytestconfig):
         print('Found %d activator(s) on slot #%d' % (len(base_addr_list), driver._fpga_slot_id))
 
     # Store some values for access in tests
+    import accelize_drm as _accelize_drm
     _accelize_drm.pytest_new_freq_method_supported = fpga_driver[0].read_register(drm_ctrl_base_addr + 0xFFF8) == 0x60DC0DE0
     _accelize_drm.pytest_server = pytestconfig.getoption("server")
     _accelize_drm.pytest_build_environment = build_environment
@@ -882,3 +895,35 @@ def exec_func(accelize_drm, cred_json, conf_json):
     return ExecFunctionFactory(conf_json.path, cred_json.path, is_cpp, is_release_build)
 
 
+#--------------------------
+# Man-in-the-middle server
+#--------------------------
+
+class EndpointAction(object):
+
+    def __init__(self, action):
+        self.action = action
+
+    def __call__(self, *args):
+        status, answer = self.action()
+        return Response(answer, status=status, headers={})
+
+
+class FlaskAppWrapper(object):
+    app = None
+
+    def __init__(self, name=__name__):
+        self.app = Flask(name)
+
+    def run(self):
+        self.app.run()
+
+    def add_endpoint(self, rule, handler=None):
+        self.app.add_url_rule(rule, view_func=EndpointAction(handler))
+    #def add_endpoint(self, endpoint=None, endpoint_name=None, handler=None):
+    #    self.app.add_url_rule(endpoint, endpoint_name, EndpointAction(handler))
+
+
+@pytest.fixture
+def fake_server(accelize_drm, cred_json, conf_json):
+    return FlaskAppWrapper()

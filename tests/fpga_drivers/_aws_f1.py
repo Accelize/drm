@@ -15,19 +15,7 @@ from threading import Lock as _Lock
 
 from tests.fpga_drivers import FpgaDriverBase as _FpgaDriverBase
 
-__all__ = ['FpgaDriver', 'AwsLock']
-
-
-class AwsLock():
-    def __init__(self, *kargs):
-        self.locker = _Lock()
-
-    def __enter__(self):
-        self.locker.acquire()
-        return
-
-    def __exit__(self, *kargs):
-        self.locker.release()
+__all__ = ['FpgaDriver']
 
 
 class FpgaDriver(_FpgaDriverBase):
@@ -65,7 +53,7 @@ class FpgaDriver(_FpgaDriverBase):
         """
         Get a lock on the FPGA driver
         """
-        return AwsLock
+        return _Lock
 
     def _clear_fpga(self):
         """
@@ -154,7 +142,7 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (accelize_drm.fpga_drivers._aws_f1.FpgaDriver):
                     Keep a reference to driver.
             """
-            with driver._fpga_read_register_lock(driver):
+            with driver._fpga_read_register_lock():
                 return driver._fpga_read_register(
                     driver._fpga_handle,
                     driver._drm_ctrl_base_addr + register_offset,
@@ -188,7 +176,7 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (accelize_drm.fpga_drivers._aws_f1.FpgaDriver):
                     Keep a reference to driver.
             """
-            with driver._fpga_write_register_lock(driver):
+            with driver._fpga_write_register_lock():
                 return driver._fpga_write_register(
                     driver._fpga_handle,
                     driver._drm_ctrl_base_addr + register_offset,

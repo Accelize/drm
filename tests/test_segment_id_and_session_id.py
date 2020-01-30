@@ -8,16 +8,23 @@ from datetime import datetime, timedelta
 from re import search
 import pytest
 
-import tests.fake_server as fksrv
-
 from multiprocessing import Process
 
 
-
-def test_session_id(accelize_drm, conf_json, cred_json, async_handler):
+@pytest.mark.skip(reason='Under development')
+def test_session_id(accelize_drm, conf_json, cred_json, async_handler, fake_server):
     """
     Test an error is return if a wrong session id is provided
     """
+
+    def action():
+        print('ACTION!!!!!!!!!!!!')
+        return 200, 'GOT SERVER'
+
+    srv = fake_server()
+    srv.add_endpoint('/', handler=action)
+    srv.run()
+
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
