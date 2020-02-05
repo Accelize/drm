@@ -8,6 +8,8 @@ from re import match, search, IGNORECASE
 from ctypes import c_uint32, byref
 from random import randint
 from flask import Flask, Response
+import requests
+from time import sleep
 
 import pytest
 
@@ -88,6 +90,28 @@ def clean_metering_env(cred_json=None, ws_admin=None, product_name=None):
             name=product_name, user=cred_json.user)
 
 
+def param2dict(param_list):
+    if param_list is None:
+        return None
+    d = dict()
+    for e in param_list.split(','):
+        k,v = e.split('=')
+        try:
+            d[k] = int(v)
+        except ValueError:
+            pass
+        else:
+            continue
+        try:
+            d[k] = float(v)
+        except ValueError:
+            pass
+        else:
+            continue
+        d[k] = str(v)
+    return d
+
+
 # Pytest configuration
 def pytest_addoption(parser):
     """
@@ -122,6 +146,9 @@ def pytest_addoption(parser):
     parser.addoption(
         "--logfile", action="store_true", help='Save log to file')
     parser.addoption(
+        "--proxy_debug", action="store_true", default=False,
+        help='Activate debug for proxy')
+    parser.addoption(
         "--fpga_image", default="default",
         help='Select FPGA image to program the FPGA with. '
              'By default, use default FPGA image for the selected driver and '
@@ -141,6 +168,9 @@ def pytest_addoption(parser):
         "--activator_base_address", action="store", default=0x10000, type=int,
         help=('Specify the base address of the 1st activator. '
             'The other activators shall be separated by an address gap of 0x10000'))
+    parser.addoption(
+        "--params", action="store", default=None,
+        help='Specify a list of parameter=value pairs separated by a coma used for one or multiple tests: "--params key1=value1,key2=value2,..."')
 
 
 def pytest_runtest_setup(item):
@@ -471,6 +501,7 @@ def accelize_drm(pytestconfig):
     # Store some values for access in tests
     import accelize_drm as _accelize_drm
     _accelize_drm.pytest_new_freq_method_supported = fpga_driver[0].read_register(drm_ctrl_base_addr + 0xFFF8) == 0x60DC0DE0
+    _accelize_drm.pytest_proxy_debug = pytestconfig.getoption("proxy_debug")
     _accelize_drm.pytest_server = pytestconfig.getoption("server")
     _accelize_drm.pytest_build_environment = build_environment
     _accelize_drm.pytest_build_source_dir = build_source_dir
@@ -487,6 +518,7 @@ def accelize_drm(pytestconfig):
         *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
     _accelize_drm.clean_metering_env = lambda *kargs, **kwargs: clean_metering_env(
         *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
+    _accelize_drm.pytest_params = param2dict(pytestconfig.getoption("params"))
 
     return _accelize_drm
 
@@ -895,35 +927,38 @@ def exec_func(accelize_drm, cred_json, conf_json):
     return ExecFunctionFactory(conf_json.path, cred_json.path, is_cpp, is_release_build)
 
 
-#--------------------------
-# Man-in-the-middle server
-#--------------------------
+#--------------
+# Proxy fixture
+#--------------
 
-class EndpointAction(object):
+class EndpointAction:
 
     def __init__(self, action):
         self.action = action
 
-    def __call__(self, *args):
-        status, answer = self.action()
-        return Response(answer, status=status, headers={})
+    def __call__(self, *kargs, **kwargs):
+        return self.action(*kargs, **kwargs)
+        print('type(resp)=',type(resp))
+        if isinstance(resp,Response):
+            return resp
+        return Response(msg, status=status, headers={})
 
 
-class FlaskAppWrapper(object):
-    app = None
-
+class FlaskAppWrapper:
     def __init__(self, name=__name__):
         self.app = Flask(name)
+        environ['WERKZEUG_RUN_MAIN'] = 'true'
+        environ['FLASK_ENV'] = 'development'
 
-    def run(self):
-        self.app.run()
+    def run(self, host='127.0.0.1', port=5000, debug=False):
+        self.host = host
+        self.port = port
+        self.app.run(host=self.host, port=self.port, debug=debug)
 
-    def add_endpoint(self, rule, handler=None):
-        self.app.add_url_rule(rule, view_func=EndpointAction(handler))
-    #def add_endpoint(self, endpoint=None, endpoint_name=None, handler=None):
-    #    self.app.add_url_rule(endpoint, endpoint_name, EndpointAction(handler))
+    def add_endpoint(self, rule=None, endpoint=None, handler=None, **kwargs):
+        self.app.add_url_rule(rule, endpoint, EndpointAction(handler), **kwargs)
 
 
 @pytest.fixture
-def fake_server(accelize_drm, cred_json, conf_json):
+def fake_server():
     return FlaskAppWrapper()

@@ -618,7 +618,7 @@ protected:
             Debug( "DRM Communication Self-Test 2 failed: writing zeros!\n" + badData );
             Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Could not access DRM Controller registers.\n" + DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
         }
-        Debug( "DRM Communication Self-Test 2 failed: all 0 test passed" );
+        Debug( "DRM Communication Self-Test 2: all 0 test passed" );
 
         // Write 1 to User Mailbox
         for( uint32_t i = 0; i < mbSize; i++ )
@@ -635,10 +635,10 @@ protected:
             Debug( "DRM Communication Self-Test 2 failed: writing ones!\n" + badData );
             Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Could not access DRM Controller registers.\n" + DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
         }
-        Debug( "DRM Communication Self-Test 2 failed: all 1 test passed" );
+        Debug( "DRM Communication Self-Test 2: all 1 test passed" );
 
         // Then, write random values to User Mailbox
-        srand (time(NULL)); // initialize random seed:
+        srand( time(NULL) ); // initialize random seed:
         for( uint32_t i = 0; i < mbSize; i++ )
             wrData[i] = rand();
         writeMailbox( eMailboxOffset::MB_USER, wrData );
@@ -653,7 +653,7 @@ protected:
             Debug( "DRM Communication Self-Test 2 failed: writing randoms!\n" + badData );
             Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Could not access DRM Controller registers.\n" + DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
         }
-        Debug( "DRM Communication Self-Test 2 failed: random test passed" );
+        Debug( "DRM Communication Self-Test 2: random test passed" );
 
         Debug( "DRM Communication Self-Test 2 succeeded" );
     }
@@ -750,10 +750,10 @@ protected:
     }
 
     void checkSessionIDFromDRM( const Json::Value license_json ) {
-        std::string ws_sessionID = license_json["sessionId"].asString();
-        if ( !mSessionID.empty() && ( mSessionID != ws_sessionID ) ) {
+        std::string drm_sessionID = license_json["sessionId"].asString();
+        if ( !mSessionID.empty() && ( mSessionID != drm_sessionID ) ) {
             Unreachable( "Session ID mismatch: DRM gives '{}' but expect '{}'. ",
-                ws_sessionID, mSessionID ); //LCOV_EXCL_LINE
+                drm_sessionID, mSessionID ); //LCOV_EXCL_LINE
         }
     }
 
