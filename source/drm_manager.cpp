@@ -1111,29 +1111,29 @@ protected:
                 checkSessionIDFromWS( license_json );
             }
 
-            // Extract license and license timer from web service response
-            licenseKey = JVgetRequired( dna_node, "key", Json::stringValue ).asString();
-            if ( !isNodeLockedMode() ) {
+            // Extract license key and license timer from web service response
+            if ( mLicenseCounter == 0 )
+                licenseKey = JVgetRequired( dna_node, "key", Json::stringValue ).asString();
+            if ( !isNodeLockedMode() )
                 licenseTimer = JVgetRequired( dna_node, "licenseTimer", Json::stringValue ).asString();
-                mLicenseDuration = JVgetRequired( metering_node, "timeoutSecond", Json::uintValue ).asUInt();
-                if ( mLicenseDuration == 0 ) {
-                    Warning( "'timeoutSecond' field sent by License WS must not be 0" );
-                }
-            }
-
+            mLicenseDuration = JVgetRequired( metering_node, "timeoutSecond", Json::uintValue ).asUInt();
+            if ( mLicenseDuration == 0 )
+                Warning( "'timeoutSecond' field sent by License WS must not be 0" );
         } catch( Exception &e ) {
             if ( e.getErrCode() != DRM_BadFormat )
                 throw;
             Throw( DRM_WSRespError, "Malformed response from License Web Service: {}", e.what() );
         }
 
-        // Activate
-        bool activationDone = false;
-        uint8_t activationErrorCode;
-        checkDRMCtlrRet( getDrmController().activate( licenseKey, activationDone, activationErrorCode ) );
-        if ( activationErrorCode ) {
-            Throw( DRM_CtlrError, "Failed to activate license on DRM controller, activationErr: 0x{:x}",
-                  activationErrorCode );
+        if ( mLicenseCounter == 0 ) {
+            // Load key
+            bool activationDone = false;
+            uint8_t activationErrorCode;
+            checkDRMCtlrRet( getDrmController().activate( licenseKey, activationDone, activationErrorCode ) );
+            if ( activationErrorCode ) {
+                Throw( DRM_CtlrError, "Failed to activate license on DRM controller, activationErr: 0x{:x}",
+                      activationErrorCode );
+            }
         }
 
         // Load license timer
