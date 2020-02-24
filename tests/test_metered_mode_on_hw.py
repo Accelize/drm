@@ -331,7 +331,7 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
             drm_manager.activate()
         assert 'License Web Service error 400' in str(excinfo.value)
         assert 'DRM WS request failed' in str(excinfo.value)
-        assert search(r'\\"Entitlement Limit Reached\\" with .+ for accelize_accelerator_test_03@accelize.com', str(excinfo.value))
+        assert search(r'\\"Entitlement Limit Reached\\" with .+ for \S+_test_03@accelize.com', str(excinfo.value))
         assert 'You have reached the maximum quantity of 1000. usage_unit for metered entitlement (licensed)' in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_NoError()
@@ -375,7 +375,7 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         assert async_cb.was_called
         assert 'License Web Service error 400' in async_cb.message
         assert 'DRM WS request failed' in async_cb.message
-        assert search(r'\\"Entitlement Limit Reached\\" with .+ for accelize_accelerator_test_03@accelize.com', async_cb.message)
+        assert search(r'\\"Entitlement Limit Reached\\" with .+ for \S+_test_03@accelize.com', async_cb.message)
         assert 'You have reached the maximum quantity of 1000. usage_unit for metered entitlement (licensed)' in async_cb.message
         assert async_cb.errcode == accelize_drm.exceptions.DRMWSReqError.error_code
         drm_manager.deactivate()

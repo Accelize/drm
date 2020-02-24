@@ -192,7 +192,7 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
         drm_manager.activate()
     assert "License Web Service error 400" in str(excinfo.value)
     assert "DRM WS request failed" in str(excinfo.value)
-    assert search(r'\\"No Entitlement\\" with .+ for accelize_accelerator_test_01@accelize.com', str(excinfo.value))
+    assert search(r'\\"No Entitlement\\" with .+ for \S+_test_01@accelize.com', str(excinfo.value))
     assert "User account has no entitlement. Purchase additional licenses via your portal" in str(excinfo.value)
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
     async_cb.assert_NoError()
@@ -215,7 +215,7 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
             drm_manager.activate()
         assert "License Web Service error 400" in str(excinfo.value)
         assert "DRM WS request failed" in str(excinfo.value)
-        assert search(r'\\"No Entitlement\\" with .+ for accelize_accelerator_test_01@accelize.com', str(excinfo.value))
+        assert search(r'\\"No Entitlement\\" with .+ for \S+_test_01@accelize.com', str(excinfo.value))
         assert "User account has no entitlement. Purchase additional licenses via your portal" in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_NoError()
@@ -259,7 +259,7 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
             drm_manager.activate()
         assert "License Web Service error 400" in str(excinfo.value)
         assert "DRM WS request failed" in str(excinfo.value)
-        assert search(r'\\"No Entitlement\\" with .+ for accelize_accelerator_test_02@accelize.com', str(excinfo.value))
+        assert search(r'\\"No Entitlement\\" with .+ for \S+_test_02@accelize.com', str(excinfo.value))
         assert 'No valid NodeLocked entitlement found for your account' in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_NoError()
@@ -347,7 +347,7 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
             drm_manager.activate()
         assert "License Web Service error 400" in str(excinfo.value)
         assert "DRM WS request failed" in str(excinfo.value)
-        assert search(r'\\"No Entitlement\\" with .+ for accelize_accelerator_test_04@accelize.com', str(excinfo.value))
+        assert search(r'\\"No Entitlement\\" with .+ for \S+_test_04@accelize.com', str(excinfo.value))
         assert 'No valid NodeLocked entitlement found for your account' in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_NoError()
@@ -2289,7 +2289,7 @@ def test_retry_function(accelize_drm, conf_json, cred_json, async_handler):
         assert (end - start).total_seconds() < 1
         assert 'License Web Service error 470' in str(excinfo.value)
         assert 'DRM WS request failed' in str(excinfo.value)
-        assert search(r'\\"Entitlement Limit Reached\\" with .+ for accelize_accelerator_test_04@accelize.com', str(excinfo.value)) is not None
+        assert search(r'\\"Entitlement Limit Reached\\" with .+ for \S+_test_04@accelize.com', str(excinfo.value)) is not None
         assert 'You have reached the maximum quantity of 1 seat(s) for floating entitlement' in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
     finally:
