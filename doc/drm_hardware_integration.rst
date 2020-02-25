@@ -321,7 +321,7 @@ Simulate your design
 ====================
 
 The user can find a simulation model of the DRM Activator, drm_activator_0xVVVVLLLLNNNNVVVV_sim.(sv,vhdl),
-in the DRM_HDK/v_l_n_v/rtl/sim folder.
+in the DRM_HDK/vendor_library_name_version/sim folder.
 It instantiates a DRM Controller Bus Functional Model (BFM) in addition to the RTL model of the
 DRM Controller and internally implements a mechanism to load a license file, generate signals and
 messages for debugging.

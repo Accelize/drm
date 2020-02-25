@@ -962,3 +962,4 @@ class FlaskAppWrapper:
 @pytest.fixture
 def fake_server():
     return FlaskAppWrapper()
+
