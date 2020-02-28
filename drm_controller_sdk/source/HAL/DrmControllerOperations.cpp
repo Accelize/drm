@@ -35,7 +35,7 @@ DrmControllerOperations::DrmControllerOperations(tDrmReadRegisterFunction readRe
     mHeartBeatModeEnabled(false),
     mLicenseTimerWasLoaded(false)
 {
-  // Set the operation timeout from environment variable if existing or use default value otherwise.
+  // Set the operation timeout from environment variable if existing, use default value otherwise.
   const char* timeout = std::getenv("DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS");
   mTimeoutInMicroSeconds = (timeout == NULL) ? DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS : std::stoul(std::string(timeout));
 

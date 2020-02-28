@@ -71,6 +71,13 @@ static const std::string DRM_SELF_TEST_ERROR_MESSAGE( "Please verify:\n"
     }
 
 
+#define TRY_DRM( func ) \
+    try { \
+        func; \
+    } catch ( std::exception &e ) { \
+        Throw( DRM_CtlrError, e.what()); \
+    }
+
 namespace Accelize {
 namespace DRM {
 
@@ -370,6 +377,7 @@ protected:
     }
 
     void checkDRMCtlrRet( const unsigned int& errcode ) const {
+        Debug( "DRM Controller error code: {}", errcode );
         if ( errcode )
             Throw( DRM_CtlrError, "Error {} from DRM Controller library. ", errcode ); //LCOV_EXCL_LINE
     }
@@ -742,19 +750,19 @@ protected:
     }
 
     void checkSessionIDFromWS( const Json::Value license_json ) {
-        std::string ws_sessionID = license_json["metering"]["sessionId"].asString();
+        /*std::string ws_sessionID = license_json["metering"]["sessionId"].asString();
         if ( !mSessionID.empty() && ( mSessionID != ws_sessionID ) ) {
             Unreachable( "Session ID mismatch: received '{}' from WS but expect '{}'. ",
                 ws_sessionID, mSessionID ); //LCOV_EXCL_LINE
-        }
+        }*/
     }
 
     void checkSessionIDFromDRM( const Json::Value license_json ) {
-        std::string drm_sessionID = license_json["sessionId"].asString();
+        /*std::string drm_sessionID = license_json["sessionId"].asString();
         if ( !mSessionID.empty() && ( mSessionID != drm_sessionID ) ) {
             Unreachable( "Session ID mismatch: DRM gives '{}' but expect '{}'. ",
                 drm_sessionID, mSessionID ); //LCOV_EXCL_LINE
-        }
+        }*/
     }
 
     // Get DRM HDK version
@@ -853,9 +861,11 @@ protected:
         std::string saasChallenge;
         std::vector<std::string> meteringFile;
 
-        Debug( "Build web request to create new session" );
         mLicenseCounter = 0;
+        Debug( "Build web request #{} to create new session", mLicenseCounter );
+
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+        // Request challenge and metering info for first request
         checkDRMCtlrRet( getDrmController().initialization( numberOfDetectedIps, saasChallenge, meteringFile ) );
         json_request["saasChallenge"] = saasChallenge;
         json_request["meteringFile"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
@@ -873,9 +883,16 @@ protected:
         std::string saasChallenge;
         std::vector<std::string> meteringFile;
 
-        Debug( "Build web request to maintain current session" );
+        Debug( "Build web request #{} to maintain current session", mLicenseCounter );
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        checkDRMCtlrRet( getDrmController().synchronousExtractMeteringFile( numberOfDetectedIps, saasChallenge, meteringFile ) );
+        // Check if an error occurred
+        try {
+            checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 10 ) );
+        } catch( const std::exception &e ) {
+            Unreachable( "DRM Controller Error on license #{}: {}", mLicenseCounter, e.what() );
+        }
+        // Request challenge and metering info for new request
+            checkDRMCtlrRet( getDrmController().synchronousExtractMeteringFile( numberOfDetectedIps, saasChallenge, meteringFile ) );
         json_request["saasChallenge"] = saasChallenge;
         json_request["sessionId"] = meteringFile[0].substr( 0, 16 );
         checkSessionIDFromDRM( json_request );
@@ -892,12 +909,14 @@ protected:
         std::string saasChallenge;
         std::vector<std::string> meteringFile;
 
-        Debug( "Build web request to stop current session" );
+        Debug( "Build web request #{} to stop current session", mLicenseCounter );
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+        // Request challenge and metering info for first request
         checkDRMCtlrRet( getDrmController().endSessionAndExtractMeteringFile(
                 numberOfDetectedIps, saasChallenge, meteringFile ) );
         json_request["saasChallenge"] = saasChallenge;
-        json_request["sessionId"] = meteringFile[0].substr( 0, 16 );
+        //json_request["sessionId"] = meteringFile[0].substr( 0, 16 );
+        json_request["sessionId"] = mSessionID;
         checkSessionIDFromDRM( json_request );
         if ( !isNodeLockedMode() )
             json_request["drm_frequency"] = mFrequencyCurr;
@@ -1091,7 +1110,7 @@ protected:
 
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
 
-        Debug( "Installing next license on DRM controller" );
+        Debug( "Provisioning license #{} on DRM controller", mLicenseCounter );
 
         std::string dna = mHeaderJsonRequest["dna"].asString();
         std::string licenseKey, licenseTimer;
@@ -1134,6 +1153,7 @@ protected:
                 Throw( DRM_CtlrError, "Failed to activate license on DRM controller, activationErr: 0x{:x}",
                       activationErrorCode );
             }
+            Debug( "Wrote license key of session ID: {}", mSessionID );
         }
 
         // Load license timer
@@ -1146,8 +1166,15 @@ protected:
                       "Failed to load license timer on DRM controller, licenseTimerEnabled: 0x{:x}",
                       licenseTimerEnabled );
             }
-            Debug( "Set license #{} of session ID {} for a duration of {} seconds",
-                    ++mLicenseCounter, mSessionID, mLicenseDuration );
+            Debug( "Wrote license timer #{} of session ID {} for a duration of {} seconds",
+                    mLicenseCounter, mSessionID, mLicenseDuration );
+        }
+
+        // Check if an error occurred while loading license
+        try {
+            checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 10 ) );
+        } catch( const std::exception &e ) {
+            Unreachable( "DRM Controller Error on license #{}: {}", mLicenseCounter, e.what() );
         }
 
         // Check DRM Controller has switched to the right license mode
@@ -1166,7 +1193,8 @@ protected:
             else
                 Debug( "DRM Controller is in Node-Locked license mode" );
         }
-        Debug( "Installed next license on DRM controller" );
+        Debug( "Provisioned license #{} on DRM controller", mLicenseCounter );
+        mLicenseCounter ++;
     }
 
     std::string getDesignHash() {
@@ -1380,7 +1408,6 @@ protected:
     }
 
     void checkDrmFrequency( int32_t measuredFrequency ) {
-
         // Compute precision error compared to config file
         double precisionError = 100.0 * abs( measuredFrequency - mFrequencyInit ) / mFrequencyInit ; // At that point mFrequencyCurr = mFrequencyInit
         mFrequencyCurr = measuredFrequency;
@@ -1394,8 +1421,7 @@ protected:
     }
 
     template< class Clock, class Duration >
-    void sleepOrExit(
-            const std::chrono::time_point<Clock, Duration> &timeout_time) {
+    void sleepOrExit( const std::chrono::time_point<Clock, Duration> &timeout_time ) {
         std::unique_lock<std::mutex> lock( mThreadKeepAliveMtx );
         bool isExitRequested = mThreadKeepAliveCondVar.wait_until( lock, timeout_time,
                 [ this ]{ return mThreadStopRequest; } );
@@ -1453,7 +1479,7 @@ protected:
                         if ( isStopRequested() )
                             return;
 
-                        Debug( "Requesting a new license now" );
+                        Debug( "Requesting new license #{} now", mLicenseCounter );
                         {
                             Debug( "Waiting metering access mutex from licensing thread" );
                             std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
@@ -1542,7 +1568,7 @@ protected:
             // Send license request to web service
             Json::Value license_json = getLicense( request_json, mWSRequestTimeout, mWSRetryPeriodShort );
 
-            // Install license on DRM controller
+            // Provision license on DRM controller
             setLicense( license_json );
         }
         Debug( "Released metering access mutex from resumeSession" );

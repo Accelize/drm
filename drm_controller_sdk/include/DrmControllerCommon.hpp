@@ -125,6 +125,7 @@ typedef enum tDrmApiErrorCode {
 #define DRM_CONTROLLER_NUMBER_OF_MICRO_SECONDS_IN_ONE_SECOND           1000000 /**<Number of micro seconds in a second.**/
 // timeout values
 #define DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS  10*DRM_CONTROLLER_NUMBER_OF_MICRO_SECONDS_IN_ONE_SECOND /**<Timeout max value in microseconds.**/
+#define DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS    100 /**<Sleep in microseconds.**/
 
 // Logs level definitions.
 #define DRM_CONTROLLER_LOG_DEBUG   0 /**<Definition of log level for debug messages.**/

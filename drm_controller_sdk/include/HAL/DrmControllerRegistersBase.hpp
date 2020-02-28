@@ -77,7 +77,7 @@ namespace DrmControllerLibrary {
       *   \brief Read the value from the register pointed by name.
       *   \param[in] name is the name of the register to read.
       *   \param[inout] value is the read value of the register.
-      *   \return Returns mDrmApi_NO_ERROR if no error, errors from read register functions otherwize.
+      *   \return Returns mDrmApi_NO_ERROR if no error, errors from read register functions otherwise.
       **/
       unsigned int readRegister(const std::string &name, unsigned int &value) const;
 
@@ -85,7 +85,7 @@ namespace DrmControllerLibrary {
       *   \brief Write the value to the register pointed by name.
       *   \param[in] name is the name of the register to read.
       *   \param[in] value is the value to write to the register.
-      *   \return Returns mDrmApi_NO_ERROR if no error, errors from read register functions otherwize.
+      *   \return Returns mDrmApi_NO_ERROR if no error, errors from read register functions otherwise.
       **/
       unsigned int writeRegister(const std::string &name, const unsigned int &value) const;
 
@@ -104,7 +104,7 @@ namespace DrmControllerLibrary {
       *   \param[in]  from is the first index of the register to read.
       *   \param[in]  n is the number of words to read.
       *   \param[out] value is the value of registers read.
-      *   \return Returns mDrmApi_NO_ERROR if no error, errors from read/write register functions otherwize.
+      *   \return Returns mDrmApi_NO_ERROR if no error, errors from read/write register functions otherwise.
       **/
       unsigned int readRegisterListFromIndex(const unsigned int &from, const unsigned int &n, std::vector<unsigned int> &value) const;
 
@@ -113,7 +113,7 @@ namespace DrmControllerLibrary {
       *   This method will access to the system bus to read a register.
       *   \param[in]  index is the index of the register word to read.
       *   \param[out] value is the value of the register read.
-      *   \return Returns mDrmApi_NO_ERROR if no error, errors from read/write register functions otherwize.
+      *   \return Returns mDrmApi_NO_ERROR if no error, errors from read/write register functions otherwise.
       **/
       unsigned int readRegisterAtIndex(const unsigned int &index, unsigned int &value) const;
 
@@ -123,7 +123,7 @@ namespace DrmControllerLibrary {
       *   \param[in] from is the first index of the register to write.
       *   \param[in] n is the number of words to write.
       *   \param[in] value is the value of registers to write.
-      *   \return Returns mDrmApi_NO_ERROR if no error, errors from read/write register functions otherwize.
+      *   \return Returns mDrmApi_NO_ERROR if no error, errors from read/write register functions otherwise.
       **/
       unsigned int writeRegisterListFromIndex(const unsigned int &from, const unsigned int &n, const std::vector<unsigned int> &value) const;
 
@@ -132,7 +132,7 @@ namespace DrmControllerLibrary {
       *   This method will access to the system bus to write a register.
       *   \param[in] index is the index of the register word to write.
       *   \param[in] value is the value of the register to write.
-      *   \return Returns mDrmApi_NO_ERROR if no error, errors from read/write register functions otherwize.
+      *   \return Returns mDrmApi_NO_ERROR if no error, errors from read/write register functions otherwise.
       **/
       unsigned int writeRegisterAtIndex(const unsigned int &index, const unsigned int &value) const;
 
