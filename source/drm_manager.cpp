@@ -887,7 +887,7 @@ protected:
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
         // Check if an error occurred
         try {
-            checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 10 ) );
+            checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 1 ) );
         } catch( const std::exception &e ) {
             Unreachable( "DRM Controller Error on license #{}: {}", mLicenseCounter, e.what() );
         }
@@ -1172,7 +1172,7 @@ protected:
 
         // Check if an error occurred while loading license
         try {
-            checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 10 ) );
+            checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 1 ) );
         } catch( const std::exception &e ) {
             Unreachable( "DRM Controller Error on license #{}: {}", mLicenseCounter, e.what() );
         }

@@ -64,7 +64,7 @@ std::string DrmControllerRegistersBase::getIndexedRegisterName() const {
 *   \brief Read the value from the register pointed by name.
 *   \param[in] name is the name of the register to read.
 *   \param[inout] value is the read value of the register.
-*   \return Returns mDrmApi_NO_ERROR if no error, errors from read register functions otherwise.
+*   \return Returns mDrmApi_NO_ERROR if no error, errors from read register functions otherwize.
 **/
 unsigned int DrmControllerRegistersBase::readRegister(const std::string &name, unsigned int &value) const {
   return mReadRegisterFunction(name, value);
@@ -74,7 +74,7 @@ unsigned int DrmControllerRegistersBase::readRegister(const std::string &name, u
 *   \brief Write the value to the register pointed by name.
 *   \param[in] name is the name of the register to read.
 *   \param[in] value is the value to write to the register.
-*   \return Returns mDrmApi_NO_ERROR if no error, errors from read register functions otherwise.
+*   \return Returns mDrmApi_NO_ERROR if no error, errors from read register functions otherwize.
 **/
 unsigned int DrmControllerRegistersBase::writeRegister(const std::string &name, const unsigned int &value) const {
   return mWriteRegisterFunction(name, value);
@@ -97,7 +97,7 @@ unsigned int DrmControllerRegistersBase::bits(const unsigned int &lsb, const uns
 *   \param[in]  from is the first index of the register to read.
 *   \param[in] n is the number of words to read.
 *   \param[out] value is the value of registers read.
-*   \return Returns mDrmApi_NO_ERROR if no error, errors from read/write register functions otherwise.
+*   \return Returns mDrmApi_NO_ERROR if no error, errors from read/write register functions otherwize.
 **/
 unsigned int DrmControllerRegistersBase::readRegisterListFromIndex(const unsigned int &from, const unsigned int &n, std::vector<unsigned int> &value) const {
   value.clear();
@@ -116,7 +116,7 @@ unsigned int DrmControllerRegistersBase::readRegisterListFromIndex(const unsigne
 *   This method will access to the system bus to read a register.
 *   \param[in]  index is the index of the register word to read.
 *   \param[out] value is the value of the register read.
-*   \return Returns mDrmApi_NO_ERROR if no error, errors from read/write register functions otherwise.
+*   \return Returns mDrmApi_NO_ERROR if no error, errors from read/write register functions otherwize.
 **/
 unsigned int DrmControllerRegistersBase::readRegisterAtIndex(const unsigned int &index, unsigned int &value) const {
   return readRegister(registerNameFromIndex(index), value);
@@ -128,7 +128,7 @@ unsigned int DrmControllerRegistersBase::readRegisterAtIndex(const unsigned int 
 *   \param[in] from is the first index of the register to write.
 *   \param[in] n is the number of words to write.
 *   \param[in] value is the value of registers to write.
-*   \return Returns mDrmApi_NO_ERROR if no error, errors from read/write register functions otherwise.
+*   \return Returns mDrmApi_NO_ERROR if no error, errors from read/write register functions otherwize.
 **/
 unsigned int DrmControllerRegistersBase::writeRegisterListFromIndex(const unsigned int &from, const unsigned int &n, const std::vector<unsigned int> &value) const {
   unsigned int ii(from);
@@ -145,7 +145,7 @@ unsigned int DrmControllerRegistersBase::writeRegisterListFromIndex(const unsign
 *   This method will access to the system bus to write a register.
 *   \param[in] index is the index of the register word to write.
 *   \param[in] value is the value of the register to write.
-*   \return Returns mDrmApi_NO_ERROR if no error, errors from read/write register functions otherwise.
+*   \return Returns mDrmApi_NO_ERROR if no error, errors from read/write register functions otherwize.
 **/
 unsigned int DrmControllerRegistersBase::writeRegisterAtIndex(const unsigned int &index, const unsigned int &value) const {
   // write register at index
@@ -549,7 +549,6 @@ std::string DrmControllerRegistersBase::exceptionStatusDescription(const std::st
 std::string DrmControllerRegistersBase::exceptionErrorDescription(const std::string &errorMsg, const unsigned char &error, const std::string &errorCodeMsg) const {
   std::ostringstream writter;
   writter << exceptionEmptyHeader() << errorMsg << DRM_CONTROLLER_ERROR_COLON << DRM_CONTROLLER_ERROR_SPACE << errorCodeMsg << " (" << hexadecimalDescription(error) << ") " << exceptionFooter() << std::endl;
-  //writter << exceptionEmptyHeader() << errorMsg << DRM_CONTROLLER_ERROR_COLON << DRM_CONTROLLER_ERROR_SPACE << errorCodeMsg << exceptionFooter() << std::endl;
   return writter.str();
 }
 
