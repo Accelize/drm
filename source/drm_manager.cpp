@@ -71,13 +71,6 @@ static const std::string DRM_SELF_TEST_ERROR_MESSAGE( "Please verify:\n"
     }
 
 
-#define TRY_DRM( func ) \
-    try { \
-        func; \
-    } catch ( std::exception &e ) { \
-        Throw( DRM_CtlrError, e.what()); \
-    }
-
 namespace Accelize {
 namespace DRM {
 
@@ -198,6 +191,17 @@ protected:
     };
 
 
+    #define checkDRMCtlrRet( func ) {                                                  \
+        unsigned int errcode = DRM_OK;                                                 \
+        try {                                                                          \
+            errcode = func;                                                            \ 
+        } catch( const std::exception &e ) {                                           \
+            Throw( DRM_CtlrError, e.what() );                                          \
+        }                                                                              \
+        if ( errcode )                                                                 \
+            Unreachable( "DRM Controller API failed with error code: {}.", errcode );  \
+    }
+
     Impl( const std::string& conf_file_path,
           const std::string& cred_file_path )
     {
@@ -295,7 +299,7 @@ protected:
                         mBypassFrequencyDetection ).asBool();
             }
 
-        } catch( Exception &e ) {
+        } catch( const Exception &e ) {
             if ( e.getErrCode() != DRM_BadFormat )
                 throw;
             Throw( DRM_BadFormat, "Error in configuration file '{}: {}", conf_file_path, e.what() );
@@ -374,12 +378,6 @@ protected:
     void uninitLog() {
         if ( sLogger )
             sLogger->flush();
-    }
-
-    void checkDRMCtlrRet( const unsigned int& errcode ) const {
-        Debug( "DRM Controller error code: {}", errcode );
-        if ( errcode )
-            Throw( DRM_CtlrError, "Error {} from DRM Controller library. ", errcode ); //LCOV_EXCL_LINE
     }
 
     uint32_t getMailboxSize() const {
@@ -885,17 +883,15 @@ protected:
 
         Debug( "Build web request #{} to maintain current session", mLicenseCounter );
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+
         // Check if an error occurred
-        try {
-            checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 1 ) );
-        } catch( const std::exception &e ) {
-            Unreachable( "DRM Controller Error on license #{}: {}", mLicenseCounter, e.what() );
-        }
+        checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 5 ) );
         // Request challenge and metering info for new request
-            checkDRMCtlrRet( getDrmController().synchronousExtractMeteringFile( numberOfDetectedIps, saasChallenge, meteringFile ) );
+        checkDRMCtlrRet( getDrmController().synchronousExtractMeteringFile( numberOfDetectedIps, saasChallenge, meteringFile ) );
         json_request["saasChallenge"] = saasChallenge;
         json_request["sessionId"] = meteringFile[0].substr( 0, 16 );
         checkSessionIDFromDRM( json_request );
+
         if ( !isNodeLockedMode() )
             json_request["drm_frequency"] = mFrequencyCurr;
         json_request["meteringFile"] = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
@@ -911,13 +907,14 @@ protected:
 
         Debug( "Build web request #{} to stop current session", mLicenseCounter );
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+
         // Request challenge and metering info for first request
         checkDRMCtlrRet( getDrmController().endSessionAndExtractMeteringFile(
                 numberOfDetectedIps, saasChallenge, meteringFile ) );
         json_request["saasChallenge"] = saasChallenge;
-        //json_request["sessionId"] = meteringFile[0].substr( 0, 16 );
-        json_request["sessionId"] = mSessionID;
+        json_request["sessionId"] = meteringFile[0].substr( 0, 16 );
         checkSessionIDFromDRM( json_request );
+
         if ( !isNodeLockedMode() )
             json_request["drm_frequency"] = mFrequencyCurr;
         json_request["meteringFile"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
@@ -1138,7 +1135,7 @@ protected:
             mLicenseDuration = JVgetRequired( metering_node, "timeoutSecond", Json::uintValue ).asUInt();
             if ( mLicenseDuration == 0 )
                 Warning( "'timeoutSecond' field sent by License WS must not be 0" );
-        } catch( Exception &e ) {
+        } catch( const Exception &e ) {
             if ( e.getErrCode() != DRM_BadFormat )
                 throw;
             Throw( DRM_WSRespError, "Malformed response from License Web Service: {}", e.what() );
@@ -1168,13 +1165,6 @@ protected:
             }
             Debug( "Wrote license timer #{} of session ID {} for a duration of {} seconds",
                     mLicenseCounter, mSessionID, mLicenseDuration );
-        }
-
-        // Check if an error occurred while loading license
-        try {
-            checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 1 ) );
-        } catch( const std::exception &e ) {
-            Unreachable( "DRM Controller Error on license #{}: {}", mLicenseCounter, e.what() );
         }
 
         // Check DRM Controller has switched to the right license mode
@@ -1547,11 +1537,11 @@ protected:
             // Send request and receive new license
             Json::Value license_json = getLicense( request_json, mWSRequestTimeout, mWSRetryPeriodShort );
             setLicense( license_json );
+
+            // Check if an error occurred
+            checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 5 ) );
         }
         Debug( "Released metering access mutex from startSession" );
-
-        startLicenseContinuityThread();
-
         Info( "New DRM session started." );
     }
 
@@ -1572,9 +1562,6 @@ protected:
             setLicense( license_json );
         }
         Debug( "Released metering access mutex from resumeSession" );
-
-        startLicenseContinuityThread();
-
         Info( "DRM session resumed." );
     }
 
@@ -1719,6 +1706,7 @@ public:
                 }
                 startSession();
             }
+            startLicenseContinuityThread();
         CATCH_AND_THROW
     }
 
