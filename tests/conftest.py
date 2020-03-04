@@ -69,7 +69,7 @@ def clean_nodelock_env(drm_manager=None, driver=None,
         product_name = 'drm_1activator'
     if (ws_admin is not None) and (cred_json is not None):
         ws_admin.remove_product_information(library='refdesign', name=product_name,
-                                            user=cred_json.email.split('@')[0])
+                                            user=cred_json.email)
     # Reprogram FPGA
     if driver is not None:
         if drm_manager is None:
@@ -87,7 +87,7 @@ def clean_metering_env(cred_json=None, ws_admin=None, product_name=None):
     # Clear metering request from WS DB (not to hit the limit)
     if (ws_admin is not None) and (cred_json is not None):
         ws_admin.remove_product_information(library='refdesign',
-            name=product_name, user=cred_json.email.split('@')[0])
+            name=product_name, user=cred_json.email)
 
 
 def param2dict(param_list):
