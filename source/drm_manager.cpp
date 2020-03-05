@@ -112,7 +112,7 @@ protected:
     const char path_sep = '/';
 #endif
 
-    bool mSecurityStop;
+    bool mSecurityStop = false;
 
     // Composition
     std::unique_ptr<DrmWSClient> mWsClient;
@@ -151,15 +151,16 @@ protected:
     uint32_t mWSRequestTimeout   = 10;    ///< Time in seconds during which retries occur
 
     eLicenseType mLicenseType = eLicenseType::METERED;
-    uint32_t mLicenseCounter;
-    uint32_t mLicenseDuration;
+    uint32_t mLicenseCounter = 0;
+    uint32_t mLicenseDuration = 0;
+    uint32_t mLicenseWaitPeriod = 5;    ///< Time in seconds to wait for the load of a new license
 
     // To protect access to the metering data (to securize the segment ID check in HW)
     mutable std::mutex mMeteringAccessMutex;
 
     // Design parameters
-    int32_t mFrequencyInit;
-    int32_t mFrequencyCurr;
+    int32_t mFrequencyInit = 0;
+    int32_t mFrequencyCurr = 0;
     uint32_t mFrequencyDetectionPeriod = 100;  // in milliseconds
     double mFrequencyDetectionThreshold = 12.0;      // Error in percentage
     bool mIsFreqDetectionMethod1 = false;
@@ -747,22 +748,6 @@ protected:
         }
     }
 
-    void checkSessionIDFromWS( const Json::Value license_json ) {
-        /*std::string ws_sessionID = license_json["metering"]["sessionId"].asString();
-        if ( !mSessionID.empty() && ( mSessionID != ws_sessionID ) ) {
-            Unreachable( "Session ID mismatch: received '{}' from WS but expect '{}'. ",
-                ws_sessionID, mSessionID ); //LCOV_EXCL_LINE
-        }*/
-    }
-
-    void checkSessionIDFromDRM( const Json::Value license_json ) {
-        /*std::string drm_sessionID = license_json["sessionId"].asString();
-        if ( !mSessionID.empty() && ( mSessionID != drm_sessionID ) ) {
-            Unreachable( "Session ID mismatch: DRM gives '{}' but expect '{}'. ",
-                drm_sessionID, mSessionID ); //LCOV_EXCL_LINE
-        }*/
-    }
-
     // Get DRM HDK version
     std::string getDrmCtrlVersion() const {
         std::string drmVersion;
@@ -890,7 +875,6 @@ protected:
         checkDRMCtlrRet( getDrmController().synchronousExtractMeteringFile( numberOfDetectedIps, saasChallenge, meteringFile ) );
         json_request["saasChallenge"] = saasChallenge;
         json_request["sessionId"] = meteringFile[0].substr( 0, 16 );
-        checkSessionIDFromDRM( json_request );
 
         if ( !isNodeLockedMode() )
             json_request["drm_frequency"] = mFrequencyCurr;
@@ -913,7 +897,6 @@ protected:
                 numberOfDetectedIps, saasChallenge, meteringFile ) );
         json_request["saasChallenge"] = saasChallenge;
         json_request["sessionId"] = meteringFile[0].substr( 0, 16 );
-        checkSessionIDFromDRM( json_request );
 
         if ( !isNodeLockedMode() )
             json_request["drm_frequency"] = mFrequencyCurr;
@@ -1122,9 +1105,6 @@ protected:
                 /// Save new Session ID
                 mSessionID = JVgetRequired( metering_node, "sessionId", Json::stringValue ).asString();
                 Debug( "Saving session ID: {}", mSessionID );
-            } else {
-                /// Verify Session ID
-                checkSessionIDFromWS( license_json );
             }
 
             // Extract license key and license timer from web service response
@@ -1445,36 +1425,33 @@ protected:
             return;
         }
 
-        Debug( "Starting background thread which maintains licensing" );
-
         mThreadKeepAlive = std::async( std::launch::async, [ this ]() {
             try {
+                Debug( "Started background thread which maintains licensing" );
+
                 /// Detecting DRM controller frequency if needed
                 if ( !mIsFreqDetectionMethod1 )
                     detectDrmFrequencyMethod2();
 
+                bool go_sleeping( false );
+
                 /// Starting license request loop
                 while( 1 ) {
+                    {
+                        Debug( "Waiting metering access mutex from licensing thread" );
+                        std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
+                        Debug( "Acquired metering access mutex from licensing thread" );
 
-                    // Check DRM licensing queue
-                    if ( !isReadyForNewLicense() ) {
-                        // DRM licensing queue is full, wait until current license expires
-                        uint32_t licenseTimeLeft = getCurrentLicenseTimeLeft();
-                        TClock::duration wait_duration = std::chrono::seconds( licenseTimeLeft + 1 );
-                        Debug( "Sleeping for {} seconds before checking DRM Controller readiness for a new license",
-                                licenseTimeLeft );
-                        sleepOrExit( wait_duration );
-
-                    } else {
                         if ( isStopRequested() )
-                            return;
+                            break;
 
-                        Debug( "Requesting new license #{} now", mLicenseCounter );
-                        {
-                            Debug( "Waiting metering access mutex from licensing thread" );
-                            std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
-                            Debug( "Acquired metering access mutex from licensing thread" );
+                        // Check DRM licensing queue
+                        if ( !isReadyForNewLicense() ) {
+                            go_sleeping = true;
 
+                        } else {
+                            go_sleeping = false;
+                            Debug( "Requesting new license #{} now", mLicenseCounter );
                             Json::Value request_json = getMeteringWait();
                             Json::Value license_json;
 
@@ -1489,17 +1466,27 @@ protected:
                             /// New license has been received: now send it to the DRM Controller
                             setLicense( license_json );
                         }
-                        Debug( "Released metering access mutex from licensing thread" );
+                    }
+                    Debug( "Released metering access mutex from licensing thread" );
+                    if ( go_sleeping ) {
+                        // DRM licensing queue is full, wait until current license expires
+                        uint32_t licenseTimeLeft = getCurrentLicenseTimeLeft();
+                        TClock::duration wait_duration = std::chrono::seconds( licenseTimeLeft + 1 );
+                        Debug( "Sleeping for {} seconds before checking DRM Controller readiness for a new license", licenseTimeLeft );
+                        sleepOrExit( wait_duration );
                     }
                 }
+                Debug( "Released metering access mutex from licensing thread" );
+
             } catch( const Exception& e ) {
                 if ( e.getErrCode() != DRM_Exit ) {
                     Error( e.what() );
                     f_asynch_error( std::string( e.what() ) );
                 }
             } catch( const std::exception& e ) {
-                Error( e.what() );
-                f_asynch_error( std::string( e.what() ) );
+                std::string errmsg = fmt::format( "[errCode={}] Unexpected error: {}", DRM_ExternFail, e.what() );
+                Error( errmsg );
+                f_asynch_error( errmsg );
             }
             Debug( "Exiting background thread which maintains licensing" );
         });
@@ -1546,20 +1533,21 @@ protected:
     }
 
     void resumeSession() {
-        if ( isReadyForNewLicense() ) {
-
+        {
             Debug( "Waiting metering access mutex from resumeSession" );
             std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
             Debug( "Acquired metering access mutex from resumeSession" );
 
-            // Create JSON license request
-            Json::Value request_json = getMeteringWait();
+            if ( isReadyForNewLicense() ) {
+                // Create JSON license request
+                Json::Value request_json = getMeteringWait();
 
-            // Send license request to web service
-            Json::Value license_json = getLicense( request_json, mWSRequestTimeout, mWSRetryPeriodShort );
+                // Send license request to web service
+                Json::Value license_json = getLicense( request_json, mWSRequestTimeout, mWSRetryPeriodShort );
 
-            // Provision license on DRM controller
-            setLicense( license_json );
+                // Provision license on DRM controller
+                setLicense( license_json );
+            }
         }
         Debug( "Released metering access mutex from resumeSession" );
         Info( "DRM session resumed." );
@@ -1582,7 +1570,6 @@ protected:
 
         // Send last metering information
         Json::Value license_json = getLicense( request_json, mWSRequestTimeout, mWSRetryPeriodShort );
-        checkSessionIDFromWS( license_json );
         Debug( "Session ID {} stopped and last metering data uploaded", mSessionID );
 
         /// Clear Session IS
