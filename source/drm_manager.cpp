@@ -1456,12 +1456,10 @@ protected:
                             Json::Value license_json;
 
                             /// Retry Web Service request loop
-                            TClock::time_point polling_deadline = TClock::now()
-                                    + std::chrono::seconds( mLicenseDuration );
+                            TClock::time_point polling_deadline = TClock::now() + std::chrono::seconds( mLicenseDuration );
 
                             /// Attempt to get the next license
-                            license_json = getLicense( request_json, polling_deadline,
-                                    mWSRetryPeriodShort, mWSRetryPeriodLong );
+                            license_json = getLicense( request_json, polling_deadline, mWSRetryPeriodShort, mWSRetryPeriodLong );
 
                             /// New license has been received: now send it to the DRM Controller
                             setLicense( license_json );
@@ -1517,6 +1515,9 @@ protected:
             Debug( "Waiting metering access mutex from startSession" );
             std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
             Debug( "Acquired metering access mutex from startSession" );
+
+            if ( !isReadyForNewLicense() )
+                Unreachable( "To start a new session the DRM Controller shall be ready to accept a new license" ); //LCOV_EXCL_LINE
 
             // Build start request message for new license
             Json::Value request_json = getMeteringStart();

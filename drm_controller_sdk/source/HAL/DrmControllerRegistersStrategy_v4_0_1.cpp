@@ -262,9 +262,6 @@ unsigned int DrmControllerRegistersStrategy_v4_0_1::readLicenseStartAddressRegis
 unsigned int DrmControllerRegistersStrategy_v4_0_1::writeLicenseStartAddressRegister(const std::vector<unsigned int> &licenseStartAddress) const {
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
-  std::vector<unsigned int> readLicenseStartAddress;
-  errorCode = readLicenseStartAddressRegister(readLicenseStartAddress);
-  if (errorCode != mDrmApi_NO_ERROR || readLicenseStartAddress == licenseStartAddress) return errorCode;
   return writeRegisterListFromIndex(mLicenseStartAddressRegisterStartIndex, mLicenseStartAddressRegisterWordNumber, licenseStartAddress);
 }
 
@@ -291,9 +288,6 @@ unsigned int DrmControllerRegistersStrategy_v4_0_1::readLicenseTimerInitRegister
 unsigned int DrmControllerRegistersStrategy_v4_0_1::writeLicenseTimerInitRegister(const std::vector<unsigned int> &licenseTimerInit) const {
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
-  std::vector<unsigned int> readLicenseTimerInit;
-  errorCode = readLicenseTimerInitRegister(readLicenseTimerInit);
-  if (errorCode != mDrmApi_NO_ERROR || readLicenseTimerInit == licenseTimerInit) return errorCode;
   return writeRegisterListFromIndex(mLicenseTimerRegisterStartIndex, mLicenseTimerRegisterWordNumber, licenseTimerInit);
 }
 
@@ -1054,9 +1048,6 @@ unsigned int DrmControllerRegistersStrategy_v4_0_1::readLicenseFileRegister(cons
 unsigned int DrmControllerRegistersStrategy_v4_0_1::writeLicenseFileRegister(const unsigned int &licenseFileSize, const std::vector<unsigned int> &licenseFile) const {
   unsigned int errorCode = writeLicenseFilePageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
-  std::vector<unsigned int> readLicenseFile;
-  errorCode = readLicenseFileRegister(licenseFileSize, readLicenseFile);
-  if (errorCode != mDrmApi_NO_ERROR || readLicenseFile == licenseFile) return errorCode;
   return writeRegisterListFromIndex(mLicenseWordRegisterStartIndex, mLicenseWordRegisterWordNumber*licenseFileSize, licenseFile);
 }
 
@@ -1306,9 +1297,6 @@ unsigned int DrmControllerRegistersStrategy_v4_0_1::readPageRegister(unsigned in
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerRegistersStrategy_v4_0_1::writePageRegister(const unsigned int &page) const {
-  unsigned int readPage;
-  unsigned int errorCode = readPageRegister(readPage);
-  if (errorCode != mDrmApi_NO_ERROR || readPage == page) return errorCode;
   return writeRegister(DRM_CONTROLLER_V4_0_1_PAGE_REGISTER_NAME, page);
 }
 
@@ -1335,9 +1323,6 @@ unsigned int DrmControllerRegistersStrategy_v4_0_1::readCommandRegister(unsigned
 unsigned int DrmControllerRegistersStrategy_v4_0_1::writeCommandRegister(const unsigned int &command) const {
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
-  unsigned int readCommand;
-  errorCode = readCommandRegister(readCommand);
-  if (errorCode != mDrmApi_NO_ERROR || readCommand == command) return errorCode;
   return writeRegisterAtIndex(mCommandRegisterStartIndex, command);
 }
 

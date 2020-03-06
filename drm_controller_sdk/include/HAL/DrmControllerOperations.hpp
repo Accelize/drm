@@ -498,7 +498,7 @@ namespace DrmControllerLibrary {
       bool mHeartBeatModeEnabled; /**<Tell wether the heart beat mode is enabled on hardware**/
       // we suppose the heart beat mode to be disabled by default
       // it will be set if it is not the case during the wait auto controller function
-
+      
       bool mLicenseTimerWasLoaded; /**<Tell wether the license timer was loaded at least one time.**/
 
       unsigned int mTimeoutInMicroSeconds; /**<Store the timeout in microseconds to complete internal operation.**/
