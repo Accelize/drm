@@ -2735,7 +2735,7 @@ def test_drm_manager_frequency_detection_bypass(accelize_drm, conf_json, cred_js
             str(excinfo.value)) is not None
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadFrequency.error_code
     async_cb.assert_NoError()
-    print('Test bypass_frequency_detection=true: PASS')
+    print('Test bypass_frequency_detection=false: PASS')
 
 
 @pytest.mark.hwtst

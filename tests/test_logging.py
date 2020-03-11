@@ -352,7 +352,7 @@ def test_versions_displayed_in_log_file(accelize_drm, conf_json, cred_json, asyn
 
 
 def test_log_file_parameters_modifiability(accelize_drm, conf_json, cred_json, async_handler):
-    """Once the log service has been created, test the parameters cannot be modified except verbosity and format """
+    """Once the log file has been created, test the parameters cannot be modified except verbosity and format """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
@@ -423,4 +423,4 @@ def test_log_file_parameters_modifiability(accelize_drm, conf_json, cred_json, a
     finally:
         if isfile(log_path):
             remove(log_path)
-    print('Test log service parameters modifiability from config: PASS')
+    print('Test log file parameters modifiability from config: PASS')
