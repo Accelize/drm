@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegistersStrategy_v3_0_0.cpp
-*  \version   4.0.0.1
-*  \date      July 2019
+*  \version   4.1.0.0
+*  \date      March 2020
 *  \brief     Class DrmControllerRegistersStrategy_v3_0_0 defines strategy for register access of drm controller v3.0.0.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License") {
 

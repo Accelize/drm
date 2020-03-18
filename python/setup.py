@@ -25,6 +25,7 @@ PACKAGE_INFO = dict(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Operating System :: OS Independent'
     ],
     keywords='drm fpga',
@@ -39,11 +40,10 @@ PACKAGE_INFO = dict(
     license='Apache License, Version 2.0',
     python_requires='>=3.5',
     setup_requires=['setuptools'],
-    packages=['accelize_drm', 'accelize_drm.fpga_drivers'],
+    packages=['accelize_drm'],
     package_data={'accelize_drm': ['*.pxd']},
-    zip_safe=False,
-    entry_points={'console_scripts': [
-        'accelize_drm=accelize_drm._systemd:run_service']})
+    zip_safe=False
+)
 
 SETUP_DIR = abspath(dirname(__file__))
 

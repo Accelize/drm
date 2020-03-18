@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerDataConverter.hpp
-*  \version   4.0.0.1
-*  \date      July 2019
+*  \version   4.1.0.0
+*  \date      March 2020
 *  \brief     Class DrmControllerDataConverter provides base functions for data conversion.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.

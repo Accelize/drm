@@ -492,6 +492,7 @@ Command options are:
 --fpga_driver=key_name      Select FPGA driver to use. Default: ``aws_f1``.
                             Possibles key_name values:
                             * **aws_f1**: Amazon Web Service FPGA instances (f1.2xlarge, f1.4xlarge).
+                            * **xilinx_xrt**: Xilinx XRT.
 
 --fpga_slot_id=integer      Set FPGA slot. Default: ``0``.
 

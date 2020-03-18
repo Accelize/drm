@@ -54,15 +54,15 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         accelize_drm.clean_nodelock_env(drm_manager, driver, conf_json, cred_json, ws_admin)
 
 
+@pytest.mark.minimum
 def test_nodelock_license_is_not_given_to_inactive_user(accelize_drm, conf_json, cred_json,
                                                         async_handler, ws_admin):
-    """Test an user who has not bought a valid nodelocked license cannot get a license"""
+    """Test a user who has not bought a valid nodelocked license cannot get a license"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-
-    conf_json.addNodelock()
     cred_json.set_user('accelize_accelerator_test_01')
+    conf_json.addNodelock()
 
     try:
         # Start application
@@ -79,7 +79,7 @@ def test_nodelock_license_is_not_given_to_inactive_user(accelize_drm, conf_json,
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
         assert 'License Web Service error 400' in str(excinfo.value)
-        assert search(r'\\"No Entitlement\\" with .+ for accelize_accelerator_test_01@accelize.com', str(excinfo.value))
+        assert search(r'\\"No Entitlement\\" with .+ for \S+_test_01@accelize.com', str(excinfo.value))
         assert 'User account has no entitlement. Purchase additional licenses via your portal.' in str(excinfo.value)
         err_code = async_handler.get_error_code(str(excinfo.value))
         assert err_code == accelize_drm.exceptions.DRMWSReqError.error_code
@@ -90,6 +90,7 @@ def test_nodelock_license_is_not_given_to_inactive_user(accelize_drm, conf_json,
 
 @pytest.mark.minimum
 @pytest.mark.no_parallel
+@pytest.mark.hwtst
 def test_nodelock_normal_case(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
     """Test normal nodelock license usage"""
 
@@ -97,6 +98,7 @@ def test_nodelock_normal_case(accelize_drm, conf_json, cred_json, async_handler,
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
     activators.reset_coin()
+    activators[0].autotest()
 
     cred_json.set_user('accelize_accelerator_test_03')
     conf_json.addNodelock()
@@ -114,10 +116,13 @@ def test_nodelock_normal_case(accelize_drm, conf_json, cred_json, async_handler,
         assert drm_manager.get('license_type') == 'Node-Locked'
         # Start application
         assert not drm_manager.get('license_status')
+        activators[0].autotest()
         drm_manager.activate()
+        activators[0].autotest()
         assert not drm_manager.get('license_status')
         assert drm_manager.get('drm_license_type') == 'Node-Locked'
         assert drm_manager.get('license_duration') == 0
+        activators[0].check_coin(drm_manager.get('metered_data'))
         activators[0].generate_coin(10)
         activators[0].check_coin(drm_manager.get('metered_data'))
         drm_manager.deactivate()
@@ -127,6 +132,7 @@ def test_nodelock_normal_case(accelize_drm, conf_json, cred_json, async_handler,
 
 
 @pytest.mark.no_parallel
+@pytest.mark.hwtst
 def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, async_handler,
                                          ws_admin):
     """Test normal nodelock license usage"""
@@ -138,6 +144,7 @@ def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, asy
 
     cred_json.set_user('accelize_accelerator_test_03')
     conf_json.addNodelock()
+    activators[0].autotest()
 
     try:
         # Load a user who has a valid nodelock license
@@ -191,6 +198,7 @@ def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, asy
 
 
 @pytest.mark.no_parallel
+@pytest.mark.hwtst
 def test_nodelock_without_server_access(accelize_drm, conf_json, cred_json, async_handler,
                                         ws_admin):
     """Test error is returned when no url is provided"""
@@ -223,6 +231,7 @@ def test_nodelock_without_server_access(accelize_drm, conf_json, cred_json, asyn
 
 @pytest.mark.on_2_fpga
 @pytest.mark.minimum
+@pytest.mark.hwtst
 def test_nodelock_limits(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
     """
     Test behavior when limits are reached. 2 FPGA are required.
@@ -269,7 +278,7 @@ def test_nodelock_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
             drm_manager1.activate()
         assert 'License Web Service error 400' in str(excinfo.value)
         assert 'DRM WS request failed' in str(excinfo.value)
-        assert search(r'\\"Entitlement Limit Reached\\" with .+ for accelize_accelerator_test_03@accelize.com', str(excinfo.value))
+        assert search(r'\\"Entitlement Limit Reached\\" with .+ for \S+_test_03@accelize.com', str(excinfo.value))
         assert 'You have reached the maximum quantity of 1 nodes for Nodelocked entitlement' in str(excinfo.value)
         err_code = async_handler.get_error_code(str(excinfo.value))
         assert err_code == accelize_drm.exceptions.DRMWSReqError.error_code
@@ -280,6 +289,7 @@ def test_nodelock_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
 
 
 @pytest.mark.no_parallel
+@pytest.mark.hwtst
 def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, cred_json,
                                                       async_handler, ws_admin):
     """
@@ -353,6 +363,7 @@ def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, c
 
 
 @pytest.mark.no_parallel
+@pytest.mark.hwtst
 def test_nodelock_after_metering_mode(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
     """Test metering session is stopped when switching to nodelock mode"""
 
@@ -412,6 +423,7 @@ def test_nodelock_after_metering_mode(accelize_drm, conf_json, cred_json, async_
 
 
 @pytest.mark.no_parallel
+@pytest.mark.hwtst
 def test_parsing_of_nodelock_files(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
     """Test metering session is stopped when switching to nodelock mode"""
 

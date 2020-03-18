@@ -6,6 +6,7 @@ import pytest
 import sys
 import gc
 import re
+import logging
 from glob import glob
 from os import remove
 from os.path import getsize, isfile, dirname, join, realpath, basename
@@ -78,7 +79,7 @@ def check_bit_dispersion(value_list):
     value_len = max(map(lambda x: len(x), value_list))
     if list_size < SAMPLES_DISPERSION_THRESHOLD:
         print('Not enough samples to compute bit dispersion')
-        return None
+        return -1
     value_list = list(map(lambda x: x.zfill(value_len), value_list))
     # Compute dispersion
     count_per_bit = [0]*value_len
@@ -100,7 +101,6 @@ def check_bit_dispersion(value_list):
     print('Percentage of tested bits: %0.1f%%' % bit_tested_percent)
     print('Percentage of bad bits: %0.3f%% (%d)' % (float(err)/value_len*100, err))
     score = gap/len(disp_per_bit)
-    print('=> Dispersion score: %f' % score)
     return score
 
 
@@ -118,6 +118,7 @@ def test_global_challenge_quality():
         print('... adding %d more requests' % len(res_json['requests']))
 
     # CHECK CHALLENGE QUALITY
+    print('*** Check global Challenge quality ***')
     value_list = list()
     for e in value_json['requests']:
         try:
@@ -126,15 +127,14 @@ def test_global_challenge_quality():
         except:
             print("Bad format for following request: %s" % str(e))
     # Check duplicates
-    dupl_score = check_duplicates(value_list)
-    if dupl_score:
-        assert dupl_score < DUPLICATE_THRESHOLD
+    chlg_dupl_score = check_duplicates(value_list)
+    print("=> Percentage of global Challenge duplicates: %f%%" % chlg_dupl_score)
     # Check dispersion
-    disp_score = check_bit_dispersion(value_list)
-    if disp_score:
-        assert disp_score < DISPERSION_THRESHOLD
+    chlg_disp_score = check_bit_dispersion(value_list)
+    print('=> Global Challenge dispersion score: %f' % chlg_disp_score)
 
     # CHECK DNA QUALITY
+    print('*** Check global DNA quality ***')
     value_list = [e['dna'] for e in value_json['requests'] if e['request']=='open']
     value_list = list()
     for e in value_json['requests']:
@@ -144,242 +144,20 @@ def test_global_challenge_quality():
         except:
             print("Bad format for following request: %s" % str(e))
     # Check duplicates
-    dupl_score = check_duplicates(value_list)
-    if dupl_score:
-        assert dupl_score < DUPLICATE_THRESHOLD
+    dna_dupl_score = check_duplicates(value_list)
+    print("=> Percentage of global DNA duplicates: %f%%" % dna_dupl_score)
     # Check dispersion
-    disp_score = check_bit_dispersion(value_list)
-    if disp_score:
-        assert disp_score < DISPERSION_THRESHOLD
-
-
-@pytest.mark.security
-@pytest.mark.skip
-def test_first_challenge_duplication(accelize_drm, conf_json, cred_json, async_handler):
-    """Run 'num_samples' times the drmlib application to evaluate the quality of the first challenge.
-    """
-    driver = accelize_drm.pytest_fpga_driver[0]
-    async_cb = async_handler.create()
-    activators = accelize_drm.pytest_fpga_activators[0]
-    activators.autotest()
-    cred_json.set_user('accelize_accelerator_test_05_manual')
-    try:
-        num_sessions = accelize_drm.pytest_params['num_open_sessions']
-    except:
-        num_sessions = 100
-        print('Warning: Missing argument "num_open_sessions". Using default value %d' % num_sessions)
-    try:
-        num_samples = accelize_drm.pytest_params['num_open_samples']
-    except:
-        num_samples = 4
-        print('Warning: Missing argument "num_open_samples". Using default value %d' % num_samples)
-    print('num_open_sessions=', num_sessions)
-    print('num_open_samples=', num_samples)
-
-    async_cb.reset()
-    conf_json.reset()
-    logpath = realpath("./drmlib.%d.%d.log" % (time(), randrange(0xFFFFFFFF)))
-    conf_json['settings']['log_file_verbosity'] = 1
-    conf_json['settings']['log_file_type'] = 1
-    conf_json['settings']['log_file_path'] = logpath
-    conf_json['settings']['log_file_format'] = LOG_FORMAT_LONG
-    conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    try:
-        session_cnt = 0
-        while session_cnt < num_sessions:
-            try:
-                print('Starting session #%d/%d ...' % (session_cnt+1,num_sessions))
-                activators.autotest(is_activated=False)
-                drm_manager.activate()
-                activators.autotest(is_activated=True)
-                license_duration = drm_manager.get('license_duration')
-                session_cnt += 1
-                sleep(1)
-                for s in range(num_samples):
-                    print('Waiting %d seconds' % license_duration)
-                    sleep(license_duration)
-                    if async_cb.was_called:
-                        print('Error occurred in %s at sample #%d/%d: background thread failed with message: %s' % (sys._getframe().f_code.co_name, s+1, num_samples, async_cb.message))
-                        break
-            except:
-                print('Session #%d/%d failed: retrying!' % (session_cnt+1,num_sessions))
-            finally:
-                while True:
-                    try:
-                        drm_manager.deactivate()
-                        break
-                    except:
-                        print('Error occurred in %s: deactivate failed with message: %s' % (sys._getframe().f_code.co_name, async_cb.message))
-                        sleep(1)
-                activators.autotest(is_activated=False)
-                async_cb.reset()
-    finally:
-        # Check validity
-        assert session_cnt >= num_sessions
-        del drm_manager
-        gc.collect()
-    # Parse log file
-    request_list = parse_and_save_challenge(logpath, REGEX_PATTERN, 'test_first_challenge_duplication.%d.%d.json' % (time(), randrange(0xFFFFFFFF)))
-    # Keep only the 'open' requests
-    request_json['requests'] = list(filter(lambda x: x['request'] == 'open', request_list))
-    # Check validity
-    assert len(request_list) >= num_sessions
-    # Check duplicates
-    challenge_list = [e['saasChallenge'] for e in request_list]
-    dupl_score = check_duplicates(challenge_list)
-    if dupl_score:
-        assert dupl_score < DUPLICATE_THRESHOLD
-    async_cb.assert_NoError()
-
-
-@pytest.mark.security
-@pytest.mark.skip
-def test_intra_challenge_duplication(accelize_drm, conf_json, cred_json, async_handler):
-    """Run drmlib application long enough to generate 'num_samples' license request to License WS.
-    Purpose is to evaluate the quality of the SAAS Challenge.
-    """
-    driver = accelize_drm.pytest_fpga_driver[0]
-    async_cb = async_handler.create()
-    activators = accelize_drm.pytest_fpga_activators[0]
-    activators.autotest()
-    cred_json.set_user('accelize_accelerator_test_05_manual')
-    try:
-        num_samples = accelize_drm.pytest_params['num_intra_samples']
-    except:
-        num_samples = 100
-        print('Warning: Missing argument "num_intra_samples". Using default value %d' % num_samples)
-    print('num_intra_samples=', num_samples)
-
-    async_cb.reset()
-    conf_json.reset()
-    logpath = realpath("./drmlib.%d.%d.log" % (time(), randrange(0xFFFFFFFF)))
-    conf_json['settings']['log_file_verbosity'] = 1
-    conf_json['settings']['log_file_type'] = 1
-    conf_json['settings']['log_file_path'] = logpath
-    conf_json['settings']['log_file_format'] = LOG_FORMAT_LONG
-    conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    try:
-        activators.autotest(is_activated=False)
-        drm_manager.activate()
-        activators.autotest(is_activated=True)
-        license_duration = drm_manager.get('license_duration')
-        print('License duration=%d, num of samples=%d' % (license_duration, num_samples))
-        sleep(1)
-        sample_cnt = 0
-        while sample_cnt < num_samples:
-            sleep(license_duration)
-            if async_cb.was_called:
-                print('Error occurred in %s at sample #%d/%d: background thread failed with message: %s' % (sys._getframe().f_code.co_name, sample_cnt+1, num_samples, async_cb.message))
-                async_cb.reset()
-            else:
-                sample_cnt += 1
-    finally:
-        while True:
-            try:
-                drm_manager.deactivate()
-                break
-            except:
-                print('Error occurred in %s: deactivate failed with message: %s' % (sys._getframe().f_code.co_name, async_cb.message))
-                sleep(1)
-        activators.autotest(is_activated=False)
-        # Check validity
-        assert sample_cnt >= num_samples
-        del drm_manager
-        gc.collect()
-    # Parse log file
-    request_list = parse_and_save_challenge(logpath, REGEX_PATTERN, 'test_intra_challenge_duplication.%d.%d.json' % (time(), randrange(0xFFFFFFFF)))
-    # Remove close request because they repeat the last challenge
-    request_list = list(filter(lambda x: x['request'] != 'close', request_list))
-    # Check validity
-    assert len(request_list) >= num_samples
-    # Check duplicates
-    challenge_list = [e['saasChallenge'] for e in request_list]
-    dupl_score = check_duplicates(challenge_list)
-    if dupl_score:
-        assert dupl_score < DUPLICATE_THRESHOLD
-    async_cb.assert_NoError()
-
-
-@pytest.mark.security
-@pytest.mark.skip
-def test_dna_duplication(accelize_drm, conf_json, cred_json, async_handler):
-    """Reprogram FPGA and display DNA.
-    Purpose is to evaluate the quality of the DNA Challenge.
-    """
-    driver = accelize_drm.pytest_fpga_driver[0]
-    image_bkp = driver.fpga_image
-    async_cb = async_handler.create()
-    activators = accelize_drm.pytest_fpga_activators[0]
-    activators.autotest()
-    cred_json.set_user('accelize_accelerator_test_05_chipid')
-    try:
-        num_samples = accelize_drm.pytest_params['num_dna_samples']
-    except:
-        num_samples = 50
-        print('Warning: Missing argument "num_dna_samples". Using default value %d' % num_samples)
-    print('num_dna_samples=', num_samples)
-
-    async_cb.reset()
-    conf_json.reset()
-    logpath = realpath("./drmlib.%d.%d.log" % (time(), randrange(0xFFFFFFFF)))
-    conf_json['settings']['log_verbosity'] = 4
-    conf_json['settings']['log_file_verbosity'] = 2
-    conf_json['settings']['log_file_type'] = 1
-    conf_json['settings']['log_file_path'] = logpath
-    conf_json.save()
-
-    dna_list = list()
-    while len(dna_list) < num_samples:
-        try:
-            print('Reset #%d/%d...' % (len(dna_list)+1, num_samples))
-            driver.program_fpga(image_bkp)
-            drm_manager = accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            )
-            drm_manager.get('hw_report')
-            activators.autotest(is_activated=False)
-            drm_manager.activate()
-            activators.autotest(is_activated=True)
-            drm_manager.deactivate()
-            activators.autotest(is_activated=False)
-        except:
-            print('Last reset failed at sample #%d/%d: retrying!' % (len(dna_list), num_samples))
-        finally:
-            del drm_manager
-            gc.collect()
-            print(f'Parsing requests from log file: {logpath}')
-            with open(logpath, 'rt') as f:
-                log = f.read()
-            dna_list.append({'request':'open', 'dna':search(r'-\s*dna\s*\.+\s*:\s*0x([0-9A-F]+)', log, re.I).group(1)})
-    # Check validity
-    assert len(dna_list) >= num_samples
-    # Save to file
-    with open('test_dna_duplication.%d.%d.json' % (time(), randrange(0xFFFFFFFF)), 'wt') as f:
-        f.write(dumps({'requests': dna_list}, indent=4, sort_keys=True))
-    # Check duplicates
-    dna_list = [e['dna'] for e in dna_list]
-    dupl_score = check_duplicates(dna_list)
-    if dupl_score:
-        assert dupl_score < DUPLICATE_THRESHOLD
-    async_cb.assert_NoError()
+    dna_disp_score = check_bit_dispersion(value_list)
+    print('=> Global DNA dispersion score: %f' % chlg_disp_score)
+    # Check assertion
+    if chlg_dupl_score:
+        assert chlg_dupl_score < DUPLICATE_THRESHOLD
+    if chlg_disp_score:
+        assert chlg_disp_score < DISPERSION_THRESHOLD
+    if dna_dupl_score:
+        assert dna_dupl_score < DUPLICATE_THRESHOLD
+    if dna_disp_score:
+        assert dna_disp_score < DISPERSION_THRESHOLD
 
 
 @pytest.mark.security
@@ -392,33 +170,21 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
     activators = accelize_drm.pytest_fpga_activators[0]
     activators.autotest()
     #cred_json.set_user('accelize_accelerator_test_05_chipid_only')
-    #cred_json.set_user('accelize_accelerator_test_05_dna_challenge')
-
-    # Get number of sessions parameter
+    cred_json.set_user('accelize_accelerator_test_05_dna_challenge')
     try:
         num_sessions = accelize_drm.pytest_params['num_sessions']
     except:
         num_sessions = 100
         print('Warning: Missing argument "num_sessions". Using default value %d' % num_sessions)
-    # Get number of samples parameter
     try:
         num_samples = accelize_drm.pytest_params['num_samples']
     except:
         num_samples = 4
         print('Warning: Missing argument "num_samples". Using default value %d' % num_samples)
-    # Get access key parameter
-    try:
-        access_key = accelize_drm.pytest_params['access_key']
-    except:
-        access_key = "exploration_test_05"
-        print('Warning: Missing argument "access_key". Using default value %d' % access_key)
-
     print('num_sessions=', num_sessions)
     print('num_samples=', num_samples)
-    print('access_key=', access_key)
 
     async_cb.reset()
-    cred_json.set_user(access_key)
     conf_json.reset()
     logpath = realpath("./drmlib.%d.%d.log" % (time(), randrange(0xFFFFFFFF)))
     conf_json['settings']['log_file_verbosity'] = 1

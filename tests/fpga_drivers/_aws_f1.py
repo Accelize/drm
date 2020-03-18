@@ -9,8 +9,11 @@ from ctypes import (
     cdll as _cdll, POINTER as _POINTER, byref as _byref, c_uint32 as _c_uint32,
     c_uint64 as _c_uint64, c_int as _c_int)
 from subprocess import run as _run, PIPE as _PIPE, STDOUT as _STDOUT
+from os.path import basename as _basename
+from re import match as _match
+from threading import Lock as _Lock
 
-from accelize_drm.fpga_drivers import FpgaDriverBase as _FpgaDriverBase
+from tests.fpga_drivers import FpgaDriverBase as _FpgaDriverBase
 
 __all__ = ['FpgaDriver']
 
@@ -25,6 +28,7 @@ class FpgaDriver(_FpgaDriverBase):
         drm_ctrl_base_addr (int): DRM Controller base address.
         log_dir (path-like object): Unused with this driver.
     """
+    _name = _match(r'_(.+)\.py', _basename(__file__)).group(1)
 
     @staticmethod
     def _get_driver():
@@ -43,6 +47,23 @@ class FpgaDriver(_FpgaDriverBase):
             raise RuntimeError('Unable to initialize the "fpga_pci" library')
 
         return fpga_library
+
+    @staticmethod
+    def _get_lock():
+        """
+        Get a lock on the FPGA driver
+        """
+        return _Lock
+
+    def _clear_fpga(self):
+        """
+        Clear FPGA
+        """
+        clear_fpga = _run(
+            ['fpga-clear-local-image', '-S', str(self._fpga_slot_id)],
+            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
+        if clear_fpga.returncode:
+            raise RuntimeError(clear_fpga.stdout)
 
     def _program_fpga(self, fpga_image):
         """
@@ -121,7 +142,7 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (accelize_drm.fpga_drivers._aws_f1.FpgaDriver):
                     Keep a reference to driver.
             """
-            with driver._fpga_read_register_lock:
+            with driver._fpga_read_register_lock():
                 return driver._fpga_read_register(
                     driver._fpga_handle,
                     driver._drm_ctrl_base_addr + register_offset,
@@ -155,7 +176,7 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (accelize_drm.fpga_drivers._aws_f1.FpgaDriver):
                     Keep a reference to driver.
             """
-            with driver._fpga_write_register_lock:
+            with driver._fpga_write_register_lock():
                 return driver._fpga_write_register(
                     driver._fpga_handle,
                     driver._drm_ctrl_base_addr + register_offset,

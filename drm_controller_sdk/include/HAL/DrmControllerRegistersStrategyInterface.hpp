@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegistersStrategyInterface.hpp
-*  \version   4.0.0.1
-*  \date      July 2019
+*  \version   4.1.0.0
+*  \date      March 2020
 *  \brief     Class DrmControllerRegistersStrategyInterface defines strategy interface for register access.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.
@@ -1121,6 +1121,8 @@ namespace DrmControllerLibrary {
 
     // private members, functions ...
     private:
+
+      unsigned int mSleepInMicroSeconds; /**<Store the sleep in microseconds to complete internal operation.**/
 
       /** printPage
       *   \brief Display the value of the page register.

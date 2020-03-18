@@ -7,10 +7,11 @@ import gc
 from glob import glob
 from os import remove, getpid
 from os.path import getsize, isfile, dirname, join, realpath
-from re import search, finditer, MULTILINE
+from re import match, search, finditer, MULTILINE
 from time import sleep, time
 from json import loads
 from datetime import datetime, timedelta
+from time import time
 
 
 LOG_FORMAT_SHORT = "[%^%=8l%$] %-6t, %v"
@@ -55,12 +56,6 @@ _PARAM_LIST = ['license_type',
                'log_message_level',
                'list_all',
                'dump_all',
-               'log_service_verbosity',
-               'log_service_format',
-               'log_service_path',
-               'log_service_type',
-               'log_service_rotating_size',
-               'log_service_rotating_num',
                'page_ctrlreg',
                'page_vlnvfile',
                'page_licfile',
@@ -68,7 +63,6 @@ _PARAM_LIST = ['license_type',
                'page_meteringfile',
                'page_mailbox',
                'hw_report',
-               'log_service_create',
                'trigger_async_callback',
                'bad_product_id',
                'bad_oauth2_token',
@@ -86,55 +80,49 @@ def ordered_json(obj):
 
 @pytest.mark.minimum
 def test_backward_compatibility(accelize_drm, conf_json, cred_json, async_handler):
+    from itertools import groupby
     """Test API is not compatible with DRM HDK < 3.0"""
     refdesign = accelize_drm.pytest_ref_designs
+    hdk_version = accelize_drm.pytest_hdk_version
+    if hdk_version is None:
+        pytest.skip("FPGA image is not corresponding to a known HDK version")
+
+    current_major = int(match(r'^(\d+)\.', hdk_version).group(1))
     driver = accelize_drm.pytest_fpga_driver[0]
     fpga_image_bkp = driver.fpga_image
     async_cb = async_handler.create()
     drm_manager = None
 
     try:
-        # Program FPGA with old HDK 2.x.x
-        hdk = list(filter(lambda x: x.startswith('2.'), refdesign.hdk_versions))[0]
-        assert hdk.startswith('2.')
-        image_id = refdesign.get_image_id(hdk)
-        driver.program_fpga(image_id)
-        # Test compatibility issue
-        with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
-            async_cb.reset()
-            drm_manager = accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            )
-        assert 'Unable to find DRM Controller registers. Please check:' in str(excinfo.value)
-        assert 'The DRM offset in your read/write callback implementation' in str(excinfo.value)
-        assert 'The compatibility between the SDK and DRM HDK in use' in str(excinfo.value)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
-        async_cb.assert_NoError()
+        refdesignByMajor = ((int(match(r'^(\d+)\.', x).group(1)), x) for x in refdesign.hdk_versions)
 
-        # Program FPGA with old HDK 3.0.x
-        hdk = list(filter(lambda x: x.startswith('3.0'), refdesign.hdk_versions))[0]
-        assert hdk.startswith('3.0.')
-        image_id = refdesign.get_image_id(hdk)
-        driver.program_fpga(image_id)
-        # Test compatibility issue
-        async_cb = async_handler.create()
-        with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
-            async_cb.reset()
-            drm_manager = accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            )
-        assert search(r'This DRM Library version .* is not compatible with the DRM HDK version .*',
-                      str(excinfo.value)) is not None
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
-        async_cb.assert_NoError()
+        for major, versions in groupby(refdesignByMajor, lambda x: x[0]):
+            if major >= current_major:
+                continue
+
+            hdk = sorted((e[1] for e in versions))[0]
+            # Program FPGA with older HDK
+            image_id = refdesign.get_image_id(hdk)
+            driver.program_fpga(image_id)
+            # Test compatibility issue
+            with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
+                async_cb.reset()
+                drm_manager = accelize_drm.DrmManager(
+                    conf_json.path,
+                    cred_json.path,
+                    driver.read_register_callback,
+                    driver.write_register_callback,
+                    async_cb.callback
+                )
+            hit = False
+            if 'Unable to find DRM Controller registers' in str(excinfo.value):
+                hit =True
+            if search(r'This DRM Library version \S+ is not compatible with the DRM HDK version', str(excinfo.value)):
+                hit =True
+            assert hit
+            assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
+            async_cb.assert_NoError()
+            print('Test compatibility with %s: PASS' % hdk)
 
     finally:
         if drm_manager:
@@ -168,14 +156,14 @@ def test_wrong_drm_controller_address(accelize_drm, conf_json, cred_json, async_
                 driver.write_register_callback,
                 async_cb.callback
             )
-        assert 'Unable to find DRM Controller registers. Please check:' in str(excinfo.value)
-        assert 'The DRM offset in your read/write callback implementation' in str(excinfo.value)
-        assert 'The compatibility between the SDK and DRM HDK in use' in str(excinfo.value)
+        assert 'Unable to find DRM Controller registers.' in str(excinfo.value)
+        assert 'Please verify' in str(excinfo.value)
     finally:
         driver._drm_ctrl_base_addr = ctrl_base_addr_backup
 
 
 @pytest.mark.minimum
+@pytest.mark.hwtst
 @pytest.mark.no_parallel
 def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
     """
@@ -204,7 +192,7 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
         drm_manager.activate()
     assert "License Web Service error 400" in str(excinfo.value)
     assert "DRM WS request failed" in str(excinfo.value)
-    assert search(r'\\"No Entitlement\\" with .+ for accelize_accelerator_test_01@accelize.com', str(excinfo.value))
+    assert search(r'\\"No Entitlement\\" with .+ for \S+_test_01@accelize.com', str(excinfo.value))
     assert "User account has no entitlement. Purchase additional licenses via your portal" in str(excinfo.value)
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
     async_cb.assert_NoError()
@@ -227,7 +215,7 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
             drm_manager.activate()
         assert "License Web Service error 400" in str(excinfo.value)
         assert "DRM WS request failed" in str(excinfo.value)
-        assert search(r'\\"No Entitlement\\" with .+ for accelize_accelerator_test_01@accelize.com', str(excinfo.value))
+        assert search(r'\\"No Entitlement\\" with .+ for \S+_test_01@accelize.com', str(excinfo.value))
         assert "User account has no entitlement. Purchase additional licenses via your portal" in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_NoError()
@@ -271,7 +259,7 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
             drm_manager.activate()
         assert "License Web Service error 400" in str(excinfo.value)
         assert "DRM WS request failed" in str(excinfo.value)
-        assert search(r'\\"No Entitlement\\" with .+ for accelize_accelerator_test_02@accelize.com', str(excinfo.value))
+        assert search(r'\\"No Entitlement\\" with .+ for \S+_test_02@accelize.com', str(excinfo.value))
         assert 'No valid NodeLocked entitlement found for your account' in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_NoError()
@@ -359,7 +347,7 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
             drm_manager.activate()
         assert "License Web Service error 400" in str(excinfo.value)
         assert "DRM WS request failed" in str(excinfo.value)
-        assert search(r'\\"No Entitlement\\" with .+ for accelize_accelerator_test_04@accelize.com', str(excinfo.value))
+        assert search(r'\\"No Entitlement\\" with .+ for \S+_test_04@accelize.com', str(excinfo.value))
         assert 'No valid NodeLocked entitlement found for your account' in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_NoError()
@@ -470,7 +458,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     # Test parameter: log_file_path
     async_cb.reset()
     conf_json.reset()
-    exp_value = realpath("./drmlib.%d.log" % getpid())
+    exp_value = realpath("./drmlib.%d.%s.log" % (getpid(), time()))
     conf_json['settings']['log_file_path'] = exp_value
     conf_json.save()
     drm_manager = accelize_drm.DrmManager(
@@ -534,108 +522,6 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     assert drm_manager.get('log_file_rotating_num') == exp_value
     async_cb.assert_NoError()
     print("Test parameter 'log_file_rotating_num': PASS")
-
-    # Test parameter: log_service_verbosity
-    async_cb.reset()
-    conf_json.reset()
-    exp_value = 0
-    conf_json['settings']['log_service_verbosity'] = exp_value
-    conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    assert drm_manager.get('log_service_verbosity') == exp_value
-    async_cb.assert_NoError()
-    print("Test parameter 'log_service_verbosity': PASS")
-
-    # Test parameter: log_service_format
-    async_cb.reset()
-    conf_json.reset()
-    exp_value = LOG_FORMAT_SHORT
-    conf_json['settings']['log_service_format'] = exp_value
-    conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    assert drm_manager.get('log_service_format') == exp_value
-    async_cb.assert_NoError()
-    print("Test parameter 'log_service_format': PASS")
-
-    # Test parameter: log_service_path
-    async_cb.reset()
-    conf_json.reset()
-    exp_value = realpath("./drmservice.%d.log" % getpid())
-    conf_json['settings']['log_service_path'] = exp_value
-    conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    assert drm_manager.get('log_service_path') == exp_value
-    async_cb.assert_NoError()
-    print("Test parameter 'log_service_path': PASS")
-
-    # Test parameter: log_service_type
-    async_cb.reset()
-    conf_json.reset()
-    exp_value = 1
-    conf_json['settings']['log_service_type'] = exp_value
-    conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    assert drm_manager.get('log_service_type') == exp_value
-    async_cb.assert_NoError()
-    print("Test parameter 'log_service_type': PASS")
-
-    # Test parameter: log_service_rotating_size
-    async_cb.reset()
-    conf_json.reset()
-    exp_value = 1024
-    conf_json['settings']['log_service_rotating_size'] = exp_value
-    conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    assert drm_manager.get('log_service_rotating_size') == exp_value
-    async_cb.assert_NoError()
-    print("Test parameter 'log_service_rotating_size': PASS")
-
-    # Test parameter: log_service_rotating_num
-    async_cb.reset()
-    conf_json.reset()
-    exp_value = 10
-    conf_json['settings']['log_service_rotating_num'] = exp_value
-    conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    assert drm_manager.get('log_service_rotating_num') == exp_value
-    async_cb.assert_NoError()
-    print("Test parameter 'log_service_rotating_num': PASS")
 
     # Test parameter: frequency_detection_method
     if accelize_drm.pytest_new_freq_method_supported:
@@ -872,8 +758,10 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
 @pytest.mark.aws
 def test_c_unittests(accelize_drm, exec_func):
     """Test errors when missing arguments are given to DRM Controller Constructor"""
-
     driver = accelize_drm.pytest_fpga_driver[0]
+    if driver._name != 'aws':
+        pytest.skip("C unit-tests are only supported with AWS driver.")
+
     exec_lib = exec_func.load('unittests', driver._fpga_slot_id)
 
     # Test when read register callback is null
@@ -995,65 +883,6 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
 
     # Test parameter: log_file_path, log_file_type, log_file_rotating_size, log_file_rotating_num
     # => Cannot be written programmatically
-
-    # Test parameter: log_service_verbosity
-    orig_val = drm_manager.get('log_service_verbosity')
-    exp_val = 1 if orig_val == 0 else 0
-    drm_manager.set(log_service_verbosity=exp_val)
-    assert drm_manager.get('log_service_verbosity') == exp_val
-    drm_manager.set(log_service_verbosity=orig_val)
-    async_cb.assert_NoError()
-    print("Test parameter 'log_service_verbosity': PASS")
-
-    # Test parameter: log_service_format
-    orig_val = drm_manager.get('log_service_format')
-    assert orig_val == LOG_FORMAT_LONG
-    exp_val = LOG_FORMAT_SHORT
-    drm_manager.set(log_service_format=exp_val)
-    assert drm_manager.get('log_service_format') == exp_val
-    drm_manager.set(log_service_format=orig_val)
-    async_cb.assert_NoError()
-    print("Test parameter 'log_service_format': PASS")
-
-    # Test parameter: log_service_path
-    orig_val = drm_manager.get('log_service_path')
-    assert search(r'accelize_drmservice_\d+\.log', orig_val)
-    exp_path = 'test.log'
-    drm_manager.set(log_service_path=exp_path)
-    assert drm_manager.get('log_service_path') == exp_path
-    drm_manager.set(log_service_path=orig_val)
-    async_cb.assert_NoError()
-    print("Test parameter 'log_service_path': PASS")
-
-    # Test parameter: log_service_type
-    orig_val = drm_manager.get('log_service_type')
-    assert orig_val == 0
-    exp_type = 2
-    drm_manager.set(log_service_type=exp_type)
-    assert drm_manager.get('log_service_type') == exp_type
-    drm_manager.set(log_service_type=orig_val)
-    async_cb.assert_NoError()
-    print("Test parameter 'log_service_type': PASS")
-
-    # Test parameter: log_service_rotating_size
-    orig_val = drm_manager.get('log_service_rotating_size')
-    assert orig_val == 100*1024*1024
-    exp_type = 10*1024
-    drm_manager.set(log_service_rotating_size=exp_type)
-    assert drm_manager.get('log_service_rotating_size') == exp_type
-    drm_manager.set(log_service_rotating_size=orig_val)
-    async_cb.assert_NoError()
-    print("Test parameter 'log_service_rotating_size': PASS")
-
-    # Test parameter: log_service_rotating_num
-    orig_val = drm_manager.get('log_service_rotating_num')
-    assert orig_val == 3
-    exp_type = 5
-    drm_manager.set(log_service_rotating_num=exp_type)
-    assert drm_manager.get('log_service_rotating_num') == exp_type
-    drm_manager.set(log_service_rotating_num=orig_val)
-    async_cb.assert_NoError()
-    print("Test parameter 'log_service_rotating_num': PASS")
 
     # Test parameter: license_type in metering
     assert drm_manager.get('license_type') == 'Floating/Metering'
@@ -1322,12 +1151,11 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     async_cb.assert_NoError()
     print("Test parameter 'ParameterKeyCount': PASS")
 
-        # Test parameter: log_message
-    from time import time
+    # Test parameter: log_message
     from os.path import isfile
     async_cb.reset()
     conf_json.reset()
-    logpath = realpath("./drmlib.%d.log" % getpid())
+    logpath = realpath("./drmlib.%d.%s.log" % (getpid(), time()))
     verbosity = 5
     conf_json['settings']['log_file_verbosity'] = verbosity
     conf_json['settings']['log_file_type'] = 1
@@ -1720,9 +1548,10 @@ def test_mailbox_type_error(accelize_drm, conf_json, cred_json, async_handler):
     async_cb.assert_NoError()
 
 
-def test_configuration_file_bad_product_id(accelize_drm, conf_json, cred_json, async_handler):
+def test_configuration_file_wrong_product_id(accelize_drm, conf_json, cred_json, async_handler):
     """Test errors when an incorrect product ID is requested to License Web Server"""
 
+    refdesign = accelize_drm.pytest_ref_designs
     driver = accelize_drm.pytest_fpga_driver[0]
     fpga_image_bkp = driver.fpga_image
     async_cb = async_handler.create()
@@ -1749,12 +1578,23 @@ def test_configuration_file_bad_product_id(accelize_drm, conf_json, cred_json, a
     assert search(r'Product ID \s*%s from license request is unknown' % pid_string, str(excinfo.value)) is not None
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
     async_cb.assert_NoError()
-    print('Test Web Service when an unexisting product ID is provided: PASS')
+
+
+def test_configuration_file_empty_and_corrupted_product_id(accelize_drm, conf_json, cred_json, async_handler):
+    """Test errors when an incorrect product ID is requested to License Web Server"""
+
+    refdesign = accelize_drm.pytest_ref_designs
+    driver = accelize_drm.pytest_fpga_driver[0]
+    fpga_image_bkp = driver.fpga_image
+    async_cb = async_handler.create()
+    cred_json.set_user('accelize_accelerator_test_02')
 
     try:
-
         # Test Web Service when an empty product ID is provided
-        driver.program_fpga('agfi-09afa8cd9d0e9d725')
+        empty_fpga_image = refdesign.get_image_id('empty_product_id')
+        if empty_fpga_image is None:
+            pytest.skip("No FPGA image found for 'empty_product_id'")
+        driver.program_fpga(empty_fpga_image)
         async_cb.reset()
         drm_manager = accelize_drm.DrmManager(
             conf_json.path,
@@ -1774,8 +1614,11 @@ def test_configuration_file_bad_product_id(accelize_drm, conf_json, cred_json, a
         async_cb.assert_NoError()
         print('Test Web Service when an empty product ID is provided: PASS')
 
-        # Test Web Service when a misformatted product ID is provided
-        driver.program_fpga('agfi-07bec847264a84aa6')
+        # Test when a misformatted product ID is provided
+        bad_fpga_image = refdesign.get_image_id('bad_product_id')
+        if bad_fpga_image is None:
+            pytest.skip("No FPGA image found for 'bad_product_id'")
+        driver.program_fpga(bad_fpga_image)
         async_cb.reset()
         with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
             drm_manager = accelize_drm.DrmManager(
@@ -1786,7 +1629,7 @@ def test_configuration_file_bad_product_id(accelize_drm, conf_json, cred_json, a
                 async_cb.callback
             )
         assert 'Failed to parse Read-Only Mailbox in DRM Controller:' in str(excinfo.value)
-        assert 'Cannot parse JSON string because ' in str(excinfo.value)
+        assert search(r'Cannot parse JSON string .* because ', str(excinfo.value))
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadFormat.error_code
         async_cb.assert_NoError()
         print('Test Web Service when a misformatted product ID is provided: PASS')
@@ -1827,6 +1670,7 @@ def test_2_drm_manager_concurrently(accelize_drm, conf_json, cred_json, async_ha
 
 
 @pytest.mark.long_run
+@pytest.mark.hwtst
 def test_activation_and_license_status(accelize_drm, conf_json, cred_json, async_handler):
     """Test status of IP activators"""
 
@@ -1973,6 +1817,7 @@ def test_activation_and_license_status(accelize_drm, conf_json, cred_json, async
 
 
 @pytest.mark.long_run
+@pytest.mark.hwtst
 def test_session_status(accelize_drm, conf_json, cred_json, async_handler):
     """Test status of session"""
 
@@ -2177,6 +2022,7 @@ def test_session_status(accelize_drm, conf_json, cred_json, async_handler):
 
 
 @pytest.mark.long_run
+@pytest.mark.hwtst
 def test_license_expiration(accelize_drm, conf_json, cred_json, async_handler):
     """Test license expiration"""
 
@@ -2298,6 +2144,7 @@ def test_license_expiration(accelize_drm, conf_json, cred_json, async_handler):
             drm_manager.deactivate()
 
 
+@pytest.mark.hwtst
 def test_multiple_call(accelize_drm, conf_json, cred_json, async_handler):
     """Test multiple calls to activate and deactivate"""
 
@@ -2442,7 +2289,7 @@ def test_retry_function(accelize_drm, conf_json, cred_json, async_handler):
         assert (end - start).total_seconds() < 1
         assert 'License Web Service error 470' in str(excinfo.value)
         assert 'DRM WS request failed' in str(excinfo.value)
-        assert search(r'\\"Entitlement Limit Reached\\" with .+ for accelize_accelerator_test_04@accelize.com', str(excinfo.value)) is not None
+        assert search(r'\\"Entitlement Limit Reached\\" with .+ for \S+_test_04@accelize.com', str(excinfo.value)) is not None
         assert 'You have reached the maximum quantity of 1 seat(s) for floating entitlement' in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
     finally:
@@ -2564,6 +2411,7 @@ def test_readonly_and_writeonly_parameters(accelize_drm, conf_json, cred_json, a
 
 
 @pytest.mark.endurance
+@pytest.mark.hwtst
 def test_authentication_expiration(accelize_drm, conf_json, cred_json, async_handler):
     from random import sample
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -2610,19 +2458,18 @@ def test_directory_creation(accelize_drm, conf_json, cred_json, async_handler):
     async_cb = async_handler.create()
 
     log_type = 1
-    log_dir = realpath(expanduser('~/tmp_log_dir'))
+    log_dir = realpath(expanduser('~/tmp_log_dir.%s' % str(time())))
     if not isdir(log_dir):
         makedirs(log_dir)
 
     try:
-
         # Test error when creating directory
 
         # Create immutable folder
         check_call('sudo chattr +i %s' % log_dir, shell=True)
+        assert not access(log_dir, W_OK)
         try:
-            assert not access(log_dir, W_OK)
-            log_path = join(log_dir, "tmp", "drmservice-%d.log" % getpid())
+            log_path = join(log_dir, "tmp", "drmlib.%d.%s.log" % (getpid(), str(time())))
             assert not isdir(dirname(log_path))
             async_cb.reset()
             conf_json.reset()
@@ -2649,7 +2496,7 @@ def test_directory_creation(accelize_drm, conf_json, cred_json, async_handler):
 
         assert isdir(log_dir)
         assert access(log_dir, W_OK)
-        log_path = join(log_dir, "drmservice-%d.log" % getpid())
+        log_path = join(log_dir, "drmlib.%d.%s.log" % (getpid(), time()))
         assert not isfile(log_path)
         async_cb.reset()
         conf_json.reset()
@@ -2678,7 +2525,7 @@ def test_directory_creation(accelize_drm, conf_json, cred_json, async_handler):
         assert access(log_dir, W_OK)
         intermediate_dir = join(log_dir, 'tmp')
         assert not isdir(intermediate_dir)
-        log_path = join(intermediate_dir, "drmservice-%d.log" % getpid())
+        log_path = join(intermediate_dir, "drmlib.%d.%s.log" % (getpid(), time()))
         async_cb.reset()
         conf_json.reset()
         conf_json['settings']['log_file_path'] = log_path
@@ -2743,7 +2590,7 @@ def test_drm_manager_frequency_detection_method1(accelize_drm, conf_json, cred_j
     async_cb = async_handler.create()
 
     conf_json.reset()
-    logpath = realpath("./drmlib.%d.log" % getpid())
+    logpath = realpath("./drmlib.%d.%s.log" % (getpid(), time()))
     conf_json['settings']['log_file_verbosity'] = 1
     conf_json['settings']['log_file_type'] = 1
     conf_json['settings']['log_file_path'] = logpath
@@ -2782,7 +2629,7 @@ def test_drm_manager_frequency_detection_method1_exception(accelize_drm, conf_js
         async_cb.callback
     )
     conf_json.reset()
-    logpath = realpath("./drmlib.%d.log" % getpid())
+    logpath = realpath("./drmlib.%d.%s.log" % (getpid(), time()))
     conf_json['settings']['frequency_detection_period'] = (int)(2**32 / 125000000 * 1000) + 2
     conf_json.save()
     with pytest.raises(accelize_drm.exceptions.DRMBadFrequency) as excinfo:
@@ -2815,7 +2662,7 @@ def test_drm_manager_frequency_detection_method2(accelize_drm, conf_json, cred_j
     try:
         driver.program_fpga(image_id)
         conf_json.reset()
-        logpath = realpath("./drmlib.%d.log" % getpid())
+        logpath = realpath("./drmlib.%d.%s.log" % (getpid(), time()))
         conf_json['settings']['log_file_verbosity'] = 1
         conf_json['settings']['log_file_type'] = 1
         conf_json['settings']['log_file_path'] = logpath
@@ -2888,9 +2735,10 @@ def test_drm_manager_frequency_detection_bypass(accelize_drm, conf_json, cred_js
             str(excinfo.value)) is not None
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadFrequency.error_code
     async_cb.assert_NoError()
-    print('Test bypass_frequency_detection=true: PASS')
+    print('Test bypass_frequency_detection=false: PASS')
 
 
+@pytest.mark.hwtst
 def test_drm_manager_bist(accelize_drm, conf_json, cred_json, async_handler):
     """Test register access BIST"""
 
@@ -2911,7 +2759,8 @@ def test_drm_manager_bist(accelize_drm, conf_json, cred_json, async_handler):
             driver.write_register_callback,
             async_cb.callback
         )
-    assert 'Read/Write callbacks auto-test failed' in str(excinfo.value)
+    assert 'DRM Communication Self-Test 2 failed: Could not access DRM Controller registers' in str(excinfo.value)
+    assert 'Please verify' in str(excinfo.value)
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
     async_cb.assert_NoError()
 
@@ -2926,6 +2775,7 @@ def test_drm_manager_bist(accelize_drm, conf_json, cred_json, async_handler):
             my_wrong_write_callback,
             async_cb.callback
         )
-    assert 'Read/Write callbacks auto-test failed' in str(excinfo.value)
+    assert 'DRM Communication Self-Test 2 failed: Could not access DRM Controller registers' in str(excinfo.value)
+    assert 'Please verify' in str(excinfo.value)
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
     async_cb.assert_NoError()

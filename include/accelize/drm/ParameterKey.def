@@ -33,12 +33,6 @@ PARAMETERKEY_ITEM( ws_request_timeout )             ///< Read-write, read and wr
 PARAMETERKEY_ITEM( log_message_level )              ///< Read-write, only for testing, read and write the log level used with log_message parameter to set the message level
 PARAMETERKEY_ITEM( list_all )                       ///< Read-only, list all parameter keys available
 PARAMETERKEY_ITEM( dump_all )                       ///< Read-only, read all parameter key values
-PARAMETERKEY_ITEM( log_service_path )               ///< Read-write, read or write the service logging file path: default path is "./drm_lib.log". Can be set only from configuration file (no override from C/C++ code)
-PARAMETERKEY_ITEM( log_service_type )               ///< Read-write, read or write the service logging file type 0=no logging file, 1=basic file, 2=rotation file. Set only from configuration file (no override from C code)
-PARAMETERKEY_ITEM( log_service_rotating_size )      ///< Read-write, read or write the service logging rotating file size: default=100MB. Set only from configuration file (no override from C code)
-PARAMETERKEY_ITEM( log_service_rotating_num )       ///< Read-write, read or write the service logging rotating number of backup files: default=3. Set only from configuration file (no override from C code)
-PARAMETERKEY_ITEM( log_service_verbosity )          ///< Read-write, read and write the service logging verbosity on the file: 0=trace, 6=quiet
-PARAMETERKEY_ITEM( log_service_format )             ///< Read-write, read and write the service logging file format. Refer to spdlog reference manual (https://github.com/gabime/spdlog/wiki/3.-Custom-formatting)
 PARAMETERKEY_ITEM( page_ctrlreg )                   ///< Read-only, return nothing, print all registers in the DRM Controller Registry page
 PARAMETERKEY_ITEM( page_vlnvfile )                  ///< Read-only, return nothing, print all registers in the VLNV File page
 PARAMETERKEY_ITEM( page_licfile )                   ///< Read-only, return nothing, print all registers in the License File page
@@ -46,7 +40,6 @@ PARAMETERKEY_ITEM( page_tracefile )                 ///< Read-only, return nothi
 PARAMETERKEY_ITEM( page_meteringfile )              ///< Read-only, return nothing, print all registers in the Metering File page
 PARAMETERKEY_ITEM( page_mailbox )                   ///< Read-only, return nothing, print all registers in the Mailbox page
 PARAMETERKEY_ITEM( hw_report )                      ///< Read-only, return nothing, print the Algodone HW report
-PARAMETERKEY_ITEM( log_service_create )             ///< Write-only, create the service logging file. Logging parameters must have been set before calling this parameter.
 PARAMETERKEY_ITEM( trigger_async_callback )         ///< Write-only, only for testing, call the asynchronous error callback with the given message
 PARAMETERKEY_ITEM( bad_product_id )                 ///< Write-only, only for testing, uses a bad product ID
 PARAMETERKEY_ITEM( bad_oauth2_token )               ///< Write-only, only for testing, uses a bad token

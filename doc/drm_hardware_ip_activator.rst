@@ -167,23 +167,30 @@ IP Activator HDK directories and files:
 
 .. code-block:: bash
 
-   drm_ip_activator_vendor_library_name_version/
-   -- rtl/
-   ----- drm_ip_activator_0xvvvvllllnnnnvvvv_axi4st.v
-   ----- drm_ip_activator_0xvvvvllllnnnnvvvv_axi4st.vhdl
+   vendor_library_name_version/
+   -- core/
    ----- drm_ip_activator_0xvvvvllllnnnnvvvv.vhdl
+   ----- drm_ip_activator_0xvvvvllllnnnnvvvv.v
    ----- drm_ip_activator_0xvvvvllllnnnnvvvv.vho
    ----- drm_ip_activator_0xvvvvllllnnnnvvvv.veo
-   ----- drm_ip_activator_0xvvvvllllnnnnvvvv.v
    ----- drm_ip_activator_0xvvvvllllnnnnvvvv.xml
-   ----- drm_activation_code_package_0xvvvvllllnnnnvvvv.vhdl
-   ----- drm_activation_code_package_0xvvvvllllnnnnvvvv.v
-   -- simu/
+   -- sim/
    ----- modelsim/
    -------- drm_controller_bfm.vhdl
    -------- drm_controller_bfm.v
-   -------- drm_license_package.vhdl
-   -- docs/
+   ----- xilinx_sim/
+   -------- drm_controller_bfm.vhdl
+   -------- drm_controller_bfm.v
+   ----- drm_activator_0x1003000b00010001_license_file.xml
+   ----- drm_activator_0x1003000b00010001_sim.sv
+   ----- drm_activator_0x1003000b00010001_sim.vhdl
+   ----- drm_activator_0x1003000b00010001_sim_pkg.sv
+   ----- drm_activator_0x1003000b00010001_sim_pkg.vhdl
+   ----- drm_license_package.vhdl
+   -- syn/
+   ----- drm_activator_0xvvvvllllnnnnvvvv.v
+   ----- drm_activator_0xvvvvllllnnnnvvvv.vhdl
+   ---docs/
    common/
    -- sv/
    ----- altera/
@@ -199,6 +206,7 @@ IP Activator HDK directories and files:
    -------- drm_all_components.vhdl
    ----- xilinx/
    -------- drm_all_components.vhdl
+
 
 The IP Activator top-level file is drm_ip_activator_0xvvvvllllnnnnvvvv_axi4st.
 It declares an entity named **drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st** where

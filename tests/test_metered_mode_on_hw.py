@@ -10,6 +10,7 @@ import pytest
 
 
 @pytest.mark.minimum
+@pytest.mark.hwtst
 def test_metered_start_stop_short_time(accelize_drm, conf_json, cred_json, async_handler):
     """
     Test no error occurs in normal start/stop metering mode during a short period of time
@@ -93,6 +94,7 @@ def test_metered_start_stop_short_time_in_debug(accelize_drm, conf_json, cred_js
 
 
 @pytest.mark.long_run
+@pytest.mark.hwtst
 def test_metered_start_stop_long_time(accelize_drm, conf_json, cred_json, async_handler):
     """
     Test no error occurs in normal start/stop metering mode during a long period of time
@@ -129,6 +131,8 @@ def test_metered_start_stop_long_time(accelize_drm, conf_json, cred_json, async_
             sleep(wait_period)
             start += timedelta(seconds=license_duration)
             new_coins = randint(1,10)
+            assert drm_manager.get('license_status')
+            activators.autotest(is_activated=True)
             activators[0].generate_coin(new_coins)
             activators[0].check_coin(drm_manager.get('metered_data'))
         drm_manager.deactivate()
@@ -140,6 +144,7 @@ def test_metered_start_stop_long_time(accelize_drm, conf_json, cred_json, async_
 
 
 @pytest.mark.minimum
+@pytest.mark.hwtst
 def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, async_handler):
     """
     Test no error occurs in normal pause/resume metering mode during a short period of time
@@ -176,6 +181,9 @@ def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, asy
         assert drm_manager.get('metered_data') == 0
         activators[0].generate_coin(10)
         activators[0].check_coin(drm_manager.get('metered_data'))
+        # Wait enough time to be sure the 2nd license has been provisioned
+        wait_period = start + timedelta(seconds=lic_duration/2) - datetime.now()
+        sleep(wait_period.total_seconds())
         drm_manager.deactivate(True)
         assert drm_manager.get('session_status')
         assert drm_manager.get('license_status')
@@ -210,6 +218,7 @@ def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, asy
 
 
 @pytest.mark.long_run
+@pytest.mark.hwtst
 def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, async_handler):
     """
     Test no error occurs in normal start/stop metering mode during a long period of time
@@ -277,6 +286,7 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
 
 @pytest.mark.minimum
 @pytest.mark.no_parallel
+@pytest.mark.hwtst
 def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
     """
     Test an error is returned and the design is locked when the limit is reached.
@@ -324,7 +334,7 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
             drm_manager.activate()
         assert 'License Web Service error 400' in str(excinfo.value)
         assert 'DRM WS request failed' in str(excinfo.value)
-        assert search(r'\\"Entitlement Limit Reached\\" with .+ for accelize_accelerator_test_03@accelize.com', str(excinfo.value))
+        assert search(r'\\"Entitlement Limit Reached\\" with .+ for \S+_test_03@accelize.com', str(excinfo.value))
         assert 'You have reached the maximum quantity of 1000. usage_unit for metered entitlement (licensed)' in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_NoError()
@@ -368,7 +378,7 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         assert async_cb.was_called
         assert 'License Web Service error 400' in async_cb.message
         assert 'DRM WS request failed' in async_cb.message
-        assert search(r'\\"Entitlement Limit Reached\\" with .+ for accelize_accelerator_test_03@accelize.com', async_cb.message)
+        assert search(r'\\"Entitlement Limit Reached\\" with .+ for \S+_test_03@accelize.com', async_cb.message)
         assert 'You have reached the maximum quantity of 1000. usage_unit for metered entitlement (licensed)' in async_cb.message
         assert async_cb.errcode == accelize_drm.exceptions.DRMWSReqError.error_code
         drm_manager.deactivate()
@@ -381,6 +391,7 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
 
 @pytest.mark.on_2_fpga
 @pytest.mark.minimum
+@pytest.mark.hwtst
 def test_floating_limits(accelize_drm, conf_json, cred_json, async_handler):
     """
     Test an error is returned when the floating limit is reached

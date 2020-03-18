@@ -9,12 +9,40 @@ from ctypes import (
     c_uint as _c_uint, c_uint64 as _c_uint64, c_int as _c_int,
     c_void_p as _c_void_p, c_size_t as _c_size_t)
 from os import environ as _environ, fsdecode as _fsdecode
-from os.path import isfile as _isfile, join as _join, realpath as _realpath
+from os.path import isfile as _isfile, join as _join, realpath as _realpath, basename as _basename
+from re import match as _match
 from subprocess import run as _run, PIPE as _PIPE, STDOUT as _STDOUT
+from threading import Lock as _Lock
 
-from accelize_drm.fpga_drivers import FpgaDriverBase as _FpgaDriverBase
+from tests.fpga_drivers import FpgaDriverBase as _FpgaDriverBase
 
 __all__ = ['FpgaDriver']
+
+
+class XrtLock():
+    def __init__(self, driver):
+        self.driver = driver
+        # Define Lock function
+        self.xcl_lock = driver._fpga_library.xclLockDevice
+        self.xcl_lock.restype = _c_int
+        self.xcl_lock.argtype = _c_void_p
+        # Define Unlock function
+        self.xcl_unlock = driver._fpga_library.xclLockDevice
+        self.xcl_unlock.restype = _c_int
+        self.xcl_unlock.argtype = _c_void_p
+
+    def __enter__(self):
+        if self.driver._fpga_handle is None:
+            raise RuntimeError('Null device handle')
+        self.driver._reglock.acquire()
+        self.xcl_lock(self.driver._fpga_handle)
+        return
+
+    def __exit__(self, *kargs):
+        if self.driver._fpga_handle is None:
+            raise RuntimeError('Null device handle')
+        self.xcl_unlock(self.driver._fpga_handle)
+        self.driver._reglock.release()
 
 
 class FpgaDriver(_FpgaDriverBase):
@@ -27,6 +55,8 @@ class FpgaDriver(_FpgaDriverBase):
         drm_ctrl_base_addr (int): DRM Controller base address.
         log_dir (path-like object): directory where XRT will output log file.
     """
+    _name = _match(r'_(.+)\.py', _basename(__file__)).group(1)
+    _reglock = _Lock()
 
     def _get_driver(self):
         """
@@ -35,7 +65,19 @@ class FpgaDriver(_FpgaDriverBase):
         Returns:
             ctypes.CDLL: FPGA driver.
         """
-        return _cdll.LoadLibrary(_join(self._xrt_prefix, "lib/libxrt_core.so"))
+        if _isfile(_join(self._xrt_prefix, "lib/libxrt_aws.so")):
+            return _cdll.LoadLibrary(_join(self._xrt_prefix, "lib/libxrt_aws.so"))
+        if _isfile(_join(self._xrt_prefix, "lib/libxrt_core.so")):
+            return _cdll.LoadLibrary(_join(self._xrt_prefix, "lib/libxrt_core.so"))
+        raise RuntimeError('Unable to find Xilinx XRT Library')
+
+    def _get_lock(self):
+        """
+        Get a lock on the FPGA driver
+        """
+        def create_lock():
+            return XrtLock(self)
+        return create_lock
 
     @property
     def _xrt_prefix(self):
@@ -49,8 +91,26 @@ class FpgaDriver(_FpgaDriverBase):
                        '/usr', '/usr/local'):
             if _isfile(_join(prefix, 'bin/xbutil')):
                 return prefix
-
         raise RuntimeError('Unable to find Xilinx XRT')
+
+    @property
+    def _xbutil(self):
+        _xbutil_path = _join(self._xrt_prefix, 'bin/awssak')
+        if not _isfile(_xbutil_path):
+            _xbutil_path = _join(self._xrt_prefix, 'bin/xbutil')
+        if not _isfile(_xbutil_path):
+            raise RuntimeError('Unable to find Xilinx XRT Board Utility')
+        return _xbutil_path
+
+    def _clear_fpga(self):
+        """
+        Clear FPGA
+        """
+        clear_fpga = _run(
+            ['fpga-clear-local-image', '-S', str(self._fpga_slot_id)],
+            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
+        if clear_fpga.returncode:
+            raise RuntimeError(clear_fpga.stdout)
 
     def _program_fpga(self, fpga_image):
         """
@@ -61,18 +121,19 @@ class FpgaDriver(_FpgaDriverBase):
         """
         fpga_image = _realpath(_fsdecode(fpga_image))
         load_image = _run(
-            [_join(self._xrt_prefix, 'bin/xbutil'), 'program',
+            [self._xbutil, 'program',
              '-d', str(self._fpga_slot_id), '-p', fpga_image],
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if load_image.returncode:
             raise RuntimeError(load_image.stdout)
+        print('Programmed AWS F1 slot #%d with FPGA image %s' % (self._fpga_slot_id, fpga_image))
 
     def _reset_fpga(self):
         """
         Reset FPGA including FPGA image.
         """
         reset_image = _run(
-            [_join(self._xrt_prefix, 'bin/xbutil'), 'reset', '-d',
+            [self._xbutil, 'reset', '-d',
              str(self._fpga_slot_id)],
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if reset_image.returncode:
@@ -97,17 +158,14 @@ class FpgaDriver(_FpgaDriverBase):
             _c_char_p,  # logFileName
             _c_int,  # level
         )
-
         log_file = _join(self._log_dir, 'slot_%d_xrt.log' % self._fpga_slot_id)
         device_handle = xcl_open(
             self._fpga_slot_id,
             log_file.encode(),
             3  # XCL_ERROR
         )
-
         if not device_handle:
             raise RuntimeError("xclOpen failed to open device")
-
         self._fpga_handle = device_handle
 
     def _get_read_register_callback(self):
@@ -138,7 +196,7 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (accelize_drm.fpga_drivers._xilinx_xrt.FpgaDriver):
                     Keep a reference to driver.
             """
-            with driver._fpga_read_register_lock:
+            with driver._fpga_read_register_lock():
                 size_or_error = driver._fpga_read_register(
                     driver._fpga_handle,
                     2,  # XCL_ADDR_KERNEL_CTRL
@@ -148,7 +206,7 @@ class FpgaDriver(_FpgaDriverBase):
                 )
 
             # Return 0 return code if read size else return error code
-            return size_or_error if size_or_error <= 0 else 0
+            return size_or_error if size_or_error != 4 else 0
 
         return read_register
 
@@ -180,7 +238,7 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (accelize_drm.fpga_drivers._xilinx_xrt.FpgaDriver):
                     Keep a reference to driver.
             """
-            with driver._fpga_write_register_lock:
+            with driver._fpga_write_register_lock():
                 size_or_error = driver._fpga_write_register(
                     driver._fpga_handle,
                     2,  # XCL_ADDR_KERNEL_CTRL
@@ -190,6 +248,6 @@ class FpgaDriver(_FpgaDriverBase):
                 )
 
             # Return 0 return code if written size else return error code
-            return size_or_error if size_or_error <= 0 else 0
+            return size_or_error if size_or_error != 4 else 0
 
         return write_register

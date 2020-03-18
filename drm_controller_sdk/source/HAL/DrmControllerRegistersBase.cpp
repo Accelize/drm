@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegistersBase.cpp
-*  \version   4.0.0.1
-*  \date      July 2019
+*  \version   4.1.0.0
+*  \date      March 2020
 *  \brief     Class DrmControllerRegistersBase defines low level procedures for registers access.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.
@@ -548,8 +548,7 @@ std::string DrmControllerRegistersBase::exceptionStatusDescription(const std::st
 */
 std::string DrmControllerRegistersBase::exceptionErrorDescription(const std::string &errorMsg, const unsigned char &error, const std::string &errorCodeMsg) const {
   std::ostringstream writter;
-  writter << exceptionEmptyHeader() << errorMsg << DRM_CONTROLLER_ERROR_COLON << DRM_CONTROLLER_ERROR_SPACE << hexadecimalDescription(error) << std::endl;
-  writter << exceptionEmptyHeader() << errorMsg << DRM_CONTROLLER_ERROR_COLON << DRM_CONTROLLER_ERROR_SPACE << errorCodeMsg << exceptionFooter() << std::endl;
+  writter << exceptionEmptyHeader() << errorMsg << DRM_CONTROLLER_ERROR_COLON << DRM_CONTROLLER_ERROR_SPACE << errorCodeMsg << " (" << hexadecimalDescription(error) << ") " << exceptionFooter() << std::endl;
   return writter.str();
 }
 
