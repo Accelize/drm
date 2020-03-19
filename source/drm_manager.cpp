@@ -105,6 +105,8 @@ protected:
             {eLicenseType::NODE_LOCKED, "Node-Locked"}
     };
 
+    const uint32_t LICENSE_DURATION_DEFAULT = 10;
+
 
 #ifdef _WIN32
     const char path_sep = '\\';
@@ -152,7 +154,7 @@ protected:
 
     eLicenseType mLicenseType = eLicenseType::METERED;
     uint32_t mLicenseCounter = 0;
-    uint32_t mLicenseDuration = 0;
+    uint32_t mLicenseDuration = 0;     ///< Time duration in seconds of the license
     uint32_t mLicenseWaitPeriod = 5;    ///< Time in seconds to wait for the load of a new license
 
     // To protect access to the metering data (to securize the segment ID check in HW)
@@ -215,7 +217,7 @@ protected:
         mIsLockedToDrm = false;
 
         mLicenseCounter = 0;
-        mLicenseDuration = 0;
+        mLicenseDuration = LICENSE_DURATION_DEFAULT;
 
         mConfFilePath = conf_file_path;
         mCredFilePath = cred_file_path;

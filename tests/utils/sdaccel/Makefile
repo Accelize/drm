@@ -25,8 +25,7 @@ help::
 	$(ECHO) ""
 
 # Points to Utility Directory
-#COMMON_REPO = ../../../
-COMMON_REPO = $(COMMON_REPO)
+COMMON_REPO = $(AWS_FPGA_REPO_DIR)/SDAccel/examples/xilinx
 ABS_COMMON_REPO = $(shell readlink -f $(COMMON_REPO))
 
 TARGETS := hw
@@ -50,8 +49,7 @@ include xcl2.mk
 CXXFLAGS += $(xcl2_CXXFLAGS)
 LDFLAGS += $(xcl2_LDFLAGS)
 HOST_SRCS += $(xcl2_SRCS)
-#include config.mk
-
+	
 CXXFLAGS += $(opencl_CXXFLAGS) -Wall -O0 -g -std=c++14
 LDFLAGS += $(opencl_LDFLAGS)
 

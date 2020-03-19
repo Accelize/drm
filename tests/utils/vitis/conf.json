@@ -1,0 +1,16 @@
+{
+  "design": {
+    "udid": "6AE1A700-0000-0000-0000-000000000001",
+    "boardType": "DRM_125"
+  },
+  "licensing": {
+    "url": "https://master.devmetering.accelize.com"
+  },
+  "drm": {
+    "frequency_mhz": 250
+  },
+  "settings": {
+    "log_verbosity": 2
+  }
+}
+
