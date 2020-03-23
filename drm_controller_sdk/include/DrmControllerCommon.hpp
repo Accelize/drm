@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerCommon.hpp
-*  \version   4.0.0.1
-*  \date      July 2019
+*  \version   4.1.0.0
+*  \date      March 2020
 *  \brief     This header file contains the common definitions
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.
@@ -125,6 +125,7 @@ typedef enum tDrmApiErrorCode {
 #define DRM_CONTROLLER_NUMBER_OF_MICRO_SECONDS_IN_ONE_SECOND           1000000 /**<Number of micro seconds in a second.**/
 // timeout values
 #define DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS  10*DRM_CONTROLLER_NUMBER_OF_MICRO_SECONDS_IN_ONE_SECOND /**<Timeout max value in microseconds.**/
+#define DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS    100 /**<Sleep in microseconds.**/
 
 // Logs level definitions.
 #define DRM_CONTROLLER_LOG_DEBUG   0 /**<Definition of log level for debug messages.**/

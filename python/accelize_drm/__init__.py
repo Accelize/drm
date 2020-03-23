@@ -18,7 +18,7 @@ limitations under the License.
 """
 
 __version__ = "@ACCELIZEDRM_LONG_VERSION@"
-__copyright__ = "Copyright 2019 Accelize"
+__copyright__ = "Copyright 2018 Accelize"
 __licence__ = "Apache 2.0"
 __all__ = ['DrmManager', 'exceptions', 'get_api_version']
 
@@ -26,20 +26,20 @@ from os import environ as _environ
 from collections import namedtuple as _namedtuple
 
 
-import accelize_drm.exceptions
+import accelize_drm.exceptions  # noqa
 
 if _environ.get('ACCELIZE_DRM_PYTHON_USE_C'):
     # Bind Python Accelize DRM on libaccelize_drmc (C variant)
     from accelize_drm._accelize_drmc import DrmManager, _get_api_version
-    _library = 'libaccelize_drmc'
+    _LIBRARY = 'libaccelize_drmc'
 else:
     # Bind Python Accelize DRM on libaccelize_drm (C++ variant)
     from accelize_drm._accelize_drm import DrmManager, _get_api_version
-    _library = 'libaccelize_drm'
+    _LIBRARY = 'libaccelize_drm'
 
 del _environ
 
-_ApiVersion = _namedtuple('ApiVersion', [
+_API_VERSION = _namedtuple('ApiVersion', [
     'major', 'minor', 'revision', 'prerelease', 'build', 'version',
     'py_major', 'py_minor', 'py_revision', 'py_prerelease', 'py_build',
     'py_version', 'backend'
@@ -82,16 +82,16 @@ def get_api_version():
 
         # Convert to int if possible
         version_list = [major, minor, revision, prerelease, build, version]
-        for i in range(len(version_list)):
+        for i, _ver in enumerate(version_list):
             try:
-                version_list[i] = int(version_list[i])
+                version_list[i] = int(_ver)
             except ValueError:
                 pass
 
         api_version.extend(version_list)
 
     # Add library backend
-    api_version.append(_library)
+    api_version.append(_LIBRARY)
 
     # Return named tuple
-    return _ApiVersion(*api_version)
+    return _API_VERSION(*api_version)

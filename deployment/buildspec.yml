@@ -13,23 +13,32 @@ phases:
       - $CODEBUILD_SRC_DIR_toolbox/install.py
 
       # Artifacts output directory
-      - mkdir artifacts
+      - mkdir -p artifacts
 
       # Save environment as artifact
-      - echo "CODEBUILD:" >artifacts/env.txt
-      - export | grep CODEBUILD >>artifacts/env.txt
-      - echo "" >>artifacts/env.txt
+      - DATETIME=$(date +%F_%Hh%Mm%Ss)
+      - echo "DATE-TIME ${DATETIME}" > artifacts/env.txt
+      - echo "" >> artifacts/env.txt
 
-      - echo "PYTHON VERSION:" >>artifacts/env.txt
-      - python3 --version >>artifacts/env.txt
-      - echo "" >>artifacts/env.txt
+      - cat /etc/*-release >> artifacts/env.txt
+      - echo "" >> artifacts/env.txt
 
-      - echo "PYTHON PACKAGES:" >>artifacts/env.txt
-      - pip3 list >>artifacts/env.txt
-      - echo "" >>artifacts/env.txt
+      - echo "CODEBUILD:" >> artifacts/env.txt
+      - export | grep CODEBUILD >> artifacts/env.txt
+      - echo "" >> artifacts/env.txt
 
-      - echo "LINUX PACKAGES:" >>artifacts/env.txt
-      - apt list --installed >>artifacts/env.txt
+      - echo "PYTHON VERSION:" >> artifacts/env.txt
+      - python3 --version >> artifacts/env.txt
+      - echo "" >> artifacts/env.txt
+
+      - echo "PYTHON PACKAGES:" >> artifacts/env.txt
+      - pip3 list >> artifacts/env.txt
+      - echo "" >> artifacts/env.txt
+
+      - echo "LINUX PACKAGES:" >> artifacts/env.txt
+      - apt list --installed >> artifacts/env.txt
+
+      - head -80 artifacts/env.txt
 
   build:
     commands:
@@ -51,8 +60,15 @@ phases:
           export FILTER_SOURCES='--if git_file_changed=(?!tests/utils/|doc/|LICENSE|README\.md|\.gitignore)'
           export FILTER_BRANCH='--if git_branch=master,dev'
         fi
+      - |
+        if [ -z "${XLZ_REFDESIGN_PYTEST_ARGS}" ] || [ "${XLZ_REFDESIGN_PYTEST_ARGS}" -eq "0" ]; then
+          PYTEST_ARGS_OPTION=""
+        else
+          PYTEST_ARGS_OPTION="${XLZ_REFDESIGN_PYTEST_ARGS}"
+        fi
       - echo "FILTER_SOURCES=${FILTER_SOURCES}"
       - echo "FILTER_BRANCH=${FILTER_BRANCH}"
+      - echo "PYTEST_ARGS_OPTION=${PYTEST_ARGS_OPTION}"
 
       # Build documentation
       - xlz
@@ -89,7 +105,7 @@ phases:
         -n drm_debug_tests
         -z /dev/shm/drmlib_dev/.tox/debug/build/report artifacts/report.tar.gz
         -r "source /dev/shm/aws-fpga/sdk_setup.sh && cd /dev/shm/drmlib_dev &&
-            sudo -E TOX_PARALLEL_NO_SPINNER=1 tox -p all -e aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug -- --cred=/dev/shm/cred.json --server=${WS_ENV} -x "
+            sudo -E TOX_PARALLEL_NO_SPINNER=1 tox -p all -e aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug -- --cred=/dev/shm/cred.json --server=${WS_ENV} -x -s ${PYTEST_ARGS_OPTION}"
 
       # Build packages
       - xlz

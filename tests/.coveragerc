@@ -2,7 +2,8 @@
 [run]
 plugins = Cython.Coverage
 branch = True
+parallel = True
 
 [report]
-show_missing = true
-ignore_errors = true
+show_missing = True
+ignore_errors = True

@@ -82,7 +82,6 @@ long CurlEasyPost::perform( std::string* resp, std::chrono::steady_clock::time_p
             Throw( DRM_WSMayRetry, "Did not perform HTTP request to Accelize webservice because deadline is already reached." );
         curl_easy_setopt( curl, CURLOPT_TIMEOUT_MS, timeout.count() );
     }
-
     res = curl_easy_perform( curl );
     if ( res != CURLE_OK ) {
         if ( res == CURLE_COULDNT_RESOLVE_PROXY
@@ -243,7 +242,7 @@ Json::Value DrmWSClient::requestLicense( const Json::Value& json_req, TClock::ti
         json_resp = Json::nullValue;
         error_msg = e.what();
     }
-    Debug( "Received code {} from License Web Service in {}ms",
+    Debug( "Received code {} from License Web Service in {} ms",
             resp_code, req.getTotalTime() * 1000 );
 
     // Analyze response

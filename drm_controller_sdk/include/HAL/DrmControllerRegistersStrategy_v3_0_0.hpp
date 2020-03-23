@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegistersStrategy_v3_0_0.hpp
-*  \version   4.0.0.1
-*  \date      July 2019
+*  \version   4.1.0.0
+*  \date      March 2020
 *  \brief     Class DrmControllerRegistersStrategy_v3_0_0 defines strategy for register access of drm controller v3.0.0.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.
@@ -1209,9 +1209,9 @@ namespace DrmControllerLibrary {
       **/
       typedef enum tDrmErrorRegisterBytePositionEnumValues {
         mDrmActivationErrorPosition       = 0,  /**<Error register position for Activation.**/
-        mDrmDnaExtractErrorPosition       = 1,  /**<Error register position for DNA Extraction.**/
-        mDrmVlnvExtractErrorPosition      = 2,  /**<Error register position for VLNV Extraction.**/
-        mDrmLicenseTimerLoadErrorPosition = 3   /**<Error register position for License Timer Load.**/
+        mDrmDnaExtractErrorPosition       = 8,  /**<Error register position for DNA Extraction.**/
+        mDrmVlnvExtractErrorPosition      = 16, /**<Error register position for VLNV Extraction.**/
+        mDrmLicenseTimerLoadErrorPosition = 24  /**<Error register position for License Timer Load.**/
       } tDrmErrorRegisterBytePositionEnumValues;
 
       /**

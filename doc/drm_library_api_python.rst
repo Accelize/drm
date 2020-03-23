@@ -18,13 +18,6 @@ accelize_drm.exceptions
    :members:
    :inherited-members:
 
-accelize_drm.fpga_drivers
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. automodule:: accelize_drm.fpga_drivers
-   :members:
-   :inherited-members:
-
 Cython headers
 --------------
 

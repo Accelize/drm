@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegistersStrategyInterface.cpp
-*  \version   4.0.0.1
-*  \date      July 2019
+*  \version   4.1.0.0
+*  \date      March 2020
 *  \brief     Class DrmControllerRegistersBase defines low level procedures for registers access.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.
@@ -32,7 +32,11 @@ using namespace DrmControllerLibrary;
 DrmControllerRegistersStrategyInterface::DrmControllerRegistersStrategyInterface(tDrmReadRegisterFunction readRegisterFunction,
                                                                                  tDrmWriteRegisterFunction writeRegisterFunction)
 : DrmControllerRegistersBase(readRegisterFunction, writeRegisterFunction)
-{}
+{
+    // Set the sleep period from environment variable if existing, use default value otherwise.
+    const char* sleep = std::getenv("DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS");
+    mSleepInMicroSeconds = (sleep == NULL) ? DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS : std::stoul(std::string(sleep));
+}
 
 /** ~DrmControllerRegistersStrategyInterface
 *   \brief Class destructor.
@@ -319,7 +323,7 @@ unsigned int DrmControllerRegistersStrategyInterface::waitStatusRegister(const u
     if (actual == expected)
       break;
     // sleep
-    usleep(1);
+    usleep(mSleepInMicroSeconds);
   } while (true);
   return errorCode;
 }
@@ -376,7 +380,7 @@ unsigned int DrmControllerRegistersStrategyInterface::waitErrorRegister(const un
     if (actual == expected)
       break;
     // sleep
-    usleep(1);
+    usleep(mSleepInMicroSeconds);
   } while (true);
   return errorCode;
 }

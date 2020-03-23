@@ -68,8 +68,6 @@ basic ``conf.json`` file content:
   .. important:: For Chinese mainland, url must be set to ``https://alibaba.metering.accelize.com:4443``.
 
 * ``frequency_mhz``: Must be set to the effective frequency in MHz of the DRM Controller IP.
-* ``drm_ctrl_base_addr``: DRM controller base address. Must be set if the the
-  application is intended to work with the Accelize DRM service. Default to ``0``.
 * ``boardType``: Store any string information that the ISV (IP/App vendor) might want to save
   on his/her portal database.
 

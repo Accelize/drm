@@ -42,6 +42,6 @@ limitations under the License.
 
 
     #define Unreachable( ... ) \
-        Throw( DRM_Assert, fmt::format( "Reached an unexpected part of code: {}. Please contact support.", __VA_ARGS__ ) );
+        Throw( DRM_Assert, "Reached an unexpected part of code: " + fmt::format(__VA_ARGS__ ) + "Please contact support." );
 
 #endif /* _H_ACCELIZE_COMMON_EXPORT */

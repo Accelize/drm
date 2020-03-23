@@ -16,7 +16,6 @@ from ctypes import c_uint32 as _c_uint32, byref as _byref
 from importlib import import_module as _import_module
 from os import fsdecode as _fsdecode
 from os.path import realpath as _realpath
-from threading import Lock as _Lock
 
 __all__ = ['get_driver', 'FpgaDriverBase']
 
@@ -49,7 +48,7 @@ class FpgaDriverBase:
     """
 
     def __init__(self, fpga_slot_id=0, fpga_image=None, drm_ctrl_base_addr=0,
-                 log_dir='.'):
+                 log_dir='.', no_clear_fpga=False):
         self._fpga_slot_id = fpga_slot_id
         self._fpga_image = fpga_image
         self._drm_ctrl_base_addr = drm_ctrl_base_addr
@@ -58,8 +57,11 @@ class FpgaDriverBase:
         # FPGA read/write low level functions ans associated locks
         self._fpga_read_register = None
         self._fpga_write_register = None
-        self._fpga_read_register_lock = _Lock()
-        self._fpga_write_register_lock = _Lock()
+        self._fpga_read_register_lock = self._get_lock()
+        self._fpga_write_register_lock = self._get_lock()
+
+        if not no_clear_fpga:
+           self.clear_fpga()
 
         # Device and library handles
         self._fpga_handle = None
@@ -101,7 +103,8 @@ class FpgaDriverBase:
             int: 32 bits register value.
         """
         register_value = _c_uint32(0)
-        self._read_register_callback(register_offset, _byref(register_value))
+        if self._read_register_callback(register_offset, _byref(register_value)):
+            raise RuntimeError('Failed to read register at offset %08X' % register_offset)
         return register_value.value
 
     @property
@@ -129,7 +132,8 @@ class FpgaDriverBase:
             register_offset (int): Register offset.
             register_value (int): 32 bits register value to write.
         """
-        self.write_register_callback(register_offset, register_value)
+        if self.write_register_callback(register_offset, register_value):
+            raise RuntimeError('Failed to write register at offset %08X' % register_offset)
 
     @property
     def write_register_callback(self):
@@ -143,6 +147,14 @@ class FpgaDriverBase:
             function: Callback
         """
         return self._write_register_callback
+
+    def clear_fpga(self):
+        """
+        Clear FPGA including FPGA image.
+        """
+        print('Clearing FPGA on slot #%d' % self._fpga_slot_id)
+        with self._augment_exception('clear'):
+            return self._clear_fpga()
 
     def program_fpga(self, fpga_image=None):
         """
@@ -158,6 +170,7 @@ class FpgaDriverBase:
         else:
             self._fpga_image = fpga_image
 
+        print('Programming FPGA on slot #%d with FPGA image %s' % (self._fpga_slot_id, fpga_image))
         with self._augment_exception('program'):
             return self._program_fpga(fpga_image)
 
@@ -168,8 +181,9 @@ class FpgaDriverBase:
         with self._augment_exception('reset'):
             return self._reset_fpga()
 
+    @staticmethod
     @contextmanager
-    def _augment_exception(self, action):
+    def _augment_exception(action):
         """
         Augment exception message.
 
@@ -180,7 +194,7 @@ class FpgaDriverBase:
             yield
         except RuntimeError as exception:
             exception.args = (
-                'Unable to %s FPGA: %s' % (action, exception.args[0].strip()))
+                'Unable to %s FPGA: %s' % (action, exception.args[0].strip()),)
             raise
 
     @_abstractmethod
@@ -190,6 +204,21 @@ class FpgaDriverBase:
 
         Returns:
             object: FPGA driver.
+        """
+
+    @_abstractmethod
+    def _get_lock(self):
+        """
+        Get FPGA driver lock.
+
+        Returns:
+            object: FPGA driver lock.
+        """
+
+    @_abstractmethod
+    def _clear_fpga(self):
+        """
+        Clear the FPGA.
         """
 
     @_abstractmethod

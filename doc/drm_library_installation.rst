@@ -99,20 +99,16 @@ To install the Accelize repository, run the following commands:
     sudo yum-config-manager --add-repo https://accelize.s3.amazonaws.com/rpm/accelize_stable.repo
 
 
-Python Library and systemd service package
-``````````````````````````````````````````
+Python Library package
+``````````````````````
 
-This section explains how to install the DRM library as a python module or systemd service.
+This section explains how to install the DRM library as a python module.
 It is available for Python 3 only.
 
 This package provides 3 levels of integration:
 
 * The Accelize DRM library Python
 * Cython headers to the C/C++ Accelize DRM library.
-* A systemd service that provides a generic Accelize DRM
-  implementation as a background service (the service is not started by
-  default). Refer to :doc:`drm_library_as_service` for more details,
-  especially to see the supported environments.
 
 Depending on your OS, use the following command to install the Python package:
 
@@ -137,7 +133,7 @@ Depending on your OS, use the following command to install the Python package:
     sudo yum install -y epel-release
 
     # Install package
-    sudo yum install -y python36-accelize-drm
+    sudo yum install -y python3-accelize-drm
 
 .. code-block:: bash
     :caption: On Fedora
@@ -302,11 +298,11 @@ Run following commands to install all requirements:
     sudo yum install -y epel-release
 
     # Minimal requirements
-    sudo yum install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel python36-pip
+    sudo yum install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel python3-pip
     pip3 install --user -U cmake
 
     # Python library requirements
-    sudo yum install -y python36-devel
+    sudo yum install -y python3-devel
     pip3 install --user -U setuptools wheel cython
 
 .. code-block:: bash

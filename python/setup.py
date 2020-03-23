@@ -25,6 +25,7 @@ PACKAGE_INFO = dict(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Operating System :: OS Independent'
     ],
     keywords='drm fpga',
@@ -39,11 +40,10 @@ PACKAGE_INFO = dict(
     license='Apache License, Version 2.0',
     python_requires='>=3.5',
     setup_requires=['setuptools'],
-    packages=['accelize_drm', 'accelize_drm.fpga_drivers'],
+    packages=['accelize_drm'],
     package_data={'accelize_drm': ['*.pxd']},
-    zip_safe=False,
-    entry_points={'console_scripts': [
-        'accelize_drm=accelize_drm._systemd:run_service']})
+    zip_safe=False
+)
 
 SETUP_DIR = abspath(dirname(__file__))
 
@@ -59,7 +59,7 @@ if __name__ == '__main__':
     # Check environment.
     if PACKAGE_INFO['version'].startswith('@'):
         raise RuntimeError(
-            "Please, build using projects's CMake instead of directly setup.py")
+            "Please, build using CMake instead of directly setup.py")
 
     # Sources files
     src_names = ('_accelize_drm.cpp', '_accelize_drmc.c')
@@ -119,7 +119,7 @@ if __name__ == '__main__':
 
     # Check if Cython if available
     try:
-        import Cython
+        import Cython  # noqa
         USE_CYTHON = True
     except ImportError:
         USE_CYTHON = False

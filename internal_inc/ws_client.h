@@ -55,13 +55,14 @@ public:
 
     static bool is_error_retryable(long resp_code) {
         return        resp_code == 408 // Request Timeout
+                   || resp_code == 429 // Too Many Requests
+                   || resp_code == 470 // Floating License: no token available
                    || resp_code == 500 // Internal Server Error
                    || resp_code == 502 // Bad Gateway
                    || resp_code == 503 // Service Unavailable
                    || resp_code == 504 // Gateway timeout
                    || resp_code == 505 // HTTP version not supported
                    || resp_code == 507 // Insufficient storage
-                   || resp_code == 429 // Too Many Requests
                    || resp_code == 520 // Unknown Error
                    || resp_code == 521 // Web Server is Down
                    || resp_code == 522 // Connection Timed Out
@@ -69,7 +70,6 @@ public:
                    || resp_code == 525 // SSL Handshake Failed
                    || resp_code == 527 // Railgun Error
                    || resp_code == 530 // Origin DNS Error
-                   || resp_code == 470 // Floating License: no token available
                    || resp_code == 560 // Accelize License generation temporary issue
                 ;
     }

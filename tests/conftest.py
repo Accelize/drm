@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 """Configure Pytest"""
-from os import environ, listdir, remove
-from os.path import realpath, isfile, isdir, expanduser, splitext, join, dirname
+from os import environ, listdir, remove, getpid
+from os.path import realpath, isfile, isdir, expanduser, splitext, join, dirname, basename
 from json import dump, load
 from copy import deepcopy
-from re import match, search
+from re import match, search, IGNORECASE
 from ctypes import c_uint32, byref
 from random import randint
+from flask import Flask, Response
+import requests
+from time import sleep
 
 import pytest
 
@@ -18,7 +21,13 @@ _LICENSING_SERVERS = dict(
     dev='https://master.devmetering.accelize.com',
     prod='https://master.metering.accelize.com')
 
-INC_EVENT_REG_OFFSET = 0x08
+ACT_STATUS_REG_OFFSET = 0x38
+MAILBOX_REG_OFFSET = 0x3C
+INC_EVENT_REG_OFFSET = 0x40
+
+
+def bit_not(n, numbits=32):
+    return (1 << numbits) - 1 - n
 
 
 def get_default_conf_json(licensing_server_url):
@@ -60,7 +69,7 @@ def clean_nodelock_env(drm_manager=None, driver=None,
         product_name = 'drm_1activator'
     if (ws_admin is not None) and (cred_json is not None):
         ws_admin.remove_product_information(library='refdesign', name=product_name,
-                                            user=cred_json.user)
+                                            user=cred_json.email)
     # Reprogram FPGA
     if driver is not None:
         if drm_manager is None:
@@ -78,11 +87,32 @@ def clean_metering_env(cred_json=None, ws_admin=None, product_name=None):
     # Clear metering request from WS DB (not to hit the limit)
     if (ws_admin is not None) and (cred_json is not None):
         ws_admin.remove_product_information(library='refdesign',
-            name=product_name, user=cred_json.user)
+            name=product_name, user=cred_json.email)
+
+
+def param2dict(param_list):
+    if param_list is None:
+        return None
+    d = dict()
+    for e in param_list.split(','):
+        k,v = e.split('=')
+        try:
+            d[k] = int(v)
+        except ValueError:
+            pass
+        else:
+            continue
+        try:
+            d[k] = float(v)
+        except ValueError:
+            pass
+        else:
+            continue
+        d[k] = str(v)
+    return d
 
 
 # Pytest configuration
-
 def pytest_addoption(parser):
     """
     Add command lines arguments
@@ -91,7 +121,7 @@ def pytest_addoption(parser):
         "--backend", action="store", default="c++",
         help='Use specified Accelize DRM library API as backend: "c" or "c++"')
     parser.addoption(
-        "--fpga_driver", action="store", default="aws_f1",
+        "--fpga_driver", action="store", default=None,
         help='Specify FPGA driver to use with DRM library')
     parser.addoption(
         "--fpga_slot_id", action="store", default=0, type=int,
@@ -112,12 +142,19 @@ def pytest_addoption(parser):
         "--library_format", action="store", type=int, choices=[0,1], default=0,
         help='Specify "libaccelize_drm" logging format: 0=short, 1=long')
     parser.addoption(
+        "--no_clear_fpga", action="store_true", help='Bypass clearing of FPGA at start-up')
+    parser.addoption(
+        "--logfile", action="store_true", help='Save log to file')
+    parser.addoption(
+        "--proxy_debug", action="store_true", default=False,
+        help='Activate debug for proxy')
+    parser.addoption(
         "--fpga_image", default="default",
         help='Select FPGA image to program the FPGA with. '
              'By default, use default FPGA image for the selected driver and '
              'last HDK version.')
     parser.addoption(
-        "--hdk_version",
+        "--hdk_version", default=None,
         help='Select FPGA image base on Accelize DRM HDK version. By default, '
              'use default FPGA image for the selected driver and last HDK '
              'version.')
@@ -131,6 +168,9 @@ def pytest_addoption(parser):
         "--activator_base_address", action="store", default=0x10000, type=int,
         help=('Specify the base address of the 1st activator. '
             'The other activators shall be separated by an address gap of 0x10000'))
+    parser.addoption(
+        "--params", action="store", default=None,
+        help='Specify a list of parameter=value pairs separated by a coma used for one or multiple tests: "--params key1=value1,key2=value2,..."')
 
 
 def pytest_runtest_setup(item):
@@ -154,6 +194,10 @@ def pytest_runtest_setup(item):
     markers = tuple(item.iter_markers(name='aws'))
     if '${AWS}'=='OFF' and markers:
         pytest.skip("Don't run C/C++ function tests.")
+    # Skip 'security' test if not explicitly marked
+    for marker in item.iter_markers():
+        if 'security' == marker.name and 'security' not in item.config.option.markexpr:
+            pytest.skip('"security" marker not selected')
 
 
 class SingleActivator:
@@ -175,15 +219,17 @@ class SingleActivator:
             assert activated == is_activated
         else:
             if activated:
-                for addr in range(4, 16, 4):
-                    val = randint(1, 0xFFFFFFFF)
-                    self.driver.write_register(self.base_address + addr, val)
-                    assert self.driver.read_register(self.base_address + addr) == val
+                # If unlocked writing the mailbox should succeed
+                val = self.driver.read_register(self.base_address + MAILBOX_REG_OFFSET)
+                not_val = bit_not(val)
+                self.driver.write_register(self.base_address + MAILBOX_REG_OFFSET, not_val)
+                assert self.driver.read_register(self.base_address + MAILBOX_REG_OFFSET) == not_val
             else:
-                for addr in range(4, 16, 4):
-                    val = self.driver.read_register(self.base_address + addr)
-                    self.driver.write_register(self.base_address + addr, ~val)
-                    assert self.driver.read_register(self.base_address + addr) == val
+                # If locked writing the mailbox should fail
+                val = self.driver.read_register(self.base_address + MAILBOX_REG_OFFSET)
+                not_val = bit_not(val)
+                self.driver.write_register(self.base_address + MAILBOX_REG_OFFSET, not_val)
+                assert self.driver.read_register(self.base_address + MAILBOX_REG_OFFSET) == val
             # Test reading of the generate event register
             assert self.driver.read_register(self.base_address + INC_EVENT_REG_OFFSET) == 0x600DC0DE
             # Test address overflow
@@ -196,7 +242,7 @@ class SingleActivator:
         Returns:
             int: Status.
         """
-        return self.driver.read_register(self.base_address) == 3
+        return self.driver.read_register(self.base_address+ACT_STATUS_REG_OFFSET) == 3
 
     def generate_coin(self, coins):
         """
@@ -296,26 +342,30 @@ class RefDesign:
         if not isdir(path):
             raise IOError("Following path must be a valid directory: %s" % path)
         self._path = path
-        self.hdk_versions = sorted([splitext(file_name)[0].strip('v')
-                                    for file_name in listdir(self._path)
-                                    if file_name.endswith('.json')])
+        self.image_files = {splitext(file_name)[0].strip('v'):realpath(join(self._path, file_name))
+                                    for file_name in listdir(self._path)}
+        self.hdk_versions = sorted(filter(lambda x: match(r'^\d+', x), self.image_files.keys()))
 
     def get_image_id(self, hdk_version=None):
         if hdk_version is None:
             hdk_version = self.hdk_versions[-1]
-        with open(join(self._path, 'v%s.json' % hdk_version)) as hdk_json_file:
-            hdk_json = load(hdk_json_file)
-        for key in ('fpga_image', 'FpgaImageGlobalId', 'FpgaImageId'):
-            try:
-                return hdk_json[key]
-            except KeyError:
-                continue
-        else:
-            raise ValueError('No FPGA image found for %s.' % hdk_version)
+        elif hdk_version not in self.image_files.keys():
+            return None
+        filename = join(self._path, self.image_files[hdk_version])
+        ext = splitext(filename)[1]
+        try:
+            if ext == '.json':
+                with open(filename, 'rt') as fp:
+                    return load(fp)['FpgaImageGlobalId']
+            elif ext == '.awsxclbin':
+                return self.image_files[hdk_version]
+                with open(filename, 'rb') as fp:
+                    return search(r'(agfi-[0-9a-fA-F]+)', str(fp.read())).group(1)
+        except Exception as e:
+            raise Exception('No FPGA image found for %s: %s' % (hdk_version, str(e)))
 
 
 # Pytest Fixtures
-
 @pytest.fixture(scope='session')
 def accelize_drm(pytestconfig):
     """
@@ -353,28 +403,37 @@ def accelize_drm(pytestconfig):
     elif backend != 'c++':
         raise ValueError('Invalid value for "--backend"')
 
-    import accelize_drm as _accelize_drm
-
-    # Get FPGA driver
-    from accelize_drm.fpga_drivers import get_driver
-    fpga_driver_name = pytestconfig.getoption("fpga_driver")
-    fpga_driver_cls = get_driver(fpga_driver_name)
-
     # Get FPGA image
     fpga_image = pytestconfig.getoption("fpga_image")
     hdk_version = pytestconfig.getoption("hdk_version")
+    if hdk_version and fpga_image.lower() != 'default':
+        raise ValueError(
+            'Mutually exclusive options: Please set "hdk_version" or "fpga_image", but not both')
 
+    # Get FPGA driver
+    fpga_driver_name = pytestconfig.getoption("fpga_driver")
+    if fpga_driver_name and fpga_image.lower() != 'default':
+        raise ValueError(
+            'Mutually exclusive options: Please set "fpga_driver" or "fpga_image", but not both')
+    if fpga_image.lower() != 'default':
+        if fpga_image.endswith('.awsxclbin'):
+            fpga_driver_name = 'xilinx_xrt'
+        elif search(r'agfi-[0-9a-f]+', fpga_image, IGNORECASE):
+            fpga_driver_name = 'aws_f1'
+        else:
+            raise ValueError("Unsupported 'fpga_image' option")
+    elif fpga_driver_name is None:
+        fpga_driver_name = 'aws_f1'
+
+    # Get cmake building directory
     build_source_dir = '@CMAKE_CURRENT_SOURCE_DIR@'
     if build_source_dir.startswith('@'):
         build_source_dir = realpath('.')
 
+    # Get Ref Designs available
     ref_designs = RefDesign(join(build_source_dir, 'tests', 'refdesigns', fpga_driver_name))
 
-    if hdk_version and fpga_image.lower() != 'default':
-        raise ValueError(
-            'Please set "hdk_version" or "fpga_image" but not both')
-
-    elif fpga_image.lower() == 'default' or hdk_version:
+    if fpga_image.lower() == 'default' or hdk_version:
         # Use specified HDK version
         if hdk_version:
             hdk_version = hdk_version.strip('v')
@@ -386,7 +445,6 @@ def accelize_drm(pytestconfig):
         # Get last HDK version as default
         else:
             hdk_version = ref_designs.hdk_versions[-1]
-
         # Get FPGA image from HDK version
         fpga_image = ref_designs.get_image_id(hdk_version)
 
@@ -401,10 +459,15 @@ def accelize_drm(pytestconfig):
         # Use user defined slot
         fpga_slot_id = [pytestconfig.getoption("fpga_slot_id")]
 
+    # Get FPGA driver
+    from tests.fpga_drivers import get_driver
+    fpga_driver_cls = get_driver(fpga_driver_name)
+
     # Initialize FPGA
+    no_clear_fpga = pytestconfig.getoption("no_clear_fpga")
     drm_ctrl_base_addr = pytestconfig.getoption("drm_controller_base_address")
     print('FPGA SLOT ID:', fpga_slot_id)
-    print('FPGA IMAGE:', fpga_image)
+    print('FPGA IMAGE:', basename(fpga_image))
     print('HDK VERSION:', hdk_version)
     fpga_driver = list()
     for slot_id in fpga_slot_id:
@@ -412,7 +475,8 @@ def accelize_drm(pytestconfig):
             fpga_driver.append(
                 fpga_driver_cls( fpga_slot_id=slot_id,
                     fpga_image=fpga_image,
-                    drm_ctrl_base_addr=drm_ctrl_base_addr
+                    drm_ctrl_base_addr=drm_ctrl_base_addr,
+                    no_clear_fpga=no_clear_fpga
                 )
             )
         except:
@@ -435,7 +499,9 @@ def accelize_drm(pytestconfig):
         print('Found %d activator(s) on slot #%d' % (len(base_addr_list), driver._fpga_slot_id))
 
     # Store some values for access in tests
+    import accelize_drm as _accelize_drm
     _accelize_drm.pytest_new_freq_method_supported = fpga_driver[0].read_register(drm_ctrl_base_addr + 0xFFF8) == 0x60DC0DE0
+    _accelize_drm.pytest_proxy_debug = pytestconfig.getoption("proxy_debug")
     _accelize_drm.pytest_server = pytestconfig.getoption("server")
     _accelize_drm.pytest_build_environment = build_environment
     _accelize_drm.pytest_build_source_dir = build_source_dir
@@ -452,6 +518,7 @@ def accelize_drm(pytestconfig):
         *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
     _accelize_drm.clean_metering_env = lambda *kargs, **kwargs: clean_metering_env(
         *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
+    _accelize_drm.pytest_params = param2dict(pytestconfig.getoption("params"))
 
     return _accelize_drm
 
@@ -576,6 +643,10 @@ class CredJson(_Json):
         return self._user
 
     @property
+    def email(self):
+        return self['email']
+
+    @property
     def client_id(self):
         return self['client_id']
 
@@ -602,6 +673,10 @@ def conf_json(pytestconfig, tmpdir):
         log_param['log_format'] = '%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v'
     else:
         log_param['log_format'] = '[%^%=8l%$] %-6t, %v'
+    if pytestconfig.getoption("logfile"):
+        log_param['log_file_type'] = 1
+        log_param['log_file_path'] = realpath("./drmlib.%d.log" % getpid())
+        log_param['log_file_verbosity'] = pytestconfig.getoption("library_verbosity")
     json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param)
     json_conf.save()
     return json_conf
@@ -854,3 +929,41 @@ def exec_func(accelize_drm, cred_json, conf_json):
     is_cpp = accelize_drm.pytest_backend == 'c++'
     is_release_build = 'release' in accelize_drm.pytest_build_type
     return ExecFunctionFactory(conf_json.path, cred_json.path, is_cpp, is_release_build)
+
+
+#--------------
+# Proxy fixture
+#--------------
+
+class EndpointAction:
+
+    def __init__(self, action):
+        self.action = action
+
+    def __call__(self, *kargs, **kwargs):
+        return self.action(*kargs, **kwargs)
+        if isinstance(resp,Response):
+            return resp
+        return Response(msg, status=status, headers={})
+
+
+class FlaskAppWrapper:
+    def __init__(self, name=__name__):
+        self.app = Flask(name)
+        environ['WERKZEUG_RUN_MAIN'] = 'true'
+        environ['FLASK_ENV'] = 'development'
+
+    def run(self, host='127.0.0.1', port=5000, debug=False):
+        self.host = host
+        self.port = port
+        self.app.run(host=self.host, port=self.port, debug=debug)
+
+    def add_endpoint(self, rule=None, endpoint=None, handler=None, **kwargs):
+        self.app.add_url_rule(rule, endpoint, EndpointAction(handler), **kwargs)
+
+
+@pytest.fixture
+def fake_server():
+    name = "fake_server_%d" % randint(1,0xFFFFFFFF)
+    return FlaskAppWrapper(name)
+

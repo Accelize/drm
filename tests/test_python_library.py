@@ -81,107 +81,52 @@ def test_get_api_version(accelize_drm):
         accelize_drm._get_api_version = accelize_drm__get_api_version
 
 
-def test_fpga_drivers_base():
+@pytest.mark.packages
+def test_packages_import(pytestconfig):
     """
-    Test accelize_drm.fpga_drivers.FpgaDriverBase.
+    Test if the Python "accelize_drm" package is imported correctly.
+
+    This also indirectly check if the C/C++ libraries are correctly installed.
     """
-    from accelize_drm.fpga_drivers import FpgaDriverBase
-    from ctypes import c_uint32
+    # Set the backend to use and import
+    backend = pytestconfig.getoption("backend")
+    if backend == 'c':
+        from os import environ
+        environ['ACCELIZE_DRM_PYTHON_USE_C'] = '1'
 
-    library = 'fpga_library.so'
-    fpga_slot_id = 5
-    base_address = 0x10
-    fpga_image = 'fpga_image'
+    import accelize_drm
+    api_version = accelize_drm.get_api_version()
 
-    class Fpga:
-        """Fake FPGA"""
-        fpga_image = None
-        initialized = False
-        register = {}
+    # Check correct the backend is imported and the C/C++ library is correctly
+    # installed
 
-        @classmethod
-        def read_register(cls, register_offset, returned_data):
-            """Read register."""
-            address = int(str(returned_data).rstrip('>)').split('(', 1)[1], 16)
-            c_uint32.from_address(address).value = cls.register.get(
-                register_offset)
+    assert api_version.backend == (
+        'libaccelize_drmc' if backend == 'c' else 'libaccelize_drm')
 
-        @classmethod
-        def write_register(cls, register_offset, data_to_write):
-            """Write register."""
-            cls.register[register_offset] = data_to_write
-
-    class FpgaDriver(FpgaDriverBase):
-        """Fake FPGA driver"""
-
-        def _get_driver(self):
-            """Get FPGA driver"""
-            return library
-
-        def _program_fpga(self, fpga_image):
-            """Program the FPGA """
-            Fpga.fpga_image = fpga_image
-
-        def _init_fpga(self):
-            """Initialize FPGA"""
-            Fpga.initialized = True
-
-        def _get_read_register_callback(self):
-            """Read register callback."""
-            return Fpga.read_register
-
-        def _get_write_register_callback(self):
-            """Write register callback."""
-            return Fpga.write_register
-
-    # Test instantiation without programming image
-    assert not Fpga.initialized
-
-    driver = FpgaDriver(
-        fpga_slot_id=fpga_slot_id, drm_ctrl_base_addr=base_address)
-    assert driver._fpga_slot_id == fpga_slot_id
-    assert driver._drm_ctrl_base_addr == base_address
-    assert driver.fpga_image is None
-    assert driver._fpga_library == library
-    assert driver.read_register_callback == Fpga.read_register
-    assert driver.write_register_callback == Fpga.write_register
-    assert Fpga.fpga_image is None
-    assert Fpga.initialized
-
-    # Test: program image with unspecified image
-    with pytest.raises(RuntimeError):
-        driver.program_fpga()
-
-    # Test: program image
-    driver.program_fpga(fpga_image=fpga_image)
-    assert driver.fpga_image == fpga_image
-    assert Fpga.fpga_image == fpga_image
-
-    # Test instantiate and program image
-    Fpga.fpga_image = None
-    driver = FpgaDriver(
-        fpga_slot_id=fpga_slot_id, drm_ctrl_base_addr=base_address,
-        fpga_image=fpga_image)
-    assert driver.fpga_image == fpga_image
-    assert Fpga.fpga_image == fpga_image
-
-    # Test: Reprogram default image
-    Fpga.fpga_image = None
-    driver.program_fpga()
-    assert Fpga.fpga_image == fpga_image
-
-    # Test Write and read register
-    driver.write_register(register_offset=0x12, register_value=1)
-    assert Fpga.register[0x12] == 1
-    assert driver.read_register(register_offset=0x12) == 1
+    # Test the Python package import the C/C++ library with the good version.
+    assert api_version.major == api_version.py_major
+    assert api_version.minor == api_version.py_minor
+    assert api_version.revision == api_version.py_revision
+    assert api_version.prerelease == api_version.py_prerelease
+    assert api_version.build == api_version.py_build
 
 
-def test_get_driver():
+def test_python_lint():
     """
-    Test accelize_drm.fpga_drivers.get_driver.
+    Static code lint to detect errors and reach code quality standard.
     """
-    from accelize_drm.fpga_drivers import get_driver
+    from subprocess import run, PIPE, STDOUT
+    run_kwargs = dict(universal_newlines=True, stderr=STDOUT, stdout=PIPE)
 
-    # Test driver import.
-    from accelize_drm.fpga_drivers._aws_f1 import FpgaDriver
-    assert get_driver('aws_f1') is FpgaDriver
+    stdouts = []
+    for command in (
+            ('flake8', 'python'),
+            ('flake8', 'python/src/*.pyx',
+             # Cython specific
+             '--ignore', 'E211,E225,E226,E227,E999')):
+        stdouts.append(run(command, **run_kwargs).stdout.strip())
+
+    result = '\n'.join(stdout for stdout in stdouts if stdout)
+    if result:
+        print(result)
+        pytest.fail('Lint error')
