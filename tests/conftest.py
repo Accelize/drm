@@ -964,5 +964,6 @@ class FlaskAppWrapper:
 
 @pytest.fixture
 def fake_server():
-    return FlaskAppWrapper()
+    name = "fake_server_%d" % randint(1,0xFFFFFFFF)
+    return FlaskAppWrapper(name)
 

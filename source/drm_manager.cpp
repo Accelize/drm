@@ -105,7 +105,7 @@ protected:
             {eLicenseType::NODE_LOCKED, "Node-Locked"}
     };
 
-    const uint32_t LICENSE_DURATION_DEFAULT = 10;
+    const uint32_t LICENSE_DURATION_DEFAULT = 30;
 
 
 #ifdef _WIN32

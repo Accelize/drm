@@ -6,7 +6,6 @@ import pytest
 import sys
 import gc
 import re
-import logging
 from glob import glob
 from os import remove
 from os.path import getsize, isfile, dirname, join, realpath, basename
@@ -208,7 +207,6 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
         try:
             print('Reseting #%d/%d...' % (session_cnt+1, num_sessions))
             driver.program_fpga(image_bkp)
-            logging.info("Reset FPGA")
             print('Starting session #%d/%d ...' % (session_cnt+1,num_sessions))
             drm_manager = accelize_drm.DrmManager(
                 conf_json.path,
@@ -218,7 +216,6 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
                 async_cb.callback
             )
             activators.autotest(is_activated=False)
-            logging.info("Starting DRM")
             drm_manager.activate()
             activators.autotest(is_activated=True)
             license_duration = drm_manager.get('license_duration')
