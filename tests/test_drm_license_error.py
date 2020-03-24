@@ -16,7 +16,6 @@ import requests
 PROXY_HOST = "127.0.0.1"
 
 
-@pytest.mark.minimum
 @pytest.mark.no_parallel
 def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler, fake_server):
     """
@@ -138,7 +137,6 @@ def test_mac_error_on_key(accelize_drm, conf_json, cred_json, async_handler, fak
         server.join()
 
 
-@pytest.mark.minimum
 @pytest.mark.no_parallel
 def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_handler, fake_server):
     """
