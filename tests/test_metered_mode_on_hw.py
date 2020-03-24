@@ -343,7 +343,7 @@ def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, cred_json
         driver.write_register_callback,
         async_cb.callback
     )
-    assert drm_manager2.get('license_duration') == 10
+    assert drm_manager2.get('license_duration') == 30
     assert drm_manager2.get('session_status')
     assert drm_manager2.get('license_status')
     activators.autotest(is_activated=True)
@@ -356,7 +356,6 @@ def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, cred_json
     # Wait for license renewal
     wait_period = start + timedelta(seconds=lic_duration+2) - datetime.now()
     sleep(wait_period.total_seconds())
-    assert drm_manager2.get('license_duration') == 10
     activators[0].generate_coin(10)
     activators[0].check_coin(drm_manager2.get('metered_data'))
     assert drm_manager2.get('metered_data') == 20
