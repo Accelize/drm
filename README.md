@@ -1,6 +1,6 @@
 ![Screenshot](images/AccelDRM_lock.png)
 
-* On **Master** branch: ![Build Status](https://codebuild.eu-west-1.amazonaws.com/badges?uuid=eyJlbmNyeXB0ZWREYXRhIjoiVXRTOGxGaW5hZ1BzVGtoa0pBODhPanFlL3RpbFJPeGo5dHNxN3Uwb1ZuUmZOc1VkejBOeGk2WGVodzZPK2NvdS9WWVZUSlJhZXFMbEgrejN1VDN6TE13PSIsIml2UGFyYW1ldGVyU3BlYyI6IkhtMFRSeW1aRzVWVUpZcVQiLCJtYXRlcmlhbFNldFNlcmlhbCI6MX0%3D&branch=master)
+![Build Status](https://codebuild.eu-west-1.amazonaws.com/badges?uuid=eyJlbmNyeXB0ZWREYXRhIjoiVXRTOGxGaW5hZ1BzVGtoa0pBODhPanFlL3RpbFJPeGo5dHNxN3Uwb1ZuUmZOc1VkejBOeGk2WGVodzZPK2NvdS9WWVZUSlJhZXFMbEgrejN1VDN6TE13PSIsIml2UGFyYW1ldGVyU3BlYyI6IkhtMFRSeW1aRzVWVUpZcVQiLCJtYXRlcmlhbFNldFNlcmlhbCI6MX0%3D&branch=master)
 [![codecov](https://codecov.io/gh/Accelize/drmlib/branch/master/graph/badge.svg)](https://codecov.io/gh/Accelize/drmlib)
 
 # :closed_lock_with_key: Accelize DRM library : AccelDRM
