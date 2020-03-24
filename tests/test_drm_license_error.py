@@ -8,9 +8,7 @@ from datetime import datetime, timedelta
 from re import search
 from json import loads, dumps
 import pytest
-
 from multiprocessing import Process
-from flask import request, redirect, Response, session
 import requests
 
 PROXY_HOST = "127.0.0.1"
@@ -21,6 +19,7 @@ def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler, 
     """
     Test a MAC error is returned if the key value in the response has been modified
     """
+    from flask import request, redirect, Response, session
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
@@ -82,6 +81,7 @@ def test_mac_error_on_key(accelize_drm, conf_json, cred_json, async_handler, fak
     """
     Test a MAC error is returned if the key value in the response has been modified
     """
+    from flask import request, redirect, Response, session
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
@@ -142,6 +142,7 @@ def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_
     """
     Test a MAC error is returned if the licesnseTimer value in the response has been modified
     """
+    from flask import request, redirect, Response, session
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
@@ -216,6 +217,7 @@ def test_mac_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_han
     """
     Test a MAC error is returned if the licesnseTimer value in the response has been modified
     """
+    from flask import request, redirect, Response, session
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
@@ -289,6 +291,7 @@ def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler, fak
     """
     Test an error is returned if a wrong session id is provided
     """
+    from flask import request, redirect, Response, session
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()

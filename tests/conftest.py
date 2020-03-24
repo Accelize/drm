@@ -7,7 +7,6 @@ from copy import deepcopy
 from re import match, search, IGNORECASE
 from ctypes import c_uint32, byref
 from random import randint
-from flask import Flask, Response
 import requests
 from time import sleep
 
@@ -948,8 +947,9 @@ class EndpointAction:
 
 
 class FlaskAppWrapper:
+    __flask = __import__('flask')
     def __init__(self, name=__name__):
-        self.app = Flask(name)
+        self.app = self.__flask.Flask(name)
         environ['WERKZEUG_RUN_MAIN'] = 'true'
         environ['FLASK_ENV'] = 'development'
 
