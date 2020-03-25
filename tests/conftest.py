@@ -161,15 +161,12 @@ def pytest_addoption(parser):
         "--integration", action="store_true",
         help='Run integration tests. Theses tests may needs two FPGAs.')
     parser.addoption(
-        "--endurance", action="store_true",
-        help='Run endurance tests. Theses tests may needs two FPGAs.')
-    parser.addoption(
         "--activator_base_address", action="store", default=0x10000, type=int,
         help=('Specify the base address of the 1st activator. '
             'The other activators shall be separated by an address gap of 0x10000'))
     parser.addoption(
         "--params", action="store", default=None,
-        help='Specify a list of parameter=value pairs separated by a coma used for one or multiple tests: "--params key1=value1,key2=value2,..."')
+        help='Specify a list of key=value pairs separated by a coma used for one or multiple tests: "--params key1=value1,key2=value2,..."')
 
 
 def pytest_runtest_setup(item):
@@ -183,12 +180,17 @@ def pytest_runtest_setup(item):
         pytest.skip("Don't run integration tests.")
     elif item.config.getoption("integration") and not markers:
         pytest.skip("Run only integration tests.")
+
     # Check endurance tests
+    m_option = item.config.getoption('-m')
+    if search(r'\bendurance\b', m_option) and search(r'\nnot\n\s+\bendurance\b', m_option):
+        skip_endurance = True
+    else:
+        skip_endurance = False
     markers = tuple(item.iter_markers(name='endurance'))
-    if not item.config.getoption("endurance") and markers:
+    if markers and skip_endurance:
         pytest.skip("Don't run endurance tests.")
-    elif item.config.getoption("endurance") and not markers:
-        pytest.skip("Run only endurance tests.")
+
     # Check AWS execution
     markers = tuple(item.iter_markers(name='aws'))
     if '${AWS}'=='OFF' and markers:

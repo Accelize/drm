@@ -31,17 +31,18 @@ def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler, 
     conf_json.reset()
     url = conf_json['licensing']['url']
     proxy_port = randint(1,65535)
-    proxy_url = f"http://{PROXY_HOST}:{proxy_port}"
+    proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
     conf_json['licensing']['url'] = proxy_url
     conf_json.save()
 
     def proxy(context, path=''):
+        url_path = '%s/%s' % (context["url"],path)
         if path == 'o/token/':
-            return redirect(f'{context["url"]}/{path}', code=307)
+            return redirect(url_path, code=307)
         else:
             context['cnt'] += 1
             request_json = request.get_json()
-            response = requests.post(f'{context["url"]}/{path}', json=request_json, headers=request.headers)
+            response = requests.post(url_path, json=request_json, headers=request.headers)
             response_json = response.json()
             if context['cnt'] == 1:
                 dna, lic_json = list(response_json['license'].items())[0]
@@ -93,17 +94,18 @@ def test_mac_error_on_key(accelize_drm, conf_json, cred_json, async_handler, fak
     conf_json.reset()
     url = conf_json['licensing']['url']
     proxy_port = randint(1,65535)
-    proxy_url = f"http://{PROXY_HOST}:{proxy_port}"
+    proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
     conf_json['licensing']['url'] = proxy_url
     conf_json.save()
 
     def proxy(context, path=''):
+        url_path = '%s/%s' % (context["url"],path)
         if path == 'o/token/':
-            return redirect(f'{context["url"]}/{path}', code=307)
+            return redirect(url_path, code=307)
         else:
             context['cnt'] += 1
             request_json = request.get_json()
-            response = requests.post(f'{context["url"]}/{path}', json=request_json, headers=request.headers)
+            response = requests.post(url_path, json=request_json, headers=request.headers)
             response_json = response.json()
             if context['cnt'] == 1:
                 dna, lic_json = list(response_json['license'].items())[0]
@@ -154,17 +156,18 @@ def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_
     conf_json.reset()
     url = conf_json['licensing']['url']
     proxy_port = randint(1,65535)
-    proxy_url = f"http://{PROXY_HOST}:{proxy_port}"
+    proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
     conf_json['licensing']['url'] = proxy_url
     conf_json.save()
 
     def proxy(context, path=''):
+        url_path = '%s/%s' % (context["url"],path)
         if path == 'o/token/':
-            return redirect(f'{context["url"]}/{path}', code=307)
+            return redirect(url_path, code=307)
         else:
             context['cnt'] += 1
             request_json = request.get_json()
-            response = requests.post(f'{context["url"]}/{path}', json=request_json, headers=request.headers)
+            response = requests.post(url_path, json=request_json, headers=request.headers)
             response_json = response.json()
             if context['cnt'] == 2:
                 dna, lic_json = list(response_json['license'].items())[0]
@@ -229,17 +232,18 @@ def test_mac_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_han
     conf_json.reset()
     url = conf_json['licensing']['url']
     proxy_port = randint(1,65535)
-    proxy_url = f"http://{PROXY_HOST}:{proxy_port}"
+    proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
     conf_json['licensing']['url'] = proxy_url
     conf_json.save()
 
     def proxy(context, path=''):
+        url_path = '%s/%s' % (context["url"],path)
         if path == 'o/token/':
-            return redirect(f'{context["url"]}/{path}', code=307)
+            return redirect(url_path, code=307)
         else:
             context['cnt'] += 1
             request_json = request.get_json()
-            response = requests.post(f'{context["url"]}/{path}', json=request_json, headers=request.headers)
+            response = requests.post(url_path, json=request_json, headers=request.headers)
             response_json = response.json()
             if context['cnt'] == 2:
                 dna, lic_json = list(response_json['license'].items())[0]
@@ -303,17 +307,18 @@ def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler, fak
     conf_json.reset()
     url = conf_json['licensing']['url']
     proxy_port = randint(1,65535)
-    proxy_url = f"http://{PROXY_HOST}:{proxy_port}"
+    proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
     conf_json['licensing']['url'] = proxy_url
     conf_json.save()
 
     def proxy(context, path=''):
+        url_path = '%s/%s' % (context["url"],path)
         if path == 'o/token/':
-            return redirect(f'{context["url"]}/{path}', code=307)
+            return redirect(url_path, code=307)
         else:
             excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
             request_json = request.get_json()
-            response = requests.post(f'{context["url"]}/{path}', json=request_json, headers=request.headers)
+            response = requests.post(url_path, json=request_json, headers=request.headers)
             response_json = response.json()
             response_session_id = response_json['metering']['sessionId']
             if context['session_id'] != response_session_id:

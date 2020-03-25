@@ -153,7 +153,7 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
     mOAUth2Request.setPostFields( ss.str() );
 }
 
-uint32_t DrmWSClient::getTokenTimeLeft() const {
+int32_t DrmWSClient::getTokenTimeLeft() const {
     TClock::duration delta = mTokenExpirationTime - TClock::now();
     return (uint32_t)round( (double)delta.count() / 1000000000 );
 }
