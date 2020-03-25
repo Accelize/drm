@@ -947,9 +947,9 @@ class EndpointAction:
 
 
 class FlaskAppWrapper:
-    __flask = __import__('flask')
     def __init__(self, name=__name__):
-        self.app = self.__flask.Flask(name)
+        import flask
+        self.app = flask.Flask(name)
         environ['WERKZEUG_RUN_MAIN'] = 'true'
         environ['FLASK_ENV'] = 'development'
 

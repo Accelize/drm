@@ -755,7 +755,6 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     print("Test empty parameter: PASS")
 
 
-@pytest.mark.minimum
 @pytest.mark.aws
 def test_c_unittests(accelize_drm, exec_func):
     """Test errors when missing arguments are given to DRM Controller Constructor"""
