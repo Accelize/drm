@@ -183,10 +183,10 @@ def pytest_runtest_setup(item):
 
     # Check endurance tests
     m_option = item.config.getoption('-m')
-    if search(r'\bendurance\b', m_option) and search(r'\nnot\n\s+\bendurance\b', m_option):
-        skip_endurance = True
-    else:
+    if search(r'\bendurance\b', m_option) and not search(r'\nnot\n\s+\bendurance\b', m_option):
         skip_endurance = False
+    else:
+        skip_endurance = True
     markers = tuple(item.iter_markers(name='endurance'))
     if markers and skip_endurance:
         pytest.skip("Don't run endurance tests.")
