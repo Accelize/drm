@@ -54,7 +54,8 @@ private:
 public:
 
     static bool is_error_retryable(long resp_code) {
-        return        resp_code == 408 // Request Timeout
+        return        resp_code == 401 // Authentication credential error
+                   || resp_code == 408 // Request Timeout
                    || resp_code == 429 // Too Many Requests
                    || resp_code == 470 // Floating License: no token available
                    || resp_code == 500 // Internal Server Error
@@ -117,6 +118,8 @@ protected:
  get license and send metering data*/
 class DrmWSClient {
 
+    const uint32_t cTokenExpirationMargin = 30;
+
 protected:
 
     typedef std::chrono::steady_clock TClock; /// Shortcut type def to steady clock which is monotonic (so unaffected by clock adjustments)
@@ -126,9 +129,12 @@ protected:
     std::string mMeteringUrl;
     std::string mOAuth2Token;
     Json::Value mHostResolvesJson;
-    uint32_t mTokenValidityPeriod;
-    TClock::time_point mTokenExpirationTime;
+    uint32_t mTokenValidityPeriod;              /// Validation period of the OAuth2 token in seconds
+    uint32_t mTokenExpirationMargin;            /// OAuth2 token expiration margin in seconds
+    TClock::time_point mTokenExpirationTime;    /// OAuth2 expiration time
     CurlEasyPost mOAUth2Request;
+
+    bool isTokenValid() const;
 
 public:
     DrmWSClient(const std::string &conf_file_path, const std::string &cred_file_path);

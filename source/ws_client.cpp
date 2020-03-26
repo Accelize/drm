@@ -114,6 +114,7 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
 
     mOAuth2Token = std::string("");
     mTokenValidityPeriod = 0;
+    mTokenExpirationMargin = cTokenExpirationMargin;
     mTokenExpirationTime = TClock::now();
 
     try {
@@ -164,16 +165,29 @@ void DrmWSClient::setOAuth2token( const std::string& token ) {
     mTokenExpirationTime = TClock::now() + std::chrono::seconds( mTokenValidityPeriod );
 }
 
+bool DrmWSClient::isTokenValid() const {
+    uint32_t margin = ( mTokenExpirationMargin >= mTokenValidityPeriod ) ?
+        ( mTokenValidityPeriod >> 1) : mTokenExpirationMargin;
+    if ( ( mTokenExpirationTime - std::chrono::seconds( margin ) ) > TClock::now() ) {
+        Debug( "Current authentication token is still valid" );
+        return true;
+    } else {
+        if ( mTokenExpirationTime > TClock::now() )
+            Debug( "Current authentication token is about to expire in {} seconds maximum", margin );
+        else
+            Debug( "Current authentication token has expired" );
+        return false;
+    }
+}
+
 void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
 
     // Check if a token exists
     if ( !mOAuth2Token.empty() ) {
-        // Check if existing token has expired or is about to expire
-        if ( mTokenExpirationTime > TClock::now() ) {
-            Debug( "Current authentication token is still valid" );
+        // Yes a token already exists, check if it has expired or is about to expire
+        if ( isTokenValid() ) {
             return;
         }
-        Debug( "Current authentication token has expired" );
     }
 
     // Request a new token and wait response
