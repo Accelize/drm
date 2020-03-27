@@ -1,0 +1,113 @@
+---
+# Start an AWS EC2 instance to run and agent
+
+parameters:
+  # Job name to use
+  jobName: startAgent
+  # Agent description
+  agentDescription: AWS EC2
+  # Agent instance provider
+  provider: awsEc2
+  # Agent instance type
+  # - awsEc2: EC2 instance type
+  instanceType: f1.2xlarge
+  # Image name to use
+  image: centos_7
+  # Path to "acid" directory
+  acidDir: $(Build.SourcesDirectory)/acid
+  # Path to Ansible "playbook.yml" file. Default to a playbook that only start
+  # the agent.
+  ansiblePlaybook: $(acidDir)/agents/playbook.yml
+  # Agent shutdown timeout in minute
+  timeout: 60
+  # Use spot instance
+  spot: true
+
+jobs:
+  - job: ${{ parameters.jobName }}
+    displayName: Start ${{ parameters.agentDescription }} agent
+    variables:
+      - group: agentManager
+      - name: terraformWorkingDir
+        value: ${{ parameters.acidDir }}/agents/${{ parameters.provider }}
+      - name: agentName
+        value: $(Build.DefinitionName) ${{ parameters.agentDescription }}
+      - name: acidDir
+        value: ${{ parameters.acidDir }}
+
+    steps:
+
+      - task: UsePythonVersion@0
+        inputs:
+          versionSpec: '3.x'
+          addToPath: true
+          architecture: 'x64'
+        displayName: Get Python
+
+      - task: PythonScript@0
+        displayName: Initialize Ansible
+        inputs:
+          scriptSource: inline
+          script: |
+            from acid import ensure_ansible_roles
+            ensure_ansible_roles("${{ parameters.ansiblePlaybook }}")
+
+      # TODO: Get latest Terraform version
+      - task: TerraformInstaller@0
+        displayName: Install Terraform
+        inputs:
+          terraformVersion: '0.12.13'
+
+      - script: terraform init -input=false
+        displayName: Initialize Terraform plugins
+        workingDirectory: $(terraformWorkingDir)
+
+      - task: PythonScript@0
+        displayName: Initialize Terraform variables
+        inputs:
+          scriptSource: inline
+          script: |
+            from acid import dump_tfvars, define_unique_name
+            dump_tfvars(
+              "$(terraformWorkingDir)",
+              name=define_unique_name(
+                  "$(System.TeamProject)",
+                  "$(Build.Repository.Name)",
+                  "$(Build.SourceBranchName)",
+                  "$(Build.BuildId)"),
+              image="${{ parameters.image }}",
+              playbook="${{ parameters.ansiblePlaybook }}")
+            print(f'Agent Name: $(agentName)')
+
+      - ${{ if eq(parameters.provider, 'awsEc2') }}:
+        - task: PythonScript@0
+          displayName: Initialize AWS EC2 specific Terraform variables
+          inputs:
+            scriptSource: inline
+            script: |
+              from acid import dump_tfvars
+              dump_tfvars(
+                "$(terraformWorkingDir)",
+                instance_type="${{ parameters.instanceType }}",
+                spot="${{ parameters.spot }}")
+
+        - task: AWSShellScript@1
+          displayName: Start agent AWS EC2 instance
+          inputs:
+            awsCredentials: AWS
+            regionName: eu-west-1
+            scriptType: inline
+            inlineScript: python apply_with_spot_retries.py
+            disableAutoCwd: true
+            workingDirectory: $(terraformWorkingDir)
+          env:
+            AZURE_AGENT_TOKEN: $(agentManagerToken)
+            AZURE_AGENT_SHUTDOWN_TIMEOUT: ${{ parameters.timeout }}
+            AZURE_AGENT_NAME: $(agentName)
+            ANSIBLE_ROLES_PATH: "~/.ansible/roles:/usr/share/ansible/roles:\
+                                 /etc/ansible/roles:$(acidDir)/roles"
+
+      - publish: $(terraformWorkingDir)
+        artifact: Terraform State ${{ parameters.agentDescription }}
+        displayName: Publish Terraform state
+        condition: always()

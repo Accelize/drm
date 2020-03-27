@@ -1,0 +1,456 @@
+---
+name: DRM Library tests and release
+
+trigger:
+  batch: true
+  branches:
+    include:
+      - master
+      - dev
+  tags:
+    include:
+      # Only tags that are a version release
+      - v*
+  paths:
+    exclude:
+      - doc/*
+      - images/*
+      - README.md
+      - .gitignore
+      - LICENSE
+      - deployment/README.md
+      - deployment/release.py
+schedules:
+# Run tests on major branches weekly, including packages build on all OS
+- cron: "0 0 * * 0"
+  displayName: Weekly master build
+  branches:
+    include:
+    - master
+  always: true
+- cron: "0 0 * * 6"
+  displayName: Weekly dev build
+  branches:
+    include:
+    - dev
+  always: true
+pr: none
+
+#resources:  # TODO: move pipeline utils in another repo
+#  repositories:
+#    - repository: templates
+#      type: github
+#      name: Accelize/acid
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  # Import variable group
+  - group: drmLibrary
+
+  # Allow import of python files in "deployment" dir
+  - name: pythonPath
+    value: $(Build.SourcesDirectory)/deployment
+
+  # Common commands shortcut
+  - name: pipInstall
+    value: pip install --disable-pip-version-check
+  - name: aptInstall
+    value: sudo apt-get update &&
+           sudo apt-get install -y --no-install-recommends
+
+stages:
+  - stage: tests
+    displayName: Tests
+    variables:
+      # Set Git branch conditional variables
+      ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/master') }}:
+        meteringServer: prod
+      ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/master') }}:
+        meteringServer: dev
+
+    jobs:
+
+      # Start agents
+      - template: acid/agents/start.yml #@templates
+        parameters:
+          jobName: startAgent_AwsF1
+          agentDescription: AWS F1
+          provider: awsEc2
+          instanceType: f1.4xlarge
+          acidDir: $(Build.SourcesDirectory)/deployment/acid
+          ansiblePlaybook: $(Build.SourcesDirectory)/deployment/playbook.yml
+
+      # Run tests on agents
+      - job: runTests_AwsF1
+        displayName: Run tests on AWS F1
+        dependsOn: startAgent_AwsF1
+        pool:
+          name: Default
+          demands:  # Use previously instantiated agent
+            - agent.Name -equals $(Build.DefinitionName) AWS F1
+
+        steps:
+
+          - script: |
+              cat << EOF > $(Build.SourcesDirectory)/cred.json
+              {
+                "client_id": "$(clientIdAccelizeAcceleratorTest2)",
+                "client_secret": "$(clientSecretAccelizeAcceleratorTest2)",
+
+                "name__admin__":"Admin_JBL_Regression",
+                "client_id__admin__":"$(clientIdAdmin)",
+                "client_secret__admin__":"$(clientSecretAdmin)",
+
+                "client_id__accelize_accelerator_test_01__":
+                  "$(clientIdAccelizeAcceleratorTest1)",
+                "client_secret__accelize_accelerator_test_01__":
+                  "$(clientSecretAccelizeAcceleratorTest1)",
+                "email__accelize_accelerator_test_01__":
+                  "$(mailAccelizeAcceleratorTest1)",
+
+                "client_id__accelize_accelerator_test_02__":
+                  "$(clientIdAccelizeAcceleratorTest2)",
+                "client_secret__accelize_accelerator_test_02__":
+                  "$(clientSecretAccelizeAcceleratorTest2)",
+                "email__accelize_accelerator_test_02__":
+                  "$(mailAccelizeAcceleratorTest2)",
+
+                "client_id__accelize_accelerator_test_03__":
+                  "$(clientIdAccelizeAcceleratorTest3)",
+                "client_secret__accelize_accelerator_test_03__":
+                  "$(clientSecretAccelizeAcceleratorTest3)",
+                "email__accelize_accelerator_test_03__":
+                  "$(mailAccelizeAcceleratorTest3)",
+
+                "client_id__accelize_accelerator_test_04__":
+                  "$(clientIdAccelizeAcceleratorTest4)",
+                "client_secret__accelize_accelerator_test_04__":
+                  "$(clientSecretAccelizeAcceleratorTest4)",
+                "email__accelize_accelerator_test_04__":
+                  "$(mailAccelizeAcceleratorTest4)"
+              }
+              EOF
+            displayName: Create Accelize credentials file
+
+          - script: sudo -E tox -p all -e
+                    aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug
+                    -- --cred=$(Build.SourcesDirectory)/cred.json --server=$(meteringServer) -x
+            displayName: Run tests with Tox
+            env:
+              CODECOV_TOKEN: $(codecovToken)
+              TOX_PARALLEL_NO_SPINNER: 1
+              SDK_DIR: /opt/aws_fpga/sdk
+
+      # Stop agents
+      - template: acid/agents/stop.yml #@templates
+        parameters:
+          provider: awsEc2
+          agentDescription: AWS F1
+          acidDir: $(Build.SourcesDirectory)/deployment/acid
+          dependsOn: runTests_AwsF1
+
+  - stage: release
+    displayName: Release
+    # Build packages only if tagged or scheduled
+    condition: and(succeeded(), or(
+                   startsWith(variables['Build.SourceBranch'], 'refs/tags'),
+                   eq(variables['Build.Reason'], 'Schedule')))
+    dependsOn: tests
+    variables:
+      # File that store release number for each version
+      versionsJson: versions.json
+      versionsJsonS3: s3://accelize/versions.json
+
+    jobs:
+      - job: buildPackages
+        displayName: Build Packages for
+        strategy:
+          matrix:
+            # Supported OS matrix
+            CentOS 7:
+              osName: centos
+              osVersion: "7"
+            CentOS 8:
+              osName: centos
+              osVersion: "8"
+            Debian 9:
+              osName: debian
+              osVersion: "9"
+            Debian 10:
+              osName: debian
+              osVersion: "10"
+            Fedora 30:
+              osName: fedora
+              osVersion: "30"
+            Fedora 31:
+              osName: fedora
+              osVersion: "31"
+            Fedora 32:
+              osName: fedora
+              osVersion: "32"
+            Ubuntu LTS 16.04:
+              osName: ubuntu
+              osVersion: "16.04"
+            Ubuntu LTS 18.04:
+              osName: ubuntu
+              osVersion: "18.04"
+            Ubuntu 19.04:
+              osName: ubuntu
+              osVersion: "19.04"
+            Ubuntu 19.10:
+              osName: ubuntu
+              osVersion:  "19.10"
+            Ubuntu 20.04:
+              osName: ubuntu
+              osVersion:  "20.04"
+
+        variables:
+          # Docker commands shortcuts
+          dockerBuild: sudo docker build -t run_image .
+          dockerRun: sudo -E docker run --rm
+                     --env GPG_PASS_PHRASE
+                     --env GPG_PRIVATE_KEY
+                     --env GPG_PUBLIC_KEY
+                     --env PACKAGES_RELEASE
+                     -v $(Build.SourcesDirectory):/opt
+                     -v $(Agent.TempDirectory):$(Agent.TempDirectory)
+                     -w /opt run_image bash -c
+        steps:
+
+          # Initialize environment
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '3.x'
+              addToPath: true
+              architecture: 'x64'
+            displayName: Get Python
+
+          # Get package release, and increment it if an already published
+          # version is re-build
+          - task: AWSCLI@1
+            displayName: Get published releases manifest
+            inputs:
+              awsCredentials: AWS
+              regionName: eu-west-1
+              awsCommand: s3
+              awsSubCommand: cp
+              awsArguments: $(versionsJsonS3) $(versionsJson) --no-progress
+
+          - task: PythonScript@0
+            displayName: Get package release
+            inputs:
+              scriptSource: inline
+              script: |
+                from acid import export
+                from acid_drm import get_next_package_release
+                export("release", get_next_package_release("versions.json"))
+            name: packagesRelease
+
+          # Build & sign packages
+          - task: PythonScript@0
+            displayName: Create "building" container Dockerfile
+            inputs:
+              scriptSource: inline
+              script: |
+                from acid import render_template
+                render_template(
+                    src='$(Build.SourcesDirectory)/deployment/Dockerfile.j2',
+                    dst='$(Build.SourcesDirectory)/Dockerfile',
+                    osName='$(osName)', osVersion='$(osVersion)',
+                    buildLayer=True)
+
+          - script: $(dockerBuild)
+            displayName: Build "building" container image
+
+          - task: DownloadSecureFile@1
+            displayName: Get GPG public key
+            name: gpgPublicKey
+            inputs:
+              secureFile: gpgPublicKey
+
+          - task: DownloadSecureFile@1
+            displayName: Get GPG private key
+            name: gpgPrivateKey
+            inputs:
+              secureFile: gpgPrivateKey
+
+          - script: $(dockerRun) "tox --workdir /tmp -o
+                    -e build-release,sign-release,export-release"
+            displayName: Build and sign packages
+            env:
+              PACKAGES_RELEASE: $(packagesRelease.release)
+              GPG_PRIVATE_KEY: $(gpgPrivateKey.secureFilePath)
+              GPG_PUBLIC_KEY: $(gpgPublicKey.secureFilePath)
+              GPG_PASS_PHRASE: $(gpgPassPhrase)
+
+          # Run packages integrity tests
+          - task: PythonScript@0
+            displayName: Create "testing" container Dockerfile
+            inputs:
+              scriptSource: inline
+              script: |
+                from acid import render_template
+                render_template(
+                    src='$(Build.SourcesDirectory)/deployment/Dockerfile.j2',
+                    dst='$(Build.SourcesDirectory)/Dockerfile',
+                    osName='$(osName)', osVersion='$(osVersion)',
+                    buildLayer=True)
+
+          - script: $(dockerBuild)
+            displayName: Build "testing" container image
+
+          - script: $(dockerRun) "tox --workdir /tmp
+                    -e package-install,c-install,cpp-install -p all
+                    -- -m packages"
+            displayName: Run tests on packages
+
+          # Export packages as artifacts
+          - publish: $(Build.SourcesDirectory)/packages
+            artifact: Packages $(osName) $(osVersion)
+            displayName: Publish packages as artifacts
+
+      - deployment: publishPackages
+        displayName: Publish release
+        # Performs release only if not scheduled
+        condition: and(succeeded(), ne(variables['Build.Reason'], 'Schedule'))
+        dependsOn: buildPackages
+        environment: drmLibrary
+        variables:
+          # DEB and RPM repositories paths
+          debRepo: /tmp/deb_repo
+          debS3: s3://accelize/deb/
+          rpmRepo: /tmp/rpm_repo
+          rpmS3: s3://accelize/rpm/
+
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+
+                # Initialize environment
+                - checkout: self
+                  fetchDepth: 1
+                  submodules: false
+
+                - task: UsePythonVersion@0
+                  inputs:
+                    versionSpec: '3.x'
+                    addToPath: true
+                    architecture: 'x64'
+                  displayName: Get Python
+
+                - script: $(aptInstall) createrepo reprepro
+                  displayName: Install dependencies
+
+                # Get current repositories
+                - task: AWSCLI@1
+                  displayName: Get published releases manifest
+                  inputs:
+                    awsCredentials: AWS
+                    regionName: eu-west-1
+                    awsCommand: s3
+                    awsSubCommand: cp
+                    awsArguments: $(versionsJsonS3) $(versionsJson)
+                                  --no-progress
+
+                - task: AWSCLI@1
+                  displayName: Get current RPM repository
+                  inputs:
+                    awsCredentials: AWS
+                    regionName: eu-west-1
+                    awsCommand: s3
+                    awsSubCommand: sync
+                    awsArguments: $(rpmS3) $(rpmRepo) --no-progress
+
+                - task: AWSCLI@1
+                  displayName: Get current DEB repository
+                  inputs:
+                    awsCredentials: AWS
+                    regionName: eu-west-1
+                    awsCommand: s3
+                    awsSubCommand: sync
+                    awsArguments: $(debS3) $(debRepo) --no-progress
+
+                - task: DownloadSecureFile@1
+                  displayName: Get GPG private key
+                  name: gpgPrivateKey
+                  inputs:
+                    secureFile: gpgPrivateKey
+
+                # Update repositories
+                - task: PythonScript@0
+                  displayName: Add packages to repositories
+                  inputs:
+                    scriptSource: inline
+                    script: |
+                      from acid_drm import publish_packages
+                      publish_packages(
+                          pkg_source='$(Pipeline.Workspace)',
+                          versions_json='$(versionsJson)',
+                          deb_repo='$(debRepo)', rpm_repo='$(rpmRepo)',
+                          gpg_private_key='$(gpgPrivateKey.secureFilePath)',
+                          gpg_key_id='$(gpgKeyId)')
+
+                # Publish updated repositories
+                - task: AWSCLI@1
+                  displayName: Update published releases manifest
+                  inputs:
+                    awsCredentials: AWS
+                    regionName: eu-west-1
+                    awsCommand: s3
+                    awsSubCommand: cp
+                    awsArguments: $(versionsJson) $(versionsJsonS3)
+                                  --no-progress
+
+                - task: AWSCLI@1
+                  displayName: Publish RPM repository
+                  inputs:
+                    awsCredentials: AWS
+                    regionName: eu-west-1
+                    awsCommand: s3
+                    awsSubCommand: sync
+                    awsArguments: $(rpmRepo) $(rpmS3)
+                                  --no-progress --delete --acl public-read
+
+                - task: AWSCLI@1
+                  displayName: Publish DEB repository
+                  inputs:
+                    awsCredentials: AWS
+                    regionName: eu-west-1
+                    awsCommand: s3
+                    awsSubCommand: sync
+                    awsArguments: $(debRepo) $(debS3)
+                                  --no-progress --delete --acl public-read
+
+                # Publish the release on GitHub
+                - task: PythonScript@0
+                  displayName: Get DRM library version
+                  inputs:
+                    scriptSource: inline
+                    script: |
+                      from acid import export
+                      from acid_drm import get_drm_version
+                      export("version", get_drm_version())
+                  name: libraryVersion
+
+                - task: GitHubRelease@1
+                  displayName: Publish GitHub release
+                  inputs:
+                    gitHubConnection: Accelize-application
+                    repositoryName: $(Build.Repository.Name)
+                    action: create
+                    target: $(Build.SourceVersion)
+                    tagSource: gitTag
+                    tagPattern: v*
+                    isPreRelease: contains($(libraryVersion.version), '-')
+                    releaseNotesSource: inline
+                    releaseNotesInline: |
+                      Release of version $(libraryVersion.version).
+
+                      Packages available on Accelize repository.
+
+                      See the [documentation](http://accelize.com/docs) for more information.
+                    changeLogCompareToRelease: lastFullRelease
+                    changeLogType: commitBased

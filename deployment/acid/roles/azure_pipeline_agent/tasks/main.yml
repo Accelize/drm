@@ -1,0 +1,180 @@
+---
+
+- name: Ensure agent Shutdown timeout is set
+  command: shutdown -h {{ agent_shutdown_timeout }}
+  changed_when: False
+
+- name: Get Agent user
+  set_fact:
+    agent_user: "{{ ansible_user }}"
+  when: agent_user is not defined
+
+- name: Ensure DNF is configured
+  ini_file:
+    path: /etc/dnf/dnf.conf
+    section: main
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
+  with_items:
+    - option: max_parallel_downloads
+      value: 10
+    - option: fastestmirror
+      value: "true"
+    - option: install_weak_deps
+      value: "false"
+  when: 'not (ansible_os_family == "RedHat" and
+         ansible_distribution_major_version == "7")'
+
+- name: Ensure APT is configured
+  copy:
+    src: apt_conf
+    dest: /etc/apt/apt.conf.d/no-recommend
+  when: ansible_os_family == 'Debian'
+
+- name: Ensure PIP is configured
+  copy:
+    src: pip.conf
+    dest: /etc/pip.conf
+
+- name: Ensure YUM fastest mirror is enabled
+  yum:
+    name: yum-plugin-fastestmirror
+    state: present
+  retries: 10
+  delay: 1
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_distribution_major_version == "7"
+
+- name: Ensure Apt cache is up to date
+  apt:
+    update_cache: true
+  retries: 10
+  delay: 1
+  changed_when: false
+  when: ansible_os_family == 'Debian'
+
+- name: Ensure Git is present
+  package:
+    name: git
+    state: present
+  retries: 10
+  delay: 1
+  when: 'not (ansible_os_family == "RedHat" and
+         ansible_distribution_major_version == "7")'
+
+- name: Ensure Git version < 2.9.0 is absent
+  yum:
+    name: git
+    state: absent
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_distribution_major_version == "7"
+
+- name: Ensure IUS repository is present
+  yum:
+    name: https://centos7.iuscommunity.org/ius-release.rpm
+    state: present
+  retries: 10
+  delay: 1
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_distribution_major_version == "7"
+
+- name: Ensure a Git version >= 2.9.0 and Pip 2 are present
+  yum:
+    name:
+      - git2u
+      - python-pip
+    state: present
+  retries: 10
+  delay: 1
+  when:
+    - ansible_os_family == "RedHat"
+    - ansible_distribution_major_version == "7"
+
+- name: Ensure Python 3 is present
+  package:
+    name:
+      - python3-pip
+      - python3-setuptools
+    state: present
+  retries: 10
+  delay: 1
+
+- name: Ensure GitHub Python module is present
+  pip:
+    name: github3.py
+  retries: 10
+  delay: 1
+
+- name: Ensure the agent directory exists
+  file:
+    path: "{{ agent_directory }}"
+    state: directory
+    owner: "{{ agent_user }}"
+    group: "{{ agent_user }}"
+
+- name: Get agent latest release
+  github_release:
+    user: microsoft
+    repo: azure-pipelines-agent
+    action: latest_release
+  register: agent_release
+  retries: 10
+  delay: 1
+
+- name: Ensure the agent is installed
+  unarchive:
+    src: "https://vstsagentpackage.azureedge.net/agent/\
+          {{ agent_release.tag | strip('v') }}/\
+          vsts-agent-linux-x64-{{ agent_release.tag | strip('v') }}.tar.gz"
+    dest: "{{ agent_directory }}"
+    owner: "{{ agent_user }}"
+    group: "{{ agent_user }}"
+    remote_src: true
+    creates: "{{ agent_directory }}/config.sh"
+  retries: 10
+  delay: 1
+
+- name: Ensure the agent dependencies are installed
+  command: ./bin/installdependencies.sh
+  args:
+    chdir: "{{ agent_directory }}"
+  changed_when: false
+
+- name: Ensure ~/.bashrc Python aliases are presents
+  lineinfile:
+    path: /home/{{ agent_user }}/.bashrc
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  with_items:
+    # Allow to keep the same call behavior as on Microsoft managed agents
+    - regexp: "^alias python="
+      line: "alias python='/usr/bin/python3'"
+    - regexp: "^alias pip="
+      line: "alias pip='sudo /usr/bin/pip3'"
+    - regexp: "^alias pip3="
+      line: "alias pip3='sudo /usr/bin/pip3'"
+
+- name: Ensure the agent is configured
+  command: "./config.sh --unattended --acceptteeeula
+           --pool '{{ agent_pool }}' --agent '{{ agent_name }}' --replace
+           --url 'https://dev.azure.com/{{ agent_organization }}'
+           --work '{{ agent_work_dir }}'
+           --auth PAT --token '{{ agent_token }}'"
+  become: true
+  become_user: "{{ agent_user }}"
+  args:
+    chdir: "{{ agent_directory }}"
+  changed_when: false
+
+- name: Ensure the agent service is installed and started
+  command: "{{ item }}"
+  args:
+    chdir: "{{ agent_directory }}"
+  changed_when: false
+  with_items:
+    - ./svc.sh install
+    - ./svc.sh start
+  notify: Ensure agent service is restarted

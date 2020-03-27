@@ -1,0 +1,52 @@
+---
+# Stop an AWS EC2 instance started with "start.yml"
+
+parameters:
+  # Job name to use
+  jobName: stopAgent
+  # Agent description
+  agentDescription: AWS EC2
+  # Agent instance provider
+  provider: awsEc2
+  # Path to "acid" directory.
+  acidDir: $(Build.SourcesDirectory)/acid
+  # Job to wait for completion before trigger agent stop
+  dependsOn: startAgent
+
+jobs:
+  - job: ${{ parameters.jobName }}
+    displayName: Stop ${{ parameters.agentDescription }} agent
+    dependsOn: ${{ parameters.dependsOn }}
+    condition: always()
+    variables:
+      - name: terraformWorkingDir
+        value: ${{ parameters.acidDir }}/agents/${{ parameters.provider }}
+      - name: agentName
+        value: $(Build.DefinitionName) ${{ parameters.agentDescription }}
+    steps:
+
+      - task: DownloadPipelineArtifact@2
+        displayName: Download Terraform state
+        inputs:
+          artifactName: Terraform State ${{ parameters.agentDescription }}
+          targetPath: $(terraformWorkingDir)
+
+      - task: TerraformInstaller@0
+        displayName: Install Terraform
+        inputs:
+          terraformVersion: '0.12.13'
+
+      - script: terraform init -input=false
+        displayName: Initialize Terraform plugins
+        workingDirectory: $(terraformWorkingDir)
+
+      - ${{ if eq(parameters.provider, 'awsEc2') }}:
+        - task: AWSShellScript@1
+          displayName: Stop agent AWS EC2 instance
+          inputs:
+            awsCredentials: AWS
+            regionName: eu-west-1
+            scriptType: inline
+            inlineScript: terraform destroy -auto-approve -input=false
+            disableAutoCwd: true
+            workingDirectory: $(terraformWorkingDir)

@@ -1,19 +1,16 @@
 # -*- coding: utf-8 -*-
 """Configure Pytest"""
-from os import environ, listdir, remove, getpid
-from os.path import realpath, isfile, isdir, expanduser, splitext, join, dirname, basename
-from json import dump, load
 from copy import deepcopy
-from re import match, search, IGNORECASE
-from ctypes import c_uint32, byref
+from json import dump, load
+from os import environ, getpid, listdir, remove
+from os.path import basename, dirname, expanduser, isdir, isfile, join, \
+    realpath, splitext
 from random import randint
-import requests
-from time import sleep
+from re import IGNORECASE, match, search
 
 import pytest
 
 from tests.ws_admin_functions import WSListFunction
-
 
 _SESSION = dict()
 _LICENSING_SERVERS = dict(
@@ -135,10 +132,10 @@ def pytest_addoption(parser):
         "--server", action="store",
         default="prod", help='Specify the metering server to use')
     parser.addoption(
-        "--library_verbosity", action="store", type=int, choices=list(range(7)), default=2,
-        help='Specify "libaccelize_drm" verbosity level')
+        "--library_verbosity", action="store", type=int, choices=list(range(7)),
+        default=2, help='Specify "libaccelize_drm" verbosity level')
     parser.addoption(
-        "--library_format", action="store", type=int, choices=[0,1], default=0,
+        "--library_format", action="store", type=int, choices=(0, 1), default=0,
         help='Specify "libaccelize_drm" logging format: 0=short, 1=long')
     parser.addoption(
         "--no_clear_fpga", action="store_true", help='Bypass clearing of FPGA at start-up')
@@ -163,10 +160,13 @@ def pytest_addoption(parser):
     parser.addoption(
         "--activator_base_address", action="store", default=0x10000, type=int,
         help=('Specify the base address of the 1st activator. '
-            'The other activators shall be separated by an address gap of 0x10000'))
+              'The other activators shall be separated by an address gap of '
+              '0x10000'))
     parser.addoption(
         "--params", action="store", default=None,
-        help='Specify a list of key=value pairs separated by a coma used for one or multiple tests: "--params key1=value1,key2=value2,..."')
+        help='Specify a list of key=value pairs separated by a coma used '
+             'for one or multiple tests: '
+             '"--params key1=value1,key2=value2,..."')
 
 
 def pytest_runtest_setup(item):
@@ -193,7 +193,7 @@ def pytest_runtest_setup(item):
 
     # Check AWS execution
     markers = tuple(item.iter_markers(name='aws'))
-    if '${AWS}'=='OFF' and markers:
+    if '${AWS}' == 'OFF' and markers:
         pytest.skip("Don't run C/C++ function tests.")
     # Skip 'security' test if not explicitly marked
     for marker in item.iter_markers():

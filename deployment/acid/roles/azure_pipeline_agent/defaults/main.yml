@@ -1,0 +1,22 @@
+---
+# Agent name
+agent_name: "{{ lookup('env','AZURE_AGENT_NAME') }}"
+
+# Agent access token
+# Require scopes: Agent Pools (read, manage), Deployment group (read, manage)
+agent_token: "{{ lookup('env','AZURE_AGENT_TOKEN') }}"
+
+# Shutdown the agent machine after specified timeout in minutes
+agent_shutdown_timeout: "{{ lookup('env','AZURE_AGENT_SHUTDOWN_TIMEOUT') }}"
+
+# Agent working directory
+agent_work_dir: /dev/shm/_work
+
+# Agent install directory
+agent_directory: /opt/azure_pipeline_agent
+
+# Azure DevOps organization
+agent_organization: accelize
+
+# Azure pipeline agent pool to use
+agent_pool: Default
