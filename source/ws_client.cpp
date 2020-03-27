@@ -263,7 +263,7 @@ Json::Value DrmWSClient::requestLicense( const Json::Value& json_req, TClock::ti
     if ( resp_code != 200 ) {
         // An error occurred
         DRM_ErrorCode drm_error;
-        if ( CurlEasyPost::is_error_retryable( resp_code ) )
+        if ( CurlEasyPost::is_error_retryable( resp_code ) || ( resp_code == 401 ) )
             drm_error = DRM_WSMayRetry;
         else if ( ( resp_code >= 400 ) && ( resp_code < 500 ) )
             drm_error = DRM_WSReqError;

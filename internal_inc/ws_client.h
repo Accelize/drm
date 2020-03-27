@@ -54,8 +54,7 @@ private:
 public:
 
     static bool is_error_retryable(long resp_code) {
-        return        resp_code == 401 // Authentication credential error
-                   || resp_code == 408 // Request Timeout
+        return        resp_code == 408 // Request Timeout
                    || resp_code == 429 // Too Many Requests
                    || resp_code == 470 // Floating License: no token available
                    || resp_code == 500 // Internal Server Error

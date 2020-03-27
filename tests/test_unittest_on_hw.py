@@ -1281,7 +1281,7 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
         drm_manager.set(bad_oauth2_token=1)
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
-        assert "Authentication credentials" in str(excinfo.value)
+        assert "invalid_client" in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_NoError()
         print('Test when token is wrong: PASS')
