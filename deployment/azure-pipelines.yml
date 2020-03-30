@@ -36,11 +36,12 @@ schedules:
   always: true
 pr: none
 
-#resources:  # TODO: move pipeline utils in another repo
-#  repositories:
-#    - repository: templates
-#      type: github
-#      name: Accelize/acid
+resources:
+  repositories:
+    - repository: acid
+      type: github
+      name: Accelize/acid
+      endpoint: Accelize
 
 pool:
   vmImage: ubuntu-latest
@@ -73,7 +74,7 @@ stages:
     jobs:
 
       # Start agents
-      - template: acid/agents/start.yml #@templates
+      - template: agents/start.yml@acid
         parameters:
           jobName: startAgent_AwsF1
           agentDescription: AWS F1
@@ -144,7 +145,7 @@ stages:
               SDK_DIR: /opt/aws_fpga/sdk
 
       # Stop agents
-      - template: acid/agents/stop.yml #@templates
+      - template: agents/stop.yml@acid
         parameters:
           provider: awsEc2
           agentDescription: AWS F1

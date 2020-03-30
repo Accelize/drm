@@ -6,7 +6,6 @@
 
 # Build generated files
 docs/_build/
-deployment/packages/*
 build_*/
 build/
 dist/

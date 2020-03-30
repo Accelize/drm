@@ -1,7 +1,0 @@
----
-# This default playbook configure the Azure pipeline agent
-
-- hosts: all
-  become: true
-  roles:
-    - name: azure_pipeline_agent
