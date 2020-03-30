@@ -7,7 +7,7 @@
     "url": "https://master.devmetering.accelize.com"
   },
   "drm": {
-    "frequency_mhz": 250
+    "frequency_mhz": 125
   },
   "settings": {
     "log_verbosity": 2
