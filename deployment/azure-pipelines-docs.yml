@@ -65,7 +65,7 @@ stages:
         - task: AWSCLI@1
           displayName: Publish documentation
           inputs:
-            awsCredentials: AWS
+            awsCredentials: AWS-Repository
             regionName: eu-west-1
             awsCommand: s3
             awsSubCommand: sync

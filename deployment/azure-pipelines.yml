@@ -349,7 +349,7 @@ stages:
                 - task: AWSCLI@1
                   displayName: Get published releases manifest
                   inputs:
-                    awsCredentials: AWS
+                    awsCredentials: AWS-Repository
                     regionName: eu-west-1
                     awsCommand: s3
                     awsSubCommand: cp
@@ -359,7 +359,7 @@ stages:
                 - task: AWSCLI@1
                   displayName: Get current RPM repository
                   inputs:
-                    awsCredentials: AWS
+                    awsCredentials: AWS-Repository
                     regionName: eu-west-1
                     awsCommand: s3
                     awsSubCommand: sync
@@ -368,7 +368,7 @@ stages:
                 - task: AWSCLI@1
                   displayName: Get current DEB repository
                   inputs:
-                    awsCredentials: AWS
+                    awsCredentials: AWS-Repository
                     regionName: eu-west-1
                     awsCommand: s3
                     awsSubCommand: sync
@@ -398,7 +398,7 @@ stages:
                 - task: AWSCLI@1
                   displayName: Update published releases manifest
                   inputs:
-                    awsCredentials: AWS
+                    awsCredentials: AWS-Repository
                     regionName: eu-west-1
                     awsCommand: s3
                     awsSubCommand: cp
@@ -408,7 +408,7 @@ stages:
                 - task: AWSCLI@1
                   displayName: Publish RPM repository
                   inputs:
-                    awsCredentials: AWS
+                    awsCredentials: AWS-Repository
                     regionName: eu-west-1
                     awsCommand: s3
                     awsSubCommand: sync
@@ -418,7 +418,7 @@ stages:
                 - task: AWSCLI@1
                   displayName: Publish DEB repository
                   inputs:
-                    awsCredentials: AWS
+                    awsCredentials: AWS-Repository
                     regionName: eu-west-1
                     awsCommand: s3
                     awsSubCommand: sync
