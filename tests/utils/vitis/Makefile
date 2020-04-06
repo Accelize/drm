@@ -44,8 +44,8 @@ VPP := v++
 SDCARD := sd_card
 
 #Include Libraries
-include $(ABS_COMMON_REPO)/common/includes/opencl/opencl.mk
-include $(ABS_COMMON_REPO)/common/includes/xcl2/xcl2.mk
+include opencl.mk
+include xcl2.mk
 CXXFLAGS += $(xcl2_CXXFLAGS)
 LDFLAGS += $(xcl2_LDFLAGS)
 HOST_SRCS += $(xcl2_SRCS)

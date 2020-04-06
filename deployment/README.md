@@ -105,24 +105,13 @@ Supported OS version end of life:
 
 #### Actions to perform
 
-For Fedora & Ubuntu rolling:
-- Increment `FROM <OS>:` in:
-  * `deployment/context/build-<OS>_previous_latest.Dockerfile`
-  * `deployment/context/build-<OS>_latest.Dockerfile`
-  * `deployment/context/test-aws_f1-<OS>_previous_latest.Dockerfile`
-  * `deployment/context/test-aws_f1-<OS>_latest.Dockerfile`
+For all:
+- In the file `deployment/azure-pipelines.yml`, the increment the versions in
+  the `matrix` section of the job `buildPackages` of the stage `release`.
+- Eventually update `deployment/Dockerfile.j2` if installation instruction 
+  changed.
 
-For others :
-- Create Dockerfiles for new versions and remove end of life versions
-  Dockerfiles:
-  * `deployment/context/build-<OS>_<version>.Dockerfile`
-  * `deployment/context/test-aws_f1-<OS>_<version>.Dockerfile`
-- Update Dockerfile names in docker compose file: 
-  `deployment/docker-compose.yml`
-- Update [Docker-Hub builds](https://cloud.docker.com/u/accelize/repository/docker/accelize/accelizedrm-ci/builds)
-  with Dockerfile names
-- Update `-x OS` entries in the AWS CodeBuild buildspec:
-  `deployment/buildspec.yml`
+For CentOS, Debian and Ubuntu LTS only:
 - Update supported OS list in documentation (And eventually installation
   instructions): `doc/drm_library_installation.rst`
 

@@ -132,9 +132,9 @@ int main(int argc, char **argv) {
     //Allocate Memory in Host Memory
     auto vector_size_bytes = sizeof(int) * DATA_SIZE;
 
-    std::vector<int, aligned_allocator<int>> source_input(DATA_SIZE);
-    std::vector<int, aligned_allocator<int>> source_hw_results(DATA_SIZE);
-    std::vector<int, aligned_allocator<int>> source_sw_results(DATA_SIZE);
+    vector<int, aligned_allocator<int>> source_input(DATA_SIZE);
+    vector<int, aligned_allocator<int>> source_hw_results(DATA_SIZE);
+    vector<int, aligned_allocator<int>> source_sw_results(DATA_SIZE);
 
     // Create the test data and Software Result
     for (int i = 0; i < DATA_SIZE; i++) {
@@ -245,11 +245,11 @@ int main(int argc, char **argv) {
     // Check DRM Activator status
     read_register(DRM_ACTR_ADDRESS + 0x38, &reg);
     if (reg != 3) {
-        std::cout << "Error: DRM Activator status should be 3, not " << reg << std::endl;
+		printf("Error: DRM Activator status should be 3, not %d\n", reg);
         DrmManager_free(&pDrmManager);
         return -1;
     }
-    std::cout << "[DRMLIB] Design unlocked" << std::endl;
+	printf("[DRMLIB] Design unlocked\n");
     //ACCELIZE DRMLIB CODE AREA STOP
 
     OCL_CHECK(
@@ -294,7 +294,7 @@ int main(int argc, char **argv) {
             {buffer_input}, 0 /* 0 means from host*/, NULL, &write_event));
 
     //Launch the Kernel
-    std::vector<cl::Event> eventVec;
+    vector<cl::Event> eventVec;
     eventVec.push_back(write_event);
     OCL_CHECK(err, err = q.enqueueTask(krnl_input_stage, &eventVec));
     OCL_CHECK(err, err = q.enqueueTask(krnl_adder_stage, &eventVec));
@@ -325,7 +325,6 @@ int main(int argc, char **argv) {
     read_register(DRM_ACTR_ADDRESS + 0x38, &reg);
     if (reg != 0) {
         std::cout << "Error: DRM Activator status should be 0, not " << reg << std::endl;
-        DrmManager_free(&pDrmManager);
         return -1;
     }
 

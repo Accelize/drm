@@ -117,6 +117,8 @@ protected:
  get license and send metering data*/
 class DrmWSClient {
 
+    const uint32_t cTokenExpirationMargin = 30;
+
 protected:
 
     typedef std::chrono::steady_clock TClock; /// Shortcut type def to steady clock which is monotonic (so unaffected by clock adjustments)
@@ -126,16 +128,19 @@ protected:
     std::string mMeteringUrl;
     std::string mOAuth2Token;
     Json::Value mHostResolvesJson;
-    uint32_t mTokenValidityPeriod;
-    TClock::time_point mTokenExpirationTime;
+    uint32_t mTokenValidityPeriod;              /// Validation period of the OAuth2 token in seconds
+    uint32_t mTokenExpirationMargin;            /// OAuth2 token expiration margin in seconds
+    TClock::time_point mTokenExpirationTime;    /// OAuth2 expiration time
     CurlEasyPost mOAUth2Request;
+
+    bool isTokenValid() const;
 
 public:
     DrmWSClient(const std::string &conf_file_path, const std::string &cred_file_path);
     ~DrmWSClient() = default;
 
     uint32_t getTokenValidity() const { return mTokenValidityPeriod; }
-    uint32_t getTokenTimeLeft() const;
+    int32_t getTokenTimeLeft() const;
     std::string getTokenString() const { return mOAuth2Token; }
 
     void setOAuth2token( const std::string& token );

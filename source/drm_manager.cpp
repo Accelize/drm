@@ -1015,13 +1015,16 @@ protected:
         TClock::duration long_duration = std::chrono::seconds( long_retry_period );
         TClock::duration short_duration = std::chrono::seconds( short_retry_period );
 
-        // Get valid OAUth2 token
         uint32_t attempt = 0;
         TClock::duration wait_duration;
+        bool token_valid(false);
+
         while ( 1 ) {
+            token_valid = false;
+            // Get valid OAUth2 token
             try {
                 getDrmWSClient().requestOAuth2token( deadline );
-                break;
+                token_valid = true;
             } catch ( const Exception& e ) {
                 if ( e.getErrCode() != DRM_WSMayRetry ) {
                     throw;
@@ -1050,11 +1053,9 @@ protected:
                 // Wait a bit before retrying
                 sleepOrExit( wait_duration );
             }
-        }
+            if ( !token_valid ) continue;
 
-        // Get new license
-        attempt = 0;
-        while ( 1 ) {
+            // Get new license
             try {
                 return getDrmWSClient().requestLicense( request_json, deadline );
             } catch ( const Exception& e ) {

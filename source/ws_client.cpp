@@ -114,6 +114,7 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
 
     mOAuth2Token = std::string("");
     mTokenValidityPeriod = 0;
+    mTokenExpirationMargin = cTokenExpirationMargin;
     mTokenExpirationTime = TClock::now();
 
     try {
@@ -153,7 +154,7 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
     mOAUth2Request.setPostFields( ss.str() );
 }
 
-uint32_t DrmWSClient::getTokenTimeLeft() const {
+int32_t DrmWSClient::getTokenTimeLeft() const {
     TClock::duration delta = mTokenExpirationTime - TClock::now();
     return (uint32_t)round( (double)delta.count() / 1000000000 );
 }
@@ -164,16 +165,29 @@ void DrmWSClient::setOAuth2token( const std::string& token ) {
     mTokenExpirationTime = TClock::now() + std::chrono::seconds( mTokenValidityPeriod );
 }
 
+bool DrmWSClient::isTokenValid() const {
+    uint32_t margin = ( mTokenExpirationMargin >= mTokenValidityPeriod ) ?
+        ( mTokenValidityPeriod >> 1) : mTokenExpirationMargin;
+    if ( ( mTokenExpirationTime - std::chrono::seconds( margin ) ) > TClock::now() ) {
+        Debug( "Current authentication token is still valid" );
+        return true;
+    } else {
+        if ( mTokenExpirationTime > TClock::now() )
+            Debug( "Current authentication token is about to expire in {} seconds maximum", margin );
+        else
+            Debug( "Current authentication token has expired" );
+        return false;
+    }
+}
+
 void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
 
     // Check if a token exists
     if ( !mOAuth2Token.empty() ) {
-        // Check if existing token has expired or is about to expire
-        if ( mTokenExpirationTime > TClock::now() ) {
-            Debug( "Current authentication token is still valid" );
+        // Yes a token already exists, check if it has expired or is about to expire
+        if ( isTokenValid() ) {
             return;
         }
-        Debug( "Current authentication token has expired" );
     }
 
     // Request a new token and wait response
@@ -249,7 +263,7 @@ Json::Value DrmWSClient::requestLicense( const Json::Value& json_req, TClock::ti
     if ( resp_code != 200 ) {
         // An error occurred
         DRM_ErrorCode drm_error;
-        if ( CurlEasyPost::is_error_retryable( resp_code ) )
+        if ( CurlEasyPost::is_error_retryable( resp_code ) || ( resp_code == 401 ) )
             drm_error = DRM_WSMayRetry;
         else if ( ( resp_code >= 400 ) && ( resp_code < 500 ) )
             drm_error = DRM_WSReqError;

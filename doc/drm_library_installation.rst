@@ -8,25 +8,29 @@ This section explains how to install the Accelize DRM library API from packages 
 Supported OS
 ------------
 
-Accelize supports the following "long time support" OS and provides fully tested
-packages for them:
+Accelize provides the DRM library packages for a wide variety of Linux OS.
 
-* RHEL/Centos 8
-* RHEL/Centos 7 [#f1]_
+Following OS are fully tested, including FPGA based hardware and end to end
+tests:
+
+* RHEL/Centos 7
 * Ubuntu 18.04 LTS Bionic
 * Ubuntu 16.04 LTS Xenial
+
+Following OS are minimally tested only (without hardware):
+
+* RHEL/Centos 8
+* Fedora (2 latest stable versions)
+* Ubuntu (2 latest stable versions)
 * Debian 10 Buster
 * Debian 9 Stretch
 
-Following OS have been tested but are not supported by Accelize:
-
-* Debian Testing [#f2]_
-* Fedora (2 latest stable versions)
-* Ubuntu (2 latest stable versions)
-
-.. [#f1] With Python 3.6 from EPEL repository for Accelize DRM Python library.
-.. [#f2] No packages are provided.
-
+.. note:: We limit hardware tested OS to those which are supported by FPGA
+          vendors. But, we do minimal tests on more OS to ensure to our
+          customers that they will be able to install the library on almost any
+          Linux OS and that our library is future-proof and will be compatible
+          without efforts to any OS that will be supported in the future by FPGA
+          vendors.
 
 Software requirements
 ---------------------
@@ -271,11 +275,12 @@ Run following commands to install all requirements:
     # Minimal requirements
     sudo apt update
     sudo apt install -y git make g++ libcurl4-openssl-dev libjsoncpp-dev python3-pip
+    python3 -m pip install --user -U pip
     pip3 install --user -U cmake
 
     # Python library requirements
     sudo apt install -y python3-dev
-    pip3 install --user -U cmake setuptools wheel cython
+    pip3 install --user -U setuptools wheel cython
 
 .. code-block:: bash
     :caption: On RHEL 8, CentOS 8
@@ -285,6 +290,7 @@ Run following commands to install all requirements:
 
     # Minimal requirements
     sudo dnf install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel python3-pip
+    python3 -m pip install --user -U pip
     pip3 install --user -U cmake
 
     # Python library requirements
@@ -299,6 +305,7 @@ Run following commands to install all requirements:
 
     # Minimal requirements
     sudo yum install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel python3-pip
+    python3 -m pip install --user -U pip
     pip3 install --user -U cmake
 
     # Python library requirements

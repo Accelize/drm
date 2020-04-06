@@ -28,7 +28,7 @@ REGEX_PATTERN = r'Starting license request to \S+ with request:\n(^{.+?\n}$)'
 
 def parse_and_save_challenge(logpath, pattern, save_path=None):
     # Parse log file
-    print(f'Parsing requests from log file: {logpath}')
+    print('Parsing requests from log file: %s' % logpath)
     with open(logpath, 'rt') as f:
         text = f.read()
     request_list = list()

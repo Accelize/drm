@@ -1281,7 +1281,7 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
         drm_manager.set(bad_oauth2_token=1)
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
-        assert "Authentication credentials" in str(excinfo.value)
+        assert "invalid_client" in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_NoError()
         print('Test when token is wrong: PASS')
@@ -2411,13 +2411,20 @@ def test_readonly_and_writeonly_parameters(accelize_drm, conf_json, cred_json, a
 
 
 @pytest.mark.endurance
-@pytest.mark.hwtst
 def test_authentication_expiration(accelize_drm, conf_json, cred_json, async_handler):
     from random import sample
     driver = accelize_drm.pytest_fpga_driver[0]
-    activator = accelize_drm.pytest_fpga_activators[0][0]
+    activators = accelize_drm.pytest_fpga_activators[0]
     async_cb = async_handler.create()
     cred_json.set_user('accelize_accelerator_test_02')
+
+    # Get test duration
+    try:
+        test_duration = accelize_drm.pytest_params['duration']
+    except:
+        test_duration = 14000
+        print('Warning: Missing argument "duration". Using default value %d' % test_duration)
+
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
@@ -2425,28 +2432,30 @@ def test_authentication_expiration(accelize_drm, conf_json, cred_json, async_han
         driver.write_register_callback,
         async_cb.callback
     )
-    activator.generate_coin(1000)
+    activators[0].generate_coin(1000)
     assert not drm_manager.get('license_status')
-    activator.autotest(is_activated=False)
+    activators[0].autotest(is_activated=False)
     drm_manager.activate()
-    lic_duration = drm_manager.get('license_duration')
-    assert drm_manager.get('license_status')
-    activator.autotest(is_activated=True)
-    activators[0].check_coin(drm_manager.get('metered_data'))
-    start = datetime.now()
-    expiration_period = 12000
-    while True:
-        seconds_left = (expiration_period + 2*lic_duration) - (datetime.now() - start).total_seconds()
-        if seconds_left < 0:
-            break
+    try:
+        lic_duration = drm_manager.get('license_duration')
         assert drm_manager.get('license_status')
-        assert activator.generate_coin(1)
+        activators[0].autotest(is_activated=True)
         activators[0].check_coin(drm_manager.get('metered_data'))
-        print('Remaining time: ', seconds_left, ' s / current coins: ', activators[0].metering_data)
-        sleep(5)
-    drm_manager.deactivate()
-    assert not drm_manager.get('license_status')
-    activator.autotest(is_activated=False)
+        start = datetime.now()
+        while True:
+            assert drm_manager.get('license_status')
+            activators[0].generate_coin(1)
+            activators[0].check_coin(drm_manager.get('metered_data'))
+            seconds_left = test_duration - (datetime.now() - start).total_seconds()
+            print('Remaining time: %0.1fs  /  current coins=%d' % (seconds_left, activators[0].metering_data))
+            if seconds_left < 0:
+                break
+            sleep(60)
+    finally:
+        drm_manager.deactivate()
+        assert not drm_manager.get('license_status')
+        activators[0].autotest(is_activated=False)
+        print('Endurance test has completed')
 
 
 def test_directory_creation(accelize_drm, conf_json, cred_json, async_handler):
