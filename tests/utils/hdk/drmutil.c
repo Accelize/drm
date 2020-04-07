@@ -50,15 +50,17 @@
 #define DRM_NB_PAGES    6
 #define MAX_BATCH_CMD   32
 
-#define INC_EVENT_REG_OFFSET 0x8
-
 #define PCI_VENDOR_ID   0x1D0F /* Amazon PCI Vendor ID */
 #define PCI_DEVICE_ID   0xF000 /* PCI Device ID preassigned by Amazon for F1 applications */
 
 /* Here we add the DRM controller base address */
-#define DRM_CTRL_BASE_ADDR      0x00000
-#define ACTIVATOR_0_BASE_ADDR   0x10000
-#define ACTIVATOR_RANGE_ADDR    0x10000
+#define DRM_CTRL_ADDR           0x0000000
+#define DRM_ACTR_ADDR           0x0010000
+#define DRM_ACTR_ADDR_RANGE     0x10000
+
+#define ACT_STATUS_REG_OFFSET 0x38
+#define MAILBOX_REG_OFFSET    0x3C
+#define INC_EVENT_REG_OFFSET  0x40
 
 
 typedef enum {LOG_ERROR, LOG_WARN, LOG_INFO, LOG_DEBUG} t_LogLevel;
@@ -208,8 +210,8 @@ int tokenize(char str[], t_BatchCmd tokens[], uint32_t* tokens_len)
 
 /** Define Three callback for the DRM Lib **/
 /* Callback function for DRM library to perform a thread safe register read */
-int read_drm_reg32( uint32_t offset, uint32_t* p_value, void* user_p ) {
-    if (fpga_pci_peek(*(pci_bar_handle_t*)user_p, DRM_CTRL_BASE_ADDR+offset, p_value)) {
+int read_register( uint32_t offset, uint32_t* p_value, void* user_p ) {
+    if (fpga_pci_peek(*(pci_bar_handle_t*)user_p, DRM_CTRL_ADDR+offset, p_value)) {
         ERROR("Unable to read from the fpga!");
         return 1;
     }
@@ -217,8 +219,8 @@ int read_drm_reg32( uint32_t offset, uint32_t* p_value, void* user_p ) {
 }
 
 /* Callback function for DRM library to perform a thread safe register write */
-int write_drm_reg32( uint32_t offset, uint32_t value, void* user_p ) {
-    if (fpga_pci_poke(*(pci_bar_handle_t*)user_p, DRM_CTRL_BASE_ADDR+offset, value)) {
+int write_register( uint32_t offset, uint32_t value, void* user_p ) {
+    if (fpga_pci_poke(*(pci_bar_handle_t*)user_p, DRM_CTRL_ADDR+offset, value)) {
         ERROR("Unable to write to the fpga.");
         return 1;
     }
@@ -236,7 +238,7 @@ int generate_coin(pci_bar_handle_t* pci_bar_handle, uint32_t ip_index, uint32_t 
     uint32_t c;
 
     for(c=0; c < coins; c++) {
-        if (write_drm_reg32(ACTIVATOR_0_BASE_ADDR + INC_EVENT_REG_OFFSET + ip_index * ACTIVATOR_RANGE_ADDR, 0, pci_bar_handle)) {
+        if (write_register(DRM_ACTR_ADDR + INC_EVENT_REG_OFFSET + ip_index * DRM_ACTR_ADDR_RANGE, 0, pci_bar_handle)) {
             ERROR("Failed to increment event counter on activator #%u.", ip_index);
             return -1;
         }
@@ -253,8 +255,7 @@ int print_all_information( DrmManager* pDrmManager ) {
         \"session_id\": null,\
         \"metered_data\": null,\
         \"nodelocked_request_file\": null,\
-        \"custom_field\": null,\
-        \"strerror\": null }";
+        \"custom_field\": null }";
 
     if (DrmManager_get_json_string(pDrmManager, info_in, &info_out )) {
         ERROR("Failed to get all DRM information: %s", pDrmManager->error_message);
@@ -289,7 +290,7 @@ int get_activators_status( DrmManager* pDrmManager, pci_bar_handle_t* pci_bar_ha
 
     all_active = true;
     for(i=0; i<nb_activators; i++) {
-        if (read_drm_reg32(ACTIVATOR_0_BASE_ADDR + i * ACTIVATOR_RANGE_ADDR, &value, pci_bar_handle)) {
+        if (read_register(DRM_ACTR_ADDR + ACT_STATUS_REG_OFFSET + i * DRM_ACTR_ADDR_RANGE, &value, pci_bar_handle)) {
             ERROR("Failed to read register of activator #%u", i);
             return 2;
         }
@@ -473,7 +474,7 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFil
     /* Allocate a DrmManager, providing our previously defined callbacks */
     if (DRM_OK != DrmManager_alloc(&pDrmManager,
             configurationFile, credentialFile,
-            read_drm_reg32, write_drm_reg32, print_drm_error,
+            read_register, write_register, print_drm_error,
             pci_bar_handle )) {
         ERROR("Error allocating DRM Manager object: %s", pDrmManager->error_message);
         return -1;
@@ -588,7 +589,7 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, con
     /* Allocate a DrmManager, providing our previously defined callbacks*/
     if (DRM_OK != DrmManager_alloc(&pDrmManager,
             configurationFile, credentialFile,
-            read_drm_reg32, write_drm_reg32, print_drm_error,
+            read_register, write_register, print_drm_error,
             pci_bar_handle
             )) {
         ERROR("Error allocating DRM Manager object");
