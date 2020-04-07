@@ -233,7 +233,7 @@ stages:
           - task: AWSCLI@1
             displayName: Get published releases manifest
             inputs:
-              awsCredentials: AWS
+              awsCredentials: AWS-Repository
               regionName: eu-west-1
               awsCommand: s3
               awsSubCommand: cp
