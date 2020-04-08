@@ -2142,11 +2142,6 @@ public:
                                custom_msg );
                         break;
                     }
-                    case ParameterKey::bad_product_id: {
-                        Debug( "Set parameter '{}' (ID={}) to random value", key_str, key_id );
-                        mHeaderJsonRequest["product"]["name"] = "BAD_NAME_JUST_FOR_TEST";
-                        break;
-                    }
                     case ParameterKey::bad_oauth2_token: {
                         Debug( "Set parameter '{}' (ID={}) to random value", key_str, key_id );
                         getDrmWSClient().setOAuth2token( "BAD_TOKEN" );

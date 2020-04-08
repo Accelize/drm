@@ -41,6 +41,5 @@ PARAMETERKEY_ITEM( page_meteringfile )              ///< Read-only, return nothi
 PARAMETERKEY_ITEM( page_mailbox )                   ///< Read-only, return nothing, print all registers in the Mailbox page
 PARAMETERKEY_ITEM( hw_report )                      ///< Read-only, return nothing, print the Algodone HW report
 PARAMETERKEY_ITEM( trigger_async_callback )         ///< Write-only, only for testing, call the asynchronous error callback with the given message
-PARAMETERKEY_ITEM( bad_product_id )                 ///< Write-only, only for testing, uses a bad product ID
 PARAMETERKEY_ITEM( bad_oauth2_token )               ///< Write-only, only for testing, uses a bad token
 PARAMETERKEY_ITEM( log_message )                    ///< Write-only, only for testing, insert a message with the value as content

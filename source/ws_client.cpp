@@ -117,6 +117,7 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
     mTokenExpirationMargin = cTokenExpirationMargin;
     mTokenExpirationTime = TClock::now();
 
+    // Set properties based on file
     try {
         Json::Value conf_json = parseJsonFile( conf_file_path );
         Json::Value webservice_json = JVgetRequired( conf_json, "licensing", Json::objectValue );
@@ -125,14 +126,17 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
         mHostResolvesJson = JVgetOptional( webservice_json, "host_resolves", Json::objectValue );
 
         url = JVgetRequired( webservice_json, "url", Json::stringValue ).asString();
-        Debug( "Licensing URL: {}", url );
-        mMeteringUrl = url + std::string("/auth/metering/genlicense/");
 
     } catch( Exception &e ) {
         Throw( e.getErrCode(), "Error with service configuration file '{}': {}",
                 conf_file_path, e.what() );
     }
 
+    // Temporarily change file log level to be sure not to capture the Client and Secret IDs
+    auto logFileHandler = sLogger->sinks()[1];
+    spdlog::level::level_enum logFileLevel = logFileHandler->level();
+    if ( logFileLevel <= spdlog::level::debug )
+        logFileHandler->set_level( spdlog::level::info );
     try {
         Json::Value cred_json = parseJsonFile( cred_file_path );
         Json::Value client_id_json = JVgetRequired( cred_json, "client_id", Json::stringValue );
@@ -142,7 +146,23 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
     } catch( Exception &e ) {
         Throw( e.getErrCode(), "Error with credential file '{}': {}", cred_file_path, e.what() );
     }
+    // Restore originla file log level
+    if ( logFileLevel <= spdlog::level::debug )
+        logFileHandler->set_level( logFileLevel );
 
+    // Overwrite properties with Environment Variables if defined
+    const char* url_var = std::getenv( "ONEPORTAL_URL" );
+    if ( url_var != NULL )
+        url = std::string( url_var );
+    Debug( "Licensing URL: {}", url );
+    const char* client_id_var = std::getenv( "ONEPORTAL_CLIENT_ID" );
+    if ( client_id_var != NULL )
+        mClientId = std::string( client_id_var );
+    const char* secret_id_var = std::getenv( "ONEPORTAL_CLIENT_SECRET" );
+    if ( secret_id_var != NULL )
+        mClientSecret = std::string( secret_id_var );
+
+    // Init Curl lib
     CurlSingleton::Init();
 
     // Set header of OAuth2 request
@@ -152,6 +172,9 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
     ss << "client_id=" << mClientId << "&client_secret=" << mClientSecret;
     ss << "&grant_type=client_credentials";
     mOAUth2Request.setPostFields( ss.str() );
+
+    // Set URL of license request
+    mMeteringUrl = url + std::string("/auth/metering/genlicense/");
 }
 
 int32_t DrmWSClient::getTokenTimeLeft() const {

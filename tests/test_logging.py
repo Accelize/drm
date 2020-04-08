@@ -8,9 +8,8 @@ from glob import glob
 from os import remove, getpid
 from os.path import getsize, isfile, dirname, join, realpath
 from re import search, findall, finditer, MULTILINE
-from time import sleep, time
 from json import loads
-from datetime import datetime, timedelta
+from time import time
 
 
 LOG_FORMAT_SHORT = "[%^%=8l%$] %-6t, %v"
@@ -424,3 +423,118 @@ def test_log_file_parameters_modifiability(accelize_drm, conf_json, cred_json, a
         if isfile(log_path):
             remove(log_path)
     print('Test log file parameters modifiability from config: PASS')
+
+
+def test_log_file_error_on_directory_creation(accelize_drm, conf_json, cred_json, async_handler):
+    """ Test an error occurred when log file directory does not exist and cannot be created """
+    from shutil import rmtree
+    from subprocess import check_call
+    from os import makedirs, access, R_OK, W_OK
+    from os.path import isdir, expanduser
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+
+    log_type = 1
+    log_dir = realpath(expanduser('~/tmp_log_dir.%s' % str(time())))
+    if not isdir(log_dir):
+        makedirs(log_dir)
+    log_path = join(log_dir, "tmp", "drmlib.%d.%s.log" % (getpid(), str(time())))
+    try:
+        # Create immutable folder
+        check_call('sudo chattr +i %s' % log_dir, shell=True)
+        assert not access(log_dir, W_OK)
+        assert not isdir(dirname(log_path))
+        async_cb.reset()
+        conf_json.reset()
+        conf_json['settings']['log_file_path'] = log_path
+        conf_json['settings']['log_file_type'] = log_type
+        conf_json.save()
+        with pytest.raises(accelize_drm.exceptions.DRMExternFail) as excinfo:
+            drm_manager = accelize_drm.DrmManager(
+                    conf_json.path,
+                    cred_json.path,
+                    driver.read_register_callback,
+                    driver.write_register_callback,
+                    async_cb.callback
+                )
+        assert "Failed to create log file %s" % log_path in str(excinfo.value)
+    finally:
+        # Restore to mutable folder
+        check_call('sudo chattr -i %s' % log_dir, shell=True)
+        assert access(log_dir, W_OK)
+        if isdir(log_dir):
+            rmtree(log_dir)
+
+
+def test_log_file_on_existing_directory(accelize_drm, conf_json, cred_json, async_handler):
+    """ Test when log file directory already exists """
+    from shutil import rmtree
+    from os import makedirs, access, R_OK, W_OK
+    from os.path import isdir, expanduser
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+
+    log_type = 1
+    log_dir = realpath(expanduser('~/tmp_log_dir.%s' % str(time())))
+    if not isdir(log_dir):
+        makedirs(log_dir)
+    log_path = join(log_dir, "drmlib.%d.%s.log" % (getpid(), time()))
+    try:
+        assert isdir(log_dir)
+        assert access(log_dir, W_OK)
+        assert not isfile(log_path)
+        async_cb.reset()
+        conf_json.reset()
+        conf_json['settings']['log_file_path'] = log_path
+        conf_json['settings']['log_file_type'] = log_type
+        conf_json.save()
+        drm_manager = accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            )
+        del drm_manager
+        gc.collect()
+        assert isfile(log_path)
+
+    finally:
+        if isdir(log_dir):
+            rmtree(log_dir)
+
+
+def test_log_file_directory_creation(accelize_drm, conf_json, cred_json, async_handler):
+    from shutil import rmtree
+    from os import makedirs, access, R_OK, W_OK
+    from os.path import isdir, expanduser
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+
+    log_type = 1
+    log_dir = realpath(expanduser('~/tmp_log_dir.%s' % str(time())))
+    if not isdir(log_dir):
+        makedirs(log_dir)
+    log_path = join(log_dir, 'tmp', "drmlib.%d.%s.log" % (getpid(), time()))
+    try:
+        assert isdir(log_dir)
+        assert access(log_dir, W_OK)
+        async_cb.reset()
+        conf_json.reset()
+        conf_json['settings']['log_file_path'] = log_path
+        conf_json['settings']['log_file_type'] = log_type
+        conf_json.save()
+        drm_manager = accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            )
+        del drm_manager
+        gc.collect()
+        assert isfile(log_path)
+    finally:
+        if isdir(log_dir):
+            rmtree(log_dir)
+

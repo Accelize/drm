@@ -563,3 +563,54 @@ def test_drm_manager_get_and_set_bad_arguments(accelize_drm, conf_json, cred_jso
     err_code = async_handler.get_error_code(str(excinfo.value))
     assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
     print("Test when bad argument is given to set: PASS")
+
+
+@pytest.mark.aws
+def test_c_unittests(accelize_drm, exec_func):
+    """Test errors when missing arguments are given to DRM Controller Constructor"""
+    driver = accelize_drm.pytest_fpga_driver[0]
+    if driver._name != 'aws':
+        pytest.skip("C unit-tests are only supported with AWS driver.")
+
+    exec_lib = exec_func.load('unittests', driver._fpga_slot_id)
+
+    # Test when read register callback is null
+    exec_lib.run('test_null_read_callback')
+    assert exec_lib.returncode == accelize_drm.exceptions.DRMBadArg.error_code
+    assert 'Read register callback function must not be NULL' in exec_lib.stdout
+    assert exec_lib.asyncmsg is None
+
+    # Test when write register callback is null
+    exec_lib.run('test_null_write_callback')
+    assert exec_lib.returncode == accelize_drm.exceptions.DRMBadArg.error_code
+    assert 'Write register callback function must not be NULL' in exec_lib.stdout
+    assert exec_lib.asyncmsg is None
+
+    # Test when asynchronous error callback is null
+    exec_lib.run('test_null_error_callback')
+    assert exec_lib.returncode == accelize_drm.exceptions.DRMBadArg.error_code
+    assert 'Asynchronous error callback function must not be NULL' in exec_lib.stdout
+    assert exec_lib.asyncmsg is None
+
+    # Test various types of get and set functions
+    exec_lib.run('test_types_of_get_and_set_functions')
+    assert exec_lib.returncode == 0
+    assert exec_lib.asyncmsg is None
+
+    # Test out of range of get function
+    exec_lib.run('test_get_function_out_of_range')
+    assert exec_lib.returncode == accelize_drm.exceptions.DRMBadArg.error_code
+    assert 'Cannot find parameter with ID: ' in exec_lib.stdout
+    assert exec_lib.asyncmsg is None
+
+    # Test get_json_string with bad format
+    exec_lib.run('test_get_json_string_with_bad_format')
+    assert exec_lib.returncode == accelize_drm.exceptions.DRMBadFormat.error_code
+    assert 'Cannot parse JSON string because' in exec_lib.stdout
+    assert exec_lib.asyncmsg is None
+
+    # Test get_json_string with empty string
+    exec_lib.run('test_get_json_string_with_empty_string')
+    assert exec_lib.returncode == accelize_drm.exceptions.DRMBadFormat.error_code
+    assert 'Cannot parse an empty JSON string' in exec_lib.stdout
+    assert exec_lib.asyncmsg is None
