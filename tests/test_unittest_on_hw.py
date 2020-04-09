@@ -130,13 +130,23 @@ def test_authentication_token(accelize_drm, conf_json, cred_json, async_handler)
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-
     drm_manager = None
-    print()
+
+    file_log_level = 3
+    file_log_type = 1
+    file_log_path = realpath("./drmlib-%d.log" % getpid())
+    if isfile(file_log_path):
+        remove(file_log_path)
+    assert not isfile(file_log_path)
+
     try:
         # Test when token is wrong
         async_cb.reset()
         conf_json.reset()
+        conf_json['settings']['log_file_verbosity'] = file_log_level
+        conf_json['settings']['log_file_path'] = file_log_path
+        conf_json['settings']['log_file_type'] = file_log_type
+        conf_json.save()
         drm_manager = accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
@@ -145,11 +155,19 @@ def test_authentication_token(accelize_drm, conf_json, cred_json, async_handler)
             async_cb.callback
         )
         drm_manager.set(bad_oauth2_token=1)
-        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+        assert drm_manager.get('token_string') == 'BAD_TOKEN'
+        assert drm_manager.get('token_validity') == 1000
+        with pytest.raises(accelize_drm.exceptions.DRMWSTimedOut) as excinfo:
             drm_manager.activate()
-        assert "invalid_client" in str(excinfo.value)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+        assert "Did not perform HTTP request to Accelize webservice because deadline is reached" in str(excinfo.value)
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSTimedOut.error_code
         async_cb.assert_NoError()
+        del drm_manager
+        gc.collect()
+        assert isfile(file_log_path)
+        with open(file_log_path, 'rt') as f:
+            file_log_content = f.read()
+        assert search(r'\bAuthentication credentials were not provided\b', file_log_content)
         print('Test when token is wrong: PASS')
 
         # Test token validity after deactivate
@@ -185,47 +203,36 @@ def test_authentication_token(accelize_drm, conf_json, cred_json, async_handler)
         async_cb.assert_NoError()
         print('Test token validity after deactivate: PASS')
 
-#        # Test when token has expired
-#        async_cb.reset()
-#        conf_json.reset()
-#        drm_manager = accelize_drm.DrmManager(
-#            conf_json.path,
-#            cred_json.path,
-#            driver.read_register_callback,
-#            driver.write_register_callback,
-#            async_cb.callback
-#        )
-#        drm_manager.activate()
-#        start = datetime.now()
-#        drm_manager.deactivate()
-#        exp_token_string = drm_manager.get('token_string')
-#        token_validity = drm_manager.get('token_validity')
-#        token_expired_in = drm_manager.get('token_expired_in')
-#        exp_token_validity = 10
-#        drm_manager.set(token_validity=exp_token_validity)
-#        token_validity = drm_manager.get('token_validity')
-#        assert token_validity == exp_token_validity
-#        token_expired_in = drm_manager.get('token_expired_in')
-#        ts = drm_manager.get('token_string')
-#        assert token_expired_in > token_validity/3
-#        assert token_expired_in > 3
-#        # Wait right before the token expires and verifiy it is the same
-#        wait_period = start + timedelta(seconds=token_expired_in-3) - datetime.now()
-#        sleep(wait_period.total_seconds())
-#        drm_manager.activate()
-#        drm_manager.deactivate()
-#        token_string = drm_manager.get('token_string')
-#        assert token_string == exp_token_string
-#        sleep(4)
-#        drm_manager.activate()
-#        drm_manager.deactivate()
-#        token_string = drm_manager.get('token_string')
-#        assert token_string != exp_token_string
-#        async_cb.assert_NoError()
-#        print('Test when token has expired: PASS')
-
     finally:
         if drm_manager:
+            drm_manager.deactivate()
+
+
+@pytest.mark.long_run
+@pytest.mark.hwtst
+def test_authentication_token_expiration(accelize_drm, conf_json, cred_json, async_handler):
+    """Test authentication token behavior"""
+
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    async_cb.reset()
+    conf_json.reset()
+    cred_json.set_user('accelize_accelerator_test_02')
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    try:
+        drm_manager.activate()
+        token_string = drm_manager.get('token_string')
+        token_time_left = drm_manager.get('token_time_left')
+        sleep(token_time_left + 1)
+        assert drm_manager.get('token_string') != token_string
+    finally:
+
             drm_manager.deactivate()
 
 

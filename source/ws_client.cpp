@@ -79,7 +79,8 @@ long CurlEasyPost::perform( std::string* resp, std::chrono::steady_clock::time_p
     { // Compute timeout
         std::chrono::milliseconds timeout = std::chrono::duration_cast<std::chrono::milliseconds>( deadline - std::chrono::steady_clock::now() );
         if ( timeout <= std::chrono::milliseconds( 0 ) )
-            Throw( DRM_WSMayRetry, "Did not perform HTTP request to Accelize webservice because deadline is already reached." );
+            //Throw( DRM_WSMayRetry, "Did not perform HTTP request to Accelize webservice because deadline is reached." );
+            Throw( DRM_WSTimedOut, "Did not perform HTTP request to Accelize webservice because deadline is reached." );
         curl_easy_setopt( curl, CURLOPT_TIMEOUT_MS, timeout.count() );
     }
     res = curl_easy_perform( curl );
@@ -184,7 +185,7 @@ int32_t DrmWSClient::getTokenTimeLeft() const {
 
 void DrmWSClient::setOAuth2token( const std::string& token ) {
     mOAuth2Token = token;
-    mTokenValidityPeriod = 10;
+    mTokenValidityPeriod = 1000;
     mTokenExpirationTime = TClock::now() + std::chrono::seconds( mTokenValidityPeriod );
 }
 

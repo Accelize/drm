@@ -1027,14 +1027,15 @@ protected:
                 token_valid = true;
             } catch ( const Exception& e ) {
                 if ( e.getErrCode() != DRM_WSMayRetry ) {
+                    std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
                     throw;
                 }
                 // It is retryable
                 attempt ++;
-                if ( TClock::now() > deadline ) {
+                /*if ( TClock::now() > deadline ) {
                     // Reached timeout
                     Throw( DRM_WSError, "Timeout on Authentication request after {} attempts", attempt );
-                }
+                }*/
                 if ( short_retry_period == 0 ) {
                     // No retry
                     throw;
@@ -1064,10 +1065,10 @@ protected:
                 }
                 // It is retryable
                 attempt ++;
-                if ( TClock::now() > deadline ) {
+                /*if ( TClock::now() > deadline ) {
                     // Reached timeout
                     Throw( DRM_WSError, "Timeout on License request after {} attempts", attempt );
-                }
+                }*/
                 if ( short_retry_period == 0 ) {
                     // No retry
                     throw;
@@ -1920,10 +1921,10 @@ public:
                         break;
                     }
                     case ParameterKey::token_string: {
-                        std::string token_string = getDrmWSClient().getTokenString();
-                        json_value[key_str] = token_string;
+                        std::string token_str = getDrmWSClient().getTokenString();
+                        json_value[key_str] = token_str;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
-                               token_string );
+                               token_str );
                         break;
                     }
                     case ParameterKey::token_validity: {

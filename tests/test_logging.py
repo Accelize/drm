@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-Test node-locked behavior of DRM Library.
+Test logging mechanism of DRM Library.
 """
 import pytest
 import gc
 from glob import glob
-from os import remove, getpid
-from os.path import getsize, isfile, dirname, join, realpath
+from os import remove, getpid, makedirs, access, R_OK, W_OK
+from os.path import getsize, isfile, dirname, join, realpath, isdir, expanduser
 from re import search, findall, finditer, MULTILINE
 from json import loads
 from time import time
+from shutil import rmtree
 
 
 LOG_FORMAT_SHORT = "[%^%=8l%$] %-6t, %v"
@@ -19,10 +20,8 @@ REGEX_FORMAT_SHORT = r'\[\s*(\w+)\s*\] \s*\d+\s*, %s'
 REGEX_FORMAT_LONG  = r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.\d{3} - \s*\S+:\d+\s* \[\s*(\w+)\s*\] \s*\d+\s*, %s'
 
 
-## TEST LOG FILE
-
 def test_file_path(accelize_drm, conf_json, cred_json, async_handler):
-    """Test logging file verbosity"""
+    """Test logging file path"""
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
@@ -427,10 +426,7 @@ def test_log_file_parameters_modifiability(accelize_drm, conf_json, cred_json, a
 
 def test_log_file_error_on_directory_creation(accelize_drm, conf_json, cred_json, async_handler):
     """ Test an error occurred when log file directory does not exist and cannot be created """
-    from shutil import rmtree
     from subprocess import check_call
-    from os import makedirs, access, R_OK, W_OK
-    from os.path import isdir, expanduser
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
@@ -468,12 +464,8 @@ def test_log_file_error_on_directory_creation(accelize_drm, conf_json, cred_json
 
 def test_log_file_on_existing_directory(accelize_drm, conf_json, cred_json, async_handler):
     """ Test when log file directory already exists """
-    from shutil import rmtree
-    from os import makedirs, access, R_OK, W_OK
-    from os.path import isdir, expanduser
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-
     log_type = 1
     log_dir = realpath(expanduser('~/tmp_log_dir.%s' % str(time())))
     if not isdir(log_dir):
@@ -505,12 +497,8 @@ def test_log_file_on_existing_directory(accelize_drm, conf_json, cred_json, asyn
 
 
 def test_log_file_directory_creation(accelize_drm, conf_json, cred_json, async_handler):
-    from shutil import rmtree
-    from os import makedirs, access, R_OK, W_OK
-    from os.path import isdir, expanduser
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-
     log_type = 1
     log_dir = realpath(expanduser('~/tmp_log_dir.%s' % str(time())))
     if not isdir(log_dir):
@@ -538,3 +526,66 @@ def test_log_file_directory_creation(accelize_drm, conf_json, cred_json, async_h
         if isdir(log_dir):
             rmtree(log_dir)
 
+
+def test_log_file_without_credential_data(accelize_drm, conf_json, cred_json, async_handler):
+    async_cb = async_handler.create()
+    log_type = 1
+    log_dir = realpath(expanduser('~/tmp_log_dir.%s' % str(time())))
+    if not isdir(log_dir):
+        makedirs(log_dir)
+    assert isdir(log_dir)
+    assert access(log_dir, W_OK)
+    log_path = join(log_dir, 'tmp', "drmlib.%d.%s.log" % (getpid(), time()))
+    try:
+        # Test with DEBUG level
+        async_cb.reset()
+        conf_json.reset()
+        conf_json['settings']['log_file_path'] = log_path
+        conf_json['settings']['log_file_type'] = log_type
+        conf_json['settings']['log_file_verbosity'] = 1
+        conf_json.save()
+        drm_manager = accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            )
+        drm_manager.activate()
+        sleep(1)
+        drm_manager.deactivate()
+        del drm_manager
+        gc.collect()
+        assert isfile(log_path)
+        with open(log_path, 'rt') as f:
+            log_content = f.read()
+        assert not search(cred_json['client_id'], log_content)
+        assert not search(cred_json['client_secret'], log_content)
+
+        # Test with DEBUG2 level
+        async_cb.reset()
+        conf_json.reset()
+        conf_json['settings']['log_file_path'] = log_path
+        conf_json['settings']['log_file_type'] = log_type
+        conf_json['settings']['log_file_verbosity'] = 0
+        conf_json.save()
+        drm_manager = accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            )
+        drm_manager.activate()
+        sleep(1)
+        drm_manager.deactivate()
+        del drm_manager
+        gc.collect()
+        assert isfile(log_path)
+        with open(log_path, 'rt') as f:
+            log_content = f.read()
+        assert not search(cred_json['client_id'], log_content)
+        assert not search(cred_json['client_secret'], log_content)
+    finally:
+        if isdir(log_dir):
+            rmtree(log_dir)
