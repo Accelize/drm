@@ -227,7 +227,7 @@ stages:
         parameters:
           jobName: stopAgent_AwsF1_Ubuntu18
           provider: awsEc2
-          agentDescription: AWS F1 with Centos 7
+          agentDescription: AWS F1 with Ubuntu LTS 18.04
           acidDir: $(Build.SourcesDirectory)/deployment/acid
           dependsOn: startAgent_AwsF1_Ubuntu18
 
