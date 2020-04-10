@@ -143,9 +143,10 @@ stages:
               TOX_PARALLEL_NO_SPINNER: 1
               SDK_DIR: /opt/aws_fpga/sdk
 
-      # Stop agents
+      # Stop agents Centos 7
       - template: agents/stop.yml@acid
         parameters:
+          jobName: stopAgent_AwsF1_Centos7
           provider: awsEc2
           agentDescription: AWS F1 with Centos 7
           acidDir: $(Build.SourcesDirectory)/deployment/acid
@@ -224,6 +225,7 @@ stages:
       # Stop agents
       - template: agents/stop.yml@acid
         parameters:
+          jobName: stopAgent_AwsF1_Ubuntu18
           provider: awsEc2
           agentDescription: AWS F1 with Centos 7
           acidDir: $(Build.SourcesDirectory)/deployment/acid
