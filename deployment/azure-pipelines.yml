@@ -222,7 +222,7 @@ stages:
               TOX_PARALLEL_NO_SPINNER: 1
               SDK_DIR: /opt/aws_fpga/sdk
 
-      # Stop agents
+      # Stop agents Ubuntu LTS 18.04
       - template: agents/stop.yml@acid
         parameters:
           jobName: stopAgent_AwsF1_Ubuntu18
