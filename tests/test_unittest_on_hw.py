@@ -125,7 +125,7 @@ def test_get_version(accelize_drm):
     assert search(r'\d+\.\d+\.\d+', versions.version) is not None
 
 
-def test_authentication_token(accelize_drm, conf_json, cred_json, async_handler):
+def test_authentication_token(accelize_drm, conf_json, cred_json, async_handler, utils):
     """Test authentication token behavior"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -159,12 +159,11 @@ def test_authentication_token(accelize_drm, conf_json, cred_json, async_handler)
         assert drm_manager.get('token_validity') == 1000
         with pytest.raises(accelize_drm.exceptions.DRMWSTimedOut) as excinfo:
             drm_manager.activate()
-        assert "Did not perform HTTP request to Accelize webservice because deadline is reached" in str(excinfo.value)
+        assert search(r'Timeout on License request after \d+ attempts', str(excinfo.value))
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSTimedOut.error_code
         async_cb.assert_NoError()
         del drm_manager
-        gc.collect()
-        assert isfile(file_log_path)
+        assert utils.wait_until(lambda: isfile(file_log_path), 10)
         with open(file_log_path, 'rt') as f:
             file_log_content = f.read()
         assert search(r'\bAuthentication credentials were not provided\b', file_log_content)
@@ -896,13 +895,13 @@ def test_retry_function(accelize_drm, conf_json, cred_json, async_handler):
         drm_manager0.activate()
         assert drm_manager0.get('license_status')
         start = datetime.now()
-        with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
+        with pytest.raises(accelize_drm.exceptions.DRMWSTimedOut) as excinfo:
             drm_manager1.activate()
         end = datetime.now()
         m = search(r'Timeout on License request after (\d+) attempts', str(excinfo.value))
         assert m is not None
         assert int(m.group(1)) > 1
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSTimedOut.error_code
         assert (end - start).total_seconds() >= timeout
         assert (end - start).total_seconds() <= timeout + 1
     finally:
@@ -1017,7 +1016,9 @@ def test_curl_host_resolve(accelize_drm, conf_json, cred_json, async_handler):
     )
     with pytest.raises(accelize_drm.exceptions.DRMExternFail) as excinfo:
         drm_manager.activate()
-    assert 'SSL peer certificate or SSH remote key was not OK' in str(excinfo.value)
+    assert 'Failed performing HTTP request to Accelize webservice' in str(excinfo.value)
+    assert 'Peer certificate cannot be authenticated with given CA certificates' in str(excinfo.value)
+    assert "Peer's Certificate has expired" in str(excinfo.value)
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMExternFail.error_code
     async_cb.assert_NoError()
     del drm_manager

@@ -3,7 +3,6 @@
 Test node-locked behavior of DRM Library.
 """
 import pytest
-import gc
 from os import remove, getpid
 from os.path import isfile, realpath
 from re import search, finditer
@@ -460,7 +459,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
 
 
 def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_json, async_handler,
-                                                 ws_admin):
+                                                 ws_admin, utils):
     """Test accesses to parameter"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -822,8 +821,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         msg = 'This line should appear in log file'
         drm_manager.set(log_message=msg)
         del drm_manager
-        gc.collect()
-        assert isfile(logpath)
+        assert utils.wait_until(lambda: isfile(logpath), 10)
         with open(logpath, 'rt') as f:
             log_content = f.read()
         assert "critical" in log_content

@@ -7,6 +7,7 @@ from os.path import basename, dirname, expanduser, isdir, isfile, join, \
     realpath, splitext
 from random import randint
 from re import IGNORECASE, match, search
+from datetime import datetime
 
 import pytest
 
@@ -969,4 +970,25 @@ class FlaskAppWrapper:
 def fake_server():
     name = "fake_server_%d" % randint(1,0xFFFFFFFF)
     return FlaskAppWrapper(name)
+
+
+#--------------------
+# Wait until fixture
+#--------------------
+
+class MyUtils:
+    def wait_until(self, func, timeout=None, sleep_time=1):
+        start = datetime.now()
+        while not func():
+            if timeout:
+                if datetime.now() - start > timedelta(seconds=sleep_time):
+                    return False
+            sleep(sleep_time)
+        return True
+
+
+
+@pytest.fixture
+def utils():
+    return MyUtils()
 

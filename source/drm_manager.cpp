@@ -1026,16 +1026,15 @@ protected:
                 getDrmWSClient().requestOAuth2token( deadline );
                 token_valid = true;
             } catch ( const Exception& e ) {
+                if ( e.getErrCode() == DRM_WSTimedOut ) {
+                    // Reached timeout
+                    Throw( e.getErrCode(), "Timeout on Authentication request after {} attempts", attempt );
+                }
                 if ( e.getErrCode() != DRM_WSMayRetry ) {
-                    std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
                     throw;
                 }
                 // It is retryable
                 attempt ++;
-                /*if ( TClock::now() > deadline ) {
-                    // Reached timeout
-                    Throw( DRM_WSError, "Timeout on Authentication request after {} attempts", attempt );
-                }*/
                 if ( short_retry_period == 0 ) {
                     // No retry
                     throw;
@@ -1060,15 +1059,15 @@ protected:
             try {
                 return getDrmWSClient().requestLicense( request_json, deadline );
             } catch ( const Exception& e ) {
+                if ( e.getErrCode() == DRM_WSTimedOut ) {
+                    // Reached timeout
+                    Throw( e.getErrCode(), "Timeout on License request after {} attempts", attempt );
+                }
                 if ( e.getErrCode() != DRM_WSMayRetry ) {
                     throw;
                 }
                 // It is retryable
                 attempt ++;
-                /*if ( TClock::now() > deadline ) {
-                    // Reached timeout
-                    Throw( DRM_WSError, "Timeout on License request after {} attempts", attempt );
-                }*/
                 if ( short_retry_period == 0 ) {
                     // No retry
                     throw;
