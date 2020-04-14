@@ -2582,7 +2582,7 @@ def test_curl_host_resolve(accelize_drm, conf_json, cred_json, async_handler):
     )
     with pytest.raises(accelize_drm.exceptions.DRMExternFail) as excinfo:
         drm_manager.activate()
-    assert 'SSL peer certificate or SSH remote key was not OK' in str(excinfo.value)
+    assert 'Peer certificate cannot be authenticated with given CA certificates' in str(excinfo.value)
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMExternFail.error_code
     async_cb.assert_NoError()
     del drm_manager
