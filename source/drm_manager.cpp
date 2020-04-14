@@ -194,15 +194,15 @@ protected:
     };
 
 
-    #define checkDRMCtlrRet( func ) {                                                  \
-        unsigned int errcode = DRM_OK;                                                 \
-        try {                                                                          \
-            errcode = func;                                                            \ 
-        } catch( const std::exception &e ) {                                           \
-            Throw( DRM_CtlrError, e.what() );                                          \
-        }                                                                              \
-        if ( errcode )                                                                 \
-            Unreachable( "DRM Controller API failed with error code: {}.", errcode );  \
+    #define checkDRMCtlrRet( func ) { \
+        unsigned int errcode = DRM_OK; \
+        try { \
+            errcode = func; \
+        } catch( const std::exception &e ) { \
+            Throw( DRM_CtlrError, e.what() ); \
+        } \
+        if ( errcode ) \
+            Unreachable( "DRM Controller API failed with error code: {}.", errcode ); \
     }
 
     Impl( const std::string& conf_file_path,
