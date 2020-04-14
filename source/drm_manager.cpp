@@ -197,7 +197,7 @@ protected:
     #define checkDRMCtlrRet( func ) {                                                  \
         unsigned int errcode = DRM_OK;                                                 \
         try {                                                                          \
-            errcode = func;                                                            \ 
+            errcode = func;                                                            \
         } catch( const std::exception &e ) {                                           \
             Throw( DRM_CtlrError, e.what() );                                          \
         }                                                                              \
