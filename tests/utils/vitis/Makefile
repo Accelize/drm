@@ -58,7 +58,7 @@ LDFLAGS += $(opencl_LDFLAGS)
 ifeq ($(USE_CPP), 0)
 	HOST_SRCS += src/host_c.cpp
 else
-HOST_SRCS += src/host.cpp
+	HOST_SRCS += src/host.cpp
 endif
 
 
@@ -84,7 +84,7 @@ CXXFLAGS += -I/dev/shm/drmlib_dev/.tox/debug/build/include -I/usr/include/jsoncp
 ifeq ($(USE_CPP), 0)
 	EXECUTABLE = host_c
 else
-EXECUTABLE = host
+	EXECUTABLE = host
 endif
 
 .PHONY: all clean
