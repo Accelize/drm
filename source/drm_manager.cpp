@@ -2142,6 +2142,10 @@ public:
                                custom_msg );
                         break;
                     }
+                    case ParameterKey::bad_product_id: {
+                        Warning( "Parameter '{}' (ID={}) is deprecated", key_str, key_id );
+                        break;
+                    }
                     case ParameterKey::bad_oauth2_token: {
                         Debug( "Set parameter '{}' (ID={}) to random value", key_str, key_id );
                         getDrmWSClient().setOAuth2token( "BAD_TOKEN" );
