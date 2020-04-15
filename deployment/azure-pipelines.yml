@@ -91,7 +91,7 @@ stages:
         pool:
           name: Default
           demands:  # Use previously instantiated agent
-            - agent.Name -equals $(Build.DefinitionName) AWS F1
+            - agent.Name -equals $(Build.DefinitionName) AWS F1 with Centos 7
         steps:
           - script: |
               cat << EOF > $(Build.SourcesDirectory)/cred.json
@@ -170,7 +170,7 @@ stages:
         pool:
           name: Default
           demands:  # Use previously instantiated agent
-            - agent.Name -equals $(Build.DefinitionName) AWS F1
+            - agent.Name -equals $(Build.DefinitionName) AWS F1 with Ubuntu LTS 18.04
         steps:
           - script: |
               cat << EOF > $(Build.SourcesDirectory)/cred.json
@@ -229,7 +229,7 @@ stages:
           provider: awsEc2
           agentDescription: AWS F1 with Ubuntu LTS 18.04
           acidDir: $(Build.SourcesDirectory)/deployment/acid
-          dependsOn: startAgent_AwsF1_Ubuntu18
+          dependsOn: runTests_AwsF1_Ubuntu18
 
   - stage: release
     displayName: Release
