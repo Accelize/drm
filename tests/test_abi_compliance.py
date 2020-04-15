@@ -214,11 +214,8 @@ def test_abi_compliance(tmpdir, accelize_drm):
     abi_broken = False
     for title, future in reports.items():
         report = future.result()
-        '''
         if ('Total binary compatibility problems: 0' not in report or
                 'Total source compatibility problems: 0,' not in report):
-        '''
-        if True:
             abi_broken = True
             print('Comparison against %s:\n%s\n' % (title, report))
             # Extract path to html report from output
