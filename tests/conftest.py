@@ -439,9 +439,8 @@ def accelize_drm(pytestconfig):
 
     # Create pytest artifacts directory
     pytest_artifacts_dir = join(pytestconfig.getoption("artifacts_dir"), 'pytest_artifacts')
-    if isdir(pytest_artifacts_dir):
-        rmtree(pytest_artifacts_dir)
-    makedirs(pytest_artifacts_dir)
+    if not isdir(pytest_artifacts_dir):
+        makedirs(pytest_artifacts_dir)
     print('pytest artifacts directory: ', pytest_artifacts_dir)
 
     # Get Ref Designs available
