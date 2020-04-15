@@ -4,6 +4,8 @@ Test ABI/API compatibility
 """
 import os
 import re
+from shutil import copy
+from os.path import join, isdir, basename, splitext
 
 import pytest
 from tests.conftest import perform_once
@@ -203,13 +205,24 @@ def test_abi_compliance(tmpdir, accelize_drm):
                 new_dump=latest_dumps[name], name=name,
                 report_path=str(tmpdir.join('%s%s.html' % (name, version))))
 
+    # Create artifacts directory
+    artifacts_dir = join(accelize_drm.pytest_artifacts_dir, splitext(basename(__file__))[0])
+    if not isdir(artifacts_dir):
+        os.makedirs(artifacts_dir)
+
     # Analyses reports
     abi_broken = False
     for title, future in reports.items():
         report = future.result()
+        '''
         if ('Total binary compatibility problems: 0' not in report or
                 'Total source compatibility problems: 0,' not in report):
+        '''
+        if True:
             abi_broken = True
             print('Comparison against %s:\n%s\n' % (title, report))
+            # Extract path to html report from output
+            html_path = re.search(r'Report:\s*(.+\.html)', report).group(1)
+            copy(html_path, artifacts_dir)
 
     assert not abi_broken
