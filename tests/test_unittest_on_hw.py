@@ -901,8 +901,9 @@ def test_retry_function(accelize_drm, conf_json, cred_json, async_handler):
         assert m is not None
         assert int(m.group(1)) > 1
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSTimedOut.error_code
-        assert (end - start).total_seconds() >= timeout
-        assert (end - start).total_seconds() <= timeout + 1
+        total_seconds = int((end - start).total_seconds())
+        assert total_seconds >= timeout
+        assert total_seconds <= timeout + 1
     finally:
         drm_manager0.deactivate()
         assert not drm_manager0.get('license_status')
