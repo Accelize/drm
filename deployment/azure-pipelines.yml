@@ -136,12 +136,17 @@ stages:
 
           - script: sudo -E tox -p all -e
                     aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug
-                    -- --cred=$(Build.SourcesDirectory)/cred.json --server=$(meteringServer) -x
+                    -- --cred=$(Build.SourcesDirectory)/cred.json --server=$(meteringServer) -x --artifacts_dir=$(Build.SourcesDirectory)/artifacts
             displayName: Run tests with Tox
             env:
               CODECOV_TOKEN: $(codecovToken)
               TOX_PARALLEL_NO_SPINNER: 1
               SDK_DIR: /opt/aws_fpga/sdk
+
+          - publish: $(Build.SourcesDirectory)/artifacts
+            artifact: Artifacts for AWS F1 with Centos 7
+            displayName: Publish Artifacts for AWS F1 with Centos 7
+            condition: always()
 
       # Stop agents Centos 7
       - template: agents/stop.yml@acid
@@ -221,6 +226,11 @@ stages:
               CODECOV_TOKEN: $(codecovToken)
               TOX_PARALLEL_NO_SPINNER: 1
               SDK_DIR: /opt/aws_fpga/sdk
+
+          - publish: $(Build.SourcesDirectory)/artifacts
+            artifact: Artifacts for AWS F1 with Ubuntu LTS 18.04
+            displayName: Publish Artifacts for AWS F1 with Ubuntu LTS 18.04
+            condition: always()
 
       # Stop agents Ubuntu LTS 18.04
       - template: agents/stop.yml@acid
