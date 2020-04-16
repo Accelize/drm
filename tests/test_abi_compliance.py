@@ -25,7 +25,6 @@ def _run(*command, **kwargs):
         subprocess.CompletedProcess
     """
     from subprocess import run, CalledProcessError, PIPE
-
     result = run(*command, stdout=PIPE, stderr=PIPE,
                  universal_newlines=True, **kwargs)
     try:
@@ -62,8 +61,13 @@ def dump_abi(dump_file, so_file, include, version, name):
     Returns:
         tuple of str: version and dump_file
     """
-    _run(['abi-dumper', so_file, '-public-headers', include, '-o', dump_file,
+    print(' '.join(['abi-dumper', so_file, '-public-headers', include, '-o', dump_file,
+          '-lver', version]))
+    result = _run(['abi-dumper', so_file, '-public-headers', include, '-o', dump_file,
           '-lver', version])
+    print(result.stderr)
+    #if re.search(r'\berror\b', result.stderr, re.I):
+    #    raise RuntimeError('abi-dumper error: %s' % result.stderr)
     return version, dump_file, name
 
 
@@ -84,7 +88,7 @@ def checks_abi_compliance(old_dump, new_dump, name, report_path):
                  new_dump, '-report-path', report_path]).stdout
 
 
-def make_tag(version, path):
+def build_tag_version(version, path):
     """
     Clone and make DRMlib previous versions sources
 
@@ -123,6 +127,8 @@ def get_reference_versions(tmpdir, abi_version):
         tag.group(1) : str(tmpdir.join(tag.group(1))) for tag in list(map(
                 lambda x: re.search(r'v((\d+)\.\d+\.\d+)$', x), tags.splitlines()))
             if (tag and int(tag.group(2))==abi_version) }
+    for k,v in sorted(versions.items(), key=lambda x: x[0], reverse=True):
+        return {k:v}
     return versions
 
 
@@ -139,11 +145,10 @@ def test_abi_compliance(tmpdir, accelize_drm):
 
     # Initialize test
     from concurrent.futures import ThreadPoolExecutor, as_completed
-    build_futures = []
-    dump_futures = []
-    latest_futures = []
-    tools_futures = []
-    latest_dumps = {}
+    build_tag_futures = []
+    dump_tag_futures = []
+    dump_current_futures = []
+    current_dumps = {}
     reports = {}
 
     with ThreadPoolExecutor() as executor:
@@ -165,7 +170,7 @@ def test_abi_compliance(tmpdir, accelize_drm):
                     os.path.join(lib_path, '%s.so' % lib_name), include,
                     lib_version, lib_name))
 
-        # Get references versions
+        # Get reference versions
         abi_version = accelize_drm.get_api_version().major
         versions = executor.submit(get_reference_versions, tmpdir, abi_version)
 
@@ -176,33 +181,30 @@ def test_abi_compliance(tmpdir, accelize_drm):
                 'No previous versions with ABI version %s' % abi_version)
 
         print('CHECKING ABI/API AGAINST VERSIONS:', ', '.join(versions))
+        # Close each tag with the same major version
         for version, path in versions.items():
-            build_futures.append(executor.submit(make_tag, version, path))
+            build_tag_futures.append(executor.submit(build_tag_version, version, path))
 
-        # Waits for tools build completion
-        for future in as_completed(tools_futures):
-            future.result()
-
-        # Dump latest version ABI and API
-        dumps_library('latest', '.', latest_futures)
+        # Dump current version ABI and API
+        dumps_library('current', '.', dump_current_futures)
 
         # Dumps reference versions ABI and API
-        for future in as_completed(build_futures):
+        for future in as_completed(build_tag_futures):
             version, path = future.result()
-            dumps_library(version, path, dump_futures)
+            dumps_library(version, path, dump_tag_futures)
 
-        # Waits for latest version dump completion
-        for future in as_completed(latest_futures):
+        # Waits for current version dump completion
+        for future in as_completed(dump_current_futures):
             _, dump_file, name = future.result()
-            latest_dumps[name] = dump_file
+            current_dumps[name] = dump_file
 
-        # Compare latest ABI / API dumps with reference versions
-        for future in as_completed(dump_futures):
+        # Compare current ABI / API dumps with reference versions
+        for future in as_completed(dump_tag_futures):
             version, dump_file, name = future.result()
 
             reports[' '.join((name, version))] = executor.submit(
                 checks_abi_compliance,  old_dump=dump_file,
-                new_dump=latest_dumps[name], name=name,
+                new_dump=current_dumps[name], name=name,
                 report_path=str(tmpdir.join('%s%s.html' % (name, version))))
 
     # Create artifacts directory
