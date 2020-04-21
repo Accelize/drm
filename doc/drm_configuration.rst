@@ -145,7 +145,7 @@ To list these parameters use the following code:
 .. code-block:: c++
     :caption: C++
 
-    std::string value = drm_manager_ptr->get<string>( Accelize::DRM::DRMParameterKey::list_all );
+    std::string value = drm_manager_ptr->get<string>( Accelize::DRM::ParameterKey::list_all );
     std::cout << value << std::endl;
 
 .. code-block:: c
