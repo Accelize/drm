@@ -146,6 +146,7 @@ To list these parameters use the following code:
     :caption: C++
 
     std::string value = drm_manager_ptr->get<string>( Accelize::DRM::DRMParameterKey::list_all );
+    std::cout << value << std::endl;
 
 .. code-block:: c
     :caption: C
@@ -153,13 +154,13 @@ To list these parameters use the following code:
     char* value;
     if ( DrmManager_get_string( drm_manager_ptr, Accelize::DRM::DRMParameterKey::list_all, &value ) )
         fprintf( stderr, drm_manager.error_message );
-    [...]
+    fprintf( stdout, value );
     delete value;   // Make sure your application releases the resource
 
 .. code-block:: python
     :caption: Python
 
-    value = drm_manager.get('list_all')
+    print(drm_manager.get('list_all'))
 
 Some of these parameters are better explained in the :doc:`drm_sw_advanced_description`.
 
