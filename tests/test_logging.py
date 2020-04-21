@@ -186,7 +186,7 @@ def test_file_types(accelize_drm, conf_json, cred_json, async_handler, utils):
     log_path = realpath("./drmlib-%d.log" % getpid())
     msg = 'This is a message'
     verbosity = 2
-    rotating_size = 1024
+    rotating_size = 1
     rotating_num = 5
     size = rotating_size * rotating_num
 
@@ -233,8 +233,8 @@ def test_file_types(accelize_drm, conf_json, cred_json, async_handler, utils):
                     for log_f in log_f_list:
                         assert isfile(log_f)
                         if log_f != log_path:
-                            assert getsize(log_f) >= rotating_size / 2
-                        assert getsize(log_f) < 2 * rotating_size
+                            assert getsize(log_f) >= rotating_size*1024 / 2
+                        assert getsize(log_f) < 2 * rotating_size*1024
             async_cb.assert_NoError()
         finally:
             for f in glob(log_path[:-3] + '*log'):
@@ -250,7 +250,7 @@ def test_file_rotating_parameters(accelize_drm, conf_json, cred_json, async_hand
     log_type = 2
     msg = 'This is a message'
     verbosity = 2
-    rotating_size = 1024
+    rotating_size = 1
     rotating_num = 5
 
     async_cb.reset()
@@ -278,7 +278,7 @@ def test_file_rotating_parameters(accelize_drm, conf_json, cred_json, async_hand
         assert drm_manager.get('log_file_rotating_num') == rotating_num
         drm_manager.set(log_message_level=verbosity)
         assert drm_manager.get('log_message_level') == verbosity
-        for _ in range(2 * rotating_num * int(rotating_size / len(msg) + 10)):
+        for _ in range(2 * rotating_num * int(rotating_size*1024 / len(msg) + 10)):
             drm_manager.set(log_message=msg)
         del drm_manager
         assert utils.wait_until(lambda: len(glob(log_path[:-3] + '*log')), 10)
@@ -287,7 +287,7 @@ def test_file_rotating_parameters(accelize_drm, conf_json, cred_json, async_hand
         index_list = list(range(rotating_num + 1))
         for log_f in log_list:
             assert isfile(log_f)
-            assert getsize(log_f) < 2 * rotating_size
+            assert getsize(log_f) < 2 * rotating_size*1024
             m = search(r'drmlib-\d+(\.\d)?\.log', log_f)
             assert m is not None
             if m.group(1) is None:
@@ -351,7 +351,7 @@ def test_log_file_parameters_modifiability(accelize_drm, conf_json, cred_json, a
     log_path = realpath("./drmservice-%d.log" % getpid())
     log_format = LOG_FORMAT_LONG
     log_type = 2
-    log_rotating_size = 10*1024
+    log_rotating_size = 10
     log_rotating_num = 0
 
     # Test from config file
