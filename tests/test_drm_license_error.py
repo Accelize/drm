@@ -142,7 +142,7 @@ def test_mac_error_on_key(accelize_drm, conf_json, cred_json, async_handler, fak
 @pytest.mark.no_parallel
 def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_handler, fake_server):
     """
-    Test a MAC error is returned if the licesnseTimer value in the response has been modified
+    Test a MAC error is returned if the licenseTimer value in the response has been modified
     """
     from flask import request, redirect, Response, session
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -218,7 +218,7 @@ def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_
 @pytest.mark.no_parallel
 def test_mac_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_handler, fake_server):
     """
-    Test a MAC error is returned if the licesnseTimer value in the response has been modified
+    Test a MAC error is returned if the licenseTimer value in the response has been modified
     """
     from flask import request, redirect, Response, session
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -351,7 +351,7 @@ def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler, fak
             async_cb.callback
         )
         try:
-            # Start session #1
+            # Start session #1 to record
             drm_manager.activate()
             start = datetime.now()
             lic_duration = drm_manager.get('license_duration')
@@ -365,7 +365,7 @@ def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler, fak
             activators.autotest(is_activated=False)
             async_cb.assert_NoError()
         try:
-            # Start session #2
+            # Start session #2 to replay session #1
             drm_manager.activate()
             start = datetime.now()
             assert drm_manager.get('license_status')

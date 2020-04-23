@@ -188,7 +188,7 @@ def test_file_types(accelize_drm, conf_json, cred_json, async_handler, utils):
     verbosity = 2
     rotating_size = 1
     rotating_num = 5
-    size = rotating_size * rotating_num
+    size = rotating_size * 1024 * rotating_num
 
     for log_type in range(3):
         async_cb.reset()

@@ -8,6 +8,7 @@ from os.path import basename, dirname, expanduser, isdir, isfile, join, \
 from random import randint
 from re import IGNORECASE, match, search
 from datetime import datetime
+from time import time
 from shutil import rmtree
 
 import pytest
@@ -689,7 +690,7 @@ def conf_json(pytestconfig, tmpdir):
         log_param['log_format'] = '[%^%=8l%$] %-6t, %v'
     if pytestconfig.getoption("logfile"):
         log_param['log_file_type'] = 1
-        log_param['log_file_path'] = realpath("./drmlib.%d.log" % getpid())
+        log_param['log_file_path'] = realpath("./drmlib_t%f_pid%d.log" % (time(), getpid()))
         log_param['log_file_verbosity'] = pytestconfig.getoption("library_verbosity")
     json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param)
     json_conf.save()
