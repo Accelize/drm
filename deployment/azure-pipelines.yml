@@ -136,7 +136,7 @@ stages:
 
           - script: sudo -E tox -p all -e
                     aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug
-                    -- --cred=$(Build.SourcesDirectory)/cred.json --server=$(meteringServer) -x --artifacts_dir=$(Build.SourcesDirectory)/artifacts
+                    -- --cred=$(Build.SourcesDirectory)/cred.json --server=$(meteringServer) -x --artifacts_dir=$(Build.SourcesDirectory)/artifacts -k "not test_abi_compliance"
             displayName: Run tests with Tox
             env:
               CODECOV_TOKEN: $(codecovToken)
