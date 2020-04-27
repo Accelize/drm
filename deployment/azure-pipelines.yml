@@ -182,9 +182,6 @@ stages:
             Debian 10:
               osName: debian
               osVersion: "10"
-            Fedora 30:
-              osName: fedora
-              osVersion: "30"
             Fedora 31:
               osName: fedora
               osVersion: "31"
@@ -197,9 +194,6 @@ stages:
             Ubuntu LTS 18.04:
               osName: ubuntu
               osVersion: "18.04"
-            Ubuntu 19.04:
-              osName: ubuntu
-              osVersion: "19.04"
             Ubuntu 19.10:
               osName: ubuntu
               osVersion:  "19.10"
