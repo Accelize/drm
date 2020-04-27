@@ -1,11 +1,7 @@
 # runTestOnEc2.yml
 parameters:
-- name: 'distribList'
-  type: string
-  default: ['centos_7']
-- name: 'instanceType'
-  type: string
-  default: 'f1.4xlarge'
+- distribList: ['centos_7']
+- instanceType: 'f1.4xlarge'
 
 jobs:
 - ${{ each distrib in parameters.distribList }}: # Each linux distribution
