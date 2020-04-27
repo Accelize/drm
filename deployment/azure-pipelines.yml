@@ -76,9 +76,9 @@ stages:
         parameters:
           config_list:
           - os_distrib: 'centos_7'
-            tox_extra_option: '-k "test_environment_variable"'
+            tox_extra_option: '-k "not test_abi_compliance"'
           - os_distrib: 'ubuntu_18_04'
-            tox_extra_option: '-k "test_frequency_detection"'
+            tox_extra_option: ''
 
   - stage: release
     displayName: Release
