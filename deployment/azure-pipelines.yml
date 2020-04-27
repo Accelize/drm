@@ -74,7 +74,7 @@ stages:
     jobs:
       - template: runTestOnEc2.yml
         parameters:
-          - distribList: ['centos_7', 'ubuntu_18_04']
+          distribList: ['centos_7', 'ubuntu_18_04']
 
   - stage: release
     displayName: Release
