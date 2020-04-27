@@ -2,30 +2,32 @@
 # runTestOnEc2.yml
 
 parameters:
-  distribList: ['centos_7']
-  instanceType: 'f1.4xlarge'
+  config_list:
+  - distrib: 'centos_7'
+    instance_type: 'f1.4xlarge'
+    tox_extra_option: ''
 
 jobs:
-- ${{ each distrib in parameters.distribList }}: # Each linux distribution
+- ${{ each config in parameters.config_list }}: # For each config
   # Start AWS agents
   - template: agents/start.yml@acid
     parameters:
-      jobName: startAgent_Aws_${{ distrib }}
-      agentDescription: AWS with ${{ distrib }}
+      jobName: startAgent_Aws_${{ config.distrib }}
+      agentDescription: AWS with ${{ config.distrib }}
       provider: awsEc2
-      image: ${{ distrib }}
-      instanceType: ${{ parameters.instanceType }}
+      image: ${{ config.distrib }}
+      instanceType: ${{ config_list.instance_type }}
       acidDir: $(Build.SourcesDirectory)/deployment/acid
       ansiblePlaybook: $(Build.SourcesDirectory)/deployment/playbook.yml
 
   # Run tests on AWS agent
-  - job: runTests_Aws_${{ distrib }}
-    displayName: Run tests on AWS with ${{ distrib }}
-    dependsOn: startAgent_Aws_${{ distrib }}
+  - job: runTests_Aws_${{ config.distrib }}
+    displayName: Run tests on AWS with ${{ config.distrib }}
+    dependsOn: startAgent_Aws_${{ config.distrib }}
     pool:
       name: Default
       demands:  # Use previously instantiated agent
-        - agent.Name -equals $(Build.DefinitionName) AWS with ${{ distrib }}
+        - agent.Name -equals $(Build.DefinitionName) AWS with ${{ config.distrib }}
     steps:
       - script: |
           cat << EOF > $(Build.SourcesDirectory)/cred.json
@@ -70,7 +72,7 @@ jobs:
 
       - script: sudo -E tox -p all -e
                 aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug
-                -- --cred=$(Build.SourcesDirectory)/cred.json --server=$(meteringServer) -x --artifacts_dir=$(Build.SourcesDirectory)/artifacts -k test_environment_variable
+                -- --cred=$(Build.SourcesDirectory)/cred.json --server=$(meteringServer) -x --artifacts_dir=$(Build.SourcesDirectory)/artifacts ${{ config.tox_extra_option }}
         displayName: Run tests with Tox
         env:
           CODECOV_TOKEN: $(codecovToken)
@@ -78,15 +80,15 @@ jobs:
           SDK_DIR: /opt/aws_fpga/sdk
 
       - publish: $(Build.SourcesDirectory)/artifacts
-        artifact: AWS_Artifacts_${{ distrib }}
-        displayName: Publish AWS Artifacts for ${{ distrib }} tests
+        artifact: AWS_Artifacts_${{ config.distrib }}
+        displayName: Publish AWS Artifacts for ${{ config.distrib }} tests
         condition: always()
 
   # Stop AWS agent
   - template: agents/stop.yml@acid
     parameters:
-      jobName: stopAgent_Aws_${{ distrib }}
+      jobName: stopAgent_Aws_${{ config.distrib }}
       provider: awsEc2
-      agentDescription: AWS with ${{ distrib }}
+      agentDescription: AWS with ${{ config.distrib }}
       acidDir: $(Build.SourcesDirectory)/deployment/acid
-      dependsOn: runTests_Aws_${{ distrib }}
+      dependsOn: runTests_Aws_${{ config.distrib }}
