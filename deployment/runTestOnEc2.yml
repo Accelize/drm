@@ -2,9 +2,9 @@
 # runTestOnEc2.yml
 
 parameters:
+  instance_type: 'f1.4xlarge'
   config_list:
-  - distrib: 'centos_7'
-    instance_type: 'f1.4xlarge'
+  - os_distrib: 'centos_7'
     tox_extra_option: ''
 
 jobs:
@@ -12,22 +12,22 @@ jobs:
   # Start AWS agents
   - template: agents/start.yml@acid
     parameters:
-      jobName: startAgent_Aws_${{ config.distrib }}
-      agentDescription: AWS with ${{ config.distrib }}
+      jobName: startAgent_Aws_${{ config.os_distrib }}
+      agentDescription: AWS with ${{ config.os_distrib }}
       provider: awsEc2
-      image: ${{ config.distrib }}
-      instanceType: ${{ config_list.instance_type }}
+      image: ${{ config.os_distrib }}
+      instanceType: ${{ parameters.instance_type }}
       acidDir: $(Build.SourcesDirectory)/deployment/acid
       ansiblePlaybook: $(Build.SourcesDirectory)/deployment/playbook.yml
 
   # Run tests on AWS agent
-  - job: runTests_Aws_${{ config.distrib }}
-    displayName: Run tests on AWS with ${{ config.distrib }}
-    dependsOn: startAgent_Aws_${{ config.distrib }}
+  - job: runTests_Aws_${{ config.os_distrib }}
+    displayName: Run tests on AWS with ${{ config.os_distrib }}
+    dependsOn: startAgent_Aws_${{ config.os_distrib }}
     pool:
       name: Default
       demands:  # Use previously instantiated agent
-        - agent.Name -equals $(Build.DefinitionName) AWS with ${{ config.distrib }}
+        - agent.Name -equals $(Build.DefinitionName) AWS with ${{ config.os_distrib }}
     steps:
       - script: |
           cat << EOF > $(Build.SourcesDirectory)/cred.json
@@ -80,15 +80,15 @@ jobs:
           SDK_DIR: /opt/aws_fpga/sdk
 
       - publish: $(Build.SourcesDirectory)/artifacts
-        artifact: AWS_Artifacts_${{ config.distrib }}
-        displayName: Publish AWS Artifacts for ${{ config.distrib }} tests
+        artifact: AWS_Artifacts_${{ config.os_distrib }}
+        displayName: Publish AWS Artifacts for ${{ config.os_distrib }} tests
         condition: always()
 
   # Stop AWS agent
   - template: agents/stop.yml@acid
     parameters:
-      jobName: stopAgent_Aws_${{ config.distrib }}
+      jobName: stopAgent_Aws_${{ config.os_distrib }}
       provider: awsEc2
-      agentDescription: AWS with ${{ config.distrib }}
+      agentDescription: AWS with ${{ config.os_distrib }}
       acidDir: $(Build.SourcesDirectory)/deployment/acid
-      dependsOn: runTests_Aws_${{ config.distrib }}
+      dependsOn: runTests_Aws_${{ config.os_distrib }}

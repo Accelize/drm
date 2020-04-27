@@ -74,7 +74,11 @@ stages:
     jobs:
       - template: runTestOnEc2.yml
         parameters:
-          distribList: ['centos_7', 'ubuntu_18_04']
+          config_list:
+          - os_distrib: 'centos_7'
+            tox_extra_option: '-k "test_environment_variable"'
+          - os_distrib: 'ubuntu_18_04'
+            tox_extra_option: '-k "test_frequency_detection"'
 
   - stage: release
     displayName: Release
