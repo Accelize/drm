@@ -8,8 +8,9 @@ from os.path import basename, dirname, expanduser, isdir, isfile, join, \
 from random import randint
 from re import IGNORECASE, match, search
 from datetime import datetime
-from time import time
+from time import time, sleep
 from shutil import rmtree
+from datetime import datetime, timedelta
 
 import pytest
 
@@ -795,6 +796,21 @@ def perform_once(test_name):
     else:
         with open(test_lock, 'w'):
             pass
+
+
+def wait(start_time, duration):
+    """
+    Wait until endtime is hit
+
+    Args:
+        start_time (datetime): start time of the timer.
+        duration to wait for (int): duration in seconds to wait for.
+    """
+    wait_period = start_time + timedelta(seconds=duration) - datetime.now()
+    if wait_period.total_seconds() <= 0:
+        return
+    sleep(wait_period.total_seconds())
+
 
 
 class AsyncErrorHandler:

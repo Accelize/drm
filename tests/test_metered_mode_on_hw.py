@@ -7,6 +7,7 @@ from random import randint
 from datetime import datetime, timedelta
 from re import search
 import pytest
+from tests.conftest import wait
 
 
 def test_metered_start_stop_in_raw(accelize_drm, conf_json, cred_json, async_handler):
@@ -252,16 +253,14 @@ def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, asy
         activators[0].generate_coin(10)
         activators[0].check_coin(drm_manager.get('metered_data'))
         # Wait enough time to be sure the 2nd license has been provisioned
-        wait_period = start + timedelta(seconds=lic_duration/2) - datetime.now()
-        sleep(wait_period.total_seconds())
+        wait(start, lic_duration/2)
         drm_manager.deactivate(True)
         assert drm_manager.get('session_status')
         assert drm_manager.get('license_status')
         assert drm_manager.get('session_id') == session_id
         activators.autotest(is_activated=True)
         # Wait right before license expiration
-        wait_period = start + timedelta(seconds=2*lic_duration-2) - datetime.now()
-        sleep(wait_period.total_seconds())
+        wait(start, 2*lic_duration-2)
         assert drm_manager.get('session_status')
         assert drm_manager.get('license_status')
         assert drm_manager.get('session_id') == session_id
@@ -336,8 +335,7 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
             # Wait randomly
             nb_lic_expired = int((datetime.now() - start).total_seconds() / lic_duration)
             random_wait = randint((nb_lic_expired+2)*lic_duration-2, (nb_lic_expired+2)*lic_duration+2)
-            wait_period = start + timedelta(seconds=random_wait) - datetime.now()
-            sleep(wait_period.total_seconds())
+            wait(start, random_wait)
             drm_manager.activate(True)
             start = datetime.now()
         assert drm_manager.get('session_status')
@@ -392,8 +390,7 @@ def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, cred_json
     activators[0].check_coin(drm_manager1.get('metered_data'))
     assert drm_manager1.get('metered_data') == 10
     # Wait enough time to be sure the 2nd license has been provisioned
-    wait_period = start + timedelta(seconds=lic_duration/2) - datetime.now()
-    sleep(wait_period.total_seconds())
+    wait(start, lic_duration/2)
     drm_manager1.deactivate(True)
     assert drm_manager1.get('session_status')
     assert drm_manager1.get('license_status')
@@ -421,8 +418,7 @@ def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, cred_json
     activators.autotest(is_activated=True)
     assert drm_manager2.get('metered_data') == 10
     # Wait for license renewal
-    wait_period = start + timedelta(seconds=lic_duration+2) - datetime.now()
-    sleep(wait_period.total_seconds())
+    wait(start, lic_duration+2)
     activators[0].generate_coin(10)
     activators[0].check_coin(drm_manager2.get('metered_data'))
     assert drm_manager2.get('metered_data') == 20
@@ -517,8 +513,7 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         activators[0].generate_coin(1000)
         activators[0].check_coin(drm_manager.get('metered_data'))
         # Wait right before expiration
-        wait_period = start + timedelta(seconds=3*lic_duration-3) - datetime.now()
-        sleep(wait_period.total_seconds())
+        wait(start, 3*lic_duration-3)
         assert drm_manager.get('license_status')
         activators.autotest(is_activated=True)
         sleep(5)
