@@ -2,7 +2,7 @@
 parameters:
 - name: 'distribList'
   type: string
-  default: 'centos_7'
+  default: ['centos_7']
 - name: 'instanceType'
   type: string
   default: 'f1.4xlarge'
