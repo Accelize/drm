@@ -399,8 +399,6 @@ def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, cred_json
     assert drm_manager1.get('license_status')
     assert drm_manager1.get('session_id') == session_id
     activators.autotest(is_activated=True)
-    # Kill object
-    #del drm_manager1
     async_cb.assert_NoError()
     sleep(1)
     # Create new object
