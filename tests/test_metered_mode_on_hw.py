@@ -9,7 +9,7 @@ from re import search
 import pytest
 
 
-def test_metered_start_stop(accelize_drm, conf_json, cred_json, async_handler):
+def test_metered_start_stop_in_raw(accelize_drm, conf_json, cred_json, async_handler):
     """
     Test no error occurs in normal start/stop metering mode during a short period of time
     """
@@ -35,6 +35,43 @@ def test_metered_start_stop(accelize_drm, conf_json, cred_json, async_handler):
         activators[0].generate_coin(1000)
         activators[0].check_coin(drm_manager.get('metered_data'))
         drm_manager.activate()
+        drm_manager.deactivate()
+        assert not drm_manager.get('license_status')
+        activators.autotest(is_activated=False)
+        assert drm_manager.get('metered_data') == 0
+        async_cb.assert_NoError()
+    finally:
+        drm_manager.deactivate()
+
+
+def test_metered_start_stop_1_coin_in_raw(accelize_drm, conf_json, cred_json, async_handler):
+    """
+    Test no error occurs in normal start/stop metering mode during a short period of time
+    """
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    activators = accelize_drm.pytest_fpga_activators[0]
+    activators.reset_coin()
+    activators.autotest()
+    cred_json.set_user('accelize_accelerator_test_02')
+
+    async_cb.reset()
+    conf_json.reset()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    try:
+        assert not drm_manager.get('license_status')
+        activators.autotest(is_activated=False)
+        activators[0].generate_coin(1000)
+        activators[0].check_coin(drm_manager.get('metered_data'))
+        drm_manager.activate()
+        activators[0].generate_coin(1)
+        assert drm_manager.get('metered_data') == 1
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
@@ -363,7 +400,7 @@ def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, cred_json
     assert drm_manager1.get('session_id') == session_id
     activators.autotest(is_activated=True)
     # Kill object
-    del drm_manager1
+    #del drm_manager1
     async_cb.assert_NoError()
     sleep(1)
     # Create new object

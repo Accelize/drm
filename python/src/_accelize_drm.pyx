@@ -153,7 +153,8 @@ cdef class DrmManager:
             _handle_exceptions(exception)
 
     def __dealloc__(self):
-        del self._drm_manager
+        with nogil:
+            del self._drm_manager
 
     def __enter__(self):
         return self
