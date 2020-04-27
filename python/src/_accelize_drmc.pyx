@@ -156,8 +156,7 @@ cdef class DrmManager:
         if self._drm_manager is NULL:
             return
         cdef int return_code
-        with nogil:
-            return_code = DrmManager_free(&self._drm_manager)
+        return_code = DrmManager_free(&self._drm_manager)
         if return_code:
             _raise_from_error(self._drm_manager.error_message, return_code)
 

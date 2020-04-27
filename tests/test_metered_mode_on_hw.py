@@ -2,7 +2,6 @@
 """
 Test metering and floating behaviors of DRM Library.
 """
-import gc
 from time import sleep
 from random import randint
 from datetime import datetime, timedelta
@@ -365,7 +364,6 @@ def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, cred_json
     activators.autotest(is_activated=True)
     # Kill object
     del drm_manager1
-    gc.collect()
     async_cb.assert_NoError()
     sleep(1)
     # Create new object
@@ -376,6 +374,7 @@ def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, cred_json
         driver.write_register_callback,
         async_cb.callback
     )
+    assert drm_manager1 != drm_manager2
     assert drm_manager2.get('license_duration') == 30
     assert drm_manager2.get('session_status')
     assert drm_manager2.get('license_status')
