@@ -61,13 +61,10 @@ def dump_abi(dump_file, so_file, include, version, name):
     Returns:
         tuple of str: version and dump_file
     """
-    print(' '.join(['abi-dumper', so_file, '-public-headers', include, '-o', dump_file,
-          '-lver', version]))
     result = _run(['abi-dumper', so_file, '-public-headers', include, '-o', dump_file,
           '-lver', version])
-    print(result.stderr)
-    #if re.search(r'\berror\b', result.stderr, re.I):
-    #    raise RuntimeError('abi-dumper error: %s' % result.stderr)
+    if re.search(r'\berror\b', result.stderr, re.I):
+        raise RuntimeError('abi-dumper error: %s' % result.stderr)
     return version, dump_file, name
 
 
