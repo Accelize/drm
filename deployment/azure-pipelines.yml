@@ -72,6 +72,7 @@ stages:
         meteringServer: dev
 
     jobs:
+    
       - template: runTestOnEc2.yml
         parameters:
           instance_type: 'f1.4xlarge'
