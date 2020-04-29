@@ -798,7 +798,17 @@ def perform_once(test_name):
             pass
 
 
-def wait(start_time, duration):
+def wait_func_true(func, timeout=None, sleep_time=1):
+    start = datetime.now()
+    while not func():
+        if timeout:
+            if datetime.now() - start > timedelta(seconds=sleep_time):
+                return False
+        sleep(sleep_time)
+    return True
+
+
+def wait_deadline(start_time, duration):
     """
     Wait until endtime is hit
 
@@ -998,25 +1008,3 @@ class FlaskAppWrapper:
 def fake_server():
     name = "fake_server_%d" % randint(1,0xFFFFFFFF)
     return FlaskAppWrapper(name)
-
-
-#--------------------
-# Wait until fixture
-#--------------------
-
-class MyUtils:
-    def wait_until(self, func, timeout=None, sleep_time=1):
-        start = datetime.now()
-        while not func():
-            if timeout:
-                if datetime.now() - start > timedelta(seconds=sleep_time):
-                    return False
-            sleep(sleep_time)
-        return True
-
-
-
-@pytest.fixture
-def utils():
-    return MyUtils()
-

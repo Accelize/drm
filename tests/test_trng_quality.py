@@ -13,6 +13,7 @@ from time import sleep, time
 from json import loads, dumps
 from datetime import datetime, timedelta
 from random import randrange
+from tests.conftest import wait_func_true
 
 
 SAMPLES_DUPLICATE_THRESHOLD = 2
@@ -158,7 +159,7 @@ def test_global_challenge_quality():
 
 
 @pytest.mark.security
-def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async_handler, utils):
+def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async_handler):
     """Preprogram N times the board and start a session with M licenses.
     """
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -245,7 +246,7 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
                     sleep(1)
             activators.autotest(is_activated=False)
             del drm_manager
-            assert utils.wait_until(lambda: isfile(logpath), 10)
+            assert wait_func_true(lambda: isfile(logpath), 10)
             if no_err:
                 session_cnt += 1
         async_cb.assert_NoError()

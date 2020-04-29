@@ -8,6 +8,7 @@ from os.path import isfile, realpath
 from time import sleep, time
 from re import search
 from datetime import datetime, timedelta
+from tests.conftest import wait_func_true
 
 
 def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_json, async_handler):
@@ -142,7 +143,7 @@ def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_jso
 
 
 @pytest.mark.minimum
-def test_drm_manager_frequency_detection_method1(accelize_drm, conf_json, cred_json, async_handler, utils):
+def test_drm_manager_frequency_detection_method1(accelize_drm, conf_json, cred_json, async_handler):
     """Test method1 (based on dedicated counter in AXI wrapper) to estimate drm frequency is working"""
 
     if not accelize_drm.pytest_new_freq_method_supported:
@@ -169,7 +170,7 @@ def test_drm_manager_frequency_detection_method1(accelize_drm, conf_json, cred_j
         )
         assert drm_manager.get('frequency_detection_method') == 1
         del drm_manager
-        assert utils.wait_until(lambda: isfile(logpath), 10)
+        assert wait_func_true(lambda: isfile(logpath), 10)
         with open(logpath, 'rt') as f:
             log_content = f.read()
         assert "Use dedicated counter to compute DRM frequency (method 1)" in log_content
@@ -214,7 +215,7 @@ def test_drm_manager_frequency_detection_method1_exception(accelize_drm, conf_js
 
 
 @pytest.mark.minimum
-def test_drm_manager_frequency_detection_method2(accelize_drm, conf_json, cred_json, async_handler, utils):
+def test_drm_manager_frequency_detection_method2(accelize_drm, conf_json, cred_json, async_handler):
     """Test method2 (based on license timer) to estimate drm frequency is still working"""
 
     refdesign = accelize_drm.pytest_ref_designs
@@ -248,7 +249,7 @@ def test_drm_manager_frequency_detection_method2(accelize_drm, conf_json, cred_j
         assert drm_manager.get('frequency_detection_method') == 2
         drm_manager.deactivate()
         del drm_manager
-        assert utils.wait_until(lambda: isfile(logpath), 10)
+        assert wait_func_true(lambda: isfile(logpath), 10)
         with open(logpath, 'rt') as f:
             log_content = f.read()
         assert "Use license timer counter to compute DRM frequency (method 2)" in log_content
