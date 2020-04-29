@@ -105,6 +105,8 @@ protected:
             {eLicenseType::NODE_LOCKED, "Node-Locked"}
     };
 
+    const uint32_t LICENSE_DURATION_DEFAULT = 30;
+
 
 #ifdef _WIN32
     const char path_sep = '\\';
@@ -128,7 +130,7 @@ protected:
     std::string  sLogFileFormat       = std::string("%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v");
     eLogFileType sLogFileType         = eLogFileType::NONE;
     std::string  sLogFilePath         = fmt::format( "accelize_drmlib_{}.log", getpid() );
-    size_t       sLogFileRotatingSize = 100*1024*1024;
+    size_t       sLogFileRotatingSize = 100*1024; ///< Size max in KBytes of the log roating file
     size_t       sLogFileRotatingNum  = 3;
 
     // Function callbacks
@@ -148,12 +150,12 @@ protected:
     // License related properties
     uint32_t mWSRetryPeriodLong  = 60;    ///< Time in seconds before the next request attempt to the Web Server when the time left before timeout is large
     uint32_t mWSRetryPeriodShort = 2;     ///< Time in seconds before the next request attempt to the Web Server when the time left before timeout is short
-    uint32_t mWSRequestTimeout   = 10;    ///< Time in seconds during which retries occur
+    uint32_t mWSRequestTimeout   = 10;    ///< Time in seconds during which retries occur on activate and deactivate functions
 
     eLicenseType mLicenseType = eLicenseType::METERED;
     uint32_t mLicenseCounter = 0;
-    uint32_t mLicenseDuration = 0;
-    uint32_t mLicenseWaitPeriod = 5;    ///< Time in seconds to wait for the load of a new license
+    uint32_t mLicenseDuration = 0;        ///< Time duration in seconds of the license
+    uint32_t mLicenseWaitPeriod = 5;      ///< Time in seconds to wait for the load of a new license
 
     // To protect access to the metering data (to securize the segment ID check in HW)
     mutable std::mutex mMeteringAccessMutex;
@@ -178,13 +180,13 @@ protected:
     std::future<void> mThreadKeepAlive;
     std::mutex mThreadKeepAliveMtx;
     std::condition_variable mThreadKeepAliveCondVar;
-    bool mThreadKeepAliveStopFlag{false};
+    bool mThreadKeepAliveExit{false};
 
     // thread to maintain metering alive
     std::future<void> mThreadAsyncMetering;
     std::mutex mThreadAsyncMeteringMtx;
     std::condition_variable mThreadAsyncMeteringCondVar;
-    bool mThreadAsyncMeteringStopFlag{false};
+    bool mThreadAsyncMeteringExit{false};
 
     // Debug parameters
     spdlog::level::level_enum mDebugMessageLevel;
@@ -221,7 +223,7 @@ protected:
         mIsLockedToDrm = false;
 
         mLicenseCounter = 0;
-        mLicenseDuration = 0;
+        mLicenseDuration = LICENSE_DURATION_DEFAULT;
 
         mConfFilePath = conf_file_path;
         mCredFilePath = cred_file_path;
@@ -352,7 +354,7 @@ protected:
                         file_path, true);
             else // type == eLogFileType::ROTATING
                 log_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
-                        file_path, rotating_size, rotating_num);
+                        file_path, rotating_size*1024, rotating_num);
         }
         log_sink->set_pattern( format );
         log_sink->set_level( spdlog::level::info );
@@ -911,11 +913,11 @@ protected:
         return json_request;
     }
 
-    Json::Value getMeteringData() const {
-        Json::Value json_request( mHeaderJsonRequest );
+    uint64_t getMeteringData() const {
         uint32_t numberOfDetectedIps;
         std::string saasChallenge;
         std::vector<std::string> meteringFile;
+        uint64_t meteringData = 0;
         {
             Debug( "Waiting metering access mutex from getMeteringData" );
             std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
@@ -923,16 +925,19 @@ protected:
 
             Debug( "Get metering data from current session on DRM controller" );
             std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-
-            // Request challenge and metering info for new request
-            checkDRMCtlrRet( getDrmController().asynchronousExtractMeteringFile( numberOfDetectedIps, saasChallenge, meteringFile ) );
-            json_request["saasChallenge"] = saasChallenge;
-            json_request["sessionId"] = meteringFile[0].substr( 0, 16 );
-            json_request["drm_frequency"] = mFrequencyCurr;
-            json_request["meteringFile"] = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
+            if ( isNodeLockedMode() || isLicenseActive() ) {
+                checkDRMCtlrRet( getDrmController().asynchronousExtractMeteringFile(
+                        numberOfDetectedIps, saasChallenge, meteringFile ) );
+                std::string meteringDataStr = meteringFile[2].substr( 16, 16 );
+                errno = 0;
+                meteringData = strtoull( meteringDataStr.c_str(), nullptr, 16 );
+                if ( errno )
+                    Throw( DRM_CtlrError, "Could not convert string '{}' to unsigned long long.",
+                            meteringDataStr );
+            }
         }
         Debug( "Released metering access mutex from getMeteringData" );
-        return json_request;
+        return meteringData;
     }
 
     // Get common info
@@ -1015,23 +1020,26 @@ protected:
         TClock::duration long_duration = std::chrono::seconds( long_retry_period );
         TClock::duration short_duration = std::chrono::seconds( short_retry_period );
 
-        // Get valid OAUth2 token
         uint32_t attempt = 0;
         TClock::duration wait_duration;
+        bool token_valid(false);
+
         while ( 1 ) {
+            token_valid = false;
+            // Get valid OAUth2 token
             try {
                 getDrmWSClient().requestOAuth2token( deadline );
-                break;
+                token_valid = true;
             } catch ( const Exception& e ) {
+                if ( e.getErrCode() == DRM_WSTimedOut ) {
+                    // Reached timeout
+                    Throw( e.getErrCode(), "Timeout on Authentication request after {} attempts", attempt );
+                }
                 if ( e.getErrCode() != DRM_WSMayRetry ) {
                     throw;
                 }
                 // It is retryable
                 attempt ++;
-                if ( TClock::now() > deadline ) {
-                    // Reached timeout
-                    Throw( DRM_WSError, "Timeout on Authentication request after {} attempts", attempt );
-                }
                 if ( short_retry_period == 0 ) {
                     // No retry
                     throw;
@@ -1050,23 +1058,21 @@ protected:
                 // Wait a bit before retrying
                 sleepOrExit( wait_duration );
             }
-        }
+            if ( !token_valid ) continue;
 
         // Get new license
-        attempt = 0;
-        while ( 1 ) {
             try {
                 return getDrmWSClient().requestLicense( request_json, deadline );
             } catch ( const Exception& e ) {
+                if ( e.getErrCode() == DRM_WSTimedOut ) {
+                    // Reached timeout
+                    Throw( e.getErrCode(), "Timeout on License request after {} attempts", attempt );
+                }
                 if ( e.getErrCode() != DRM_WSMayRetry ) {
                     throw;
                 }
                 // It is retryable
                 attempt ++;
-                if ( TClock::now() > deadline ) {
-                    // Reached timeout
-                    Throw( DRM_WSError, "Timeout on License request after {} attempts", attempt );
-                }
                 if ( short_retry_period == 0 ) {
                     // No retry
                     throw;
@@ -1396,7 +1402,7 @@ protected:
     void sleepOrExit( const std::chrono::time_point<Clock, Duration> &timeout_time ) {
         std::unique_lock<std::mutex> lock( mThreadKeepAliveMtx );
         bool isExitRequested = mThreadKeepAliveCondVar.wait_until( lock, timeout_time,
-                [ this ]{ return mThreadKeepAliveStopFlag; } );
+                [ this ]{ return mThreadKeepAliveExit; } );
         if ( isExitRequested )
             Throw( DRM_Exit, "Exit requested" );
     }
@@ -1405,14 +1411,14 @@ protected:
     void sleepOrExit( const std::chrono::duration<Rep, Period> &rel_time ) {
         std::unique_lock<std::mutex> lock( mThreadKeepAliveMtx );
         bool isExitRequested = mThreadKeepAliveCondVar.wait_for( lock, rel_time,
-                [ this ]{ return mThreadKeepAliveStopFlag; } );
+                [ this ]{ return mThreadKeepAliveExit; } );
         if ( isExitRequested )
             Throw( DRM_Exit, "Exit requested" );
     }
 
     bool isStopRequested() {
         std::lock_guard<std::mutex> lock( mThreadKeepAliveMtx );
-        return mThreadKeepAliveStopFlag;
+        return mThreadKeepAliveExit;
     }
 
     uint32_t getCurrentLicenseTimeLeft() {
@@ -1556,7 +1562,7 @@ protected:
         {
             std::lock_guard<std::mutex> lock( mThreadKeepAliveMtx );
             Debug( "Stop flag of thread is set" );
-            mThreadKeepAliveStopFlag = true;
+            mThreadKeepAliveExit = true;
         }
         mThreadKeepAliveCondVar.notify_all();
         mThreadKeepAlive.get();
@@ -1564,7 +1570,7 @@ protected:
         {
             std::lock_guard<std::mutex> lock( mThreadKeepAliveMtx );
             Debug( "Stop flag of thread is reset" );
-            mThreadKeepAliveStopFlag = false;
+            mThreadKeepAliveExit = false;
         }
     }
 
@@ -1781,7 +1787,7 @@ public:
                 Debug2( "Getting parameter '{}'", key_str );
                 switch( key_id ) {
                     case ParameterKey::log_verbosity: {
-                        int logVerbosity = static_cast<int>( sLogConsoleVerbosity );
+                        int32_t logVerbosity = static_cast<int>( sLogConsoleVerbosity );
                         json_value[key_str] = logVerbosity;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                 logVerbosity );
@@ -1794,7 +1800,7 @@ public:
                         break;
                     }
                     case ParameterKey::log_file_verbosity: {
-                        int logVerbosity = static_cast<int>( sLogFileVerbosity );
+                        int32_t logVerbosity = static_cast<int>( sLogFileVerbosity );
                         json_value[key_str] = logVerbosity;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                 logVerbosity );
@@ -1813,20 +1819,20 @@ public:
                         break;
                     }
                     case ParameterKey::log_file_type: {
-                        json_value[key_str] = (int)sLogFileType;
+                        json_value[key_str] = (int32_t)sLogFileType;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
-                               (int)sLogFileType );
+                               (int32_t)sLogFileType );
                         break;
                     }
                     case ParameterKey::log_file_rotating_num: {
-                        json_value[key_str] = (int)sLogFileRotatingNum;
+                        json_value[key_str] = (int32_t)sLogFileRotatingNum;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                sLogFileRotatingNum );
                         break;
                     }
                     case ParameterKey::log_file_rotating_size: {
-                        json_value[key_str] = (int)sLogFileRotatingSize;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        json_value[key_str] = (int32_t)sLogFileRotatingSize;
+                        Debug( "Get value of parameter '{}' (ID={}): {} KB", key_str, key_id,
                                sLogFileRotatingSize );
                         break;
                     }
@@ -1876,21 +1882,16 @@ public:
                         break;
                     }
                     case ParameterKey::metered_data: {
-                        Json::Value metering_json = getMeteringData();
-                        std::string metering_string = metered_json["meteringFile"].toString().substr( 32, 16 );
-                        errno = 0;
 #if ((JSONCPP_VERSION_MAJOR ) >= 1 and ((JSONCPP_VERSION_MINOR) > 7 or ((JSONCPP_VERSION_MINOR) == 7 and JSONCPP_VERSION_PATCH >= 5)))
-                        uint64_t metering_data = 0;
+                        uint64_t metered_data = 0;
 #else
                         // No "int64_t" support with JsonCpp < 1.7.5
-                        unsigned long long metering_data = 0;
+                        unsigned long long metered_data = 0;
 #endif
-                        metering_data = strtoull( metering_string.c_str(), nullptr, 16 );
-                        if ( errno )
-                            Throw( DRM_CtlrError, "Could not convert string '{}' to unsigned long long.", meteringDataStr );
-                        json_value[key_str] = metering_data;
+                        metered_data = getMeteringData();
+                        json_value[key_str] = metered_data;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
-                               metering_data );
+                               metered_data );
                         break;
                     }
                     case ParameterKey::nodelocked_request_file: {
@@ -1953,7 +1954,7 @@ public:
                         break;
                     }
                     case ParameterKey::frequency_detection_method: {
-                        int method_index = 2;
+                        int32_t method_index = 2;
                         if ( mIsFreqDetectionMethod1 )
                             method_index = 1;
                         json_value[key_str] = method_index;
@@ -1980,10 +1981,10 @@ public:
                         break;
                     }
                     case ParameterKey::token_string: {
-                        std::string token_string = getDrmWSClient().getTokenString();
-                        json_value[key_str] = token_string;
+                        std::string token_str = getDrmWSClient().getTokenString();
+                        json_value[key_str] = token_str;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
-                               token_string );
+                               token_str );
                         break;
                     }
                     case ParameterKey::token_validity: {
@@ -2035,7 +2036,7 @@ public:
                         break;
                     }
                     case ParameterKey::log_message_level: {
-                        int msgLevel = static_cast<int>( mDebugMessageLevel );
+                        int32_t msgLevel = static_cast<int>( mDebugMessageLevel );
                         json_value[key_str] = msgLevel;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                msgLevel );
@@ -2098,7 +2099,7 @@ public:
                 const ParameterKey key_id = findParameterKey( key_str );
                 switch( key_id ) {
                     case ParameterKey::log_verbosity: {
-                        int verbosityInt = (*it).asInt();
+                        int32_t verbosityInt = (*it).asInt();
                         sLogConsoleVerbosity = static_cast<spdlog::level::level_enum>( verbosityInt );
                         sLogger->sinks()[0]->set_level( sLogConsoleVerbosity );
                         if ( sLogConsoleVerbosity < sLogger->level() )
@@ -2116,7 +2117,7 @@ public:
                         break;
                     }
                     case ParameterKey::log_file_verbosity: {
-                        int verbosityInt = (*it).asInt();
+                        int32_t verbosityInt = (*it).asInt();
                         sLogFileVerbosity = static_cast<spdlog::level::level_enum>( verbosityInt );
                         sLogger->sinks()[1]->set_level( sLogFileVerbosity );
                         if ( sLogFileVerbosity < sLogger->level() )
@@ -2203,8 +2204,7 @@ public:
                         break;
                     }
                     case ParameterKey::bad_product_id: {
-                        Debug( "Set parameter '{}' (ID={}) to random value", key_str, key_id );
-                        mHeaderJsonRequest["product"]["name"] = "BAD_NAME_JUST_FOR_TEST";
+                        Warning( "Parameter '{}' (ID={}) is deprecated", key_str, key_id );
                         break;
                     }
                     case ParameterKey::bad_oauth2_token: {
@@ -2213,11 +2213,11 @@ public:
                         break;
                     }
                     case ParameterKey::log_message_level: {
-                        int message_level = (*it).asInt();
+                        int32_t message_level = (*it).asInt();
                         if ( ( message_level < spdlog::level::trace)
                           || ( message_level > spdlog::level::off) )
                             Throw( DRM_BadArg, "log_message_level ({}) is out of range [{:d}:{:d}]",
-                                    message_level, (int)spdlog::level::trace, (int)spdlog::level::off );
+                                    message_level, (int32_t)spdlog::level::trace, (int32_t)spdlog::level::off );
                         mDebugMessageLevel = static_cast<spdlog::level::level_enum>( message_level );
                         Debug( "Set parameter '{}' (ID={}) to value {}", key_str, key_id,
                                 message_level );
