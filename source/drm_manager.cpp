@@ -130,7 +130,7 @@ protected:
     std::string  sLogFileFormat       = std::string("%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v");
     eLogFileType sLogFileType         = eLogFileType::NONE;
     std::string  sLogFilePath         = fmt::format( "accelize_drmlib_{}.log", getpid() );
-    size_t       sLogFileRotatingSize = 100*1024; // Size max in KBytes of the log roating file
+    size_t       sLogFileRotatingSize = 100*1024; ///< Size max in KBytes of the log roating file
     size_t       sLogFileRotatingNum  = 3;
 
     // Function callbacks
@@ -154,8 +154,8 @@ protected:
 
     eLicenseType mLicenseType = eLicenseType::METERED;
     uint32_t mLicenseCounter = 0;
-    uint32_t mLicenseDuration = 0;     ///< Time duration in seconds of the license
-    uint32_t mLicenseWaitPeriod = 5;    ///< Time in seconds to wait for the load of a new license
+    uint32_t mLicenseDuration = 0;        ///< Time duration in seconds of the license
+    uint32_t mLicenseWaitPeriod = 5;      ///< Time in seconds to wait for the load of a new license
 
     // To protect access to the metering data (to securize the segment ID check in HW)
     mutable std::mutex mMeteringAccessMutex;
@@ -176,11 +176,11 @@ protected:
     // Web service communication
     Json::Value mHeaderJsonRequest;
 
-    // thread to maintain alive
+    // thread to maintain license alive
     std::future<void> mThreadKeepAlive;
     std::mutex mThreadKeepAliveMtx;
     std::condition_variable mThreadKeepAliveCondVar;
-    bool mThreadStopRequest{false};
+    bool mThreadKeepAliveExit{false};
 
     // Debug parameters
     spdlog::level::level_enum mDebugMessageLevel;
@@ -912,7 +912,6 @@ protected:
         std::string saasChallenge;
         std::vector<std::string> meteringFile;
         uint64_t meteringData = 0;
-
         {
             Debug( "Waiting metering access mutex from getMeteringData" );
             std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
@@ -1397,7 +1396,7 @@ protected:
     void sleepOrExit( const std::chrono::time_point<Clock, Duration> &timeout_time ) {
         std::unique_lock<std::mutex> lock( mThreadKeepAliveMtx );
         bool isExitRequested = mThreadKeepAliveCondVar.wait_until( lock, timeout_time,
-                [ this ]{ return mThreadStopRequest; } );
+                [ this ]{ return mThreadKeepAliveExit; } );
         if ( isExitRequested )
             Throw( DRM_Exit, "Exit requested" );
     }
@@ -1406,14 +1405,14 @@ protected:
     void sleepOrExit( const std::chrono::duration<Rep, Period> &rel_time ) {
         std::unique_lock<std::mutex> lock( mThreadKeepAliveMtx );
         bool isExitRequested = mThreadKeepAliveCondVar.wait_for( lock, rel_time,
-                [ this ]{ return mThreadStopRequest; } );
+                [ this ]{ return mThreadKeepAliveExit; } );
         if ( isExitRequested )
             Throw( DRM_Exit, "Exit requested" );
     }
 
     bool isStopRequested() {
         std::lock_guard<std::mutex> lock( mThreadKeepAliveMtx );
-        return mThreadStopRequest;
+        return mThreadKeepAliveExit;
     }
 
     uint32_t getCurrentLicenseTimeLeft() {
@@ -1424,7 +1423,7 @@ protected:
     void startLicenseContinuityThread() {
 
         if ( mThreadKeepAlive.valid() ) {
-            Warning( "Thread already started" );
+            Warning( "Licensing thread already started" );
             return;
         }
 
@@ -1501,7 +1500,7 @@ protected:
         {
             std::lock_guard<std::mutex> lock( mThreadKeepAliveMtx );
             Debug( "Stop flag of thread is set" );
-            mThreadStopRequest = true;
+            mThreadKeepAliveExit = true;
         }
         mThreadKeepAliveCondVar.notify_all();
         mThreadKeepAlive.get();
@@ -1509,7 +1508,7 @@ protected:
         {
             std::lock_guard<std::mutex> lock( mThreadKeepAliveMtx );
             Debug( "Stop flag of thread is reset" );
-            mThreadStopRequest = false;
+            mThreadKeepAliveExit = false;
         }
     }
 
