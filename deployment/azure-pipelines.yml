@@ -74,6 +74,7 @@ stages:
     jobs:
       - template: runTestOnEc2.yml
         parameters:
+          instance_type: 'f1.4xlarge'
           config_list:
           - os_distrib: 'centos_7'
             tox_extra_option: '-k "not test_abi_compliance"'
