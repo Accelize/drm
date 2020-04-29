@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 """Configure Pytest"""
-from os import environ, listdir, remove, getpid
-from os.path import realpath, isfile, isdir, expanduser, splitext, join, dirname, basename
-from json import dump, load
 from copy import deepcopy
-from re import match, search, IGNORECASE
-from ctypes import c_uint32, byref
+from json import dump, load
+from os import environ, getpid, listdir, remove, makedirs, getcwd
+from os.path import basename, dirname, expanduser, isdir, isfile, join, \
+    realpath, splitext
 from random import randint
-from flask import Flask, Response
-import requests
-from time import sleep
+from re import IGNORECASE, match, search
+from datetime import datetime
+from time import time, sleep
+from shutil import rmtree
+from datetime import datetime, timedelta
 
 import pytest
 
@@ -136,10 +137,10 @@ def pytest_addoption(parser):
         "--server", action="store",
         default="prod", help='Specify the metering server to use')
     parser.addoption(
-        "--library_verbosity", action="store", type=int, choices=list(range(7)), default=2,
-        help='Specify "libaccelize_drm" verbosity level')
+        "--library_verbosity", action="store", type=int, choices=list(range(7)),
+        default=2, help='Specify "libaccelize_drm" verbosity level')
     parser.addoption(
-        "--library_format", action="store", type=int, choices=[0,1], default=0,
+        "--library_format", action="store", type=int, choices=(0, 1), default=0,
         help='Specify "libaccelize_drm" logging format: 0=short, 1=long')
     parser.addoption(
         "--no_clear_fpga", action="store_true", help='Bypass clearing of FPGA at start-up')
@@ -162,15 +163,18 @@ def pytest_addoption(parser):
         "--integration", action="store_true",
         help='Run integration tests. Theses tests may needs two FPGAs.')
     parser.addoption(
-        "--endurance", action="store_true",
-        help='Run endurance tests. Theses tests may needs two FPGAs.')
-    parser.addoption(
         "--activator_base_address", action="store", default=0x10000, type=int,
         help=('Specify the base address of the 1st activator. '
-            'The other activators shall be separated by an address gap of 0x10000'))
+              'The other activators shall be separated by an address gap of '
+              '0x10000'))
     parser.addoption(
         "--params", action="store", default=None,
-        help='Specify a list of parameter=value pairs separated by a coma used for one or multiple tests: "--params key1=value1,key2=value2,..."')
+        help='Specify a list of key=value pairs separated by a coma used '
+             'for one or multiple tests: '
+             '"--params key1=value1,key2=value2,..."')
+    parser.addoption(
+        "--artifacts_dir", action="store", default=getcwd(),
+        help='Specify pytest artifacts directory')
 
 
 def pytest_runtest_setup(item):
@@ -184,15 +188,20 @@ def pytest_runtest_setup(item):
         pytest.skip("Don't run integration tests.")
     elif item.config.getoption("integration") and not markers:
         pytest.skip("Run only integration tests.")
+
     # Check endurance tests
+    m_option = item.config.getoption('-m')
+    if search(r'\bendurance\b', m_option) and not search(r'\nnot\n\s+\bendurance\b', m_option):
+        skip_endurance = False
+    else:
+        skip_endurance = True
     markers = tuple(item.iter_markers(name='endurance'))
-    if not item.config.getoption("endurance") and markers:
+    if markers and skip_endurance:
         pytest.skip("Don't run endurance tests.")
-    elif item.config.getoption("endurance") and not markers:
-        pytest.skip("Run only endurance tests.")
+
     # Check AWS execution
     markers = tuple(item.iter_markers(name='aws'))
-    if '${AWS}'=='OFF' and markers:
+    if '${AWS}' == 'OFF' and markers:
         pytest.skip("Don't run C/C++ function tests.")
     # Skip 'security' test if not explicitly marked
     for marker in item.iter_markers():
@@ -430,6 +439,12 @@ def accelize_drm(pytestconfig):
     if build_source_dir.startswith('@'):
         build_source_dir = realpath('.')
 
+    # Create pytest artifacts directory
+    pytest_artifacts_dir = join(pytestconfig.getoption("artifacts_dir"), 'pytest_artifacts')
+    if not isdir(pytest_artifacts_dir):
+        makedirs(pytest_artifacts_dir)
+    print('pytest artifacts directory: ', pytest_artifacts_dir)
+
     # Get Ref Designs available
     ref_designs = RefDesign(join(build_source_dir, 'tests', 'refdesigns', fpga_driver_name))
 
@@ -519,6 +534,7 @@ def accelize_drm(pytestconfig):
     _accelize_drm.clean_metering_env = lambda *kargs, **kwargs: clean_metering_env(
         *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
     _accelize_drm.pytest_params = param2dict(pytestconfig.getoption("params"))
+    _accelize_drm.pytest_artifacts_dir = pytest_artifacts_dir
 
     return _accelize_drm
 
@@ -675,7 +691,7 @@ def conf_json(pytestconfig, tmpdir):
         log_param['log_format'] = '[%^%=8l%$] %-6t, %v'
     if pytestconfig.getoption("logfile"):
         log_param['log_file_type'] = 1
-        log_param['log_file_path'] = realpath("./drmlib.%d.log" % getpid())
+        log_param['log_file_path'] = realpath("./drmlib_t%f_pid%d.log" % (time(), getpid()))
         log_param['log_file_verbosity'] = pytestconfig.getoption("library_verbosity")
     json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param)
     json_conf.save()
@@ -780,6 +796,31 @@ def perform_once(test_name):
     else:
         with open(test_lock, 'w'):
             pass
+
+
+def wait_func_true(func, timeout=None, sleep_time=1):
+    start = datetime.now()
+    while not func():
+        if timeout:
+            if datetime.now() - start > timedelta(seconds=sleep_time):
+                return False
+        sleep(sleep_time)
+    return True
+
+
+def wait_deadline(start_time, duration):
+    """
+    Wait until endtime is hit
+
+    Args:
+        start_time (datetime): start time of the timer.
+        duration to wait for (int): duration in seconds to wait for.
+    """
+    wait_period = start_time + timedelta(seconds=duration) - datetime.now()
+    if wait_period.total_seconds() <= 0:
+        return
+    sleep(wait_period.total_seconds())
+
 
 
 class AsyncErrorHandler:
@@ -949,7 +990,8 @@ class EndpointAction:
 
 class FlaskAppWrapper:
     def __init__(self, name=__name__):
-        self.app = Flask(name)
+        import flask
+        self.app = flask.Flask(name)
         environ['WERKZEUG_RUN_MAIN'] = 'true'
         environ['FLASK_ENV'] = 'development'
 
@@ -964,5 +1006,5 @@ class FlaskAppWrapper:
 
 @pytest.fixture
 def fake_server():
-    return FlaskAppWrapper()
-
+    name = "fake_server_%d" % randint(1,0xFFFFFFFF)
+    return FlaskAppWrapper(name)

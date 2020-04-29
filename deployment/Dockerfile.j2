@@ -1,0 +1,80 @@
+# Define Packages build environments for all supported OS
+# Used in the "Release" stage of "azure-pipeline.yml"
+
+FROM {{ osName }}:{{ osVersion }}
+
+ENV PACKAGES_DIR /opt/packages
+ENV TOX_PARALLEL_NO_SPINNER 1
+
+# "Building" and "Testing" common layer
+RUN \
+{%- if osName == "centos" and osVersion == "7" %}
+yum install -y epel-release yum-plugin-fastestmirror && \
+yum install -y \
+{%- elif osName in ("fedora", "centos") %}
+echo "fastestmirror=True" >> /etc/dnf/dnf.conf && \
+echo "max_parallel_downloads=10" >> /etc/dnf/dnf.conf && \
+echo "install_weak_deps=False" >> /etc/dnf/dnf.conf && \
+{%- if osName == "centos" %}
+dnf install -y epel-release 'dnf-command(config-manager)' && \
+dnf config-manager --set-enabled PowerTools && \
+{%- endif %}
+dnf install -y \
+{%- elif osName in ("debian", "ubuntu") %}
+echo "APT::Install-Recommends "0";" >> /etc/apt/apt.conf.d/no-recommend && \
+echo "APT::Install-Suggests "0";" >> /etc/apt/apt.conf.d/no-recommend && \
+echo "APT::Acquire::Queue-Mode "access";" >> /etc/apt/apt.conf.d/parallel && \
+echo "APT::Acquire::Retries 10;" >> /etc/apt/apt.conf.d/parallel && \
+apt-get update && \
+apt-get install -y \
+{%- endif %}
+    python3-pip && \
+echo "[global]" > /etc/pip.conf && \
+echo "disable-pip-version-check = true " >> /etc/pip.conf && \
+python3 -m pip install -U{% if osName == "centos" and osVersion == "7" %} --prefix='/usr'{% endif %} \
+    pip \
+    setuptools && \
+python3 -m pip install -U{% if osName == "centos" and osVersion == "7" %} --prefix='/usr'{% endif %} \
+    cython \
+    flake8 \
+    pytest \
+    requests \
+    tox \
+    wheel
+
+{%- if buildLayer %}
+# "Building" only layer
+RUN \
+{%- if osName in ("centos", "fedora") and osVersion != "7" %}
+dnf install -y \
+{%- elif osName == "centos" and osVersion == "7" %}
+yum install -y \
+{%- elif osName in ("debian", "ubuntu") %}
+apt-get install -y \
+{%- endif %}
+    doxygen \
+    gnupg \
+    make \
+{%- if osName in ("debian", "ubuntu") %}
+    dpkg-dev \
+    dpkg-sig \
+    file \
+    g++ \
+    libcurl4-openssl-dev \
+    libjsoncpp-dev \
+    pkg-config \
+    python3-dev && \
+{%- elif osName in ("centos", "fedora") %}
+    gcc \
+    gcc-c++ \
+    jsoncpp-devel \
+    libcurl-devel \
+    python3-devel \
+    rpm-build \
+    rpm-sign && \
+{%- endif %}
+python3 -m pip install -U{% if osName == "centos" and osVersion == "7" %} --prefix='/usr'{% endif %} \
+    breathe \
+    cmake \
+    sphinx_rtd_theme \
+{%- endif %}

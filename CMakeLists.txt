@@ -21,7 +21,7 @@ cmake_minimum_required(VERSION 3.12)
 # - Alpha             : 1.0.0-alpha.1
 # - Beta              : 1.0.0-beta.1
 # - Release candidate : 1.0.0-rc.1
-set(ACCELIZEDRM_VERSION 2.3.0)
+set(ACCELIZEDRM_VERSION 2.4.0)
 
 ## Define package release number (Number of time this version was packaged)
 if (NOT CPACK_PACKAGE_RELEASE)
@@ -49,9 +49,9 @@ set(ACCELIZEDRM_LONG_VERSION ${ACCELIZEDRM_VERSION})
 find_program(GIT git)
 if (GIT)
     execute_process(COMMAND git rev-parse --short HEAD
-	    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-	    OUTPUT_VARIABLE GIT_COMMIT
-	    OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_COMMIT
+    OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
     if (GIT_COMMIT)
 	# Add as Semantic versioning build metadata
 	set(ACCELIZEDRM_LONG_VERSION ${ACCELIZEDRM_VERSION}+${GIT_COMMIT})
@@ -95,12 +95,15 @@ set(CMAKE_CXX_STANDARD 11)
 add_compile_options(-fvisibility=hidden)
 if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     # Enable warnings
-    add_compile_options(-O0 -Wall -Wextra -Wnon-virtual-dtor -Wpedantic -Werror=format-security)
+    add_compile_options(-Wall -Wextra -Wnon-virtual-dtor -Wpedantic -Werror=format-security)
 
     # Optimize for Debugging
     if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
 	add_compile_options(-fdebug-prefix-map=${CMAKE_SOURCE_DIR}=.)
     endif()
+
+    # ABI check
+    add_compile_options(-g -Og)
 
     # Code coverage
     option(COVERAGE "Activate code coverage" OFF)

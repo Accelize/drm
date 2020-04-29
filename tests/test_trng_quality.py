@@ -4,9 +4,7 @@ Test node-locked behavior of DRM Library.
 """
 import pytest
 import sys
-import gc
 import re
-import logging
 from glob import glob
 from os import remove
 from os.path import getsize, isfile, dirname, join, realpath, basename
@@ -15,6 +13,7 @@ from time import sleep, time
 from json import loads, dumps
 from datetime import datetime, timedelta
 from random import randrange
+from tests.conftest import wait_func_true
 
 
 SAMPLES_DUPLICATE_THRESHOLD = 2
@@ -29,7 +28,7 @@ REGEX_PATTERN = r'Starting license request to \S+ with request:\n(^{.+?\n}$)'
 
 def parse_and_save_challenge(logpath, pattern, save_path=None):
     # Parse log file
-    print(f'Parsing requests from log file: {logpath}')
+    print('Parsing requests from log file: %s' % logpath)
     with open(logpath, 'rt') as f:
         text = f.read()
     request_list = list()
@@ -52,7 +51,7 @@ def check_duplicates(value_list):
     list_size = len(value_list)
     if list_size < SAMPLES_DUPLICATE_THRESHOLD:
         print('Not enough samples to compute duplicates')
-        return None
+        return -1
     count_by_value = dict()
     for value in value_list:
         if value not in count_by_value.keys():
@@ -67,7 +66,6 @@ def check_duplicates(value_list):
             if d > 0:
                 print("\t%s appears %d times" % (v,d+1))
     duplication_percent = float(num_duplicates)/ list_size * 100
-    print("=> Percentage of duplicates: %f%%" % duplication_percent)
     return duplication_percent
 
 
@@ -169,22 +167,32 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
     activators.autotest()
-    #cred_json.set_user('accelize_accelerator_test_05_chipid_only')
-    cred_json.set_user('accelize_accelerator_test_05_dna_challenge')
+
+    # Get number of sessions parameter
     try:
         num_sessions = accelize_drm.pytest_params['num_sessions']
     except:
         num_sessions = 100
         print('Warning: Missing argument "num_sessions". Using default value %d' % num_sessions)
+    # Get number of samples parameter
     try:
         num_samples = accelize_drm.pytest_params['num_samples']
     except:
         num_samples = 4
         print('Warning: Missing argument "num_samples". Using default value %d' % num_samples)
+    # Get access key parameter
+    try:
+        access_key = accelize_drm.pytest_params['access_key']
+    except:
+        access_key = "accelize_accelerator_test_05"
+        print('Warning: Missing argument "access_key". Using default value %s' % access_key)
+
     print('num_sessions=', num_sessions)
     print('num_samples=', num_samples)
+    print('access_key=', access_key)
 
     async_cb.reset()
+    cred_json.set_user(access_key)
     conf_json.reset()
     logpath = realpath("./drmlib.%d.%d.log" % (time(), randrange(0xFFFFFFFF)))
     conf_json['settings']['log_file_verbosity'] = 1
@@ -238,7 +246,7 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
                     sleep(1)
             activators.autotest(is_activated=False)
             del drm_manager
-            gc.collect()
+            assert wait_func_true(lambda: isfile(logpath), 10)
             if no_err:
                 session_cnt += 1
         async_cb.assert_NoError()
@@ -252,14 +260,16 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
         request_list = loads(f.read())['requests']
     # Remove 'close' requests
     request_list = list(filter(lambda x: x['request'] != 'close', request_list))
-    # Check validity
     assert len(request_list) >= num_sessions * num_samples
-    # Compute duplicates challenges
+    # Compute Challenges duplicates
     challenge_list = [e['saasChallenge'] for e in request_list]
     challenge_score = check_duplicates(challenge_list)
-    # Compute duplicates DNA
-    dna_list = [e['dna'] for e in request_list]
+    print("=> Percentage of Challenge duplicates for current test: %f%%" % challenge_score)
+    # Compute DNA duplicates
+    dna_list = [e['dna'] for e in request_list if e['request']=='open']
+    assert len(dna_list) >= num_sessions
     dna_score = check_duplicates(dna_list)
+    print("=> Percentage of DNA duplicates for current test: %f%%" % dna_score)
     # Check duplicate
     if challenge_score:
         assert challenge_score < DUPLICATE_THRESHOLD

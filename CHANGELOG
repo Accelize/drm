@@ -1,5 +1,14 @@
-* Fri Oct 18 2019 Accelize v2.4.0
-- DEP: Deprecated the systemd service and python drivers.
+* Mon Mar 23 2020 Accelize v2.4.0
+- NEW: Strengthen hardware security
+- NEW: Add SDAccel and Vitis support to regression
+- NEW: Enhance messaging
+- NEW: Enhance Built-In Self Test at DRMLib start up
+- FIX: resume session when license duration default value is 0
+- FIX: Error reporting
+- FIX: Change URL for China mainland users
+- TST: Enhance non regresison and coverage tests
+- DEP: Deprecated the systemd service and python drivers
+- DOC: Change file organisation and some naming conventions
 
 * Fri Oct 18 2019 Accelize v2.3.0
 - NEW: Added host name resolving for China Mainland

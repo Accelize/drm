@@ -79,7 +79,7 @@ long CurlEasyPost::perform( std::string* resp, std::chrono::steady_clock::time_p
     { // Compute timeout
         std::chrono::milliseconds timeout = std::chrono::duration_cast<std::chrono::milliseconds>( deadline - std::chrono::steady_clock::now() );
         if ( timeout <= std::chrono::milliseconds( 0 ) )
-            Throw( DRM_WSMayRetry, "Did not perform HTTP request to Accelize webservice because deadline is already reached." );
+            Throw( DRM_WSTimedOut, "Did not perform HTTP request to Accelize webservice because deadline is reached." );
         curl_easy_setopt( curl, CURLOPT_TIMEOUT_MS, timeout.count() );
     }
     res = curl_easy_perform( curl );
@@ -114,8 +114,10 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
 
     mOAuth2Token = std::string("");
     mTokenValidityPeriod = 0;
+    mTokenExpirationMargin = cTokenExpirationMargin;
     mTokenExpirationTime = TClock::now();
 
+    // Set properties based on file
     try {
         Json::Value conf_json = parseJsonFile( conf_file_path );
         Json::Value webservice_json = JVgetRequired( conf_json, "licensing", Json::objectValue );
@@ -124,14 +126,17 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
         mHostResolvesJson = JVgetOptional( webservice_json, "host_resolves", Json::objectValue );
 
         url = JVgetRequired( webservice_json, "url", Json::stringValue ).asString();
-        Debug( "Licensing URL from Json file: {}", url );
-        mMeteringUrl = url + std::string("/auth/metering/genlicense/");
 
     } catch( Exception &e ) {
         Throw( e.getErrCode(), "Error with service configuration file '{}': {}",
                 conf_file_path, e.what() );
     }
 
+    // Temporarily change file log level to be sure not to capture the Client and Secret IDs
+    auto logFileHandler = sLogger->sinks()[1];
+    spdlog::level::level_enum logFileLevel = logFileHandler->level();
+    if ( logFileLevel <= spdlog::level::debug )
+        logFileHandler->set_level( spdlog::level::info );
     try {
         Json::Value cred_json = parseJsonFile( cred_file_path );
         Json::Value client_id_json = JVgetRequired( cred_json, "client_id", Json::stringValue );
@@ -141,7 +146,23 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
     } catch( Exception &e ) {
         Throw( e.getErrCode(), "Error with credential file '{}': {}", cred_file_path, e.what() );
     }
+    // Restore originla file log level
+    if ( logFileLevel <= spdlog::level::debug )
+        logFileHandler->set_level( logFileLevel );
 
+    // Overwrite properties with Environment Variables if defined
+    const char* url_var = std::getenv( "ONEPORTAL_URL" );
+    if ( url_var != NULL )
+        url = std::string( url_var );
+    Debug( "Licensing URL: {}", url );
+    const char* client_id_var = std::getenv( "ONEPORTAL_CLIENT_ID" );
+    if ( client_id_var != NULL )
+        mClientId = std::string( client_id_var );
+    const char* secret_id_var = std::getenv( "ONEPORTAL_CLIENT_SECRET" );
+    if ( secret_id_var != NULL )
+        mClientSecret = std::string( secret_id_var );
+
+    // Init Curl lib
     CurlSingleton::Init();
 
     // Set header of OAuth2 request
@@ -151,29 +172,45 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
     ss << "client_id=" << mClientId << "&client_secret=" << mClientSecret;
     ss << "&grant_type=client_credentials";
     mOAUth2Request.setPostFields( ss.str() );
+
+    // Set URL of license request
+    mMeteringUrl = url + std::string("/auth/metering/genlicense/");
 }
 
-uint32_t DrmWSClient::getTokenTimeLeft() const {
+int32_t DrmWSClient::getTokenTimeLeft() const {
     TClock::duration delta = mTokenExpirationTime - TClock::now();
     return (uint32_t)round( (double)delta.count() / 1000000000 );
 }
 
 void DrmWSClient::setOAuth2token( const std::string& token ) {
     mOAuth2Token = token;
-    mTokenValidityPeriod = 10;
+    mTokenValidityPeriod = 1000;
     mTokenExpirationTime = TClock::now() + std::chrono::seconds( mTokenValidityPeriod );
+}
+
+bool DrmWSClient::isTokenValid() const {
+    uint32_t margin = ( mTokenExpirationMargin >= mTokenValidityPeriod ) ?
+        ( mTokenValidityPeriod >> 1) : mTokenExpirationMargin;
+    if ( ( mTokenExpirationTime - std::chrono::seconds( margin ) ) > TClock::now() ) {
+        Debug( "Current authentication token is still valid" );
+        return true;
+    } else {
+        if ( mTokenExpirationTime > TClock::now() )
+            Debug( "Current authentication token is about to expire in {} seconds maximum", margin );
+        else
+            Debug( "Current authentication token has expired" );
+        return false;
+    }
 }
 
 void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
 
     // Check if a token exists
     if ( !mOAuth2Token.empty() ) {
-        // Check if existing token has expired or is about to expire
-        if ( mTokenExpirationTime > TClock::now() ) {
-            Debug( "Current authentication token is still valid" );
+        // Yes a token already exists, check if it has expired or is about to expire
+        if ( isTokenValid() ) {
             return;
         }
-        Debug( "Current authentication token has expired" );
     }
 
     // Request a new token and wait response
@@ -249,7 +286,7 @@ Json::Value DrmWSClient::requestLicense( const Json::Value& json_req, TClock::ti
     if ( resp_code != 200 ) {
         // An error occurred
         DRM_ErrorCode drm_error;
-        if ( CurlEasyPost::is_error_retryable( resp_code ) )
+        if ( CurlEasyPost::is_error_retryable( resp_code ) || ( resp_code == 401 ) )
             drm_error = DRM_WSMayRetry;
         else if ( ( resp_code >= 400 ) && ( resp_code < 500 ) )
             drm_error = DRM_WSReqError;

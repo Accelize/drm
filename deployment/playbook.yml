@@ -1,0 +1,28 @@
+---
+# This playbook configure agents used to run FPGA tests
+# Used in the "Tests" stage of "azure-pipelines.yml"
+
+- hosts: all
+  become: true
+  roles:
+    # Install Azure agent
+    - name: azure_pipeline_agent
+
+    # Install AWS FPGA
+    - name: accelize.xilinx_xrt
+      vars:
+        aws_fpga_install: true
+        aws_fpga_src_install: /opt/aws_fpga
+        xilinx_xrt_env: aws
+        xilinx_xrt_install: false
+        xilinx_xrt_ensure_compatible_kernel: false
+
+    # Install Accelize DRM build & test requirements
+    - name: accelize.accelize_drm
+      vars:
+        accelize_drm_build: true
+        accelize_drm_test: true
+        accelize_drm_coverage: true
+        accelize_drm_abi_check: true
+        accelize_drm_no_install: true
+        accelize_drm_service_started: false
