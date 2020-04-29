@@ -125,7 +125,7 @@ def test_get_version(accelize_drm):
     assert search(r'\d+\.\d+\.\d+', versions.version) is not None
 
 
-def test_authentication_token(accelize_drm, conf_json, cred_json, async_handler, utils):
+def test_authentication_token(accelize_drm, conf_json, cred_json, async_handler):
     """Test authentication token behavior"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
