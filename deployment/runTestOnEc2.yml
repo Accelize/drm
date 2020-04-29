@@ -6,6 +6,7 @@ parameters:
   config_list:
   - os_distrib: 'centos_7'
     tox_extra_option: ''
+    dependsOn: []
 
 jobs:
 - ${{ each config in parameters.config_list }}: # For each config
