@@ -2,12 +2,84 @@
 """
 Test metering and floating behaviors of DRM Library.
 """
-import gc
 from time import sleep
 from random import randint
 from datetime import datetime, timedelta
 from re import search
 import pytest
+from tests.conftest import wait
+
+
+def test_metered_start_stop_in_raw(accelize_drm, conf_json, cred_json, async_handler):
+    """
+    Test no error occurs in normal start/stop metering mode during a short period of time
+    """
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    activators = accelize_drm.pytest_fpga_activators[0]
+    activators.reset_coin()
+    activators.autotest()
+    cred_json.set_user('accelize_accelerator_test_02')
+
+    async_cb.reset()
+    conf_json.reset()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    try:
+        assert not drm_manager.get('license_status')
+        activators.autotest(is_activated=False)
+        activators[0].generate_coin(1000)
+        activators[0].check_coin(drm_manager.get('metered_data'))
+        drm_manager.activate()
+        drm_manager.deactivate()
+        assert not drm_manager.get('license_status')
+        activators.autotest(is_activated=False)
+        assert drm_manager.get('metered_data') == 0
+        async_cb.assert_NoError()
+    finally:
+        drm_manager.deactivate()
+
+
+def test_metered_start_stop_1_coin_in_raw(accelize_drm, conf_json, cred_json, async_handler):
+    """
+    Test no error occurs in normal start/stop metering mode during a short period of time
+    """
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    activators = accelize_drm.pytest_fpga_activators[0]
+    activators.reset_coin()
+    activators.autotest()
+    cred_json.set_user('accelize_accelerator_test_02')
+
+    async_cb.reset()
+    conf_json.reset()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    try:
+        assert not drm_manager.get('license_status')
+        activators.autotest(is_activated=False)
+        activators[0].generate_coin(1000)
+        activators[0].check_coin(drm_manager.get('metered_data'))
+        drm_manager.activate()
+        activators[0].generate_coin(1)
+        assert drm_manager.get('metered_data') == 1
+        drm_manager.deactivate()
+        assert not drm_manager.get('license_status')
+        activators.autotest(is_activated=False)
+        assert drm_manager.get('metered_data') == 0
+        async_cb.assert_NoError()
+    finally:
+        drm_manager.deactivate()
 
 
 @pytest.mark.minimum
@@ -37,7 +109,6 @@ def test_metered_start_stop_short_time(accelize_drm, conf_json, cred_json, async
         activators.autotest(is_activated=False)
         activators[0].generate_coin(1000)
         drm_manager.activate()
-        sleep(1)
         activators[0].check_coin(drm_manager.get('metered_data'))
         assert drm_manager.get('license_status')
         activators.autotest(is_activated=True)
@@ -79,7 +150,6 @@ def test_metered_start_stop_short_time_in_debug(accelize_drm, conf_json, cred_js
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
         drm_manager.activate()
-        sleep(1)
         assert drm_manager.get('metered_data') == 0
         assert drm_manager.get('license_status')
         activators.autotest(is_activated=True)
@@ -183,16 +253,14 @@ def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, asy
         activators[0].generate_coin(10)
         activators[0].check_coin(drm_manager.get('metered_data'))
         # Wait enough time to be sure the 2nd license has been provisioned
-        wait_period = start + timedelta(seconds=lic_duration/2) - datetime.now()
-        sleep(wait_period.total_seconds())
+        wait(start, lic_duration/2)
         drm_manager.deactivate(True)
         assert drm_manager.get('session_status')
         assert drm_manager.get('license_status')
         assert drm_manager.get('session_id') == session_id
         activators.autotest(is_activated=True)
         # Wait right before license expiration
-        wait_period = start + timedelta(seconds=2*lic_duration-2) - datetime.now()
-        sleep(wait_period.total_seconds())
+        wait(start, 2*lic_duration-2)
         assert drm_manager.get('session_status')
         assert drm_manager.get('license_status')
         assert drm_manager.get('session_id') == session_id
@@ -267,8 +335,7 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
             # Wait randomly
             nb_lic_expired = int((datetime.now() - start).total_seconds() / lic_duration)
             random_wait = randint((nb_lic_expired+2)*lic_duration-2, (nb_lic_expired+2)*lic_duration+2)
-            wait_period = start + timedelta(seconds=random_wait) - datetime.now()
-            sleep(wait_period.total_seconds())
+            wait(start, random_wait)
             drm_manager.activate(True)
             start = datetime.now()
         assert drm_manager.get('session_status')
@@ -323,16 +390,12 @@ def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, cred_json
     activators[0].check_coin(drm_manager1.get('metered_data'))
     assert drm_manager1.get('metered_data') == 10
     # Wait enough time to be sure the 2nd license has been provisioned
-    wait_period = start + timedelta(seconds=lic_duration/2) - datetime.now()
-    sleep(wait_period.total_seconds())
+    wait(start, lic_duration/2)
     drm_manager1.deactivate(True)
     assert drm_manager1.get('session_status')
     assert drm_manager1.get('license_status')
     assert drm_manager1.get('session_id') == session_id
     activators.autotest(is_activated=True)
-    # Kill object
-    del drm_manager1
-    gc.collect()
     async_cb.assert_NoError()
     sleep(1)
     # Create new object
@@ -343,6 +406,7 @@ def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, cred_json
         driver.write_register_callback,
         async_cb.callback
     )
+    assert drm_manager1 != drm_manager2
     assert drm_manager2.get('license_duration') == 30
     assert drm_manager2.get('session_status')
     assert drm_manager2.get('license_status')
@@ -354,8 +418,7 @@ def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, cred_json
     activators.autotest(is_activated=True)
     assert drm_manager2.get('metered_data') == 10
     # Wait for license renewal
-    wait_period = start + timedelta(seconds=lic_duration+2) - datetime.now()
-    sleep(wait_period.total_seconds())
+    wait(start, lic_duration+2)
     activators[0].generate_coin(10)
     activators[0].check_coin(drm_manager2.get('metered_data'))
     assert drm_manager2.get('metered_data') == 20
@@ -450,8 +513,7 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         activators[0].generate_coin(1000)
         activators[0].check_coin(drm_manager.get('metered_data'))
         # Wait right before expiration
-        wait_period = start + timedelta(seconds=3*lic_duration-3) - datetime.now()
-        sleep(wait_period.total_seconds())
+        wait(start, 3*lic_duration-3)
         assert drm_manager.get('license_status')
         activators.autotest(is_activated=True)
         sleep(5)
@@ -508,10 +570,10 @@ def test_floating_limits(accelize_drm, conf_json, cred_json, async_handler):
     try:
         drm_manager0.activate()
         assert drm_manager0.get('license_status')
-        with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
+        with pytest.raises(accelize_drm.exceptions.DRMWSTimedOut) as excinfo:
             drm_manager1.activate()
         assert search(r'Timeout on License request after .+ attempts', str(excinfo.value)) is not None
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSTimedOut.error_code
         async_cb1.assert_NoError()
     finally:
         drm_manager0.deactivate()
@@ -520,10 +582,10 @@ def test_floating_limits(accelize_drm, conf_json, cred_json, async_handler):
     try:
         drm_manager1.activate()
         assert drm_manager1.get('license_status')
-        with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
+        with pytest.raises(accelize_drm.exceptions.DRMWSTimedOut) as excinfo:
             drm_manager0.activate()
         assert search(r'Timeout on License request after .+ attempts', str(excinfo.value)) is not None
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSTimedOut.error_code
         async_cb0.assert_NoError()
     finally:
         drm_manager1.deactivate()

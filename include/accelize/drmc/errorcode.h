@@ -40,6 +40,7 @@ typedef enum {
     DRM_WSReqError          = 10002, /**< Failed during HTTP request to Accelize WebService */
     DRM_WSError             = 10003, /**< Error returned from Accelize WebService */
     DRM_WSMayRetry          = 10004, /**< Error with request to Accelize Webservice, retry advised */
+    DRM_WSTimedOut          = 10005, /**< Error with request to Accelize Webservice, deadline has been reached */
 
     DRM_CtlrError           = 20001, /**< An error happened on a command to the DRM controller */
 

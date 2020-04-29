@@ -2,11 +2,15 @@
 """Configure Pytest"""
 from copy import deepcopy
 from json import dump, load
-from os import environ, getpid, listdir, remove
+from os import environ, getpid, listdir, remove, makedirs, getcwd
 from os.path import basename, dirname, expanduser, isdir, isfile, join, \
     realpath, splitext
 from random import randint
 from re import IGNORECASE, match, search
+from datetime import datetime
+from time import time, sleep
+from shutil import rmtree
+from datetime import datetime, timedelta
 
 import pytest
 
@@ -168,6 +172,9 @@ def pytest_addoption(parser):
         help='Specify a list of key=value pairs separated by a coma used '
              'for one or multiple tests: '
              '"--params key1=value1,key2=value2,..."')
+    parser.addoption(
+        "--artifacts_dir", action="store", default=getcwd(),
+        help='Specify pytest artifacts directory')
 
 
 def pytest_runtest_setup(item):
@@ -432,6 +439,12 @@ def accelize_drm(pytestconfig):
     if build_source_dir.startswith('@'):
         build_source_dir = realpath('.')
 
+    # Create pytest artifacts directory
+    pytest_artifacts_dir = join(pytestconfig.getoption("artifacts_dir"), 'pytest_artifacts')
+    if not isdir(pytest_artifacts_dir):
+        makedirs(pytest_artifacts_dir)
+    print('pytest artifacts directory: ', pytest_artifacts_dir)
+
     # Get Ref Designs available
     ref_designs = RefDesign(join(build_source_dir, 'tests', 'refdesigns', fpga_driver_name))
 
@@ -521,6 +534,7 @@ def accelize_drm(pytestconfig):
     _accelize_drm.clean_metering_env = lambda *kargs, **kwargs: clean_metering_env(
         *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
     _accelize_drm.pytest_params = param2dict(pytestconfig.getoption("params"))
+    _accelize_drm.pytest_artifacts_dir = pytest_artifacts_dir
 
     return _accelize_drm
 
@@ -677,7 +691,7 @@ def conf_json(pytestconfig, tmpdir):
         log_param['log_format'] = '[%^%=8l%$] %-6t, %v'
     if pytestconfig.getoption("logfile"):
         log_param['log_file_type'] = 1
-        log_param['log_file_path'] = realpath("./drmlib.%d.log" % getpid())
+        log_param['log_file_path'] = realpath("./drmlib_t%f_pid%d.log" % (time(), getpid()))
         log_param['log_file_verbosity'] = pytestconfig.getoption("library_verbosity")
     json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param)
     json_conf.save()
@@ -782,6 +796,21 @@ def perform_once(test_name):
     else:
         with open(test_lock, 'w'):
             pass
+
+
+def wait(start_time, duration):
+    """
+    Wait until endtime is hit
+
+    Args:
+        start_time (datetime): start time of the timer.
+        duration to wait for (int): duration in seconds to wait for.
+    """
+    wait_period = start_time + timedelta(seconds=duration) - datetime.now()
+    if wait_period.total_seconds() <= 0:
+        return
+    sleep(wait_period.total_seconds())
+
 
 
 class AsyncErrorHandler:
@@ -969,4 +998,25 @@ class FlaskAppWrapper:
 def fake_server():
     name = "fake_server_%d" % randint(1,0xFFFFFFFF)
     return FlaskAppWrapper(name)
+
+
+#--------------------
+# Wait until fixture
+#--------------------
+
+class MyUtils:
+    def wait_until(self, func, timeout=None, sleep_time=1):
+        start = datetime.now()
+        while not func():
+            if timeout:
+                if datetime.now() - start > timedelta(seconds=sleep_time):
+                    return False
+            sleep(sleep_time)
+        return True
+
+
+
+@pytest.fixture
+def utils():
+    return MyUtils()
 

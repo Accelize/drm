@@ -4,7 +4,6 @@ Test node-locked behavior of DRM Library.
 """
 import pytest
 import sys
-import gc
 import re
 from glob import glob
 from os import remove
@@ -159,7 +158,7 @@ def test_global_challenge_quality():
 
 
 @pytest.mark.security
-def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async_handler):
+def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async_handler, utils):
     """Preprogram N times the board and start a session with M licenses.
     """
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -246,7 +245,7 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
                     sleep(1)
             activators.autotest(is_activated=False)
             del drm_manager
-            gc.collect()
+            assert utils.wait_until(lambda: isfile(logpath), 10)
             if no_err:
                 session_cnt += 1
         async_cb.assert_NoError()
