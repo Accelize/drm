@@ -11,6 +11,7 @@ from re import match, search, finditer, MULTILINE, IGNORECASE
 from time import sleep, time
 from json import loads
 from datetime import datetime, timedelta
+from tests.conftest import wait_func_true
 
 
 LOG_FORMAT_SHORT = "[%^%=8l%$] %-6t, %v"
@@ -162,7 +163,7 @@ def test_authentication_token(accelize_drm, conf_json, cred_json, async_handler,
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSTimedOut.error_code
         async_cb.assert_NoError()
         del drm_manager
-        assert utils.wait_until(lambda: isfile(file_log_path), 10)
+        assert wait_func_true(lambda: isfile(file_log_path), 10)
         with open(file_log_path, 'rt') as f:
             file_log_content = f.read()
         assert search(r'\bAuthentication credentials were not provided\b', file_log_content)

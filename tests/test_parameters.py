@@ -7,6 +7,7 @@ from os import remove, getpid
 from os.path import isfile, realpath
 from re import search, finditer
 from time import sleep, time
+from tests.conftest import wait_func_true
 
 
 LOG_FORMAT_SHORT = "[%^%=8l%$] %-6t, %v"
@@ -460,7 +461,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
 
 
 def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_json, async_handler,
-                                                 ws_admin, utils):
+                                                 ws_admin):
     """Test accesses to parameter"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -822,7 +823,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         msg = 'This line should appear in log file'
         drm_manager.set(log_message=msg)
         del drm_manager
-        assert utils.wait_until(lambda: isfile(logpath), 10)
+        assert wait_func_true(lambda: isfile(logpath), 10)
         with open(logpath, 'rt') as f:
             log_content = f.read()
         assert "critical" in log_content

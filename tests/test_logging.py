@@ -9,6 +9,7 @@ from os.path import getsize, isfile, dirname, join, realpath, isdir, expanduser
 from re import search, findall, finditer, MULTILINE
 from time import time, sleep
 from shutil import rmtree
+from tests.conftest import wait_func_true
 
 
 LOG_FORMAT_SHORT = "[%^%=8l%$] %-6t, %v"
@@ -18,7 +19,7 @@ REGEX_FORMAT_SHORT = r'\[\s*(\w+)\s*\] \s*\d+\s*, %s'
 REGEX_FORMAT_LONG  = r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.\d{3} - \s*\S+:\d+\s* \[\s*(\w+)\s*\] \s*\d+\s*, %s'
 
 
-def test_file_path(accelize_drm, conf_json, cred_json, async_handler, utils):
+def test_file_path(accelize_drm, conf_json, cred_json, async_handler):
     """Test logging file path"""
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -44,14 +45,14 @@ def test_file_path(accelize_drm, conf_json, cred_json, async_handler, utils):
             async_cb.callback
         )
         del drm_manager
-        assert utils.wait_until(lambda: isfile(log_path), 10)
+        assert wait_func_true(lambda: isfile(log_path), 10)
         async_cb.assert_NoError()
     finally:
         if isfile(log_path):
             remove(log_path)
 
 
-def test_file_verbosity(accelize_drm, conf_json, cred_json, async_handler, utils):
+def test_file_verbosity(accelize_drm, conf_json, cred_json, async_handler):
     """Test logging file verbosity"""
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -86,7 +87,7 @@ def test_file_verbosity(accelize_drm, conf_json, cred_json, async_handler, utils
                 drm_manager.set(log_message_level=i)
                 drm_manager.set(log_message=msg % level_dict[i])
             del drm_manager
-            assert utils.wait_until(lambda: isfile(log_path), 10)
+            assert wait_func_true(lambda: isfile(log_path), 10)
             with open(log_path, 'rt') as f:
                 log_content = f.read()
             regex = REGEX_FORMAT_LONG % (msg % '(.*)')
@@ -102,7 +103,7 @@ def test_file_verbosity(accelize_drm, conf_json, cred_json, async_handler, utils
                 remove(log_path)
 
 
-def test_file_format(accelize_drm, conf_json, cred_json, async_handler, utils):
+def test_file_format(accelize_drm, conf_json, cred_json, async_handler):
     """Test logging file formats"""
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -133,7 +134,7 @@ def test_file_format(accelize_drm, conf_json, cred_json, async_handler, utils):
         drm_manager.set(log_message_level=2)
         drm_manager.set(log_message=msg)
         del drm_manager
-        assert utils.wait_until(lambda: isfile(log_path), 10)
+        assert wait_func_true(lambda: isfile(log_path), 10)
         with open(log_path, 'rt') as f:
             log_content = f.read()
         m = search(regex_short, log_content, MULTILINE)
@@ -165,7 +166,7 @@ def test_file_format(accelize_drm, conf_json, cred_json, async_handler, utils):
         drm_manager.set(log_message_level=2)
         drm_manager.set(log_message=msg)
         del drm_manager
-        assert utils.wait_until(lambda: isfile(log_path), 10)
+        assert wait_func_true(lambda: isfile(log_path), 10)
         with open(log_path, 'rt') as f:
             log_content = f.read()
         m = search(regex_long, log_content, MULTILINE)
@@ -178,7 +179,7 @@ def test_file_format(accelize_drm, conf_json, cred_json, async_handler, utils):
     print('Test logging file long format: PASS')
 
 
-def test_file_types(accelize_drm, conf_json, cred_json, async_handler, utils):
+def test_file_types(accelize_drm, conf_json, cred_json, async_handler):
     """Test logging file types"""
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -222,7 +223,7 @@ def test_file_types(accelize_drm, conf_json, cred_json, async_handler, utils):
                 for _ in range(2 * int(size / len(msg)) + 1):
                     drm_manager.set(log_message=msg)
                 del drm_manager
-                assert utils.wait_until(lambda: isfile(log_path), 10)
+                assert wait_func_true(lambda: isfile(log_path), 10)
                 if log_type == 1:
                     # Basic file
                     assert getsize(log_path) >= 2 * size
@@ -241,7 +242,7 @@ def test_file_types(accelize_drm, conf_json, cred_json, async_handler, utils):
                 remove(f)
 
 
-def test_file_rotating_parameters(accelize_drm, conf_json, cred_json, async_handler, utils):
+def test_file_rotating_parameters(accelize_drm, conf_json, cred_json, async_handler):
     """Test logging file rotating parameters"""
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -281,7 +282,7 @@ def test_file_rotating_parameters(accelize_drm, conf_json, cred_json, async_hand
         for _ in range(2 * rotating_num * int(rotating_size*1024 / len(msg) + 10)):
             drm_manager.set(log_message=msg)
         del drm_manager
-        assert utils.wait_until(lambda: len(glob(log_path[:-3] + '*log')), 10)
+        assert wait_func_true(lambda: len(glob(log_path[:-3] + '*log')), 10)
         log_list = glob(log_path[:-3] + '*log')
         assert len(log_list) == rotating_num + 1
         index_list = list(range(rotating_num + 1))
@@ -303,7 +304,7 @@ def test_file_rotating_parameters(accelize_drm, conf_json, cred_json, async_hand
             remove(f)
 
 
-def test_versions_displayed_in_log_file(accelize_drm, conf_json, cred_json, async_handler, utils):
+def test_versions_displayed_in_log_file(accelize_drm, conf_json, cred_json, async_handler):
     """Test versions of dependent libraries are displayed in log file"""
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -329,7 +330,7 @@ def test_versions_displayed_in_log_file(accelize_drm, conf_json, cred_json, asyn
             )
         assert drm_manager.get('log_file_verbosity') == verbosity
         del drm_manager
-        assert utils.wait_until(lambda: isfile(log_path), 10)
+        assert wait_func_true(lambda: isfile(log_path), 10)
         with open(log_path, 'rt') as f:
             log_content = f.read()
         assert search(r'drmlib\s*:\s*\d+\.\d+\.\d+', log_content)
@@ -342,7 +343,7 @@ def test_versions_displayed_in_log_file(accelize_drm, conf_json, cred_json, asyn
             remove(log_path)
 
 
-def test_log_file_parameters_modifiability(accelize_drm, conf_json, cred_json, async_handler, utils):
+def test_log_file_parameters_modifiability(accelize_drm, conf_json, cred_json, async_handler):
     """Once the log file has been created, test the parameters cannot be modified except verbosity and format """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -404,7 +405,7 @@ def test_log_file_parameters_modifiability(accelize_drm, conf_json, cred_json, a
             drm_manager.set(log_file_rotating_num=exp_value)
         assert drm_manager.get('log_file_rotating_num') == log_rotating_num
         del drm_manager
-        assert utils.wait_until(lambda: isfile(log_path), 10)
+        assert wait_func_true(lambda: isfile(log_path), 10)
         with open(log_path, 'rt') as f:
             log_content = f.read()
         critical_list = findall(r'[\s*critical\s*].* Parameter \S* cannot be overwritten', log_content)
@@ -454,7 +455,7 @@ def test_log_file_error_on_directory_creation(accelize_drm, conf_json, cred_json
             rmtree(log_dir)
 
 
-def test_log_file_on_existing_directory(accelize_drm, conf_json, cred_json, async_handler, utils):
+def test_log_file_on_existing_directory(accelize_drm, conf_json, cred_json, async_handler):
     """ Test when log file directory already exists """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -480,14 +481,14 @@ def test_log_file_on_existing_directory(accelize_drm, conf_json, cred_json, asyn
                 async_cb.callback
             )
         del drm_manager
-        assert utils.wait_until(lambda: isfile(log_path), 10)
+        assert wait_func_true(lambda: isfile(log_path), 10)
 
     finally:
         if isdir(log_dir):
             rmtree(log_dir)
 
 
-def test_log_file_directory_creation(accelize_drm, conf_json, cred_json, async_handler, utils):
+def test_log_file_directory_creation(accelize_drm, conf_json, cred_json, async_handler):
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     log_type = 1
@@ -511,13 +512,13 @@ def test_log_file_directory_creation(accelize_drm, conf_json, cred_json, async_h
                 async_cb.callback
             )
         del drm_manager
-        assert utils.wait_until(lambda: isfile(log_path), 10)
+        assert wait_func_true(lambda: isfile(log_path), 10)
     finally:
         if isdir(log_dir):
             rmtree(log_dir)
 
 
-def test_log_file_without_credential_data(accelize_drm, conf_json, cred_json, async_handler, utils):
+def test_log_file_without_credential_data(accelize_drm, conf_json, cred_json, async_handler):
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     log_type = 1
@@ -546,7 +547,7 @@ def test_log_file_without_credential_data(accelize_drm, conf_json, cred_json, as
         sleep(1)
         drm_manager.deactivate()
         del drm_manager
-        assert utils.wait_until(lambda: isfile(log_path), 10)
+        assert wait_func_true(lambda: isfile(log_path), 10)
         with open(log_path, 'rt') as f:
             log_content = f.read()
         assert not search(cred_json['client_id'], log_content)
@@ -570,7 +571,7 @@ def test_log_file_without_credential_data(accelize_drm, conf_json, cred_json, as
         sleep(1)
         drm_manager.deactivate()
         del drm_manager
-        assert utils.wait_until(lambda: isfile(log_path), 10)
+        assert wait_func_true(lambda: isfile(log_path), 10)
         with open(log_path, 'rt') as f:
             log_content = f.read()
         assert not search(cred_json['client_id'], log_content)
