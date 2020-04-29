@@ -7,7 +7,7 @@ import gc
 from glob import glob
 from os import remove, getpid
 from os.path import getsize, isfile, dirname, join, realpath
-from re import match, search, finditer, MULTILINE
+from re import match, search, finditer, MULTILINE, IGNORECASE
 from time import sleep, time
 from json import loads
 from datetime import datetime, timedelta
@@ -1018,7 +1018,7 @@ def test_curl_host_resolve(accelize_drm, conf_json, cred_json, async_handler):
         drm_manager.activate()
     assert 'Failed performing HTTP request to Accelize webservice' in str(excinfo.value)
     assert 'Peer certificate cannot be authenticated with given CA certificates' in str(excinfo.value)
-    assert "Peer's Certificate has expired" in str(excinfo.value)
+    assert search(r'certificate .* expired', str(excinfo.value), IGNORECASE)
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMExternFail.error_code
     async_cb.assert_NoError()
     del drm_manager
