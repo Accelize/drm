@@ -56,7 +56,7 @@ limitations under the License.
 
 #define FREQ_DETECTION_VERSION_EXPECTED	 0x60DC0DE0
 
-static const std::string DRM_SELF_TEST_ERROR_MESSAGE( "Please verify:\n"
+static const std::string DRM_SELF_TEST_ERROR_MESSAGE( "Could not access DRM Controller registers.\nPlease verify:\n"
                         "\t-The read/write callbacks implementation in the SW application: verify it uses the correct offset address of DRM Controller IP in the design address space.\n"
                         "\t-The DRM Controller IP instantiation in the FPGA design: verify the correctness of 16-bit address received by the AXI-Lite port of the DRM Controller." );
 
@@ -113,6 +113,9 @@ protected:
 # else
     const char path_sep = '/';
 #endif
+
+    // HDK version
+    uint32_t mDrmVersion = 0;
 
     bool mSecurityStop = false;
 
@@ -393,6 +396,11 @@ protected:
 
     uint32_t getUserMailboxSize() const {
         uint32_t mbSize = getMailboxSize() - (uint32_t)eMailboxOffset::MB_USER;
+        auto drmMajor = ( mDrmVersion >> 16 ) & 0xFF;
+        if ( (drmMajor <= 3) && (mbSize >= 4) )
+            // Used to compensate the bug in the HDK that prevent any access to the highest addresses of the mailbox
+            mbSize -= 4;
+
         Debug( "User Mailbox size: {}", mbSize );
         return mbSize;
     }
@@ -559,16 +567,15 @@ protected:
     }
 
     // Check compatibility of the DRM Version with Algodone version
-    void checkHdkCompatibility() const {
-        uint32_t drmVersionNum;
+    void checkHdkCompatibility() {
         std::string drmVersionDot;
+
         std::string drmVersion = getDrmCtrlVersion();
+        mDrmVersion = DrmControllerLibrary::DrmControllerDataConverter::hexStringToBinary( drmVersion )[0];
+        drmVersionDot = DrmControllerLibrary::DrmControllerDataConverter::binaryToVersionString( mDrmVersion );
 
-        drmVersionNum = DrmControllerLibrary::DrmControllerDataConverter::hexStringToBinary( drmVersion )[0];
-        drmVersionDot = DrmControllerLibrary::DrmControllerDataConverter::binaryToVersionString( drmVersionNum );
-
-        auto drmMajor = ( drmVersionNum >> 16 ) & 0xFF;
-        auto drmMinor = ( drmVersionNum >> 8  ) & 0xFF;
+        auto drmMajor = ( mDrmVersion >> 16 ) & 0xFF;
+        auto drmMinor = ( mDrmVersion >> 8  ) & 0xFF;
 
         if ( drmMajor < HDK_COMPATIBLITY_LIMIT_MAJOR ) {
             Throw( DRM_CtlrError,
@@ -589,11 +596,11 @@ protected:
         unsigned int reg;
         for(unsigned int i=0; i<=5; i++) {
             if ( writeDrmRegister( "DrmPageRegister", i ) != 0 )
-                Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not write DRM page register\n" + DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
+                Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not write DRM page register\n{}", DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
             if ( readDrmRegister( "DrmPageRegister", reg ) != 0 )
-                Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not read DRM page register\n" + DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
+                Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not read DRM page register\n{}", DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
             if ( reg != i ) {
-                Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not switch DRM register page.\n" + DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
+                Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not switch DRM register page.\n{}", DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
             }
         }
         Debug( "DRM Communication Self-Test 1 succeeded" );
@@ -609,7 +616,7 @@ protected:
         // Check mailbox size
         if ( mbSize >= 0x10000 ) {
             Debug( "DRM Communication Self-Test 2 failed: bad size {}", mbSize );
-            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Could not access DRM Controller registers.\n" + DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
+            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Unexpected mailbox size ({} > 0x10000).\n{}", mbSize, DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
         }
         Debug( "DRM Communication Self-Test 2: test size of mailbox passed" );
 
@@ -625,7 +632,7 @@ protected:
         }
         if ( badData.size() ) {
             Debug( "DRM Communication Self-Test 2 failed: writing zeros!\n" + badData );
-            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Could not access DRM Controller registers.\n" + DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
+            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: all 0 test failed.\n{}", DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
         }
         Debug( "DRM Communication Self-Test 2: all 0 test passed" );
 
@@ -642,7 +649,7 @@ protected:
         }
         if ( badData.size() ) {
             Debug( "DRM Communication Self-Test 2 failed: writing ones!\n" + badData );
-            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Could not access DRM Controller registers.\n" + DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
+            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: all 1 test failed.\n{}", DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
         }
         Debug( "DRM Communication Self-Test 2: all 1 test passed" );
 
@@ -660,7 +667,7 @@ protected:
         }
         if ( badData.size() ) {
             Debug( "DRM Communication Self-Test 2 failed: writing randoms!\n" + badData );
-            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Could not access DRM Controller registers.\n" + DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
+            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: random test failed.\n{}", DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
         }
         Debug( "DRM Communication Self-Test 2: random test passed" );
 
@@ -693,7 +700,7 @@ protected:
             std::string err_msg(e.what());
             if ( err_msg.find( "Unable to select a register strategy that is compatible with the DRM Controller" )
                     != std::string::npos )
-                Throw( DRM_CtlrError, "Unable to find DRM Controller registers.\n" + DRM_SELF_TEST_ERROR_MESSAGE );
+                Throw( DRM_CtlrError, "Unable to find DRM Controller registers.\n{}", DRM_SELF_TEST_ERROR_MESSAGE );
             Throw( DRM_CtlrError, "Failed to initialize DRM Controller: {}", e.what() );
         }
         Debug( "DRM Controller SDK is initialized" );
