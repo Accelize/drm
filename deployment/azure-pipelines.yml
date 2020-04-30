@@ -425,6 +425,8 @@ stages:
                   inputs:
                     scriptSource: inline
                     script: |
+                      import sys
+                      sys.append("$(Build.SourcesDirectory)/deployment")
                       from acid import export
                       from acid_drm import get_drm_version
                       export("version", get_drm_version())
