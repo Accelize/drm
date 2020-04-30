@@ -27,6 +27,7 @@ jobs:
     - startAgent_Aws_${{ config.os_distrib }}
     - ${{ if config.dependsOn }}:
       - runTests_Aws_${{ config.dependsOn }}
+    condition: succeededOrFailed()
     pool:
       name: Default
       demands:  # Use previously instantiated agent
