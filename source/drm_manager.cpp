@@ -1514,7 +1514,7 @@ protected:
         Debug( "Background thread stopped" );
         {
             std::lock_guard<std::mutex> lock( mThreadKeepAliveMtx );
-            Debug( "Stop flag of thread is reset" );
+            Debug( "Stop flag of thread is cleared" );
             mThreadKeepAliveExit = false;
         }
     }

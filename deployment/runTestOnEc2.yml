@@ -23,11 +23,14 @@ jobs:
   # Run tests on AWS agent
   - job: runTests_Aws_${{ config.os_distrib }}
     displayName: Run tests on AWS with ${{ config.os_distrib }}
-    dependsOn: startAgent_Aws_${{ config.os_distrib }}
+    dependsOn:
+    - startAgent_Aws_${{ config.os_distrib }}
+    - ${{ if config.dependsOn }}:
+      - runTests_Aws_${{ config.dependsOn }}
     pool:
       name: Default
       demands:  # Use previously instantiated agent
-        - agent.Name -equals $(Build.BuildId) $(Build.DefinitionName) AWS F1 with ${{ config.os_distrib }}
+        - agent.Name -equals $(Build.BuildId) $(Build.DefinitionName) AWS with ${{ config.os_distrib }}
     steps:
       - script: |
           cat << EOF > $(Build.SourcesDirectory)/cred.json
