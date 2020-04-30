@@ -60,6 +60,7 @@ _PARAM_LIST = ['license_type',
                'page_mailbox',
                'hw_report',
                'trigger_async_callback',
+               'bad_product_id',
                'bad_oauth2_token',
                'log_message']
 

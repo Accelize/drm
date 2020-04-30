@@ -157,8 +157,8 @@ protected:
 
     eLicenseType mLicenseType = eLicenseType::METERED;
     uint32_t mLicenseCounter = 0;
-    uint32_t mLicenseDuration = 0;        ///< Time duration in seconds of the license
-    uint32_t mLicenseWaitPeriod = 5;      ///< Time in seconds to wait for the load of a new license
+    uint32_t mLicenseDuration = 0;     ///< Time duration in seconds of the license
+    uint32_t mLicenseWaitPeriod = 5;    ///< Time in seconds to wait for the load of a new license
 
     // To protect access to the metering data (to securize the segment ID check in HW)
     mutable std::mutex mMeteringAccessMutex;
@@ -197,15 +197,15 @@ protected:
     };
 
 
-    #define checkDRMCtlrRet( func ) { \
-        unsigned int errcode = DRM_OK; \
-        try { \
-            errcode = func; \
-        } catch( const std::exception &e ) { \
-            Throw( DRM_CtlrError, e.what() ); \
-        } \
-        if ( errcode ) \
-            Unreachable( "DRM Controller API failed with error code: {}.", errcode ); \
+    #define checkDRMCtlrRet( func ) {                                                  \
+        unsigned int errcode = DRM_OK;                                                 \
+        try {                                                                          \
+            errcode = func;                                                            \ 
+        } catch( const std::exception &e ) {                                           \
+            Throw( DRM_CtlrError, e.what() );                                          \
+        }                                                                              \
+        if ( errcode )                                                                 \
+            Unreachable( "DRM Controller API failed with error code: {}.", errcode );  \
     }
 
     Impl( const std::string& conf_file_path,
