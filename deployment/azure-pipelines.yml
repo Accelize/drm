@@ -90,7 +90,7 @@ stages:
         pool:
           name: Default
           demands:  # Use previously instantiated agent
-            - agent.Name -equals $(Build.DefinitionName) AWS F1
+            - agent.Name -equals $(Build.BuildId) $(Build.DefinitionName) AWS F1
 
         steps:
 
