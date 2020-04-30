@@ -2768,7 +2768,7 @@ def test_drm_manager_bist(accelize_drm, conf_json, cred_json, async_handler):
             driver.write_register_callback,
             async_cb.callback
         )
-    assert 'DRM Communication Self-Test 2 failed: Could not access DRM Controller registers' in str(excinfo.value)
+    assert 'DRM Communication Self-Test 2 failed' in str(excinfo.value)
     assert 'Please verify' in str(excinfo.value)
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
     async_cb.assert_NoError()
@@ -2784,7 +2784,7 @@ def test_drm_manager_bist(accelize_drm, conf_json, cred_json, async_handler):
             my_wrong_write_callback,
             async_cb.callback
         )
-    assert 'DRM Communication Self-Test 2 failed: Could not access DRM Controller registers' in str(excinfo.value)
+    assert 'DRM Communication Self-Test 2 failed' in str(excinfo.value)
     assert 'Please verify' in str(excinfo.value)
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
     async_cb.assert_NoError()
