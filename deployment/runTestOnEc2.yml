@@ -31,7 +31,7 @@ jobs:
     pool:
       name: Default
       demands:  # Use previously instantiated agent
-        - agent.Name -equals $(Build.DefinitionName) AWS with ${{ config.os_distrib }}
+        - agent.Name -equals $(Build.BuildId) $(Build.DefinitionName) AWS with ${{ config.os_distrib }}
     steps:
       - script: |
           cat << EOF > $(Build.SourcesDirectory)/cred.json
