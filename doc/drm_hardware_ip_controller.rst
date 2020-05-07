@@ -115,7 +115,8 @@ For each IP connected there are 3 parts:
 AXI4-Lite Register Interface
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The communication with the Software layer is performed through an AXI4-Lite slave interface:
+The communication with the Software layer is performed through an AXI4-Lite slave interface.
+The address space exposed by the DRM Controller IP is minimum 16 bit wide.
 
 .. list-table::
    :header-rows: 1
@@ -209,6 +210,14 @@ The communication with the Software layer is performed through an AXI4-Lite slav
      - 2
      - AXI4-Lite read response
 
+The DRM Controller maintains different pages of registers that provide status and
+allow control over the overall DRM system.
+To operate correctly, those registers must be accessible in read and write mode by
+Software layer (DRM Library).
+
+Please refer to :doc:`drm_library_integration` for more information.
+
+
 Chip DNA Interface
 ~~~~~~~~~~~~~~~~~~
 
@@ -232,16 +241,6 @@ the user for his/her convenience.
      - 96
      - DNA as exposed by the chip
 
-
-Registers
----------
-
-The DRM Controller maintains different pages of registers that provide status and
-allow control over the overall DRM system.
-To operate correctly, those registers must be accessible in read and write mode by
-Software layer (DRM Library).
-
-Please refer to :doc:`drm_library_integration` for more information.
 
 Implementation results
 ----------------------

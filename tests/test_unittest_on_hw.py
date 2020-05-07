@@ -60,62 +60,9 @@ _PARAM_LIST = ['license_type',
                'page_mailbox',
                'hw_report',
                'trigger_async_callback',
+               'bad_product_id',
                'bad_oauth2_token',
                'log_message']
-
-
-@pytest.mark.minimum
-def test_backward_compatibility(accelize_drm, conf_json, cred_json, async_handler):
-    from itertools import groupby
-    """Test API is not compatible with DRM HDK < 3.0"""
-    refdesign = accelize_drm.pytest_ref_designs
-    hdk_version = accelize_drm.pytest_hdk_version
-    if hdk_version is None:
-        pytest.skip("FPGA image is not corresponding to a known HDK version")
-
-    current_major = int(match(r'^(\d+)\.', hdk_version).group(1))
-    driver = accelize_drm.pytest_fpga_driver[0]
-    fpga_image_bkp = driver.fpga_image
-    async_cb = async_handler.create()
-    drm_manager = None
-
-    try:
-        refdesignByMajor = ((int(match(r'^(\d+)\.', x).group(1)), x) for x in refdesign.hdk_versions)
-
-        for major, versions in groupby(refdesignByMajor, lambda x: x[0]):
-            if major >= current_major:
-                continue
-
-            hdk = sorted((e[1] for e in versions))[0]
-            # Program FPGA with older HDK
-            image_id = refdesign.get_image_id(hdk)
-            driver.program_fpga(image_id)
-            # Test compatibility issue
-            with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
-                async_cb.reset()
-                drm_manager = accelize_drm.DrmManager(
-                    conf_json.path,
-                    cred_json.path,
-                    driver.read_register_callback,
-                    driver.write_register_callback,
-                    async_cb.callback
-                )
-            hit = False
-            if 'Unable to find DRM Controller registers' in str(excinfo.value):
-                hit =True
-            if search(r'This DRM Library version \S+ is not compatible with the DRM HDK version', str(excinfo.value)):
-                hit =True
-            assert hit
-            assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
-            async_cb.assert_NoError()
-            print('Test compatibility with %s: PASS' % hdk)
-
-    finally:
-        if drm_manager:
-            del drm_manager
-        gc.collect()
-        # Reprogram FPGA with original image
-        driver.program_fpga(fpga_image_bkp)
 
 
 @pytest.mark.minimum
@@ -123,116 +70,6 @@ def test_get_version(accelize_drm):
     """Test the versions of the DRM Lib and its dependencies are well displayed"""
     versions = accelize_drm.get_api_version()
     assert search(r'\d+\.\d+\.\d+', versions.version) is not None
-
-
-def test_authentication_token(accelize_drm, conf_json, cred_json, async_handler):
-    """Test authentication token behavior"""
-
-    driver = accelize_drm.pytest_fpga_driver[0]
-    async_cb = async_handler.create()
-    drm_manager = None
-
-    file_log_level = 3
-    file_log_type = 1
-    file_log_path = realpath("./drmlib-%d.log" % getpid())
-    if isfile(file_log_path):
-        remove(file_log_path)
-    assert not isfile(file_log_path)
-
-    try:
-        # Test when token is wrong
-        async_cb.reset()
-        conf_json.reset()
-        conf_json['settings']['log_file_verbosity'] = file_log_level
-        conf_json['settings']['log_file_path'] = file_log_path
-        conf_json['settings']['log_file_type'] = file_log_type
-        conf_json.save()
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        drm_manager.set(bad_oauth2_token=1)
-        assert drm_manager.get('token_string') == 'BAD_TOKEN'
-        assert drm_manager.get('token_validity') == 1000
-        with pytest.raises(accelize_drm.exceptions.DRMWSTimedOut) as excinfo:
-            drm_manager.activate()
-        assert search(r'Timeout on License request after \d+ attempts', str(excinfo.value))
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSTimedOut.error_code
-        async_cb.assert_NoError()
-        del drm_manager
-        assert wait_func_true(lambda: isfile(file_log_path), 10)
-        with open(file_log_path, 'rt') as f:
-            file_log_content = f.read()
-        assert search(r'\bAuthentication credentials were not provided\b', file_log_content)
-        print('Test when token is wrong: PASS')
-
-        # Test token validity after deactivate
-        async_cb.reset()
-        conf_json.reset()
-        cred_json.set_user('accelize_accelerator_test_02')
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        drm_manager.activate()
-        token_time_left = drm_manager.get('token_time_left')
-        if token_time_left < 15:
-            drm_manager.deactivate()
-            # Wait expiration of current oauth2 token before starting test
-            sleep(16)
-            drm_manager.activate()
-        token_validity = drm_manager.get('token_validity')
-        assert token_validity > 15
-        exp_token_string = drm_manager.get('token_string')
-        drm_manager.deactivate()
-        token_string = drm_manager.get('token_string')
-        assert token_string == exp_token_string
-        drm_manager.activate()
-        token_string = drm_manager.get('token_string')
-        assert token_string == exp_token_string
-        drm_manager.deactivate()
-        token_string = drm_manager.get('token_string')
-        assert token_string == exp_token_string
-        async_cb.assert_NoError()
-        print('Test token validity after deactivate: PASS')
-
-    finally:
-        if drm_manager:
-            drm_manager.deactivate()
-
-
-@pytest.mark.long_run
-@pytest.mark.hwtst
-def test_authentication_token_expiration(accelize_drm, conf_json, cred_json, async_handler):
-    """Test authentication token behavior"""
-
-    driver = accelize_drm.pytest_fpga_driver[0]
-    async_cb = async_handler.create()
-    async_cb.reset()
-    conf_json.reset()
-    cred_json.set_user('accelize_accelerator_test_02')
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    try:
-        drm_manager.activate()
-        token_string = drm_manager.get('token_string')
-        token_time_left = drm_manager.get('token_time_left')
-        sleep(token_time_left + 1)
-        assert drm_manager.get('token_string') != token_string
-    finally:
-
-            drm_manager.deactivate()
 
 
 @pytest.mark.long_run
@@ -946,54 +783,6 @@ def test_security_stop(accelize_drm, conf_json, cred_json, async_handler):
     session_id = drm_manager1.get('session_id')
     assert len(session_id) == 0
     async_cb.assert_NoError()
-
-
-@pytest.mark.endurance
-def test_authentication_expiration(accelize_drm, conf_json, cred_json, async_handler):
-    from random import sample
-    driver = accelize_drm.pytest_fpga_driver[0]
-    activators = accelize_drm.pytest_fpga_activators[0]
-    async_cb = async_handler.create()
-    cred_json.set_user('accelize_accelerator_test_02')
-
-    # Get test duration
-    try:
-        test_duration = accelize_drm.pytest_params['duration']
-    except:
-        test_duration = 14000
-        print('Warning: Missing argument "duration". Using default value %d' % test_duration)
-
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    activators[0].generate_coin(1000)
-    assert not drm_manager.get('license_status')
-    activators[0].autotest(is_activated=False)
-    drm_manager.activate()
-    try:
-        lic_duration = drm_manager.get('license_duration')
-        assert drm_manager.get('license_status')
-        activators[0].autotest(is_activated=True)
-        activators[0].check_coin(drm_manager.get('metered_ta'))
-        start = datetime.now()
-        while True:
-            assert drm_manager.get('license_status')
-            activators[0].generate_coin(1)
-            activators[0].check_coin(drm_manager.get('metered_data'))
-            seconds_left = test_duration - (datetime.now() - start).total_seconds()
-            print('Remaining time: %0.1fs  /  current coins=%d' % (seconds_left, activators[0].metering_data))
-            if seconds_left < 0:
-                break
-            sleep(60)
-    finally:
-        drm_manager.deactivate()
-        assert not drm_manager.get('license_status')
-        activators[0].autotest(is_activated=False)
-        print('Endurance test has completed')
 
 
 #@pytest.mark.skip(reason='TODO: fix a Python Segmentation Fault generated by latest versions of OS')

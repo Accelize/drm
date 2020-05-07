@@ -56,7 +56,7 @@ limitations under the License.
 
 #define FREQ_DETECTION_VERSION_EXPECTED	 0x60DC0DE0
 
-static const std::string DRM_SELF_TEST_ERROR_MESSAGE( "Please verify:\n"
+static const std::string DRM_SELF_TEST_ERROR_MESSAGE( "Could not access DRM Controller registers.\nPlease verify:\n"
                         "\t-The read/write callbacks implementation in the SW application: verify it uses the correct offset address of DRM Controller IP in the design address space.\n"
                         "\t-The DRM Controller IP instantiation in the FPGA design: verify the correctness of 16-bit address received by the AXI-Lite port of the DRM Controller." );
 
@@ -91,6 +91,13 @@ protected:
     enum class eLogFileType: uint8_t {NONE=0, BASIC, ROTATING};
     enum class eLicenseType: uint8_t {METERED, NODE_LOCKED, NONE};
     enum class eMailboxOffset: uint8_t {MB_LOCK_DRM=0, MB_CUSTOM_FIELD, MB_USER};
+    enum class eParamAccessMode: uint8_t {RW=0, RO, WO};
+
+    // Structure
+    typedef struct {
+        std::string      name;
+        eParamAccessMode access;
+    } TParamInfo;
 
     // Design constants
     const uint32_t SDK_COMPATIBLITY_LIMIT_MAJOR = 3;
@@ -113,6 +120,9 @@ protected:
 # else
     const char path_sep = '/';
 #endif
+
+    // HDK version
+    uint32_t mDrmVersion = 0;
 
     bool mSecurityStop = false;
 
@@ -176,6 +186,10 @@ protected:
     // Web service communication
     Json::Value mHeaderJsonRequest;
 
+    // Health/Asynchronous metering parameters
+    uint32_t mHealthPeriod;
+    uint32_t mHealthRetry;
+
     // thread to maintain license alive
     std::future<void> mThreadKeepAlive;
     std::mutex mThreadKeepAliveMtx;
@@ -193,7 +207,7 @@ protected:
 
     // User accessible parameters
     const std::map<ParameterKey, std::string> mParameterKeyMap = {
-    #   define PARAMETERKEY_ITEM(id) {id, #id},
+    #   define PARAMETERKEY_ITEM(id, access) {id, TParamInfo(#id, access)},
     #   include "accelize/drm/ParameterKey.def"
     #   undef PARAMETERKEY_ITEM
         {ParameterKeyCount, "ParameterKeyCount"}
@@ -399,6 +413,11 @@ protected:
 
     uint32_t getUserMailboxSize() const {
         uint32_t mbSize = getMailboxSize() - (uint32_t)eMailboxOffset::MB_USER;
+        auto drmMajor = ( mDrmVersion >> 16 ) & 0xFF;
+        if ( (drmMajor <= 3) && (mbSize >= 4) )
+            // Used to compensate the bug in the HDK that prevent any access to the highest addresses of the mailbox
+            mbSize -= 4;
+
         Debug( "User Mailbox size: {}", mbSize );
         return mbSize;
     }
@@ -565,16 +584,15 @@ protected:
     }
 
     // Check compatibility of the DRM Version with Algodone version
-    void checkHdkCompatibility() const {
-        uint32_t drmVersionNum;
+    void checkHdkCompatibility() {
         std::string drmVersionDot;
+
         std::string drmVersion = getDrmCtrlVersion();
+        mDrmVersion = DrmControllerLibrary::DrmControllerDataConverter::hexStringToBinary( drmVersion )[0];
+        drmVersionDot = DrmControllerLibrary::DrmControllerDataConverter::binaryToVersionString( mDrmVersion );
 
-        drmVersionNum = DrmControllerLibrary::DrmControllerDataConverter::hexStringToBinary( drmVersion )[0];
-        drmVersionDot = DrmControllerLibrary::DrmControllerDataConverter::binaryToVersionString( drmVersionNum );
-
-        auto drmMajor = ( drmVersionNum >> 16 ) & 0xFF;
-        auto drmMinor = ( drmVersionNum >> 8  ) & 0xFF;
+        auto drmMajor = ( mDrmVersion >> 16 ) & 0xFF;
+        auto drmMinor = ( mDrmVersion >> 8  ) & 0xFF;
 
         if ( drmMajor < HDK_COMPATIBLITY_LIMIT_MAJOR ) {
             Throw( DRM_CtlrError,
@@ -595,11 +613,11 @@ protected:
         unsigned int reg;
         for(unsigned int i=0; i<=5; i++) {
             if ( writeDrmRegister( "DrmPageRegister", i ) != 0 )
-                Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not write DRM page register\n" + DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
+                Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not write DRM page register\n{}", DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
             if ( readDrmRegister( "DrmPageRegister", reg ) != 0 )
-                Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not read DRM page register\n" + DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
+                Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not read DRM page register\n{}", DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
             if ( reg != i ) {
-                Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not switch DRM register page.\n" + DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
+                Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not switch DRM register page.\n{}", DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
             }
         }
         Debug( "DRM Communication Self-Test 1 succeeded" );
@@ -615,7 +633,7 @@ protected:
         // Check mailbox size
         if ( mbSize >= 0x10000 ) {
             Debug( "DRM Communication Self-Test 2 failed: bad size {}", mbSize );
-            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Could not access DRM Controller registers.\n" + DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
+            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Unexpected mailbox size ({} > 0x10000).\n{}", mbSize, DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
         }
         Debug( "DRM Communication Self-Test 2: test size of mailbox passed" );
 
@@ -631,7 +649,7 @@ protected:
         }
         if ( badData.size() ) {
             Debug( "DRM Communication Self-Test 2 failed: writing zeros!\n" + badData );
-            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Could not access DRM Controller registers.\n" + DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
+            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: all 0 test failed.\n{}", DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
         }
         Debug( "DRM Communication Self-Test 2: all 0 test passed" );
 
@@ -648,7 +666,7 @@ protected:
         }
         if ( badData.size() ) {
             Debug( "DRM Communication Self-Test 2 failed: writing ones!\n" + badData );
-            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Could not access DRM Controller registers.\n" + DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
+            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: all 1 test failed.\n{}", DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
         }
         Debug( "DRM Communication Self-Test 2: all 1 test passed" );
 
@@ -666,7 +684,7 @@ protected:
         }
         if ( badData.size() ) {
             Debug( "DRM Communication Self-Test 2 failed: writing randoms!\n" + badData );
-            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Could not access DRM Controller registers.\n" + DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
+            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: random test failed.\n{}", DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
         }
         Debug( "DRM Communication Self-Test 2: random test passed" );
 
@@ -699,7 +717,7 @@ protected:
             std::string err_msg(e.what());
             if ( err_msg.find( "Unable to select a register strategy that is compatible with the DRM Controller" )
                     != std::string::npos )
-                Throw( DRM_CtlrError, "Unable to find DRM Controller registers.\n" + DRM_SELF_TEST_ERROR_MESSAGE );
+                Throw( DRM_CtlrError, "Unable to find DRM Controller registers.\n{}", DRM_SELF_TEST_ERROR_MESSAGE );
             Throw( DRM_CtlrError, "Failed to initialize DRM Controller: {}", e.what() );
         }
         Debug( "DRM Controller SDK is initialized" );
@@ -1434,8 +1452,8 @@ protected:
         }
 
         mThreadKeepAlive = std::async( std::launch::async, [ this ]() {
+            Debug( "Started background thread which maintains licensing" );
             try {
-                Debug( "Started background thread which maintains licensing" );
 
                 /// Detecting DRM controller frequency if needed
                 if ( !mIsFreqDetectionMethod1 )
@@ -1505,15 +1523,14 @@ protected:
             return;
         }
 
-        Debug( "Starting background thread which maintains licensing" );
-
         mThreadAsyncMetering = std::async( std::launch::async, [ this ]() {
+            Debug( "Starting background thread which collects metering data" );
             try {
-                /// Starting license request loop
+                /// Starting async metering post loop
                 while( 1 ) {
 
                     // Check DRM licensing queue
-                    if ( !isReadyForNewLicense() ) {
+                    if ( !is() ) {
                         // DRM licensing queue is full, wait until current license expires
                         uint32_t licenseTimeLeft = getCurrentLicenseTimeLeft();
                         TClock::duration wait_duration = std::chrono::seconds( licenseTimeLeft + 1 );
@@ -1551,6 +1568,7 @@ protected:
                 Error( e.what() );
                 f_asynch_error( std::string( e.what() ) );
             }
+            Debug( "Exiting background thread which collects metering data" );
         });
     }
 
@@ -1569,7 +1587,7 @@ protected:
         Debug( "Background thread stopped" );
         {
             std::lock_guard<std::mutex> lock( mThreadKeepAliveMtx );
-            Debug( "Stop flag of thread is reset" );
+            Debug( "Stop flag of thread is cleared" );
             mThreadKeepAliveExit = false;
         }
     }
@@ -1652,14 +1670,14 @@ protected:
 
     ParameterKey findParameterKey( const std::string& key_string ) const {
         for ( auto const& it : mParameterKeyMap ) {
-            if ( key_string == it.second ) {
+            if ( key_string == it.second.name ) {
                 return it.first;
             }
         }
         Throw( DRM_BadArg, "Cannot find parameter: {}", key_string );
     }
 
-    std::string findParameterString( const ParameterKey key_id ) const {
+    TParamInfo findParameterString( const ParameterKey key_id ) const {
         std::map<ParameterKey, std::string>::const_iterator it;
         it = mParameterKeyMap.find( key_id );
         if ( it == mParameterKeyMap.end() )
@@ -1671,7 +1689,7 @@ protected:
         Json::Value node;
         for( int i=0; i<ParameterKey::ParameterKeyCount; i++ ) {
             ParameterKey e = static_cast<ParameterKey>( i );
-            std::string keyStr = findParameterString( e );
+            std::string keyStr = findParameterString( e ).name;
             node.append( keyStr );
         }
         return node;
@@ -1681,7 +1699,7 @@ protected:
         Json::Value node;
         for( int i=0; i<ParameterKey::dump_all; i++ ) {
             ParameterKey e = static_cast<ParameterKey>( i );
-            std::string keyStr = findParameterString( e );
+            std::string keyStr = findParameterString( e ).name;
             node[ keyStr ] = Json::nullValue;
         }
         get( node );
@@ -1759,6 +1777,7 @@ public:
                 startSession();
             }
             startLicenseContinuityThread();
+            startMeteringContinuityThread();
         CATCH_AND_THROW
     }
 

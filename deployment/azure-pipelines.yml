@@ -72,6 +72,7 @@ stages:
         meteringServer: dev
 
     jobs:
+
       - template: runTestOnEc2.yml
         parameters:
           instance_type: 'f1.4xlarge'
@@ -80,6 +81,7 @@ stages:
             tox_extra_option: '-k "not test_abi_compliance"'
           - os_distrib: 'ubuntu_18_04'
             tox_extra_option: ''
+            dependsOn: 'centos_7'
 
   - stage: release
     displayName: Release
@@ -123,12 +125,12 @@ stages:
             Ubuntu LTS 18.04:
               osName: ubuntu
               osVersion: "18.04"
+            Ubuntu LTS 20.04:
+              osName: ubuntu
+              osVersion:  "20.04"
             Ubuntu 19.10:
               osName: ubuntu
               osVersion:  "19.10"
-            Ubuntu 20.04:
-              osName: ubuntu
-              osVersion:  "20.04"
 
         variables:
           # Docker commands shortcuts
@@ -256,7 +258,6 @@ stages:
                 # Initialize environment
                 - checkout: self
                   fetchDepth: 1
-                  submodules: false
 
                 - task: UsePythonVersion@0
                   inputs:
@@ -367,7 +368,7 @@ stages:
                     action: create
                     target: $(Build.SourceVersion)
                     tagSource: gitTag
-                    tagPattern: v*
+                    tagPattern: v.*
                     isPreRelease: contains($(libraryVersion.version), '-')
                     releaseNotesSource: inline
                     releaseNotesInline: |
