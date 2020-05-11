@@ -14,57 +14,6 @@ from datetime import datetime, timedelta
 from tests.conftest import wait_func_true
 
 
-LOG_FORMAT_SHORT = "[%^%=8l%$] %-6t, %v"
-LOG_FORMAT_LONG = "%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v"
-
-_PARAM_LIST = ['license_type',
-               'license_duration',
-               'num_activators',
-               'session_id',
-               'session_status',
-               'license_status',
-               'metered_data',
-               'nodelocked_request_file',
-               'drm_frequency',
-               'drm_license_type',
-               'product_info',
-               'mailbox_size',
-               'token_string',
-               'token_validity',
-               'token_time_left',
-               'log_verbosity',
-               'log_format',
-               'log_file_verbosity',
-               'log_file_format',
-               'log_file_path',
-               'log_file_type',
-               'log_file_rotating_size',
-               'log_file_rotating_num',
-               'bypass_frequency_detection',
-               'frequency_detection_method',
-               'frequency_detection_threshold',
-               'frequency_detection_period',
-               'custom_field',
-               'mailbox_data',
-               'ws_retry_period_long',
-               'ws_retry_period_short',
-               'ws_request_timeout',
-               'log_message_level',
-               'list_all',
-               'dump_all',
-               'page_ctrlreg',
-               'page_vlnvfile',
-               'page_licfile',
-               'page_tracefile',
-               'page_meteringfile',
-               'page_mailbox',
-               'hw_report',
-               'trigger_async_callback',
-               'bad_product_id',
-               'bad_oauth2_token',
-               'log_message']
-
-
 @pytest.mark.minimum
 def test_get_version(accelize_drm):
     """Test the versions of the DRM Lib and its dependencies are well displayed"""

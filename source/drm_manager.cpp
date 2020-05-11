@@ -91,18 +91,8 @@ protected:
     enum class eLogFileType: uint8_t {NONE=0, BASIC, ROTATING};
     enum class eLicenseType: uint8_t {METERED, NODE_LOCKED, NONE};
     enum class eMailboxOffset: uint8_t {MB_LOCK_DRM=0, MB_CUSTOM_FIELD, MB_USER};
-    enum class eParamAccessMode: uint8_t {RW=0, RO, WO};
-
-    // Structure
-    typedef struct {
-        std::string      name;
-        eParamAccessMode access;
-    } TParamInfo;
 
     // Design constants
-    const uint32_t SDK_COMPATIBLITY_LIMIT_MAJOR = 3;
-    const uint32_t SDK_COMPATIBLITY_LIMIT_MINOR = 1;
-
     const uint32_t HDK_COMPATIBLITY_LIMIT_MAJOR = 3;
     const uint32_t HDK_COMPATIBLITY_LIMIT_MINOR = 1;
 
@@ -207,7 +197,7 @@ protected:
 
     // User accessible parameters
     const std::map<ParameterKey, std::string> mParameterKeyMap = {
-    #   define PARAMETERKEY_ITEM(id, access) {id, TParamInfo(#id, access)},
+    #   define PARAMETERKEY_ITEM(id) {id, #id},
     #   include "accelize/drm/ParameterKey.def"
     #   undef PARAMETERKEY_ITEM
         {ParameterKeyCount, "ParameterKeyCount"}
@@ -244,6 +234,9 @@ protected:
 
         mFrequencyInit = 0;
         mFrequencyCurr = 0;
+
+        mHealthPeriod = 0;  // Disabled by default
+        mHealthRetry = 0;   // Disabled by default
 
         mDebugMessageLevel = spdlog::level::trace;
 
@@ -408,6 +401,7 @@ protected:
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
         checkDRMCtlrRet( getDrmController().writeMailBoxFilePageRegister() );
         checkDRMCtlrRet( getDrmController().readMailboxFileSizeRegister( roSize, rwSize ) );
+        Debug2( "Full mailbox size: {}", rwSize );
         return rwSize;
     }
 
@@ -1670,14 +1664,14 @@ protected:
 
     ParameterKey findParameterKey( const std::string& key_string ) const {
         for ( auto const& it : mParameterKeyMap ) {
-            if ( key_string == it.second.name ) {
+            if ( key_string == it.second ) {
                 return it.first;
             }
         }
         Throw( DRM_BadArg, "Cannot find parameter: {}", key_string );
     }
 
-    TParamInfo findParameterString( const ParameterKey key_id ) const {
+    std::string findParameterString( const ParameterKey key_id ) const {
         std::map<ParameterKey, std::string>::const_iterator it;
         it = mParameterKeyMap.find( key_id );
         if ( it == mParameterKeyMap.end() )
@@ -1689,7 +1683,7 @@ protected:
         Json::Value node;
         for( int i=0; i<ParameterKey::ParameterKeyCount; i++ ) {
             ParameterKey e = static_cast<ParameterKey>( i );
-            std::string keyStr = findParameterString( e ).name;
+            std::string keyStr = findParameterString( e );
             node.append( keyStr );
         }
         return node;
@@ -1699,7 +1693,7 @@ protected:
         Json::Value node;
         for( int i=0; i<ParameterKey::dump_all; i++ ) {
             ParameterKey e = static_cast<ParameterKey>( i );
-            std::string keyStr = findParameterString( e ).name;
+            std::string keyStr = findParameterString( e );
             node[ keyStr ] = Json::nullValue;
         }
         get( node );
@@ -2080,6 +2074,23 @@ public:
                         json_value[key_str] = list;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                list.toStyledString() );
+                        break;
+                    }
+                    case ParameterKey::hdk_compatibility: {
+                        std::string hdk_limit = fmt::format( "{}.{}.x", HDK_COMPATIBLITY_LIMIT_MAJOR, HDK_COMPATIBLITY_LIMIT_MINOR );
+                        json_value[key_str] = hdk_limit;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                               hdk_limit );
+                        break;
+                    }
+                    case ParameterKey::health_period: {
+                        json_value[key_str] = mHealthPeriod;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id, mHealthPeriod );
+                        break;
+                    }
+                    case ParameterKey::health_retry: {
+                        json_value[key_str] = mHealthRetry;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id, mHealthRetry );
                         break;
                     }
                     case ParameterKey::ParameterKeyCount: {
