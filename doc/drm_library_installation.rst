@@ -368,11 +368,18 @@ Run following commands to install requirements:
 
     sudo yum install -y rpm-build
 
-Once dependencies are installed, simply run the previous section build and
-install commands but replace "`sudo make install`" by:
+Once dependencies are installed, simply run the following section:
 
 .. code-block:: bash
 
+    git clone https://github.com/Accelize/drmlib.git --recursive --depth 1
+    mkdir -p drmlib/build
+    cd drmlib/build
+
+    # The "-DPKG=ON" option is required to build the package
+    cmake -DPYTHON3=ON -DPKG=ON ..
+
+    make -j
     make package
 
 Packages will be generated in the `drmlib/build/packages` directory.
