@@ -176,8 +176,8 @@ protected:
     Json::Value mHeaderJsonRequest;
 
     // Health/Asynchronous metering parameters
-    uint32_t mHealthPeriod;
-    uint32_t mHealthRetry;
+    uint32_t mHealthPeriod = 300;
+    uint32_t mHealthRetry = 10;
 
     // thread to maintain license alive
     uint32_t mLicenseCounter = 0;
@@ -237,8 +237,6 @@ protected:
         mFrequencyCurr = 0;
 
         mAsyncMeteringCounter = 0;
-        mHealthPeriod = 0;  // Disabled by default
-        mHealthRetry = 0;   // Disabled by default
 
         mDebugMessageLevel = spdlog::level::trace;
 
@@ -778,14 +776,14 @@ protected:
         return drmVersion;
     }
 
-    void checkSessionIDFromWS( const Json::Value license_json ) {
+    void checkSessionIDFromWS( const Json::Value license_json ) const {
         std::string ws_sessionID = license_json["metering"]["sessionId"].asString();
         if ( !mSessionID.empty() && ( mSessionID != ws_sessionID ) ) {
             Warning( "Session ID mismatch: WebService returns '{}' but '{}' is expected", ws_sessionID, mSessionID ); //LCOV_EXCL_LINE
         }
     }
 
-    void checkSessionIDFromDRM( const Json::Value license_json ) {
+    void checkSessionIDFromDRM( const Json::Value license_json ) const {
         std::string ws_sessionID = license_json["sessionId"].asString();
         if ( !mSessionID.empty() && ( mSessionID != ws_sessionID ) ) {
             Warning( "Session ID mismatch: DRM IP returns '{}' but '{}' is expected", ws_sessionID, mSessionID ); //LCOV_EXCL_LINE
@@ -874,13 +872,12 @@ protected:
         return json_output;
     }
 
-    Json::Value getMeteringStart() {
+    Json::Value getMeteringStart() const {
         Json::Value json_request( mHeaderJsonRequest );
         uint32_t numberOfDetectedIps;
         std::string saasChallenge;
         std::vector<std::string> meteringFile;
 
-        mLicenseCounter = 0;
         Debug( "Build license request #{} to create new session", mLicenseCounter );
 
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
@@ -896,7 +893,7 @@ protected:
         return json_request;
     }
 
-    Json::Value getMeteringWait() {
+    Json::Value getMeteringWait() const {
         Json::Value json_request( mHeaderJsonRequest );
         uint32_t numberOfDetectedIps;
         std::string saasChallenge;
@@ -920,7 +917,7 @@ protected:
         return json_request;
     }
 
-    Json::Value getMeteringStop() {
+    Json::Value getMeteringStop() const {
         Json::Value json_request( mHeaderJsonRequest );
         uint32_t numberOfDetectedIps;
         std::string saasChallenge;
@@ -1563,6 +1560,7 @@ protected:
         mThreadAsyncMetering = std::async( std::launch::async, [ this ]() {
             Debug( "Starting background thread which collects metering data" );
             try {
+                mAsyncMeteringCounter = 0;
                 TClock::time_point wakeup_time = TClock::now();
                 /// Starting async metering post loop
                 while( 1 ) {
@@ -1628,6 +1626,8 @@ protected:
 
             if ( !isReadyForNewLicense() )
                 Unreachable( "To start a new session the DRM Controller shall be ready to accept a new license" ); //LCOV_EXCL_LINE
+
+            mLicenseCounter = 0;
 
             // Build start request message for new license
             Json::Value request_json = getMeteringStart();
