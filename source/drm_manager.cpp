@@ -155,7 +155,7 @@ protected:
     eLicenseType mLicenseType = eLicenseType::METERED;
     uint32_t mLicenseCounter = 0;
     uint32_t mLicenseDuration = 0;        ///< Time duration in seconds of the license
-    uint32_t mLicenseWaitPeriod = 5;      ///< Time in seconds to wait for the load of a new license
+    uint32_t mLicenseWaitPeriod = 5;    ///< Time in seconds to wait for the load of a new license
 
     // To protect access to the metering data (to securize the segment ID check in HW)
     mutable std::mutex mMeteringAccessMutex;
@@ -776,6 +776,20 @@ protected:
         return drmVersion;
     }
 
+    void checkSessionIDFromWS( const Json::Value license_json ) {
+        std::string ws_sessionID = license_json["metering"]["sessionId"].asString();
+        if ( !mSessionID.empty() && ( mSessionID != ws_sessionID ) ) {
+            Warning( "Session ID mismatch: WebService returns '{}' but '{}' is expected", ws_sessionID, mSessionID ); //LCOV_EXCL_LINE
+        }
+    }
+
+    void checkSessionIDFromDRM( const Json::Value license_json ) {
+        std::string ws_sessionID = license_json["sessionId"].asString();
+        if ( !mSessionID.empty() && ( mSessionID != ws_sessionID ) ) {
+            Warning( "Session ID mismatch: DRM IP returns '{}' but '{}' is expected", ws_sessionID, mSessionID ); //LCOV_EXCL_LINE
+        }
+    }
+
     void getNumActivator( uint32_t& value ) const {
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
         checkDRMCtlrRet( getDrmController().writeRegistersPageRegister() );
@@ -895,6 +909,7 @@ protected:
         checkDRMCtlrRet( getDrmController().synchronousExtractMeteringFile( numberOfDetectedIps, saasChallenge, meteringFile ) );
         json_request["saasChallenge"] = saasChallenge;
         json_request["sessionId"] = meteringFile[0].substr( 0, 16 );
+        checkSessionIDFromDRM( json_request );
 
         if ( !isNodeLockedMode() )
             json_request["drm_frequency"] = mFrequencyCurr;
@@ -917,6 +932,7 @@ protected:
                 numberOfDetectedIps, saasChallenge, meteringFile ) );
         json_request["saasChallenge"] = saasChallenge;
         json_request["sessionId"] = meteringFile[0].substr( 0, 16 );
+        checkSessionIDFromDRM( json_request );
 
         if ( !isNodeLockedMode() )
             json_request["drm_frequency"] = mFrequencyCurr;
@@ -1125,6 +1141,9 @@ protected:
                 /// Save new Session ID
                 mSessionID = JVgetRequired( metering_node, "sessionId", Json::stringValue ).asString();
                 Debug( "Saving session ID: {}", mSessionID );
+            } else {
+                /// Verify Session ID
+                checkSessionIDFromWS( license_json );
             }
 
             // Extract license key and license timer from web service response
@@ -1647,6 +1666,7 @@ protected:
 
         // Send last metering information
         Json::Value license_json = getLicense( request_json, mWSRequestTimeout, mWSRetryPeriodShort );
+        checkSessionIDFromWS( license_json );
         Debug( "Session ID {} stopped and last metering data uploaded", mSessionID );
 
         /// Clear Session IS
