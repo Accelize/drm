@@ -94,7 +94,16 @@ To install the Accelize repository, run the following commands:
     sudo dnf config-manager --add-repo https://accelize.s3.amazonaws.com/rpm/accelize_stable.repo
 
 .. code-block:: bash
-    :caption: On RHEL 7, CentOS 7
+    :caption: On RHEL 7
+
+    # Ensure that config manager is installed
+    sudo yum install -y yum-utils
+
+     # Install Accelize repository:
+    sudo yum-config-manager --add-repo https://accelize.s3.amazonaws.com/rpm/accelize_stable_rhel7.repo
+
+.. code-block:: bash
+    :caption: On CentOS 7
 
     # Ensure that config manager is installed
     sudo yum install -y yum-utils
@@ -125,7 +134,7 @@ Depending on your OS, use the following command to install the Python package:
     :caption: On RHEL 8, CentOS 8
 
     # Ensure EPEL repository is installed
-    sudo dnf install -y epel-release
+    sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 
     # Install package
     sudo dnf install -y python3-accelize-drm
@@ -134,7 +143,7 @@ Depending on your OS, use the following command to install the Python package:
     :caption: On RHEL 7, CentOS 7
 
     # Ensure EPEL repository is installed
-    sudo yum install -y epel-release
+    sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
     # Install package
     sudo yum install -y python3-accelize-drm
@@ -166,7 +175,7 @@ Run the following command:
     :caption: On RHEL 8, CentOS 8
 
     # Ensure EPEL repository is installed
-    sudo dnf install -y epel-release
+    sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 
     # Install package
     sudo dnf install -y libaccelize-drm
@@ -175,7 +184,7 @@ Run the following command:
     :caption: On RHEL 7, CentOS 7
 
     # Ensure EPEL repository is installed
-    sudo yum install -y epel-release
+    sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
     # Install package
     sudo yum install -y libaccelize-drm
@@ -203,7 +212,7 @@ Run the following command:
     :caption: On RHEL 8, CentOS 8
 
     # Ensure EPEL repository is installed
-    sudo dnf install -y epel-release
+    sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 
     # Install package
     sudo dnf install -y libaccelize-drm-devel
@@ -212,7 +221,7 @@ Run the following command:
     :caption: On RHEL 7, CentOS 7
 
     # Ensure EPEL repository is installed
-    sudo yum install -y epel-release
+    sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
     # Install package
     sudo yum install -y libaccelize-drm-devel
@@ -286,7 +295,7 @@ Run following commands to install all requirements:
     :caption: On RHEL 8, CentOS 8
 
     # Ensure EPEL repository is installed
-    sudo dnf install -y epel-release
+    sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 
     # Minimal requirements
     sudo dnf install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel python3-pip
@@ -301,7 +310,7 @@ Run following commands to install all requirements:
     :caption: On RHEL 7, CentOS 7
 
     # Ensure EPEL repository is installed
-    sudo yum install -y epel-release
+    sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
     # Minimal requirements
     sudo yum install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel python3-pip
