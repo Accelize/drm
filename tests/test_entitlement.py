@@ -34,7 +34,7 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
     drmLicType = drm_manager.get('drm_license_type')
     with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
         drm_manager.activate()
-    assert "License Web Service error 400" in str(excinfo.value)
+    assert "Metering Web Service error 400" in str(excinfo.value)
     assert "DRM WS request failed" in str(excinfo.value)
     assert search(r'\\"No Entitlement\\" with .+ for \S+_test_01@accelize.com', str(excinfo.value))
     assert "User account has no entitlement. Purchase additional licenses via your portal" in str(excinfo.value)
@@ -57,7 +57,7 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
         assert drm_manager.get('drm_license_type') == drmLicType
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
-        assert "License Web Service error 400" in str(excinfo.value)
+        assert "Metering Web Service error 400" in str(excinfo.value)
         assert "DRM WS request failed" in str(excinfo.value)
         assert search(r'\\"No Entitlement\\" with .+ for \S+_test_01@accelize.com', str(excinfo.value))
         assert "User account has no entitlement. Purchase additional licenses via your portal" in str(excinfo.value)
@@ -101,7 +101,7 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
         assert drm_manager.get('drm_license_type') == 'Floating/Metering'
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
-        assert "License Web Service error 400" in str(excinfo.value)
+        assert "Metering Web Service error 400" in str(excinfo.value)
         assert "DRM WS request failed" in str(excinfo.value)
         assert search(r'\\"No Entitlement\\" with .+ for \S+_test_02@accelize.com', str(excinfo.value))
         assert 'No valid NodeLocked entitlement found for your account' in str(excinfo.value)
@@ -189,7 +189,7 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
         assert drm_manager.get('drm_license_type') == 'Floating/Metering'
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
-        assert "License Web Service error 400" in str(excinfo.value)
+        assert "Metering Web Service error 400" in str(excinfo.value)
         assert "DRM WS request failed" in str(excinfo.value)
         assert search(r'\\"No Entitlement\\" with .+ for \S+_test_04@accelize.com', str(excinfo.value))
         assert 'No valid NodeLocked entitlement found for your account' in str(excinfo.value)

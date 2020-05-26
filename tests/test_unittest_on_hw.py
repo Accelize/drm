@@ -639,7 +639,7 @@ def test_retry_function(accelize_drm, conf_json, cred_json, async_handler):
             drm_manager1.activate()
         end = datetime.now()
         assert (end - start).total_seconds() < 1
-        assert 'License Web Service error 470' in str(excinfo.value)
+        assert 'Metering Web Service error 470' in str(excinfo.value)
         assert 'DRM WS request failed' in str(excinfo.value)
         assert search(r'\\"Entitlement Limit Reached\\" with .+ for \S+_test_04@accelize.com', str(excinfo.value)) is not None
         assert 'You have reached the maximum quantity of 1 seat(s) for floating entitlement' in str(excinfo.value)

@@ -31,7 +31,7 @@ def test_uncompatibilities(accelize_drm, conf_json, cred_json, async_handler):
                 driver.write_register_callback,
                 async_cb.callback
             )
-            HDK_Limit = float(drm_manager.get('hdk_compatiblity'))
+            HDK_Limit = float(drm_manager.get('hdk_compatibility'))
         except:
             HDK_Limit = 3.1
 
@@ -99,7 +99,7 @@ def test_hdk_compatibility(accelize_drm, conf_json, cred_json, async_handler):
                 driver.write_register_callback,
                 async_cb.callback
             )
-            HDK_Limit = float(drm_manager.get('hdk_compatiblity'))
+            HDK_Limit = float(drm_manager.get('hdk_compatibility'))
         except:
             HDK_Limit = 3.1
 

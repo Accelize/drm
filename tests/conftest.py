@@ -2,7 +2,7 @@
 """Configure Pytest"""
 from copy import deepcopy
 from json import dump, load
-from os import environ, getpid, listdir, remove, makedirs, getcwd
+from os import environ, getpid, listdir, remove, makedirs, getcwd, urandom
 from os.path import basename, dirname, expanduser, isdir, isfile, join, \
     realpath, splitext
 from random import randint
@@ -989,22 +989,24 @@ class EndpointAction:
 
 
 class FlaskAppWrapper:
-    def __init__(self, name=__name__):
-        import flask
-        self.app = flask.Flask(name)
+    def __init__(self, name=__name__, debug=False):
+        from flask import Flask, session
+        self.app = Flask(name)
+        self.app.config['SECRET_KEY'] = 'super secret'
+        self.debug = debug
         environ['WERKZEUG_RUN_MAIN'] = 'true'
         environ['FLASK_ENV'] = 'development'
 
-    def run(self, host='127.0.0.1', port=5000, debug=False):
+    def run(self, host='127.0.0.1', port=5000):
         self.host = host
         self.port = port
-        self.app.run(host=self.host, port=self.port, debug=debug)
+        self.app.run(host=self.host, port=self.port, debug=self.debug)
 
     def add_endpoint(self, rule=None, endpoint=None, handler=None, **kwargs):
         self.app.add_url_rule(rule, endpoint, EndpointAction(handler), **kwargs)
 
 
 @pytest.fixture
-def fake_server():
+def fake_server(accelize_drm):
     name = "fake_server_%d" % randint(1,0xFFFFFFFF)
-    return FlaskAppWrapper(name)
+    return FlaskAppWrapper(name, accelize_drm.pytest_proxy_debug)

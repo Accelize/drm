@@ -59,7 +59,7 @@ _PARAM_LIST = ('license_type',
                'bad_product_id',
                'bad_oauth2_token',
                'log_message',
-               'hdk_compatiblity',
+               'hdk_compatibility',
                'health_period',
                'health_retry'
 )
@@ -838,7 +838,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     async_cb.assert_NoError()
     print("Test parameter 'log_message': PASS")
 
-    # Test parameter: hdk_compatiblity
+    # Test parameter: hdk_compatibility
     async_cb.reset()
     conf_json.reset()
     drm_manager = accelize_drm.DrmManager(
@@ -848,10 +848,10 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         driver.write_register_callback,
         async_cb.callback
     )
-    hdk_limit = float(drm_manager.get('hdk_compatiblity'))
+    hdk_limit = float(drm_manager.get('hdk_compatibility'))
     assert match(r'\d+\.\d\.x', hdk_limit)
     async_cb.assert_NoError()
-    print("Test parameter 'hdk_compatiblity': PASS")
+    print("Test parameter 'hdk_compatibility': PASS")
 
     # Test parameter: health_period
     async_cb.reset()

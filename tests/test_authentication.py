@@ -3,73 +3,27 @@
 Test node-locked behavior of DRM Library.
 """
 import pytest
-import gc
 from glob import glob
 from os import remove, getpid
 from os.path import getsize, isfile, dirname, join, realpath
 from re import match, search, finditer, MULTILINE, IGNORECASE
 from time import sleep, time
-from json import loads
+from json import loads, dumps
 from datetime import datetime, timedelta
+from random import randint
+from multiprocessing import Process
+import requests
+
 from tests.conftest import wait_func_true
 
 
-LOG_FORMAT_SHORT = "[%^%=8l%$] %-6t, %v"
-LOG_FORMAT_LONG = "%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v"
+PROXY_HOST = "127.0.0.1"
 
-_PARAM_LIST = ['license_type',
-               'license_duration',
-               'num_activators',
-               'session_id',
-               'session_status',
-               'license_status',
-               'metered_data',
-               'nodelocked_request_file',
-               'drm_frequency',
-               'drm_license_type',
-               'product_info',
-               'mailbox_size',
-               'token_string',
-               'token_validity',
-               'token_time_left',
-               'log_verbosity',
-               'log_format',
-               'log_file_verbosity',
-               'log_file_format',
-               'log_file_path',
-               'log_file_type',
-               'log_file_rotating_size',
-               'log_file_rotating_num',
-               'bypass_frequency_detection',
-               'frequency_detection_method',
-               'frequency_detection_threshold',
-               'frequency_detection_period',
-               'custom_field',
-               'mailbox_data',
-               'ws_retry_period_long',
-               'ws_retry_period_short',
-               'ws_request_timeout',
-               'log_message_level',
-               'list_all',
-               'dump_all',
-               'page_ctrlreg',
-               'page_vlnvfile',
-               'page_licfile',
-               'page_tracefile',
-               'page_meteringfile',
-               'page_mailbox',
-               'hw_report',
-               'trigger_async_callback',
-               'bad_oauth2_token',
-               'log_message']
-
-
-def test_authentication_token(accelize_drm, conf_json, cred_json, async_handler):
-    """Test authentication token behavior"""
+def test_authentication_bad_token(accelize_drm, conf_json, cred_json, async_handler):
+    """Test when a bad authentication token is used"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-    drm_manager = None
 
     file_log_level = 3
     file_log_type = 1
@@ -78,21 +32,20 @@ def test_authentication_token(accelize_drm, conf_json, cred_json, async_handler)
         remove(file_log_path)
     assert not isfile(file_log_path)
 
+    async_cb.reset()
+    conf_json.reset()
+    conf_json['settings']['log_file_verbosity'] = file_log_level
+    conf_json['settings']['log_file_path'] = file_log_path
+    conf_json['settings']['log_file_type'] = file_log_type
+    conf_json.save()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
     try:
-        # Test when token is wrong
-        async_cb.reset()
-        conf_json.reset()
-        conf_json['settings']['log_file_verbosity'] = file_log_level
-        conf_json['settings']['log_file_path'] = file_log_path
-        conf_json['settings']['log_file_type'] = file_log_type
-        conf_json.save()
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
         drm_manager.set(bad_oauth2_token=1)
         assert drm_manager.get('token_string') == 'BAD_TOKEN'
         assert drm_manager.get('token_validity') == 1000
@@ -102,26 +55,44 @@ def test_authentication_token(accelize_drm, conf_json, cred_json, async_handler)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSTimedOut.error_code
         async_cb.assert_NoError()
         del drm_manager
+        drm_manager = None
         assert wait_func_true(lambda: isfile(file_log_path), 10)
         with open(file_log_path, 'rt') as f:
             file_log_content = f.read()
         assert search(r'\bAuthentication credentials were not provided\b', file_log_content)
-        print('Test when token is wrong: PASS')
 
-        # Test token validity after deactivate
-        async_cb.reset()
-        conf_json.reset()
-        cred_json.set_user('accelize_accelerator_test_02')
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
+    finally:
+        if drm_manager:
+            drm_manager.deactivate()
+
+
+def test_authentication_validity_after_deactivation(accelize_drm, conf_json, cred_json, async_handler):
+    """Test authentication token is still valid after deactivate"""
+
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+
+    file_log_level = 3
+    file_log_type = 1
+    file_log_path = realpath("./drmlib-%d.log" % getpid())
+    if isfile(file_log_path):
+        remove(file_log_path)
+    assert not isfile(file_log_path)
+
+    async_cb.reset()
+    conf_json.reset()
+    cred_json.set_user('accelize_accelerator_test_02')
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    try:
         drm_manager.activate()
         token_time_left = drm_manager.get('token_time_left')
-        if token_time_left < 15:
+        if token_time_left <= 15:
             drm_manager.deactivate()
             # Wait expiration of current oauth2 token before starting test
             sleep(16)
@@ -140,16 +111,14 @@ def test_authentication_token(accelize_drm, conf_json, cred_json, async_handler)
         assert token_string == exp_token_string
         async_cb.assert_NoError()
         print('Test token validity after deactivate: PASS')
-
     finally:
-        if drm_manager:
-            drm_manager.deactivate()
+        drm_manager.deactivate()
 
 
 @pytest.mark.long_run
 @pytest.mark.hwtst
-def test_authentication_token_expiration(accelize_drm, conf_json, cred_json, async_handler):
-    """Test authentication token behavior"""
+def test_authentication_token_renewal(accelize_drm, conf_json, cred_json, async_handler):
+    """Test a different authentication token is given after expiration"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -170,12 +139,12 @@ def test_authentication_token_expiration(accelize_drm, conf_json, cred_json, asy
         sleep(token_time_left + 1)
         assert drm_manager.get('token_string') != token_string
     finally:
-
-            drm_manager.deactivate()
+        drm_manager.deactivate()
 
 
 @pytest.mark.endurance
-def test_authentication_expiration(accelize_drm, conf_json, cred_json, async_handler):
+def test_authentication_endurance(accelize_drm, conf_json, cred_json, async_handler):
+    """Test the continuity of service for a long period"""
     from random import sample
     driver = accelize_drm.pytest_fpga_driver[0]
     activators = accelize_drm.pytest_fpga_activators[0]

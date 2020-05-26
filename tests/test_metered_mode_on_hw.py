@@ -36,6 +36,7 @@ def test_metered_start_stop_in_raw(accelize_drm, conf_json, cred_json, async_han
         activators[0].generate_coin(1000)
         activators[0].check_coin(drm_manager.get('metered_data'))
         drm_manager.activate()
+        assert drm_manager.get('metered_data') == 0
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
@@ -478,7 +479,7 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         assert not drm_manager.get('license_status')
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
-        assert 'License Web Service error 400' in str(excinfo.value)
+        assert 'Metering Web Service error 400' in str(excinfo.value)
         assert 'DRM WS request failed' in str(excinfo.value)
         assert search(r'\\"Entitlement Limit Reached\\" with .+ for \S+_test_03@accelize.com', str(excinfo.value))
         assert 'You have reached the maximum quantity of 1000. usage_unit for metered entitlement (licensed)' in str(excinfo.value)
@@ -521,7 +522,7 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         activators.autotest(is_activated=False)
         # Verify asynchronous callback has been called
         assert async_cb.was_called
-        assert 'License Web Service error 400' in async_cb.message
+        assert 'Metering Web Service error 400' in async_cb.message
         assert 'DRM WS request failed' in async_cb.message
         assert search(r'\\"Entitlement Limit Reached\\" with .+ for \S+_test_03@accelize.com', async_cb.message)
         assert 'You have reached the maximum quantity of 1000. usage_unit for metered entitlement (licensed)' in async_cb.message

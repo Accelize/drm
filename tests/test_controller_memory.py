@@ -84,7 +84,7 @@ def test_mailbox_type_error(accelize_drm, conf_json, cred_json, async_handler):
 
 
 def test_configuration_file_empty_and_corrupted_product_id(accelize_drm, conf_json, cred_json, async_handler):
-    """Test errors when an incorrect product ID is requested to License Web Server"""
+    """Test errors when an incorrect product ID is requested to Web Server"""
 
     refdesign = accelize_drm.pytest_ref_designs
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -109,10 +109,10 @@ def test_configuration_file_empty_and_corrupted_product_id(accelize_drm, conf_js
         assert drm_manager.get('product_info') is None
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
-        assert 'License Web Service error 400' in str(excinfo.value)
+        assert 'Metering Web Service error 400' in str(excinfo.value)
         assert 'DRM WS request failed' in str(excinfo.value)
         assert search(r'\\"Unknown Product ID\\" for ', str(excinfo.value)) is not None
-        assert 'Product ID from license request is not set' in str(excinfo.value)
+        assert 'Product ID from request is not set' in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_NoError()
         print('Test Web Service when an empty product ID is provided: PASS')
