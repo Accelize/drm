@@ -21,7 +21,7 @@ def test_health_disabled(accelize_drm, conf_json, cred_json, async_handler, fake
     Test the asynchronous health feature can be disabled.
     """
     from random import randrange
-    from os.path import realpath
+    from os.path import realpath, isfile
     from tests.conftest import wait_func_true
 
     driver = accelize_drm.pytest_fpga_driver[0]
