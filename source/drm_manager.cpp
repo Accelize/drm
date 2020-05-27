@@ -174,8 +174,8 @@ protected:
     Json::Value mHeaderJsonRequest;
 
     // Health/Asynchronous metering parameters
-    uint32_t mHealthPeriod = 300;
-    uint32_t mHealthRetry = 10;
+    uint32_t mHealthPeriod;
+    uint32_t mHealthRetry;
 
     // thread to maintain license alive
     uint32_t mLicenseCounter = 0;
@@ -278,6 +278,9 @@ protected:
                 if ( mWSRequestTimeout == 0 )
                     Throw( DRM_BadArg, "ws_request_timeout must not be 0");
             }
+            mHealthRetry = mWSRequestTimeout;
+            mHealthPeriod = 0;
+
             // Customize logging configuration
             updateLog();
 

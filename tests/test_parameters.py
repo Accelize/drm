@@ -863,14 +863,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         driver.write_register_callback,
         async_cb.callback
     )
-    health_period = drm_manager.get('health_period')
-    assert health_period == 0
-    try:
-        drm_manager.activate()
-        health_period = drm_manager.get('health_period')
-        assert health_period != 0
-    finally:
-        drm_manager.deactivate()
+    assert drm_manager.get('health_period') == 0
     async_cb.assert_NoError()
     print("Test parameter 'health_period': PASS")
 
@@ -884,14 +877,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         driver.write_register_callback,
         async_cb.callback
     )
-    health_retry = drm_manager.get('health_retry')
-    assert health_retry == 0
-    try:
-        drm_manager.activate()
-        health_retry = drm_manager.get('health_retry')
-        assert health_retry != 0
-    finally:
-        drm_manager.deactivate()
+    assert drm_manager.get('health_retry') == drm_manager.get('ws_request_timeout')
     async_cb.assert_NoError()
     print("Test parameter 'health_retry': PASS")
 
