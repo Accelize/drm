@@ -949,7 +949,7 @@ protected:
             std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
             Debug( "Acquired metering access mutex from getMeteringData" );
 
-            Debug( "Build metering request #{}", mHealthCounter );
+            Debug( "Build health request #{}", mHealthCounter );
             {
                 std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
                 if ( isNodeLockedMode() || isLicenseActive() ) {
@@ -1547,7 +1547,7 @@ protected:
         }
 
         mThreadKeepAlive = std::async( std::launch::async, [ this ]() {
-            Debug( "Started background thread which maintains licensing" );
+            Debug( "Starting background thread which maintains licensing" );
             try {
 
                 /// Detecting DRM controller frequency if needed
@@ -1618,7 +1618,7 @@ protected:
         }
 
         mThreadHealth = std::async( std::launch::async, [ this ]() {
-            Debug( "Starting background thread which collects metering data" );
+            Debug( "Starting background thread which checks heath" );
             try {
                 mHealthCounter = 0;
                 /// Starting async metering post loop
@@ -1663,13 +1663,13 @@ protected:
                 Error( e.what() );
                 f_asynch_error( std::string( e.what() ) );
             }
-            Debug( "Exiting background thread which collects metering data" );
+            Debug( "Exiting background thread which checks health" );
         });
     }
 
     void stopThread() {
         if ( !mThreadKeepAlive.valid() ) {
-            Debug( "Background thread was not running" );
+            Debug( "Background threads were not running" );
             return;
         }
         {
@@ -1680,10 +1680,10 @@ protected:
         mThreadExitCondVar.notify_all();
         mThreadKeepAlive.get();     // Wait until the License thread ends
         mThreadHealth.get();     // Wait until the Health thread ends
-        Debug( "Background thread stopped" );
+        Debug( "Background threads stopped" );
         {
             std::lock_guard<std::mutex> lock( mThreadExitMtx );
-            Debug( "Stop flag of thread is cleared" );
+            Debug( "Stop flag of threads is cleared" );
             mThreadExit = false;
         }
     }
