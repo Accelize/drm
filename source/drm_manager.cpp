@@ -278,7 +278,7 @@ protected:
                 if ( mWSRequestTimeout == 0 )
                     Throw( DRM_BadArg, "ws_request_timeout must not be 0");
             }
-            mHealthRetry = mWSRequestTimeout;
+            mHealthRetry = mWSRetryPeriodShort;
             mHealthPeriod = 0;
 
             // Customize logging configuration
@@ -969,7 +969,7 @@ protected:
         // Finalize the request with the collected data
         json_request["meteringFile"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
         json_request["request"] = "health";
-        json_request["request_id"] = mHealthCounter;
+        json_request["health_id"] = mHealthCounter;
         return json_request;
     }
 
@@ -1244,16 +1244,18 @@ protected:
             } catch ( const Exception& e ) {
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
                     // Reached timeout
-                    Throw( e.getErrCode(), "Timeout on Authentication request after {} attempts", attempt );
+                    Warning( "Timeout on Authentication request after {} attempts", attempt );
+                    return Json::nullValue;
                 }
                 if ( e.getErrCode() != DRM_WSMayRetry ) {
-                    throw;
+                    Error( "Health request error: {}", e.what() );
+                    return Json::nullValue;
                 }
                 // It is retryable
                 attempt ++;
                 if ( retry_period == 0 ) {
                     // No retry
-                    throw;
+                    return Json::nullValue;
                 }
                 Warning( "Attempt #{} to obtain a new OAuth2 token failed with message: {}. New attempt planned in {} seconds",
                         attempt, e.what(), retry_duration.count()/1000000000 );
@@ -1268,16 +1270,18 @@ protected:
             } catch ( const Exception& e ) {
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
                     // Reached timeout
-                    Throw( e.getErrCode(), "Timeout on Health request after {} attempts", attempt );
+                    Warning( "Timeout on Health request after {} attempts", attempt );
+                    return Json::nullValue;
                 }
                 if ( e.getErrCode() != DRM_WSMayRetry ) {
-                    throw;
+                    Error( "Health request error: {}", e.what() );
+                    return Json::nullValue;
                 }
                 // It is retryable
                 attempt ++;
                 if ( retry_period == 0 ) {
                     // No retry
-                    throw;
+                    return Json::nullValue;
                 }
                 // Perform retry
                 Warning( "Attempt #{} to send a new Health request failed with message: {}. New attempt planned in {} seconds",
@@ -1618,8 +1622,10 @@ protected:
         }
 
         mThreadHealth = std::async( std::launch::async, [ this ]() {
-            Debug( "Starting background thread which checks heath" );
+            Debug( "Starting background thread which checks health" );
             try {
+                uint32_t retry_period = mWSRetryPeriodShort;
+                uint32_t timeout = mWSRequestTimeout;
                 mHealthCounter = 0;
                 /// Starting async metering post loop
                 while( 1 ) {
@@ -1629,13 +1635,14 @@ protected:
                     // Get next data from DRM Controller
                     Json::Value request_json = getMeteringData();
                     // Compute retry period
-                    TClock::time_point retry_deadline = TClock::now() + std::chrono::seconds( mHealthRetry );
+                    TClock::time_point retry_deadline = TClock::now() + std::chrono::seconds( timeout );
                     // Post next data to server
-                    Json::Value response_json = getHealth( request_json, retry_deadline, mWSRetryPeriodShort );
+                    Json::Value response_json = getHealth( request_json, retry_deadline, retry_period );
                     mHealthCounter ++;
 
                     /// Extract asynchronous metering parameters from response
-                    Json::Value metering_node = JVgetRequired( response_json, "metering", Json::objectValue );
+                    //Json::Value metering_node = JVgetRequired( response_json, "metering", Json::objectValue );
+                    Json::Value metering_node = JVgetOptional( response_json, "metering", Json::objectValue, Json::nullValue );
                     uint32_t healthPeriod = JVgetOptional( metering_node, "healthPeriod", Json::uintValue, mHealthPeriod ).asUInt();
                     uint32_t healthRetry = JVgetOptional( metering_node, "healthRetry", Json::uintValue, mHealthRetry ).asUInt();
                     if ( ( healthPeriod != mHealthPeriod ) || ( healthRetry != mHealthRetry) ) {
@@ -1647,6 +1654,17 @@ protected:
                             Debug( "Health thread has been disabled" );
                             break;
                         }
+                        if ( mHealthRetry == 0 ) {
+                            timeout = mWSRequestTimeout;
+                            retry_period = 0;
+                            Debug( "Health retry is disabled" );
+                        } else {
+                            timeout = mHealthRetry;
+                            retry_period = mWSRetryPeriodShort;
+                            Debug( "Health retry is enabled" );
+                        }
+                    } else {
+                        Debug( "Health parameters are unchanged: healthPeriod={}, healthRetry={}", healthPeriod, healthRetry );
                     }
 
                     /// Sleep until it's time to collect the next metering data
