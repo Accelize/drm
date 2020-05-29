@@ -290,7 +290,7 @@ def test_file_rotating_parameters(accelize_drm, conf_json, cred_json, async_hand
         for log_f in log_list:
             assert isfile(log_f)
             assert getsize(log_f) < 2 * rotating_size*1024
-            m = search(r'drmlib-\d+(\.\d)?\.log', log_f)
+            m = search(r'drmlib-\d+\.\d+(\.\d+)?\.log', log_f)
             assert m is not None
             if m.group(1) is None:
                 index = 0
