@@ -48,19 +48,19 @@ using namespace std;
 
 xclDeviceHandle handle;
 uuid_t xclbinId;
-    
+
 
 /*
  * Read Register Function
  */
 int32_t read_register(uint32_t cuidx, uint32_t addr, uint32_t* value)
 {
-	xclOpenContext(handle, xclbinId, cuidx, false);
-	int ret = xclRegRead(handle, cuidx, addr, value);
+    xclOpenContext(handle, xclbinId, cuidx, false);
+    int ret = xclRegRead(handle, cuidx, addr, value);
     if (ret) {
-        cout << "[ERROR] " << __FUNCTION__ << ": Failed to read CU ID" << cuidx << " @0x" << hex << addr << dec << endl;        
+        cout << "[ERROR] " << __FUNCTION__ << ": Failed to read CU ID" << cuidx << " @0x" << hex << addr << dec << endl;
     }
-    xclCloseContext(handle, xclbinId, cuidx);    
+    xclCloseContext(handle, xclbinId, cuidx);
     return ret;
 }
 
@@ -69,12 +69,12 @@ int32_t read_register(uint32_t cuidx, uint32_t addr, uint32_t* value)
  */
 int32_t write_register(uint32_t cuidx, uint32_t addr, uint32_t value)
 {
-	xclOpenContext(handle, xclbinId, cuidx, false);
+    xclOpenContext(handle, xclbinId, cuidx, false);
     int ret = xclRegWrite(handle, cuidx, addr, value);
     if (ret) {
         cout << "[ERROR] " << __FUNCTION__ << ": Failed to write CU ID" << cuidx << " @0x" << hex << addr << dec << endl;
     }
-    xclCloseContext(handle, xclbinId, cuidx);    
+    xclCloseContext(handle, xclbinId, cuidx);
     return ret;
 }
 
@@ -83,7 +83,7 @@ int32_t write_register(uint32_t cuidx, uint32_t addr, uint32_t value)
  */
 int32_t drm_read_callback(uint32_t addr, uint32_t* value, void* context)
 {
-	return read_register(*(int*)context, addr, value);
+    return read_register(*(int*)context, addr, value);
 }
 
 /*
@@ -102,17 +102,17 @@ void drm_error_callback( const char* errmsg, void* context ){
 }
 
 std::vector<unsigned char> readBinary(const std::string &fileName) {
-	std::ifstream file(fileName, std::ios::binary | std::ios::ate);
-	if (file) {
-	  file.seekg(0, std::ios::end);
-	  streamsize size = file.tellg();
-	  file.seekg(0, std::ios::beg);
-	  std::vector<unsigned char> buffer(size);
-	  file.read((char *)buffer.data(), size);
-	  return buffer;
-	} else {
-	  return std::vector<unsigned char>(0);
-	}
+    std::ifstream file(fileName, std::ios::binary | std::ios::ate);
+    if (file) {
+      file.seekg(0, std::ios::end);
+      streamsize size = file.tellg();
+      file.seekg(0, std::ios::beg);
+      std::vector<unsigned char> buffer(size);
+      file.read((char *)buffer.data(), size);
+      return buffer;
+    } else {
+      return std::vector<unsigned char>(0);
+    }
 }
 
 
@@ -120,12 +120,12 @@ std::vector<unsigned char> readBinary(const std::string &fileName) {
  * Entry point
  */
 int main(int argc, char **argv) {
-	
+
     if (argc != 2) {
         cout << "Usage: " << argv[0] << " <XCLBIN File>" << endl;
         return EXIT_FAILURE;
     }
-    
+
     cl_int err;                           // error code returned from api calls
     cl_uint check_status = 0;
     const cl_uint number_of_words = 4096; // 16KB of data
@@ -133,10 +133,10 @@ int main(int argc, char **argv) {
     cl_platform_id platform_id;         // platform id
     cl_device_id device_id;             // compute device id
     cl_context context;                 // compute context
-    
+
     char cl_platform_vendor[1001];
     char target_device_name[1001] = TARGET_DEVICE;
-    
+
     // Get all platforms and then select Xilinx platform
     cl_platform_id platforms[16];       // platform id
     cl_uint platform_count;
@@ -167,7 +167,7 @@ int main(int argc, char **argv) {
         printf("ERROR: Platform Xilinx not found. Exit.\n");
         return EXIT_FAILURE;
     }
-    
+
     // Get Accelerator compute device
     cl_uint num_devices;
     cl_uint device_found = 0;
@@ -182,7 +182,7 @@ int main(int argc, char **argv) {
     }
 
     // Iterate all devices to select the target device.
-    for (cl_uint i=0; i<num_devices; i++) {
+    for (cl_uint i=0; (i<num_devices) && (device_found==0); i++) {
         err = clGetDeviceInfo(devices[i], CL_DEVICE_NAME, 1024, cl_device_name, 0);
         if (err != CL_SUCCESS) {
             printf("Error: Failed to get device name for device %d!\n", i);
@@ -201,7 +201,7 @@ int main(int argc, char **argv) {
         printf("Target device %s not found. Exit.\n", target_device_name);
         return EXIT_FAILURE;
     }
-    
+
     // Create a compute context
     //
     context = clCreateContext(0, 1, &device_id, NULL, NULL, &err);
@@ -216,13 +216,13 @@ int main(int argc, char **argv) {
     // Create Program Objects
     // Load binary from disk
     char *xclbin = argv[1];
-    
+
     // Read xclbin and create program
     printf("INFO: loading xclbin %s\n", xclbin);
     std::vector<unsigned char> binary = readBinary(xclbin);
     size_t binary_size = binary.size();
     const unsigned char *kernelbinary = binary.data();
-    
+
     // Create the compute program from offline
     cl_program program = clCreateProgramWithBinary(context, 1, &device_id, &binary_size,
                                     &kernelbinary, &status, &err);
@@ -232,30 +232,30 @@ int main(int argc, char **argv) {
         printf("Test failed\n");
         return EXIT_FAILURE;
     }
-    
+
     cl_kernel drm_ctrl_kernel = clCreateKernel(program, "kernel_drm_controller", &err);
     if (!drm_ctrl_kernel || err != CL_SUCCESS) {
         printf("Error: Failed to create compute kernel_drm_controller!\n");
         printf("Test failed\n");
         return EXIT_FAILURE;
     }
-    
+
     cl_kernel input_kernel = clCreateKernel(program, "krnl_input_stage_rtl", &err);
     if (!input_kernel || err != CL_SUCCESS) {
         printf("Error: Failed to create compute krnl_input_stage_rtl!\n");
         printf("Test failed\n");
         return EXIT_FAILURE;
     }
-    
+
     cl_kernel adder_kernel = clCreateKernel(program, "krnl_adder_stage_rtl", &err);
     if (!adder_kernel || err != CL_SUCCESS) {
         printf("Error: Failed to create compute krnl_adder_stage_rtl!\n");
         printf("Test failed\n");
         return EXIT_FAILURE;
     }
-    
+
     cl_kernel output_kernel = clCreateKernel(program, "krnl_output_stage_rtl", &err);
-    if (!input_kernel || err != CL_SUCCESS) {
+    if (!output_kernel || err != CL_SUCCESS) {
         printf("Error: Failed to create compute krnl_output_stage_rtl!\n");
         printf("Test failed\n");
         return EXIT_FAILURE;
@@ -264,22 +264,22 @@ int main(int argc, char **argv) {
     xclbin_uuid(kernelbinary, xclbinId);
 
     handle = xclOpen(0, nullptr, XCL_INFO);
-    
+
     // Get kernel_drm_controller info
-    
+
     // checking cu based address for testing purpose: not needed
-    size_t drm_cuaddr; 
+    size_t drm_cuaddr;
     xclGetComputeUnitInfo(drm_ctrl_kernel,0,XCL_COMPUTE_UNIT_BASE_ADDRESS,sizeof(drm_cuaddr),&drm_cuaddr,nullptr);
     printf("\n DRM Ctrl CU addr = %zx",drm_cuaddr);
-    
+
     cl_uint drm_cuidx = 0;
     xclGetComputeUnitInfo(drm_ctrl_kernel,0,XCL_COMPUTE_UNIT_INDEX,sizeof(drm_cuidx),&drm_cuidx,nullptr);
     printf("\n DRM Ctrl CU index = %d\n\n",drm_cuidx);
 
     // Get krnl_input_stage_rtl info
-    
+
     // checking cu based address for testing purpose: not needed
-    size_t in_cuaddr; 
+    size_t in_cuaddr;
     xclGetComputeUnitInfo(input_kernel,0,XCL_COMPUTE_UNIT_BASE_ADDRESS,sizeof(in_cuaddr),&in_cuaddr,nullptr);
     printf("\n Input CU addr = %zx",in_cuaddr);
     // checked
@@ -289,9 +289,9 @@ int main(int argc, char **argv) {
     printf("\n Input CU index = %d\n\n",in_cuidx);
 
     // Get krnl_adder_stage_rtl info
-    
+
     // checking cu based address for testing purpose: not needed
-    size_t add_cuaddr; 
+    size_t add_cuaddr;
     xclGetComputeUnitInfo(adder_kernel,0,XCL_COMPUTE_UNIT_BASE_ADDRESS,sizeof(add_cuaddr),&add_cuaddr,nullptr);
     printf("\n Adder CU addr = %zx",add_cuaddr);
     // checked
@@ -301,9 +301,9 @@ int main(int argc, char **argv) {
     printf("\n Adder CU index = %d\n\n",add_cuidx);
 
     // Get krnl_output_stage_rtl info
-    
+
     // checking cu based address for testing purpose: not needed
-    size_t out_cuaddr; 
+    size_t out_cuaddr;
     xclGetComputeUnitInfo(output_kernel,0,XCL_COMPUTE_UNIT_BASE_ADDRESS,sizeof(out_cuaddr),&out_cuaddr,nullptr);
     printf("\n Output CU addr = %zx",out_cuaddr);
     // checked
@@ -311,10 +311,10 @@ int main(int argc, char **argv) {
     cl_uint out_cuidx = 0;
     xclGetComputeUnitInfo(output_kernel,0,XCL_COMPUTE_UNIT_INDEX,sizeof(out_cuidx),&out_cuidx,nullptr);
     printf("\n Output CU index = %d\n\n",out_cuidx);
-   
+
     uint32_t reg;
-    
-	// Get DRM Ctrl version
+
+    // Get DRM Ctrl version
     read_register(drm_cuidx, 0x70, &reg);
     cout << "DRM Controller version: " << hex << reg << dec << endl;
 
@@ -362,7 +362,7 @@ int main(int argc, char **argv) {
         return -1;
     }
     cout << "[DRMLIB] a DRM Activator is detected" << endl;
-    
+
     // Check DRM Activator status
     read_register(add_cuidx, 0x38, &reg);
     if (reg != 3) {
@@ -372,92 +372,91 @@ int main(int argc, char **argv) {
     }
     cout << "[DRMLIB] Design unlocked" << endl;
     //ACCELIZE DRMLIB CODE AREA STOP
-    
+
+    // Perform some processing with the kernels
+
+    // Allocate buffers
+    int* source_input;
+    int* source_hw_results;
+    int* source_sw_results;
+
+    // Aligning memory in 4K boundary
+    err  = posix_memalign((void**)&source_input,4096,MAX_LENGTH*sizeof(int));
+    err |= posix_memalign((void**)&source_hw_results,4096,MAX_LENGTH*sizeof(int));
+    err |= posix_memalign((void**)&source_sw_results,4096,MAX_LENGTH*sizeof(int));
+    if (err) {
+        cout << "Fatal Error calling posix_memalign" << endl;
+        exit(EXIT_FAILURE);
+    }
+
+    // Fill the buffers
+    for (int i = 0; i < DATA_SIZE; i++) {
+        source_input[i] = i;
+        source_sw_results[i] = i + INCR_VALUE;
+        source_hw_results[i] = 0;
+    }
+
+    auto vector_size_bytes = sizeof(int) * DATA_SIZE;
+
+    cl_mem buffer_input = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+                vector_size_bytes, source_input, NULL);
+
+    cl_mem buffer_output = clCreateBuffer(context, CL_MEM_WRITE_ONLY | CL_MEM_USE_HOST_PTR,
+                vector_size_bytes, source_hw_results, NULL);
+
+    // Set kernel arguments
+    int size = DATA_SIZE;
+    int inc = INCR_VALUE;
+    clSetKernelArg(input_kernel, 0, sizeof(cl_mem), &buffer_input);
+    clSetKernelArg(input_kernel, 1, sizeof(int), &size);
+    clSetKernelArg(adder_kernel, 0, sizeof(int), &inc);
+    clSetKernelArg(adder_kernel, 1, sizeof(int), &size);
+    clSetKernelArg(output_kernel, 0, sizeof(cl_mem), &buffer_output);
+    clSetKernelArg(output_kernel, 1, sizeof(int), &size);
+
     // Create a command queue
-    cl_command_queue commands;
-    commands = clCreateCommandQueue(context, device_id, CL_QUEUE_PROFILING_ENABLE | CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &err);
+    cl_command_queue commands = clCreateCommandQueue(context, device_id, CL_QUEUE_PROFILING_ENABLE | CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &err);
     if (err || !commands) {
         printf("Error: Failed to create a command commands!\n");
         printf("Error: code %i\n",err);
         printf("Test failed\n");
         return EXIT_FAILURE;
     }
-    
-    // Perform some processing with the kernels
-    
-	// Allocate buffers
-	int* source_input;
-	int* source_hw_results;
-	int* source_sw_results;
-    	
-	// Aligning memory in 4K boundary
-	err  = posix_memalign((void**)&source_input,4096,MAX_LENGTH*sizeof(int));
-	err |= posix_memalign((void**)&source_hw_results,4096,MAX_LENGTH*sizeof(int)); 
-	err |= posix_memalign((void**)&source_sw_results,4096,MAX_LENGTH*sizeof(int)); 
-	if (err) {
-		cout << "Fatal Error calling posix_memalign" << endl;
-		exit(EXIT_FAILURE);
-	}
- 
-	// Fill the buffers
-	for (int i = 0; i < DATA_SIZE; i++) {
-        source_input[i] = i;
-        source_sw_results[i] = i + INCR_VALUE;
-        source_hw_results[i] = 0;
+
+    // Copy input data to device global memory
+    cl_event write_event;
+    if (clEnqueueMigrateMemObjects(commands, 1, &buffer_input, 0, 0, nullptr, &write_event)) {
+        cout << "Fatal Error calling clEnqueueMigrateMemObjects" << endl;
+        exit(EXIT_FAILURE);
     }
-    
-    auto vector_size_bytes = sizeof(int) * DATA_SIZE;	
 
-	cl_mem buffer_input = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,  
-				vector_size_bytes, source_input, NULL); 
+    // Launch the kernels
+    cl_event evts[1] = {write_event};
+    err  = clEnqueueTask(commands, input_kernel, 1, evts, nullptr);
+    err |= clEnqueueTask(commands, adder_kernel, 1, evts, nullptr);
+    err |= clEnqueueTask(commands, output_kernel, 1, evts, nullptr);
+    if (err) {
+        cout << "Fatal Error calling clEnqueueTask" << endl;
+        exit(EXIT_FAILURE);
+    }
 
-	cl_mem buffer_output = clCreateBuffer(context, CL_MEM_WRITE_ONLY | CL_MEM_USE_HOST_PTR,  
-				vector_size_bytes, source_hw_results, NULL); 
-
-	// Set kernel arguments
-	int size = DATA_SIZE;
-	int inc = INCR_VALUE;
-	clSetKernelArg(input_kernel, 0, sizeof(cl_mem), &buffer_input);
-	clSetKernelArg(input_kernel, 1, sizeof(int), &size);	
-	clSetKernelArg(adder_kernel, 0, sizeof(int), &inc);
-	clSetKernelArg(adder_kernel, 1, sizeof(int), &size);
-	clSetKernelArg(output_kernel, 0, sizeof(cl_mem), &buffer_output);
-	clSetKernelArg(output_kernel, 1, sizeof(int), &size);	
-	
-	// Copy input data to device global memory
-	cl_event write_event;
-	if (clEnqueueMigrateMemObjects(commands, 1, &buffer_input, 0, 0, nullptr, &write_event)) {
-	    cout << "Fatal Error calling clEnqueueMigrateMemObjects" << endl;
-		exit(EXIT_FAILURE);
-	}      
-	
-	// Launch the kernels
-	cl_event evts[1] = {write_event};
-	err  = clEnqueueTask(commands, input_kernel, 1, evts, nullptr);
-	err |= clEnqueueTask(commands, adder_kernel, 1, evts, nullptr);
-	err |= clEnqueueTask(commands, output_kernel, 1, evts, nullptr);
-	if (err) {
-		cout << "Fatal Error calling clEnqueueTask" << endl;
-		exit(EXIT_FAILURE);
-	}
-	
-	// Wait for all kernels to finish their operations
-	if (clFinish(commands)) {
-		cout << "Fatal Error calling clFinish" << endl;
-		exit(EXIT_FAILURE);
-	}
+    // Wait for all kernels to finish their operations
+    if (clFinish(commands)) {
+        cout << "Fatal Error calling clFinish" << endl;
+        exit(EXIT_FAILURE);
+    }
 
     // Copy Result from Device Global Memory to Host Local Memory
     if (clEnqueueMigrateMemObjects(commands, 1, &buffer_output, CL_MIGRATE_MEM_OBJECT_HOST, 0, nullptr, nullptr)) {
-	    cout << "Fatal Error calling clEnqueueMigrateMemObjects" << endl;
-		exit(EXIT_FAILURE);
-	}      
-	// Wait for all kernels to finish their operations
-	if (clFinish(commands)) {
-		cout << "Fatal Error calling clFinish" << endl;
-		exit(EXIT_FAILURE);
-	}
-	
+        cout << "Fatal Error calling clEnqueueMigrateMemObjects" << endl;
+        exit(EXIT_FAILURE);
+    }
+    // Wait for all kernels to finish their operations
+    if (clFinish(commands)) {
+        cout << "Fatal Error calling clFinish" << endl;
+        exit(EXIT_FAILURE);
+    }
+
     // Compare the results of the Device to the simulation
     int mismatch = 0;
     for (int i = 0; i < DATA_SIZE; i++) {
@@ -470,8 +469,8 @@ int main(int argc, char **argv) {
             if (mismatch > 5) break;
         }
     }
-	
-	if (DRM_OK != DrmManager_deactivate(pDrmManager, false))
+
+    if (DRM_OK != DrmManager_deactivate(pDrmManager, false))
         cout << "Error deactivating DRM Manager object: " << pDrmManager->error_message << endl;
     else
         cout << "[DRMLIB] Design locked" << endl;
@@ -479,9 +478,9 @@ int main(int argc, char **argv) {
     if (DRM_OK != DrmManager_free(&pDrmManager))
         cout << "Error deallocating DRM Manager object: " << pDrmManager->error_message << endl;
     //ACCELIZE DRMLIB CODE AREA STOP
-    
+
 /*
-    // DOES NOT WORK BECAUSE THE ADDER KERNEL CANNOT BE ACCESSED ANYMORE BUT I DON't KNOW WHY
+    // DOES NOT WORK BECAUSE THE ADDER KERNEL CANNOT BE ACCESSED ANYMORE BUT I DON'T KNOW WHY
 
     // Check DRM Activator status
     read_register(add_cuidx, 0x38, &reg);
@@ -490,20 +489,20 @@ int main(int argc, char **argv) {
         DrmManager_free(&pDrmManager);
         return -1;
     }
-  */    
-    
+  */
+
     clReleaseMemObject(buffer_input);
-    clReleaseMemObject(buffer_output);    
+    clReleaseMemObject(buffer_output);
     free(source_sw_results);
 
     clReleaseKernel(drm_ctrl_kernel);
     clReleaseKernel(input_kernel);
     clReleaseKernel(adder_kernel);
     clReleaseKernel(output_kernel);
-	clReleaseCommandQueue(commands);
+    clReleaseCommandQueue(commands);
     clReleaseContext(context);
-	clReleaseProgram(program);
+    clReleaseProgram(program);
 
-	cout << "TEST " << (mismatch ? "FAILED" : "PASSED") << endl;
+    cout << "TEST " << (mismatch ? "FAILED" : "PASSED") << endl;
     return (mismatch ? EXIT_FAILURE : EXIT_SUCCESS);
 }

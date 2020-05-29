@@ -5,7 +5,7 @@ MODE := hw
 DSA := xilinx_u50_gen3x16_xdma_201920_3
 
 # sources
-HOST_SRC := src/host.2.cpp 
+HOST_SRC := src/host_cpp.2.cpp
 KRNL_SRC := kernel.cpp
 
 # kernel targets
@@ -18,7 +18,7 @@ HOST_EXE := host.exe
 # config files target
 EMCONFIG_FILE := emconfig.json
 
-VPP_OPTS := -s -t $(MODE) --platform $(DSA) 
+VPP_OPTS := -s -t $(MODE) --platform $(DSA)
 VPP_OPTS += --temp_dir ./all_builds/$(TARGET)
 VPP_OPTS += --report_dir ./all_logs/$(TARGET)
 VPP_OPTS += --log_dir ./all_logs/$(TARGET)
@@ -34,12 +34,12 @@ EXE_OPT := kernel.${MODE}.xclbin ${SUM}
 .PHONY: xclbin app all
 
 xclbin:  $(XCLBIN)
-app: $(HOST_EXE) 
+app: $(HOST_EXE)
 
 all: xclbin app
 
 clean:
-	-$(RM) $(EMCONFIG_FILE) $(HOST_EXE) $(XCLBIN) 
+	-$(RM) $(EMCONFIG_FILE) $(HOST_EXE) $(XCLBIN)
 
 # kernel rules
 $(KRNL_XO): $(KRNL_SRC)
@@ -47,8 +47,8 @@ $(KRNL_XO): $(KRNL_SRC)
 	$(VPP) $(VPP_OPTS) -c -k increment -o $@ $+
 
 
-$(XCLBIN): $(KRNL_XO) 
-	$(VPP) $(VPP_OPTS) -l -o $@ $(KRNL_XO) 
+$(XCLBIN): $(KRNL_XO)
+	$(VPP) $(VPP_OPTS) -l -o $@ $(KRNL_XO)
 
 # host rules
 $(HOST_EXE): $(HOST_SRC)

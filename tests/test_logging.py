@@ -349,10 +349,10 @@ def test_log_file_parameters_modifiability(accelize_drm, conf_json, cred_json, a
     async_cb = async_handler.create()
 
     log_verbosity = 3
-    log_path = realpath("./drmservice-%d.log" % getpid())
+    log_path = realpath("./drmlib-%d.log" % getpid())
     log_format = LOG_FORMAT_LONG
     log_type = 2
-    log_rotating_size = 10
+    log_rotating_size = 10  # =10KB
     log_rotating_num = 0
 
     # Test from config file
@@ -408,12 +408,13 @@ def test_log_file_parameters_modifiability(accelize_drm, conf_json, cred_json, a
         assert wait_func_true(lambda: isfile(log_path), 10)
         with open(log_path, 'rt') as f:
             log_content = f.read()
-        critical_list = findall(r'[\s*critical\s*].* Parameter \S* cannot be overwritten', log_content)
+        critical_list = findall(r'\[\s*critical\s*\].* Parameter \S* cannot be overwritten', log_content)
         assert len(critical_list) == 3
         async_cb.assert_NoError()
     finally:
         if isfile(log_path):
-            remove(log_path)
+            #remove(log_path)
+            print(log_path)
     print('Test log file parameters modifiability from config: PASS')
 
 

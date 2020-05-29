@@ -1508,7 +1508,7 @@ protected:
         mFrequencyCurr = measuredFrequency;
         if ( precisionError >= mFrequencyDetectionThreshold ) {
             Throw( DRM_BadFrequency,
-                   "Estimated DRM frequency ({} MHz) differs from the value ({} MHz) defined in the configuration file '{}' by more than {}%: From now on the estimated frequency is used.",
+                   "Estimated DRM frequency ({} MHz) differs from the value ({} MHz) defined in the configuration file '{}' by more than {}%: From now on the estimated frequency will be used.",
                     mFrequencyCurr, mFrequencyInit, mConfFilePath, mFrequencyDetectionThreshold, mFrequencyCurr);
         }
         Debug( "Estimated DRM frequency = {} MHz, config frequency = {} MHz: gap = {}%",
@@ -2389,11 +2389,9 @@ public:
     }
 
     void set( const std::string& json_string ) {
-        TRY
-            Debug2( "Calling 'set' with in/out string: {}", json_string );
-            Json::Value root = parseJsonString( json_string );
-            set( root );
-        CATCH_AND_THROW
+        Debug2( "Calling 'set' with in/out string: {}", json_string );
+        Json::Value root = parseJsonString( json_string );
+        set( root );
     }
 
     template<typename T> void set( const ParameterKey /*key_id*/, const T& /*value*/ ) {}

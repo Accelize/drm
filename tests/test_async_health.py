@@ -22,6 +22,7 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
     Test the asynchronous health feature can be disabled.
     """
     from random import randrange
+    from os import remove
     from os.path import realpath, isfile
     from tests.conftest import wait_func_true
 
@@ -91,6 +92,8 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
     finally:
         server.terminate()
         server.join()
+        if isfile(logpath):
+            remove(logpath)
 
 
 @pytest.mark.minimum

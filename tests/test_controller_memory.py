@@ -112,7 +112,7 @@ def test_configuration_file_empty_and_corrupted_product_id(accelize_drm, conf_js
         assert 'Metering Web Service error 400' in str(excinfo.value)
         assert 'DRM WS request failed' in str(excinfo.value)
         assert search(r'\\"Unknown Product ID\\" for ', str(excinfo.value)) is not None
-        assert 'Product ID from request is not set' in str(excinfo.value)
+        assert 'Product ID from license request is not set' in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_NoError()
         print('Test Web Service when an empty product ID is provided: PASS')
