@@ -2200,7 +2200,7 @@ public:
                         break;
                     }
                     case ParameterKey::hdk_compatibility: {
-                        std::string hdk_limit = fmt::format( "{}.{}.x", HDK_COMPATIBILITY_LIMIT_MAJOR, HDK_COMPATIBILITY_LIMIT_MINOR );
+                        std::string hdk_limit = fmt::format( "{}.{}", HDK_COMPATIBILITY_LIMIT_MAJOR, HDK_COMPATIBILITY_LIMIT_MINOR );
                         json_value[key_str] = hdk_limit;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                hdk_limit );

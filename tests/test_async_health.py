@@ -3,7 +3,7 @@
 Test asynchronous metering behaviors of DRM Library.
 """
 from time import sleep
-from random import randint
+from random import randrange
 from datetime import datetime, timedelta
 from re import search, MULTILINE
 from json import loads, dumps
@@ -21,7 +21,6 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
     """
     Test the asynchronous health feature can be disabled.
     """
-    from random import randrange
     from os import remove
     from os.path import realpath, isfile
     from tests.conftest import wait_func_true
@@ -32,7 +31,7 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
 
     conf_json.reset()
     url = conf_json['licensing']['url']
-    proxy_port = randint(1,65535)
+    proxy_port = randrange(1,65535)
     proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
     conf_json['licensing']['url'] = proxy_url
     logpath = realpath("./test_health_disabled.%d.log" % randrange(0xFFFFFFFF))
@@ -107,7 +106,7 @@ def test_health_period(accelize_drm, conf_json, cred_json, async_handler, fake_s
 
     conf_json.reset()
     url = conf_json['licensing']['url']
-    proxy_port = randint(1,65535)
+    proxy_port = randrange(1,65535)
     proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
     conf_json['licensing']['url'] = proxy_url
     conf_json.save()
@@ -180,7 +179,7 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
 
     conf_json.reset()
     url = conf_json['licensing']['url']
-    proxy_port = randint(1,65535)
+    proxy_port = randrange(1,65535)
     proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
     conf_json['licensing']['url'] = proxy_url
     conf_json.save()
@@ -254,7 +253,7 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
 
     conf_json.reset()
     url = conf_json['licensing']['url']
-    proxy_port = randint(1,65535)
+    proxy_port = randrange(1,65535)
     proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
     conf_json['licensing']['url'] = proxy_url
     conf_json.save()
@@ -334,7 +333,7 @@ def test_health_retry(accelize_drm, conf_json, cred_json, async_handler, fake_se
 
     conf_json.reset()
     url = conf_json['licensing']['url']
-    proxy_port = randint(1,65535)
+    proxy_port = randrange(1,65535)
     proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
     conf_json['licensing']['url'] = proxy_url
     conf_json.save()
@@ -418,7 +417,7 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
 
     conf_json.reset()
     url = conf_json['licensing']['url']
-    proxy_port = randint(1,65535)
+    proxy_port = randrange(1,65535)
     proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
     conf_json['licensing']['url'] = proxy_url
     conf_json.save()

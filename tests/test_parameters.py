@@ -848,8 +848,8 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         driver.write_register_callback,
         async_cb.callback
     )
-    hdk_limit = float(drm_manager.get('hdk_compatibility'))
-    assert match(r'\d+\.\d\.x', hdk_limit)
+    hdk_limit = drm_manager.get('hdk_compatibility')
+    assert match(r'\d+\.\d', hdk_limit)
     async_cb.assert_NoError()
     print("Test parameter 'hdk_compatibility': PASS")
 
@@ -877,7 +877,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         driver.write_register_callback,
         async_cb.callback
     )
-    assert drm_manager.get('health_retry') == drm_manager.get('ws_request_timeout')
+    assert drm_manager.get('health_retry') == drm_manager.get('ws_retry_period_short')
     async_cb.assert_NoError()
     print("Test parameter 'health_retry': PASS")
 
