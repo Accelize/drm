@@ -1,23 +1,31 @@
 # Define Packages build environments for all supported OS
 # Used in the "Release" stage of "azure-pipeline.yml"
 
-FROM {{ osName }}:{{ osVersion }}
+FROM {{ image }}
 
 ENV PACKAGES_DIR /opt/packages
 ENV TOX_PARALLEL_NO_SPINNER 1
 
 # "Building" and "Testing" common layer
 RUN \
-{%- if osName == "centos" and osVersion == "7" %}
-yum install -y epel-release yum-plugin-fastestmirror && \
+{%- if osName == "rhel" %}
+subscription-manager register \
+    --auto-attach \
+    --name=AccelizeDrmTestRhel{{ osVersion }} \
+    --username={{ rhelUsername }} \
+    --password={{ rhelPassword }} && \
+{%- endif %}
+{%- if osName in ("centos", "rhel") and osVersion == "7" %}
 yum install -y \
-{%- elif osName in ("fedora", "centos") %}
+    https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ osVersion }}.noarch.rpm \
+    yum-plugin-fastestmirror && \
+yum install -y \
+{%- elif osName in ("fedora", "centos", "rhel") %}
 echo "fastestmirror=True" >> /etc/dnf/dnf.conf && \
 echo "max_parallel_downloads=10" >> /etc/dnf/dnf.conf && \
 echo "install_weak_deps=False" >> /etc/dnf/dnf.conf && \
-{%- if osName == "centos" %}
-dnf install -y epel-release 'dnf-command(config-manager)' && \
-dnf config-manager --set-enabled PowerTools && \
+{%- if osName in ("centos", "rhel") %}
+dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ osVersion }}.noarch.rpm && \
 {%- endif %}
 dnf install -y \
 {%- elif osName in ("debian", "ubuntu") %}
@@ -29,12 +37,17 @@ apt-get update && \
 apt-get install -y \
 {%- endif %}
     python3-pip && \
+{%- if osName == "rhel" %}
+subscription-manager remove --all && \
+subscription-manager unregister && \
+subscription-manager clean && \
+{%- endif %}
 echo "[global]" > /etc/pip.conf && \
 echo "disable-pip-version-check = true " >> /etc/pip.conf && \
-python3 -m pip install -U{% if osName == "centos" and osVersion == "7" %} --prefix='/usr'{% endif %} \
+python3 -m pip install -U{% if osName in ("centos", "rhel") and osVersion == "7" %} --prefix='/usr'{% endif %} \
     pip \
     setuptools && \
-python3 -m pip install -U{% if osName == "centos" and osVersion == "7" %} --prefix='/usr'{% endif %} \
+python3 -m pip install -U{% if osName in ("centos", "rhel") and osVersion == "7" %} --prefix='/usr'{% endif %} \
     cython \
     flake8 \
     pytest \
@@ -45,14 +58,20 @@ python3 -m pip install -U{% if osName == "centos" and osVersion == "7" %} --pref
 {%- if buildLayer %}
 # "Building" only layer
 RUN \
-{%- if osName in ("centos", "fedora") and osVersion != "7" %}
+{%- if osName == "rhel" %}
+subscription-manager register \
+    --auto-attach \
+    --name=AccelizeDrmTestRhel{{ osVersion }} \
+    --username={{ rhelUsername }} \
+    --password={{ rhelPassword }} && \
+{%- endif %}
+{%- if osName in ("centos", "fedora", "rhel") and osVersion != "7" %}
 dnf install -y \
-{%- elif osName == "centos" and osVersion == "7" %}
+{%- elif osName in ("centos", "rhel") and osVersion == "7" %}
 yum install -y \
 {%- elif osName in ("debian", "ubuntu") %}
 apt-get install -y \
 {%- endif %}
-    doxygen \
     gnupg \
     make \
 {%- if osName in ("debian", "ubuntu") %}
@@ -64,7 +83,7 @@ apt-get install -y \
     libjsoncpp-dev \
     pkg-config \
     python3-dev && \
-{%- elif osName in ("centos", "fedora") %}
+{%- elif osName in ("centos", "fedora", "rhel") %}
     gcc \
     gcc-c++ \
     jsoncpp-devel \
@@ -73,8 +92,11 @@ apt-get install -y \
     rpm-build \
     rpm-sign && \
 {%- endif %}
-python3 -m pip install -U{% if osName == "centos" and osVersion == "7" %} --prefix='/usr'{% endif %} \
-    breathe \
+{%- if osName == "rhel" %}
+subscription-manager remove --all && \
+subscription-manager unregister && \
+subscription-manager clean && \
+{%- endif %}
+python3 -m pip install -U{% if osName in ("centos", "rhel") and osVersion == "7" %} --prefix='/usr'{% endif %} \
     cmake \
-    sphinx_rtd_theme \
 {%- endif %}
