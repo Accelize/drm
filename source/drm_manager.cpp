@@ -1069,9 +1069,10 @@ protected:
         TClock::duration long_duration = std::chrono::seconds( long_retry_period );
         TClock::duration short_duration = std::chrono::seconds( short_retry_period );
 
-        uint32_t attempt = 0;
         TClock::duration wait_duration;
         bool token_valid(false);
+        uint32_t attempt = 0;
+        string msg_history();
 
         while ( 1 ) {
             token_valid = false;
@@ -1079,10 +1080,12 @@ protected:
             try {
                 getDrmWSClient().requestOAuth2token( deadline );
                 token_valid = true;
+                attempt = 0;
+                msg_history.clear();
             } catch ( const Exception& e ) {
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
                     // Reached timeout
-                    Throw( e.getErrCode(), "Timeout on Authentication request after {} attempts", attempt );
+                    Throw( e.getErrCode(), "Timeout on Authentication request after {} attempts:\n{}", attempt, msg_history );
                 }
                 if ( e.getErrCode() != DRM_WSMayRetry ) {
                     throw;
@@ -1103,6 +1106,7 @@ protected:
                 }
                 Warning( "Attempt #{} to obtain a new OAuth2 token failed with message: {}. New attempt planned in {} seconds",
                         attempt, e.what(), wait_duration.count()/1000000000 );
+                msg_history += fmt::format( "\t- Attemps #{}: {}\n", attempt, e.what() );
                 // Wait a bit before retrying
                 sleepOrExit( wait_duration );
             }
@@ -1114,7 +1118,7 @@ protected:
             } catch ( const Exception& e ) {
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
                     // Reached timeout
-                    Throw( e.getErrCode(), "Timeout on License request after {} attempts", attempt );
+                    Throw( e.getErrCode(), "Timeout on License request after {} attempts:\n{}", attempt, msg_history );
                 }
                 if ( e.getErrCode() != DRM_WSMayRetry ) {
                     throw;
@@ -1136,6 +1140,7 @@ protected:
                 }
                 Warning( "Attempt #{} to obtain a new License failed with message: {}. New attempt planned in {} seconds",
                         attempt, e.what(), wait_duration.count()/1000000000 );
+                msg_history += fmt::format( "\t- Attemps #{}: {}\n", attempt, e.what() );
                 // Wait a bit before retrying
                 sleepOrExit( wait_duration );
             }
@@ -1231,9 +1236,9 @@ protected:
             const uint32_t& retry_period = 0 ) {
 
         TClock::duration retry_duration = std::chrono::seconds( retry_period );
-
-        uint32_t attempt = 0;
         bool token_valid(false);
+        uint32_t attempt = 0;
+        string msg_history();
 
         while ( 1 ) {
             token_valid = false;
@@ -1241,10 +1246,12 @@ protected:
             try {
                 getDrmWSClient().requestOAuth2token( deadline );
                 token_valid = true;
+                attempt = 0;
+                msg_history.clear();
             } catch ( const Exception& e ) {
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
                     // Reached timeout
-                    Warning( "Timeout on Authentication request after {} attempts", attempt );
+                    Warning( "Timeout on Authentication request after {} attempts:\n{}", attempt, msg_history );
                     return Json::nullValue;
                 }
                 if ( e.getErrCode() != DRM_WSMayRetry ) {
@@ -1259,6 +1266,7 @@ protected:
                 }
                 Warning( "Attempt #{} to obtain a new OAuth2 token failed with message: {}. New attempt planned in {} seconds",
                         attempt, e.what(), retry_duration.count()/1000000000 );
+                msg_history += fmt::format( "\t- Attemps #{}: {}\n", attempt, e.what() );
                 // Wait a bit before retrying
                 sleepOrExit( retry_duration );
             }
@@ -1270,7 +1278,7 @@ protected:
             } catch ( const Exception& e ) {
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
                     // Reached timeout
-                    Warning( "Timeout on Health request after {} attempts", attempt );
+                    Warning( "Timeout on Health request after {} attempts:\n{}", attempt, msg_history );
                     return Json::nullValue;
                 }
                 if ( e.getErrCode() != DRM_WSMayRetry ) {
@@ -1286,6 +1294,7 @@ protected:
                 // Perform retry
                 Warning( "Attempt #{} to send a new Health request failed with message: {}. New attempt planned in {} seconds",
                         attempt, e.what(), retry_duration.count()/1000000000 );
+                msg_history += fmt::format( "\t- Attemps #{}: {}\n", attempt, e.what() );
                 // Wait a bit before retrying
                 sleepOrExit( retry_duration );
             }
