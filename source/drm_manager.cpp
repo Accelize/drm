@@ -1072,7 +1072,7 @@ protected:
         TClock::duration wait_duration;
         bool token_valid(false);
         uint32_t attempt = 0;
-        string msg_history();
+        std::string msg_history;
 
         while ( 1 ) {
             token_valid = false;
@@ -1238,7 +1238,7 @@ protected:
         TClock::duration retry_duration = std::chrono::seconds( retry_period );
         bool token_valid(false);
         uint32_t attempt = 0;
-        string msg_history();
+        std::string msg_history;
 
         while ( 1 ) {
             token_valid = false;
