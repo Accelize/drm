@@ -81,7 +81,7 @@ if __name__ == '__main__':
         PACKAGE_INFO['package_data'] = {'accelize_drm': ['*']}
 
         # Debug compiler options
-        compile_args = ["-g3", "-O0"]
+        compile_args = ["-g3", "-Og"]
 
         # Show source code in generated files
         cython_options = dict(emit_code_comments=True)
