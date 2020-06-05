@@ -175,7 +175,8 @@ protected:
 
     // Health/Asynchronous metering parameters
     uint32_t mHealthPeriod;
-    uint32_t mHealthRetry;
+    uint32_t mHealthRetryTimeout;
+    uint32_t mHealthRetrySleep;
 
     // thread to maintain license alive
     uint32_t mLicenseCounter = 0;
@@ -278,8 +279,9 @@ protected:
                 if ( mWSRequestTimeout == 0 )
                     Throw( DRM_BadArg, "ws_request_timeout must not be 0");
             }
-            mHealthRetry = mWSRetryPeriodShort;
             mHealthPeriod = 0;
+            mHealthRetryTimeout = mWSRequestTimeout;
+            mHealthRetrySleep = mWSRetryPeriodShort;
 
             // Customize logging configuration
             updateLog();
@@ -1641,8 +1643,8 @@ protected:
         mThreadHealth = std::async( std::launch::async, [ this ]() {
             Debug( "Starting background thread which checks health" );
             try {
-                uint32_t retry_period = mWSRetryPeriodShort;
-                uint32_t timeout = mWSRequestTimeout;
+                uint32_t retry_sleep = mWSRetryPeriodShort;
+                uint32_t retry_timeout = mWSRequestTimeout;
                 mHealthCounter = 0;
                 /// Starting async metering post loop
                 while( 1 ) {
@@ -1652,36 +1654,41 @@ protected:
                     // Get next data from DRM Controller
                     Json::Value request_json = getMeteringData();
                     // Compute retry period
-                    TClock::time_point retry_deadline = TClock::now() + std::chrono::seconds( timeout );
+                    TClock::time_point retry_deadline = TClock::now() + std::chrono::seconds( retry_timeout );
                     // Post next data to server
-                    Json::Value response_json = getHealth( request_json, retry_deadline, retry_period );
+                    Json::Value response_json = getHealth( request_json, retry_deadline, retry_sleep );
                     mHealthCounter ++;
 
                     /// Extract asynchronous metering parameters from response
-                    //Json::Value metering_node = JVgetRequired( response_json, "metering", Json::objectValue );
                     Json::Value metering_node = JVgetOptional( response_json, "metering", Json::objectValue, Json::nullValue );
                     uint32_t healthPeriod = JVgetOptional( metering_node, "healthPeriod", Json::uintValue, mHealthPeriod ).asUInt();
-                    uint32_t healthRetry = JVgetOptional( metering_node, "healthRetry", Json::uintValue, mHealthRetry ).asUInt();
-                    if ( ( healthPeriod != mHealthPeriod ) || ( healthRetry != mHealthRetry) ) {
-                        /// Reajust async metering thread if one parameter has changed
+                    uint32_t healthRetryTimeout = JVgetOptional( metering_node, "healthRetry", Json::uintValue, mHealthRetryTimeout ).asUInt();
+                    uint32_t healthRetrySleep = JVgetOptional( metering_node, "healthRetrySleep", Json::uintValue, mHealthRetrySleep ).asUInt();
+
+                    /// Reajust async metering thread if needed
+                    if ( ( healthPeriod != mHealthPeriod ) || ( healthRetryTimeout != mHealthRetryTimeout)
+                            || ( healthRetrySleep != mHealthRetrySleep) ) {
                         mHealthPeriod = healthPeriod;
-                        mHealthRetry = healthRetry;
-                        Debug( "Updating health parameters with new values: healthPeriod={}, healthRetry={}", healthPeriod, healthRetry );
+                        mHealthRetryTimeout = healthRetryTimeout;
+                        mHealthRetrySleep = healthRetrySleep;
+                        Debug( "Updating health parameters with new values: healthPeriod={}, healthRetry={}, healthRetrySleep={}",
+                            healthPeriod, healthRetry, healthRetrySleep );
                         if ( mHealthPeriod == 0 ) {
-                            Debug( "Health thread has been disabled" );
+                            Warning( "Health thread has been disabled" );
                             break;
                         }
-                        if ( mHealthRetry == 0 ) {
-                            timeout = mWSRequestTimeout;
-                            retry_period = 0;
+                        if ( mHealthRetryTimeout == 0 ) {
+                            retry_timeout = mWSRequestTimeout;
+                            retry_sleep = 0;
                             Debug( "Health retry is disabled" );
                         } else {
-                            timeout = mHealthRetry;
-                            retry_period = mWSRetryPeriodShort;
+                            retry_timeout = mHealthRetryTimeout;
+                            retry_sleep = mWSRetryPeriodShort;
                             Debug( "Health retry is enabled" );
                         }
                     } else {
-                        Debug( "Health parameters are unchanged: healthPeriod={}, healthRetry={}", healthPeriod, healthRetry );
+                        Debug( "Health parameters are unchanged: healthPeriod={}, healthRetry={}, healthRetrySleep={}",
+                            healthPeriod, healthRetry, healthRetrySleep );
                     }
 
                     /// Sleep until it's time to collect the next metering data
@@ -2229,8 +2236,13 @@ public:
                         break;
                     }
                     case ParameterKey::health_retry: {
-                        json_value[key_str] = mHealthRetry;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id, mHealthRetry );
+                        json_value[key_str] = mHealthRetryTimeout;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id, mHealthRetryTimeout );
+                        break;
+                    }
+                    case ParameterKey::health_retry_sleep: {
+                        json_value[key_str] = mHealthRetrySleep;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id, mHealthRetrySleep );
                         break;
                     }
                     case ParameterKey::ParameterKeyCount: {

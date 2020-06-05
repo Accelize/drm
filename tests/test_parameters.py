@@ -61,7 +61,8 @@ _PARAM_LIST = ('license_type',
                'log_message',
                'hdk_compatibility',
                'health_period',
-               'health_retry'
+               'health_retry',
+               'health_retry_sleep'
 )
 
 
@@ -877,9 +878,23 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         driver.write_register_callback,
         async_cb.callback
     )
-    assert drm_manager.get('health_retry') == drm_manager.get('ws_retry_period_short')
+    assert drm_manager.get('health_retry') == drm_manager.get('ws_request_timeout')
     async_cb.assert_NoError()
     print("Test parameter 'health_retry': PASS")
+
+    # Test parameter: health_retry_sleep
+    async_cb.reset()
+    conf_json.reset()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    assert drm_manager.get('health_retry_sleep') == drm_manager.get('ws_retry_period_short')
+    async_cb.assert_NoError()
+    print("Test parameter 'health_retry_sleep': PASS")
 
 
 def test_readonly_and_writeonly_parameters(accelize_drm, conf_json, cred_json, async_handler):
