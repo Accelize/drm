@@ -711,7 +711,6 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
             request_json = request.get_json()
             if request_json['request'] == 'health':
                 health_id = request_json['health_id']
-            print(request.headers
             response = post(url_path, json=request_json, headers=request.headers)
             excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
             headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]

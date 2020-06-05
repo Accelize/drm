@@ -651,8 +651,30 @@ class CredJson(_Json):
                     self[m.group(1)] = v
             self._user = user
         if ('client_id' not in self._content) or ('client_secret' not in self._content):
-            raise ValueError('User "%s" not found in "%s"' % (self._user, self._init_cred_path))
+            raise ValueError('User "%s" not found in "%s"' % (user, self._init_cred_path))
         self.save()
+
+    def get_user(self, user=None):
+        """
+        Return user details.
+
+        Args:
+            user (str): User to get. If not specified, use default user.
+        """
+        content = {}
+        if user is None:
+            for k, v in [e for e in self._initial_content.items() if not e.endswith('__')]:
+                content[k] = v
+            content['user'] = ''
+        else:
+            for k, v in self._initial_content.items():
+                m = match(r'(.+)__%s__' % user, k)
+                if m:
+                    content[m.group(1)] = v
+            content['user'] = user
+        if ('client_id' not in content) or ('client_secret' not in content):
+            raise ValueError('User "%s" not found in "%s"' % (user, self._init_cred_path))
+        return content
 
     @property
     def user(self):
@@ -907,10 +929,10 @@ class WSAdmin:
 
 @pytest.fixture
 def ws_admin(cred_json, conf_json):
-    cred_json.set_user('admin')
-    assert cred_json.user == 'admin'
-    return WSAdmin(conf_json['licensing']['url'], cred_json['client_id'],
-                   cred_json['client_secret'])
+    cred = cred_json.get_user('admin')
+    assert cred['user'] == 'admin'
+    return WSAdmin(conf_json['licensing']['url'], cred['client_id'],
+                   cred['client_secret'])
 
 
 class ExecFunction:
