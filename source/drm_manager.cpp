@@ -1672,7 +1672,7 @@ protected:
                         mHealthRetryTimeout = healthRetryTimeout;
                         mHealthRetrySleep = healthRetrySleep;
                         Debug( "Updating health parameters with new values: healthPeriod={}, healthRetry={}, healthRetrySleep={}",
-                            healthPeriod, healthRetry, healthRetrySleep );
+                            healthPeriod, mHealthRetryTimeout, healthRetrySleep );
                         if ( mHealthPeriod == 0 ) {
                             Warning( "Health thread has been disabled" );
                             break;
@@ -1688,7 +1688,7 @@ protected:
                         }
                     } else {
                         Debug( "Health parameters are unchanged: healthPeriod={}, healthRetry={}, healthRetrySleep={}",
-                            healthPeriod, healthRetry, healthRetrySleep );
+                            healthPeriod, mHealthRetryTimeout, healthRetrySleep );
                     }
 
                     /// Sleep until it's time to collect the next metering data
