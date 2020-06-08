@@ -523,8 +523,8 @@ def test_health_retry_sleep(accelize_drm, conf_json, cred_json, async_handler, f
     conf_json['licensing']['url'] = proxy_url
     conf_json.save()
     tmpHealthPeriod = 3
-    tmpHealthRetry = 5
-    tmpHealthRetrySleep = 4
+    tmpHealthRetry = 4
+    tmpHealthRetrySleep = 2
     nb_run = 3
     context = {'url': url, 'data': list(), 'exit':False}
 
@@ -579,13 +579,13 @@ def test_health_retry_sleep(accelize_drm, conf_json, cred_json, async_handler, f
         context = get(url=proxy_url+'/get/').json()
         data_list = context['data']
         data0 = data_list.pop(0)
-        assert len(data_list) == nb_run * (int(tmpHealthRetry / tmpHealthRetrySleep) + 1)
+        assert len(data_list) == nb_run
         # Check the retry sleep period is correct
         for health_id, group in groupby(data_list, lambda x: x[0]):
             group = list(group)
             assert len(group) == 2
-            start = group[0][1]
-            end = group[-1][2]
+            start = group[0][2]
+            end = group[-1][1]
             delta = parser.parse(end) - parser.parse(start)
             assert int(delta.total_seconds()) == tmpHealthRetrySleep
     finally:
