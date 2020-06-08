@@ -1,10 +1,8 @@
 import sys
-import array
 from ctypes import c_uint, c_int, byref, sizeof, memset, cast, POINTER
 
 # Following found in PYTHONPATH setup by XRT
 from xrt_binding import *
-from ert_binding import * 
 
 #sys.path.append('/opt/xilinx/xrt/test/')
 from utils_binding import *
@@ -15,16 +13,6 @@ import accelize_drm
 
 INCR_VALUE = 10
 DATA_SIZE = 4096
-
-CONTROL_ADDR_AP_CTRL = 0x00
-CONTROL_ADDR_GIE = 0x04
-CONTROL_ADDR_IER = 0x08
-CONTROL_ADDR_ISR = 0x0c
-CONTROL_ADDR_BUFFER_ADDR = 0x10
-CONTROL_ADDR_DATA_SIZE = 0x1C
-
-ADDER_CONTROL_ADDR_INC_SIZE = 0x10
-ADDER_CONTROL_ADDR_DATA_SIZE = 0x14
 
 
 # Global Read Register Function
@@ -56,6 +44,7 @@ def py_write_register(cuidx, addr, value, shared):
 
 
 def main(args):
+    mismatch = DATA_SIZE
     opt = Options()
     Options.getOptions(opt, args)
     try:
@@ -84,154 +73,103 @@ def main(args):
         if reg != 0:
             print("Error: DRM Activator status should be 0, not", reg);
             return -1
-
         print("DRM Activator is locked");
 
 #ACCELIZE DRMLIB ACTIVATION CODE AREA START        
-        try:
-            drm_manager = accelize_drm.DrmManager(
-               'conf.json', 
-               'cred.json',
-               lambda addr, value: read_register(drm_cuidx, addr, value, opt),
-               lambda addr, value: write_register(drm_cuidx, addr, value, opt)
-            )
-            print('[DRMLIB] Allocated')
+        drm_manager = accelize_drm.DrmManager(
+            'conf.json', 
+            'cred.json',
+            lambda addr, value: read_register(drm_cuidx, addr, value, opt),
+            lambda addr, value: write_register(drm_cuidx, addr, value, opt)
+        )
+        print('[DRMLIB] Allocated')
 
-            drm_manager.activate()
-            print("[DRMLIB] Design unlocked")        
+        drm_manager.activate()
+        print("[DRMLIB] Design unlocked")
+               
 #ACCELIZE DRMLIB ACTIVATION CODE AREA STOP
 
+        try:            
             # Check a DRM Activator is detected
             reg = py_read_register(add_cuidx, 0x40, opt);
             if reg != 0x600DC0DE:
-                print("Error: No DRM Activator is detected")
-                return -1
-            print("[DRMLIB] a DRM Activator is detected")
+                raise RuntimeError("Error: No DRM Activator is detected")
+            print("A DRM Activator is detected")
 
             # Check DRM Activator status
             reg = py_read_register(add_cuidx, 0x38, opt)
             if reg != 3:
-                print("Error: DRM Activator status should be 3, not", reg)
-                return -1
-            '''
-            # Perform some processing with the kernels
-            xclOpenContext(opt.handle, opt.xuuid, 0, False)
+                raise RuntimeError("Error: DRM Activator status should be 3, not", reg)
+            print("Checked Activator is unlocked")
             
+            # Perform some processing with the kernels
             try:
-                inputHandle = -1
-                outputHandle = -1
-                execHandle = -1
-                C_DATA_SIZE = sizeof(c_int) * DATA_SIZE
-                                
-                inputHandle = xclAllocBO(opt.handle, C_DATA_SIZE, 0, opt.first_mem)
-                if inputHandle == -1:
-                    raise RuntimeError("Error: Unabe to alloc Input BO")
-                    
-                outputHandle = xclAllocBO(opt.handle, C_DATA_SIZE, 0, opt.first_mem)
-                if outputHandle == -1:
-                    raise RuntimeError("Error: Unabe to allocOutnput BO")
-                    
-                input_bo = xclMapBO(opt.handle, inputHandle, True)
-                if not input_bo: # checks NULLBO
-                    raise RuntimeError("Error: Unable to map Input BO")
-                    
-                output_bo = xclMapBO(opt.handle, outputHandle, True)
-                if not output_bo: # checks NULLBO
-                    raise RuntimeError("Error: Unable to map Output BO")
-                    
+                c_data_size = sizeof(c_int) * DATA_SIZE
+
+                input_kernel = adder_kernel = output_kernel = None
+                rInputhandle = rAdderhandle = rOutputhandle = None
+                input_bo_handle = output_bo_handle = None
+                input_bo = output_bo = None        
+
+                input_kernel = xrtPLKernelOpen(opt.handle, opt.xuuid, 'krnl_input_stage_rtl'.encode('utf-8'))
+                adder_kernel = xrtPLKernelOpen(opt.handle, opt.xuuid, 'krnl_adder_stage_rtl'.encode('utf-8'))
+                output_kernel = xrtPLKernelOpen(opt.handle, opt.xuuid, 'krnl_output_stage_rtl'.encode('utf-8'))
+
+                input_bo_handle = xclAllocBO(opt.handle, c_data_size, 0, opt.first_mem)
+                input_bo = xclMapBO(opt.handle, input_bo_handle, True)
                 memset(input_bo, 0, DATA_SIZE)
-                memset(output_bo, 0, DATA_SIZE)
-                
-                source_input = cast(input_bo, POINTER(c_int))
-                source_hw_results = cast(input_bo, POINTER(c_int))
-                source_sw_results = array.array('L', [0]*DATA_SIZE)
-                
+                input_bo_int = cast(input_bo, POINTER(c_int))
                 for i in range(DATA_SIZE):
-                    source_input[i] = i
-                    source_sw_results[i] = i + INCR_VALUE
-                    source_sw_results[i] = 0
-                    
-                if xclSyncBO(opt.handle, inputHandle, xclBOSyncDirection.XCL_BO_SYNC_BO_TO_DEVICE, C_DATA_SIZE, 0):
-                    raise RuntimeError("Error: Unable to sync Input BO")
+                    input_bo_int[i] = i
 
-                if xclSyncBO(opt.handle, outputHandle, xclBOSyncDirection.XCL_BO_SYNC_BO_TO_DEVICE, C_DATA_SIZE, 0):
-                    raise RuntimeError("Error: Unable to sync Output BO")
-                    
-                p = xclBOProperties()
-                
-                input_bodevAddr = p.paddr if not (xclGetBOProperties(opt.handle, inputHandle, p)) else -1
-                if input_bodevAddr is -1:
-                    raise RuntimeError("Error: Unable to get Input BO properties")
-                output_bodevAddr = p.paddr if not (xclGetBOProperties(opt.handle, outputHandle, p)) else -1
-                if output_bodevAddr is -1:
-                    raise RuntimeError("Error: Unable to get Output BO properties")
-                
-                # Allocate the exec_bo
-                execHandle = xclAllocBO(opt.handle, opt.DATA_SIZE, 0, (1 << 31))
-                if execHandle == -1:
-                    raise RuntimeError("Error: Unable to alloc exec BO")
-                execData = xclMapBO(opt.handle, execHandle, True)  # returns mmap()
-                if not execData:
-                    raise RuntimeError("Error: Unable to map exec BO")
+                output_bo_handle = xclAllocBO(opt.handle, c_data_size, 0, opt.first_mem)
+                output_bo = xclMapBO(opt.handle, output_bo_handle, True)
+                memset(output_bo, 0, DATA_SIZE)
 
-                print("Construct the exec command to run the Input kernel on FPGA")
-                
-                # construct the exec buffer cmd to start the Input kernel
-                config_cmd = ert_configure_cmd.from_buffer(execData.contents)
-    
-                start_cmd = ert_start_kernel_cmd.from_buffer(execData.contents)
-                rsz = int((CONTROL_ADDR_DATA_SIZE / 4 + 1) + 1)  # regmap array size
-                memset(execData.contents, 0, sizeof(ert_start_kernel_cmd) + rsz*4)
-                start_cmd.m_uert.m_start_cmd_struct.state = 1  # ERT_CMD_STATE_NEW
-                start_cmd.m_uert.m_start_cmd_struct.opcode = 0  # ERT_START_CU
-                start_cmd.m_uert.m_start_cmd_struct.count = 1 + rsz
-                start_cmd.cu_mask = 0x1
-                
-                # Prepare kernel reg map
-                new_data = (c_uint * rsz).from_buffer(execData.contents, 8)
-                new_data[CONTROL_ADDR_AP_CTRL] = 0x0
-                new_data[int(CONTROL_ADDR_BUFFER_ADDR / 4)] = input_bodevAddr
-                new_data[int(CONTROL_ADDR_BUFFER_ADDR / 4 + 1)] = (input_bodevAddr >> 32) & 0xFFFFFFFF
-                new_data[int(CONTROL_ADDR_DATA_SIZE / 4)] = DATA_SIZE
-                
-                if xclExecBuf(opt.handle, execHandle):
-                    raise RuntimeError("Error: Unable to issue exec buf")
-                print("Kernel start command issued through xclExecBuf : start_kernel")
-                print("Now wait until the kernel finish")
+                xclSyncBO(opt.handle, input_bo_handle, xclBOSyncDirection.XCL_BO_SYNC_BO_TO_DEVICE, c_data_size, 0)
+                xclSyncBO(opt.handle, output_bo_handle, xclBOSyncDirection.XCL_BO_SYNC_BO_TO_DEVICE, c_data_size, 0)
 
-                print("Wait until the command finish")
-                while start_cmd.m_uert.m_start_cmd_struct.state < ert_cmd_state.ERT_CMD_STATE_COMPLETED:
-                    while xclExecWait(opt.handle, 100) == 0:
-                        print(".")
+                print("Issue kernel start requests")
+                rInputhandle = xrtKernelRun(input_kernel, input_bo_handle, DATA_SIZE)
+                rAdderhandle = xrtKernelRun(adder_kernel, INCR_VALUE, DATA_SIZE)
+                rOutputhandle = xrtKernelRun(output_kernel, output_bo_handle, DATA_SIZE)
 
-                print("Get the output data from the device")
-                if xclSyncBO(opt.handle, inputHandle, xclBOSyncDirection.XCL_BO_SYNC_BO_FROM_DEVICE, opt.DATA_SIZE, 0):
-                    raise RuntimeError("Error: Unable to sync BO")
+                print("Now wait for the kernels to finish")
+                xrtRunWait(rInputhandle)
+                xrtRunWait(rAdderhandle)
+                xrtRunWait(rOutputhandle)
+                
+                print("Get the output data produced by the kernel runs from the device")
+                xclSyncBO(opt.handle, output_bo_handle, xclBOSyncDirection.XCL_BO_SYNC_BO_FROM_DEVICE, c_data_size, 0)
 
-                result = input_bo.contents[:len("Hello World")]
-                print("Result string = [%s]\n" % result.decode("utf-8"))
-               
+                # Compare result
+                hw_result_int = cast(output_bo, POINTER(c_int))
+                for i in range(DATA_SIZE):
+                    if hw_result_int[i] == i + INCR_VALUE:
+                        mismatch -= 1
+
             except Exception as e:
                 print('Error:', str(e))
-                raise
+
             finally:
-                if inputHandle != -1:
-                    xclFreeBO(opt.handle, inputHandle)
-                if outputHandle != -1:
-                    xclFreeBO(opt.handle, outputHandle)
-                if execHandle != -1:
-                    xclFreeBO(opt.handle, execHandle)
-                xclCloseContext(opt.handle, opt.xuuid, 0)
-            '''
-            # Compare result
-            mismatch = 0            
+                xrtRunClose(rInputhandle)
+                xrtRunClose(rAdderhandle)
+                xrtRunClose(rOutputhandle)
+                
+                xrtKernelClose(input_kernel)
+                xrtKernelClose(adder_kernel)
+                xrtKernelClose(output_kernel)
+
+                xclUnmapBO(opt.handle, input_bo_handle, input_bo)
+                xclFreeBO(opt.handle, input_bo_handle)
+                xclUnmapBO(opt.handle, output_bo_handle, output_bo)
+                xclFreeBO(opt.handle, output_bo_handle)            
                 
         finally:
 #ACCELIZE DRMLIB DEACTIVATION CODE AREA START
             drm_manager.deactivate()
-            print("[DRMLIB] Design locked")
             del drm_manager
-            
+            print("[DRMLIB] Design locked")
 #ACCELIZE DRMLIB DEACTIVATION CODE AREA STOP
 
         # Check DRM Activator status
@@ -239,7 +177,8 @@ def main(args):
         if reg != 0:
             print("Error: DRM Activator status should be 0, not", reg)
             return -1
-            
+        print("Checked Activator is locked")
+
         print("TEST", "FAILED" if mismatch else "PASSED")
         return mismatch
         
@@ -258,79 +197,6 @@ def main(args):
     finally:
         xclClose(opt.handle)
 
-"""
-def runKernel(opt):
-    COUNT = 1024
-    DATA_SIZE = sizeof(c_int) * COUNT
-
-    khandle = xrtPLKernelOpen(opt.handle, opt.xuuid, "simple")
-
-    boHandle1 = xclAllocBO(opt.handle, DATA_SIZE, 0, opt.first_mem)
-    boHandle2 = xclAllocBO(opt.handle, DATA_SIZE, 0, opt.first_mem)
-
-    bo1 = xclMapBO(opt.handle, boHandle1, True)
-    bo2 = xclMapBO(opt.handle, boHandle2, True)
-
-    memset(bo1, 0, DATA_SIZE)
-    ctypes.memset(bo2, 0, DATA_SIZE)
-
-    bo1Int = ctypes.cast(bo1, ctypes.POINTER(ctypes.c_int))
-    bo2Int = ctypes.cast(bo2, ctypes.POINTER(ctypes.c_int))
-
-    for i in range(COUNT):
-        bo2Int[i] = i
-
-    # bufReference
-    bufReference = [i + i*16 for i in range(COUNT)]
-
-    xclSyncBO(opt.handle, boHandle1, xclBOSyncDirection.XCL_BO_SYNC_BO_TO_DEVICE, DATA_SIZE, 0)
-    xclSyncBO(opt.handle, boHandle2, xclBOSyncDirection.XCL_BO_SYNC_BO_TO_DEVICE, DATA_SIZE, 0)
-
-    print("Issue kernel start requests using xrtKernelRun()")
-    rhandle1 = xrtKernelRun(khandle, boHandle1, boHandle2, 0x10)
-
-    print("Now wait for the kernels to finish using xrtRunWait()")
-    xrtRunWait(rhandle1)
-
-    # get the output xclSyncBO
-    print("Get the output data from the device")
-    xclSyncBO(opt.handle, boHandle1, xclBOSyncDirection.XCL_BO_SYNC_BO_FROM_DEVICE, DATA_SIZE, 0)
-
-    xrtRunClose(rhandle1)
-    xrtKernelClose(khandle)
-
-    assert (bufReference[:COUNT] == bo1Int[:COUNT]), "Computed value does not match reference"
-    xclUnmapBO(opt.handle, boHandle2, bo2)
-    xclFreeBO(opt.handle, boHandle2)
-    xclUnmapBO(opt.handle, boHandle1, bo1)
-    xclFreeBO(opt.handle, boHandle1)
-
-def main(args):
-    opt = Options()
-    Options.getOptions(opt, args)
-
-    try:
-        initXRT(opt)
-        assert (opt.first_mem >= 0), "Incorrect memory configuration"
-
-        runKernel(opt)
-        print("PASSED TEST")
-
-    except OSError as o:
-        print(o)
-        print("FAILED TEST")
-        sys.exit(o.errno)
-    except AssertionError as a:
-        print(a)
-        print("FAILED TEST")
-        sys.exit(1)
-    except Exception as e:
-        print(e)
-        print("FAILED TEST")
-        sys.exit(1)
-    finally:
-        xclClose(opt.handle)
-"""
 
 if __name__ == "__main__":
     main(sys.argv)
