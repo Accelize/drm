@@ -740,7 +740,7 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
             sleep(1)
         assert drm_manager.get('metered_data') == 0
         activators[0].generate_coin(10)
-        metering_data = ws_admin.get_metering_information(session_id)
+        metering_data = ws_admin.metering_lastinformation(session_id)
         print('metering_data=', metering_data)
         drm_manager.deactivate()
         async_cb.assert_NoError()
