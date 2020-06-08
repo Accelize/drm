@@ -1683,7 +1683,7 @@ protected:
                             Debug( "Health retry is disabled" );
                         } else {
                             retry_timeout = mHealthRetryTimeout;
-                            retry_sleep = mWSRetryPeriodShort;
+                            retry_sleep = mHealthRetrySleep;
                             Debug( "Health retry is enabled" );
                         }
                     } else {

@@ -914,12 +914,11 @@ class WSAdmin:
         text, status = self._functions.remove_product_information(data)
         assert status == 200, text
 
-    def get_metering_information(self, session_id):
+    def get_last_metering_information(self, session_id):
         self._functions._get_user_token()
-        data = {'session': session_id}
-        text, status = self._functions.metering_information(data)
+        text, status = self._functions.metering_lastinformation({'session': session_id})
         assert status == 200, text
-        print('get_metering_information=', text)
+        print('metering_lastinformation=', text)
         return text
 
     @property

@@ -9,7 +9,7 @@ from os import remove, getpid
 from os.path import getsize, isfile, dirname, join, realpath
 from re import match, search, finditer, MULTILINE, IGNORECASE
 from time import sleep, time
-from json import loads
+from json import loads, dumps
 from datetime import datetime, timedelta
 from tests.conftest import wait_func_true
 
@@ -761,3 +761,55 @@ def test_curl_host_resolve(accelize_drm, conf_json, cred_json, async_handler):
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMExternFail.error_code
     async_cb.assert_NoError()
     del drm_manager
+
+
+@pytest.mark.minimum
+def test_http_header_api_version(accelize_drm, conf_json, cred_json, async_handler, fake_server):
+    """Test the http header contains the expected API version"""
+    from random import randrange
+    from multiprocessing import Process
+    from flask import redirect, request, Response
+    from requests import get, post
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    async_cb.reset()
+
+    conf_json.reset()
+    saas_url = conf_json['licensing']['url']
+    proxy_port = randrange(1,65535)
+    proxy_url = "http://127.0.0.1:%s" % proxy_port
+    conf_json['licensing']['url'] = proxy_url
+    conf_json.save()
+
+    def proxy(path=''):
+        url_path = '%s/%s' % (saas_url,path)
+        if path == 'o/token/':
+            return redirect(url_path, code=307)
+        else:
+            request_json = request.get_json()
+            assert search(r'Accept:.*application/vnd\.accelize\.v1\+json', request.headers)
+            response = post(url_path, json=request_json, headers=request.headers)
+            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+            response_json = response.json()
+            return Response(dumps(response_json), response.status_code, headers)
+
+    fake_server.add_endpoint('/<path:path>', 'proxy', proxy, methods=['GET', 'POST'])
+    server = Process(target=fake_server.run, args=("127.0.0.1", proxy_port))
+    server.start()
+    try:
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+        try:
+            drm_manager.activate()
+        finally:
+            drm_manager.deactivate()
+        async_cb.assert_NoError()
+    finally:
+        server.terminate()
+        server.join()

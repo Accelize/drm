@@ -262,8 +262,8 @@ Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Val
     req.setHostResolves( mHostResolvesJson );
     req.setURL( url );
     req.appendHeader( "Accept: application/json" );
-    req.appendHeader( "Content-Type: application/json" );
     req.appendHeader( "Accept: application/vnd.accelize.v1+json" );
+    req.appendHeader( "Content-Type: application/json" );
     req.appendHeader( std::string("Authorization: Bearer ") + mOAuth2Token );
     req.setPostFields( saveJsonToString( json_req ) );
 

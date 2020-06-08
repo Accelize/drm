@@ -582,6 +582,7 @@ def test_health_retry_sleep(accelize_drm, conf_json, cred_json, async_handler, f
         assert len(data_list) == nb_run * (int(tmpHealthRetry / tmpHealthRetrySleep) + 1)
         # Check the retry sleep period is correct
         for health_id, group in groupby(data_list, lambda x: x[0]):
+            group = list(group)
             assert len(group) == 2
             start = group[0][1]
             end = group[-1][2]
@@ -643,7 +644,7 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, asy
     fake_server.add_endpoint('/<path:path>', 'proxy', proxy, methods=['GET', 'POST'])
 
     for i in range(nb_run):
-        retry_retry_sleep = tmpHealthRetrySleep+2*i
+        retry_retry_sleep = tmpHealthRetrySleep + i
         context = {'url': url, 'data': list(), 'exit':False, 'health_retry_sleep':retry_retry_sleep}
         server = Process(target=fake_server.run, args=(PROXY_HOST, proxy_port))
         server.start()
@@ -657,7 +658,7 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, asy
             )
             error_gap = drm_manager.get('ws_retry_period_short')
             drm_manager.activate()
-            sleep(retry_period)
+            sleep(tmpHealthRetry)
             while not context['exit']:
                 context = get(url=proxy_url+'/get/').json()
                 sleep(1)
@@ -666,14 +667,16 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, asy
             context = get(url=proxy_url+'/get/').json()
             data_list = context['data']
             data0 = data_list.pop(0)
-            assert len(data_list) == int(tmpHealthRetry / retry_retry_sleep) + 1
+            nb_sleep_prev = 0
             # Check the retry sleep period is correct
             for health_id, group in groupby(data_list, lambda x: x[0]):
-                start = group[0][2]
+                group = list(group)
+                assert len(group) > nb_sleep_prev
+                nb_sleep_prev = len(group)
+                start = group.pop(0)[2]
                 for _, lstart, lend in group:
                     delta = parser.parse(lstart) - parser.parse(start)
-                    print('start, lstart, delta =', start, lstart, delta.total_seconds())
-                    assert int(delta.total_seconds()) == tmpHealthRetrySleep
+                    assert int(delta.total_seconds()) == retry_retry_sleep
                     start = lend
         finally:
             server.terminate()
@@ -698,7 +701,7 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
     proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
     conf_json['licensing']['url'] = proxy_url
     conf_json.save()
-    tmpHealthPeriod = 5
+    tmpHealthPeriod = 1
     tmpHealthRetry = 0  # No retry
 
     def proxy(path=''):
@@ -721,6 +724,13 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
                 context['health_id']= health_id
             return Response(dumps(response_json), response.status_code, headers)
 
+    def wait_next_health():
+        next_health_id = get(url=proxy_url+'/get/').json()['health_id'] + 1
+        while True:
+            if get(url=proxy_url+'/get/').json()['health_id'] >= next_health_id:
+                break
+            sleep(1)
+
     fake_server.add_endpoint('/<path:path>', 'proxy', proxy, methods=['GET', 'POST'])
     context = {'url': url, 'data': list(), 'health_id':0}
     server = Process(target=fake_server.run, args=(PROXY_HOST, proxy_port))
@@ -735,13 +745,15 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
         )
         drm_manager.activate()
         session_id = drm_manager.get('session_id')
-        while context['health_id'] < 1:
-            context = get(url=proxy_url+'/get/').json()
-            sleep(1)
         assert drm_manager.get('metered_data') == 0
+        wait_next_health()
+        assert drm_manager.get('metered_data') == 0
+        metering_data = ws_admin.get_last_metering_information(session_id)
         activators[0].generate_coin(10)
-        metering_data = ws_admin.metering_lastinformation(session_id)
-        print('metering_data=', metering_data)
+        activators[0].check_coin(drm_manager.get('metered_data'))
+        # Wait next async metering
+        wait_next_health()
+        metering_data = ws_admin.get_last_metering_information(session_id)
         drm_manager.deactivate()
         async_cb.assert_NoError()
     finally:
