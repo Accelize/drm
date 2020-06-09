@@ -724,7 +724,7 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
             return Response(dumps(response_json), response.status_code, headers)
 
     def wait_and_check_on_next_health(drm_manager):
-        next_health_id = get(url=proxy_url+'/get/').json()['health_id'] + 1
+        next_health_id = get(url=proxy_url+'/get/').json()['health_id'] + 2
         while True:
             if get(url=proxy_url+'/get/').json()['health_id'] >= next_health_id:
                 break
