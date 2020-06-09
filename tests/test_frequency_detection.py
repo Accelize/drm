@@ -113,7 +113,7 @@ def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_jso
     )
     with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
         drm_manager.activate()
-    assert 'License Web Service error 400' in str(excinfo.value)
+    assert 'Metering Web Service error 400' in str(excinfo.value)
     assert 'Ensure this value is greater than or equal to 50' in str(excinfo.value)
     err_code = async_handler.get_error_code(str(excinfo.value))
     assert err_code == accelize_drm.exceptions.DRMWSReqError.error_code
@@ -135,7 +135,7 @@ def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_jso
     )
     with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
         drm_manager.activate()
-    assert 'License Web Service error 400' in str(excinfo.value)
+    assert 'Metering Web Service error 400' in str(excinfo.value)
     assert 'Ensure this value is less than or equal to 320' in str(excinfo.value)
     err_code = async_handler.get_error_code(str(excinfo.value))
     assert err_code == accelize_drm.exceptions.DRMWSReqError.error_code

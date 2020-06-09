@@ -9,6 +9,7 @@ from os.path import getsize, isfile, dirname, join, realpath, isdir, expanduser
 from re import search, findall, finditer, MULTILINE
 from time import time, sleep
 from shutil import rmtree
+from random import randrange
 from tests.conftest import wait_func_true
 
 
@@ -24,7 +25,7 @@ def test_file_path(accelize_drm, conf_json, cred_json, async_handler):
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
-    log_path = realpath("./test_drmlib-%d.log" % getpid())
+    log_path = realpath("./drmlib-%d.%d.log" % (getpid(), randrange(0xFFFFFFFF)))
     log_type= 1
 
     async_cb.reset()
@@ -57,7 +58,7 @@ def test_file_verbosity(accelize_drm, conf_json, cred_json, async_handler):
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
-    log_path = realpath("./drmlib-%d.log" % getpid())
+    log_path = realpath("./drmlib-%d.%d.log" % (getpid(), randrange(0xFFFFFFFF)))
     log_type = 1
     msg = 'This is a %s message'
     level_dict = {0:'trace', 1:'debug', 2:'info', 3:'warning', 4:'error', 5:'critical'}
@@ -108,7 +109,7 @@ def test_file_format(accelize_drm, conf_json, cred_json, async_handler):
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
-    log_path = realpath("./drmlib-%d.log" % getpid())
+    log_path = realpath("./drmlib-%d.%d.log" % (getpid(), randrange(0xFFFFFFFF)))
     log_type = 1
     msg = 'This is a message'
     regex_short = REGEX_FORMAT_SHORT % msg
@@ -184,7 +185,7 @@ def test_file_types(accelize_drm, conf_json, cred_json, async_handler):
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
-    log_path = realpath("./drmlib-%d.log" % getpid())
+    log_path = realpath("./drmlib-%d.%d.log" % (getpid(), randrange(0xFFFFFFFF)))
     msg = 'This is a message'
     verbosity = 2
     rotating_size = 1
@@ -247,7 +248,7 @@ def test_file_rotating_parameters(accelize_drm, conf_json, cred_json, async_hand
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
-    log_path = realpath("./drmlib-%d.log" % getpid())
+    log_path = realpath("./drmlib-%d.%d.log" % (getpid(), randrange(0xFFFFFFFF)))
     log_type = 2
     msg = 'This is a message'
     verbosity = 2
@@ -289,7 +290,7 @@ def test_file_rotating_parameters(accelize_drm, conf_json, cred_json, async_hand
         for log_f in log_list:
             assert isfile(log_f)
             assert getsize(log_f) < 2 * rotating_size*1024
-            m = search(r'drmlib-\d+(\.\d)?\.log', log_f)
+            m = search(r'drmlib-\d+\.\d+(\.\d+)?\.log', log_f)
             assert m is not None
             if m.group(1) is None:
                 index = 0
@@ -309,7 +310,7 @@ def test_versions_displayed_in_log_file(accelize_drm, conf_json, cred_json, asyn
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
-    log_path = realpath("./drmlib-%d.log" % getpid())
+    log_path = realpath("./drmlib-%d.%d.log" % (getpid(), randrange(0xFFFFFFFF)))
     log_type = 1
     verbosity = 5
 
@@ -349,10 +350,10 @@ def test_log_file_parameters_modifiability(accelize_drm, conf_json, cred_json, a
     async_cb = async_handler.create()
 
     log_verbosity = 3
-    log_path = realpath("./drmservice-%d.log" % getpid())
+    log_path = realpath("./drmlib-%d.%d.log" % (getpid(), randrange(0xFFFFFFFF)))
     log_format = LOG_FORMAT_LONG
     log_type = 2
-    log_rotating_size = 10
+    log_rotating_size = 10  # =10KB
     log_rotating_num = 0
 
     # Test from config file
@@ -390,7 +391,7 @@ def test_log_file_parameters_modifiability(accelize_drm, conf_json, cred_json, a
         drm_manager.set(log_file_format=exp_value)
         assert drm_manager.get('log_file_format') == exp_value
         # Try to modify path => not authorized
-        exp_value = realpath("./unexpected-%d.log" % getpid())
+        exp_value = realpath("./unexpected-%d.%d.log" % (getpid(), randrange(0xFFFFFFFF)))
         with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
             drm_manager.set(log_file_path=exp_value)
         assert drm_manager.get('log_file_path') == log_path
@@ -408,12 +409,13 @@ def test_log_file_parameters_modifiability(accelize_drm, conf_json, cred_json, a
         assert wait_func_true(lambda: isfile(log_path), 10)
         with open(log_path, 'rt') as f:
             log_content = f.read()
-        critical_list = findall(r'[\s*critical\s*].* Parameter \S* cannot be overwritten', log_content)
+        critical_list = findall(r'\[\s*critical\s*\].* Parameter \S* cannot be overwritten', log_content)
         assert len(critical_list) == 3
         async_cb.assert_NoError()
     finally:
         if isfile(log_path):
-            remove(log_path)
+            #remove(log_path)
+            print(log_path)
     print('Test log file parameters modifiability from config: PASS')
 
 
@@ -424,7 +426,7 @@ def test_log_file_error_on_directory_creation(accelize_drm, conf_json, cred_json
     async_cb = async_handler.create()
 
     log_type = 1
-    log_dir = realpath(expanduser('~/tmp_log_dir.%s' % str(time())))
+    log_dir = realpath(expanduser('~/tmp_log_dir.%s.%d' % (str(time()), randrange(0xFFFFFFFF))))
     if not isdir(log_dir):
         makedirs(log_dir)
     log_path = join(log_dir, "tmp", "drmlib.%d.%s.log" % (getpid(), str(time())))
@@ -460,7 +462,7 @@ def test_log_file_on_existing_directory(accelize_drm, conf_json, cred_json, asyn
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     log_type = 1
-    log_dir = realpath(expanduser('~/tmp_log_dir.%s' % str(time())))
+    log_dir = realpath(expanduser('~/tmp_log_dir.%s.%d' % (str(time()), randrange(0xFFFFFFFF))))
     if not isdir(log_dir):
         makedirs(log_dir)
     log_path = join(log_dir, "drmlib.%d.%s.log" % (getpid(), time()))
@@ -492,7 +494,7 @@ def test_log_file_directory_creation(accelize_drm, conf_json, cred_json, async_h
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     log_type = 1
-    log_dir = realpath(expanduser('~/tmp_log_dir.%s' % str(time())))
+    log_dir = realpath(expanduser('~/tmp_log_dir.%s.%d' % (str(time()), randrange(0xFFFFFFFF))))
     if not isdir(log_dir):
         makedirs(log_dir)
     log_path = join(log_dir, 'tmp', "drmlib.%d.%s.log" % (getpid(), time()))
@@ -522,7 +524,7 @@ def test_log_file_without_credential_data(accelize_drm, conf_json, cred_json, as
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     log_type = 1
-    log_dir = realpath(expanduser('~/tmp_log_dir.%s' % str(time())))
+    log_dir = realpath(expanduser('~/tmp_log_dir.%s.%d' % (str(time()), randrange(0xFFFFFFFF))))
     if not isdir(log_dir):
         makedirs(log_dir)
     assert isdir(log_dir)

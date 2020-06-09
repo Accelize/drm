@@ -173,8 +173,9 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
     ss << "&grant_type=client_credentials";
     mOAUth2Request.setPostFields( ss.str() );
 
-    // Set URL of license request
-    mMeteringUrl = url + std::string("/auth/metering/genlicense/");
+    // Set URL of license and metering requests
+    mLicenseUrl = url + std::string("/auth/metering/genlicense/");
+    mHealthUrl = url + std::string("/auth/metering/health/");
 }
 
 int32_t DrmWSClient::getTokenTimeLeft() const {
@@ -254,19 +255,18 @@ void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
 }
 
 
-Json::Value DrmWSClient::requestLicense( const Json::Value& json_req, TClock::time_point deadline ) {
+Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Value& json_req, TClock::time_point deadline ) {
 
     // Create new request
     CurlEasyPost req;
     req.setHostResolves( mHostResolvesJson );
-    req.setURL( mMeteringUrl );
-    req.appendHeader( "Accept: application/json" );
+    req.setURL( url );
+    req.appendHeader( "Accept: application/vnd.accelize.v1+json" );
     req.appendHeader( "Content-Type: application/json" );
     req.appendHeader( std::string("Authorization: Bearer ") + mOAuth2Token );
     req.setPostFields( saveJsonToString( json_req ) );
 
     // Send request and wait response
-    Debug( "Starting license request to {} with request:\n{}", mMeteringUrl, json_req.toStyledString() );
     std::string response;
     long resp_code = req.perform( &response, deadline );
 
@@ -279,7 +279,7 @@ Json::Value DrmWSClient::requestLicense( const Json::Value& json_req, TClock::ti
         json_resp = Json::nullValue;
         error_msg = e.what();
     }
-    Debug( "Received code {} from License Web Service in {} ms",
+    Debug( "Received code {} from Metering Web Service in {} ms",
             resp_code, req.getTotalTime() * 1000 );
 
     // Analyze response
@@ -292,15 +292,25 @@ Json::Value DrmWSClient::requestLicense( const Json::Value& json_req, TClock::ti
             drm_error = DRM_WSReqError;
         else
             drm_error = DRM_WSError;
-        Throw( drm_error, "License Web Service error {}: {}", resp_code, response );
+        Throw( drm_error, "Metering Web Service error {}: {}", resp_code, response );
     }
     // Verify response parsing
     if ( json_resp == Json::nullValue )
-        Throw( DRM_WSRespError, "Failed to parse response from License Web Service because {}: {}",
+        Throw( DRM_WSRespError, "Failed to parse response from Metering Web Service because {}: {}",
                error_msg, response);
 
     // No error: return the response as JSON object
     return json_resp;
+}
+
+Json::Value DrmWSClient::requestLicense( const Json::Value& json_req, TClock::time_point deadline ) {
+    Debug( "Starting License request to {} with request:\n{}", mLicenseUrl, json_req.toStyledString() );
+    return requestMetering( mLicenseUrl, json_req, deadline );
+}
+
+Json::Value DrmWSClient::requestHealth( const Json::Value& json_req, TClock::time_point deadline ) {
+    Debug( "Starting Health request to {} with request:\n{}", mHealthUrl, json_req.toStyledString() );
+    return requestMetering( mHealthUrl, json_req, deadline );
 }
 
 }

@@ -44,3 +44,7 @@ PARAMETERKEY_ITEM( trigger_async_callback )         ///< Write-only, only for te
 PARAMETERKEY_ITEM( bad_product_id )                 ///< Write-only, only for testing, uses a bad product ID
 PARAMETERKEY_ITEM( bad_oauth2_token )               ///< Write-only, only for testing, uses a bad token
 PARAMETERKEY_ITEM( log_message )                    ///< Write-only, only for testing, insert a message with the value as content
+PARAMETERKEY_ITEM( hdk_compatibility )              ///< Read-only, only for testing, return the lower version of the HDK it is compatible with
+PARAMETERKEY_ITEM( health_period )                  ///< Read-only, return the current value of the health period
+PARAMETERKEY_ITEM( health_retry )                   ///< Read-only, return the current value of the health retry timeout
+PARAMETERKEY_ITEM( health_retry_sleep )             ///< Read-only, return the current value of the health retry sleep

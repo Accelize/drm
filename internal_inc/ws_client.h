@@ -125,8 +125,9 @@ protected:
 
     std::string mClientId;
     std::string mClientSecret;
-    std::string mMeteringUrl;
     std::string mOAuth2Token;
+    std::string mLicenseUrl;
+    std::string mHealthUrl;
     Json::Value mHostResolvesJson;
     uint32_t mTokenValidityPeriod;              /// Validation period of the OAuth2 token in seconds
     uint32_t mTokenExpirationMargin;            /// OAuth2 token expiration margin in seconds
@@ -134,6 +135,7 @@ protected:
     CurlEasyPost mOAUth2Request;
 
     bool isTokenValid() const;
+    Json::Value requestMetering( const std::string url, const Json::Value& json_req, TClock::time_point deadline );
 
 public:
     DrmWSClient(const std::string &conf_file_path, const std::string &cred_file_path);
@@ -144,9 +146,10 @@ public:
     std::string getTokenString() const { return mOAuth2Token; }
 
     void setOAuth2token( const std::string& token );
-
     void requestOAuth2token(TClock::time_point deadline);
+
     Json::Value requestLicense( const Json::Value& json_req, TClock::time_point deadline );
+    Json::Value requestHealth( const Json::Value& json_req, TClock::time_point deadline );
 
 };
 

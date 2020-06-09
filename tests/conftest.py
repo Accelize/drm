@@ -2,7 +2,7 @@
 """Configure Pytest"""
 from copy import deepcopy
 from json import dump, load
-from os import environ, getpid, listdir, remove, makedirs, getcwd
+from os import environ, getpid, listdir, remove, makedirs, getcwd, urandom
 from os.path import basename, dirname, expanduser, isdir, isfile, join, \
     realpath, splitext
 from random import randint
@@ -651,8 +651,30 @@ class CredJson(_Json):
                     self[m.group(1)] = v
             self._user = user
         if ('client_id' not in self._content) or ('client_secret' not in self._content):
-            raise ValueError('User "%s" not found in "%s"' % (self._user, self._init_cred_path))
+            raise ValueError('User "%s" not found in "%s"' % (user, self._init_cred_path))
         self.save()
+
+    def get_user(self, user=None):
+        """
+        Return user details.
+
+        Args:
+            user (str): User to get. If not specified, use default user.
+        """
+        content = {}
+        if user is None:
+            for k, v in [e for e in self._initial_content.items() if not e.endswith('__')]:
+                content[k] = v
+            content['user'] = ''
+        else:
+            for k, v in self._initial_content.items():
+                m = match(r'(.+)__%s__' % user, k)
+                if m:
+                    content[m.group(1)] = v
+            content['user'] = user
+        if ('client_id' not in content) or ('client_secret' not in content):
+            raise ValueError('User "%s" not found in "%s"' % (user, self._init_cred_path))
+        return content
 
     @property
     def user(self):
@@ -892,6 +914,12 @@ class WSAdmin:
         text, status = self._functions.remove_product_information(data)
         assert status == 200, text
 
+    def get_last_metering_information(self, session_id):
+        self._functions._get_user_token()
+        text, status = self._functions.metering_lastinformation({'session': session_id})
+        assert status == 200, text
+        return text
+
     @property
     def functions(self):
         return self._functions
@@ -899,10 +927,10 @@ class WSAdmin:
 
 @pytest.fixture
 def ws_admin(cred_json, conf_json):
-    cred_json.set_user('admin')
-    assert cred_json.user == 'admin'
-    return WSAdmin(conf_json['licensing']['url'], cred_json['client_id'],
-                   cred_json['client_secret'])
+    cred = cred_json.get_user('admin')
+    assert cred['user'] == 'admin'
+    return WSAdmin(conf_json['licensing']['url'], cred['client_id'],
+                   cred['client_secret'])
 
 
 class ExecFunction:
@@ -989,22 +1017,58 @@ class EndpointAction:
 
 
 class FlaskAppWrapper:
-    def __init__(self, name=__name__):
-        import flask
-        self.app = flask.Flask(name)
+
+    def __init__(self, name=__name__, debug=False):
+        from flask import Flask, session
+        self.app = Flask(name)
+        self.app.config['SECRET_KEY'] = 'super secret'
+        self.debug = debug
         environ['WERKZEUG_RUN_MAIN'] = 'true'
         environ['FLASK_ENV'] = 'development'
 
-    def run(self, host='127.0.0.1', port=5000, debug=False):
+    def run(self, host='127.0.0.1', port=5000):
         self.host = host
         self.port = port
-        self.app.run(host=self.host, port=self.port, debug=debug)
+        self.app.run(host=self.host, port=self.port, debug=self.debug)
 
     def add_endpoint(self, rule=None, endpoint=None, handler=None, **kwargs):
         self.app.add_url_rule(rule, endpoint, EndpointAction(handler), **kwargs)
 
 
 @pytest.fixture
-def fake_server():
+def fake_server(accelize_drm):
     name = "fake_server_%d" % randint(1,0xFFFFFFFF)
-    return FlaskAppWrapper(name)
+    return FlaskAppWrapper(name, accelize_drm.pytest_proxy_debug)
+
+
+#-------------------
+# Artifacts fixture
+#-------------------
+
+class ArtifactFactory:
+
+    def __init__(self, artifacts_dir=None):
+        self.artifact_dir = artifacts_dir
+        # Create artifacts directory if not existing
+        if not isdir(self.artifact_dir):
+            makedirs(self.artifact_dir)
+
+    def save_path(self, path, rename=None):
+        from shutil import copy
+        if rename:
+            dst = join(self.artifact_dir, rename)
+        else:
+            dst = self.artifact_dir
+        if isfile(path):
+            copy(path, dst)
+        elif isdir(path):
+            copytree(path, dst)
+
+    def save_content(self, content, filename, mode='wt'):
+        file_path = join(self.artifact_dir, filename)
+        with open(file_path, mode) as fw:
+            fw.write(content)
+
+@pytest.fixture
+def artifacts(accelize_drm):
+    return ArtifactFactory(accelize_drm.pytest_artifacts_dir)

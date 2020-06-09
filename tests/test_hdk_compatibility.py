@@ -6,9 +6,6 @@ import pytest
 from re import match, search, IGNORECASE
 
 
-HDK_COMPATIBLITY_LIMIT = 3.1
-
-
 @pytest.mark.minimum
 def test_uncompatibilities(accelize_drm, conf_json, cred_json, async_handler):
     from itertools import groupby
@@ -25,11 +22,25 @@ def test_uncompatibilities(accelize_drm, conf_json, cred_json, async_handler):
     drm_manager = None
 
     try:
+        # First instanciate an object to get the HDK compatbility version
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+        try:
+            HDK_Limit = float(drm_manager.get('hdk_compatibility'))
+        except:
+            HDK_Limit = 3.1
+
+        # Then test all HDK versions that are not compatible
         current_num = float(match(r'^(\d+.\d+)', hdk_version).group(1))
         refdesignByMajor = ((float(match(r'^(\d+.\d+)', x).group(1)), x) for x in refdesign.hdk_versions)
 
         for num, versions in groupby(refdesignByMajor, lambda x: x[0]):
-            if HDK_COMPATIBLITY_LIMIT <= num and num <= current_num:
+            if HDK_Limit <= num and num <= current_num:
                 continue
 
             # Program FPGA with older HDK
@@ -46,15 +57,12 @@ def test_uncompatibilities(accelize_drm, conf_json, cred_json, async_handler):
                     driver.write_register_callback,
                     async_cb.callback
                 )
-            #hit = False
-            #if 'Unable to find DRM Controller registers' in str(excinfo.value):
-            #    hit =True
-            #if search(r'This DRM Library version \S+ is not compatible with the DRM HDK version', str(excinfo.value)):
-            #    hit =True
-            #assert hit
-            assert search(r'This DRM Library version \S+ is not compatible with the DRM HDK version', str(excinfo.value), IGNORECASE)
-            assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
-            async_cb.assert_NoError()
+            hit = False
+            if 'Unable to find DRM Controller registers' in str(excinfo.value):
+                hit =True
+            if search(r'This DRM Library version \S+ is not compatible with the DRM HDK version', str(excinfo.value), IGNORECASE):
+                hit =True
+            assert hit
 
     finally:
         if drm_manager:
@@ -79,11 +87,25 @@ def test_hdk_compatibility(accelize_drm, conf_json, cred_json, async_handler):
     drm_manager = None
 
     try:
+        # First instanciate an object to get the HDK compatbility version
+        try:
+            drm_manager = accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            )
+            HDK_Limit = float(drm_manager.get('hdk_compatibility'))
+        except:
+            HDK_Limit = 3.1
+
+        # Then test all HDK versions that are compatible
         current_num = float(match(r'^(\d+.\d+)', hdk_version).group(1))
         refdesignByMajor = ((float(match(r'^(\d+.\d+)', x).group(1)), x) for x in refdesign.hdk_versions)
 
         for num, versions in groupby(refdesignByMajor, lambda x: x[0]):
-            if num < HDK_COMPATIBLITY_LIMIT or num > current_num:
+            if num < HDK_Limit or num > current_num:
                 continue
 
             # Program FPGA with lastest HDK per major number

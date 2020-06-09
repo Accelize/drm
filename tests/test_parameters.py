@@ -5,7 +5,7 @@ Test node-locked behavior of DRM Library.
 import pytest
 from os import remove, getpid
 from os.path import isfile, realpath
-from re import search, finditer
+from re import match, search, finditer
 from time import sleep, time
 from tests.conftest import wait_func_true
 
@@ -13,7 +13,7 @@ from tests.conftest import wait_func_true
 LOG_FORMAT_SHORT = "[%^%=8l%$] %-6t, %v"
 LOG_FORMAT_LONG = "%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v"
 
-_PARAM_LIST = ['license_type',
+_PARAM_LIST = ('license_type',
                'license_duration',
                'num_activators',
                'session_id',
@@ -58,7 +58,12 @@ _PARAM_LIST = ['license_type',
                'trigger_async_callback',
                'bad_product_id',
                'bad_oauth2_token',
-               'log_message']
+               'log_message',
+               'hdk_compatibility',
+               'health_period',
+               'health_retry',
+               'health_retry_sleep'
+)
 
 
 @pytest.mark.minimum
@@ -833,6 +838,63 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
             remove(logpath)
     async_cb.assert_NoError()
     print("Test parameter 'log_message': PASS")
+
+    # Test parameter: hdk_compatibility
+    async_cb.reset()
+    conf_json.reset()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    hdk_limit = drm_manager.get('hdk_compatibility')
+    assert match(r'\d+\.\d', hdk_limit)
+    async_cb.assert_NoError()
+    print("Test parameter 'hdk_compatibility': PASS")
+
+    # Test parameter: health_period
+    async_cb.reset()
+    conf_json.reset()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    assert drm_manager.get('health_period') == 0
+    async_cb.assert_NoError()
+    print("Test parameter 'health_period': PASS")
+
+    # Test parameter: health_retry
+    async_cb.reset()
+    conf_json.reset()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    assert drm_manager.get('health_retry') == drm_manager.get('ws_request_timeout')
+    async_cb.assert_NoError()
+    print("Test parameter 'health_retry': PASS")
+
+    # Test parameter: health_retry_sleep
+    async_cb.reset()
+    conf_json.reset()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    assert drm_manager.get('health_retry_sleep') == drm_manager.get('ws_retry_period_short')
+    async_cb.assert_NoError()
+    print("Test parameter 'health_retry_sleep': PASS")
 
 
 def test_readonly_and_writeonly_parameters(accelize_drm, conf_json, cred_json, async_handler):
