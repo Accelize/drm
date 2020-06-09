@@ -213,8 +213,8 @@ def test_abi_compliance(tmpdir, accelize_drm, artifacts):
     abi_broken = False
     for title, (report_file, future) in reports.items():
         stdout = future.result()
-        if ('Total binary compatibility problems: 0' not in stdout) or
-                ('Total source compatibility problems: 0,' not in stdout):
+        if ('Total binary compatibility problems: 0' not in stdout or
+            'Total source compatibility problems: 0,' not in stdout):
             print('Comparison against %s shows issues:\n%s\n' % (title, stdout))
             abi_broken = True
         else:
