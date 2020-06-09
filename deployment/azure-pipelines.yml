@@ -80,7 +80,8 @@ stages:
           - os_distrib: 'centos_7'
             tox_extra_option: '-k "not test_abi_compliance"'
           - os_distrib: 'ubuntu_18_04'
-            tox_extra_option: ''
+            #tox_extra_option: ''
+            tox_extra_option: '-k "not test_abi_compliance"'
             dependsOn: 'centos_7'
 
   - stage: release
