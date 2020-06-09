@@ -821,10 +821,21 @@ def perform_once(test_name):
 
 
 def wait_func_true(func, timeout=None, sleep_time=1):
+    """
+    Wait until the func retursn a none 0 value
+
+    Args:
+        func (__call__) : Function that is run and evaluated
+        timeout (int) : Specify a timeout in seconds for the loop
+        sleep_time (int) : Sleep in seconds befaore reexecuting the function
+
+    Returns:
+        boolean: True if the output of the function has been evaluated to True, False otherwise
+    """
     start = datetime.now()
     while not func():
         if timeout:
-            if datetime.now() - start > timedelta(seconds=sleep_time):
+            if (datetime.now() - start) > timedelta(seconds=sleep_time):
                 return False
         sleep(sleep_time)
     return True

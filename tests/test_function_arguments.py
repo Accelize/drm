@@ -110,25 +110,6 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
-    # Test with a null configuration file
-    async_cb.reset()
-    conf_json.reset()
-    conf_json._content = None
-    conf_json.save()
-    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-    assert search(r'JSON file .* is empty', str(excinfo.value)) is not None
-    errcode = async_handler.get_error_code(str(excinfo.value))
-    assert errcode == accelize_drm.exceptions.DRMBadArg.error_code
-    async_cb.assert_NoError()
-    print('Test null config file: PASS')
-
     # Test with an empty configuration file
     async_cb.reset()
     conf_json.reset()
