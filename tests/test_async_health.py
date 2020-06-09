@@ -579,7 +579,6 @@ def test_health_retry_sleep(accelize_drm, conf_json, cred_json, async_handler, f
         context = get(url=proxy_url+'/get/').json()
         data_list = context['data']
         data0 = data_list.pop(0)
-        assert len(data_list) == nb_run
         # Check the retry sleep period is correct
         for health_id, group in groupby(data_list, lambda x: x[0]):
             group = list(group)
