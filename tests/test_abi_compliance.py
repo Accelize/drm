@@ -216,7 +216,7 @@ def test_abi_compliance(tmpdir, accelize_drm, artifacts):
         if ('Total binary compatibility problems: 0' not in stdout or
                 'Total source compatibility problems: 0,' not in stdout):
             abi_broken = True
-            print('Comparison against %s:\n%s\n' % (title, stdout))
+            print('Comparison against %s shows issues: refer to %s' % (title, report_file))
             # Save html report to artifact folder
             artifacts.save_path(report_file)
 

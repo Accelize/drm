@@ -1053,7 +1053,7 @@ class ArtifactFactory:
         if not isdir(self.artifact_dir):
             makedirs(self.artifact_dir)
 
-    def save_path(path, rename=None):
+    def save_path(self, path, rename=None):
         from shutil import copy
         if rename:
             dst = join(self.artifact_dir, rename)
@@ -1064,7 +1064,7 @@ class ArtifactFactory:
         elif isdir(path):
             copytree(path, dst)
 
-    def save_content(content, filename, mode='wt'):
+    def save_content(self, content, filename, mode='wt'):
         file_path = join(self.artifact_dir, filename)
         with open(file_path, mode) as fw:
             fw.write(content)
