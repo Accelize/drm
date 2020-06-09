@@ -78,9 +78,9 @@ stages:
           instance_type: 'f1.4xlarge'
           config_list:
           - os_distrib: 'centos_7'
-            tox_extra_option: ''
-          - os_distrib: 'ubuntu_18_04'
             tox_extra_option: '-k "not test_abi_compliance"'
+          - os_distrib: 'ubuntu_18_04'
+            tox_extra_option: ''
             dependsOn: 'centos_7'
 
   - stage: release
