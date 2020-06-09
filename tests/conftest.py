@@ -1017,6 +1017,7 @@ class EndpointAction:
 
 
 class FlaskAppWrapper:
+
     def __init__(self, name=__name__, debug=False):
         from flask import Flask, session
         self.app = Flask(name)
@@ -1038,3 +1039,36 @@ class FlaskAppWrapper:
 def fake_server(accelize_drm):
     name = "fake_server_%d" % randint(1,0xFFFFFFFF)
     return FlaskAppWrapper(name, accelize_drm.pytest_proxy_debug)
+
+
+#-------------------
+# Artifacts fixture
+#-------------------
+
+class ArtifactFactory:
+
+    def __init__(self, artifacts_dir=None):
+        self.artifact_dir = artifacts_dir
+        # Create artifacts directory if not existing
+        if not isdir(self.artifact_dir):
+            makedirs(self.artifact_dir)
+
+    def save_path(path, rename=None):
+        from shutil import copy
+        if rename:
+            dst = join(self.artifact_dir, rename)
+        else:
+            dst = self.artifact_dir
+        if isfile(path):
+            copy(path, dst)
+        elif isdir(path):
+            copytree(path, dst)
+
+    def save_content(content, filename, mode='wt'):
+        file_path = join(self.artifact_dir, filename)
+        with open(file_path, mode) as fw:
+            fw.write(content)
+
+@pytest.fixture
+def artifacts(accelize_drm):
+    return ArtifactFactory(accelize_drm.pytest_artifacts_dir)

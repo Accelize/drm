@@ -129,7 +129,7 @@ def get_reference_versions(tmpdir, abi_version):
     return versions
 
 
-def test_abi_compliance(tmpdir, accelize_drm):
+def test_abi_compliance(tmpdir, accelize_drm, artifacts):
     """
     Test the ABI/API compliance of the lib_name.
     """
@@ -198,27 +198,26 @@ def test_abi_compliance(tmpdir, accelize_drm):
         # Compare current ABI / API dumps with reference versions
         for future in as_completed(dump_tag_futures):
             version, dump_file, name = future.result()
-
-            reports[' '.join((name, version))] = executor.submit(
-                checks_abi_compliance,  old_dump=dump_file,
-                new_dump=current_dumps[name], name=name,
-                report_path=str(tmpdir.join('%s%s.html' % (name, version))))
-
-    # Create artifacts directory
-    artifacts_dir = join(accelize_drm.pytest_artifacts_dir, splitext(basename(__file__))[0])
-    if not isdir(artifacts_dir):
-        os.makedirs(artifacts_dir)
+            report_file = str(tmpdir.join('%s%s.html' % (name, version)))
+            reports[' '.join((name, version))] = (
+                report_file,
+                executor.submit(
+                    checks_abi_compliance,
+                    old_dump=dump_file,
+                    new_dump=current_dumps[name],
+                    name=name,
+                    report_path=report_file)
+            )
 
     # Analyses reports
     abi_broken = False
-    for title, future in reports.items():
-        report = future.result()
-        if ('Total binary compatibility problems: 0' not in report or
-                'Total source compatibility problems: 0,' not in report):
+    for title, (report_file, future) in reports.items():
+        stdout = future.result()
+        if ('Total binary compatibility problems: 0' not in stdout or
+                'Total source compatibility problems: 0,' not in stdout):
             abi_broken = True
-            print('Comparison against %s:\n%s\n' % (title, report))
-            # Extract path to html report from output
-            html_path = re.search(r'Report:\s*(.+\.html)', report).group(1)
-            copy(html_path, artifacts_dir)
+            print('Comparison against %s:\n%s\n' % (title, stdout))
+            # Save html report to artifact folder
+            artifacts.save_path(report_file)
 
     assert not abi_broken
