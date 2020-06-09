@@ -724,12 +724,16 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
                 context['health_id']= health_id
             return Response(dumps(response_json), response.status_code, headers)
 
-    def wait_next_health():
+    def wait_and_check_on_next_health(drm_manager):
         next_health_id = get(url=proxy_url+'/get/').json()['health_id'] + 1
         while True:
             if get(url=proxy_url+'/get/').json()['health_id'] >= next_health_id:
                 break
             sleep(1)
+        session_id = drm_manager.get('session_id')
+        saas_data = ws_admin.get_last_metering_information(session_id)
+        assert saas_data['session'] == session_id
+        assert saas_data['metering'] == drm_manager.get('metered_data')
 
     fake_server.add_endpoint('/<path:path>', 'proxy', proxy, methods=['GET', 'POST'])
     context = {'url': url, 'data': list(), 'health_id':0}
@@ -744,16 +748,22 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
             async_cb.callback
         )
         drm_manager.activate()
-        session_id = drm_manager.get('session_id')
+        # First round without no unit
         assert drm_manager.get('metered_data') == 0
-        wait_next_health()
-        assert drm_manager.get('metered_data') == 0
-        metering_data = ws_admin.get_last_metering_information(session_id)
+        activators[0].check_coin(drm_manager.get('metered_data'))
+        wait_and_check_on_next_health()
+        # Second round with 10 units
         activators[0].generate_coin(10)
         activators[0].check_coin(drm_manager.get('metered_data'))
-        # Wait next async metering
-        wait_next_health()
-        metering_data = ws_admin.get_last_metering_information(session_id)
+        wait_and_check_on_next_health()
+        # Second round with 10 more units for a total of 20 units
+        activators[0].generate_coin(10)
+        activators[0].check_coin(drm_manager.get('metered_data'))
+        wait_and_check_on_next_health()
+        # Third round with 80 more units for a total of 100 units
+        activators[0].generate_coin(80)
+        activators[0].check_coin(drm_manager.get('metered_data'))
+        wait_and_check_on_next_health()
         drm_manager.deactivate()
         async_cb.assert_NoError()
     finally:

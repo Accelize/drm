@@ -918,7 +918,6 @@ class WSAdmin:
         self._functions._get_user_token()
         text, status = self._functions.metering_lastinformation({'session': session_id})
         assert status == 200, text
-        print('metering_lastinformation=', text)
         return text
 
     @property
