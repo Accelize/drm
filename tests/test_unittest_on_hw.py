@@ -610,7 +610,7 @@ def test_retry_function(accelize_drm, conf_json, cred_json, async_handler):
         with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
             drm_manager1.activate()
         end = datetime.now()
-        assert (end - start).total_seconds() < 1
+        assert (end - start).total_seconds() < drm_manager0.get('ws_retry_period_short')
         assert 'Metering Web Service error 470' in str(excinfo.value)
         assert 'DRM WS request failed' in str(excinfo.value)
         assert search(r'\\"Entitlement Limit Reached\\" with .+ for \S+_test_04@accelize.com', str(excinfo.value)) is not None
@@ -701,7 +701,7 @@ def test_security_stop(accelize_drm, conf_json, cred_json, async_handler):
         async_cb.callback
     )
     assert not drm_manager1.get('session_status')
-    assert drm_manager1.get('session_id') == 0
+    assert len(drm_manager1.get('session_id')) == 0
     async_cb.assert_NoError()
 
 
