@@ -190,47 +190,37 @@ def test_session_status(accelize_drm, conf_json, cred_json, async_handler):
         # Test session status on start/stop
 
         # Check no session is running and no ID is available
-        status = drm_manager.get('session_status')
-        session_id = drm_manager.get('session_id')
-        assert not status, 'A session is running'
-        assert len(session_id) == 0, 'A session ID exists'
+        assert not drm_manager.get('session_status')
+        assert len(drm_manager.get('session_id')) == 0
         # Activate new session
         drm_manager.activate()
         # Check a session is running with a valid ID
-        status = drm_manager.get('session_status')
-        session_id = drm_manager.get('session_id')
-        assert status, 'No session is running'
-        assert len(session_id) == 16, 'No session ID is returned'
+        assert drm_manager.get('session_status')
+        assert len(drm_manager.get('session_id')= == 16
         # Deactivate current session
         drm_manager.deactivate()
         # Check session is closed
-        status = drm_manager.get('session_status')
-        session_id = drm_manager.get('session_id')
-        assert not status, 'A session is running'
-        assert len(session_id) == 0, 'A session ID exists'
+        assert not drm_manager.get('session_status')
+        assert len(drm_manager.get('session_id')) == 0
         print('Test session status on start/stop: PASS')
 
         # Test session status on start/pause
 
         # Check no session is running and no ID is available
-        status = drm_manager.get('session_status')
-        session_id = drm_manager.get('session_id')
-        assert not status, 'A session is running'
-        assert len(session_id) == 0, 'A session ID exists'
+        assert not drm_manager.get('session_status')
+        assert len(drm_manager.get('session_id')) == 0
         # Activate new session
         drm_manager.activate()
         start = datetime.now()
         # Check a session is running with a valid ID
-        status = drm_manager.get('session_status')
+        assert drm_manager.get('session_status')
         id_ref = drm_manager.get('session_id')
-        assert status, 'No session is running'
         assert len(id_ref) == 16, 'No session ID is returned'
         # Pause current session
         drm_manager.deactivate(True)
         # Check a session is still alive with the same ID
-        status = drm_manager.get('session_status')
+        assert drm_manager.get('session_status')
         session_id = drm_manager.get('session_id')
-        assert status, 'No session is running'
         assert len(session_id) == 16, 'No session ID is returned'
         assert session_id == id_ref, 'Return different session ID'
         async_cb.assert_NoError()
@@ -239,25 +229,22 @@ def test_session_status(accelize_drm, conf_json, cred_json, async_handler):
         # Test session status on resume from valid license/pause
 
         # Check a session is still alive with the same ID
-        status = drm_manager.get('session_status')
+        assert drm_manager.get('session_status')
         session_id = drm_manager.get('session_id')
-        assert status, 'No session is running'
         assert len(session_id) == 16, 'No session ID is returned'
         assert session_id == id_ref, 'Return different session ID'
         # Resume current session
         drm_manager.activate(True)
         # Check a session is still alive with the same ID
-        status = drm_manager.get('session_status')
+        assert  drm_manager.get('session_status')
         session_id = drm_manager.get('session_id')
-        assert status, 'No session is running'
         assert len(session_id) == 16, 'No session ID is returned'
         assert session_id == id_ref, 'Return different session ID'
         # Pause current session
         drm_manager.deactivate(True)
         # Check a session is still alive with the same ID
-        status = drm_manager.get('session_status')
+        assert drm_manager.get('session_status')
         session_id = drm_manager.get('session_id')
-        assert status, 'No session is running'
         assert len(session_id) == 16, 'No session ID is returned'
         assert session_id == id_ref, 'Return different session ID'
         # Wait until license expires
@@ -265,9 +252,8 @@ def test_session_status(accelize_drm, conf_json, cred_json, async_handler):
         wait_period = start + timedelta(seconds=2 * lic_duration + 1) - datetime.now()
         sleep(wait_period.total_seconds())
         # Check a session is still alive with the same ID
-        status = drm_manager.get('session_status')
+        assert drm_manager.get('session_status')
         session_id = drm_manager.get('session_id')
-        assert status, 'No session is running'
         assert len(session_id) == 16, 'No session ID is returned'
         assert session_id == id_ref, 'Return different session ID'
         async_cb.assert_NoError()
@@ -276,25 +262,22 @@ def test_session_status(accelize_drm, conf_json, cred_json, async_handler):
         # Test session status on resume from expired license/pause
 
         # Check a session is still alive with the same ID
-        status = drm_manager.get('session_status')
+        assert drm_manager.get('session_status')
         session_id = drm_manager.get('session_id')
-        assert status, 'No session is running'
         assert len(session_id) == 16, 'No session ID is returned'
         assert session_id == id_ref, 'Return different session ID'
         # Resume current session
         drm_manager.activate(True)
         # Check a session is still alive with the same ID
-        status = drm_manager.get('session_status')
+        assert drm_manager.get('session_status')
         session_id = drm_manager.get('session_id')
-        assert status, 'No session is running'
         assert len(session_id) == 16, 'No session ID is returned'
         assert session_id == id_ref, 'Return different session ID'
         # Pause current session
         drm_manager.deactivate(True)
         # Check a session is still alive with the same ID
-        status = drm_manager.get('session_status')
+        assert drm_manager.get('session_status')
         session_id = drm_manager.get('session_id')
-        assert status, 'No session is running'
         assert len(session_id) == 16, 'No session ID is returned'
         assert session_id == id_ref, 'Return different session ID'
         async_cb.assert_NoError()
@@ -303,68 +286,57 @@ def test_session_status(accelize_drm, conf_json, cred_json, async_handler):
         # Test session status on resume/stop
 
         # Check a session is still alive with the same ID
-        status = drm_manager.get('session_status')
+        assert drm_manager.get('session_status')
         session_id = drm_manager.get('session_id')
-        assert status, 'No session is running'
         assert len(session_id) == 16, 'No session ID is returned'
         assert session_id == id_ref, 'Return different session ID'
         # Resume current session
         drm_manager.activate(True)
         # Check a session is still alive with the same ID
-        status = drm_manager.get('session_status')
+        assert drm_manager.get('session_status')
         session_id = drm_manager.get('session_id')
-        assert status, 'No session is running'
         assert len(session_id) == 16, 'No session ID is returned'
         assert session_id == id_ref, 'Return different session ID'
         # Close session
         drm_manager.deactivate()
         # Check session is closed
-        status = drm_manager.get('session_status')
-        session_id = drm_manager.get('session_id')
-        assert not status, 'A session is running'
-        assert len(session_id) == 0, 'A session ID exists'
+        assert not drm_manager.get('session_status')
+        assert len(drm_manager.get('session_id')) == 0
         async_cb.assert_NoError()
         print('Test session status on resume/stop: PASS')
 
         # Test session status on start from paused session/stop
 
         # Check no session is running
-        status = drm_manager.get('session_status')
-        session_id = drm_manager.get('session_id')
-        assert not status, 'A session is running'
-        assert len(session_id) == 0, 'A session ID exists'
+        assert not drm_manager.get('session_status')
+        assert len(drm_manager.get('session_id')) == 0
         # Start a new session
         drm_manager.activate()
         # Check a session is alive with a new ID
-        status = drm_manager.get('session_status')
+        assert drm_manager.get('session_status')
         session_id = drm_manager.get('session_id')
-        assert status, 'No session is running'
         assert len(session_id) == 16, 'No session ID is returned'
         assert session_id != id_ref, 'Return different session ID'
         id_ref = session_id
         # Pause session
         drm_manager.deactivate(True)
         # Check a session is still alive with the same ID
-        status = drm_manager.get('session_status')
+        assert drm_manager.get('session_status')
         session_id = drm_manager.get('session_id')
-        assert status, 'No session is running'
         assert len(session_id) == 16, 'No session ID is returned'
         assert session_id == id_ref, 'Return different session ID'
         # Start a new session
         drm_manager.activate()
         # Check a new session has been created with a new ID
-        status = drm_manager.get('session_status')
+        assert drm_manager.get('session_status')
         session_id = drm_manager.get('session_id')
-        assert status, 'No session is running'
         assert len(session_id) == 16, 'No session ID is returned'
         assert session_id != id_ref, 'Return different session ID'
         # Close session
         drm_manager.deactivate()
         # Check session is closed
-        status = drm_manager.get('session_status')
-        session_id = drm_manager.get('session_id')
-        assert not status, 'A session is running'
-        assert len(session_id) == 0, 'A session ID exists'
+        assert not drm_manager.get('session_status')
+        assert len(drm_manager.get('session_id')) == 0
         async_cb.assert_NoError()
         print('Test session status on restart: PASS')
 
@@ -729,8 +701,7 @@ def test_security_stop(accelize_drm, conf_json, cred_json, async_handler):
         async_cb.callback
     )
     assert not drm_manager1.get('session_status')
-    session_id = drm_manager1.get('session_id')
-    assert len(session_id) == 0
+    assert drm_manager1.get('session_id') == 0
     async_cb.assert_NoError()
 
 
@@ -760,7 +731,6 @@ def test_curl_host_resolve(accelize_drm, conf_json, cred_json, async_handler):
     assert search(r'certificate .* expired', str(excinfo.value), IGNORECASE)
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMExternFail.error_code
     async_cb.assert_NoError()
-    del drm_manager
 
 
 @pytest.mark.minimum

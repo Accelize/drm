@@ -191,6 +191,8 @@ protected:
     std::condition_variable mThreadExitCondVar;
     bool mThreadExit{false};
 
+    // XRT PATH
+    std::string mXrtPath;
 
     // Debug parameters
     spdlog::level::level_enum mDebugMessageLevel;
