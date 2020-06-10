@@ -42,7 +42,7 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
     conf_json.save()
     tmpHealthPeriod = 2
     context = {'url':url, 'data':0}
-    nb_health = 4
+    nb_health = 3
 
     def proxy(path=''):
         url_path = '%s/%s' % (context["url"],path)
@@ -112,10 +112,10 @@ def test_health_period(accelize_drm, conf_json, cred_json, async_handler, fake_s
     conf_json['licensing']['url'] = proxy_url
     conf_json.save()
     tmpHealthPeriod = 2
-    tmpHealthRetry = 10
+    tmpHealthRetry = 0  # no retry
     tmpHealthRetrySleep = 1
     context = {'url': url, 'data': list()}
-    nb_health = 4
+    nb_health = 3
 
     def proxy(path=''):
         url_path = '%s/%s' % (context["url"],path)
@@ -187,7 +187,7 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
     conf_json['licensing']['url'] = proxy_url
     conf_json.save()
     tmpHealthPeriod = 2
-    tmpHealthRetry = 10
+    tmpHealthRetry = 0  # no retry
     tmpHealthRetrySleep = 1
     context = {'url': url, 'data': list(), 'health_period':tmpHealthPeriod}
     nb_health = 5
@@ -265,7 +265,7 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
     tmpHealthPeriod = 3
     tmpHealthRetrySleep = 1
     context = {'url': url, 'data': list()}
-    nb_health = 4
+    nb_health = 3
 
     def proxy(path=''):
         url_path = '%s/%s' % (context["url"],path)
@@ -345,7 +345,7 @@ def test_health_retry(accelize_drm, conf_json, cred_json, async_handler, fake_se
     conf_json['licensing']['url'] = proxy_url
     conf_json.save()
     tmpHealthPeriod = 3
-    tmpHealthRetry = 20
+    tmpHealthRetry = 15
     tmpHealthRetrySleep = 1
     context = {'url': url, 'data': list(), 'exit':False}
 
@@ -389,7 +389,6 @@ def test_health_retry(accelize_drm, conf_json, cred_json, async_handler, fake_se
             driver.write_register_callback,
             async_cb.callback
         )
-        error_gap = drm_manager.get('ws_retry_period_short')
         drm_manager.activate()
         sleep(tmpHealthRetry)
         while not context['exit']:
@@ -401,15 +400,14 @@ def test_health_retry(accelize_drm, conf_json, cred_json, async_handler, fake_se
         data_list = context['data']
         data0 = data_list.pop(0)
         assert len(data_list) > 1
-        # Check health_id is unchanged during the retry period
         assert data0[0] == 0
-        id_list = list(set(map(lambda x: x[0], data_list)))
-        assert len(id_list) == 1
-        assert id_list[0] == 1
+        # Check health_id is unchanged during the retry period
+        assert sum(map(lambda x: x[0], data_list)) == len(data_list)
         # Check the retry period is correct
         start = data_list[0][1]
         end = data_list[-1][2]
         delta = parser.parse(end) - parser.parse(start)
+        error_gap = drm_manager.get('tmpHealthRetrySleep') + 1
         assert tmpHealthRetry - error_gap <= int(delta.total_seconds()) <= tmpHealthRetry + error_gap
     finally:
         server.terminate()
@@ -433,7 +431,7 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
     tmpHealthPeriod = 3
     tmpHealthRetry = 10
     tmpHealthRetrySleep = 1
-    nb_run = 4
+    nb_run = 3
 
     def proxy(path=''):
         url_path = '%s/%s' % (context["url"],path)
@@ -480,7 +478,6 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
                 driver.write_register_callback,
                 async_cb.callback
             )
-            error_gap = drm_manager.get('ws_retry_period_short')
             drm_manager.activate()
             sleep(retry_timeout)
             while not context['exit']:
@@ -492,15 +489,14 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
             data_list = context['data']
             data0 = data_list.pop(0)
             assert len(data_list) > 1
-            # Check health_id is unchanged during the retry period
             assert data0[0] == 0
-            id_list = list(set(map(lambda x: x[0], data_list)))
-            assert len(id_list) == 1
-            assert id_list[0] == 1
+            # Check health_id is unchanged during the retry period
+            assert sum(map(lambda x: x[0], data_list)) == len(data_list)
             # Check the retry period is correct
             start = data_list[0][1]
             end = data_list[-1][2]
             delta = parser.parse(end) - parser.parse(start)
+            error_gap = drm_manager.get('tmpHealthRetrySleep') + 1
             assert retry_timeout - error_gap <= int(delta.total_seconds()) <= retry_timeout + error_gap
         finally:
             server.terminate()
@@ -614,7 +610,7 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, asy
     tmpHealthPeriod = 3
     tmpHealthRetry = 10
     tmpHealthRetrySleep = 1
-    nb_run = 4
+    nb_run = 3
 
     def proxy(path=''):
         url_path = '%s/%s' % (context["url"],path)
