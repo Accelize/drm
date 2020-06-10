@@ -184,6 +184,11 @@ Json::Value parseJsonFile( const std::string& file_path ) {
     Json::Value json_node;
     std::string file_content;
 
+    // Check path is a file
+    if ( !isFile(file_path) ) {
+        Throw( DRM_BadArg, "Path is not a valid file: {}", file_path );
+    }
+
     // Open file
     std::ifstream fh( file_path );
     if ( !fh.good() )
