@@ -193,6 +193,7 @@ protected:
 
     // XRT PATH
     std::string mXrtPath;
+    std::string mXbutil;
 
     // Debug parameters
     spdlog::level::level_enum mDebugMessageLevel;
@@ -318,11 +319,19 @@ protected:
                         mBypassFrequencyDetection ).asBool();
             }
 
-            // Check XILINX_XRT environment vriable existence
+            // Check XILINX_XRT environment variable existence
             char * env_val = getenv( "XILINX_XRT" );
             if (env_val == NULL) {
                 mXrtPath = std::string( env_val );
                 Debug( "XILINX_XRT variable is defined: {}", mXrtPath );
+                // Check xbutils existence
+                xrt_bin_dir = fmt::format( "{}{}bin", mXrtPath, path_separator );
+                mXbutil = fmt::format( "{}{}xbutil", xrt_bin_dir, path_separator );
+                if ( isFile( mXbutil ) ) {
+                    Debug( "xbutil tool has been found: {}", mXbutil );
+                } else {
+                    Warning( "xbutil tool could not be found in {}", xrt_bin_dir );
+                }
             } else {
                 Debug( "XILINX_XRT variable is not defined" );
             }

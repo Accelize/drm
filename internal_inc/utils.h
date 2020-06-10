@@ -23,6 +23,13 @@ limitations under the License.
 namespace Accelize {
 namespace DRM {
 
+const char path_separator =
+#ifdef _WIN32
+                     '\\';
+#else
+                     '/';
+#endif
+
 std::string getDirName( const std::string& full_path );
 bool isDir( const std::string& dir_path );
 bool isFile( const std::string& file_path );
