@@ -196,7 +196,7 @@ def test_session_status(accelize_drm, conf_json, cred_json, async_handler):
         drm_manager.activate()
         # Check a session is running with a valid ID
         assert drm_manager.get('session_status')
-        assert len(drm_manager.get('session_id')= == 16
+        assert len(drm_manager.get('session_id') == 16
         # Deactivate current session
         drm_manager.deactivate()
         # Check session is closed
