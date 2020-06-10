@@ -8,13 +8,14 @@ import pytest
 
 
 def test_drm_manager_constructor_with_bad_arguments(accelize_drm, conf_json, cred_json,
-                                                    async_handler):
+                                                    async_handler, tmpdir):
     """Test errors when missing arguments are given to DRM Controller Constructor"""
+    from os.path import isdir
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
-    # Test when no configuration file is given
+    # Test when unexisting configuration file is given
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         accelize_drm.DrmManager(
             "wrong_path_to_conf.json",
@@ -23,11 +24,10 @@ def test_drm_manager_constructor_with_bad_arguments(accelize_drm, conf_json, cre
             driver.write_register_callback,
             async_cb.callback
         )
-    assert 'Cannot find JSON file' in str(excinfo.value)
-    print('Test when no configuration file is given: PASS')
+    assert 'Path is not a valid file:' in str(excinfo.value)
+    print('Test when unexisting configuration file is given: PASS')
 
     # Test when unexisting credentials file is given
-    conf_json.reset()
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         accelize_drm.DrmManager(
             conf_json.path,
@@ -36,11 +36,38 @@ def test_drm_manager_constructor_with_bad_arguments(accelize_drm, conf_json, cre
             driver.write_register_callback,
             async_cb.callback
         )
-    assert 'Cannot find JSON file' in str(excinfo.value)
+    assert 'Path is not a valid file:' in str(excinfo.value)
     print('Test when unexisting credentials file is given: PASS')
 
+    # Test when configuration path is a directory
+    tmp_dir = str(tmpdir)
+    assert isdir(tmp_dir)
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+        accelize_drm.DrmManager(
+            tmp_dir,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+    assert 'Path is not a valid file:' in str(excinfo.value)
+    print('Test when configuration path is a directory: PASS')
+
+    # Test when credentials path is a directory
+    tmp_dir = str(tmpdir)
+    assert isdir(tmp_dir)
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+        accelize_drm.DrmManager(
+            conf_json.path,
+            tmp_dir,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+    assert 'Path is not a valid file:' in str(excinfo.value)
+    print('Test when credentials path is a directory: PASS')
+
     # Test when no hardware read register function is given
-    conf_json.reset()
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         accelize_drm.DrmManager(
             conf_json.path,
@@ -53,7 +80,6 @@ def test_drm_manager_constructor_with_bad_arguments(accelize_drm, conf_json, cre
     print('Test when no hardware read register function is given: PASS')
 
     # Test when no hardware write register function is given
-    conf_json.reset()
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         accelize_drm.DrmManager(
             conf_json.path,
@@ -65,7 +91,6 @@ def test_drm_manager_constructor_with_bad_arguments(accelize_drm, conf_json, cre
     print('Test when no hardware write register function is given: PASS')
 
     # Test when read register function is not a callable
-    conf_json.reset()
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         accelize_drm.DrmManager(
             conf_json.path,
@@ -78,7 +103,6 @@ def test_drm_manager_constructor_with_bad_arguments(accelize_drm, conf_json, cre
     print('Test when read register function is not a callable: PASS')
 
     # Test when write register function is not a callable
-    conf_json.reset()
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         accelize_drm.DrmManager(
             conf_json.path,
@@ -91,7 +115,6 @@ def test_drm_manager_constructor_with_bad_arguments(accelize_drm, conf_json, cre
     print('Test when write register function is not a callable: PASS')
 
     # Test when asynchronous error function is not a callable
-    conf_json.reset()
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         accelize_drm.DrmManager(
             conf_json.path,
