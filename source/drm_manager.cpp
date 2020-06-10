@@ -318,6 +318,16 @@ protected:
                         mBypassFrequencyDetection ).asBool();
             }
 
+            // Check XILINX_XRT environment vriable existence
+            char * env_val = getenv( "XILINX_XRT" );
+            if (env_val == NULL) {
+                mXrtPath = std::string( env_val );
+                Debug( "XILINX_XRT variable is defined: {}", mXrtPath );
+            } else {
+                Debug( "XILINX_XRT variable is not defined" );
+            }
+
+
         } catch( const Exception &e ) {
             if ( e.getErrCode() != DRM_BadFormat )
                 throw;
