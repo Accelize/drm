@@ -580,13 +580,18 @@ def test_health_retry_sleep(accelize_drm, conf_json, cred_json, async_handler, f
         data_list = context['data']
         data0 = data_list.pop(0)
         # Check the retry sleep period is correct
+        check_cnt = 0
         for health_id, group in groupby(data_list, lambda x: x[0]):
             group = list(group)
-            assert len(group) == 2
+            if len(group) < 2:
+                continue
+            assert len(group) >= 2
             start = group[0][2]
-            end = group[-1][1]
+            end = group[1][1]
             delta = parser.parse(end) - parser.parse(start)
             assert int(delta.total_seconds()) == tmpHealthRetrySleep
+            check_cnt += 1
+        assert check_cnt > 0
     finally:
         server.terminate()
         server.join()
