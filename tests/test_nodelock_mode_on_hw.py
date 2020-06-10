@@ -456,7 +456,7 @@ def test_parsing_of_nodelock_files(accelize_drm, conf_json, cred_json, async_han
         move(req_file_path, req_file_path_bad)
         with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
             drm_manager.activate()
-        assert 'Cannot find JSON file' in str(excinfo.value)
+        assert 'Path is not a valid file' in str(excinfo.value)
         err_code = async_handler.get_error_code(str(excinfo.value))
         assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
         async_cb.assert_NoError()
