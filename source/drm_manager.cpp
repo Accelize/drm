@@ -324,7 +324,7 @@ protected:
             if (env_val == NULL) {
                 mXrtPath = std::string( env_val );
                 Debug( "XILINX_XRT variable is defined: {}", mXrtPath );
-                // Check xbutils existence
+                // Check xbutil existence
                 xrt_bin_dir = fmt::format( "{}{}bin", mXrtPath, path_separator );
                 mXbutil = fmt::format( "{}{}xbutil", xrt_bin_dir, path_separator );
                 if ( isFile( mXbutil ) ) {
