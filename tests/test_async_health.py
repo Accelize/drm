@@ -407,7 +407,7 @@ def test_health_retry(accelize_drm, conf_json, cred_json, async_handler, fake_se
         start = data_list[0][1]
         end = data_list[-1][2]
         delta = parser.parse(end) - parser.parse(start)
-        error_gap = drm_manager.get('tmpHealthRetrySleep') + 1
+        error_gap = drm_manager.get('health_retry_sleep') + 1
         assert tmpHealthRetry - error_gap <= int(delta.total_seconds()) <= tmpHealthRetry + error_gap
     finally:
         server.terminate()
@@ -496,7 +496,7 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
             start = data_list[0][1]
             end = data_list[-1][2]
             delta = parser.parse(end) - parser.parse(start)
-            error_gap = drm_manager.get('tmpHealthRetrySleep') + 1
+            error_gap = drm_manager.get('health_retry_sleep') + 1
             assert retry_timeout - error_gap <= int(delta.total_seconds()) <= retry_timeout + error_gap
         finally:
             server.terminate()
@@ -564,7 +564,6 @@ def test_health_retry_sleep(accelize_drm, conf_json, cred_json, async_handler, f
             driver.write_register_callback,
             async_cb.callback
         )
-        error_gap = drm_manager.get('ws_retry_period_short')
         drm_manager.activate()
         sleep(tmpHealthRetry)
         while not context['exit']:
@@ -656,7 +655,6 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, asy
                 driver.write_register_callback,
                 async_cb.callback
             )
-            error_gap = drm_manager.get('ws_retry_period_short')
             drm_manager.activate()
             sleep(tmpHealthRetry)
             while not context['exit']:

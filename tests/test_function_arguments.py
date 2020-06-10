@@ -26,7 +26,7 @@ def test_drm_manager_constructor_with_bad_arguments(accelize_drm, conf_json, cre
     assert 'Cannot find JSON file' in str(excinfo.value)
     print('Test when no configuration file is given: PASS')
 
-    # Test when no credentials file is given
+    # Test when unexisting credentials file is given
     conf_json.reset()
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         accelize_drm.DrmManager(
@@ -37,7 +37,7 @@ def test_drm_manager_constructor_with_bad_arguments(accelize_drm, conf_json, cre
             async_cb.callback
         )
     assert 'Cannot find JSON file' in str(excinfo.value)
-    print('Test when no credentials file is given: PASS')
+    print('Test when unexisting credentials file is given: PASS')
 
     # Test when no hardware read register function is given
     conf_json.reset()
@@ -399,25 +399,6 @@ def test_drm_manager_with_bad_credential_file(accelize_drm, conf_json, cred_json
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-
-    # Test with a null crendential file
-    async_cb.reset()
-    cred_json.reset()
-    cred_json._content = None
-    cred_json.save()
-    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-    assert search(r'JSON file .* is empty', str(excinfo.value)) is not None
-    errcode = async_handler.get_error_code(str(excinfo.value))
-    assert errcode == accelize_drm.exceptions.DRMBadArg.error_code
-    async_cb.assert_NoError()
-    print('Test null crendential file: PASS')
 
     # Test with an empty crendential file
     async_cb.reset()
