@@ -11,7 +11,66 @@ import pytest
 from multiprocessing import Process
 import requests
 
-PROXY_HOST = "127.0.0.1"
+PROXY_HOST = "0.0.0.0"
+
+'''
+rom flask import Flask
+from flask_classful import FlaskView
+import requests
+from multiprocessing import Process
+from time import sleep
+
+
+# we'll make a list to hold some quotes for our app
+quotes = [
+    "A noble spirit embiggens the smallest man! ~ Jebediah Springfield",
+    "If there is a way to do it better... find it. ~ Thomas Edison",
+    "No one knows what he can do till he tries. ~ Publilius Syrus"
+]
+
+app = Flask(__name__)
+
+class QuotesView(FlaskView):
+    def index(self):
+        print("Enter index")
+        return "<br>".join(quotes)
+
+
+if __name__ == '__main__':
+#    app.run()
+    QuotesView.register(app, route_base='/')
+    server = Process(target=app.run, args=())
+    server.start()
+    sleep(1)
+    try:
+        #proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
+        proxy_url = "http://127.0.0.1:5000"
+        print('proxy_url=', proxy_url)
+        response = requests.get(proxy_url)
+        print('response=', response.status_code)
+        print('response=', response.text)
+    finally:
+        server.terminate()
+        server.join()
+'''
+
+def test_flask_view(fake_server):
+    """
+    Test a MAC error is returned if the key value in the response has been modified
+    """
+    from flask import request, redirect, Response, session
+    proxy_port = randint(1,65535)
+    server = Process(target=fake_server.run, args=(PROXY_HOST, proxy_port))
+    server.start()
+    try:
+        proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
+        print('proxy_url=', proxy_url)
+        response = requests.get(url_path)
+        print('response=', response.status_code)
+        print('response=', response.text)
+    finally:
+        server.terminate()
+        server.join()
 
 
 @pytest.mark.no_parallel

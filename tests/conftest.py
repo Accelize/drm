@@ -11,6 +11,9 @@ from datetime import datetime
 from time import time, sleep
 from shutil import rmtree
 from datetime import datetime, timedelta
+from flask import Flask
+from flask_classful import FlaskView
+from multiprocessing import Process
 
 import pytest
 
@@ -1027,6 +1030,18 @@ class EndpointAction:
         return Response(msg, status=status, headers={})
 
 
+class TestView(FlaskView):
+    #default_methods = ['GET', 'POST']
+
+    def index(self):
+    # http://localhost:5000/
+        print('entering index fct')
+        return "<h1>This is my indexpage</h1>"
+
+    def secondpage(self):
+    # http://localhost:5000/secondpage
+        return "<h1>This is my second</h1>"
+
 class FlaskAppWrapper:
 
     def __init__(self, name=__name__, debug=False):
@@ -1036,17 +1051,28 @@ class FlaskAppWrapper:
         self.debug = debug
         environ['WERKZEUG_RUN_MAIN'] = 'true'
         environ['FLASK_ENV'] = 'development'
+        TestView.register(self.app, route_base='/')
 
     def run(self, host='127.0.0.1', port=5000):
         self.host = host
         self.port = port
+        TestView.register(self.app, route_base='/')
         self.app.run(host=self.host, port=self.port, debug=self.debug)
+
+    def run_bg(self, host='0.0.0.0', port=5000):
+        self.server = Process(target=self.app.run, args=(host, port, self.debug))
+        self.server.start()
+        sleep(1)
+
+    def stop_bg(self):
+        self.server.terminate()
+        self.server.join()
 
     def add_endpoint(self, rule=None, endpoint=None, handler=None, **kwargs):
         self.app.add_url_rule(rule, endpoint, EndpointAction(handler), **kwargs)
 
 
-@pytest.fixture
+@pytest.fixture(scope='function')
 def fake_server(accelize_drm):
     name = "fake_server_%d" % randint(1,0xFFFFFFFF)
     return FlaskAppWrapper(name, accelize_drm.pytest_proxy_debug)

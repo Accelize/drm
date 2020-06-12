@@ -131,3 +131,91 @@ def test_10s_retry(accelize_drm, conf_json, cred_json, async_handler):
         assert not drm_manager1.get('license_status')
         async_cb0.assert_NoError()
         async_cb1.assert_NoError()
+
+
+@pytest.mark.on_2_fpga
+def test_long_to_short_retry_switch(accelize_drm, conf_json, cred_json, async_handler, fake_server):
+    """
+    Test an error is returned if a wrong session id is provided
+    """
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    async_cb.reset()
+
+    conf_json.reset()
+    url = conf_json['licensing']['url']
+    proxy_port = randrange(1,65535)
+    proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
+    conf_json['licensing']['url'] = proxy_url
+    conf_json.save()
+    retryShortPeriod = 2
+    retryLongPeriod = 10
+    licenseValidity = 40
+
+    def proxy(path=''):
+        url_path = '%s/%s' % (context["url"],path)
+        if path == 'o/token/':
+            return redirect(url_path, code=307)
+        elif path == 'get/':
+            return context
+        else:
+            # context['data'] save the time when new request is sent to the server and
+            # when the response from the server has been received
+            request_json = request.get_json()
+            if request_json['request'] == 'running':
+                start = str(datetime.now())
+            response = post(url_path, json=request_json, headers=request.headers)
+            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+            response_json = response.json()
+            if request_json['request'] == 'running':
+                response_json['metering']['healthPeriod'] = tmpHealthPeriod
+                response_json['metering']['healthRetry'] = tmpHealthRetry
+                response_json['metering']['healthRetrySleep'] = context['health_retry_sleep']
+                if len(context['data']) >= 1:
+                    response.status_code = 408
+                if health_id <= 1:
+                    context['data'].append( (health_id,start,str(datetime.now())) )
+                else:
+                    context['exit'] = True
+            return Response(dumps(response_json), response.status_code, headers)
+
+    fake_server.add_endpoint('/<path:path>', 'proxy', proxy, methods=['GET', 'POST'])
+
+    for i in range(nb_run):
+        retry_retry_sleep = tmpHealthRetrySleep + i
+        context = {'url': url, 'data': list(), 'exit':False, 'health_retry_sleep':retry_retry_sleep}
+        server = Process(target=fake_server.run, args=(PROXY_HOST, proxy_port))
+        server.start()
+        try:
+            drm_manager = accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            )
+            drm_manager.activate()
+            sleep(tmpHealthRetry)
+            while not context['exit']:
+                context = get(url=proxy_url+'/get/').json()
+                sleep(1)
+            drm_manager.deactivate()
+            async_cb.assert_NoError()
+            context = get(url=proxy_url+'/get/').json()
+            data_list = context['data']
+            data0 = data_list.pop(0)
+            nb_sleep_prev = 0
+            # Check the retry sleep period is correct
+            for health_id, group in groupby(data_list, lambda x: x[0]):
+                group = list(group)
+                assert len(group) > nb_sleep_prev
+                nb_sleep_prev = len(group)
+                start = group.pop(0)[2]
+                for _, lstart, lend in group:
+                    delta = parser.parse(lstart) - parser.parse(start)
+                    assert int(delta.total_seconds()) == retry_retry_sleep
+                    start = lend
+        finally:
+            server.terminate()
+            server.join()
