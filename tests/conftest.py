@@ -1046,6 +1046,8 @@ class FlaskAppWrapper:
 
     def __init__(self, name=__name__, debug=False):
         from flask import Flask, session
+        self.host = '0.0.0.0'
+        self.port = 5000
         self.app = Flask(name)
         self.app.config['SECRET_KEY'] = 'super secret'
         self.debug = debug
@@ -1053,26 +1055,31 @@ class FlaskAppWrapper:
         environ['FLASK_ENV'] = 'development'
         TestView.register(self.app, route_base='/')
 
-    def run(self, host='127.0.0.1', port=5000):
+    def __call__( self, host, port):
         self.host = host
         self.port = port
-        TestView.register(self.app, route_base='/')
-        self.app.run(host=self.host, port=self.port, debug=self.debug)
+        return self
 
-    def run_bg(self, host='0.0.0.0', port=5000):
-        self.server = Process(target=self.app.run, args=(host, port, self.debug))
+    def start(self):
+        self.server = Process(target=self.app.run, args=(self.host, self.port, self.debug))
         self.server.start()
         sleep(1)
+        return self.server
 
-    def stop_bg(self):
+    def stop(self):
         self.server.terminate()
         self.server.join()
+
+    __enter__ = start
+
+    def __exit__(self, type, value, tb):
+        self.stop()
 
     def add_endpoint(self, rule=None, endpoint=None, handler=None, **kwargs):
         self.app.add_url_rule(rule, endpoint, EndpointAction(handler), **kwargs)
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture
 def fake_server(accelize_drm):
     name = "fake_server_%d" % randint(1,0xFFFFFFFF)
     return FlaskAppWrapper(name, accelize_drm.pytest_proxy_debug)

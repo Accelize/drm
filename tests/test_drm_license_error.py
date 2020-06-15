@@ -16,9 +16,6 @@ PROXY_HOST = "0.0.0.0"
 
 @pytest.mark.no_parallel
 def test_flask_view(fake_server):
-    """
-    Test a MAC error is returned if the key value in the response has been modified
-    """
     proxy_port = randint(1,65535)
     fake_server.run_bg(PROXY_HOST, proxy_port)
     try:
@@ -32,23 +29,15 @@ def test_flask_view(fake_server):
         fake_server.stop_bg()
 
 
-def test_flask_view(fake_server):
-    """
-    Test a MAC error is returned if the key value in the response has been modified
-    """
-    from flask import request, redirect, Response, session
+@pytest.mark.no_parallel
+def test_flask_view2(fake_server):
     proxy_port = randint(1,65535)
-    server = Process(target=fake_server.run, args=(PROXY_HOST, proxy_port))
-    server.start()
-    try:
+    with fake_server(PROXY_HOST, proxy_port):
         proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
-        print('proxy_url=', proxy_url)
-        response = requests.get(url_path)
-        print('response=', response.status_code)
-        print('response=', response.text)
-    finally:
-        server.terminate()
-        server.join()
+        response = requests.get(proxy_url)
+        print('status_code=', response.status_code)
+        print('text=', response.text)
+        assert response.status_code == 200
 
 
 @pytest.mark.no_parallel
