@@ -167,7 +167,9 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
 
     // Set header of OAuth2 request
     mOAUth2Request.setHostResolves( mHostResolvesJson );
-    mOAUth2Request.setURL( url + std::string("/o/token/") );
+    std::string oauth_url = url + std::string("/o/token/");
+    mOAUth2Request.setURL( oauth_url );
+    Debug( "OAuth URL: {}", oauth_url );
     std::stringstream ss;
     ss << "client_id=" << mClientId << "&client_secret=" << mClientSecret;
     ss << "&grant_type=client_credentials";

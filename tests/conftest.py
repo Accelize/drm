@@ -11,7 +11,7 @@ from datetime import datetime
 from time import time, sleep
 from shutil import rmtree
 from datetime import datetime, timedelta
-from flask import Flask
+from flask import Flask, request, session
 from flask_classful import FlaskView
 from multiprocessing import Process
 
@@ -1018,46 +1018,38 @@ def exec_func(accelize_drm, cred_json, conf_json):
 # Proxy fixture
 #--------------
 
-class EndpointAction:
-
-    def __init__(self, action):
-        self.action = action
-
-    def __call__(self, *kargs, **kwargs):
-        return self.action(*kargs, **kwargs)
-        if isinstance(resp,Response):
-            return resp
-        return Response(msg, status=status, headers={})
-
-
 class TestView(FlaskView):
-    #default_methods = ['GET', 'POST']
+    default_methods = ['GET', 'POST']
+
+    def get_context(self):
+        if 'context' in session:
+            return jsonify(session['context'])
+        else:
+            return jsonify({})
+
+    def set_context(self):
+        sesion['context'] = request.get_json()
+        return 'OK'
 
     def index(self):
-    # http://localhost:5000/
-        print('entering index fct')
-        return "<h1>This is my indexpage</h1>"
+        return "<h1>Passing index test</h1>"
 
-    def secondpage(self):
-    # http://localhost:5000/secondpage
-        return "<h1>This is my second</h1>"
 
 class FlaskAppWrapper:
 
     def __init__(self, name=__name__, debug=False):
-        from flask import Flask, session
         self.host = '0.0.0.0'
         self.port = 5000
         self.app = Flask(name)
-        self.app.config['SECRET_KEY'] = 'super secret'
+        self.app.secret_key = 'Super Secret'
         self.debug = debug
         environ['WERKZEUG_RUN_MAIN'] = 'true'
         environ['FLASK_ENV'] = 'development'
-        TestView.register(self.app, route_base='/')
 
-    def __call__( self, host, port):
+    def __call__( self, view, host, port):
         self.host = host
         self.port = port
+        view.register(self.app, route_base='/')
         return self
 
     def start(self):
@@ -1074,9 +1066,6 @@ class FlaskAppWrapper:
 
     def __exit__(self, type, value, tb):
         self.stop()
-
-    def add_endpoint(self, rule=None, endpoint=None, handler=None, **kwargs):
-        self.app.add_url_rule(rule, endpoint, EndpointAction(handler), **kwargs)
 
 
 @pytest.fixture

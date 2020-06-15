@@ -9,35 +9,70 @@ from re import search
 from json import loads, dumps
 import pytest
 from multiprocessing import Process
+from flask_classful import FlaskView, route
+from flask import request, redirect, Response, session, jsonify
 import requests
+
 
 PROXY_HOST = "0.0.0.0"
 
 
+class TestView(FlaskView):
+    default_methods = ['GET', 'POST']
+    route_base = '/'
+
+    def get_context(self):
+        if 'context' in session:
+            return jsonify(session['context'])
+        else:
+            return jsonify({})
+
+    def set_context(self):
+        session['context'] = request.get_json()
+        return 'OK'
+
+    @route('/test_header_error_on_key/<path:path>')
+    def test_header_error_on_key(self, path=''):
+        context = session['context']
+        try:
+            url_path = '%s/%s' % (context["url"], path)
+            print(
+            if path == 'o/token/':
+                return redirect(url_path, code=307)
+            else:
+                context['cnt'] += 1
+                request_json = request.get_json()
+                response = requests.post(url_path, json=request_json, headers=request.headers)
+                response_json = response.json()
+                if context['cnt'] == 1:
+                    dna, lic_json = list(response_json['license'].items())[0]
+                    key = lic_json['key']
+                    key = '1' + key[1:] if key[0] == '0' else '0' + key[1:]
+                    response_json['license'][dna]['key'] = key
+                excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+                headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+                return Response(dumps(response_json), response.status_code, headers)
+        finally:
+            session['context'] = context
+
+
 @pytest.mark.no_parallel
 def test_flask_view(fake_server):
+    """
+    Test a MAC error is returned if the key value in the response has been modified
+    """
+    context = {'toto':1}
     proxy_port = randint(1,65535)
-    fake_server.run_bg(PROXY_HOST, proxy_port)
-    try:
+    with fake_server(TestView, PROXY_HOST, proxy_port):
         proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
         print('proxy_url=', proxy_url)
-        response = requests.get(proxy_url)
-        print('status_code=', response.status_code)
-        print('text=', response.text)
-        assert response.status_code == 200
-    finally:
-        fake_server.stop_bg()
-
-
-@pytest.mark.no_parallel
-def test_flask_view2(fake_server):
-    proxy_port = randint(1,65535)
-    with fake_server(PROXY_HOST, proxy_port):
-        proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
-        response = requests.get(proxy_url)
-        print('status_code=', response.status_code)
-        print('text=', response.text)
-        assert response.status_code == 200
+        client = requests.Session()
+        print(client.get(url=proxy_url+'/all/').text)
+        return
+        client.post(url=proxy_url+'/set_context/', json={'url':proxy_url})
+        context = client.get(url=proxy_url+'/get_context/').json()
+        print('New context=', context)
+        context = client.get(url=proxy_url+'/all/').text
 
 
 @pytest.mark.no_parallel
@@ -45,7 +80,48 @@ def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler, 
     """
     Test a MAC error is returned if the key value in the response has been modified
     """
-    from flask import request, redirect, Response, session
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    async_cb.reset()
+
+    activators = accelize_drm.pytest_fpga_activators[0]
+    activators.reset_coin()
+    activators.autotest()
+
+    conf_json.reset()
+    url = conf_json['licensing']['url']
+    proxy_port = randint(1,65535)
+    proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
+    conf_json['licensing']['url'] = proxy_url
+    conf_json.save()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    context = {'url': url, 'cnt': 0}
+    with fake_server(TestView, PROXY_HOST, proxy_port):
+        proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
+        print('proxy_url=', proxy_url)
+        client = requests.Session()
+        client.post(url=proxy_url+'/set_context/', json=context)
+        with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
+            drm_manager.activate()
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
+        assert "License header check error" in str(excinfo.value)
+        async_cb.assert_NoError()
+
+
+
+
+
+@pytest.mark.no_parallel
+def test_header_error_on_key_old(accelize_drm, conf_json, cred_json, async_handler, fake_server):
+    """
+    Test a MAC error is returned if the key value in the response has been modified
+    """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
@@ -107,7 +183,6 @@ def test_mac_error_on_key(accelize_drm, conf_json, cred_json, async_handler, fak
     """
     Test a MAC error is returned if the key value in the response has been modified
     """
-    from flask import request, redirect, Response, session
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
@@ -168,7 +243,6 @@ def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_
     """
     Test a MAC error is returned if the licenseTimer value in the response has been modified
     """
-    from flask import request, redirect, Response, session
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
@@ -243,7 +317,6 @@ def test_mac_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_han
     """
     Test a MAC error is returned if the licenseTimer value in the response has been modified
     """
-    from flask import request, redirect, Response, session
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
@@ -317,7 +390,6 @@ def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler, fak
     """
     Test an error is returned if a wrong session id is provided
     """
-    from flask import request, redirect, Response, session
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
