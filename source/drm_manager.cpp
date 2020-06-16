@@ -194,6 +194,7 @@ protected:
     // XRT PATH
     std::string mXrtPath;
     std::string mXbutil;
+    Json::Value mHostCardInfo;
 
     // Debug parameters
     spdlog::level::level_enum mDebugMessageLevel;
@@ -319,23 +320,9 @@ protected:
                         mBypassFrequencyDetection ).asBool();
             }
 
-            // Check XILINX_XRT environment variable existence
-            char * env_val = getenv( "XILINX_XRT" );
-            if (env_val == NULL) {
-                mXrtPath = std::string( env_val );
-                Debug( "XILINX_XRT variable is defined: {}", mXrtPath );
-                // Check xbutil existence
-                xrt_bin_dir = fmt::format( "{}{}bin", mXrtPath, path_separator );
-                mXbutil = fmt::format( "{}{}xbutil", xrt_bin_dir, path_separator );
-                if ( isFile( mXbutil ) ) {
-                    Debug( "xbutil tool has been found: {}", mXbutil );
-                } else {
-                    Warning( "xbutil tool could not be found in {}", xrt_bin_dir );
-                }
-            } else {
-                Debug( "XILINX_XRT variable is not defined" );
-            }
-
+            // If possible extract host and card information
+            Json::Value mHostCardInfo = getHostAndCardInfo();
+            if
 
         } catch( const Exception &e ) {
             if ( e.getErrCode() != DRM_BadFormat )
@@ -416,6 +403,34 @@ protected:
     void uninitLog() {
         if ( sLogger )
             sLogger->flush();
+    }
+
+    Json::Value getHostAndCardInfo() {
+        // Check XILINX_XRT environment variable existence
+        char * env_val = getenv( "XILINX_XRT" );
+        if (env_val == NULL) {
+            Debug( "XILINX_XRT variable is not defined" );
+            mXrtPath.clear();
+            return Json::nullValue;
+        }
+        mXrtPath = std::string( env_val );
+        Debug( "XILINX_XRT variable is defined: {}", mXrtPath );
+
+        // Check xbutil existence
+        xrt_bin_dir = fmt::format( "{}{}bin", mXrtPath, path_separator );
+        mXbutil = fmt::format( "{}{}xbutil", xrt_bin_dir, path_separator );
+        if ( !isFile( mXbutil ) ) {
+            // If xbutil does not exist
+            Debug( "xbutil tool could not be found in {}", xrt_bin_dir );
+            mXbutil.clear();
+            return Json::nullValue;
+        }
+        Debug( "xbutil tool has been found in {}", mXbutil );
+
+        // Call xbutil to collect host and card data
+        std::string cmd = fmt::format( "{} query scan", mXbutil );
+        std::string cmd_out = exec( cmd.c_str() );
+        Info( "cmd_out=\n{}\n", cmd_out );
     }
 
     uint32_t getMailboxSize() const {
