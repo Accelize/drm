@@ -233,6 +233,154 @@ def create_app(url):
         context['data'].append( (health_id,start,str(datetime.now())) )
         return Response(dumps(response_json), response.status_code, headers)
 
+    # test_health_retry functions
+    @app.route('/test_health_retry/o/token/', methods=['GET', 'POST'])
+    def otoken__test_health_retry():
+        return redirect(request.url_root + '/o/token/', code=307)
+
+    @app.route('/test_health_retry/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_health_retry():
+        return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
+
+    @app.route('/test_health_retry/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_health_retry(path=''):
+        global context
+        new_url = request.url.replace(request.url_root+'test_health_retry', url)
+        request_json = request.get_json()
+        health_id = request_json['health_id']
+        start = str(datetime.now())
+        response = post(new_url, json=request_json, headers=request.headers)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        response_json['metering']['healthPeriod'] = context['healthPeriod']
+        response_json['metering']['healthRetry'] = context['healthRetry']
+        response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
+        if len(context['data']) >= 1:
+            response.status_code = 408
+        if health_id <= 1:
+            context['data'].append( (health_id,start,str(datetime.now())) )
+        else:
+            context['exit'] = True
+        return Response(dumps(response_json), response.status_code, headers)
+
+    # test_health_retry_modification functions
+    @app.route('/test_health_retry_modification/o/token/', methods=['GET', 'POST'])
+    def otoken__test_health_retry_modification():
+        return redirect(request.url_root + '/o/token/', code=307)
+
+    @app.route('/test_health_retry_modification/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_health_retry_modification():
+        return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
+
+    @app.route('/test_health_retry_modification/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_health_retry_modification(path=''):
+        global context
+        new_url = request.url.replace(request.url_root+'test_health_retry_modification', url)
+        request_json = request.get_json()
+        health_id = request_json['health_id']
+        start = str(datetime.now())
+        response = post(new_url, json=request_json, headers=request.headers)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        response_json['metering']['healthPeriod'] = context['healthPeriod']
+        response_json['metering']['healthRetry'] = context['healthRetry']
+        response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
+        if len(context['data']) >= 1:
+            response.status_code = 408
+        if health_id <= 1:
+            context['data'].append( (health_id,start,str(datetime.now())) )
+        else:
+            context['exit'] = True
+        return Response(dumps(response_json), response.status_code, headers)
+
+    # test_health_retry_sleep functions
+    @app.route('/test_health_retry_sleep/o/token/', methods=['GET', 'POST'])
+    def otoken__test_health_retry_sleep():
+        return redirect(request.url_root + '/o/token/', code=307)
+
+    @app.route('/test_health_retry_sleep/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_health_retry_sleep():
+        return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
+
+    @app.route('/test_health_retry_sleep/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_health_retry_sleep(path=''):
+        global context
+        new_url = request.url.replace(request.url_root+'test_health_retry_sleep', url)
+        request_json = request.get_json()
+        health_id = request_json['health_id']
+        start = str(datetime.now())
+        response = post(new_url, json=request_json, headers=request.headers)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        response_json['metering']['healthPeriod'] = context['healthPeriod']
+        response_json['metering']['healthRetry'] = context['healthRetry']
+        response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
+        if len(context['data']) >= 1:
+            response.status_code = 408
+        if health_id <= nb_run:
+            context['data'].append( (health_id,start,str(datetime.now())) )
+        else:
+            context['exit'] = True
+        return Response(dumps(response_json), response.status_code, headers)
+
+    # test_health_retry_sleep_modification functions
+    @app.route('/test_health_retry_sleep_modification/o/token/', methods=['GET', 'POST'])
+    def otoken__test_health_retry_sleep_modification():
+        return redirect(request.url_root + '/o/token/', code=307)
+
+    @app.route('/test_health_retry_sleep_modification/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_health_retry_sleep_modification():
+        return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
+
+    @app.route('/test_health_retry_sleep_modification/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_health_retry_sleep_modification(path=''):
+        global context
+        new_url = request.url.replace(request.url_root+'test_health_retry_sleep_modification', url)
+        request_json = request.get_json()
+        health_id = request_json['health_id']
+        start = str(datetime.now())
+        response = post(new_url, json=request_json, headers=request.headers)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        response_json['metering']['healthPeriod'] = context['healthPeriod']
+        response_json['metering']['healthRetry'] = context['healthRetry']
+        response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
+        if len(context['data']) >= 1:
+            response.status_code = 408
+        if health_id <= 1:
+            context['data'].append( (health_id,start,str(datetime.now())) )
+        else:
+            context['exit'] = True
+        return Response(dumps(response_json), response.status_code, headers)
+
+    # test_health_metering_data functions
+    @app.route('/test_health_metering_data/o/token/', methods=['GET', 'POST'])
+    def otoken__test_health_metering_data():
+        return redirect(request.url_root + '/o/token/', code=307)
+
+    @app.route('/test_health_metering_data/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_health_metering_data():
+        return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
+
+    @app.route('/test_health_metering_data/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_health_metering_data(path=''):
+        global context
+        new_url = request.url.replace(request.url_root+'test_health_metering_data', url)
+        request_json = request.get_json()
+        health_id = request_json['health_id']
+        response = post(new_url, json=request_json, headers=request.headers)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        response_json['metering']['healthPeriod'] = context['healthPeriod']
+        response_json['metering']['healthRetry'] = context['healthRetry']
+        context['health_id']= health_id
+        return Response(dumps(response_json), response.status_code, headers)
+
 
     return app
 
