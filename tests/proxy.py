@@ -1,6 +1,6 @@
 from json import dumps
 from flask import Flask, request, session, redirect, Response, jsonify
-import requests
+from requests import get, post
 
 
 context = None
@@ -11,6 +11,7 @@ def create_app(url):
     app.secret_key = 'You Will Never Guess'
     #environ['WERKZEUG_RUN_MAIN'] = 'true'
     #environ['FLASK_ENV'] = 'development'
+    url = url.rstrip('/')
 
     @app.route('/get/', methods=['GET'])
     def get():
@@ -24,18 +25,23 @@ def create_app(url):
 
     @app.route('/o/token/', methods=['GET', 'POST'])
     def otoken():
-        new_url = url.rstrip('/') + '/o/token/'
+        new_url = url + '/o/token/'
         return redirect(new_url, code=307)
 
     @app.route('/auth/metering/health/', methods=['GET', 'POST'])
     def health():
-        new_url = url.rstrip('/') + '/auth/metering/health/'
+        new_url = url + '/auth/metering/health/'
         return redirect(new_url, code=307)
 
     @app.route('/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense():
-        new_url = url.rstrip('/') + '/auth/metering/genlicense/'
-        return redirect(new_url, code=307)
+        request_json = request.get_json()
+        new_url = url + '/auth/metering/genlicense/'
+        response = post(new_url, json=request_json, headers=request.headers)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        return Response(dumps(response_json), response.status_code, headers)
 
     # test_header_error_on_key functions
     @app.route('/test_header_error_on_key/o/token/', methods=['GET', 'POST'])
@@ -52,7 +58,7 @@ def create_app(url):
         context['cnt'] += 1
         new_url = request.url.replace(request.url_root+'test_header_error_on_key', url)
         request_json = request.get_json()
-        response = requests.post(new_url, json=request_json, headers=request.headers)
+        response = post(new_url, json=request_json, headers=request.headers)
         response_json = response.json()
         if context['cnt'] == 1:
             dna, lic_json = list(response_json['license'].items())[0]
@@ -78,7 +84,7 @@ def create_app(url):
         context['cnt'] += 1
         new_url = request.url.replace(request.url_root+'test_header_error_on_licenseTimer', url)
         request_json = request.get_json()
-        response = requests.post(new_url, json=request_json, headers=request.headers)
+        response = post(new_url, json=request_json, headers=request.headers)
         response_json = response.json()
         if context['cnt'] == 2:
             dna, lic_json = list(response_json['license'].items())[0]
@@ -104,7 +110,7 @@ def create_app(url):
         new_url = request.url.replace(request.url_root+'test_session_id_error', url)
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         request_json = request.get_json()
-        response = requests.post(new_url, json=request_json, headers=request.headers)
+        response = post(new_url, json=request_json, headers=request.headers)
         response_json = response.json()
         response_session_id = response_json['metering']['sessionId']
         if context['session_id'] != response_session_id:
@@ -130,7 +136,7 @@ def create_app(url):
 
     @app.route('/test_health_period_disabled/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_health_period_disabled():
-        return redirect(request.url_root + '/auth/metering/health/', code=307)
+        return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
 
     @app.route('/test_health_period_disabled/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_health_period_disabled(path=''):
