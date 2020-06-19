@@ -273,30 +273,28 @@ def test_health_retry(accelize_drm, conf_json, cred_json, async_handler, live_se
     set_context(context)
     assert get_context() == context
 
+    drm_manager.activate()
     try:
-        drm_manager.activate()
         sleep(healthRetry)
         while not context['exit']:
             context = get_context()
             sleep(1)
-        drm_manager.deactivate()
-        async_cb.assert_NoError()
-        context = get_context()
-        data_list = context['data']
-        data0 = data_list.pop(0)
-        assert len(data_list) > 1
-        assert data0[0] == 0
-        # Check health_id is unchanged during the retry period
-        assert sum(map(lambda x: x[0], data_list)) == len(data_list)
-        # Check the retry period is correct
-        start = data_list[0][1]
-        end = data_list[-1][2]
-        delta = parser.parse(end) - parser.parse(start)
-        error_gap = drm_manager.get('health_retry_sleep') + 1
-        assert healthRetry - error_gap <= int(delta.total_seconds()) <= healthRetry + error_gap
     finally:
-        server.terminate()
-        server.join()
+        drm_manager.deactivate()
+    async_cb.assert_NoError()
+    context = get_context()
+    data_list = context['data']
+    data0 = data_list.pop(0)
+    assert len(data_list) > 1
+    assert data0[0] == 0
+    # Check health_id is unchanged during the retry period
+    assert sum(map(lambda x: x[0], data_list)) == len(data_list)
+    # Check the retry period is correct
+    start = data_list[0][1]
+    end = data_list[-1][2]
+    delta = parser.parse(end) - parser.parse(start)
+    error_gap = drm_manager.get('health_retry_sleep') + 1
+    assert healthRetry - error_gap <= int(delta.total_seconds()) <= healthRetry + error_gap
 
 
 def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_handler, live_server):
@@ -387,7 +385,9 @@ def test_health_retry_sleep(accelize_drm, conf_json, cred_json, async_handler, l
     healthPeriod = 3
     healthRetry = 4
     healthRetrySleep = 2
+    nb_run = 3
     context = {'data': list(),
+               'nb_run':nb_run,
                'healthPeriod':healthPeriod,
                'healthRetry':healthRetry,
                'healthRetrySleep':healthRetrySleep,
