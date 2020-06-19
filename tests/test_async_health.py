@@ -2,17 +2,11 @@
 """
 Test asynchronous metering behaviors of DRM Library.
 """
+import pytest
 from time import sleep
 from random import randrange
-from datetime import datetime, timedelta
 from re import search, MULTILINE
-from json import loads, dumps
-import pytest
-from multiprocessing import Process
-from flask import redirect, request, Response
-from requests import get, post
 from dateutil import parser
-from copy import deepcopy
 from itertools import groupby
 from flask import request, url_for
 from requests import get, post
