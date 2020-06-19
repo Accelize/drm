@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Configure Pytest"""
 from copy import deepcopy
-from json import dump, load
+from json import dump, load, dumps
 from os import environ, getpid, listdir, remove, makedirs, getcwd, urandom
 from os.path import basename, dirname, expanduser, isdir, isfile, join, \
     realpath, splitext
@@ -11,6 +11,7 @@ from datetime import datetime
 from time import time, sleep
 from shutil import rmtree
 from datetime import datetime, timedelta
+from tests.proxy import create_app
 
 import pytest
 
@@ -1015,41 +1016,13 @@ def exec_func(accelize_drm, cred_json, conf_json):
 # Proxy fixture
 #--------------
 
-class EndpointAction:
-
-    def __init__(self, action):
-        self.action = action
-
-    def __call__(self, *kargs, **kwargs):
-        return self.action(*kargs, **kwargs)
-        if isinstance(resp,Response):
-            return resp
-        return Response(msg, status=status, headers={})
-
-
-class FlaskAppWrapper:
-
-    def __init__(self, name=__name__, debug=False):
-        from flask import Flask, session
-        self.app = Flask(name)
-        self.app.config['SECRET_KEY'] = 'super secret'
-        self.debug = debug
-        environ['WERKZEUG_RUN_MAIN'] = 'true'
-        environ['FLASK_ENV'] = 'development'
-
-    def run(self, host='127.0.0.1', port=5000):
-        self.host = host
-        self.port = port
-        self.app.run(host=self.host, port=self.port, debug=self.debug)
-
-    def add_endpoint(self, rule=None, endpoint=None, handler=None, **kwargs):
-        self.app.add_url_rule(rule, endpoint, EndpointAction(handler), **kwargs)
-
-
-@pytest.fixture
-def fake_server(accelize_drm):
-    name = "fake_server_%d" % randint(1,0xFFFFFFFF)
-    return FlaskAppWrapper(name, accelize_drm.pytest_proxy_debug)
+@pytest.fixture(scope='session')
+def app(pytestconfig):
+    url = _LICENSING_SERVERS[pytestconfig.getoption("server")]
+    app = create_app(url)
+    app.debug = pytestconfig.getoption("proxy_debug")
+    print('app.debug=', app.debug)
+    return app
 
 
 #-------------------
@@ -1083,3 +1056,4 @@ class ArtifactFactory:
 @pytest.fixture
 def artifacts(accelize_drm):
     return ArtifactFactory(accelize_drm.pytest_artifacts_dir)
+

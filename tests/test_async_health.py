@@ -15,10 +15,8 @@ from dateutil import parser
 from copy import deepcopy
 from itertools import groupby
 
-PROXY_HOST = "127.0.0.1"
 
-
-def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handler, fake_server):
+def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test the asynchronous health feature can be disabled.
     """
@@ -97,7 +95,7 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
 
 
 @pytest.mark.minimum
-def test_health_period(accelize_drm, conf_json, cred_json, async_handler, fake_server):
+def test_health_period(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test the asynchronous health period is correct.
     """
@@ -172,7 +170,7 @@ def test_health_period(accelize_drm, conf_json, cred_json, async_handler, fake_s
         server.join()
 
 
-def test_health_period_modification(accelize_drm, conf_json, cred_json, async_handler, fake_server):
+def test_health_period_modification(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test the asynchronous health feature can be modified dynamically.
     """
@@ -248,7 +246,7 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
         server.join()
 
 
-def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler, fake_server):
+def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test the asynchronous health retry feature can be disabled.
     """
@@ -330,7 +328,7 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
 
 
 @pytest.mark.minimum
-def test_health_retry(accelize_drm, conf_json, cred_json, async_handler, fake_server):
+def test_health_retry(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test the asynchronous health retry.
     """
@@ -414,7 +412,7 @@ def test_health_retry(accelize_drm, conf_json, cred_json, async_handler, fake_se
         server.join()
 
 
-def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_handler, fake_server):
+def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test the asynchronous health retry can be modified dynamically.
     """
@@ -504,7 +502,7 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
 
 
 @pytest.mark.minimum
-def test_health_retry_sleep(accelize_drm, conf_json, cred_json, async_handler, fake_server):
+def test_health_retry_sleep(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test the asynchronous health retry sleep value
     """
@@ -592,7 +590,7 @@ def test_health_retry_sleep(accelize_drm, conf_json, cred_json, async_handler, f
         server.join()
 
 
-def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, async_handler, fake_server):
+def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test the asynchronous health retry sleep value when changed dynamically.
     """
@@ -682,7 +680,7 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, asy
 
 
 @pytest.mark.minimum
-def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler, fake_server, ws_admin):
+def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler, live_server, ws_admin):
     """
     Test the metering data returned to the web service is correct.
     """
