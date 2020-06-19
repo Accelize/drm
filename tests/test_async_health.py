@@ -18,6 +18,15 @@ from flask import request, url_for
 from requests import get, post
 
 
+def get_context():
+    r = get(url_for('get', _external=True))
+    assert r.status_code == 200
+    return r.json()
+
+def set_context(data):
+    r = post(url_for('set', _external=True), json=data)
+    assert r.status_code == 200
+
 
 def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
@@ -51,11 +60,8 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
     nb_health = 3
     healthPeriod = 2
     context = {'cnt':0, 'healthPeriod':healthPeriod, 'nb_health':nb_health}
-    r = post(url_for('set', _external=True), json=context)
-    assert r.status_code == 200
-    r = get(url_for('get', _external=True))
-    assert r.status_code == 200
-    assert r.json() == context
+    set_context(context)
+    assert get_context() == context
 
     try:
         drm_manager.activate()
@@ -86,70 +92,51 @@ def test_health_period(accelize_drm, conf_json, cred_json, async_handler, live_s
     async_cb.reset()
 
     conf_json.reset()
-    url = conf_json['licensing']['url']
-    proxy_port = randrange(1,65535)
-    proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
-    conf_json['licensing']['url'] = proxy_url
+    conf_json['licensing']['url'] = request.url + 'test_health_period'
     conf_json.save()
-    tmpHealthPeriod = 2
-    tmpHealthRetry = 0  # no retry
-    tmpHealthRetrySleep = 1
-    context = {'url': url, 'data': list()}
-    nb_health = 3
 
-    def proxy(path=''):
-        url_path = '%s/%s' % (context["url"],path)
-        if path == 'o/token/':
-            return redirect(url_path, code=307)
-        elif path == 'get/':
-            return context
-        else:
-            # context['data'] save the time when new request is sent to the server and
-            # when the response from the served has been received
-            request_json = request.get_json()
-            if request_json['request'] == 'health':
-                start = str(datetime.now())
-            response = post(url_path, json=request_json, headers=request.headers)
-            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-            response_json = response.json()
-            if request_json['request'] == 'health':
-                response_json['metering']['healthPeriod'] = tmpHealthPeriod
-                response_json['metering']['healthRetry'] = tmpHealthRetry
-                response_json['metering']['healthRetrySleep'] = tmpHealthRetrySleep
-                context['data'].append( (start,str(datetime.now())) )
-            return Response(dumps(response_json), response.status_code, headers)
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
 
-    fake_server.add_endpoint('/<path:path>', 'proxy', proxy, methods=['GET', 'POST'])
-    server = Process(target=fake_server.run, args=(PROXY_HOST, proxy_port))
-    server.start()
+    # Set initial context on the live server
+    healthPeriod = 2
+    healthRetry = 0  # no retry
+    healthRetrySleep = 1
+    context = {'data': list(),
+               'healthPeriod':healthPeriod,
+               'healthRetry':healthRetry,
+               'healthRetrySleep':healthRetrySleep
+    }
+    r = post(url_for('set', _external=True), json=context)
+    assert r.status_code == 200
+    r = get(url_for('get', _external=True))
+    assert r.status_code == 200
+    assert r.json() == context
+
+    drm_manager.activate()
     try:
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        drm_manager.activate()
+        nb_health = 3
         while True:
-            sleep(tmpHealthPeriod)
-            context = get(url=proxy_url+'/get/').json()
+            sleep(healthPeriod)
+            context = get(url_for('get', _external=True)).json()
             if len(context['data']) >= (nb_health + 1):
                 break
-        drm_manager.deactivate()
-        async_cb.assert_NoError()
-        context = get(url=proxy_url+'/get/').json()
-        data_list = context['data']
-        assert len(data_list) >= nb_health+1
-        wait_start = data_list.pop(0)[1]
-        for start, end in data_list:
-            delta = parser.parse(start) - parser.parse(wait_start)
-            assert int(delta.total_seconds()) == tmpHealthPeriod
-            wait_start = end
     finally:
-        server.terminate()
-        server.join()
+        drm_manager.deactivate()
+    async_cb.assert_NoError()
+    context = get(url_for('get', _external=True)).json()
+    data_list = context['data']
+    assert len(data_list) >= nb_health+1
+    wait_start = data_list.pop(0)[1]
+    for start, end in data_list:
+        delta = parser.parse(start) - parser.parse(wait_start)
+        assert int(delta.total_seconds()) == healthPeriod
+        wait_start = end
 
 
 def test_health_period_modification(accelize_drm, conf_json, cred_json, async_handler, live_server):
@@ -161,71 +148,51 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
     async_cb.reset()
 
     conf_json.reset()
-    url = conf_json['licensing']['url']
-    proxy_port = randrange(1,65535)
-    proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
-    conf_json['licensing']['url'] = proxy_url
+    conf_json['licensing']['url'] = request.url + 'test_health_period_modification'
     conf_json.save()
-    tmpHealthPeriod = 2
-    tmpHealthRetry = 0  # no retry
-    tmpHealthRetrySleep = 1
-    context = {'url': url, 'data': list(), 'health_period':tmpHealthPeriod}
-    nb_health = 5
 
-    def proxy(path=''):
-        url_path = '%s/%s' % (context["url"],path)
-        if path == 'o/token/':
-            return redirect(url_path, code=307)
-        elif path == 'get/':
-            return context
-        else:
-            # context['data'] save the time when new request is sent to the server and
-            # when the response from the served has been received
-            request_json = request.get_json()
-            if request_json['request'] == 'health':
-                start = str(datetime.now())
-            response = post(url_path, json=request_json, headers=request.headers)
-            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-            response_json = response.json()
-            if request_json['request'] == 'health':
-                response_json['metering']['healthPeriod'] = context['health_period']
-                response_json['metering']['healthRetry'] = tmpHealthRetry
-                response_json['metering']['healthRetrySleep'] = tmpHealthRetrySleep
-                context['health_period'] += 1
-                context['data'].append( (start,str(datetime.now())) )
-            return Response(dumps(response_json), response.status_code, headers)
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
 
-    fake_server.add_endpoint('/<path:path>', 'proxy', proxy, methods=['GET', 'POST'])
-    server = Process(target=fake_server.run, args=(PROXY_HOST, proxy_port))
-    server.start()
+    # Set initial context on the live server
+    healthPeriod = 2
+    healthRetry = 0  # no retry
+    healthRetrySleep = 1
+    context = {'data': list(),
+               'healthPeriod':healthPeriod,
+               'healthRetry':healthRetry,
+               'healthRetrySleep':healthRetrySleep
+    }
+    r = post(url_for('set', _external=True), json=context)
+    assert r.status_code == 200
+    r = get(url_for('get', _external=True))
+    assert r.status_code == 200
+    assert r.json() == context
+
+    drm_manager.activate()
     try:
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        drm_manager.activate()
+        nb_health = 5
         while True:
-            sleep(tmpHealthPeriod)
-            context = get(url=proxy_url+'/get/').json()
+            sleep(healthPeriod)
+            context = get(url_for('get', _external=True)).json()
             if len(context['data']) >= (nb_health*2 + 1):
                 break
-        drm_manager.deactivate()
-        async_cb.assert_NoError()
-        context = get(url=proxy_url+'/get/').json()
-        data_list = context['data']
-        assert len(data_list) >= nb_health+1
-        wait_start = data_list.pop(0)[1]
-        for i, (start, end) in enumerate(data_list):
-            delta = parser.parse(start) - parser.parse(wait_start)
-            assert int(delta.total_seconds()) == tmpHealthPeriod + i
-            wait_start = end
     finally:
-        server.terminate()
-        server.join()
+        drm_manager.deactivate()
+    async_cb.assert_NoError()
+    context = get(url_for('get', _external=True)).json()
+    data_list = context['data']
+    assert len(data_list) >= nb_health+1
+    wait_start = data_list.pop(0)[1]
+    for i, (start, end) in enumerate(data_list):
+        delta = parser.parse(start) - parser.parse(wait_start)
+        assert int(delta.total_seconds()) == healthPeriod + i
+        wait_start = end
 
 
 def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler, live_server):
@@ -237,76 +204,53 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
     async_cb.reset()
 
     conf_json.reset()
-    url = conf_json['licensing']['url']
-    proxy_port = randrange(1,65535)
-    proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
-    conf_json['licensing']['url'] = proxy_url
+    conf_json['licensing']['url'] = request.url + 'test_health_retry_disabled'
     conf_json.save()
-    tmpHealthPeriod = 3
-    tmpHealthRetrySleep = 1
-    context = {'url': url, 'data': list()}
-    nb_health = 3
 
-    def proxy(path=''):
-        url_path = '%s/%s' % (context["url"],path)
-        if path == 'o/token/':
-            return redirect(url_path, code=307)
-        elif path == 'get/':
-            return context
-        else:
-            # context['data'] save the time when new request is sent to the server and
-            # when the response from the served has been received
-            request_json = request.get_json()
-            if request_json['request'] == 'health':
-                health_id = request_json['health_id']
-                start = str(datetime.now())
-            response = post(url_path, json=request_json, headers=request.headers)
-            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-            response_json = response.json()
-            if request_json['request'] == 'health':
-                response_json['metering']['healthPeriod'] = tmpHealthPeriod
-                response_json['metering']['healthRetry'] = 0
-                response_json['metering']['healthRetrySleep'] = tmpHealthRetrySleep
-                if len(context['data']) > 1:
-                    response.status_code = 408
-                context['data'].append( (health_id,start,str(datetime.now())) )
-            return Response(dumps(response_json), response.status_code, headers)
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
 
-    fake_server.add_endpoint('/<path:path>', 'proxy', proxy, methods=['GET', 'POST'])
-    server = Process(target=fake_server.run, args=(PROXY_HOST, proxy_port))
-    server.start()
+    # Set initial context on the live server
+    healthPeriod = 3
+    healthRetrySleep = 1
+    context = {'data': list(),
+               'healthPeriod':healthPeriod,
+               'healthRetrySleep':healthRetrySleep
+    }
+    r = post(url_for('set', _external=True), json=context)
+    assert r.status_code == 200
+    r = get(url_for('get', _external=True))
+    assert r.status_code == 200
+    assert r.json() == context
+
+    drm_manager.activate()
     try:
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        drm_manager.activate()
+        nb_health = 3
         while True:
             sleep(tmpHealthPeriod)
-            context = get(url=proxy_url+'/get/').json()
+            context = get(url_for('get', _external=True)).json()
             if len(context['data']) >= nb_health + 1:
                 break
-        drm_manager.deactivate()
-        async_cb.assert_NoError()
-        context = get(url=proxy_url+'/get/').json()
-        data_list = context['data']
-        assert len(data_list) >= nb_health+1
-        # Check there is no duplicated health_id
-        id_list = tuple(map(lambda x: x[0], data_list))
-        assert id_list == tuple(set(id_list))
-        # Check the time between 2 period
-        wait_start = data_list.pop(0)[2]
-        for hid, start, end in data_list:
-            delta = parser.parse(start) - parser.parse(wait_start)
-            assert int(delta.total_seconds()) == tmpHealthPeriod
-            wait_start = end
     finally:
-        server.terminate()
-        server.join()
+        drm_manager.deactivate()
+    async_cb.assert_NoError()
+    context = get(url_for('get', _external=True)).json()
+    data_list = context['data']
+    assert len(data_list) >= nb_health+1
+    # Check there is no duplicated health_id
+    id_list = tuple(map(lambda x: x[0], data_list))
+    assert id_list == tuple(set(id_list))
+    # Check the time between 2 period
+    wait_start = data_list.pop(0)[2]
+    for hid, start, end in data_list:
+        delta = parser.parse(start) - parser.parse(wait_start)
+        assert int(delta.total_seconds()) == tmpHealthPeriod
+        wait_start = end
 
 
 @pytest.mark.minimum
@@ -372,11 +316,11 @@ def test_health_retry(accelize_drm, conf_json, cred_json, async_handler, live_se
         drm_manager.activate()
         sleep(tmpHealthRetry)
         while not context['exit']:
-            context = get(url=proxy_url+'/get/').json()
+            context = get(url_for('get', _external=True)).json()
             sleep(1)
         drm_manager.deactivate()
         async_cb.assert_NoError()
-        context = get(url=proxy_url+'/get/').json()
+        context = get(url_for('get', _external=True)).json()
         data_list = context['data']
         data0 = data_list.pop(0)
         assert len(data_list) > 1
@@ -461,11 +405,11 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
             drm_manager.activate()
             sleep(retry_timeout)
             while not context['exit']:
-                context = get(url=proxy_url+'/get/').json()
+                context = get(url_for('get', _external=True)).json()
                 sleep(1)
             drm_manager.deactivate()
             async_cb.assert_NoError()
-            context = get(url=proxy_url+'/get/').json()
+            context = get(url_for('get', _external=True)).json()
             data_list = context['data']
             data0 = data_list.pop(0)
             assert len(data_list) > 1
@@ -547,11 +491,11 @@ def test_health_retry_sleep(accelize_drm, conf_json, cred_json, async_handler, l
         drm_manager.activate()
         sleep(tmpHealthRetry)
         while not context['exit']:
-            context = get(url=proxy_url+'/get/').json()
+            context = get(url_for('get', _external=True)).json()
             sleep(1)
         drm_manager.deactivate()
         async_cb.assert_NoError()
-        context = get(url=proxy_url+'/get/').json()
+        context = get(url_for('get', _external=True)).json()
         data_list = context['data']
         data0 = data_list.pop(0)
         # Check the retry sleep period is correct
@@ -638,11 +582,11 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, asy
             drm_manager.activate()
             sleep(tmpHealthRetry)
             while not context['exit']:
-                context = get(url=proxy_url+'/get/').json()
+                context = get(url_for('get', _external=True)).json()
                 sleep(1)
             drm_manager.deactivate()
             async_cb.assert_NoError()
-            context = get(url=proxy_url+'/get/').json()
+            context = get(url_for('get', _external=True)).json()
             data_list = context['data']
             data0 = data_list.pop(0)
             nb_sleep_prev = 0
@@ -703,9 +647,9 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
             return Response(dumps(response_json), response.status_code, headers)
 
     def wait_and_check_on_next_health(drm_manager):
-        next_health_id = get(url=proxy_url+'/get/').json()['health_id'] + 2
+        next_health_id = get(url_for('get', _external=True)).json()['health_id'] + 2
         while True:
-            if get(url=proxy_url+'/get/').json()['health_id'] >= next_health_id:
+            if get(url_for('get', _external=True)).json()['health_id'] >= next_health_id:
                 break
             sleep(1)
         session_id = drm_manager.get('session_id')
