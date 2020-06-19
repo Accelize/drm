@@ -8,7 +8,7 @@ from random import randint
 from datetime import datetime, timedelta
 from re import search
 from json import loads, dumps
-from flask import request, redirect, Response, session, url_for, jsonify
+from flask import request, url_for
 from requests import get, post
 
 
