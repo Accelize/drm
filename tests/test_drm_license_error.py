@@ -2,81 +2,20 @@
 """
 Test metering and floating behaviors of DRM Library.
 """
+import pytest
 from time import sleep
 from random import randint
 from datetime import datetime, timedelta
 from re import search
 from json import loads, dumps
-import pytest
-from multiprocessing import Process
-from flask_classful import FlaskView, route
-from flask import request, redirect, Response, session, jsonify
+from flask import request, redirect, Response, session, url_for, jsonify
 import requests
 
 
-PROXY_HOST = "0.0.0.0"
-
-
-class TestView(FlaskView):
-    default_methods = ['GET', 'POST']
-    route_base = '/'
-
-    def get_context(self):
-        if 'context' in session:
-            return jsonify(session['context'])
-        else:
-            return jsonify({})
-
-    def set_context(self):
-        session['context'] = request.get_json()
-        return 'OK'
-
-    @route('/test_header_error_on_key/<path:path>')
-    def test_header_error_on_key(self, path=''):
-        context = session['context']
-        try:
-            url_path = '%s/%s' % (context["url"], path)
-            print(
-            if path == 'o/token/':
-                return redirect(url_path, code=307)
-            else:
-                context['cnt'] += 1
-                request_json = request.get_json()
-                response = requests.post(url_path, json=request_json, headers=request.headers)
-                response_json = response.json()
-                if context['cnt'] == 1:
-                    dna, lic_json = list(response_json['license'].items())[0]
-                    key = lic_json['key']
-                    key = '1' + key[1:] if key[0] == '0' else '0' + key[1:]
-                    response_json['license'][dna]['key'] = key
-                excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-                headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-                return Response(dumps(response_json), response.status_code, headers)
-        finally:
-            session['context'] = context
-
+context = 0
 
 @pytest.mark.no_parallel
-def test_flask_view(fake_server):
-    """
-    Test a MAC error is returned if the key value in the response has been modified
-    """
-    context = {'toto':1}
-    proxy_port = randint(1,65535)
-    with fake_server(TestView, PROXY_HOST, proxy_port):
-        proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
-        print('proxy_url=', proxy_url)
-        client = requests.Session()
-        print(client.get(url=proxy_url+'/all/').text)
-        return
-        client.post(url=proxy_url+'/set_context/', json={'url':proxy_url})
-        context = client.get(url=proxy_url+'/get_context/').json()
-        print('New context=', context)
-        context = client.get(url=proxy_url+'/all/').text
-
-
-@pytest.mark.no_parallel
-def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler, fake_server):
+def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test a MAC error is returned if the key value in the response has been modified
     """
@@ -89,10 +28,17 @@ def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler, 
     activators.autotest()
 
     conf_json.reset()
-    url = conf_json['licensing']['url']
-    proxy_port = randint(1,65535)
-    proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
-    conf_json['licensing']['url'] = proxy_url
+    srv_url = conf_json['licensing']['url']
+
+	# Set initial context on the live server
+    context = {'cnt':0}
+    r = requests.post(url_for('set', _external=True), json=context)
+    assert r.status_code == 200
+    r = requests.get(url_for('get', _external=True))
+    assert r.status_code == 200
+    assert loads(r.text) == context
+
+    conf_json['licensing']['url'] = request.url + 'test_header_error_on_key'
     conf_json.save()
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
@@ -101,145 +47,17 @@ def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler, 
         driver.write_register_callback,
         async_cb.callback
     )
-    context = {'url': url, 'cnt': 0}
-    with fake_server(TestView, PROXY_HOST, proxy_port):
-        proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
-        print('proxy_url=', proxy_url)
-        client = requests.Session()
-        client.post(url=proxy_url+'/set_context/', json=context)
-        with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
-            drm_manager.activate()
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
-        assert "License header check error" in str(excinfo.value)
-        async_cb.assert_NoError()
 
-
+    with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
+        drm_manager.activate()
+    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
+    assert "License header check error" in str(excinfo.value)
+    async_cb.assert_NoError()
 
 
 
 @pytest.mark.no_parallel
-def test_header_error_on_key_old(accelize_drm, conf_json, cred_json, async_handler, fake_server):
-    """
-    Test a MAC error is returned if the key value in the response has been modified
-    """
-    driver = accelize_drm.pytest_fpga_driver[0]
-    async_cb = async_handler.create()
-    async_cb.reset()
-
-    activators = accelize_drm.pytest_fpga_activators[0]
-    activators.reset_coin()
-    activators.autotest()
-
-    conf_json.reset()
-    url = conf_json['licensing']['url']
-    proxy_port = randint(1,65535)
-    proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
-    conf_json['licensing']['url'] = proxy_url
-    conf_json.save()
-
-    def proxy(context, path=''):
-        url_path = '%s/%s' % (context["url"],path)
-        if path == 'o/token/':
-            return redirect(url_path, code=307)
-        else:
-            context['cnt'] += 1
-            request_json = request.get_json()
-            response = requests.post(url_path, json=request_json, headers=request.headers)
-            response_json = response.json()
-            if context['cnt'] == 1:
-                dna, lic_json = list(response_json['license'].items())[0]
-                key = lic_json['key']
-                key = '1' + key[1:] if key[0] == '0' else '0' + key[1:]
-                response_json['license'][dna]['key'] = key
-            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-            return Response(dumps(response_json), response.status_code, headers)
-
-    context = {'url': url, 'cnt': 0}
-    fake_server.add_endpoint('/<path:path>', 'proxy', lambda path: proxy(context, path), methods=['GET', 'POST'])
-    server = Process(target=fake_server.run, args=(PROXY_HOST, proxy_port))
-    server.start()
-    try:
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
-            drm_manager.activate()
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
-        assert "License header check error" in str(excinfo.value)
-        async_cb.assert_NoError()
-    finally:
-        server.terminate()
-        server.join()
-
-
-@pytest.mark.skip
-@pytest.mark.no_parallel
-def test_mac_error_on_key(accelize_drm, conf_json, cred_json, async_handler, fake_server):
-    """
-    Test a MAC error is returned if the key value in the response has been modified
-    """
-    driver = accelize_drm.pytest_fpga_driver[0]
-    async_cb = async_handler.create()
-    async_cb.reset()
-
-    activators = accelize_drm.pytest_fpga_activators[0]
-    activators.reset_coin()
-    activators.autotest()
-
-    conf_json.reset()
-    url = conf_json['licensing']['url']
-    proxy_port = randint(1,65535)
-    proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
-    conf_json['licensing']['url'] = proxy_url
-    conf_json.save()
-
-    def proxy(context, path=''):
-        url_path = '%s/%s' % (context["url"],path)
-        if path == 'o/token/':
-            return redirect(url_path, code=307)
-        else:
-            context['cnt'] += 1
-            request_json = request.get_json()
-            response = requests.post(url_path, json=request_json, headers=request.headers)
-            response_json = response.json()
-            if context['cnt'] == 1:
-                dna, lic_json = list(response_json['license'].items())[0]
-                key = lic_json['key']
-                key = key[:-1] + '1' if key[-1] == '0' else key[:-1] + '0'
-                response_json['license'][dna]['key'] = key
-            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-            return Response(dumps(response_json), response.status_code, headers)
-
-    context = {'url': url, 'cnt': 0}
-    fake_server.add_endpoint('/<path:path>', 'proxy', lambda path: proxy(context, path), methods=['GET', 'POST'])
-    server = Process(target=fake_server.run, args=(PROXY_HOST, proxy_port))
-    server.start()
-    try:
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
-            drm_manager.activate()
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
-        assert "License MAC check error" in str(excinfo.value)
-        async_cb.assert_NoError()
-    finally:
-        server.terminate()
-        server.join()
-
-
-@pytest.mark.no_parallel
-def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_handler, fake_server):
+def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test a MAC error is returned if the licenseTimer value in the response has been modified
     """
@@ -252,141 +70,48 @@ def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_
     activators.autotest()
 
     conf_json.reset()
-    url = conf_json['licensing']['url']
-    proxy_port = randint(1,65535)
-    proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
-    conf_json['licensing']['url'] = proxy_url
+    srv_url = conf_json['licensing']['url']
+
+	# Set initial context on the live server
+    context = {'cnt':0}
+    r = requests.post(url_for('set', _external=True), json=context)
+    assert r.status_code == 200
+    r = requests.get(url_for('get', _external=True))
+    assert r.status_code == 200
+    assert loads(r.text) == context
+
+    conf_json['licensing']['url'] = request.url + 'test_header_error_on_licenseTimer'
     conf_json.save()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
 
-    def proxy(context, path=''):
-        url_path = '%s/%s' % (context["url"],path)
-        if path == 'o/token/':
-            return redirect(url_path, code=307)
-        else:
-            context['cnt'] += 1
-            request_json = request.get_json()
-            response = requests.post(url_path, json=request_json, headers=request.headers)
-            response_json = response.json()
-            if context['cnt'] == 2:
-                dna, lic_json = list(response_json['license'].items())[0]
-                timer = lic_json['licenseTimer']
-                timer = '1' + timer[1:] if timer[0] == '0' else '0' + timer[1:]
-                response_json['license'][dna]['licenseTimer'] = timer
-            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-            return Response(dumps(response_json), response.status_code, headers)
-
-    context = {'url': url, 'cnt': 0}
-    fake_server.add_endpoint('/<path:path>', 'proxy', lambda path: proxy(context, path), methods=['GET', 'POST'])
-    server = Process(target=fake_server.run, args=(PROXY_HOST, proxy_port))
-    server.start()
+    drm_manager.activate()
     try:
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        try:
-            drm_manager.activate()
-            start = datetime.now()
-            lic_duration = drm_manager.get('license_duration')
-            assert drm_manager.get('license_status')
-            activators.autotest(is_activated=True)
-            wait_period = start + timedelta(seconds=lic_duration+2) - datetime.now()
-            sleep(wait_period.total_seconds())
-            assert not drm_manager.get('license_status')
-            activators.autotest(is_activated=False)
-        finally:
-            drm_manager.deactivate()
-            assert not drm_manager.get('license_status')
-            activators.autotest(is_activated=False)
-            assert async_cb.was_called
-            assert async_cb.message is not None
-            assert async_cb.errcode == accelize_drm.exceptions.DRMCtlrError.error_code
-            assert "License header check error" in async_cb.message
+        start = datetime.now()
+        lic_duration = drm_manager.get('license_duration')
+        assert drm_manager.get('license_status')
+        activators.autotest(is_activated=True)
+        wait_period = start + timedelta(seconds=lic_duration+2) - datetime.now()
+        sleep(wait_period.total_seconds())
+        assert not drm_manager.get('license_status')
+        activators.autotest(is_activated=False)
     finally:
-        server.terminate()
-        server.join()
-
-
-@pytest.mark.skip
-@pytest.mark.no_parallel
-def test_mac_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_handler, fake_server):
-    """
-    Test a MAC error is returned if the licenseTimer value in the response has been modified
-    """
-    driver = accelize_drm.pytest_fpga_driver[0]
-    async_cb = async_handler.create()
-    async_cb.reset()
-
-    activators = accelize_drm.pytest_fpga_activators[0]
-    activators.reset_coin()
-    activators.autotest()
-
-    conf_json.reset()
-    url = conf_json['licensing']['url']
-    proxy_port = randint(1,65535)
-    proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
-    conf_json['licensing']['url'] = proxy_url
-    conf_json.save()
-
-    def proxy(context, path=''):
-        url_path = '%s/%s' % (context["url"],path)
-        if path == 'o/token/':
-            return redirect(url_path, code=307)
-        else:
-            context['cnt'] += 1
-            request_json = request.get_json()
-            response = requests.post(url_path, json=request_json, headers=request.headers)
-            response_json = response.json()
-            if context['cnt'] == 2:
-                dna, lic_json = list(response_json['license'].items())[0]
-                timer = lic_json['licenseTimer']
-                timer = timer[:-1] + '1' if timer[-1] == '0' else timer[:-1] + '0'
-                response_json['license'][dna]['licenseTimer'] = timer
-            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-            return Response(dumps(response_json), response.status_code, headers)
-
-    context = {'url': url, 'cnt': 0}
-    fake_server.add_endpoint('/<path:path>', 'proxy', lambda path: proxy(context, path), methods=['GET', 'POST'])
-    server = Process(target=fake_server.run, args=(PROXY_HOST, proxy_port))
-    server.start()
-    try:
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        try:
-            drm_manager.activate()
-            start = datetime.now()
-            lic_duration = drm_manager.get('license_duration')
-            assert drm_manager.get('license_status')
-            activators.autotest(is_activated=True)
-            wait_period = start + timedelta(seconds=lic_duration+2) - datetime.now()
-            sleep(wait_period.total_seconds())
-            assert not drm_manager.get('license_status')
-            activators.autotest(is_activated=False)
-        finally:
-            drm_manager.deactivate()
-            assert not drm_manager.get('license_status')
-            activators.autotest(is_activated=False)
-            assert async_cb.was_called
-            assert async_cb.message is not None
-            assert async_cb.errcode == accelize_drm.exceptions.DRMCtlrError.error_code
-            assert "License MAC check error" in async_cb.message
-    finally:
-        server.terminate()
-        server.join()
+        drm_manager.deactivate()
+        assert not drm_manager.get('license_status')
+        activators.autotest(is_activated=False)
+        assert async_cb.was_called
+        assert async_cb.message is not None
+        assert async_cb.errcode == accelize_drm.exceptions.DRMCtlrError.error_code
+        assert "License header check error" in async_cb.message
 
 
 @pytest.mark.no_parallel
-def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler, fake_server):
+def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test an error is returned if a wrong session id is provided
     """
@@ -399,82 +124,54 @@ def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler, fak
     activators.autotest()
 
     conf_json.reset()
-    url = conf_json['licensing']['url']
-    proxy_port = randint(1,65535)
-    proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
-    conf_json['licensing']['url'] = proxy_url
+    srv_url = conf_json['licensing']['url']
+
+    # Set initial context on the live server
+    context = {'session_id':None, 'session_cnt':0, 'request_cnt':0}
+    r = requests.post(url_for('set', _external=True), json=context)
+    assert r.status_code == 200
+    r = requests.get(url_for('get', _external=True))
+    assert r.status_code == 200
+    assert loads(r.text) == context
+
+    conf_json['licensing']['url'] = request.url + 'test_session_id_error'
     conf_json.save()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
 
-    def proxy(context, path=''):
-        url_path = '%s/%s' % (context["url"],path)
-        if path == 'o/token/':
-            return redirect(url_path, code=307)
-        else:
-            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-            request_json = request.get_json()
-            response = requests.post(url_path, json=request_json, headers=request.headers)
-            response_json = response.json()
-            response_session_id = response_json['metering']['sessionId']
-            if context['session_id'] != response_session_id:
-                context['session_cnt'] += 1
-                context['request_cnt'] = 0
-            context['request_cnt'] += 1
-            context['session_id'] = response_session_id
-            if context['session_cnt'] == 2:
-                if context['request_cnt'] == 2:
-                    response = context['replay']
-                headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-                return Response(response.content, response.status_code, headers)
-            else:
-                headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-                if context['request_cnt'] == 2:
-                    context['replay'] = response
-                return Response(response.content, response.status_code, headers)
-
-    context = {'url':url, 'session_id':None, 'session_cnt':0, 'request_cnt':0}
-    fake_server.add_endpoint('/<path:path>', 'proxy', lambda path: proxy(context, path), methods=['GET', 'POST'])
-    server = Process(target=fake_server.run, args=(PROXY_HOST, proxy_port))
-    server.start()
+    # Start session #1 to record
+    drm_manager.activate()
     try:
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        try:
-            # Start session #1 to record
-            drm_manager.activate()
-            start = datetime.now()
-            lic_duration = drm_manager.get('license_duration')
-            assert drm_manager.get('license_status')
-            activators.autotest(is_activated=True)
-            wait_period = start + timedelta(seconds=lic_duration/2) - datetime.now()
-            sleep(wait_period.total_seconds())
-        finally:
-            drm_manager.deactivate()
-            assert not drm_manager.get('license_status')
-            activators.autotest(is_activated=False)
-            async_cb.assert_NoError()
-        try:
-            # Start session #2 to replay session #1
-            drm_manager.activate()
-            start = datetime.now()
-            assert drm_manager.get('license_status')
-            activators.autotest(is_activated=True)
-            lic_duration = drm_manager.get('license_duration')
-            wait_period = start + timedelta(seconds=lic_duration+2) - datetime.now()
-            sleep(wait_period.total_seconds())
-            assert not drm_manager.get('license_status')
-            activators.autotest(is_activated=False)
-        finally:
-            drm_manager.deactivate()
-            assert async_cb.was_called
-            assert async_cb.message is not None
-            assert async_cb.errcode == accelize_drm.exceptions.DRMCtlrError.error_code
-            assert "License header check error" in async_cb.message
+        start = datetime.now()
+        lic_duration = drm_manager.get('license_duration')
+        assert drm_manager.get('license_status')
+        activators.autotest(is_activated=True)
+        wait_period = start + timedelta(seconds=lic_duration/2) - datetime.now()
+        sleep(wait_period.total_seconds())
     finally:
-        server.terminate()
-        server.join()
-
+        drm_manager.deactivate()
+        assert not drm_manager.get('license_status')
+        activators.autotest(is_activated=False)
+        async_cb.assert_NoError()
+    # Start session #2 to replay session #1
+    drm_manager.activate()
+    try:
+        start = datetime.now()
+        assert drm_manager.get('license_status')
+        activators.autotest(is_activated=True)
+        lic_duration = drm_manager.get('license_duration')
+        wait_period = start + timedelta(seconds=lic_duration+2) - datetime.now()
+        sleep(wait_period.total_seconds())
+        assert not drm_manager.get('license_status')
+        activators.autotest(is_activated=False)
+    finally:
+        drm_manager.deactivate()
+        assert async_cb.was_called
+        assert async_cb.message is not None
+        assert async_cb.errcode == accelize_drm.exceptions.DRMCtlrError.error_code
+        assert "License header check error" in async_cb.message

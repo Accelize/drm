@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Configure Pytest"""
 from copy import deepcopy
-from json import dump, load
+from json import dump, load, dumps
 from os import environ, getpid, listdir, remove, makedirs, getcwd, urandom
 from os.path import basename, dirname, expanduser, isdir, isfile, join, \
     realpath, splitext
@@ -11,9 +11,7 @@ from datetime import datetime
 from time import time, sleep
 from shutil import rmtree
 from datetime import datetime, timedelta
-from flask import Flask, request, session
-from flask_classful import FlaskView
-from multiprocessing import Process
+from tests.proxy import create_app
 
 import pytest
 
@@ -1018,60 +1016,13 @@ def exec_func(accelize_drm, cred_json, conf_json):
 # Proxy fixture
 #--------------
 
-class TestView(FlaskView):
-    default_methods = ['GET', 'POST']
-
-    def get_context(self):
-        if 'context' in session:
-            return jsonify(session['context'])
-        else:
-            return jsonify({})
-
-    def set_context(self):
-        sesion['context'] = request.get_json()
-        return 'OK'
-
-    def index(self):
-        return "<h1>Passing index test</h1>"
-
-
-class FlaskAppWrapper:
-
-    def __init__(self, name=__name__, debug=False):
-        self.host = '0.0.0.0'
-        self.port = 5000
-        self.app = Flask(name)
-        self.app.secret_key = 'Super Secret'
-        self.debug = debug
-        environ['WERKZEUG_RUN_MAIN'] = 'true'
-        environ['FLASK_ENV'] = 'development'
-
-    def __call__( self, view, host, port):
-        self.host = host
-        self.port = port
-        view.register(self.app, route_base='/')
-        return self
-
-    def start(self):
-        self.server = Process(target=self.app.run, args=(self.host, self.port, self.debug))
-        self.server.start()
-        sleep(1)
-        return self.server
-
-    def stop(self):
-        self.server.terminate()
-        self.server.join()
-
-    __enter__ = start
-
-    def __exit__(self, type, value, tb):
-        self.stop()
-
-
-@pytest.fixture
-def fake_server(accelize_drm):
-    name = "fake_server_%d" % randint(1,0xFFFFFFFF)
-    return FlaskAppWrapper(name, accelize_drm.pytest_proxy_debug)
+@pytest.fixture(scope='session')
+def app(pytestconfig):
+    url = _LICENSING_SERVERS[pytestconfig.getoption("server")]
+    app = create_app(url)
+    app.debug = pytestconfig.getoption("proxy_debug")
+    print('app.debug=', app.debug)
+    return app
 
 
 #-------------------
@@ -1105,3 +1056,4 @@ class ArtifactFactory:
 @pytest.fixture
 def artifacts(accelize_drm):
     return ArtifactFactory(accelize_drm.pytest_artifacts_dir)
+
