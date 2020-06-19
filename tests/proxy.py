@@ -23,7 +23,7 @@ def create_app(url):
         return 'OK'
 
     @app.route('/o/token/', methods=['GET', 'POST'])
-    def oauth():
+    def otoken():
         new_url = url.rstrip('/') + '/o/token/'
         return redirect(new_url, code=307)
 
@@ -32,9 +32,14 @@ def create_app(url):
         new_url = url.rstrip('/') + '/auth/metering/health/'
         return redirect(new_url, code=307)
 
+    @app.route('/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense():
+        new_url = url.rstrip('/') + '/auth/metering/genlicense/'
+        return redirect(new_url, code=307)
+
     # test_header_error_on_key functions
     @app.route('/test_header_error_on_key/o/token/', methods=['GET', 'POST'])
-    def oauth__test_header_error_on_key():
+    def otoken__test_header_error_on_key():
         return redirect(request.url_root + '/o/token/', code=307)
 
     @app.route('/test_header_error_on_key/auth/metering/health/', methods=['GET', 'POST'])
@@ -60,7 +65,7 @@ def create_app(url):
 
     # test_header_error_on_licenseTimer functions
     @app.route('/test_header_error_on_licenseTimer/o/token/', methods=['GET', 'POST'])
-    def oauth__test_header_error_on_licenseTimer():
+    def otoken__test_header_error_on_licenseTimer():
         return redirect(request.url_root + '/o/token/', code=307)
 
     @app.route('/test_header_error_on_licenseTimer/auth/metering/health/', methods=['GET', 'POST'])
@@ -86,7 +91,7 @@ def create_app(url):
 
     # test_session_id_error functions
     @app.route('/test_session_id_error/o/token/', methods=['GET', 'POST'])
-    def oauth__test_session_id_error():
+    def otoken__test_session_id_error():
         return redirect(request.url_root + '/o/token/', code=307)
 
     @app.route('/test_session_id_error/auth/metering/health/', methods=['GET', 'POST'])
@@ -117,6 +122,32 @@ def create_app(url):
             if context['request_cnt'] == 2:
                context['replay'] = response
             return Response(response.content, response.status_code, headers)
+
+    # test_health_period_disabled functions
+    @app.route('/test_health_period_disabled/o/token/', methods=['GET', 'POST'])
+    def otoken__test_health_period_disabled():
+        return redirect(request.url_root + '/o/token/', code=307)
+
+    @app.route('/test_health_period_disabled/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_health_period_disabled():
+        return redirect(request.url_root + '/auth/metering/health/', code=307)
+
+    @app.route('/test_health_period_disabled/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_health_period_disabled(path=''):
+        global context
+        new_url = request.url.replace(request.url_root+'test_health_period_disabled', url)
+        request_json = request.get_json()
+        context['cnt'] += 1
+        response = post(new_url, json=request_json, headers=request.headers)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        if context['cnt'] < context['nb_health']:
+            response_json['metering']['healthPeriod'] = context['healthPeriod']
+        else:
+            response_json['metering']['healthPeriod'] = 0
+        return Response(dumps(response_json), response.status_code, headers)
+
 
     return app
 

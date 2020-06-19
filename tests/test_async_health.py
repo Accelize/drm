@@ -29,50 +29,32 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
     async_cb.reset()
 
     conf_json.reset()
-    url = conf_json['licensing']['url']
-    proxy_port = randrange(1,65535)
-    proxy_url = "http://%s:%s" % (PROXY_HOST, proxy_port)
-    conf_json['licensing']['url'] = proxy_url
+    conf_json['licensing']['url'] = request.url + 'test_health_period_disabled'
     logpath = realpath("./test_health_disabled.%d.log" % randrange(0xFFFFFFFF))
     conf_json['settings']['log_file_verbosity'] = 1
     conf_json['settings']['log_file_type'] = 1
     conf_json['settings']['log_file_path'] = logpath
     conf_json.save()
-    tmpHealthPeriod = 2
-    context = {'url':url, 'data':0}
+
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+
+    # Set initial context on the live server
     nb_health = 3
+    healthPeriod = 2
+    context = {'cnt':0, 'healthPeriod':healthPeriod, 'nb_health':nb_health}
+    r = post(url_for('set', _external=True), json=context)
+    assert r.status_code == 200
+    r = get(url_for('get', _external=True))
+    assert r.status_code == 200
+    assert r.json() == context
 
-    def proxy(path=''):
-        url_path = '%s/%s' % (context["url"],path)
-        if path == 'o/token/':
-            return redirect(url_path, code=307)
-        elif path == 'get/':
-            return context
-        else:
-            request_json = request.get_json()
-            if request_json['request'] == 'health':
-                context['data'] += 1
-            response = post(url_path, json=request_json, headers=request.headers)
-            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-            response_json = response.json()
-            if request_json['request'] == 'health' and context['data'] < nb_health:
-                response_json['metering']['healthPeriod'] = tmpHealthPeriod
-            else:
-                response_json['metering']['healthPeriod'] = 0
-            return Response(dumps(response_json), response.status_code, headers)
-
-    fake_server.add_endpoint('/<path:path>', 'proxy', proxy, methods=['GET', 'POST'])
-    server = Process(target=fake_server.run, args=(PROXY_HOST, proxy_port))
-    server.start()
     try:
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
         drm_manager.activate()
         sleep(3)
         healthPeriod = drm_manager.get('health_period')
@@ -80,16 +62,13 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
         drm_manager.deactivate()
         del drm_manager
         async_cb.assert_NoError()
-        context = get(url=proxy_url+'/get/').json()
-        cnt = context['data']
-        assert cnt == nb_health
+        context = get(url_for('get', _external=True)).json()
+        assert context['cnt'] == nb_health
         assert wait_func_true(lambda: isfile(logpath), 10)
         with open(logpath, 'rt') as f:
             log_content = f.read()
         assert search(r'Health thread has been disabled', log_content, MULTILINE)
     finally:
-        server.terminate()
-        server.join()
         if isfile(logpath):
             remove(logpath)
 

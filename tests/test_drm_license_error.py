@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from re import search
 from json import loads, dumps
 from flask import request, redirect, Response, session, url_for, jsonify
-import requests
+from requests import get, post
 
 
 context = 0
@@ -28,18 +28,9 @@ def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler, 
     activators.autotest()
 
     conf_json.reset()
-    srv_url = conf_json['licensing']['url']
-
-	# Set initial context on the live server
-    context = {'cnt':0}
-    r = requests.post(url_for('set', _external=True), json=context)
-    assert r.status_code == 200
-    r = requests.get(url_for('get', _external=True))
-    assert r.status_code == 200
-    assert loads(r.text) == context
-
     conf_json['licensing']['url'] = request.url + 'test_header_error_on_key'
     conf_json.save()
+
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
@@ -47,6 +38,14 @@ def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler, 
         driver.write_register_callback,
         async_cb.callback
     )
+
+    # Set initial context on the live server
+    context = {'cnt':0}
+    r = post(url_for('set', _external=True), json=context)
+    assert r.status_code == 200
+    r = get(url_for('get', _external=True))
+    assert r.status_code == 200
+    assert r.json() == context
 
     with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
         drm_manager.activate()
@@ -70,18 +69,9 @@ def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_
     activators.autotest()
 
     conf_json.reset()
-    srv_url = conf_json['licensing']['url']
-
-	# Set initial context on the live server
-    context = {'cnt':0}
-    r = requests.post(url_for('set', _external=True), json=context)
-    assert r.status_code == 200
-    r = requests.get(url_for('get', _external=True))
-    assert r.status_code == 200
-    assert loads(r.text) == context
-
     conf_json['licensing']['url'] = request.url + 'test_header_error_on_licenseTimer'
     conf_json.save()
+
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
@@ -89,6 +79,14 @@ def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_
         driver.write_register_callback,
         async_cb.callback
     )
+
+    # Set initial context on the live server
+    context = {'cnt':0}
+    r = post(url_for('set', _external=True), json=context)
+    assert r.status_code == 200
+    r = get(url_for('get', _external=True))
+    assert r.status_code == 200
+    assert r.json() == context
 
     drm_manager.activate()
     try:
@@ -124,18 +122,9 @@ def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler, liv
     activators.autotest()
 
     conf_json.reset()
-    srv_url = conf_json['licensing']['url']
-
-    # Set initial context on the live server
-    context = {'session_id':None, 'session_cnt':0, 'request_cnt':0}
-    r = requests.post(url_for('set', _external=True), json=context)
-    assert r.status_code == 200
-    r = requests.get(url_for('get', _external=True))
-    assert r.status_code == 200
-    assert loads(r.text) == context
-
     conf_json['licensing']['url'] = request.url + 'test_session_id_error'
     conf_json.save()
+
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
@@ -143,6 +132,14 @@ def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler, liv
         driver.write_register_callback,
         async_cb.callback
     )
+
+    # Set initial context on the live server
+    context = {'session_id':None, 'session_cnt':0, 'request_cnt':0}
+    r = post(url_for('set', _external=True), json=context)
+    assert r.status_code == 200
+    r = get(url_for('get', _external=True))
+    assert r.status_code == 200
+    assert r.json() == context
 
     # Start session #1 to record
     drm_manager.activate()
