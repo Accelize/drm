@@ -10,6 +10,7 @@ from re import search
 from json import loads, dumps
 from flask import request, url_for
 from requests import get, post
+from tests.proxy import get_context, set_context
 
 
 context = 0

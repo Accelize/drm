@@ -412,6 +412,7 @@ def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, cred_json
     assert drm_manager2.get('session_status')
     assert drm_manager2.get('license_status')
     activators.autotest(is_activated=True)
+    assert drm_manager2.get('session_id') == session_id
     # Resume session
     drm_manager2.activate(True)
     assert drm_manager2.get('session_status')
@@ -426,8 +427,8 @@ def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, cred_json
     drm_manager2.deactivate()
     assert not drm_manager2.get('session_status')
     assert not drm_manager2.get('license_status')
+    assert drm_manager2.get('session_id') == ''
     activators.autotest(is_activated=False)
-    assert drm_manager2.get('session_id') != session_id
     async_cb.assert_NoError()
 
 

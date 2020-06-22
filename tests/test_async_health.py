@@ -10,17 +10,7 @@ from dateutil import parser
 from itertools import groupby
 from flask import request, url_for
 from requests import get, post
-
-
-def get_context():
-    r = get(url_for('get', _external=True))
-    assert r.status_code == 200
-    return r.json()
-
-
-def set_context(data):
-    r = post(url_for('set', _external=True), json=data)
-    assert r.status_code == 200
+from tests.proxy import get_context, set_context
 
 
 def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handler, live_server):

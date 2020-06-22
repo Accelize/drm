@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """Configure Pytest"""
+import pytest
+
 from copy import deepcopy
 from json import dump, load, dumps
 from os import environ, getpid, listdir, remove, makedirs, getcwd, urandom
@@ -11,10 +13,7 @@ from datetime import datetime
 from time import time, sleep
 from shutil import rmtree
 from datetime import datetime, timedelta
-from tests.proxy import create_app
-
-import pytest
-
+from tests.proxy import create_app, get_context, set_context
 from tests.ws_admin_functions import WSListFunction
 
 
@@ -1023,6 +1022,7 @@ def app(pytestconfig):
     app.debug = pytestconfig.getoption("proxy_debug")
     print('app.debug=', app.debug)
     return app
+
 
 
 #-------------------

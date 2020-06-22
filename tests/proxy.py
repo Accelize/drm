@@ -1,9 +1,14 @@
 from json import dumps
-from flask import Flask, request, session, redirect, Response, jsonify
+from flask import Flask, request, session, redirect, Response, jsonify, url_for
 from requests import get, post
 from datetime import datetime
 from threading import Lock
 
+from werkzeug.local import Local
+
+
+loc = Local()
+loc.context = 0
 
 context = None
 lock = Lock()
@@ -18,7 +23,7 @@ def create_app(url):
     @app.route('/get/', methods=['GET'])
     def get():
         global lock
-        global lock
+        print('loc.context =', loc.context)
         with lock:
             return jsonify(context)
 
@@ -26,10 +31,12 @@ def create_app(url):
     def set():
         global context
         global lock
+        loc.context = request.get_json()
         with lock:
             context = request.get_json()
         return 'OK'
 
+    # Functions calling the real web services
     @app.route('/o/token/', methods=['GET', 'POST'])
     def otoken():
         new_url = url + '/o/token/'
@@ -156,7 +163,7 @@ def create_app(url):
         return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
 
     @app.route('/test_health_period_disabled/auth/metering/health/', methods=['GET', 'POST'])
-    def health__test_health_period_disabled(path=''):
+    def health__test_health_period_disabled():
         global context
         global lock
         with lock:
@@ -184,13 +191,13 @@ def create_app(url):
         return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
 
     @app.route('/test_health_period/auth/metering/health/', methods=['GET', 'POST'])
-    def health__test_health_period(path=''):
+    def health__test_health_period():
         global context
         global lock
         with lock:
+            start = str(datetime.now())
             new_url = request.url.replace(request.url_root+'test_health_period', url)
             request_json = request.get_json()
-            start = str(datetime.now())
             response = post(new_url, json=request_json, headers=request.headers)
             assert response.status_code == 200
             excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
@@ -212,13 +219,13 @@ def create_app(url):
         return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
 
     @app.route('/test_health_period_modification/auth/metering/health/', methods=['GET', 'POST'])
-    def health__test_health_period_modification(path=''):
+    def health__test_health_period_modification():
         global context
         global lock
         with lock:
+            start = str(datetime.now())
             new_url = request.url.replace(request.url_root+'test_health_period_modification', url)
             request_json = request.get_json()
-            start = str(datetime.now())
             response = post(new_url, json=request_json, headers=request.headers)
             assert response.status_code == 200
             excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
@@ -241,14 +248,14 @@ def create_app(url):
         return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
 
     @app.route('/test_health_retry_disabled/auth/metering/health/', methods=['GET', 'POST'])
-    def health__test_health_retry_disabled(path=''):
+    def health__test_health_retry_disabled():
         global context
         global lock
         with lock:
+            start = str(datetime.now())
             new_url = request.url.replace(request.url_root+'test_health_retry_disabled', url)
             request_json = request.get_json()
             health_id = request_json['health_id']
-            start = str(datetime.now())
             response = post(new_url, json=request_json, headers=request.headers)
             assert response.status_code == 200
             excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
@@ -272,14 +279,14 @@ def create_app(url):
         return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
 
     @app.route('/test_health_retry/auth/metering/health/', methods=['GET', 'POST'])
-    def health__test_health_retry(path=''):
+    def health__test_health_retry():
         global context
         global lock
         with lock:
+            start = str(datetime.now())
             new_url = request.url.replace(request.url_root+'test_health_retry', url)
             request_json = request.get_json()
             health_id = request_json['health_id']
-            start = str(datetime.now())
             response = post(new_url, json=request_json, headers=request.headers)
             assert response.status_code == 200
             excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
@@ -306,14 +313,14 @@ def create_app(url):
         return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
 
     @app.route('/test_health_retry_modification/auth/metering/health/', methods=['GET', 'POST'])
-    def health__test_health_retry_modification(path=''):
+    def health__test_health_retry_modification():
         global context
         global lock
         with lock:
+            start = str(datetime.now())
             new_url = request.url.replace(request.url_root+'test_health_retry_modification', url)
             request_json = request.get_json()
             health_id = request_json['health_id']
-            start = str(datetime.now())
             response = post(new_url, json=request_json, headers=request.headers)
             assert response.status_code == 200
             excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
@@ -340,14 +347,14 @@ def create_app(url):
         return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
 
     @app.route('/test_health_retry_sleep/auth/metering/health/', methods=['GET', 'POST'])
-    def health__test_health_retry_sleep(path=''):
+    def health__test_health_retry_sleep():
         global context
         global lock
         with lock:
+            start = str(datetime.now())
             new_url = request.url.replace(request.url_root+'test_health_retry_sleep', url)
             request_json = request.get_json()
             health_id = request_json['health_id']
-            start = str(datetime.now())
             response = post(new_url, json=request_json, headers=request.headers)
             assert response.status_code == 200
             excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
@@ -374,14 +381,14 @@ def create_app(url):
         return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
 
     @app.route('/test_health_retry_sleep_modification/auth/metering/health/', methods=['GET', 'POST'])
-    def health__test_health_retry_sleep_modification(path=''):
+    def health__test_health_retry_sleep_modification():
         global context
         global lock
         with lock:
+            start = str(datetime.now())
             new_url = request.url.replace(request.url_root+'test_health_retry_sleep_modification', url)
             request_json = request.get_json()
             health_id = request_json['health_id']
-            start = str(datetime.now())
             response = post(new_url, json=request_json, headers=request.headers)
             assert response.status_code == 200
             excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
@@ -408,7 +415,7 @@ def create_app(url):
         return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
 
     @app.route('/test_health_metering_data/auth/metering/health/', methods=['GET', 'POST'])
-    def health__test_health_metering_data(path=''):
+    def health__test_health_metering_data():
         global context
         global lock
         with lock:
@@ -425,5 +432,72 @@ def create_app(url):
             context['health_id']= health_id
             return Response(dumps(response_json), response.status_code, headers)
 
+    # test_long_to_short_retry_switch functions
+    @app.route('/test_long_to_short_retry_switch/o/token/', methods=['GET', 'POST'])
+    def otoken__test_long_to_short_retry_switch():
+        return redirect(request.url_root + '/o/token/', code=307)
+
+    @app.route('/test_long_to_short_retry_switch/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_long_to_short_retry_switch():
+        return redirect(request.url_root + '/auth/metering/health/', code=307)
+
+    @app.route('/test_long_to_short_retry_switch/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_long_to_short_retry_switch():
+        global context
+        global lock
+        with lock:
+            start = str(datetime.now())
+            new_url = request.url.replace(request.url_root+'test_long_to_short_retry_switch', url)
+            request_json = request.get_json()
+            request_type = request_json['request']
+            response = post(url_path, json=request_json, headers=request.headers)
+            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+            response_json = response.json()
+            if len(context['data']) <= 1:
+                timeoutSecond = context['timeoutSecondFirst2']
+            else:
+                timeoutSecond = context['timeoutSecond']
+                response.status_code = 408
+            response_json['metering']['timeoutSecond'] = timeoutSecond
+            context['data'].append( (request_type,start,str(datetime.now())) )
+            return Response(dumps(response_json), response.status_code, headers)
+
+    # test_http_header_api_version functions
+    @app.route('/test_http_header_api_version/o/token/', methods=['GET', 'POST'])
+    def otoken__test_http_header_api_version():
+        return redirect(request.url_root + '/o/token/', code=307)
+
+    @app.route('/test_http_header_api_version/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_http_header_api_version():
+        return redirect(request.url_root + '/auth/metering/health/', code=307)
+
+    @app.route('/test_http_header_api_version/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_http_header_api_version():
+        global context
+        global lock
+        with lock:
+            start = str(datetime.now())
+            new_url = request.url.replace(request.url_root+'test_http_header_api_version', url)
+            request_json = request.get_json()
+            assert search(r'Accept:.*application/vnd\.accelize\.v1\+json', str(request.headers))
+            response = post(url_path, json=request_json, headers=request.headers)
+            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+            response_json = response.json()
+            return Response(dumps(response_json), response.status_code, headers)
+
     return app
+
+
+def get_context():
+    r = get(url_for('get', _external=True))
+    assert r.status_code == 200
+    return r.json()
+
+
+def set_context(data):
+    r = post(url_for('set', _external=True), json=data)
+    assert r.status_code == 200
+
 
