@@ -4,13 +4,7 @@ from requests import get, post
 from datetime import datetime
 from threading import Lock
 
-from werkzeug.local import Local
-
-
-loc = Local()
-loc.context = 0
-
-#context = None
+context = None
 lock = Lock()
 
 def create_app(url):
@@ -24,17 +18,15 @@ def create_app(url):
     def get():
         global lock
         with lock:
-            print('loc.context =', loc.context)
-            return jsonify(loc.context)
-        #    return jsonify(context)
+            print('context =', context)
+            return jsonify(context)
 
     @app.route('/set/', methods=['POST'])
     def set():
-        #global context
+        global context
         global lock
         with lock:
-            loc.context = request.get_json()
-        #    context = request.get_json()
+            context = request.get_json()
         return 'OK'
 
     # Functions calling the real web services
@@ -70,16 +62,16 @@ def create_app(url):
 
     @app.route('/test_header_error_on_key/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_header_error_on_key_genlicense():
-        #global context
+        global context
         global lock
         with lock:
-            loc.context['cnt'] += 1
+            context['cnt'] += 1
             new_url = request.url.replace(request.url_root+'test_header_error_on_key', url)
             request_json = request.get_json()
             response = post(new_url, json=request_json, headers=request.headers)
             assert response.status_code == 200
             response_json = response.json()
-            if loc.context['cnt'] == 1:
+            if context['cnt'] == 1:
                 dna, lic_json = list(response_json['license'].items())[0]
                 key = lic_json['key']
                 key = '1' + key[1:] if key[0] == '0' else '0' + key[1:]
@@ -99,16 +91,16 @@ def create_app(url):
 
     @app.route('/test_header_error_on_licenseTimer/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_header_error_on_licenseTimer():
-        #global context
+        global context
         global lock
         with lock:
-            loc.context['cnt'] += 1
+            context['cnt'] += 1
             new_url = request.url.replace(request.url_root+'test_header_error_on_licenseTimer', url)
             request_json = request.get_json()
             response = post(new_url, json=request_json, headers=request.headers)
             assert response.status_code == 200
             response_json = response.json()
-            if loc.context['cnt'] == 2:
+            if context['cnt'] == 2:
                 dna, lic_json = list(response_json['license'].items())[0]
                 timer = lic_json['licenseTimer']
                 timer = '1' + timer[1:] if timer[0] == '0' else '0' + timer[1:]
@@ -128,7 +120,7 @@ def create_app(url):
 
     @app.route('/test_session_id_error/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_session_id_error():
-        #global context
+        global context
         global lock
         with lock:
             new_url = request.url.replace(request.url_root+'test_session_id_error', url)
@@ -138,20 +130,20 @@ def create_app(url):
             assert response.status_code == 200
             response_json = response.json()
             response_session_id = response_json['metering']['sessionId']
-            if loc.context['session_id'] != response_session_id:
-                loc.context['session_cnt'] += 1
-                loc.context['request_cnt'] = 0
-            loc.context['request_cnt'] += 1
-            loc.context['session_id'] = response_session_id
-            if loc.context['session_cnt'] == 2:
-                if loc.context['request_cnt'] == 2:
-                    response = loc.context['replay']
+            if context['session_id'] != response_session_id:
+                context['session_cnt'] += 1
+                context['request_cnt'] = 0
+            context['request_cnt'] += 1
+            context['session_id'] = response_session_id
+            if context['session_cnt'] == 2:
+                if context['request_cnt'] == 2:
+                    response = context['replay']
                 headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
                 return Response(response.content, response.status_code, headers)
             else:
                 headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-                if loc.context['request_cnt'] == 2:
-                   loc.context['replay'] = response
+                if context['request_cnt'] == 2:
+                   context['replay'] = response
                 return Response(response.content, response.status_code, headers)
 
     # test_health_period_disabled functions
@@ -165,19 +157,19 @@ def create_app(url):
 
     @app.route('/test_health_period_disabled/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_health_period_disabled():
-        #global context
+        global context
         global lock
         with lock:
             new_url = request.url.replace(request.url_root+'test_health_period_disabled', url)
             request_json = request.get_json()
-            loc.context['cnt'] += 1
+            context['cnt'] += 1
             response = post(new_url, json=request_json, headers=request.headers)
             assert response.status_code == 200
             excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
             headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
             response_json = response.json()
-            if loc.context['cnt'] < loc.context['nb_health']:
-                response_json['metering']['healthPeriod'] = loc.context['healthPeriod']
+            if context['cnt'] < context['nb_health']:
+                response_json['metering']['healthPeriod'] = context['healthPeriod']
             else:
                 response_json['metering']['healthPeriod'] = 0
             return Response(dumps(response_json), response.status_code, headers)
@@ -193,7 +185,7 @@ def create_app(url):
 
     @app.route('/test_health_period/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_health_period():
-        #global context
+        global context
         global lock
         with lock:
             start = str(datetime.now())
@@ -204,10 +196,10 @@ def create_app(url):
             excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
             headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
             response_json = response.json()
-            response_json['metering']['healthPeriod'] = loc.context['healthPeriod']
-            response_json['metering']['healthRetry'] = loc.context['healthRetry']
-            response_json['metering']['healthRetrySleep'] = loc.context['healthRetrySleep']
-            loc.context['data'].append( (start,str(datetime.now())) )
+            response_json['metering']['healthPeriod'] = context['healthPeriod']
+            response_json['metering']['healthRetry'] = context['healthRetry']
+            response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
+            context['data'].append( (start,str(datetime.now())) )
             return Response(dumps(response_json), response.status_code, headers)
 
     # test_health_period_modification functions
@@ -221,7 +213,7 @@ def create_app(url):
 
     @app.route('/test_health_period_modification/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_health_period_modification():
-        #global context
+        global context
         global lock
         with lock:
             start = str(datetime.now())
@@ -232,11 +224,11 @@ def create_app(url):
             excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
             headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
             response_json = response.json()
-            response_json['metering']['healthPeriod'] = loc.context['healthPeriod']
-            response_json['metering']['healthRetry'] = loc.context['healthRetry']
-            response_json['metering']['healthRetrySleep'] = loc.context['healthRetrySleep']
-            loc.context['healthPeriod'] += 1
-            loc.context['data'].append( (start,str(datetime.now())) )
+            response_json['metering']['healthPeriod'] = context['healthPeriod']
+            response_json['metering']['healthRetry'] = context['healthRetry']
+            response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
+            context['healthPeriod'] += 1
+            context['data'].append( (start,str(datetime.now())) )
             return Response(dumps(response_json), response.status_code, headers)
 
     # test_health_retry_disabled functions
@@ -250,7 +242,7 @@ def create_app(url):
 
     @app.route('/test_health_retry_disabled/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_health_retry_disabled():
-        #global context
+        global context
         global lock
         with lock:
             start = str(datetime.now())
@@ -262,12 +254,12 @@ def create_app(url):
             excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
             headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
             response_json = response.json()
-            response_json['metering']['healthPeriod'] = loc.context['healthPeriod']
+            response_json['metering']['healthPeriod'] = context['healthPeriod']
             response_json['metering']['healthRetry'] = 0
-            response_json['metering']['healthRetrySleep'] = loc.context['healthRetrySleep']
-            if len(loc.context['data']) > 1:
+            response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
+            if len(context['data']) > 1:
                 response.status_code = 408
-            loc.context['data'].append( (health_id,start,str(datetime.now())) )
+            context['data'].append( (health_id,start,str(datetime.now())) )
             return Response(dumps(response_json), response.status_code, headers)
 
     # test_health_retry functions
@@ -281,7 +273,7 @@ def create_app(url):
 
     @app.route('/test_health_retry/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_health_retry():
-        #global context
+        global context
         global lock
         with lock:
             start = str(datetime.now())
@@ -293,15 +285,15 @@ def create_app(url):
             excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
             headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
             response_json = response.json()
-            response_json['metering']['healthPeriod'] = loc.context['healthPeriod']
-            response_json['metering']['healthRetry'] = loc.context['healthRetry']
-            response_json['metering']['healthRetrySleep'] = loc.context['healthRetrySleep']
-            if len(loc.context['data']) >= 1:
+            response_json['metering']['healthPeriod'] = context['healthPeriod']
+            response_json['metering']['healthRetry'] = context['healthRetry']
+            response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
+            if len(context['data']) >= 1:
                 response.status_code = 408
             if health_id <= 1:
-                loc.context['data'].append( (health_id,start,str(datetime.now())) )
+                context['data'].append( (health_id,start,str(datetime.now())) )
             else:
-                loc.context['exit'] = True
+                context['exit'] = True
             return Response(dumps(response_json), response.status_code, headers)
 
     # test_health_retry_modification functions
@@ -315,7 +307,7 @@ def create_app(url):
 
     @app.route('/test_health_retry_modification/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_health_retry_modification():
-        #global context
+        global context
         global lock
         with lock:
             start = str(datetime.now())
@@ -327,15 +319,15 @@ def create_app(url):
             excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
             headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
             response_json = response.json()
-            response_json['metering']['healthPeriod'] = loc.context['healthPeriod']
-            response_json['metering']['healthRetry'] = loc.context['healthRetry']
-            response_json['metering']['healthRetrySleep'] = loc.context['healthRetrySleep']
-            if len(loc.context['data']) >= 1:
+            response_json['metering']['healthPeriod'] = context['healthPeriod']
+            response_json['metering']['healthRetry'] = context['healthRetry']
+            response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
+            if len(context['data']) >= 1:
                 response.status_code = 408
             if health_id <= 1:
-                loc.context['data'].append( (health_id,start,str(datetime.now())) )
+                context['data'].append( (health_id,start,str(datetime.now())) )
             else:
-                loc.context['exit'] = True
+                context['exit'] = True
             return Response(dumps(response_json), response.status_code, headers)
 
     # test_health_retry_sleep functions
@@ -349,7 +341,7 @@ def create_app(url):
 
     @app.route('/test_health_retry_sleep/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_health_retry_sleep():
-        #global context
+        global context
         global lock
         with lock:
             start = str(datetime.now())
@@ -361,15 +353,15 @@ def create_app(url):
             excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
             headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
             response_json = response.json()
-            response_json['metering']['healthPeriod'] = loc.context['healthPeriod']
-            response_json['metering']['healthRetry'] = loc.context['healthRetry']
-            response_json['metering']['healthRetrySleep'] = loc.context['healthRetrySleep']
-            if len(loc.context['data']) >= 1:
+            response_json['metering']['healthPeriod'] = context['healthPeriod']
+            response_json['metering']['healthRetry'] = context['healthRetry']
+            response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
+            if len(context['data']) >= 1:
                 response.status_code = 408
-            if health_id <= loc.context['nb_run']:
-                loc.context['data'].append( (health_id,start,str(datetime.now())) )
+            if health_id <= context['nb_run']:
+                context['data'].append( (health_id,start,str(datetime.now())) )
             else:
-                loc.context['exit'] = True
+                context['exit'] = True
             return Response(dumps(response_json), response.status_code, headers)
 
     # test_health_retry_sleep_modification functions
@@ -383,7 +375,7 @@ def create_app(url):
 
     @app.route('/test_health_retry_sleep_modification/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_health_retry_sleep_modification():
-        #global context
+        global context
         global lock
         with lock:
             start = str(datetime.now())
@@ -395,15 +387,15 @@ def create_app(url):
             excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
             headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
             response_json = response.json()
-            response_json['metering']['healthPeriod'] = loc.context['healthPeriod']
-            response_json['metering']['healthRetry'] = loc.context['healthRetry']
-            response_json['metering']['healthRetrySleep'] = loc.context['healthRetrySleep']
-            if len(loc.context['data']) >= 1:
+            response_json['metering']['healthPeriod'] = context['healthPeriod']
+            response_json['metering']['healthRetry'] = context['healthRetry']
+            response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
+            if len(context['data']) >= 1:
                 response.status_code = 408
             if health_id <= 1:
-                loc.context['data'].append( (health_id,start,str(datetime.now())) )
+                context['data'].append( (health_id,start,str(datetime.now())) )
             else:
-                loc.context['exit'] = True
+                context['exit'] = True
             return Response(dumps(response_json), response.status_code, headers)
 
     # test_health_metering_data functions
@@ -417,7 +409,7 @@ def create_app(url):
 
     @app.route('/test_health_metering_data/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_health_metering_data():
-        #global context
+        global context
         global lock
         with lock:
             new_url = request.url.replace(request.url_root+'test_health_metering_data', url)
@@ -428,9 +420,9 @@ def create_app(url):
             excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
             headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
             response_json = response.json()
-            response_json['metering']['healthPeriod'] = loc.context['healthPeriod']
-            response_json['metering']['healthRetry'] = loc.context['healthRetry']
-            loc.context['health_id']= health_id
+            response_json['metering']['healthPeriod'] = context['healthPeriod']
+            response_json['metering']['healthRetry'] = context['healthRetry']
+            context['health_id']= health_id
             return Response(dumps(response_json), response.status_code, headers)
 
     # test_long_to_short_retry_switch functions
@@ -444,7 +436,7 @@ def create_app(url):
 
     @app.route('/test_long_to_short_retry_switch/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_long_to_short_retry_switch():
-        #global context
+        global context
         global lock
         with lock:
             start = str(datetime.now())
@@ -455,13 +447,13 @@ def create_app(url):
             excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
             headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
             response_json = response.json()
-            if len(loc.context['data']) <= 1:
-                timeoutSecond = loc.context['timeoutSecondFirst2']
+            if len(context['data']) <= 1:
+                timeoutSecond = context['timeoutSecondFirst2']
             else:
-                timeoutSecond = loc.context['timeoutSecond']
+                timeoutSecond = context['timeoutSecond']
                 response.status_code = 408
             response_json['metering']['timeoutSecond'] = timeoutSecond
-            loc.context['data'].append( (request_type,start,str(datetime.now())) )
+            context['data'].append( (request_type,start,str(datetime.now())) )
             return Response(dumps(response_json), response.status_code, headers)
 
     # test_http_header_api_version functions
@@ -475,7 +467,7 @@ def create_app(url):
 
     @app.route('/test_http_header_api_version/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_http_header_api_version():
-        #global context
+        global context
         global lock
         with lock:
             start = str(datetime.now())
