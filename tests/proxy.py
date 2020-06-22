@@ -11,7 +11,7 @@ loc = Local()
 loc.context = 0
 
 #context = None
-#lock = Lock()
+lock = Lock()
 
 def create_app(url):
     app = Flask(__name__)
@@ -22,18 +22,18 @@ def create_app(url):
 
     @app.route('/get/', methods=['GET'])
     def get():
-        #global lock
-        print('loc.context =', loc.context)
-        #with lock:
+        global lock
+        with lock:
+            print('loc.context =', loc.context)
+            return jsonify(loc.context)
         #    return jsonify(context)
-        return jsonify(loc.context)
 
     @app.route('/set/', methods=['POST'])
     def set():
         #global context
-        #global lock
-        loc.context = request.get_json()
-        #with lock:
+        global lock
+        with lock:
+            loc.context = request.get_json()
         #    context = request.get_json()
         return 'OK'
 
@@ -71,8 +71,8 @@ def create_app(url):
     @app.route('/test_header_error_on_key/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_header_error_on_key_genlicense():
         #global context
-        #global lock
-        #with lock:
+        global lock
+        with lock:
             loc.context['cnt'] += 1
             new_url = request.url.replace(request.url_root+'test_header_error_on_key', url)
             request_json = request.get_json()
@@ -100,8 +100,8 @@ def create_app(url):
     @app.route('/test_header_error_on_licenseTimer/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_header_error_on_licenseTimer():
         #global context
-        #global lock
-        #with lock:
+        global lock
+        with lock:
             loc.context['cnt'] += 1
             new_url = request.url.replace(request.url_root+'test_header_error_on_licenseTimer', url)
             request_json = request.get_json()
@@ -129,8 +129,8 @@ def create_app(url):
     @app.route('/test_session_id_error/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_session_id_error():
         #global context
-        #global lock
-        #with lock:
+        global lock
+        with lock:
             new_url = request.url.replace(request.url_root+'test_session_id_error', url)
             excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
             request_json = request.get_json()
@@ -166,8 +166,8 @@ def create_app(url):
     @app.route('/test_health_period_disabled/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_health_period_disabled():
         #global context
-        #global lock
-        #with lock:
+        global lock
+        with lock:
             new_url = request.url.replace(request.url_root+'test_health_period_disabled', url)
             request_json = request.get_json()
             loc.context['cnt'] += 1
@@ -194,8 +194,8 @@ def create_app(url):
     @app.route('/test_health_period/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_health_period():
         #global context
-        #global lock
-        #with lock:
+        global lock
+        with lock:
             start = str(datetime.now())
             new_url = request.url.replace(request.url_root+'test_health_period', url)
             request_json = request.get_json()
@@ -222,8 +222,8 @@ def create_app(url):
     @app.route('/test_health_period_modification/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_health_period_modification():
         #global context
-        #global lock
-        #with lock:
+        global lock
+        with lock:
             start = str(datetime.now())
             new_url = request.url.replace(request.url_root+'test_health_period_modification', url)
             request_json = request.get_json()
@@ -251,8 +251,8 @@ def create_app(url):
     @app.route('/test_health_retry_disabled/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_health_retry_disabled():
         #global context
-        #global lock
-        #with lock:
+        global lock
+        with lock:
             start = str(datetime.now())
             new_url = request.url.replace(request.url_root+'test_health_retry_disabled', url)
             request_json = request.get_json()
@@ -282,8 +282,8 @@ def create_app(url):
     @app.route('/test_health_retry/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_health_retry():
         #global context
-        #global lock
-        #with lock:
+        global lock
+        with lock:
             start = str(datetime.now())
             new_url = request.url.replace(request.url_root+'test_health_retry', url)
             request_json = request.get_json()
@@ -316,8 +316,8 @@ def create_app(url):
     @app.route('/test_health_retry_modification/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_health_retry_modification():
         #global context
-        #global lock
-        #with lock:
+        global lock
+        with lock:
             start = str(datetime.now())
             new_url = request.url.replace(request.url_root+'test_health_retry_modification', url)
             request_json = request.get_json()
@@ -350,8 +350,8 @@ def create_app(url):
     @app.route('/test_health_retry_sleep/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_health_retry_sleep():
         #global context
-        #global lock
-        #with lock:
+        global lock
+        with lock:
             start = str(datetime.now())
             new_url = request.url.replace(request.url_root+'test_health_retry_sleep', url)
             request_json = request.get_json()
@@ -384,8 +384,8 @@ def create_app(url):
     @app.route('/test_health_retry_sleep_modification/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_health_retry_sleep_modification():
         #global context
-        #global lock
-        #with lock:
+        global lock
+        with lock:
             start = str(datetime.now())
             new_url = request.url.replace(request.url_root+'test_health_retry_sleep_modification', url)
             request_json = request.get_json()
@@ -418,8 +418,8 @@ def create_app(url):
     @app.route('/test_health_metering_data/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_health_metering_data():
         #global context
-        #global lock
-        #with lock:
+        global lock
+        with lock:
             new_url = request.url.replace(request.url_root+'test_health_metering_data', url)
             request_json = request.get_json()
             health_id = request_json['health_id']
@@ -445,8 +445,8 @@ def create_app(url):
     @app.route('/test_long_to_short_retry_switch/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_long_to_short_retry_switch():
         #global context
-        #global lock
-        #with lock:
+        global lock
+        with lock:
             start = str(datetime.now())
             new_url = request.url.replace(request.url_root+'test_long_to_short_retry_switch', url)
             request_json = request.get_json()
@@ -476,8 +476,8 @@ def create_app(url):
     @app.route('/test_http_header_api_version/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_http_header_api_version():
         #global context
-        #global lock
-        #with lock:
+        global lock
+        with lock:
             start = str(datetime.now())
             new_url = request.url.replace(request.url_root+'test_http_header_api_version', url)
             request_json = request.get_json()
