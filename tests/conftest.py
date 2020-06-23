@@ -835,7 +835,7 @@ def wait_func_true(func, timeout=None, sleep_time=1):
     start = datetime.now()
     while not func():
         if timeout:
-            if (datetime.now() - start) > timedelta(seconds=sleep_time):
+            if (datetime.now() - start) > timedelta(seconds=timeout):
                 return False
         sleep(sleep_time)
     return True

@@ -37,8 +37,14 @@ def create_app(url):
 
     @app.route('/auth/metering/health/', methods=['GET', 'POST'])
     def health():
+        request_json = request.get_json()
         new_url = url + '/auth/metering/health/'
-        return redirect(new_url, code=307)
+        response = post(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 200
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        return Response(dumps(response_json), response.status_code, headers)
 
     @app.route('/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense():
@@ -443,14 +449,15 @@ def create_app(url):
             new_url = request.url.replace(request.url_root+'test_long_to_short_retry_switch', url)
             request_json = request.get_json()
             request_type = request_json['request']
-            response = post(url_path, json=request_json, headers=request.headers)
+            response = post(new_url, json=request_json, headers=request.headers)
             excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
             headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
             response_json = response.json()
-            if len(context['data']) <= 1:
+            if len(context['data']) == 0:
                 timeoutSecond = context['timeoutSecondFirst2']
             else:
                 timeoutSecond = context['timeoutSecond']
+            if len(context['data']) >= 2 and request_json['request'] == 'running':
                 response.status_code = 408
             response_json['metering']['timeoutSecond'] = timeoutSecond
             context['data'].append( (request_type,start,str(datetime.now())) )
@@ -474,7 +481,7 @@ def create_app(url):
             new_url = request.url.replace(request.url_root+'test_http_header_api_version', url)
             request_json = request.get_json()
             assert search(r'Accept:.*application/vnd\.accelize\.v1\+json', str(request.headers))
-            response = post(url_path, json=request_json, headers=request.headers)
+            response = post(new_url, json=request_json, headers=request.headers)
             excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
             headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
             response_json = response.json()
@@ -492,5 +499,4 @@ def get_context():
 def set_context(data):
     r = post(url_for('set', _external=True), json=data)
     assert r.status_code == 200
-
 

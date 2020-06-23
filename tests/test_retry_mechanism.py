@@ -11,6 +11,9 @@ from re import match, search, finditer, MULTILINE, IGNORECASE
 from time import sleep, time
 from json import loads
 from datetime import datetime, timedelta
+from flask import request, url_for
+from dateutil import parser
+
 from tests.conftest import wait_func_true
 from tests.proxy import get_context, set_context
 
@@ -142,9 +145,9 @@ def test_long_to_short_retry_switch(accelize_drm, conf_json, cred_json, async_ha
     async_cb = async_handler.create()
     async_cb.reset()
 
-    retryShortPeriod = 2
+    retryShortPeriod = 3
     retryLongPeriod = 10
-    timeoutSecondFirst2 = 5
+    timeoutSecondFirst2 = 3
     timeoutSecond = 30
 
     conf_json.reset()
@@ -170,7 +173,9 @@ def test_long_to_short_retry_switch(accelize_drm, conf_json, cred_json, async_ha
 
     drm_manager.activate()
     try:
-        sleep(timeoutSecond + 5)
+        wait_func_true(lambda: async_cb.was_called,
+                timeout=timeoutSecondFirst2 + 2*timeoutSecond + 2,
+                sleep_time=1)
     finally:
         drm_manager.deactivate()
     assert async_cb.was_called
@@ -180,24 +185,20 @@ def test_long_to_short_retry_switch(accelize_drm, conf_json, cred_json, async_ha
     data_list = context['data']
     nb_long_retry = int(timeoutSecond / retryLongPeriod)
     nb_short_retry = int(retryLongPeriod / retryShortPeriod)
-    assert (2+nb_long_retry+nb_short_retry-1) <= len(data_list) <= (2+nb_long_retry+nb_short_retry)
+    assert (1+nb_long_retry+nb_short_retry-1) <= len(data_list) <= (1+nb_long_retry+nb_short_retry)
     data = data_list.pop(0)    # Remove 'open' request
     assert data[0] == 'open'
-    prev_lic = data[2]
+    prev_lic = parser.parse(data[2])
     data = data_list.pop(0)    # Remove 1st 'running' request
     assert data[0] == 'running'
-    lic_delta = data[1] - prev_lic
-    assert lic_delta.total_seconds() < timeoutSecondFirst2
-    prev_lic = data[2]
-    data = data_list.pop(0)    # Remove 2nd 'running' request
-    lic_delta = data[1] - prev_lic
-    assert lic_delta.total_seconds() < timeoutSecondFirst2
-    prev_lic = data[2]
+    lic_delta = int((parser.parse(data[1]) - prev_lic).total_seconds())
+    assert lic_delta < 1
+    prev_lic = parser.parse(data[2])
     for i, (type, start, end) in enumerate(data_list):
-        lic_delta = start - prev_lic
-        prev_lic = end
-        if i <= nb_long_retry:
-            assert (retryLongPeriod - 1) <= lic_delta.total_seconds() <= retryLongPeriod
+        lic_delta = int((parser.parse(start) - prev_lic).total_seconds())
+        prev_lic = parser.parse(end)
+        if i < nb_long_retry:
+            assert (retryLongPeriod - 1) <= lic_delta <= retryLongPeriod
         else:
-            assert (retryShortPeriod - 1) <= lic_delta.total_seconds() <= retryShortPeriod
+            assert (retryShortPeriod - 1) <= lic_delta <= retryShortPeriod
 
