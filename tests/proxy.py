@@ -18,7 +18,6 @@ def create_app(url):
     def get():
         global lock
         with lock:
-            print('context =', context)
             return jsonify(context)
 
     @app.route('/set/', methods=['POST'])
