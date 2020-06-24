@@ -249,7 +249,7 @@ const Json::Value& JVgetOptional( const Json::Value& jval,
 }
 
 
-std::string exec( const char* cmd) {
+std::string exec_cmd( const char* cmd) {
     std::array<char, 128> buffer;
     std::string result;
     Debug( "Running command: {}", cmd );

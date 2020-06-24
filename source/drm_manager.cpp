@@ -405,58 +405,61 @@ protected:
             sLogger->flush();
     }
 
-    void setXrtUtility() {
+    bool findXrtUtility() {
         // Check XILINX_XRT environment variable existence
         char * env_val = getenv( "XILINX_XRT" );
         if (env_val == NULL) {
             Debug( "XILINX_XRT variable is not defined" );
             mXrtPath.clear();
-            return Json::nullValue;
+            return false;
         }
         mXrtPath = std::string( env_val );
         Debug( "XILINX_XRT variable is defined: {}", mXrtPath );
 
         // Check xbutil existence
-        xrt_bin_dir = fmt::format( "{}{}bin", mXrtPath, path_separator );
+        std::string xrt_bin_dir = fmt::format( "{}{}bin", mXrtPath, path_separator );
         mXbutil = fmt::format( "{}{}xbutil", xrt_bin_dir, path_separator );
         if ( !isFile( mXbutil ) ) {
             // If xbutil does not exist
             Debug( "xbutil tool could not be found in {}", xrt_bin_dir );
             mXbutil.clear();
-            return Json::nullValue;
+            return false;
         }
         Debug( "xbutil tool has been found in {}", mXbutil );
+        return true;
     }
 
     void getHostAndCardInfo() {
 
         // Find xbutil if existing
-        setXrtUtility();
+        if ( !findXrtUtility() )
+            return;
 
         // Call xbutil to collect host and card data
         std::string cmd = fmt::format( "{} query scan", mXbutil );
-        std::string cmd_out = exec( cmd.c_str() );
+        std::string cmd_out = exec_cmd( cmd.c_str() );
 
         // Parse collected data and save to header
-        for( auto itr: parseJsonString( cmd_out ) )
-            std::string key = itr.key();
+        Json::Value node = parseJsonString( cmd_out );
+        for(Json::Value::iterator itr=node.begin(); itr!=node.end(); ++itr) {
+            std::string key = itr.key().asString();
             try {
                 if (   ( key == "version" )
                     || ( key == "system" )
                     || ( key == "runtime" )
                    )
-                    mHostConfigData[key].swap( *itr);
+                    mHostConfigData[key] = *itr;
                 else if ( key == "board" ) {
                     //  Add general info node
-                    mHostConfigData[key]["info"].swap( itr->value("info"));
+                    mHostConfigData[key]["info"] = itr->get("info");
                     // Try to get the number of kernels
-                    mHostConfigData[key]["compute_unit"].swap( itr->value("compute_unit", -1) );
+                    mHostConfigData[key]["compute_unit"] = itr->get("compute_unit", Json::Int(-1) );
                 }
-            } catch(const std::exception &e) {
+            } catch( const std::exception &e ) {
                 Debug( "Could not extract Host Information for key {}", key );
             }
         }
-        Debug( "Host and card information: {}", mHostConfigData.toStyledString() );
+        Debug( "Host and card information:\n{}", mHostConfigData.toStyledString() );
     }
 
     Json::Value buildSettingsNode() {
@@ -469,9 +472,7 @@ protected:
         settings["log_file_rotating_size"] = (uint32_t)sLogFileRotatingSize;
         settings["log_file_rotating_num"] = (uint32_t)sLogFileRotatingNum;
         settings["log_file_verbosity"] = static_cast<int>( sLogFileVerbosity );
-        settings["log_file_format"] = sLogFileFormat;
         settings["log_verbosity"] = static_cast<int>( sLogConsoleVerbosity );
-        settings["log_format"] = sLogConsoleFormat;
         settings["ws_retry_period_long"] = mWSRetryPeriodLong;
         settings["ws_retry_period_short"] = mWSRetryPeriodShort;
         settings["ws_request_timeout"] = mWSRequestTimeout;
@@ -792,7 +793,7 @@ protected:
                                        std::placeholders::_1,
                                        std::placeholders::_2 )
                     ));
-        } catch( const std::exception& e ) {
+        } catch( const std::exception &e ) {
             std::string err_msg(e.what());
             if ( err_msg.find( "Unable to select a register strategy that is compatible with the DRM Controller" )
                     != std::string::npos )
@@ -977,10 +978,7 @@ protected:
             json_request["drm_frequency"] = mFrequencyCurr;
         json_request["mode"] = (uint8_t)mLicenseType;
 
-        // Add settings parameters
-        json_request["settings"].swap( buildSettingsNode() );
-
-        mLicenseCounter = strtoull( meteringFile[0].substr( 96, 32 ).c_str(), nullptr, 16 );
+        mLicenseCounter = strtoull( meteringFile[0].substr( 24, 8 ).c_str(), nullptr, 16 );
         Debug( "Built license request #{} to create new session", mLicenseCounter );
 
         return json_request;
@@ -1007,7 +1005,7 @@ protected:
         json_request["meteringFile"] = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
         json_request["request"] = "running";
 
-        mLicenseCounter = strtoull( meteringFile[0].substr( 96, 32 ).c_str(), nullptr, 16 );
+        mLicenseCounter = strtoull( meteringFile[0].substr( 24, 8 ).c_str(), nullptr, 16 );
         Debug( "Built license request #{} to maintain current session", mLicenseCounter );
 
         return json_request;
@@ -1027,15 +1025,13 @@ protected:
         json_request["saasChallenge"] = saasChallenge;
         json_request["sessionId"] = meteringFile[0].substr( 0, 16 );
         checkSessionIDFromDRM( json_request );
-        uint32_t lic_index = strtoull( meteringFile[0].substr( 96, 32 ).c_str(), nullptr, 16 );
-        checkLicenseIndexFromDRM( lic_index );
 
         if ( !isNodeLockedMode() )
             json_request["drm_frequency"] = mFrequencyCurr;
         json_request["meteringFile"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
         json_request["request"] = "close";
 
-        mLicenseCounter = strtoull( meteringFile[0].substr( 96, 32 ).c_str(), nullptr, 16 );
+        mLicenseCounter = strtoull( meteringFile[0].substr( 24, 8 ).c_str(), nullptr, 16 );
         Debug( "Built license request #{} to stop current session", mLicenseCounter );
 
         return json_request;
@@ -1214,10 +1210,11 @@ protected:
 
             // Get new license
             try {
-                if ( mLicenseCounter <= 1 ) {
-                    // Add Host and Card information for the first 2 requests
-                    request_json["host_configuration"].swap( mHostConfigData );
-                }
+                // Add Host and Card information for the first 2 requests
+                if ( mLicenseCounter < 2 )
+                    request_json["host_configuration"] = mHostConfigData;
+                // Add settings parameters
+                request_json["settings"] = buildSettingsNode();
                 // Send license request and wait for the answer
                 return getDrmWSClient().requestLicense( request_json, deadline );
             } catch ( const Exception& e ) {
@@ -1716,7 +1713,7 @@ protected:
                     Error( e.what() );
                     f_asynch_error( std::string( e.what() ) );
                 }
-            } catch( const std::exception& e ) {
+            } catch( const std::exception &e ) {
                 std::string errmsg = fmt::format( "[errCode={}] Unexpected error: {}", DRM_ExternFail, e.what() );
                 Error( errmsg );
                 f_asynch_error( errmsg );
@@ -1793,7 +1790,7 @@ protected:
                     Error( e.what() );
                     f_asynch_error( std::string( e.what() ) );
                 }
-            } catch( const std::exception& e ) {
+            } catch( const std::exception &e ) {
                 Error( e.what() );
                 f_asynch_error( std::string( e.what() ) );
             }
