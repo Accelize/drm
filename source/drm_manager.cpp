@@ -160,8 +160,8 @@ protected:
     // Design parameters
     int32_t mFrequencyInit = 0;
     int32_t mFrequencyCurr = 0;
-    uint32_t mFrequencyDetectionPeriod = 100;  // in milliseconds
-    double mFrequencyDetectionThreshold = 12.0;      // Error in percentage
+    uint32_t mFrequencyDetectionPeriod = 100;       // in milliseconds
+    double mFrequencyDetectionThreshold = 12.0;     // Error in percentage
     bool mIsFreqDetectionMethod1 = false;
     bool mBypassFrequencyDetection = false;
 
@@ -194,10 +194,11 @@ protected:
     // XRT PATH
     std::string mXrtPath;
     std::string mXbutil;
-    Json::Value mHostCardInfo;
+    Json::Value mHostConfigData;
 
     // Debug parameters
     spdlog::level::level_enum mDebugMessageLevel;
+    Json::Value mSettings;
 
     // User accessible parameters
     const std::map<ParameterKey, std::string> mParameterKeyMap = {
@@ -321,8 +322,7 @@ protected:
             }
 
             // If possible extract host and card information
-            Json::Value mHostCardInfo = getHostAndCardInfo();
-            if
+            getHostAndCardInfo();
 
         } catch( const Exception &e ) {
             if ( e.getErrCode() != DRM_BadFormat )
@@ -405,7 +405,7 @@ protected:
             sLogger->flush();
     }
 
-    Json::Value getHostAndCardInfo() {
+    void setXrtUtility() {
         // Check XILINX_XRT environment variable existence
         char * env_val = getenv( "XILINX_XRT" );
         if (env_val == NULL) {
@@ -426,11 +426,59 @@ protected:
             return Json::nullValue;
         }
         Debug( "xbutil tool has been found in {}", mXbutil );
+    }
+
+    void getHostAndCardInfo() {
+
+        // Find xbutil if existing
+        setXrtUtility();
 
         // Call xbutil to collect host and card data
         std::string cmd = fmt::format( "{} query scan", mXbutil );
         std::string cmd_out = exec( cmd.c_str() );
-        Info( "cmd_out=\n{}\n", cmd_out );
+
+        // Parse collected data and save to header
+        for( auto itr: parseJsonString( cmd_out ) )
+            std::string key = itr.key();
+            try {
+                if (   ( key == "version" )
+                    || ( key == "system" )
+                    || ( key == "runtime" )
+                   )
+                    mHostConfigData[key].swap( *itr);
+                else if ( key == "board" ) {
+                    //  Add general info node
+                    mHostConfigData[key]["info"].swap( itr->value("info"));
+                    // Try to get the number of kernels
+                    mHostConfigData[key]["compute_unit"].swap( itr->value("compute_unit", -1) );
+                }
+            } catch(const std::exception &e) {
+                Debug( "Could not extract Host Information for key {}", key );
+            }
+        }
+        Debug( "Host and card information: {}", mHostConfigData.toStyledString() );
+    }
+
+    Json::Value buildSettingsNode() {
+        Json::Value settings;
+        settings["frequency_detection_method"] = mIsFreqDetectionMethod1? 1:2;
+        settings["bypass_frequency_detection"] = mBypassFrequencyDetection;
+        settings["frequency_detection_threshold"] = mFrequencyDetectionThreshold;
+        settings["frequency_detection_period"] = mFrequencyDetectionPeriod;
+        settings["log_file_type"] = (int32_t)sLogFileType;
+        settings["log_file_rotating_size"] = (uint32_t)sLogFileRotatingSize;
+        settings["log_file_rotating_num"] = (uint32_t)sLogFileRotatingNum;
+        settings["log_file_verbosity"] = static_cast<int>( sLogFileVerbosity );
+        settings["log_file_format"] = sLogFileFormat;
+        settings["log_verbosity"] = static_cast<int>( sLogConsoleVerbosity );
+        settings["log_format"] = sLogConsoleFormat;
+        settings["ws_retry_period_long"] = mWSRetryPeriodLong;
+        settings["ws_retry_period_short"] = mWSRetryPeriodShort;
+        settings["ws_request_timeout"] = mWSRequestTimeout;
+        settings["health_period"] = mHealthPeriod;
+        settings["health_retry"] = mHealthRetryTimeout;
+        settings["health_retry_sleep"] = mHealthRetrySleep;
+        return settings;
     }
 
     uint32_t getMailboxSize() const {
@@ -816,14 +864,16 @@ protected:
     void checkSessionIDFromWS( const Json::Value license_json ) const {
         std::string ws_sessionID = license_json["metering"]["sessionId"].asString();
         if ( !mSessionID.empty() && ( mSessionID != ws_sessionID ) ) {
-            Warning( "Session ID mismatch: WebService returns '{}' but '{}' is expected", ws_sessionID, mSessionID ); //LCOV_EXCL_LINE
+            Warning( "Session ID mismatch: WebService returns '{}' but '{}' is expected",
+                ws_sessionID, mSessionID ); //LCOV_EXCL_LINE
         }
     }
 
     void checkSessionIDFromDRM( const Json::Value license_json ) const {
-        std::string ws_sessionID = license_json["sessionId"].asString();
-        if ( !mSessionID.empty() && ( mSessionID != ws_sessionID ) ) {
-            Warning( "Session ID mismatch: DRM IP returns '{}' but '{}' is expected", ws_sessionID, mSessionID ); //LCOV_EXCL_LINE
+        std::string drm_sessionID = license_json["sessionId"].asString();
+        if ( !mSessionID.empty() && ( mSessionID != drm_sessionID ) ) {
+            Warning( "Session ID mismatch: DRM IP returns '{}' but '{}' is expected",
+                drm_sessionID, mSessionID ); //LCOV_EXCL_LINE
         }
     }
 
@@ -883,7 +933,7 @@ protected:
         // Get information from DRM Controller
         getDesignInfo( drmVersion, dna, vlnvFile, mailboxReadOnly );
 
-        // Fulfill DRM section
+        // Fulfill with DRM section
         json_output["drmlibVersion"] = DRMLIB_VERSION;
         json_output["lgdnVersion"] = drmVersion;
         json_output["dna"] = dna;
@@ -895,6 +945,7 @@ protected:
             json_output["vlnvFile"][i_str]["version"] = std::string("x") + vlnvFile[i].substr(12, 4);
         }
 
+        // Fulfill with Product information
         if ( !mailboxReadOnly.empty() ) {
             try {
                 json_output["product"] = parseJsonString( mailboxReadOnly );
@@ -906,6 +957,7 @@ protected:
         } else {
             Debug( "Could not find product ID information in DRM Controller Mailbox" );
         }
+
         return json_output;
     }
 
@@ -914,8 +966,6 @@ protected:
         uint32_t numberOfDetectedIps;
         std::string saasChallenge;
         std::vector<std::string> meteringFile;
-
-        Debug( "Build license request #{} to create new session", mLicenseCounter );
 
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
         // Request challenge and metering info for first request
@@ -927,16 +977,21 @@ protected:
             json_request["drm_frequency"] = mFrequencyCurr;
         json_request["mode"] = (uint8_t)mLicenseType;
 
+        // Add settings parameters
+        json_request["settings"].swap( buildSettingsNode() );
+
+        mLicenseCounter = strtoull( meteringFile[0].substr( 96, 32 ).c_str(), nullptr, 16 );
+        Debug( "Built license request #{} to create new session", mLicenseCounter );
+
         return json_request;
     }
 
-    Json::Value getMeteringWait() const {
+    Json::Value getMeteringRunning() const {
         Json::Value json_request( mHeaderJsonRequest );
         uint32_t numberOfDetectedIps;
         std::string saasChallenge;
         std::vector<std::string> meteringFile;
 
-        Debug( "Build license request #{} to maintain current session", mLicenseCounter );
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
 
         // Check if an error occurred
@@ -951,6 +1006,10 @@ protected:
             json_request["drm_frequency"] = mFrequencyCurr;
         json_request["meteringFile"] = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
         json_request["request"] = "running";
+
+        mLicenseCounter = strtoull( meteringFile[0].substr( 96, 32 ).c_str(), nullptr, 16 );
+        Debug( "Built license request #{} to maintain current session", mLicenseCounter );
+
         return json_request;
     }
 
@@ -960,7 +1019,6 @@ protected:
         std::string saasChallenge;
         std::vector<std::string> meteringFile;
 
-        Debug( "Build license request #{} to stop current session", mLicenseCounter );
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
 
         // Request challenge and metering info for first request
@@ -969,11 +1027,17 @@ protected:
         json_request["saasChallenge"] = saasChallenge;
         json_request["sessionId"] = meteringFile[0].substr( 0, 16 );
         checkSessionIDFromDRM( json_request );
+        uint32_t lic_index = strtoull( meteringFile[0].substr( 96, 32 ).c_str(), nullptr, 16 );
+        checkLicenseIndexFromDRM( lic_index );
 
         if ( !isNodeLockedMode() )
             json_request["drm_frequency"] = mFrequencyCurr;
         json_request["meteringFile"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
         json_request["request"] = "close";
+
+        mLicenseCounter = strtoull( meteringFile[0].substr( 96, 32 ).c_str(), nullptr, 16 );
+        Debug( "Built license request #{} to stop current session", mLicenseCounter );
+
         return json_request;
     }
 
@@ -1150,6 +1214,11 @@ protected:
 
             // Get new license
             try {
+                if ( mLicenseCounter <= 1 ) {
+                    // Add Host and Card information for the first 2 requests
+                    request_json["host_configuration"].swap( mHostConfigData );
+                }
+                // Send license request and wait for the answer
                 return getDrmWSClient().requestLicense( request_json, deadline );
             } catch ( const Exception& e ) {
                 oauth_attempt = 0;
@@ -1265,7 +1334,6 @@ protected:
                 Debug( "DRM Controller is in Node-Locked license mode" );
         }
         Debug( "Provisioned license #{} on DRM controller", mLicenseCounter );
-        mLicenseCounter ++;
     }
 
     Json::Value getHealth( const Json::Value& request_json, const TClock::time_point& deadline,
@@ -1619,8 +1687,8 @@ protected:
 
                         } else {
                             go_sleeping = false;
-                            Debug( "Requesting new license #{} now", mLicenseCounter );
-                            Json::Value request_json = getMeteringWait();
+                            Debug( "Requesting new license now" );
+                            Json::Value request_json = getMeteringRunning();
 
                             /// Retry Web Service request loop
                             TClock::time_point polling_deadline = TClock::now() + std::chrono::seconds( mLicenseDuration );
@@ -1763,8 +1831,6 @@ protected:
             if ( !isReadyForNewLicense() )
                 Unreachable( "To start a new session the DRM Controller shall be ready to accept a new license" ); //LCOV_EXCL_LINE
 
-            mLicenseCounter = 0;
-
             // Build start request message for new license
             Json::Value request_json = getMeteringStart();
 
@@ -1787,7 +1853,7 @@ protected:
 
             if ( isReadyForNewLicense() ) {
                 // Create JSON license request
-                Json::Value request_json = getMeteringWait();
+                Json::Value request_json = getMeteringRunning();
 
                 // Send license request to web service
                 Json::Value license_json = getLicense( request_json, mWSRequestTimeout, mWSRetryPeriodShort );
@@ -2003,19 +2069,19 @@ public:
                         break;
                     }
                     case ParameterKey::log_file_type: {
-                        json_value[key_str] = (int32_t)sLogFileType;
+                        json_value[key_str] = (uint32_t)sLogFileType;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
-                               (int32_t)sLogFileType );
+                               sLogFileType );
                         break;
                     }
                     case ParameterKey::log_file_rotating_num: {
-                        json_value[key_str] = (int32_t)sLogFileRotatingNum;
+                        json_value[key_str] = (uint32_t)sLogFileRotatingNum;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                sLogFileRotatingNum );
                         break;
                     }
                     case ParameterKey::log_file_rotating_size: {
-                        json_value[key_str] = (int32_t)sLogFileRotatingSize;
+                        json_value[key_str] = (uint32_t)sLogFileRotatingSize;
                         Debug( "Get value of parameter '{}' (ID={}): {} KB", key_str, key_id,
                                sLogFileRotatingSize );
                         break;
