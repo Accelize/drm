@@ -735,6 +735,7 @@ def test_curl_host_resolve(accelize_drm, conf_json, cred_json, async_handler):
     async_cb.assert_NoError()
 
 
+@pytest.mark.no_parallel
 @pytest.mark.minimum
 def test_http_header_api_version(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """Test the http header contains the expected API version"""

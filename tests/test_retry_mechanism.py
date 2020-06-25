@@ -137,6 +137,7 @@ def test_10s_retry(accelize_drm, conf_json, cred_json, async_handler):
         async_cb1.assert_NoError()
 
 
+@pytest.mark.no_parallel
 def test_long_to_short_retry_switch(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test an error is returned if a wrong session id is provided

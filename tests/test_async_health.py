@@ -15,6 +15,7 @@ from tests.conftest import wait_func_true
 from tests.proxy import get_context, set_context
 
 
+@pytest.mark.no_parallel
 @pytest.mark.minimum
 def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
@@ -74,6 +75,7 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
             remove(logpath)
 
 
+@pytest.mark.no_parallel
 def test_health_period(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test the asynchronous health period is correct.
@@ -123,6 +125,7 @@ def test_health_period(accelize_drm, conf_json, cred_json, async_handler, live_s
         wait_start = end
 
 
+@pytest.mark.no_parallel
 @pytest.mark.minimum
 def test_health_period_modification(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
@@ -173,6 +176,7 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
         wait_start = end
 
 
+@pytest.mark.no_parallel
 @pytest.mark.minimum
 def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
@@ -225,6 +229,7 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
         wait_start = end
 
 
+@pytest.mark.no_parallel
 def test_health_retry(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test the asynchronous health retry.
@@ -261,7 +266,7 @@ def test_health_retry(accelize_drm, conf_json, cred_json, async_handler, live_se
     drm_manager.activate()
     try:
         wait_func_true(lambda: get_context()['exit'],
-                timeout=(healthRetry*2, sleep_time=1)
+                timeout=healthRetry*2, sleep_time=1)
     finally:
         drm_manager.deactivate()
     async_cb.assert_NoError()
@@ -279,6 +284,7 @@ def test_health_retry(accelize_drm, conf_json, cred_json, async_handler, live_se
     assert healthRetry - error_gap <= int(delta.total_seconds()) <= healthRetry + error_gap
 
 
+@pytest.mark.no_parallel
 @pytest.mark.minimum
 def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
@@ -340,6 +346,7 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
         assert retry_timeout - error_gap <= int(delta.total_seconds()) <= retry_timeout + error_gap
 
 
+@pytest.mark.no_parallel
 def test_health_retry_sleep(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test the asynchronous health retry sleep value
@@ -399,6 +406,7 @@ def test_health_retry_sleep(accelize_drm, conf_json, cred_json, async_handler, l
     assert check_cnt > 0
 
 
+@pytest.mark.no_parallel
 @pytest.mark.minimum
 def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
@@ -461,6 +469,7 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, asy
                 start = lend
 
 
+@pytest.mark.no_parallel
 @pytest.mark.minimum
 def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler, live_server, ws_admin):
     """
