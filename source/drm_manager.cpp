@@ -1086,7 +1086,7 @@ protected:
                 lic_attempt = 0;
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
                     // Reached timeout
-                    Throw( e.getErrCode(), "Timeout on Authentication request after {} attempts", oauth_attempt );
+                    Throw( DRM_WSRespError, "Timeout on Authentication request after {} attempts", oauth_attempt );
                 }
                 if ( e.getErrCode() != DRM_WSMayRetry ) {
                     throw;
@@ -1119,7 +1119,7 @@ protected:
                 oauth_attempt = 0;
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
                     // Reached timeout
-                    Throw( e.getErrCode(), "Timeout on License request after {} attempts", lic_attempt );
+                    Throw( DRM_WSRespError, "Timeout on License request after {} attempts", lic_attempt );
                 }
                 if ( e.getErrCode() != DRM_WSMayRetry ) {
                     throw;
