@@ -31,7 +31,7 @@ const char * DrmManager_getApiVersion() {
 
 void checkPointer(void *p) {
     if ( p == NULL )
-        Throw( DRM_BadArg, "Provided pointer is NULL" );
+        Throw( DRM_BadArg, spdlog::level::err, "Provided pointer is NULL" );
 }
 
 /* Help macros TRY/CATCH to return code error */
@@ -77,11 +77,11 @@ DRM_ErrorCode DrmManager_alloc( DrmManager **p_m,
     *p_m = m;
     TRY
         if (read_register == NULL)
-            Throw( DRM_BadArg, "Read register callback function must not be NULL" );
+            Throw( DRM_BadArg, spdlog::level::err, "Read register callback function must not be NULL" );
         if (write_register == NULL)
-            Throw( DRM_BadArg, "Write register callback function must not be NULL" );
+            Throw( DRM_BadArg, spdlog::level::err, "Write register callback function must not be NULL" );
         if (async_error == NULL)
-            Throw( DRM_BadArg, "Asynchronous error callback function must not be NULL" );
+            Throw( DRM_BadArg, spdlog::level::err, "Asynchronous error callback function must not be NULL" );
         m->drm = (decltype(m->drm))malloc(sizeof(*(m->drm)));
         m->drm->obj = NULL;
         m->drm->obj = new cpp::DrmManager(conf_file_path, cred_file_path,
