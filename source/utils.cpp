@@ -149,11 +149,11 @@ void saveJsonToFile( const std::string& file_path,
     std::ofstream ofs( file_path );
 
     if ( !ofs.is_open() )
-        Throw( DRM_ExternFail, "Unable to access file: {}", file_path );
+        Throw( DRM_ExternFail, spdlog::level::error, "Unable to access file: {}", file_path );
     if ( writer->write( json_value, &ofs ) )
-        Throw( DRM_ExternFail, "Unable to write file: {}", file_path );
+        Throw( DRM_ExternFail, spdlog::level::error, "Unable to write file: {}", file_path );
     if ( !ofs.good() )
-        Throw( DRM_ExternFail, "Unable to write file: {}", file_path );
+        Throw( DRM_ExternFail, spdlog::level::error, "Unable to write file: {}", file_path );
     ofs.close();
 }
 
@@ -165,14 +165,14 @@ Json::Value parseJsonString( const std::string &json_string ) {
     std::unique_ptr<Json::CharReader> const reader( builder.newCharReader() );
 
     if ( json_string.size() == 0 )
-        Throw( DRM_BadFormat, "Cannot parse an empty JSON string" );
+        Throw( DRM_BadFormat, spdlog::level::error, "Cannot parse an empty JSON string" );
 
     if ( !reader->parse( json_string.c_str(), json_string.c_str() + json_string.size(),
             &json_node, &parseErr) )
-        Throw( DRM_BadFormat, "Cannot parse JSON string '{}' because {}", json_string, parseErr );
+        Throw( DRM_BadFormat, spdlog::level::error, "Cannot parse JSON string '{}' because {}", json_string, parseErr );
 
     if ( json_node.empty() || json_node.isNull() )
-        Throw( DRM_BadArg, "JSON string is empty" );
+        Throw( DRM_BadArg, spdlog::level::error, "JSON string is empty" );
 
     Debug( "Extracted JSON Object: {}", json_node.toStyledString() );
 
@@ -186,13 +186,13 @@ Json::Value parseJsonFile( const std::string& file_path ) {
 
     // Check path is a file
     if ( !isFile(file_path) ) {
-        Throw( DRM_BadArg, "Path is not a valid file: {}", file_path );
+        Throw( DRM_BadArg, spdlog::level::error, "Path is not a valid file: {}", file_path );
     }
 
     // Open file
     std::ifstream fh( file_path );
     if ( !fh.good() )
-        Throw( DRM_BadArg, "Cannot find JSON file: {}", file_path );
+        Throw( DRM_BadArg, spdlog::level::error, "Cannot find JSON file: {}", file_path );
     // Read file content
     fh.seekg( 0, std::ios::end );
     file_content.reserve( fh.tellg() );
@@ -202,7 +202,7 @@ Json::Value parseJsonFile( const std::string& file_path ) {
     try {
         json_node = parseJsonString( file_content );
     } catch( const Exception& e ) {
-        Throw( e.getErrCode(), "Cannot parse JSON file {}: {}", file_path, e.what() );
+        Throw( e.getErrCode(), spdlog::level::error, "Cannot parse JSON file {}: {}", file_path, e.what() );
     }
     Debug("Found and loaded JSON file: {}", file_path);
 
@@ -214,19 +214,19 @@ const Json::Value& JVgetRequired( const Json::Value& jval,
         const char* key,
         const Json::ValueType& type ) {
     if ( !jval.isMember( key ) )
-        Throw( DRM_BadFormat, "Missing parameter '{}' of type {}", key, typeToString( type ) );
+        Throw( DRM_BadFormat, spdlog::level::error, "Missing parameter '{}' of type {}", key, typeToString( type ) );
 
     const Json::Value& jvalmember = jval[key];
 
     if ( ( jvalmember.type() != type ) && !jvalmember.isConvertibleTo( type ) )
-        Throw( DRM_BadFormat, "Wrong parameter type for '{}' = {}, expecting {}, parsed as {}",
+        Throw( DRM_BadFormat, spdlog::level::error, "Wrong parameter type for '{}' = {}, expecting {}, parsed as {}",
               key, jvalmember.toStyledString(), typeToString( type ), typeToString( jvalmember.type() ) );
 
     if ( jvalmember.empty() )
-        Throw( DRM_BadFormat, "Value of parameter '{}' is empty", key );
+        Throw( DRM_BadFormat, spdlog::level::error, "Value of parameter '{}' is empty", key );
 
     if ( ( jvalmember.type() == Json::stringValue ) && ( jvalmember.asString().empty() ) )
-        Throw( DRM_BadFormat, "Value of parameter '{}' is an empty string", key );
+        Throw( DRM_BadFormat, spdlog::level::error, "Value of parameter '{}' is an empty string", key );
 
     std::string val = jvalmember.toStyledString();
     val = val.erase( val.find_last_not_of("\t\n\v\f\r") + 1 );
@@ -244,7 +244,7 @@ const Json::Value& JVgetOptional( const Json::Value& jval,
     const Json::Value& jvalmember = exists ? jval[key] : defaultValue;
 
     if ( jvalmember.type()!=type && !jvalmember.isConvertibleTo(type) )
-        Throw( DRM_BadFormat, "Wrong parameter type for '{}' = {}, expecting {}, parsed as {}",
+        Throw( DRM_BadFormat, spdlog::level::error, "Wrong parameter type for '{}' = {}, expecting {}, parsed as {}",
                 key, jvalmember.toStyledString(), typeToString( type ), typeToString( jvalmember.type() ) );
 
     std::string val = jvalmember.toStyledString();

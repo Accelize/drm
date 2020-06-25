@@ -95,7 +95,7 @@ def test_health_period(accelize_drm, conf_json, cred_json, async_handler, live_s
     )
 
     # Set initial context on the live server
-    nb_health = 3
+    nb_health = 2
     healthPeriod = 2
     healthRetry = 0  # no retry
     healthRetrySleep = 1
@@ -145,7 +145,7 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
     )
 
     # Set initial context on the live server
-    nb_health = 5
+    nb_health = 4
     healthPeriod = 2
     healthRetry = 0  # no retry
     healthRetrySleep = 1
@@ -195,7 +195,7 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
     )
 
     # Set initial context on the live server
-    nb_health = 3
+    nb_health = 2
     healthPeriod = 3
     healthRetrySleep = 1
     context = {'data': list(),
@@ -261,7 +261,7 @@ def test_health_retry(accelize_drm, conf_json, cred_json, async_handler, live_se
     drm_manager.activate()
     try:
         wait_func_true(lambda: get_context()['exit'],
-                timeout=(healthPeriod+3) * (nb_health+2), sleep_time=1)
+                timeout=(healthRetry*2, sleep_time=1)
     finally:
         drm_manager.deactivate()
     async_cb.assert_NoError()
@@ -295,7 +295,7 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
     healthPeriod = 3
     healthRetry = 10
     healthRetrySleep = 1
-    nb_run = 3
+    nb_run = 2
 
     for i in range(nb_run):
 
@@ -361,7 +361,7 @@ def test_health_retry_sleep(accelize_drm, conf_json, cred_json, async_handler, l
     )
 
     # Set initial context on the live server
-    nb_health = 3
+    nb_health = 2
     healthPeriod = 3
     healthRetry = 4
     healthRetrySleep = 2
@@ -415,7 +415,7 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, asy
     healthPeriod = 3
     healthRetry = 10
     healthRetrySleep = 1
-    nb_run = 3
+    nb_run = 2
 
     for i in range(nb_run):
 
