@@ -32,7 +32,7 @@ namespace DRM {
 CurlEasyPost::CurlEasyPost() {
     curl = curl_easy_init();
     if ( !curl )
-        Throw( DRM_ExternFail, spdlog::level::error, "Curl : cannot init curl_easy" );
+        Throw( DRM_ExternFail, spdlog::level::err, "Curl : cannot init curl_easy" );
 }
 
 CurlEasyPost::~CurlEasyPost() {
@@ -79,7 +79,7 @@ long CurlEasyPost::perform( std::string* resp, std::chrono::steady_clock::time_p
     { // Compute timeout
         std::chrono::milliseconds timeout = std::chrono::duration_cast<std::chrono::milliseconds>( deadline - std::chrono::steady_clock::now() );
         if ( timeout <= std::chrono::milliseconds( 0 ) )
-            Throw( DRM_WSTimedOut, spdlog::level::warning, "Did not perform HTTP request to Accelize webservice because deadline is reached." );
+            Throw( DRM_WSTimedOut, spdlog::level::warn, "Did not perform HTTP request to Accelize webservice because deadline is reached." );
         curl_easy_setopt( curl, CURLOPT_TIMEOUT_MS, timeout.count() );
     }
     res = curl_easy_perform( curl );
@@ -88,10 +88,10 @@ long CurlEasyPost::perform( std::string* resp, std::chrono::steady_clock::time_p
           || res == CURLE_COULDNT_RESOLVE_HOST
           || res == CURLE_COULDNT_CONNECT
           || res == CURLE_OPERATION_TIMEDOUT ) {
-            Throw( DRM_WSMayRetry, spdlog::level::warning, "Failed performing HTTP request to Accelize webservice ({}) : {}",
+            Throw( DRM_WSMayRetry, spdlog::level::warn, "Failed performing HTTP request to Accelize webservice ({}) : {}",
                     curl_easy_strerror( res ), errbuff.data() );
         } else {
-            Throw( DRM_ExternFail, spdlog::level::error, "Failed performing HTTP request to Accelize webservice ({}) : {}",
+            Throw( DRM_ExternFail, spdlog::level::err, "Failed performing HTTP request to Accelize webservice ({}) : {}",
                     curl_easy_strerror( res ), errbuff.data() );
         }
     }
@@ -128,7 +128,7 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
         url = JVgetRequired( webservice_json, "url", Json::stringValue ).asString();
 
     } catch( Exception &e ) {
-        Throw( e.getErrCode(), spdlog::level::error, "Error with service configuration file '{}': {}",
+        Throw( e.getErrCode(), spdlog::level::err, "Error with service configuration file '{}': {}",
                 conf_file_path, e.what() );
     }
 
@@ -144,7 +144,7 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
         Json::Value client_secret_json = JVgetRequired( cred_json, "client_secret", Json::stringValue );
         mClientSecret = client_secret_json.asString();
     } catch( Exception &e ) {
-        Throw( e.getErrCode(), spdlog::level::error, "Error with credential file '{}': {}", cred_file_path, e.what() );
+        Throw( e.getErrCode(), spdlog::level::err, "Error with credential file '{}': {}", cred_file_path, e.what() );
     }
     // Restore originla file log level
     if ( logFileLevel <= spdlog::level::debug )
@@ -244,12 +244,12 @@ void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
             drm_error = DRM_WSReqError;
         else
             drm_error = DRM_WSError;
-        Throw( drm_error, spdlog::level::error, "OAuth2 Web Service error {}: {}", resp_code, response );
+        Throw( drm_error, spdlog::level::err, "OAuth2 Web Service error {}: {}", resp_code, response );
     }
 
     // Verify response parsing
     if ( json_resp == Json::nullValue )
-        Throw( DRM_WSRespError, spdlog::level::error, "Failed to parse response from OAuth2 Web Service because {}: {}",
+        Throw( DRM_WSRespError, spdlog::level::err, "Failed to parse response from OAuth2 Web Service because {}: {}",
                 error_msg, response);
 
     mOAuth2Token = JVgetRequired( json_resp, "access_token", Json::stringValue ).asString();
@@ -295,11 +295,11 @@ Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Val
             drm_error = DRM_WSReqError;
         else
             drm_error = DRM_WSError;
-        Throw( drm_error, spdlog::level::error, "Metering Web Service error {}: {}", resp_code, response );
+        Throw( drm_error, spdlog::level::err, "Metering Web Service error {}: {}", resp_code, response );
     }
     // Verify response parsing
     if ( json_resp == Json::nullValue )
-        Throw( DRM_WSRespError, spdlog::level::error, "Failed to parse response from Metering Web Service because {}: {}",
+        Throw( DRM_WSRespError, spdlog::level::err, "Failed to parse response from Metering Web Service because {}: {}",
                error_msg, response);
 
     // No error: return the response as JSON object
