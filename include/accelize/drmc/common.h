@@ -31,10 +31,20 @@ limitations under the License.
     #endif /* __cplusplus */
 
 
+<<<<<<< HEAD
     #define Throw( errcode, loglevel, ... ) do {                                        \
         Accelize::DRM::Exception except( errcode, fmt::format( __VA_ARGS__ ) );         \
         SPDLOG_LOGGER_CALL( sLogger, (spdlog::level::level_enum)loglevel, __VA_ARGS__); \
         throw except;                                                                   \
+=======
+    #define Throw( errcode, ... ) do {                                          \
+        Accelize::DRM::Exception except( errcode, fmt::format( __VA_ARGS__ ) ); \
+        if ( ( errcode != DRM_Exit ) && ( errcode != DRM_WSTimedOut ) && ( errcode != DRM_WSMayRetry ) )  \
+            Error( __VA_ARGS__ );                                               \
+        else                                                                    \
+            Debug( __VA_ARGS__ );                                               \
+        throw except;                                                           \
+>>>>>>> tmp
     } while(0)
 
 
