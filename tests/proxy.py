@@ -48,6 +48,7 @@ def create_app(url):
     @app.route('/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense():
         request_json = request.get_json()
+        print('request_json=', request_json)
         new_url = url + '/auth/metering/genlicense/'
         response = post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json, indent=4, sort_keys=True), response.status_code, response.text)
