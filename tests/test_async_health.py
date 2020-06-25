@@ -10,16 +10,18 @@ from dateutil import parser
 from itertools import groupby
 from flask import request, url_for
 from requests import get, post
+
+from tests.conftest import wait_func_true
 from tests.proxy import get_context, set_context
 
 
+@pytest.mark.minimum
 def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test the asynchronous health feature can be disabled.
     """
     from os import remove
     from os.path import realpath, isfile
-    from tests.conftest import wait_func_true
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -52,10 +54,10 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
         drm_manager.activate()
         try:
             wait_func_true(lambda: get_context()['cnt'] > 0,
-                    timeout=healthPeriod * nb_health, sleep_time=1):
+                    timeout=healthPeriod * nb_health, sleep_time=1)
             assert drm_manager.get('health_period') == healthPeriod
             wait_func_true(lambda: get_context()['exit'],
-                    timeout=healthPeriod * nb_health, sleep_time=1):
+                    timeout=healthPeriod * nb_health, sleep_time=1)
             sleep(healthPeriod * 2)
             assert drm_manager.get('health_period') == 0
             assert get_context()['cnt'] == nb_health + 1
@@ -72,7 +74,6 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
             remove(logpath)
 
 
-@pytest.mark.minimum
 def test_health_period(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test the asynchronous health period is correct.
@@ -122,6 +123,7 @@ def test_health_period(accelize_drm, conf_json, cred_json, async_handler, live_s
         wait_start = end
 
 
+@pytest.mark.minimum
 def test_health_period_modification(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test the asynchronous health feature can be modified dynamically.
@@ -171,6 +173,7 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
         wait_start = end
 
 
+@pytest.mark.minimum
 def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test the asynchronous health retry feature can be disabled.
@@ -222,7 +225,6 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
         wait_start = end
 
 
-@pytest.mark.minimum
 def test_health_retry(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test the asynchronous health retry.
@@ -277,6 +279,7 @@ def test_health_retry(accelize_drm, conf_json, cred_json, async_handler, live_se
     assert healthRetry - error_gap <= int(delta.total_seconds()) <= healthRetry + error_gap
 
 
+@pytest.mark.minimum
 def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test the asynchronous health retry can be modified dynamically.
@@ -337,7 +340,6 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
         assert retry_timeout - error_gap <= int(delta.total_seconds()) <= retry_timeout + error_gap
 
 
-@pytest.mark.minimum
 def test_health_retry_sleep(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test the asynchronous health retry sleep value
@@ -397,6 +399,7 @@ def test_health_retry_sleep(accelize_drm, conf_json, cred_json, async_handler, l
     assert check_cnt > 0
 
 
+@pytest.mark.minimum
 def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test the asynchronous health retry sleep value when changed dynamically.
