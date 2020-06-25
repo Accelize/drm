@@ -42,26 +42,31 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
     )
 
     # Set initial context on the live server
-    nb_health = 3
+    nb_health = 2
     healthPeriod = 2
-    context = {'cnt':0, 'healthPeriod':healthPeriod, 'nb_health':nb_health}
+    context = {'cnt':0, 'healthPeriod':healthPeriod, 'nb_health':nb_health, 'exit':False}
     set_context(context)
     assert get_context() == context
 
     try:
         drm_manager.activate()
-        sleep(3)
-        healthPeriod = drm_manager.get('health_period')
-        sleep(healthPeriod*(nb_health+2))
-        drm_manager.deactivate()
+        try:
+            wait_func_true(lambda: get_context()['cnt'] > 0,
+                    timeout=healthPeriod * nb_health, sleep_time=1):
+            assert drm_manager.get('health_period') == healthPeriod
+            wait_func_true(lambda: get_context()['exit'],
+                    timeout=healthPeriod * nb_health, sleep_time=1):
+            sleep(healthPeriod * 2)
+            assert drm_manager.get('health_period') == 0
+            assert get_context()['cnt'] == nb_health + 1
+        finally:
+            drm_manager.deactivate()
         del drm_manager
         async_cb.assert_NoError()
-        context = get_context()
-        assert context['cnt'] == nb_health
         assert wait_func_true(lambda: isfile(logpath), 10)
         with open(logpath, 'rt') as f:
             log_content = f.read()
-        assert search(r'Health thread has been disabled', log_content, MULTILINE)
+        assert search(r'Health thread is disabled', log_content, MULTILINE)
     finally:
         if isfile(logpath):
             remove(logpath)
@@ -89,6 +94,7 @@ def test_health_period(accelize_drm, conf_json, cred_json, async_handler, live_s
     )
 
     # Set initial context on the live server
+    nb_health = 3
     healthPeriod = 2
     healthRetry = 0  # no retry
     healthRetrySleep = 1
@@ -102,17 +108,12 @@ def test_health_period(accelize_drm, conf_json, cred_json, async_handler, live_s
 
     drm_manager.activate()
     try:
-        nb_health = 3
-        while True:
-            sleep(healthPeriod)
-            context = get_context()
-            if len(context['data']) >= (nb_health + 1):
-                break
+        wait_func_true(lambda: len(get_context()['data']) > nb_health + 1,
+                timeout=(healthPeriod+3) * (nb_health+2), sleep_time=1)
     finally:
         drm_manager.deactivate()
     async_cb.assert_NoError()
-    context = get_context()
-    data_list = context['data']
+    data_list = get_context()['data']
     assert len(data_list) >= nb_health+1
     wait_start = data_list.pop(0)[1]
     for start, end in data_list:
@@ -142,6 +143,7 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
     )
 
     # Set initial context on the live server
+    nb_health = 5
     healthPeriod = 2
     healthRetry = 0  # no retry
     healthRetrySleep = 1
@@ -155,17 +157,12 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
 
     drm_manager.activate()
     try:
-        nb_health = 5
-        while True:
-            sleep(healthPeriod)
-            context = get_context()
-            if len(context['data']) >= (nb_health*2 + 1):
-                break
+        wait_func_true(lambda: len(get_context()['data']) >= (nb_health*2 + 1),
+                timeout=(healthPeriod+3) * (nb_health+2), sleep_time=1)
     finally:
         drm_manager.deactivate()
     async_cb.assert_NoError()
-    context = get_context()
-    data_list = context['data']
+    data_list = get_context()['data']
     assert len(data_list) >= nb_health+1
     wait_start = data_list.pop(0)[1]
     for i, (start, end) in enumerate(data_list):
@@ -195,6 +192,7 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
     )
 
     # Set initial context on the live server
+    nb_health = 3
     healthPeriod = 3
     healthRetrySleep = 1
     context = {'data': list(),
@@ -206,17 +204,12 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
 
     drm_manager.activate()
     try:
-        nb_health = 3
-        while True:
-            sleep(healthPeriod)
-            context = get_context()
-            if len(context['data']) >= nb_health + 1:
-                break
+        wait_func_true(lambda: len(get_context()['data']) >= (nb_health + 1),
+                timeout=(healthPeriod+3) * (nb_health+2), sleep_time=1)
     finally:
         drm_manager.deactivate()
     async_cb.assert_NoError()
-    context = get_context()
-    data_list = context['data']
+    data_list = get_context()['data']
     assert len(data_list) >= nb_health+1
     # Check there is no duplicated health_id
     id_list = tuple(map(lambda x: x[0], data_list))
@@ -251,7 +244,7 @@ def test_health_retry(accelize_drm, conf_json, cred_json, async_handler, live_se
     )
 
     # Set initial context on the live server
-    healthPeriod = 3
+    healthPeriod = 2
     healthRetry = 15
     healthRetrySleep = 1
     context = {'data': list(),
@@ -265,15 +258,12 @@ def test_health_retry(accelize_drm, conf_json, cred_json, async_handler, live_se
 
     drm_manager.activate()
     try:
-        sleep(healthRetry)
-        while not context['exit']:
-            context = get_context()
-            sleep(1)
+        wait_func_true(lambda: get_context()['exit'],
+                timeout=(healthPeriod+3) * (nb_health+2), sleep_time=1)
     finally:
         drm_manager.deactivate()
     async_cb.assert_NoError()
-    context = get_context()
-    data_list = context['data']
+    data_list = get_context()['data']
     data0 = data_list.pop(0)
     assert len(data_list) > 1
     assert data0[0] == 0
@@ -327,16 +317,13 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
         )
         drm_manager.activate()
         try:
-            sleep(retry_timeout)
-            while not context['exit']:
-                context = get_context()
-                sleep(1)
+            wait_func_true(lambda: get_context()['exit'],
+                timeout=(retry_timeout+3) * 2, sleep_time=1)
         finally:
             drm_manager.deactivate()
 
         async_cb.assert_NoError()
-        context = get_context()
-        data_list = context['data']
+        data_list = get_context()['data']
         data0 = data_list.pop(0)
         assert len(data_list) > 1
         assert data0[0] == 0
@@ -372,12 +359,12 @@ def test_health_retry_sleep(accelize_drm, conf_json, cred_json, async_handler, l
     )
 
     # Set initial context on the live server
+    nb_health = 3
     healthPeriod = 3
     healthRetry = 4
     healthRetrySleep = 2
-    nb_run = 3
     context = {'data': list(),
-               'nb_run':nb_run,
+               'nb_health':nb_health,
                'healthPeriod':healthPeriod,
                'healthRetry':healthRetry,
                'healthRetrySleep':healthRetrySleep,
@@ -388,15 +375,12 @@ def test_health_retry_sleep(accelize_drm, conf_json, cred_json, async_handler, l
 
     drm_manager.activate()
     try:
-        sleep(healthRetry)
-        while not context['exit']:
-            context = get_context()
-            sleep(1)
+        wait_func_true(lambda: get_context()['exit'],
+                timeout=(healthPeriod+3) * (nb_health+2), sleep_time=1)
     finally:
         drm_manager.deactivate()
     async_cb.assert_NoError()
-    context = get_context()
-    data_list = context['data']
+    data_list = get_context()['data']
     data0 = data_list.pop(0)
     # Check the retry sleep period is correct
     check_cnt = 0
@@ -453,16 +437,13 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, asy
         )
         drm_manager.activate()
         try:
-            sleep(healthRetry)
-            while not context['exit']:
-                context = get_context()
-                sleep(1)
+            wait_func_true(lambda: get_context()['exit'],
+                timeout=healthRetry*2, sleep_time=1)
         finally:
             drm_manager.deactivate()
 
         async_cb.assert_NoError()
-        context = get_context()
-        data_list = context['data']
+        data_list = get_context()['data']
         data0 = data_list.pop(0)
         nb_sleep_prev = 0
         # Check the retry sleep period is correct
@@ -514,10 +495,8 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
 
     def wait_and_check_on_next_health(drm_manager):
         next_health_id = get_context()['health_id'] + 2
-        while True:
-            if get_context()['health_id'] >= next_health_id:
-                break
-            sleep(1)
+        wait_func_true(lambda: get_context()['health_id'] >= next_health_id,
+                timeout=healthPeriod*3, sleep_time=1)
         session_id = drm_manager.get('session_id')
         saas_data = ws_admin.get_last_metering_information(session_id)
         assert saas_data['session'] == session_id

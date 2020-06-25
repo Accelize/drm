@@ -173,10 +173,11 @@ def create_app(url):
             excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
             headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
             response_json = response.json()
-            if context['cnt'] < context['nb_health']:
+            if context['cnt'] <= context['nb_health']:
                 response_json['metering']['healthPeriod'] = context['healthPeriod']
             else:
                 response_json['metering']['healthPeriod'] = 0
+                context['exit'] = True
             return Response(dumps(response_json), response.status_code, headers)
 
     # test_health_period functions
@@ -363,7 +364,7 @@ def create_app(url):
             response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
             if len(context['data']) >= 1:
                 response.status_code = 408
-            if health_id <= context['nb_run']:
+            if health_id <= context['nb_health']:
                 context['data'].append( (health_id,start,str(datetime.now())) )
             else:
                 context['exit'] = True

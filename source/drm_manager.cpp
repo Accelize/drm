@@ -894,7 +894,7 @@ protected:
         return json_request;
     }
 
-    Json::Value getMeteringWait() const {
+    Json::Value getMeteringRunning() const {
         Json::Value json_request( mHeaderJsonRequest );
         uint32_t numberOfDetectedIps;
         std::string saasChallenge;
@@ -1584,7 +1584,7 @@ protected:
                         } else {
                             go_sleeping = false;
                             Debug( "Requesting new license #{} now", mLicenseCounter );
-                            Json::Value request_json = getMeteringWait();
+                            Json::Value request_json = getMeteringRunning();
 
                             /// Retry Web Service request loop
                             TClock::time_point polling_deadline = TClock::now() + std::chrono::seconds( mLicenseDuration );
@@ -1662,7 +1662,7 @@ protected:
                         Debug( "Updating health parameters with new values: healthPeriod={}, healthRetry={}, healthRetrySleep={}",
                             healthPeriod, mHealthRetryTimeout, healthRetrySleep );
                         if ( mHealthPeriod == 0 ) {
-                            Warning( "Health thread has been disabled" );
+                            Warning( "Health thread is disabled" );
                             break;
                         }
                         if ( mHealthRetryTimeout == 0 ) {
@@ -1751,7 +1751,7 @@ protected:
 
             if ( isReadyForNewLicense() ) {
                 // Create JSON license request
-                Json::Value request_json = getMeteringWait();
+                Json::Value request_json = getMeteringRunning();
 
                 // Send license request to web service
                 Json::Value license_json = getLicense( request_json, mWSRequestTimeout, mWSRetryPeriodShort );
