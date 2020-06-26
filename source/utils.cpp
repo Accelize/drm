@@ -251,9 +251,9 @@ const Json::Value& JVgetOptional( const Json::Value& jval,
     val = val.erase( val.find_last_not_of("\t\n\v\f\r") + 1 );
 
     if ( exists )
-        Debug( "Found parameter '{}' of type {} with value {}", key, typeToString( jvalmember.type() ), val );
+        Debug( "Found parameter '{}' of type {}: return its value {}", key, typeToString( jvalmember.type() ), val );
     else
-        Debug( "Set parameter '{}' of type {} to default value {}", key, typeToString( jvalmember.type() ), val );
+        Debug( "Could not find parameter '{}' of type {}: return default value {}", key, typeToString( jvalmember.type() ), val );
 
     return jvalmember;
 }
