@@ -169,7 +169,7 @@ Json::Value parseJsonString( const std::string &json_string ) {
 
     if ( !reader->parse( json_string.c_str(), json_string.c_str() + json_string.size(),
             &json_node, &parseErr) )
-        Throw( DRM_BadFormat, "Cannot parse JSON string '{}' because {}", json_string, parseErr );
+        Throw( DRM_BadFormat, "Cannot parse JSON string because {}", parseErr );
 
     if ( json_node.empty() || json_node.isNull() )
         Throw( DRM_BadArg, "JSON string is empty" );
