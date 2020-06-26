@@ -966,7 +966,8 @@ protected:
         json_request["saasChallenge"] = saasChallenge;
         if ( meteringFile.size() ) {
             json_request["sessionId"] = meteringFile[0].substr( 0, 16 );
-            checkSessionIDFromDRM( json_request );
+        } else {
+            json_request["sessionId"] = "";
         }
         // Finalize the request with the collected data
         json_request["meteringFile"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
@@ -1641,6 +1642,10 @@ protected:
                     Debug( "Health thread collecting new metering data" );
                     // Get next data from DRM Controller
                     Json::Value request_json = getMeteringData();
+                    // Check session ID
+                    checkSessionIDFromDRM( request_json["sessionId"] );
+                    if ( request_json["meteringFile"].empty() )
+                        Unreachable( "Received an empty metering file from DRM Controller" );  //LCOV_EXCL_LINE
                     // Compute retry period
                     TClock::time_point retry_deadline = TClock::now() + std::chrono::seconds( retry_timeout );
                     // Post next data to server
@@ -1698,7 +1703,7 @@ protected:
     }
 
     void stopThread() {
-        if ( !mThreadKeepAlive.valid() ) {
+        if ( !mThreadKeepAlive.valid() && !mThreadHealth.valid() ) {
             Debug( "Background threads were not running" );
             return;
         }
@@ -1905,6 +1910,7 @@ public:
                 }
                 startSession();
             }
+            mThreadExit = false;
             startLicenseContinuityThread();
             startHealthContinuityThread();
         CATCH_AND_THROW
