@@ -186,7 +186,7 @@ def test_long_to_short_retry_switch(accelize_drm, conf_json, cred_json, async_ha
     data_list = context['data']
     nb_long_retry = int(timeoutSecond / retryLongPeriod)
     nb_short_retry = int(retryLongPeriod / retryShortPeriod)
-    assert (1+nb_long_retry+nb_short_retry-1) <= len(data_list) <= (1+nb_long_retry+nb_short_retry)
+    assert (nb_long_retry+nb_short_retry) <= len(data_list) <= (1+nb_long_retry+nb_short_retry)
     data = data_list.pop(0)    # Remove 'open' request
     assert data[0] == 'open'
     prev_lic = parser.parse(data[2])
