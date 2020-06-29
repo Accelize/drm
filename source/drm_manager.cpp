@@ -941,15 +941,15 @@ protected:
         return json_request;
     }
 
-    Json::Value getMeteringData() const {
+    Json::Value getMeteringHealth() {
         Json::Value json_request( mHeaderJsonRequest );
         uint32_t numberOfDetectedIps;
         std::string saasChallenge;
         std::vector<std::string> meteringFile;
         {
-            Debug( "Waiting metering access mutex from getMeteringData" );
+            Debug( "Waiting metering access mutex from getMeteringHealth" );
             std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
-            Debug( "Acquired metering access mutex from getMeteringData" );
+            Debug( "Acquired metering access mutex from getMeteringHealth" );
 
             Debug( "Build health request #{}", mHealthCounter );
             {
@@ -962,7 +962,7 @@ protected:
                 }
             }
         }
-        Debug( "Released metering access mutex from getMeteringData" );
+        Debug( "Released metering access mutex from getMeteringHealth" );
         json_request["saasChallenge"] = saasChallenge;
         if ( meteringFile.size() ) {
             json_request["sessionId"] = meteringFile[0].substr( 0, 16 );
@@ -1283,6 +1283,19 @@ protected:
                 sleepOrExit( retry_duration );
             }
         }
+    }
+
+    Json::Value performHealth( const uint32_t retry_timeout, const uint32_t retry_sleep) const {
+        // Get next data from DRM Controller
+        Json::Value request_json = getMeteringHealth();
+        // Check session ID
+        checkSessionIDFromDRM( request_json );
+        if ( request_json["meteringFile"].empty() )
+            Unreachable( "Received an empty metering file from DRM Controller" );  //LCOV_EXCL_LINE
+        // Compute retry period
+        TClock::time_point retry_deadline = TClock::now() + std::chrono::seconds( retry_timeout );
+        // Post next data to server
+        return postHealth( request_json, retry_deadline, retry_sleep );
     }
 
     std::string getDesignHash() {
@@ -1622,18 +1635,14 @@ protected:
                 /// Starting async metering post loop
                 while( 1 ) {
 
-                    /// Collect the next metering data
+                    /// Sleep until it's time to collect the next metering data
+                    TClock::time_point wakeup_time = TClock::now() + std::chrono::seconds( mHealthPeriod );
+                    Debug( "Health thread sleeping {} seconds before gathering new metering", mHealthPeriod );
+                    sleepOrExit( wakeup_time );
+
+                    /// Collect the next metering data and send them to the Health Web Service
                     Debug( "Health thread collecting new metering data" );
-                    // Get next data from DRM Controller
-                    Json::Value request_json = getMeteringData();
-                    // Check session ID
-                    checkSessionIDFromDRM( request_json );
-                    if ( request_json["meteringFile"].empty() )
-                        Unreachable( "Received an empty metering file from DRM Controller" );  //LCOV_EXCL_LINE
-                    // Compute retry period
-                    TClock::time_point retry_deadline = TClock::now() + std::chrono::seconds( retry_timeout );
-                    // Post next data to server
-                    Json::Value response_json = postHealth( request_json, retry_deadline, retry_sleep );
+                    Json::Value response_json = performHealth( retry_timeout, retry_sleep );
 
                     if ( response_json != Json::nullValue ) {
                         /// Extract asynchronous metering parameters from response
@@ -1671,11 +1680,6 @@ protected:
                         Debug( "Keep same Health parameters: healthPeriod={}, healthRetry={}, healthRetrySleep={}",
                             healthPeriod, mHealthRetryTimeout, healthRetrySleep );
                     }
-
-                    /// Sleep until it's time to collect the next metering data
-                    TClock::time_point wakeup_time = TClock::now() + std::chrono::seconds( mHealthPeriod );
-                    Debug( "Health thread sleeping {} seconds before gathering new metering", mHealthPeriod );
-                    sleepOrExit( wakeup_time );
                 }
             } catch( const Exception& e ) {
                 if ( e.getErrCode() != DRM_Exit ) {
@@ -1728,6 +1732,12 @@ protected:
             // Send request and receive new license
             Json::Value license_json = getLicense( request_json, mWSRequestTimeout, mWSRetryPeriodShort );
             setLicense( license_json );
+
+            /// Extract asynchronous health parameters from response
+            Json::Value metering_node = JVgetOptional( license_json, "metering", Json::objectValue, Json::nullValue );
+            mHealthPeriod = JVgetOptional( license_json, "healthPeriod", Json::uintValue, mHealthPeriod ).asUInt();
+            mHealthRetryTimeout = JVgetOptional( license_json, "healthRetry", Json::uintValue, mHealthRetryTimeout ).asUInt();
+            mHealthRetrySleep = JVgetOptional( license_json, "healthRetrySleep", Json::uintValue, mHealthRetrySleep ).asUInt();
 
             // Check if an error occurred
             checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 5 ) );
@@ -1788,6 +1798,7 @@ protected:
     void pauseSession() {
         stopThread();
         mSecurityStop = false;
+        performHealth(mWSRequestTimeout, 0);
         Info( "DRM session paused." );
     }
 
@@ -2031,7 +2042,7 @@ public:
                         // No "int64_t" support with JsonCpp < 1.7.5
                         unsigned long long meteringData = 0;
 #endif
-                        Json::Value json_request = getMeteringData();
+                        Json::Value json_request = getMeteringHealth();
                         std::string meteringFileStr = json_request["meteringFile"].asString();
                         if  ( meteringFileStr.size() ) {
                             std::string meteringDataStr = meteringFileStr.substr( 80, 16 );

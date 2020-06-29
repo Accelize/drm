@@ -57,6 +57,9 @@ def create_app(url):
         response_json = response.json()
         return Response(dumps(response_json), response.status_code, headers)
 
+    ##############################################################################
+    # test_drm_license_error.py
+
     # test_header_error_on_key functions
     @app.route('/test_header_error_on_key/o/token/', methods=['GET', 'POST'])
     def otoken__test_header_error_on_key():
@@ -151,6 +154,9 @@ def create_app(url):
                 if context['request_cnt'] == 2:
                    context['replay'] = response
                 return Response(response.content, response.status_code, headers)
+
+    ##############################################################################
+    # test_async_health.py
 
     # test_health_period_disabled functions
     @app.route('/test_health_period_disabled/o/token/', methods=['GET', 'POST'])
@@ -432,6 +438,48 @@ def create_app(url):
             context['health_id']= health_id
             return Response(dumps(response_json), response.status_code, headers)
 
+
+    # test_segment_index functions
+    @app.route('/test_segment_index/o/token/', methods=['GET', 'POST'])
+    def otoken__test_segment_index():
+        return redirect(request.url_root + '/o/token/', code=307)
+
+    @app.route('/test_segment_index/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_segment_index():
+        global context
+        global lock
+        with lock:
+            new_url = request.url.replace(request.url_root+'test_segment_index', url)
+            request_json = request.get_json()
+            context['genlic_cnt'] += 1
+            response = post(new_url, json=request_json, headers=request.headers)
+            assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json, indent=4, sort_keys=True), response.status_code, response.text)
+            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+            response_json = response.json()
+            response_json['metering']['timeoutSecond'] = context['timeoutSecond']
+            return Response(dumps(response_json), response.status_code, headers)
+
+    @app.route('/test_segment_index/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_segment_index():
+        global context
+        global lock
+        with lock:
+            new_url = request.url.replace(request.url_root+'test_segment_index', url)
+            request_json = request.get_json()
+            context['health_cnt'] += 1
+            response = post(new_url, json=request_json, headers=request.headers)
+            assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json, indent=4, sort_keys=True), response.status_code, response.text)
+            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+            response_json = response.json()
+            response_json['metering']['healthPeriod'] = context['healthPeriod']
+            response_json['metering']['healthRetry'] = context['healthRetry']
+            return Response(dumps(response_json), response.status_code, headers)
+
+    ##############################################################################
+    # test_retry_mechanism.py
+
     # test_long_to_short_retry_switch functions
     @app.route('/test_long_to_short_retry_switch/o/token/', methods=['GET', 'POST'])
     def otoken__test_long_to_short_retry_switch():
@@ -463,6 +511,9 @@ def create_app(url):
             response_json['metering']['timeoutSecond'] = timeoutSecond
             context['data'].append( (request_type,start,str(datetime.now())) )
             return Response(dumps(response_json), response.status_code, headers)
+
+    ##############################################################################
+    # test_unittest_on_hw.py
 
     # test_http_header_api_version functions
     @app.route('/test_http_header_api_version/o/token/', methods=['GET', 'POST'])

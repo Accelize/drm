@@ -55,16 +55,16 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
         drm_manager.activate()
         try:
             wait_func_true(lambda: get_context()['cnt'] > 0,
-                    timeout=healthPeriod * nb_health, sleep_time=1)
+                    timeout=healthPeriod * nb_health)
             assert drm_manager.get('health_period') == healthPeriod
             wait_func_true(lambda: get_context()['exit'],
-                    timeout=healthPeriod * nb_health, sleep_time=1)
+                    timeout=healthPeriod * nb_health)
             sleep(healthPeriod * 2)
             assert drm_manager.get('health_period') == 0
             assert get_context()['cnt'] == nb_health + 1
         finally:
             drm_manager.deactivate()
-        del drm_manager
+            del drm_manager
         async_cb.assert_NoError()
         assert wait_func_true(lambda: isfile(logpath), 10)
         with open(logpath, 'rt') as f:
@@ -113,7 +113,7 @@ def test_health_period(accelize_drm, conf_json, cred_json, async_handler, live_s
     drm_manager.activate()
     try:
         wait_func_true(lambda: len(get_context()['data']) > nb_health + 1,
-                timeout=(healthPeriod+3) * (nb_health+2), sleep_time=1)
+                timeout=(healthPeriod+3) * (nb_health+2))
     finally:
         drm_manager.deactivate()
     async_cb.assert_NoError()
@@ -164,7 +164,7 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
     drm_manager.activate()
     try:
         wait_func_true(lambda: len(get_context()['data']) >= (nb_health*2 + 1),
-                timeout=(healthPeriod+3) * (nb_health+2), sleep_time=1)
+                timeout=(healthPeriod+3) * (nb_health+2))
     finally:
         drm_manager.deactivate()
     async_cb.assert_NoError()
@@ -213,7 +213,7 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
     drm_manager.activate()
     try:
         wait_func_true(lambda: len(get_context()['data']) >= (nb_health + 1),
-                timeout=(healthPeriod+3) * (nb_health+2), sleep_time=1)
+                timeout=(healthPeriod+3) * (nb_health+2))
     finally:
         drm_manager.deactivate()
     async_cb.assert_NoError()
@@ -268,7 +268,7 @@ def test_health_retry(accelize_drm, conf_json, cred_json, async_handler, live_se
     drm_manager.activate()
     try:
         wait_func_true(lambda: get_context()['exit'],
-                timeout=healthRetry*2, sleep_time=1)
+                timeout=healthRetry*2)
     finally:
         drm_manager.deactivate()
     async_cb.assert_NoError()
@@ -329,7 +329,7 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
         drm_manager.activate()
         try:
             wait_func_true(lambda: get_context()['exit'],
-                timeout=(retry_timeout+3) * 2, sleep_time=1)
+                timeout=(retry_timeout+3) * 2)
         finally:
             drm_manager.deactivate()
 
@@ -388,7 +388,7 @@ def test_health_retry_sleep(accelize_drm, conf_json, cred_json, async_handler, l
     drm_manager.activate()
     try:
         wait_func_true(lambda: get_context()['exit'],
-                timeout=(healthPeriod+3) * (nb_health+2), sleep_time=1)
+                timeout=(healthPeriod+3) * (nb_health+2))
     finally:
         drm_manager.deactivate()
     async_cb.assert_NoError()
@@ -452,7 +452,7 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, asy
         drm_manager.activate()
         try:
             wait_func_true(lambda: get_context()['exit'],
-                timeout=healthRetry*2, sleep_time=1)
+                timeout=healthRetry*2)
         finally:
             drm_manager.deactivate()
 
@@ -508,14 +508,13 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
     set_context(context)
     assert get_context() == context
 
-    def wait_and_check_on_next_health(drm_manager):
-        next_health_id = get_context()['health_id'] + 2
+    def wait_and_check_on_next_health(drm):
+        next_health_id = get_context()['health_id'] + 1
         wait_func_true(lambda: get_context()['health_id'] >= next_health_id,
-                timeout=healthPeriod*3, sleep_time=1)
-        session_id = drm_manager.get('session_id')
+                timeout=healthPeriod*3)
         saas_data = ws_admin.get_last_metering_information(session_id)
-        assert saas_data['session'] == session_id
-        assert saas_data['metering'] == drm_manager.get('metered_data')
+        assert saas_data['session'] == drm.get('session_id')
+        assert saas_data['metering'] == drm.get('metered_data')
 
     drm_manager.activate()
     try:
@@ -539,3 +538,78 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
     finally:
         drm_manager.deactivate()
     async_cb.assert_NoError()
+
+
+@ytest.mark.skip(reason='HDK is not yet ready to support synch and async metering request')
+@pytest.mark.no_parallel
+def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_server):
+    """
+    Test the DRM Controller capacity to handle stressfully health and license requests
+    """
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    async_cb.reset()
+
+    conf_json.reset()
+    conf_json['licensing']['url'] = request.url + 'test_saturate_health_and_genlicense'
+    logpath = realpath("./test_segment_index.%d.log" % randrange(0xFFFFFFFF))
+    conf_json['settings']['log_file_verbosity'] = 1
+    conf_json['settings']['log_file_type'] = 1
+    conf_json['settings']['log_file_path'] = logpath
+    conf_json.save()
+
+    try:
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+
+        # Set initial context on the live server
+        nb_genlic = 4
+        healthPeriod = 1
+        healthRetry = 0  # no retry
+        timeoutSecond = 6
+        context = {'health_cnt':0,
+                   'genlic_cnt':0,
+                   'healthPeriod':healthPeriod,
+                   'healthRetry':healthRetry,
+                   'timeoutSecond':timeoutSecond
+        }
+        set_context(context)
+        assert get_context() == context
+
+        drm_manager.activate()
+        try:
+            wait_func_true(lambda: get_context()['nb_genlic']) >= nb_genlic,
+                    timeout=(nb_genlic+1)*timeoutSecond)
+        finally:
+            drm_manager.deactivate()
+            del drm_manager
+        async_cb.assert_NoError()
+        data_list = get_context()['data']
+        assert len(data_list) > nb_genlic
+        assert wait_func_true(lambda: isfile(logpath), 10)
+        with open(logpath, 'rt') as f:
+            log_content = f.read()
+        segment_idx_expected = 0
+        for m in findall(r'"meteringFile"\s*:\s*"([^"]*)"', log_content):
+            assert len(m) > 0
+            session_id = m[0:16]
+            close_flag = m[20]
+            segment_idx = int(m[24:32],16)
+            if session_id == "0000000000000000":
+                assert close_flag == '0'
+                assert segment_idx == 0
+            assert segment_idx == segment_idx_expected
+            segment_idx_expected += 1
+            if close_flag == '1':
+                segment_idx_expected = 0
+    finally:
+        if isfile(logpath):
+            remove(logpath)
+
+
+
