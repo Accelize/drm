@@ -399,6 +399,7 @@ def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, cred_json
     activators.autotest(is_activated=True)
     async_cb.assert_NoError()
     sleep(1)
+
     # Create new object
     drm_manager2 = accelize_drm.DrmManager(
         conf_json.path,
@@ -408,16 +409,17 @@ def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, cred_json
         async_cb.callback
     )
     assert drm_manager1 != drm_manager2
-    assert drm_manager2.get('license_duration') == 30
+    assert drm_manager2.get('license_duration') == lic_duration
     assert drm_manager2.get('session_status')
     assert drm_manager2.get('license_status')
     activators.autotest(is_activated=True)
-    assert drm_manager2.get('session_id') == session_id
+    assert drm_manager2.get('session_id') == ''
     # Resume session
     drm_manager2.activate(True)
     assert drm_manager2.get('session_status')
     assert drm_manager2.get('license_status')
     activators.autotest(is_activated=True)
+    assert drm_manager2.get('session_id') == session_id
     assert drm_manager2.get('metered_data') == 10
     # Wait for license renewal
     wait_deadline(start, lic_duration+2)
