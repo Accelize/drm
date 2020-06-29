@@ -512,6 +512,7 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
         next_health_id = get_context()['health_id'] + 1
         wait_func_true(lambda: get_context()['health_id'] >= next_health_id,
                 timeout=healthPeriod*3)
+        session_id = drm.get('session_id')
         saas_data = ws_admin.get_last_metering_information(session_id)
         assert saas_data['session'] == drm.get('session_id')
         assert saas_data['metering'] == drm.get('metered_data')
@@ -540,7 +541,7 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
     async_cb.assert_NoError()
 
 
-@ytest.mark.skip(reason='HDK is not yet ready to support synch and async metering request')
+@pytest.mark.skip(reason='HDK is not yet ready to support synch and async metering request')
 @pytest.mark.no_parallel
 def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
@@ -583,7 +584,7 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_s
 
         drm_manager.activate()
         try:
-            wait_func_true(lambda: get_context()['nb_genlic']) >= nb_genlic,
+            wait_func_true(lambda: get_context()['nb_genlic'] >= nb_genlic,
                     timeout=(nb_genlic+1)*timeoutSecond)
         finally:
             drm_manager.deactivate()

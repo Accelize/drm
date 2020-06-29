@@ -183,7 +183,7 @@ protected:
     std::future<void> mThreadKeepAlive;
 
     // thread to maintain health alive
-    uint32_t mHealthCounter = 0;
+    mutable uint32_t mHealthCounter = 0;
     std::future<void> mThreadHealth;
 
     // All thread exit elements
@@ -941,7 +941,7 @@ protected:
         return json_request;
     }
 
-    Json::Value getMeteringHealth() {
+    Json::Value getMeteringHealth() const {
         Json::Value json_request( mHeaderJsonRequest );
         uint32_t numberOfDetectedIps;
         std::string saasChallenge;
@@ -1285,7 +1285,7 @@ protected:
         }
     }
 
-    Json::Value performHealth( const uint32_t retry_timeout, const uint32_t retry_sleep) const {
+    Json::Value performHealth( const uint32_t retry_timeout, const uint32_t retry_sleep) {
         // Get next data from DRM Controller
         Json::Value request_json = getMeteringHealth();
         // Check session ID
@@ -1658,7 +1658,7 @@ protected:
                             mHealthRetryTimeout = healthRetryTimeout;
                             mHealthRetrySleep = healthRetrySleep;
                             Debug( "Updating Health parameters with new values: healthPeriod={}, healthRetry={}, healthRetrySleep={}",
-                                healthPeriod, mHealthRetryTimeout, healthRetrySleep );
+                                mHealthPeriod, mHealthRetryTimeout, mHealthRetrySleep );
                             if ( mHealthPeriod == 0 ) {
                                 Warning( "Health thread is disabled" );
                                 break;
@@ -1674,11 +1674,11 @@ protected:
                             }
                         } else {
                             Debug( "Keep same Health parameters: healthPeriod={}, healthRetry={}, healthRetrySleep={}",
-                                healthPeriod, mHealthRetryTimeout, healthRetrySleep );
+                                mHealthPeriod, mHealthRetryTimeout, mHealthRetrySleep );
                         }
                     } else {
                         Debug( "Keep same Health parameters: healthPeriod={}, healthRetry={}, healthRetrySleep={}",
-                            healthPeriod, mHealthRetryTimeout, healthRetrySleep );
+                            mHealthPeriod, mHealthRetryTimeout, mHealthRetrySleep );
                     }
                 }
             } catch( const Exception& e ) {
