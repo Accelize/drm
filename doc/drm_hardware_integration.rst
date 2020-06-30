@@ -191,15 +191,15 @@ Add the following ports to the original IP core:
        - Size
        - Description
      * - ip_core_aclk
-       - in
+       - out
        - 1
        - IP Core clock domain
      * - activation_code
-       - out
+       - in
        - 128
        - Expose the Activation Code corresponding the current license key (synchronous to ip_core_aclk)
      * - metering_event
-       - in
+       - out
        - 1
        - A 1 clock cycle pulse (synchronous to ip_core_aclk) increments the Metering data counter
 

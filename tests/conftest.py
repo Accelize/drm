@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """Configure Pytest"""
+import pytest
+
 from copy import deepcopy
-from json import dump, load
+from json import dump, load, dumps
 from os import environ, getpid, listdir, remove, makedirs, getcwd, urandom
 from os.path import basename, dirname, expanduser, isdir, isfile, join, \
     realpath, splitext
@@ -11,9 +13,7 @@ from datetime import datetime
 from time import time, sleep
 from shutil import rmtree
 from datetime import datetime, timedelta
-
-import pytest
-
+from tests.proxy import create_app, get_context, set_context
 from tests.ws_admin_functions import WSListFunction
 
 
@@ -714,7 +714,7 @@ def conf_json(pytestconfig, tmpdir):
     if pytestconfig.getoption("logfile"):
         log_param['log_file_type'] = 1
         log_param['log_file_path'] = realpath("./drmlib_t%f_pid%d.log" % (time(), getpid()))
-        log_param['log_file_verbosity'] = pytestconfig.getoption("library_verbosity")
+        log_param['log_file_verbosity'] = 1
     json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param)
     json_conf.save()
     return json_conf
@@ -835,7 +835,7 @@ def wait_func_true(func, timeout=None, sleep_time=1):
     start = datetime.now()
     while not func():
         if timeout:
-            if (datetime.now() - start) > timedelta(seconds=sleep_time):
+            if (datetime.now() - start) > timedelta(seconds=timeout):
                 return False
         sleep(sleep_time)
     return True
@@ -1015,41 +1015,13 @@ def exec_func(accelize_drm, cred_json, conf_json):
 # Proxy fixture
 #--------------
 
-class EndpointAction:
+@pytest.fixture(scope='session')
+def app(pytestconfig):
+    url = _LICENSING_SERVERS[pytestconfig.getoption("server")]
+    app = create_app(url)
+    app.debug = pytestconfig.getoption("proxy_debug")
+    return app
 
-    def __init__(self, action):
-        self.action = action
-
-    def __call__(self, *kargs, **kwargs):
-        return self.action(*kargs, **kwargs)
-        if isinstance(resp,Response):
-            return resp
-        return Response(msg, status=status, headers={})
-
-
-class FlaskAppWrapper:
-
-    def __init__(self, name=__name__, debug=False):
-        from flask import Flask, session
-        self.app = Flask(name)
-        self.app.config['SECRET_KEY'] = 'super secret'
-        self.debug = debug
-        environ['WERKZEUG_RUN_MAIN'] = 'true'
-        environ['FLASK_ENV'] = 'development'
-
-    def run(self, host='127.0.0.1', port=5000):
-        self.host = host
-        self.port = port
-        self.app.run(host=self.host, port=self.port, debug=self.debug)
-
-    def add_endpoint(self, rule=None, endpoint=None, handler=None, **kwargs):
-        self.app.add_url_rule(rule, endpoint, EndpointAction(handler), **kwargs)
-
-
-@pytest.fixture
-def fake_server(accelize_drm):
-    name = "fake_server_%d" % randint(1,0xFFFFFFFF)
-    return FlaskAppWrapper(name, accelize_drm.pytest_proxy_debug)
 
 
 #-------------------
@@ -1083,3 +1055,4 @@ class ArtifactFactory:
 @pytest.fixture
 def artifacts(accelize_drm):
     return ArtifactFactory(accelize_drm.pytest_artifacts_dir)
+

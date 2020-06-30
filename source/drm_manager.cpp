@@ -183,7 +183,7 @@ protected:
     std::future<void> mThreadKeepAlive;
 
     // thread to maintain health alive
-    uint32_t mHealthCounter = 0;
+    mutable uint32_t mHealthCounter = 0;
     std::future<void> mThreadHealth;
 
     // All thread exit elements
@@ -968,6 +968,8 @@ protected:
         std::string saasChallenge;
         std::vector<std::string> meteringFile;
 
+        Debug( "Build license request #{} to create new session", mLicenseCounter );
+
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
         // Request challenge and metering info for first request
         checkDRMCtlrRet( getDrmController().initialization( numberOfDetectedIps, saasChallenge, meteringFile ) );
@@ -978,9 +980,6 @@ protected:
             json_request["drm_frequency"] = mFrequencyCurr;
         json_request["mode"] = (uint8_t)mLicenseType;
 
-        mLicenseCounter = strtoull( meteringFile[0].substr( 24, 8 ).c_str(), nullptr, 16 );
-        Debug( "Built license request #{} to create new session", mLicenseCounter );
-
         return json_request;
     }
 
@@ -990,6 +989,7 @@ protected:
         std::string saasChallenge;
         std::vector<std::string> meteringFile;
 
+        Debug( "Build license request #{} to maintain current session", mLicenseCounter );
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
 
         // Check if an error occurred
@@ -1004,10 +1004,6 @@ protected:
             json_request["drm_frequency"] = mFrequencyCurr;
         json_request["meteringFile"] = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
         json_request["request"] = "running";
-
-        mLicenseCounter = strtoull( meteringFile[0].substr( 24, 8 ).c_str(), nullptr, 16 );
-        Debug( "Built license request #{} to maintain current session", mLicenseCounter );
-
         return json_request;
     }
 
@@ -1017,6 +1013,7 @@ protected:
         std::string saasChallenge;
         std::vector<std::string> meteringFile;
 
+        Debug( "Build license request #{} to stop current session", mLicenseCounter );
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
 
         // Request challenge and metering info for first request
@@ -1030,22 +1027,18 @@ protected:
             json_request["drm_frequency"] = mFrequencyCurr;
         json_request["meteringFile"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
         json_request["request"] = "close";
-
-        mLicenseCounter = strtoull( meteringFile[0].substr( 24, 8 ).c_str(), nullptr, 16 );
-        Debug( "Built license request #{} to stop current session", mLicenseCounter );
-
         return json_request;
     }
 
-    Json::Value getMeteringData() const {
+    Json::Value getMeteringHealth() const {
         Json::Value json_request( mHeaderJsonRequest );
         uint32_t numberOfDetectedIps;
         std::string saasChallenge;
         std::vector<std::string> meteringFile;
         {
-            Debug( "Waiting metering access mutex from getMeteringData" );
+            Debug( "Waiting metering access mutex from getMeteringHealth" );
             std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
-            Debug( "Acquired metering access mutex from getMeteringData" );
+            Debug( "Acquired metering access mutex from getMeteringHealth" );
 
             Debug( "Build health request #{}", mHealthCounter );
             {
@@ -1058,33 +1051,19 @@ protected:
                 }
             }
         }
-        Debug( "Released metering access mutex from getMeteringData" );
+        Debug( "Released metering access mutex from getMeteringHealth" );
         json_request["saasChallenge"] = saasChallenge;
         if ( meteringFile.size() ) {
             json_request["sessionId"] = meteringFile[0].substr( 0, 16 );
-            checkSessionIDFromDRM( json_request );
+        } else {
+            json_request["sessionId"] = "";
         }
         // Finalize the request with the collected data
         json_request["meteringFile"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
+        json_request["drm_frequency"] = mFrequencyCurr;
         json_request["request"] = "health";
-        json_request["health_id"] = mHealthCounter;
+        json_request["health_id"] = mHealthCounter++;
         return json_request;
-    }
-
-    uint64_t getMeteringDataInt64() const {
-        Json::Value json_request = getMeteringData();
-        uint64_t meteringData = 0;
-        std::string meteringFileStr = json_request["meteringFile"].asString();
-        if  ( meteringFileStr.size() ) {
-            std::string meteringDataStr = meteringFileStr.substr( 80, 16 );
-            errno = 0;
-            meteringData = strtoull( meteringDataStr.c_str(), nullptr, 16 );
-            if ( errno ) {
-                Throw( DRM_CtlrError, "Could not convert string '{}' to unsigned long long.",
-                       meteringDataStr );
-            }
-        }
-        return meteringData;
     }
 
     // Get common info
@@ -1182,7 +1161,7 @@ protected:
                 lic_attempt = 0;
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
                     // Reached timeout
-                    Throw( e.getErrCode(), "Timeout on Authentication request after {} attempts", oauth_attempt );
+                    Throw( DRM_WSError, "Timeout on Authentication request after {} attempts", oauth_attempt );
                 }
                 if ( e.getErrCode() != DRM_WSMayRetry ) {
                     throw;
@@ -1221,7 +1200,7 @@ protected:
                 oauth_attempt = 0;
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
                     // Reached timeout
-                    Throw( e.getErrCode(), "Timeout on License request after {} attempts", lic_attempt );
+                    Throw( DRM_WSError, "Timeout on License request after {} attempts", lic_attempt );
                 }
                 if ( e.getErrCode() != DRM_WSMayRetry ) {
                     throw;
@@ -1331,9 +1310,10 @@ protected:
                 Debug( "DRM Controller is in Node-Locked license mode" );
         }
         Debug( "Provisioned license #{} on DRM controller", mLicenseCounter );
+        mLicenseCounter ++;
     }
 
-    Json::Value getHealth( const Json::Value& request_json, const TClock::time_point& deadline,
+    Json::Value postHealth( const Json::Value& request_json, const TClock::time_point& deadline,
             const uint32_t& retry_period = 0 ) {
 
         TClock::duration retry_duration = std::chrono::seconds( retry_period );
@@ -1398,6 +1378,19 @@ protected:
                 sleepOrExit( retry_duration );
             }
         }
+    }
+
+    Json::Value performHealth( const uint32_t retry_timeout, const uint32_t retry_sleep) {
+        // Get next data from DRM Controller
+        Json::Value request_json = getMeteringHealth();
+        // Check session ID
+        checkSessionIDFromDRM( request_json );
+        if ( request_json["meteringFile"].empty() )
+            Unreachable( "Received an empty metering file from DRM Controller" );  //LCOV_EXCL_LINE
+        // Compute retry period
+        TClock::time_point retry_deadline = TClock::now() + std::chrono::seconds( retry_timeout );
+        // Post next data to server
+        return postHealth( request_json, retry_deadline, retry_sleep );
     }
 
     std::string getDesignHash() {
@@ -1670,13 +1663,12 @@ protected:
 
                 /// Starting license request loop
                 while( 1 ) {
+                    if ( isStopRequested() )
+                        break;
                     {
                         Debug( "Waiting metering access mutex from licensing thread" );
                         std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
                         Debug( "Acquired metering access mutex from licensing thread" );
-
-                        if ( isStopRequested() )
-                            break;
 
                         // Check DRM licensing queue
                         if ( !isReadyForNewLicense() ) {
@@ -1684,7 +1676,7 @@ protected:
 
                         } else {
                             go_sleeping = false;
-                            Debug( "Requesting new license now" );
+                            Debug( "Requesting new license #{} now", mLicenseCounter );
                             Json::Value request_json = getMeteringRunning();
 
                             /// Retry Web Service request loop
@@ -1702,7 +1694,7 @@ protected:
                         // DRM licensing queue is full, wait until current license expires
                         uint32_t licenseTimeLeft = getCurrentLicenseTimeLeft();
                         TClock::duration wait_duration = std::chrono::seconds( licenseTimeLeft + 1 );
-                        Debug( "Sleeping for {} seconds before checking DRM Controller readiness for a new license", licenseTimeLeft );
+                        Debug( "License thread sleeping {} seconds before checking DRM Controller readiness", licenseTimeLeft );
                         sleepOrExit( wait_duration );
                     }
                 }
@@ -1738,52 +1730,51 @@ protected:
                 /// Starting async metering post loop
                 while( 1 ) {
 
-                    /// Collect the next metering data
-                    Debug( "Health thread collecting new metering data" );
-                    // Get next data from DRM Controller
-                    Json::Value request_json = getMeteringData();
-                    // Compute retry period
-                    TClock::time_point retry_deadline = TClock::now() + std::chrono::seconds( retry_timeout );
-                    // Post next data to server
-                    Json::Value response_json = getHealth( request_json, retry_deadline, retry_sleep );
-                    mHealthCounter ++;
-
-                    /// Extract asynchronous metering parameters from response
-                    Json::Value metering_node = JVgetOptional( response_json, "metering", Json::objectValue, Json::nullValue );
-                    uint32_t healthPeriod = JVgetOptional( metering_node, "healthPeriod", Json::uintValue, mHealthPeriod ).asUInt();
-                    uint32_t healthRetryTimeout = JVgetOptional( metering_node, "healthRetry", Json::uintValue, mHealthRetryTimeout ).asUInt();
-                    uint32_t healthRetrySleep = JVgetOptional( metering_node, "healthRetrySleep", Json::uintValue, mHealthRetrySleep ).asUInt();
-
-                    /// Reajust async metering thread if needed
-                    if ( ( healthPeriod != mHealthPeriod ) || ( healthRetryTimeout != mHealthRetryTimeout)
-                            || ( healthRetrySleep != mHealthRetrySleep) ) {
-                        mHealthPeriod = healthPeriod;
-                        mHealthRetryTimeout = healthRetryTimeout;
-                        mHealthRetrySleep = healthRetrySleep;
-                        Debug( "Updating health parameters with new values: healthPeriod={}, healthRetry={}, healthRetrySleep={}",
-                            healthPeriod, mHealthRetryTimeout, healthRetrySleep );
-                        if ( mHealthPeriod == 0 ) {
-                            Warning( "Health thread has been disabled" );
-                            break;
-                        }
-                        if ( mHealthRetryTimeout == 0 ) {
-                            retry_timeout = mWSRequestTimeout;
-                            retry_sleep = 0;
-                            Debug( "Health retry is disabled" );
-                        } else {
-                            retry_timeout = mHealthRetryTimeout;
-                            retry_sleep = mHealthRetrySleep;
-                            Debug( "Health retry is enabled" );
-                        }
-                    } else {
-                        Debug( "Health parameters are unchanged: healthPeriod={}, healthRetry={}, healthRetrySleep={}",
-                            healthPeriod, mHealthRetryTimeout, healthRetrySleep );
-                    }
-
                     /// Sleep until it's time to collect the next metering data
                     TClock::time_point wakeup_time = TClock::now() + std::chrono::seconds( mHealthPeriod );
-                    Debug( "Health thread sleeping for {} seconds", mHealthPeriod );
+                    Debug( "Health thread sleeping {} seconds before gathering new metering", mHealthPeriod );
                     sleepOrExit( wakeup_time );
+
+                    /// Collect the next metering data and send them to the Health Web Service
+                    Debug( "Health thread collecting new metering data" );
+                    Json::Value response_json = performHealth( retry_timeout, retry_sleep );
+
+                    if ( response_json != Json::nullValue ) {
+                        /// Extract asynchronous metering parameters from response
+                        Json::Value metering_node = JVgetOptional( response_json, "metering", Json::objectValue, Json::nullValue );
+                        uint32_t healthPeriod = JVgetOptional( metering_node, "healthPeriod", Json::uintValue, mHealthPeriod ).asUInt();
+                        uint32_t healthRetryTimeout = JVgetOptional( metering_node, "healthRetry", Json::uintValue, mHealthRetryTimeout ).asUInt();
+                        uint32_t healthRetrySleep = JVgetOptional( metering_node, "healthRetrySleep", Json::uintValue, mHealthRetrySleep ).asUInt();
+
+                        /// Reajust async metering thread if needed
+                        if ( ( healthPeriod != mHealthPeriod ) || ( healthRetryTimeout != mHealthRetryTimeout)
+                                || ( healthRetrySleep != mHealthRetrySleep) ) {
+                            mHealthPeriod = healthPeriod;
+                            mHealthRetryTimeout = healthRetryTimeout;
+                            mHealthRetrySleep = healthRetrySleep;
+                            Debug( "Updating Health parameters with new values: healthPeriod={}, healthRetry={}, healthRetrySleep={}",
+                                mHealthPeriod, mHealthRetryTimeout, mHealthRetrySleep );
+                            if ( mHealthPeriod == 0 ) {
+                                Warning( "Health thread is disabled" );
+                                break;
+                            }
+                            if ( mHealthRetryTimeout == 0 ) {
+                                retry_timeout = mWSRequestTimeout;
+                                retry_sleep = 0;
+                                Debug( "Health retry is disabled" );
+                            } else {
+                                retry_timeout = mHealthRetryTimeout;
+                                retry_sleep = mHealthRetrySleep;
+                                Debug( "Health retry is enabled" );
+                            }
+                        } else {
+                            Debug( "Keep same Health parameters: healthPeriod={}, healthRetry={}, healthRetrySleep={}",
+                                mHealthPeriod, mHealthRetryTimeout, mHealthRetrySleep );
+                        }
+                    } else {
+                        Debug( "Keep same Health parameters: healthPeriod={}, healthRetry={}, healthRetrySleep={}",
+                            mHealthPeriod, mHealthRetryTimeout, mHealthRetrySleep );
+                    }
                 }
             } catch( const Exception& e ) {
                 if ( e.getErrCode() != DRM_Exit ) {
@@ -1799,13 +1790,13 @@ protected:
     }
 
     void stopThread() {
-        if ( !mThreadKeepAlive.valid() ) {
-            Debug( "Background threads were not running" );
+        if ( ( mThreadKeepAlive.valid() == 0 ) && ( mThreadHealth.valid() == 0 ) ) {
+            Debug( "Background threads are not running" );
             return;
         }
         {
             std::lock_guard<std::mutex> lock( mThreadExitMtx );
-            Debug( "Stop flag of thread is set" );
+            Debug( "Set Stop flag for threads" );
             mThreadExit = true;
         }
         mThreadExitCondVar.notify_all();
@@ -1814,7 +1805,7 @@ protected:
         Debug( "Background threads stopped" );
         {
             std::lock_guard<std::mutex> lock( mThreadExitMtx );
-            Debug( "Stop flag of threads is cleared" );
+            Debug( "Clear Stop flag for threads" );
             mThreadExit = false;
         }
     }
@@ -1828,12 +1819,20 @@ protected:
             if ( !isReadyForNewLicense() )
                 Unreachable( "To start a new session the DRM Controller shall be ready to accept a new license" ); //LCOV_EXCL_LINE
 
+            mLicenseCounter = 0;
+
             // Build start request message for new license
             Json::Value request_json = getMeteringStart();
 
             // Send request and receive new license
             Json::Value license_json = getLicense( request_json, mWSRequestTimeout, mWSRetryPeriodShort );
             setLicense( license_json );
+
+            /// Extract asynchronous health parameters from response
+            Json::Value metering_node = JVgetOptional( license_json, "metering", Json::objectValue, Json::nullValue );
+            mHealthPeriod = JVgetOptional( license_json, "healthPeriod", Json::uintValue, mHealthPeriod ).asUInt();
+            mHealthRetryTimeout = JVgetOptional( license_json, "healthRetry", Json::uintValue, mHealthRetryTimeout ).asUInt();
+            mHealthRetrySleep = JVgetOptional( license_json, "healthRetrySleep", Json::uintValue, mHealthRetrySleep ).asUInt();
 
             // Check if an error occurred
             checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 5 ) );
@@ -1875,24 +1874,26 @@ protected:
             std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
             Debug( "Acquired metering access mutex from stopSession" );
             request_json = getMeteringStop();
+
+            // Send last metering information
+            Json::Value license_json = getLicense( request_json, mWSRequestTimeout, mWSRetryPeriodShort );
+            checkSessionIDFromWS( license_json );
+            Debug( "Session ID {} stopped and last metering data uploaded", mSessionID );
         }
         Debug( "Released metering access mutex from stopSession" );
-
-        // Send last metering information
-        Json::Value license_json = getLicense( request_json, mWSRequestTimeout, mWSRetryPeriodShort );
-        checkSessionIDFromWS( license_json );
-        Debug( "Session ID {} stopped and last metering data uploaded", mSessionID );
 
         /// Clear Session IS
         Debug( "Clearing session ID: {}", mSessionID );
         mSessionID = std::string("");
 
         Info( "DRM session stopped." );
+        mSecurityStop = false;
     }
 
     void pauseSession() {
         stopThread();
         mSecurityStop = false;
+        performHealth(mWSRequestTimeout, 0);
         Info( "DRM session paused." );
     }
 
@@ -1989,7 +1990,6 @@ public:
                 Throw( DRM_BadUsage, "DRM Controller is locked in Node-Locked licensing mode: "
                                     "To use other modes you must reprogram the FPGA device." );
             }
-            mSecurityStop = true;
             if ( isRunning && resume_session_request ) {
                 resumeSession();
             } else {
@@ -2004,8 +2004,10 @@ public:
                 }
                 startSession();
             }
+            mThreadExit = false;
             startLicenseContinuityThread();
             startHealthContinuityThread();
+            mSecurityStop = true;
         CATCH_AND_THROW
     }
 
@@ -2130,15 +2132,25 @@ public:
                     }
                     case ParameterKey::metered_data: {
 #if ((JSONCPP_VERSION_MAJOR ) >= 1 and ((JSONCPP_VERSION_MINOR) > 7 or ((JSONCPP_VERSION_MINOR) == 7 and JSONCPP_VERSION_PATCH >= 5)))
-                        uint64_t metered_data = 0;
+                        uint64_t meteringData = 0;
 #else
                         // No "int64_t" support with JsonCpp < 1.7.5
-                        unsigned long long metered_data = 0;
+                        unsigned long long meteringData = 0;
 #endif
-                        metered_data = getMeteringDataInt64();
-                        json_value[key_str] = metered_data;
+                        Json::Value json_request = getMeteringHealth();
+                        std::string meteringFileStr = json_request["meteringFile"].asString();
+                        if  ( meteringFileStr.size() ) {
+                            std::string meteringDataStr = meteringFileStr.substr( 80, 16 );
+                            errno = 0;
+                            meteringData = strtoull( meteringDataStr.c_str(), nullptr, 16 );
+                            if ( errno ) {
+                                Throw( DRM_CtlrError, "Could not convert string '{}' to unsigned long long.",
+                                    meteringDataStr );
+                            }
+                        }
+                        json_value[key_str] = meteringData;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
-                               metered_data );
+                               meteringData );
                         break;
                     }
                     case ParameterKey::nodelocked_request_file: {

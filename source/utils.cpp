@@ -159,7 +159,7 @@ Json::Value parseJsonString( const std::string &json_string ) {
 
     if ( !reader->parse( json_string.c_str(), json_string.c_str() + json_string.size(),
             &json_node, &parseErr) )
-        Throw( DRM_BadFormat, "Cannot parse JSON string '{}' because {}", json_string, parseErr );
+        Throw( DRM_BadFormat, "Cannot parse JSON string because {}", parseErr );
 
     if ( json_node.empty() || json_node.isNull() )
         Throw( DRM_BadArg, "JSON string is empty" );
@@ -241,9 +241,9 @@ const Json::Value& JVgetOptional( const Json::Value& jval,
     val = val.erase( val.find_last_not_of("\t\n\v\f\r") + 1 );
 
     if ( exists )
-        Debug( "Found parameter '{}' of type {} with value {}", key, typeToString( jvalmember.type() ), val );
+        Debug( "Found parameter '{}' of type {}: return its value {}", key, typeToString( jvalmember.type() ), val );
     else
-        Debug( "Set parameter '{}' of type {} to default value {}", key, typeToString( jvalmember.type() ), val );
+        Debug( "Could not find parameter '{}' of type {}: return default value {}", key, typeToString( jvalmember.type() ), val );
 
     return jvalmember;
 }

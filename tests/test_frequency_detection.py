@@ -7,7 +7,7 @@ from os import remove, getpid
 from os.path import isfile, realpath
 from time import sleep, time
 from re import search
-from datetime import datetime, timedelta
+
 from tests.conftest import wait_func_true
 
 

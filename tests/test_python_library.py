@@ -116,15 +116,17 @@ def test_python_lint():
     Static code lint to detect errors and reach code quality standard.
     """
     from subprocess import run, PIPE, STDOUT
-    from glob import glob
-
     run_kwargs = dict(universal_newlines=True, stderr=STDOUT, stdout=PIPE)
 
-    commands = [('flake8', 'python_src', '--ignore', 'E501')]
-    for f in glob('python_src/src/*.pyx'):
-        commands.append(('flake8', f,
-             # Cython specific
-             '--ignore', 'E211,E225,E226,E227,E999'))
+    flake8 = ['flake8', 'python/src',
+              # Use "blake" reasonable value (https://github.com/psf/black)
+              '--max-line-length', '88']
+    commands = (
+        # Standard Python files
+        flake8,
+        # Cython files (Ignore incompatible rules)
+        flake8 + ['--filename', '*.pyx', '--ignore', 'E211,E225,E226,E227,E999']
+    )
 
     stdouts = []
     for command in commands:

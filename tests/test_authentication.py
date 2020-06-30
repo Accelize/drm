@@ -49,10 +49,10 @@ def test_authentication_bad_token(accelize_drm, conf_json, cred_json, async_hand
         drm_manager.set(bad_oauth2_token=1)
         assert drm_manager.get('token_string') == 'BAD_TOKEN'
         assert drm_manager.get('token_validity') == 1000
-        with pytest.raises(accelize_drm.exceptions.DRMWSTimedOut) as excinfo:
+        with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
             drm_manager.activate()
         assert search(r'Timeout on License request after \d+ attempts', str(excinfo.value))
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSTimedOut.error_code
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
         async_cb.assert_NoError()
         del drm_manager
         drm_manager = None

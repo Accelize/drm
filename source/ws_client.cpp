@@ -154,7 +154,6 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
     const char* url_var = std::getenv( "ONEPORTAL_URL" );
     if ( url_var != NULL )
         url = std::string( url_var );
-    Debug( "Licensing URL: {}", url );
     const char* client_id_var = std::getenv( "ONEPORTAL_CLIENT_ID" );
     if ( client_id_var != NULL )
         mClientId = std::string( client_id_var );
@@ -167,7 +166,9 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
 
     // Set header of OAuth2 request
     mOAUth2Request.setHostResolves( mHostResolvesJson );
-    mOAUth2Request.setURL( url + std::string("/o/token/") );
+    std::string oauth_url = url + std::string("/o/token/");
+    mOAUth2Request.setURL( oauth_url );
+    Debug( "OAuth URL: {}", oauth_url );
     std::stringstream ss;
     ss << "client_id=" << mClientId << "&client_secret=" << mClientSecret;
     ss << "&grant_type=client_credentials";
@@ -176,6 +177,8 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
     // Set URL of license and metering requests
     mLicenseUrl = url + std::string("/auth/metering/genlicense/");
     mHealthUrl = url + std::string("/auth/metering/health/");
+    Debug( "Licensing URL: {}", mLicenseUrl );
+    Debug( "Health URL: {}", mHealthUrl );
 }
 
 int32_t DrmWSClient::getTokenTimeLeft() const {
