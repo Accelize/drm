@@ -149,7 +149,7 @@ def test_long_to_short_retry_switch(accelize_drm, conf_json, cred_json, async_ha
     retryShortPeriod = 3
     retryLongPeriod = 10
     timeoutSecondFirst2 = 3
-    timeoutSecond = 30
+    timeoutSecond = 20
 
     conf_json.reset()
     conf_json['licensing']['url'] = request.url + 'test_long_to_short_retry_switch'
@@ -175,8 +175,7 @@ def test_long_to_short_retry_switch(accelize_drm, conf_json, cred_json, async_ha
     drm_manager.activate()
     try:
         wait_func_true(lambda: async_cb.was_called,
-                timeout=timeoutSecondFirst2 + 2*timeoutSecond + 2,
-                sleep_time=1)
+                timeout=timeoutSecondFirst2 + 2*timeoutSecond + 2)
     finally:
         drm_manager.deactivate()
     assert async_cb.was_called
@@ -199,7 +198,71 @@ def test_long_to_short_retry_switch(accelize_drm, conf_json, cred_json, async_ha
         lic_delta = int((parser.parse(start) - prev_lic).total_seconds())
         prev_lic = parser.parse(end)
         if i < nb_long_retry:
-            assert (retryLongPeriod - 1) <= lic_delta <= retryLongPeriod
+            assert (retryLongPeriod-1) <= lic_delta <= (retryLongPeriod+1)
         else:
-            assert (retryShortPeriod - 1) <= lic_delta <= retryShortPeriod
+            assert (retryShortPeriod-1) <= lic_delta <= (retryShortPeriod+1)
+
+
+@pytest.mark.no_parallel
+def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handler, live_server):
+    """
+    Test an error is returned if a wrong session id is provided
+    """
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    async_cb.reset()
+
+    retryShortPeriod = 3
+    retryLongPeriod = 10
+    timeoutSecond = 20
+
+    conf_json.reset()
+    conf_json['licensing']['url'] = request.url + 'test_long_to_short_retry_switch'
+    conf_json['settings']['ws_retry_period_short'] = retryShortPeriod
+    conf_json['settings']['ws_retry_period_long'] = retryLongPeriod
+    conf_json.save()
+
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+
+    context = {'data': list(),
+               'timeoutSecond':timeoutSecond
+    }
+    set_context(context)
+    assert get_context() == context
+
+    drm_manager.activate()
+    try:
+        wait_func_true(lambda: async_cb.was_called,
+                timeout=timeoutSecond*2)
+    finally:
+        drm_manager.deactivate()
+    assert async_cb.was_called
+    assert 'Timeout on License' in async_cb.message
+    assert async_cb.errcode == accelize_drm.exceptions.DRMWSError.error_code
+    context = get_context()
+    data_list = context['data']
+    nb_long_retry = int(timeoutSecond / retryLongPeriod)
+    nb_short_retry = int(retryLongPeriod / retryShortPeriod)
+    assert (nb_long_retry+nb_short_retry) <= len(data_list) <= (1+nb_long_retry+nb_short_retry)
+    data = data_list.pop(0)    # Remove 'open' request
+    assert data[0] == 'open'
+    prev_lic = parser.parse(data[2])
+    data = data_list.pop(0)    # Remove 1st 'running' request
+    assert data[0] == 'running'
+    lic_delta = int((parser.parse(data[1]) - prev_lic).total_seconds())
+    assert lic_delta < 1
+    prev_lic = parser.parse(data[2])
+    for i, (type, start, end) in enumerate(data_list):
+        lic_delta = int((parser.parse(start) - prev_lic).total_seconds())
+        prev_lic = parser.parse(end)
+        if i < nb_long_retry:
+            assert (retryLongPeriod - 1) <= lic_delta <= (retryLongPeriod + 1)
+        else:
+            assert (retryShortPeriod - 1) <= lic_delta <= (retryShortPeriod + 1)
 

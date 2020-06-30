@@ -4,6 +4,7 @@ from requests import get, post
 from datetime import datetime
 from threading import Lock
 from re import search
+from time import sleep
 
 context = None
 lock = Lock()
@@ -439,7 +440,6 @@ def create_app(url):
             context['health_id']= health_id
             return Response(dumps(response_json), response.status_code, headers)
 
-
     # test_segment_index functions
     @app.route('/test_segment_index/o/token/', methods=['GET', 'POST'])
     def otoken__test_segment_index():
@@ -511,6 +511,35 @@ def create_app(url):
                 response.status_code = 408
             response_json['metering']['timeoutSecond'] = timeoutSecond
             context['data'].append( (request_type,start,str(datetime.now())) )
+            return Response(dumps(response_json), response.status_code, headers)
+
+    # test_retry_on_no_connection functions
+    @app.route('/test_retry_on_no_connection/o/token/', methods=['GET', 'POST'])
+    def otoken__test_retry_on_no_connection():
+        return redirect(request.url_root + '/o/token/', code=307)
+
+    @app.route('/test_retry_on_no_connection/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_retry_on_no_connection():
+        return redirect(request.url_root + '/auth/metering/health/', code=307)
+
+    @app.route('/test_retry_on_no_connection/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_retry_on_no_connection():
+        global context
+        global lock
+        with lock:
+            start = str(datetime.now())
+            request_json = request.get_json()
+            request_type = request_json['request']
+            if len(context['data']) < 2:
+                response = post(new_url, json=request_json, headers=request.headers)
+                excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+                headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+                response_json = response.json()
+                response_json['metering']['timeoutSecond'] = context['timeoutSecond']
+            else:
+                abort()
+                sleep(context['timeoutSecond'])
+            context['data'].append( (request_type, start, str(datetime.now())) )
             return Response(dumps(response_json), response.status_code, headers)
 
     ##############################################################################
