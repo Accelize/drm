@@ -591,7 +591,7 @@ def test_c_unittests(accelize_drm, exec_func):
     # Test get_json_string with bad format
     exec_lib.run('test_get_json_string_with_bad_format')
     assert exec_lib.returncode == accelize_drm.exceptions.DRMBadFormat.error_code
-    assert 'Cannot parse JSON string because' in exec_lib.stdout
+    assert 'Cannot parse JSON string ' in exec_lib.stdout
     assert exec_lib.asyncmsg is None
 
     # Test get_json_string with empty string

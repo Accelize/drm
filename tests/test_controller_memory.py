@@ -132,7 +132,7 @@ def test_configuration_file_empty_and_corrupted_product_id(accelize_drm, conf_js
                 async_cb.callback
             )
         assert 'Failed to parse Read-Only Mailbox in DRM Controller:' in str(excinfo.value)
-        assert search(r'Cannot parse JSON string .* because ', str(excinfo.value))
+        assert search(r'Cannot parse JSON string ', str(excinfo.value))
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadFormat.error_code
         async_cb.assert_NoError()
         print('Test Web Service when a misformatted product ID is provided: PASS')
