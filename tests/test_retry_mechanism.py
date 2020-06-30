@@ -140,7 +140,7 @@ def test_10s_retry(accelize_drm, conf_json, cred_json, async_handler):
 @pytest.mark.no_parallel
 def test_long_to_short_retry_switch(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
-    Test an error is returned if a wrong session id is provided
+    Test the number of expected retris and the gap between 2 retries are correct when a retryable error is returned
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -206,7 +206,7 @@ def test_long_to_short_retry_switch(accelize_drm, conf_json, cred_json, async_ha
 @pytest.mark.no_parallel
 def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
-    Test an error is returned if a wrong session id is provided
+    Test the number of expected retris and the gap between 2 retries are correct when the requests are lost
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -217,7 +217,7 @@ def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handle
     timeoutSecond = 20
 
     conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_long_to_short_retry_switch'
+    conf_json['licensing']['url'] = request.url + 'test_retry_on_no_connection'
     conf_json['settings']['ws_retry_period_short'] = retryShortPeriod
     conf_json['settings']['ws_retry_period_long'] = retryLongPeriod
     conf_json.save()

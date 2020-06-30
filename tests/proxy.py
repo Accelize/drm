@@ -530,17 +530,19 @@ def create_app(url):
             start = str(datetime.now())
             request_json = request.get_json()
             request_type = request_json['request']
-            if len(context['data']) < 2:
+            if len(context['data']) < 2 or request_type == 'close':
+                new_url = request.url.replace(request.url_root+'test_retry_on_no_connection', url)
                 response = post(new_url, json=request_json, headers=request.headers)
                 excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
                 headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
                 response_json = response.json()
                 response_json['metering']['timeoutSecond'] = context['timeoutSecond']
+                ret = Response(dumps(response_json), response.status_code, headers)
             else:
-                abort()
-                sleep(context['timeoutSecond'])
+                sleep(context['timeoutSecond'] + 1)
+                ret = ('', 204)
             context['data'].append( (request_type, start, str(datetime.now())) )
-            return Response(dumps(response_json), response.status_code, headers)
+            return ret
 
     ##############################################################################
     # test_unittest_on_hw.py
