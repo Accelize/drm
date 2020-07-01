@@ -2,11 +2,12 @@
 """
 Test metering and floating behaviors of DRM Library.
 """
+import pytest
 from time import sleep
-from random import randint
+from random import randint, randrange
 from datetime import datetime, timedelta
 from re import search
-import pytest
+from random import randrange
 from tests.conftest import wait_deadline
 
 
