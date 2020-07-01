@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from re import search
 import pytest
 from tests.conftest import wait_deadline
+from os.path import realpath
 
 
 def test_metered_start_stop_in_raw(accelize_drm, conf_json, cred_json, async_handler):

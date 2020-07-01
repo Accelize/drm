@@ -436,7 +436,7 @@ protected:
             return;
 
         // Call xbutil to collect host and card data
-        std::string cmd = fmt::format( "{} query scan", mXbutil );
+        std::string cmd = fmt::format( "{} dump", mXbutil );
         std::string cmd_out = exec_cmd( cmd.c_str() );
 
         // Parse collected data and save to header
@@ -451,7 +451,7 @@ protected:
                     mHostConfigData[key] = *itr;
                 else if ( key == "board" ) {
                     //  Add general info node
-                    mHostConfigData[key]["info"] = itr->get("info");
+                    mHostConfigData[key]["info"] = itr->get("info", Json::nullValue);
                     // Try to get the number of kernels
                     mHostConfigData[key]["compute_unit"] = itr->get("compute_unit", Json::Int(-1) );
                 }
@@ -1134,13 +1134,13 @@ protected:
         return !isLicenseEmpty;
     }
 
-    Json::Value getLicense( const Json::Value& request_json, const uint32_t& timeout,
+    Json::Value getLicense( Json::Value& request_json, const uint32_t& timeout,
             const uint32_t& short_retry_period = 0, const uint32_t& long_retry_period = 0 ) {
         TClock::time_point deadline = TClock::now() + std::chrono::seconds( timeout );
         return getLicense( request_json, deadline, short_retry_period, long_retry_period );
     }
 
-    Json::Value getLicense( const Json::Value& request_json, const TClock::time_point& deadline,
+    Json::Value getLicense( Json::Value& request_json, const TClock::time_point& deadline,
             const uint32_t& short_retry_period = 0, const uint32_t& long_retry_period = 0 ) {
 
         TClock::duration long_duration = std::chrono::seconds( long_retry_period );
