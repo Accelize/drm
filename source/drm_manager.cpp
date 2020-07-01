@@ -160,8 +160,8 @@ protected:
     // Design parameters
     int32_t mFrequencyInit = 0;
     int32_t mFrequencyCurr = 0;
-    uint32_t mFrequencyDetectionPeriod = 100;  // in milliseconds
-    double mFrequencyDetectionThreshold = 12.0;      // Error in percentage
+    uint32_t mFrequencyDetectionPeriod = 100;       // in milliseconds
+    double mFrequencyDetectionThreshold = 12.0;     // Error in percentage
     bool mIsFreqDetectionMethod1 = false;
     bool mBypassFrequencyDetection = false;
 
@@ -708,7 +708,7 @@ protected:
                                        std::placeholders::_1,
                                        std::placeholders::_2 )
                     ));
-        } catch( const std::exception& e ) {
+        } catch( const std::exception &e ) {
             std::string err_msg(e.what());
             if ( err_msg.find( "Unable to select a register strategy that is compatible with the DRM Controller" )
                     != std::string::npos )
@@ -847,7 +847,7 @@ protected:
         // Get information from DRM Controller
         getDesignInfo( drmVersion, dna, vlnvFile, mailboxReadOnly );
 
-        // Fulfill DRM section
+        // Fulfill with DRM section
         json_output["drmlibVersion"] = DRMLIB_VERSION;
         json_output["lgdnVersion"] = drmVersion;
         json_output["dna"] = dna;
@@ -859,6 +859,7 @@ protected:
             json_output["vlnvFile"][i_str]["version"] = std::string("x") + vlnvFile[i].substr(12, 4);
         }
 
+        // Fulfill with Product information
         if ( !mailboxReadOnly.empty() ) {
             try {
                 json_output["product"] = parseJsonString( mailboxReadOnly );
@@ -870,6 +871,7 @@ protected:
         } else {
             Debug( "Could not find product ID information in DRM Controller Mailbox" );
         }
+
         return json_output;
     }
 
@@ -1610,7 +1612,7 @@ protected:
                     Error( e.what() );
                     f_asynch_error( std::string( e.what() ) );
                 }
-            } catch( const std::exception& e ) {
+            } catch( const std::exception &e ) {
                 std::string errmsg = fmt::format( "[errCode={}] Unexpected error: {}", DRM_ExternFail, e.what() );
                 Error( errmsg );
                 f_asynch_error( errmsg );
@@ -1686,7 +1688,7 @@ protected:
                     Error( e.what() );
                     f_asynch_error( std::string( e.what() ) );
                 }
-            } catch( const std::exception& e ) {
+            } catch( const std::exception &e ) {
                 Error( e.what() );
                 f_asynch_error( std::string( e.what() ) );
             }
@@ -1701,7 +1703,7 @@ protected:
         }
         {
             std::lock_guard<std::mutex> lock( mThreadExitMtx );
-            Debug( "Set Stop flag for thread" );
+            Debug( "Set Stop flag for threads" );
             mThreadExit = true;
         }
         mThreadExitCondVar.notify_all();
@@ -1710,7 +1712,7 @@ protected:
         Debug( "Background threads stopped" );
         {
             std::lock_guard<std::mutex> lock( mThreadExitMtx );
-            Debug( "Clear Stop flag for thread" );
+            Debug( "Clear Stop flag for threads" );
             mThreadExit = false;
         }
     }
@@ -1973,19 +1975,19 @@ public:
                         break;
                     }
                     case ParameterKey::log_file_type: {
-                        json_value[key_str] = (int32_t)sLogFileType;
+                        json_value[key_str] = (uint32_t)sLogFileType;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
-                               (int32_t)sLogFileType );
+                               sLogFileType );
                         break;
                     }
                     case ParameterKey::log_file_rotating_num: {
-                        json_value[key_str] = (int32_t)sLogFileRotatingNum;
+                        json_value[key_str] = (uint32_t)sLogFileRotatingNum;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                sLogFileRotatingNum );
                         break;
                     }
                     case ParameterKey::log_file_rotating_size: {
-                        json_value[key_str] = (int32_t)sLogFileRotatingSize;
+                        json_value[key_str] = (uint32_t)sLogFileRotatingSize;
                         Debug( "Get value of parameter '{}' (ID={}): {} KB", key_str, key_id,
                                sLogFileRotatingSize );
                         break;

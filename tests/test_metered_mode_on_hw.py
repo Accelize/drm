@@ -7,7 +7,6 @@ from time import sleep
 from random import randint, randrange
 from datetime import datetime, timedelta
 from re import search
-from random import randrange
 from tests.conftest import wait_deadline
 
 
