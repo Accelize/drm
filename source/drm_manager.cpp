@@ -1657,31 +1657,6 @@ protected:
         return (uint32_t)std::ceil( (double)counterCurr / mFrequencyCurr / 1000000 );
     }
 
-    void updateHealthParameters( uint32_t healthPeriod, uint32_t healthRetryTimeout,
-                                 uint32_t healthRetrySleep) {
-        if ( ( healthPeriod != mHealthPeriod ) || ( healthRetryTimeout != mHealthRetryTimeout)
-          || ( healthRetrySleep != mHealthRetrySleep) ) {
-            mHealthPeriod = healthPeriod;
-            if ( healthRetryTimeout == 0 ) {
-                mHealthRetryTimeout = mWSRequestTimeout;
-                mHealthRetrySleep = 0;
-                Debug( "Health retry is disabled" );
-            } else {
-                mHealthRetryTimeout = mHealthRetryTimeout;
-                mHealthRetrySleep = healthRetrySleep;
-                Debug( "Health retry is enabled" );
-            }
-            Debug( "Updating Health parameters with new values: healthPeriod={}, healthRetry={}, healthRetrySleep={}",
-                mHealthPeriod, mHealthRetryTimeout, mHealthRetrySleep );
-            if ( mHealthPeriod == 0 ) {
-                Warning( "Health thread is disabled" );
-            }
-        } else {
-            Debug( "Keep same Health parameters: healthPeriod={}, healthRetry={}, healthRetrySleep={}",
-                mHealthPeriod, mHealthRetryTimeout, mHealthRetrySleep );
-        }
-    }
-
     void startLicenseContinuityThread() {
 
         if ( mThreadKeepAlive.valid() ) {
@@ -1762,6 +1737,8 @@ protected:
         mThreadHealth = std::async( std::launch::async, [ this ]() {
             Debug( "Starting background thread which checks health" );
             try {
+                uint32_t retry_sleep = mWSRetryPeriodShort;
+                uint32_t retry_timeout = mWSRequestTimeout;
                 mHealthCounter = 0;
                 /// Starting async metering post loop
                 while( 1 ) {
@@ -1773,7 +1750,7 @@ protected:
 
                     /// Collect the next metering data and send them to the Health Web Service
                     Debug( "Health thread collecting new metering data" );
-                    Json::Value response_json = performHealth( mHealthRetryTimeout, mHealthRetrySleep );
+                    Json::Value response_json = performHealth( retry_timeout, retry_sleep );
 
                     if ( response_json != Json::nullValue ) {
                         /// Extract asynchronous metering parameters from response
@@ -1783,9 +1760,30 @@ protected:
                         uint32_t healthRetrySleep = JVgetOptional( metering_node, "healthRetrySleep", Json::uintValue, mHealthRetrySleep ).asUInt();
 
                         /// Reajust async metering thread if needed
-                        updateHealthParameters( healthPeriod, healthRetryTimeout, healthRetrySleep);
-                        if ( mHealthPeriod == 0 )
-                            break;
+                        if ( ( healthPeriod != mHealthPeriod ) || ( healthRetryTimeout != mHealthRetryTimeout)
+                                || ( healthRetrySleep != mHealthRetrySleep) ) {
+                            mHealthPeriod = healthPeriod;
+                            mHealthRetryTimeout = healthRetryTimeout;
+                            mHealthRetrySleep = healthRetrySleep;
+                            Debug( "Updating Health parameters with new values: healthPeriod={}, healthRetry={}, healthRetrySleep={}",
+                                mHealthPeriod, mHealthRetryTimeout, mHealthRetrySleep );
+                            if ( mHealthPeriod == 0 ) {
+                                Warning( "Health thread is disabled" );
+                                break;
+                            }
+                            if ( mHealthRetryTimeout == 0 ) {
+                                retry_timeout = mWSRequestTimeout;
+                                retry_sleep = 0;
+                                Debug( "Health retry is disabled" );
+                            } else {
+                                retry_timeout = mHealthRetryTimeout;
+                                retry_sleep = mHealthRetrySleep;
+                                Debug( "Health retry is enabled" );
+                            }
+                        } else {
+                            Debug( "Keep same Health parameters: healthPeriod={}, healthRetry={}, healthRetrySleep={}",
+                                mHealthPeriod, mHealthRetryTimeout, mHealthRetrySleep );
+                        }
                     }
                 }
             } catch( const Exception& e ) {
@@ -1842,12 +1840,9 @@ protected:
 
             // Extract asynchronous health parameters from response
             Json::Value metering_node = JVgetOptional( license_json, "metering", Json::objectValue, Json::nullValue );
-            uint32_t healthPeriod = JVgetOptional( metering_node, "healthPeriod", Json::uintValue, mHealthPeriod ).asUInt();
-            uint32_t healthRetryTimeout = JVgetOptional( metering_node, "healthRetry", Json::uintValue, mHealthRetryTimeout ).asUInt();
-            uint32_t healthRetrySleep = JVgetOptional( metering_node, "healthRetrySleep", Json::uintValue, mHealthRetrySleep ).asUInt();
-
-            // Reajust async metering thread if needed
-            updateHealthParameters( healthPeriod, healthRetryTimeout, healthRetrySleep);
+            mHealthPeriod = JVgetOptional( metering_node, "healthPeriod", Json::uintValue, mHealthPeriod ).asUInt();
+            mHealthRetryTimeout = JVgetOptional( metering_node, "healthRetry", Json::uintValue, mHealthRetryTimeout ).asUInt();
+            mHealthRetrySleep = JVgetOptional( metering_node, "healthRetrySleep", Json::uintValue, mHealthRetrySleep ).asUInt();
 
             // Check if an error occurred
             checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 5 ) );
@@ -2021,7 +2016,7 @@ public:
             }
             mThreadExit = false;
             startLicenseContinuityThread();
-            if ( mHealthPeriod != 0 )
+            if ( mHealthRetryTimeout != 0 )
                 startHealthContinuityThread();
             mSecurityStop = true;
         CATCH_AND_THROW
