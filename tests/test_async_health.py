@@ -300,52 +300,49 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
     conf_json['licensing']['url'] = request.url + 'test_health_retry_modification'
     conf_json.save()
 
-    healthPeriod = 3
-    healthRetry = 10
+    healthPeriod = 1
+    healthRetry = 0
     healthRetrySleep = 1
-    nb_run = 2
+    nb_run = 3
 
-    for i in range(nb_run):
+    # Set initial context on the live server
+    context = {'data': list(),
+       'nb_run': nb_run
+       'healthPeriod': healthPeriod,
+       'healthRetry': retry_timeout,
+       'healthRetrySleep': healthRetrySleep,
+       'exit': False
+    }
+    set_context(context)
+    assert get_context() == context
 
-        retry_timeout = healthRetry+5*i
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    drm_manager.activate()
+    try:
+        wait_func_true(lambda: get_context()['exit'],
+            timeout=(retry_timeout+3) * 2, sleep_time=2)
+    finally:
+        drm_manager.deactivate()
 
-        # Set initial context on the live server
-        context = {'data': list(),
-               'healthPeriod':healthPeriod,
-               'healthRetry':retry_timeout,
-               'healthRetrySleep':healthRetrySleep,
-               'exit':False
-        }
-        set_context(context)
-        assert get_context() == context
-
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        drm_manager.activate()
-        try:
-            wait_func_true(lambda: get_context()['exit'],
-                timeout=(retry_timeout+3) * 2)
-        finally:
-            drm_manager.deactivate()
-
-        async_cb.assert_NoError()
-        data_list = get_context()['data']
-        data0 = data_list.pop(0)
-        assert len(data_list) > 1
-        assert data0[0] == 0
-        # Check health_id is unchanged during the retry period
-        assert sum(map(lambda x: x[0], data_list)) == len(data_list)
-        # Check the retry period is correct
-        start = data_list[0][1]
-        end = data_list[-1][2]
-        delta = parser.parse(end) - parser.parse(start)
-        error_gap = drm_manager.get('health_retry_sleep') + 1
-        assert retry_timeout - error_gap <= int(delta.total_seconds()) <= retry_timeout + error_gap
+    async_cb.assert_NoError()
+    data_list = get_context()['data']
+    data0 = data_list.pop(0)
+    assert len(data_list) > 1
+    assert data0[0] == 0
+    # Check health_id is unchanged during the retry period
+    assert sum(map(lambda x: x[0], data_list)) == len(data_list)
+    # Check the retry period is correct
+    start = data_list[0][1]
+    end = data_list[-1][2]
+    delta = parser.parse(end) - parser.parse(start)
+    error_gap = drm_manager.get('health_retry_sleep') + 1
+    assert retry_timeout - error_gap <= int(delta.total_seconds()) <= retry_timeout + error_gap
 
 
 @pytest.mark.skip

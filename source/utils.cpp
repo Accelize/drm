@@ -30,7 +30,7 @@ namespace DRM {
 
 std::string getDirName( const std::string& full_path ) {
 
-    size_t i = full_path.rfind( path_separator, full_path.length() );
+    size_t i = full_path.rfind( PATH_SEP, full_path.length() );
     if ( i != std::string::npos ) {
         return full_path.substr( 0, i );
     }
@@ -82,12 +82,12 @@ bool makeDirs( const std::string& dir_path, mode_t mode ) {
         return true;
     }
 
-    if ( path[ path.size() - 1 ] != path_separator ) {
+    if ( path[ path.size() - 1 ] != PATH_SEP ) {
         // Force trailing '/' so we can handle everything in loop
-        path += path_separator;
+        path += PATH_SEP;
     }
 
-    while( ( pos = path.find_first_of( path_separator, pos ) ) != std::string::npos ) {
+    while( ( pos = path.find_first_of( PATH_SEP, pos ) ) != std::string::npos ) {
         dir = path.substr( 0, pos++ );
         if ( ( dir.size() == 0 ) || ( isDir( dir ) ) )
             continue; // if leading / first time is 0 length

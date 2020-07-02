@@ -23,7 +23,7 @@ limitations under the License.
 namespace Accelize {
 namespace DRM {
 
-const char path_separator =
+const char PATH_SEP =
 #ifdef _WIN32
                      '\\';
 #else

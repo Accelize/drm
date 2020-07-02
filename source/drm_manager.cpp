@@ -417,8 +417,8 @@ protected:
         Debug( "XILINX_XRT variable is defined: {}", mXrtPath );
 
         // Check xbutil existence
-        std::string xrt_bin_dir = fmt::format( "{}{}bin", mXrtPath, path_separator );
-        mXbutil = fmt::format( "{}{}xbutil", xrt_bin_dir, path_separator );
+        std::string xrt_bin_dir = fmt::format( "{}{}bin", mXrtPath, PATH_SEP );
+        mXbutil = fmt::format( "{}{}xbutil", xrt_bin_dir, PATH_SEP );
         if ( !isFile( mXbutil ) ) {
             // If xbutil does not exist
             Debug( "xbutil tool could not be found in {}", xrt_bin_dir );
