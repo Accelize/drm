@@ -309,6 +309,7 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
 
     # Set initial context on the live server
     context = {'data': dict(),
+       'response': dict(),
        'nb_run': nb_run,
        'timeoutSecond':timeoutSecond,
        'healthPeriod': healthPeriod,
