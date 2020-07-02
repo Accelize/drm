@@ -222,6 +222,9 @@ void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
     std::string response;
     long resp_code = mOAUth2Request.perform( &response, deadline );
 
+    Debug( "Received code {} from OAuth2 Web Service in {} ms",
+            resp_code, mOAUth2Request.getTotalTime() * 1000 );
+
     // Parse response
     std::string error_msg;
     Json::Value json_resp;
@@ -231,9 +234,6 @@ void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
         json_resp = Json::nullValue;
         error_msg = e.what();
     }
-    Debug( "Received code {} from OAuth2 Web Service in {} ms",
-            resp_code, mOAUth2Request.getTotalTime() * 1000 );
-
     // Analyze response
     if ( resp_code != 200 ) {
         // An error occurred
@@ -273,6 +273,9 @@ Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Val
     std::string response;
     long resp_code = req.perform( &response, deadline );
 
+    Debug( "Received code {} from Metering Web Service in {} ms",
+            resp_code, req.getTotalTime() * 1000 );
+
     // Parse response
     std::string error_msg;
     Json::Value json_resp;
@@ -282,8 +285,6 @@ Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Val
         json_resp = Json::nullValue;
         error_msg = e.what();
     }
-    Debug( "Received code {} from Metering Web Service in {} ms",
-            resp_code, req.getTotalTime() * 1000 );
 
     // Analyze response
     if ( resp_code != 200 ) {
