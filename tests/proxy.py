@@ -341,28 +341,31 @@ def create_app(url):
         request_json = request.get_json()
         health_id = request_json['health_id']
         with lock:
-            retry_timeout = context['healthRetryStep']*health_id
-            if health_id not in context['response'].keys():
+            if health_id % 2 == 1:
+                # Good request
+                retry_timeout = context['healthRetryStep']*(health_id/2)
+                context['healthRetry'] = retry_timeout
                 response = post(new_url, json=request_json, headers=request.headers)
-                assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" %
+                assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % \
                         (dumps(request_json, indent=4, sort_keys=True), response.status_code, response.text)
                 excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
                 headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
                 response_json = response.json()
-                context['healthRetry'] = retry_timeout
                 response_json['metering']['healthPeriod'] = context['healthPeriod']
                 response_json['metering']['healthRetry'] = context['healthRetry']
                 response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
-                response.status_code = 408
-                context['data'][retry_timeout] = list()
-                res = Response(dumps(response_json), response.status_code, headers)
-                context['response'][health_id] = res
+                return Response(dumps(response_json), response.status_code, headers)
             else:
-                res = context['response'][health_id]
-            context['data'][retry_timeout].append( (health_id, start, str(datetime.now())) )
-            if len(context['data']) >= context['nb_run']:
-                context['exit'] = True
-            return res
+                # Retry request
+                request_json['saasChallenge'] = request_json['saasChallenge'][1:]
+                response = post(new_url, json=request_json, headers=request.headers)
+                assert response.status_code == 400, "Request:\n'%s'\nfailed with code %d and message: %s" % \
+                        (dumps(request_json, indent=4, sort_keys=True), response.status_code, response.text)
+                context['data'][retry_timeout] = list()
+                context['data'][retry_timeout].append( (health_id, start, str(datetime.now())) )
+                if len(context['data']) >= context['nb_run']:
+                    context['exit'] = True
+                return response
 
 
     # test_health_retry_sleep functions

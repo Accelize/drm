@@ -309,7 +309,6 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
 
     # Set initial context on the live server
     context = {'data': dict(),
-       'response': dict(),
        'nb_run': nb_run,
        'timeoutSecond':timeoutSecond,
        'healthPeriod': healthPeriod,
@@ -347,12 +346,13 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
         assert retry_to == i*healthRetryStep
         if i == 0:
             assert len(l) == 1
+            assert l[0][0] == 0
         else:
             # Check the retry sleep is correct
             hid0, start0, prev_end = l.pop()
-            assert hid0 == i
+            assert hid0 == 2*i
             for hid, start, end in l:
-                assert hid == i
+                assert hid == 2*i
                 delta = parser.parse(prev_end) - parser.parse(start)
                 error_gap = healthRetrySleep
                 assert healthRetrySleep - 1 <= int(delta.total_seconds()) <= healthRetrySleep + 1
