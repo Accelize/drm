@@ -430,7 +430,7 @@ protected:
     }
 
     Json::Value getCspInfo() {
-        Json::Value csp_node == Json::nullValue;
+        Json::Value csp_node = Json::nullValue;
         return csp_node;
     }
 
