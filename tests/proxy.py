@@ -60,12 +60,15 @@ def create_app(url):
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
+            if 'timeoutSecond' in context:
+                response_json['metering']['timeoutSecond'] = context['timeoutSecond']
             if 'healthPeriod' in context:
                 response_json['metering']['healthPeriod'] = context['healthPeriod']
             if 'healthRetry' in context:
                 response_json['metering']['healthRetry'] = context['healthRetry']
             if 'healthRetrySleep' in context:
                 response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
+        #print('response_json=', dumps(response_json, indent=4, sort_keys=True))
         return Response(dumps(response_json), response.status_code, headers)
 
     ##############################################################################
@@ -343,9 +346,11 @@ def create_app(url):
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
-            retry_timeout = context['healthRetry'] + context['healthRetryStep']*health_id
+            retry_timeout = context['healthRetryStep']*health_id
+            if context['healthRetry'] < retry_timeout:
+                context['healthRetry'] = retry_timeout
             response_json['metering']['healthPeriod'] = context['healthPeriod']
-            response_json['metering']['healthRetry'] = retry_timeout
+            response_json['metering']['healthRetry'] = context['healthRetry']
             response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
             if len(context['data']) >= context['nb_run']:
                 context['exit'] = True

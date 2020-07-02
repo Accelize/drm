@@ -300,6 +300,7 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
     conf_json['licensing']['url'] = request.url + 'test_health_retry_modification'
     conf_json.save()
 
+    timeoutSecond = 300
     healthPeriod = 1
     healthRetry = 0
     healthRetrySleep = 1
@@ -309,6 +310,7 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
     # Set initial context on the live server
     context = {'data': dict(),
        'nb_run': nb_run,
+       'timeoutSecond':timeoutSecond,
        'healthPeriod': healthPeriod,
        'healthRetry': 0,
        'healthRetrySleep': healthRetrySleep,
@@ -326,9 +328,9 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
         async_cb.callback
     )
     drm_manager.activate()
-    assert drm_manager.get('healthPeriod') == healthPeriod
-    assert drm_manager.get('healthRetry') == healthRetry
-    assert drm_manager.get('healthRetrySleep') == healthRetrySleep
+    assert drm_manager.get('health_period') == healthPeriod
+    assert drm_manager.get('health_retry') == healthRetry
+    assert drm_manager.get('health_retry_sleep') == healthRetrySleep
     try:
         wait_func_true(lambda: get_context()['exit'],
             timeout=2* nb_run * healthRetryStep, sleep_time=2)

@@ -1843,9 +1843,9 @@ protected:
 
             /// Extract asynchronous health parameters from response
             Json::Value metering_node = JVgetOptional( license_json, "metering", Json::objectValue, Json::nullValue );
-            mHealthPeriod = JVgetOptional( license_json, "healthPeriod", Json::uintValue, mHealthPeriod ).asUInt();
-            mHealthRetryTimeout = JVgetOptional( license_json, "healthRetry", Json::uintValue, mHealthRetryTimeout ).asUInt();
-            mHealthRetrySleep = JVgetOptional( license_json, "healthRetrySleep", Json::uintValue, mHealthRetrySleep ).asUInt();
+            mHealthPeriod = JVgetOptional( metering_node, "healthPeriod", Json::uintValue, mHealthPeriod ).asUInt();
+            mHealthRetryTimeout = JVgetOptional( metering_node, "healthRetry", Json::uintValue, mHealthRetryTimeout ).asUInt();
+            mHealthRetrySleep = JVgetOptional( metering_node, "healthRetrySleep", Json::uintValue, mHealthRetrySleep ).asUInt();
 
             // Check if an error occurred
             checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 5 ) );
