@@ -341,9 +341,9 @@ def create_app(url):
         request_json = request.get_json()
         health_id = request_json['health_id']
         with lock:
-            if health_id % 2 == 1:
+            if health_id % 2:
                 # Good request
-                retry_timeout = context['healthRetryStep']*(health_id/2)
+                retry_timeout = context['healthRetryStep']*(health_id>>1)
                 context['healthRetry'] = retry_timeout
                 response = post(new_url, json=request_json, headers=request.headers)
                 assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % \
@@ -359,12 +359,13 @@ def create_app(url):
                 # Retry request
                 retry_timeout = context['healthRetry']
                 response = post(new_url, json=request_json, headers=request.headers)
+                assert response.status_code in [200, 400]
                 response.status_code = 408
                 context['data'][retry_timeout] = list()
                 context['data'][retry_timeout].append( (health_id, start, str(datetime.now())) )
                 if len(context['data']) >= context['nb_run']:
                     context['exit'] = True
-                return response
+                return Response(dumps(response.json()), response.status_code)
 
 
     # test_health_retry_sleep functions
