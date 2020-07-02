@@ -429,6 +429,11 @@ protected:
         return true;
     }
 
+    Json::Value getCspInfo() {
+        Json::Value csp_node == Json::nullValue;
+        return csp_node;
+    }
+
     void getHostAndCardInfo() {
 
         // Find xbutil if existing
@@ -453,7 +458,15 @@ protected:
                     //  Add general info node
                     mHostConfigData[key]["info"] = itr->get("info", Json::nullValue);
                     // Try to get the number of kernels
-                    mHostConfigData[key]["compute_unit"] = itr->get("compute_unit", Json::Int(-1) );
+                    Json::Value compute_unit_node = itr->get("compute_unit", Json::nullValue);
+                    if ( compute_unit_node != Json::nullValue )
+                        mHostConfigData[key]["compute_unit"] = compute_unit_node.size();
+                    else
+                        mHostConfigData[key]["compute_unit"] = -1;
+                    // Add XCLBIN UUID
+                    mHostConfigData[key]["xclbin"] = itr->get("xclbin", Json::nullValue);
+                    // Add CSP specific command
+                    mHostConfigData[key]["csp"] = getCspInfo();
                 }
             } catch( const std::exception &e ) {
                 Debug( "Could not extract Host Information for key {}", key );
