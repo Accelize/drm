@@ -1842,9 +1842,9 @@ protected:
 
             // Extract asynchronous health parameters from response
             Json::Value metering_node = JVgetOptional( license_json, "metering", Json::objectValue, Json::nullValue );
-            uint_32_t healthPeriod = JVgetOptional( metering_node, "healthPeriod", Json::uintValue, mHealthPeriod ).asUInt();
-            uint_32_t healthRetryTimeout = JVgetOptional( metering_node, "healthRetry", Json::uintValue, mHealthRetryTimeout ).asUInt();
-            uint_32_t healthRetrySleep = JVgetOptional( metering_node, "healthRetrySleep", Json::uintValue, mHealthRetrySleep ).asUInt();
+            uint32_t healthPeriod = JVgetOptional( metering_node, "healthPeriod", Json::uintValue, mHealthPeriod ).asUInt();
+            uint32_t healthRetryTimeout = JVgetOptional( metering_node, "healthRetry", Json::uintValue, mHealthRetryTimeout ).asUInt();
+            uint32_t healthRetrySleep = JVgetOptional( metering_node, "healthRetrySleep", Json::uintValue, mHealthRetrySleep ).asUInt();
 
             // Reajust async metering thread if needed
             updateHealthParameters( healthPeriod, healthRetryTimeout, healthRetrySleep);
