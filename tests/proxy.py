@@ -357,7 +357,7 @@ def create_app(url):
                 return Response(dumps(response_json), response.status_code, headers)
             else:
                 # Retry request
-                request_json['saasChallenge'] = request_json['saasChallenge'][1:]
+                retry_timeout = context['healthRetry']
                 response = post(new_url, json=request_json, headers=request.headers)
                 response.status_code = 408
                 context['data'][retry_timeout] = list()
