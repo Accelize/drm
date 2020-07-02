@@ -1660,23 +1660,21 @@ protected:
     void updateHealthParameters( uint32_t healthPeriod, uint32_t healthRetryTimeout,
                                  uint32_t healthRetrySleep) {
         if ( ( healthPeriod != mHealthPeriod ) || ( healthRetryTimeout != mHealthRetryTimeout)
-                || ( healthRetrySleep != mHealthRetrySleep) ) {
+          || ( healthRetrySleep != mHealthRetrySleep) ) {
             mHealthPeriod = healthPeriod;
-            mHealthRetryTimeout = healthRetryTimeout;
-            mHealthRetrySleep = healthRetrySleep;
+            if ( healthRetryTimeout == 0 ) {
+                mHealthRetryTimeout = mWSRequestTimeout;
+                mHealthRetrySleep = 0;
+                Debug( "Health retry is disabled" );
+            } else {
+                mHealthRetryTimeout = mHealthRetryTimeout;
+                mHealthRetrySleep = healthRetrySleep;
+                Debug( "Health retry is enabled" );
+            }
             Debug( "Updating Health parameters with new values: healthPeriod={}, healthRetry={}, healthRetrySleep={}",
                 mHealthPeriod, mHealthRetryTimeout, mHealthRetrySleep );
             if ( mHealthPeriod == 0 ) {
                 Warning( "Health thread is disabled" );
-            }
-            if ( mHealthRetryTimeout == 0 ) {
-                retry_timeout = mWSRequestTimeout;
-                retry_sleep = 0;
-                Debug( "Health retry is disabled" );
-            } else {
-                retry_timeout = mHealthRetryTimeout;
-                retry_sleep = mHealthRetrySleep;
-                Debug( "Health retry is enabled" );
             }
         } else {
             Debug( "Keep same Health parameters: healthPeriod={}, healthRetry={}, healthRetrySleep={}",
@@ -1777,7 +1775,7 @@ protected:
 
                     /// Collect the next metering data and send them to the Health Web Service
                     Debug( "Health thread collecting new metering data" );
-                    Json::Value response_json = performHealth( retry_timeout, retry_sleep );
+                    Json::Value response_json = performHealth( mHealthRetry, mHealthRetrySleep );
 
                     if ( response_json != Json::nullValue ) {
                         /// Extract asynchronous metering parameters from response
