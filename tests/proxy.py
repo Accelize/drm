@@ -342,8 +342,8 @@ def create_app(url):
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
-        retry_timeout = context['healthRetry'] + 5*health_id
         with lock:
+            retry_timeout = context['healthRetry'] + context['healthRetryStep']*health_id
             response_json['metering']['healthPeriod'] = context['healthPeriod']
             response_json['metering']['healthRetry'] = retry_timeout
             response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']

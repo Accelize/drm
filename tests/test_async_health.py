@@ -304,13 +304,15 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
     healthRetry = 0
     healthRetrySleep = 1
     nb_run = 3
+    healthRetryStep = 5
 
     # Set initial context on the live server
     context = {'data': list(),
-       'nb_run': nb_run
+       'nb_run': nb_run,
        'healthPeriod': healthPeriod,
-       'healthRetry': retry_timeout,
+       'healthRetry': 0,
        'healthRetrySleep': healthRetrySleep,
+       'healthRetryStep': healthRetryStep
        'exit': False
     }
     set_context(context)
@@ -326,7 +328,7 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
     drm_manager.activate()
     try:
         wait_func_true(lambda: get_context()['exit'],
-            timeout=(retry_timeout+3) * 2, sleep_time=2)
+            timeout=2* nb_run * healthRetryStep, sleep_time=2)
     finally:
         drm_manager.deactivate()
 
