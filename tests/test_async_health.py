@@ -303,16 +303,16 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
     healthPeriod = 1
     healthRetry = 0
     healthRetrySleep = 1
-    nb_run = 3
     healthRetryStep = 5
+    nb_run = 3
 
     # Set initial context on the live server
-    context = {'data': list(),
+    context = {'data': dict(),
        'nb_run': nb_run,
        'healthPeriod': healthPeriod,
        'healthRetry': 0,
        'healthRetrySleep': healthRetrySleep,
-       'healthRetryStep': healthRetryStep
+       'healthRetryStep': healthRetryStep,
        'exit': False
     }
     set_context(context)
@@ -326,6 +326,9 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
         async_cb.callback
     )
     drm_manager.activate()
+    assert drm_manager.get('healthPeriod') == healthPeriod
+    assert drm_manager.get('healthRetry') == healthRetry
+    assert drm_manager.get('healthRetrySleep') == healthRetrySleep
     try:
         wait_func_true(lambda: get_context()['exit'],
             timeout=2* nb_run * healthRetryStep, sleep_time=2)
@@ -333,18 +336,24 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
         drm_manager.deactivate()
 
     async_cb.assert_NoError()
-    data_list = get_context()['data']
-    data0 = data_list.pop(0)
-    assert len(data_list) > 1
-    assert data0[0] == 0
-    # Check health_id is unchanged during the retry period
-    assert sum(map(lambda x: x[0], data_list)) == len(data_list)
-    # Check the retry period is correct
-    start = data_list[0][1]
-    end = data_list[-1][2]
-    delta = parser.parse(end) - parser.parse(start)
-    error_gap = drm_manager.get('health_retry_sleep') + 1
-    assert retry_timeout - error_gap <= int(delta.total_seconds()) <= retry_timeout + error_gap
+    data = get_context()['data']
+    assert len(data) == nb_run
+    # Check retry timeout
+    assert data.keys() == range(0, nb_run*healthRetryStep, healthRetryStep)
+    for i, (retry_to, l) in enumerate(sorted(data.items(), key=lambda x: x[0])):
+        assert retry_to == i*healthRetryStep
+        if i == 0:
+            assert len(l) == 1
+        else:
+            # Check the retry sleep is correct
+            hid0, start0, prev_end = l.pop()
+            assert hid0 == i
+            for hid, start, end in l:
+                assert hid == i
+                delta = parser.parse(prev_end) - parser.parse(start)
+                error_gap = healthRetrySleep
+                assert healthRetrySleep - 1 <= int(delta.total_seconds()) <= healthRetrySleep + 1
+                prev_end = end
 
 
 @pytest.mark.skip
