@@ -1668,7 +1668,6 @@ protected:
                 mHealthPeriod, mHealthRetryTimeout, mHealthRetrySleep );
             if ( mHealthPeriod == 0 ) {
                 Warning( "Health thread is disabled" );
-                break;
             }
             if ( mHealthRetryTimeout == 0 ) {
                 retry_timeout = mWSRequestTimeout;
@@ -1789,6 +1788,8 @@ protected:
 
                         /// Reajust async metering thread if needed
                         updateHealthParameters( healthPeriod, healthRetryTimeout, healthRetrySleep)
+                        if ( mHealthPeriod == 0 )
+                            break;
                     }
                 }
             } catch( const Exception& e ) {
@@ -2024,7 +2025,8 @@ public:
             }
             mThreadExit = false;
             startLicenseContinuityThread();
-            startHealthContinuityThread();
+            if ( mHealthPeriod != 0 )
+                startHealthContinuityThread();
             mSecurityStop = true;
         CATCH_AND_THROW
     }
