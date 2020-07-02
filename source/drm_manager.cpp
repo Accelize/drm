@@ -1762,8 +1762,6 @@ protected:
         mThreadHealth = std::async( std::launch::async, [ this ]() {
             Debug( "Starting background thread which checks health" );
             try {
-                uint32_t retry_sleep = mWSRetryPeriodShort;
-                uint32_t retry_timeout = mWSRequestTimeout;
                 mHealthCounter = 0;
                 /// Starting async metering post loop
                 while( 1 ) {
@@ -1775,7 +1773,7 @@ protected:
 
                     /// Collect the next metering data and send them to the Health Web Service
                     Debug( "Health thread collecting new metering data" );
-                    Json::Value response_json = performHealth( mHealthRetry, mHealthRetrySleep );
+                    Json::Value response_json = performHealth( mHealthRetryTimeout, mHealthRetrySleep );
 
                     if ( response_json != Json::nullValue ) {
                         /// Extract asynchronous metering parameters from response
@@ -1785,7 +1783,7 @@ protected:
                         uint32_t healthRetrySleep = JVgetOptional( metering_node, "healthRetrySleep", Json::uintValue, mHealthRetrySleep ).asUInt();
 
                         /// Reajust async metering thread if needed
-                        updateHealthParameters( healthPeriod, healthRetryTimeout, healthRetrySleep)
+                        updateHealthParameters( healthPeriod, healthRetryTimeout, healthRetrySleep);
                         if ( mHealthPeriod == 0 )
                             break;
                     }
@@ -1849,7 +1847,7 @@ protected:
             uint_32_t healthRetrySleep = JVgetOptional( metering_node, "healthRetrySleep", Json::uintValue, mHealthRetrySleep ).asUInt();
 
             // Reajust async metering thread if needed
-            updateHealthParameters( healthPeriod, healthRetryTimeout, healthRetrySleep)
+            updateHealthParameters( healthPeriod, healthRetryTimeout, healthRetrySleep);
 
             // Check if an error occurred
             checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 5 ) );
