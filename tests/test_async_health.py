@@ -342,16 +342,17 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
     assert len(data) == nb_run
     # Check retry timeout
     assert sorted([int(e) for e in data.keys()]) == list(range(0, nb_run*healthRetryStep, healthRetryStep))
-    for i, (retry_to, l) in enumerate(sorted(data.items(), key=lambda x: x[0])):
-        assert int(retry_to) == i*healthRetryStep
-        if i == 0:
+    for retry_to, l in sorted(data.items(), key=lambda x: x[0]):
+        retry_to = int(retry_to)
+        assert retry_to % healthRetryStep == 0
+        if retry_to == 0:
             assert len(l) == 1
             assert l[0][0] == 0
         # Check the retry sleep is correct
         hid0, start0, prev_end = l.pop(0)
-        assert hid0 == 2*i
+        assert hid0 % 2 == 0
         for hid, start, end in l:
-            assert hid == 2*i
+            assert hid % 2 == 0
             delta = parser.parse(start) - parser.parse(prev_end)
             assert healthRetrySleep - 1 <= int(delta.total_seconds()) <= healthRetrySleep + 1
             prev_end = end
