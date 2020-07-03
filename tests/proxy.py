@@ -343,7 +343,7 @@ def create_app(url):
         with lock:
             if health_id % 2:
                 # Good request
-                retry_timeout = context['healthRetryStep']*(health_id>>1)
+                retry_timeout = context['healthRetryStep']*((health_id+1)>>1)
                 context['healthRetry'] = retry_timeout
                 response = post(new_url, json=request_json, headers=request.headers)
                 assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % \

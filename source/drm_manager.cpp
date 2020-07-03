@@ -1392,6 +1392,7 @@ protected:
                     Error( "Health request error: {}", e.what() );
                     return Json::nullValue;
                 }
+                Warning( "Attempt #{} to send a new Health request failed with message: {}.", lic_attempt, e.what() );
                 // It is retryable
                 lic_attempt ++;
                 if ( retry_period == 0 ) {
@@ -1399,8 +1400,7 @@ protected:
                     return Json::nullValue;
                 }
                 // Perform retry
-                Warning( "Attempt #{} to send a new Health request failed with message: {}. New attempt planned in {} seconds",
-                        lic_attempt, e.what(), retry_duration.count()/1000000000 );
+                Warning( "New attempt planned in {} seconds", retry_duration.count()/1000000000 );
                 // Wait a bit before retrying
                 sleepOrExit( retry_duration );
             }
