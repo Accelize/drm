@@ -339,11 +339,11 @@ def create_app(url):
         start = str(datetime.now())
         new_url = request.url.replace(request.url_root+'test_health_retry_modification', url)
         request_json = request.get_json()
-        health_id = request_json['health_id']
+        health_id = int(request_json['health_id'])
         with lock:
             if health_id % 2:
                 # Good request
-                retry_timeout = context['healthRetryStep']*((health_id+1)>>1)
+                retry_timeout = int(context['healthRetryStep'])*((health_id+1)>>1)
                 context['healthRetry'] = retry_timeout
                 response = post(new_url, json=request_json, headers=request.headers)
                 assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % \
@@ -362,7 +362,7 @@ def create_app(url):
                 assert response.status_code in [200, 400]
                 response.status_code = 408
                 if retry_timeout not in context['data'].keys():
-                    if len(context['data']) <= context['nb_run']
+                    if len(context['data']) < context['nb_run']:
                         context['data'][retry_timeout] = list()
                     else:
                         context['exit'] = True

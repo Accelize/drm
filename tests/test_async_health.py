@@ -341,22 +341,20 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
     data = get_context()['data']
     assert len(data) == nb_run
     # Check retry timeout
-    assert data.keys() == range(0, nb_run*healthRetryStep, healthRetryStep)
+    assert sorted([int(e) for e in data.keys()]) == list(range(0, nb_run*healthRetryStep, healthRetryStep))
     for i, (retry_to, l) in enumerate(sorted(data.items(), key=lambda x: x[0])):
-        assert retry_to == i*healthRetryStep
+        assert int(retry_to) == i*healthRetryStep
         if i == 0:
             assert len(l) == 1
             assert l[0][0] == 0
-        else:
-            # Check the retry sleep is correct
-            hid0, start0, prev_end = l.pop()
-            assert hid0 == 2*i
-            for hid, start, end in l:
-                assert hid == 2*i
-                delta = parser.parse(prev_end) - parser.parse(start)
-                error_gap = healthRetrySleep
-                assert healthRetrySleep - 1 <= int(delta.total_seconds()) <= healthRetrySleep + 1
-                prev_end = end
+        # Check the retry sleep is correct
+        hid0, start0, prev_end = l.pop(0)
+        assert hid0 == 2*i
+        for hid, start, end in l:
+            assert hid == 2*i
+            delta = parser.parse(start) - parser.parse(prev_end)
+            assert healthRetrySleep - 1 <= int(delta.total_seconds()) <= healthRetrySleep + 1
+            prev_end = end
 
 
 @pytest.mark.skip
