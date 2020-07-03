@@ -62,7 +62,7 @@ Run following commands to install requirements:
     :caption: On RHEL 8, CentOS 8
 
     # Ensure EPEL repository is installed
-    sudo dnf install -y epel-release
+    sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 
     # Install packages
     sudo dnf install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel
@@ -77,7 +77,7 @@ Run following commands to install requirements:
     :caption: On RHEL 7, CentOS 7
 
     # Ensure EPEL repository is installed
-    sudo yum install -y epel-release
+    sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
     # Install packages
     sudo yum install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel
@@ -159,9 +159,17 @@ Run following command to install requirements:
     sudo pip3 install -U sphinx breathe sphinx_rtd_theme
 
 .. code-block:: bash
-    :caption: On RHEL 8, CentOS 8
+    :caption: On CentOS 8
 
-    sudo dnf install -y --enablerepo=PowerTools doxygen
+    sudo dnf config-manager --set-enabled PowerTools
+    sudo dnf install -y doxygen
+    sudo pip3 install -U sphinx breathe sphinx_rtd_theme
+
+.. code-block:: bash
+    :caption: On RHEL 8
+
+    sudo subscription-manager repos --enable "codeready-builder-for-rhel-8-$( /bin/arch )-rpms"
+    sudo dnf install -y doxygen
     sudo pip3 install -U sphinx breathe sphinx_rtd_theme
 
 .. code-block:: bash

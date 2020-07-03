@@ -10,6 +10,7 @@ from re import search
 from json import loads, dumps
 from flask import request, url_for
 from requests import get, post
+
 from tests.proxy import get_context, set_context
 
 
@@ -171,3 +172,4 @@ def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler, liv
         assert async_cb.message is not None
         assert async_cb.errcode == accelize_drm.exceptions.DRMCtlrError.error_code
         assert "License header check error" in async_cb.message
+
