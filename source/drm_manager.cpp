@@ -1420,11 +1420,7 @@ protected:
         return postHealth( request_json, retry_deadline, retry_sleep );
     }
 
-    void updateHealthParameters(uint32_t& retry_timeout, uint32_t& retry_sleep) {
-        if ( mHealthPeriod == 0 ) {
-            Warning( "Health thread is disabled" );
-            break;
-        }
+    void updateHealthRetryParameters(uint32_t& retry_timeout, uint32_t& retry_sleep) {
         if ( mHealthRetryTimeout == 0 ) {
             retry_timeout = mWSRequestTimeout;
             retry_sleep = 0;
@@ -1756,7 +1752,6 @@ protected:
                 uint32_t retry_sleep;
                 uint32_t retry_timeout;
                 mHealthCounter = 0;
-                updateHealthParameters( retry_timeout, retry_sleep );
 
                 /// Starting async metering post loop
                 while( 1 ) {
@@ -1768,6 +1763,7 @@ protected:
 
                     /// Collect the next metering data and send them to the Health Web Service
                     Debug( "Health thread collecting new metering data" );
+                    updateHealthRetryParameters( retry_timeout, retry_sleep );
                     Json::Value response_json = performHealth( retry_timeout, retry_sleep );
 
                     if ( response_json != Json::nullValue ) {
@@ -1785,7 +1781,10 @@ protected:
                             mHealthRetrySleep = healthRetrySleep;
                             Debug( "Updating Health parameters with new values: healthPeriod={}, healthRetry={}, healthRetrySleep={}",
                                 mHealthPeriod, mHealthRetryTimeout, mHealthRetrySleep );
-                            updateHealthParameters(retry_timeout, retry_sleep);
+                            if ( mHealthPeriod == 0 ) {
+                                Warning( "Health thread is disabled" );
+                                break;
+                            }
                         } else {
                             Debug( "Keep same Health parameters: healthPeriod={}, healthRetry={}, healthRetrySleep={}",
                                 mHealthPeriod, mHealthRetryTimeout, mHealthRetrySleep );
