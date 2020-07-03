@@ -33,10 +33,8 @@ limitations under the License.
 
     #define Throw( errcode, ... ) do {                                              \
         Accelize::DRM::Exception except( errcode, fmt::format( __VA_ARGS__ ) );     \
-        if ( errcode == DRM_Exit )                                                  \
+        if ( ( errcode == DRM_Exit ) || ( errcode == DRM_WSTimedOut ) || ( errcode == DRM_WSMayRetry ) )  \
             Debug( __VA_ARGS__ );                                                   \
-        else if ( ( errcode == DRM_WSTimedOut ) || ( errcode == DRM_WSMayRetry ) )  \
-            Warning( __VA_ARGS__ );                                                 \
         else                                                                        \
             Error( __VA_ARGS__ );                                                   \
         throw except;                                                               \
