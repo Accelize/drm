@@ -186,7 +186,7 @@ stages:
                     src='$(Build.SourcesDirectory)/deployment/Dockerfile.j2',
                     dst='$(Build.SourcesDirectory)/Dockerfile',
                     osName='$(osName)', osVersion='$(osVersion)',
-                    buildLayer=True)
+                    image='$(osName):$(osVersion)', buildLayer=True)
 
           - script: $(dockerBuild)
             displayName: Build "building" container image
@@ -223,7 +223,7 @@ stages:
                     src='$(Build.SourcesDirectory)/deployment/Dockerfile.j2',
                     dst='$(Build.SourcesDirectory)/Dockerfile',
                     osName='$(osName)', osVersion='$(osVersion)',
-                    buildLayer=True)
+                    image='$(osName):$(osVersion)', buildLayer=False)
 
           - script: $(dockerBuild)
             displayName: Build "testing" container image
@@ -232,6 +232,33 @@ stages:
                     -e package-install,c-install,cpp-install -p all
                     -- -m packages"
             displayName: Run tests on packages
+
+          # Run extra RHEL integrity tests for CentOS packages
+          - task: PythonScript@0
+            displayName: Create "RHEL testing" container Dockerfile
+            inputs:
+              scriptSource: inline
+              script: |
+                from acid import render_template
+                render_template(
+                    src='$(Build.SourcesDirectory)/deployment/Dockerfile.j2',
+                    dst='$(Build.SourcesDirectory)/Dockerfile',
+                    osName='rhel', osVersion='$(osVersion)',
+                    image='registry.access.redhat.com/ubi$(osVersion)',
+                    rhelUsername='$(rhelUsername)',
+                    rhelPassword='$(rhelPassword)',
+                    buildLayer=False)
+            condition: eq(variables['osName'], 'centos')
+
+          - script: $(dockerBuild)
+            displayName: Build "RHEL testing" container image
+            condition: eq(variables['osName'], 'centos')
+
+          - script: $(dockerRun) "tox --workdir /tmp
+                    -e package-install,c-install,cpp-install -p all
+                    -- -m packages"
+            displayName: Run RHEL tests on packages
+            condition: eq(variables['osName'], 'centos')
 
           # Export packages as artifacts
           - publish: $(Build.SourcesDirectory)/packages

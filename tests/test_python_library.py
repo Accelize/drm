@@ -118,9 +118,7 @@ def test_python_lint():
     from subprocess import run, PIPE, STDOUT
     run_kwargs = dict(universal_newlines=True, stderr=STDOUT, stdout=PIPE)
 
-    flake8 = ['flake8', 'python/src',
-              # Use "blake" reasonable value (https://github.com/psf/black)
-              '--max-line-length', '88']
+    flake8 = ['flake8', 'python_src', '--ignore', 'E501']
     commands = (
         # Standard Python files
         flake8,
