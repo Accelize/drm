@@ -1147,6 +1147,20 @@ protected:
         return !isLicenseEmpty;
     }
 
+    std::string getDesignHash() {
+        std::string drmVersion, dna, mailboxReadOnly;
+        std::vector<std::string> vlnvFile;
+        std::hash<std::string> hasher;
+
+        getDesignInfo( drmVersion, dna, vlnvFile, mailboxReadOnly );
+        std::string design = dna + drmVersion;
+        for( const std::string& vlnv: vlnvFile )
+            design += vlnv;
+        std::string hash = fmt::format( "{:016X}", hasher( design ) );
+        Debug( "Hash for HW design is {}", hash );
+        return hash;
+    }
+
     Json::Value getLicense( Json::Value& request_json, const uint32_t& timeout,
             const uint32_t& short_retry_period = 0, const uint32_t& long_retry_period = 0 ) {
         TClock::time_point deadline = TClock::now() + std::chrono::seconds( timeout );
@@ -1406,18 +1420,20 @@ protected:
         return postHealth( request_json, retry_deadline, retry_sleep );
     }
 
-    std::string getDesignHash() {
-        std::string drmVersion, dna, mailboxReadOnly;
-        std::vector<std::string> vlnvFile;
-        std::hash<std::string> hasher;
-
-        getDesignInfo( drmVersion, dna, vlnvFile, mailboxReadOnly );
-        std::string design = dna + drmVersion;
-        for( const std::string& vlnv: vlnvFile )
-            design += vlnv;
-        std::string hash = fmt::format( "{:016X}", hasher( design ) );
-        Debug( "Hash for HW design is {}", hash );
-        return hash;
+    void updateHealthParameters(uint32_t& retry_timeout, uint32_t& retry_sleep) {
+        if ( mHealthPeriod == 0 ) {
+            Warning( "Health thread is disabled" );
+            break;
+        }
+        if ( mHealthRetryTimeout == 0 ) {
+            retry_timeout = mWSRequestTimeout;
+            retry_sleep = 0;
+            Debug( "Health retry is disabled" );
+        } else {
+            retry_timeout = mHealthRetryTimeout;
+            retry_sleep = mHealthRetrySleep;
+            Debug( "Health retry is enabled" );
+        }
     }
 
     void createNodelockedLicenseRequestFile() {
@@ -1737,9 +1753,11 @@ protected:
         mThreadHealth = std::async( std::launch::async, [ this ]() {
             Debug( "Starting background thread which checks health" );
             try {
-                uint32_t retry_sleep = mWSRetryPeriodShort;
-                uint32_t retry_timeout = mWSRequestTimeout;
+                uint32_t retry_sleep;
+                uint32_t retry_timeout;
                 mHealthCounter = 0;
+                updateHealthParameters( retry_timeout, retry_sleep );
+
                 /// Starting async metering post loop
                 while( 1 ) {
 
@@ -1767,19 +1785,7 @@ protected:
                             mHealthRetrySleep = healthRetrySleep;
                             Debug( "Updating Health parameters with new values: healthPeriod={}, healthRetry={}, healthRetrySleep={}",
                                 mHealthPeriod, mHealthRetryTimeout, mHealthRetrySleep );
-                            if ( mHealthPeriod == 0 ) {
-                                Warning( "Health thread is disabled" );
-                                break;
-                            }
-                            if ( mHealthRetryTimeout == 0 ) {
-                                retry_timeout = mWSRequestTimeout;
-                                retry_sleep = 0;
-                                Debug( "Health retry is disabled" );
-                            } else {
-                                retry_timeout = mHealthRetryTimeout;
-                                retry_sleep = mHealthRetrySleep;
-                                Debug( "Health retry is enabled" );
-                            }
+                            updateHealthParameters(retry_timeout, retry_sleep);
                         } else {
                             Debug( "Keep same Health parameters: healthPeriod={}, healthRetry={}, healthRetrySleep={}",
                                 mHealthPeriod, mHealthRetryTimeout, mHealthRetrySleep );
@@ -1810,8 +1816,10 @@ protected:
             mThreadExit = true;
         }
         mThreadExitCondVar.notify_all();
-        mThreadKeepAlive.get();     // Wait until the License thread ends
-        mThreadHealth.get();     // Wait until the Health thread ends
+        if ( mThreadKeepAlive.valid() )
+            mThreadKeepAlive.get();     // Wait until the License thread ends
+        if ( mThreadHealth.valid() )
+            mThreadHealth.get();     // Wait until the Health thread ends
         Debug( "Background threads stopped" );
         {
             std::lock_guard<std::mutex> lock( mThreadExitMtx );
@@ -2016,7 +2024,7 @@ public:
             }
             mThreadExit = false;
             startLicenseContinuityThread();
-            if ( mHealthRetryTimeout != 0 )
+            if ( mHealthPeriod != 0 )
                 startHealthContinuityThread();
             mSecurityStop = true;
         CATCH_AND_THROW
