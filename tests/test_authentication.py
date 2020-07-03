@@ -17,8 +17,6 @@ import requests
 from tests.conftest import wait_func_true
 
 
-PROXY_HOST = "127.0.0.1"
-
 def test_authentication_bad_token(accelize_drm, conf_json, cred_json, async_handler):
     """Test when a bad authentication token is used"""
 

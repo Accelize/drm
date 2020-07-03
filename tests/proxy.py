@@ -535,7 +535,8 @@ def create_app(url):
                 timeoutSecond = context['timeoutSecond']
             if len(context['data']) >= 2 and request_json['request'] == 'running':
                 response.status_code = 408
-            response_json['metering']['timeoutSecond'] = timeoutSecond
+            if 'metering' in response_json.keys():
+                response_json['metering']['timeoutSecond'] = timeoutSecond
             context['data'].append( (request_type,start,str(datetime.now())) )
             return Response(dumps(response_json), response.status_code, headers)
 

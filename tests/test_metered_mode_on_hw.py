@@ -8,7 +8,9 @@ from random import randint, randrange
 from datetime import datetime, timedelta
 from re import search
 from tests.conftest import wait_deadline
-from os.path import realpath
+from os.path import realpath, isfile
+
+from tests.conftest import wait_func_true
 
 
 def test_metered_start_stop_in_raw(accelize_drm, conf_json, cred_json, async_handler):

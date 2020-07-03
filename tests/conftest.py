@@ -203,10 +203,16 @@ def pytest_runtest_setup(item):
     markers = tuple(item.iter_markers(name='aws'))
     if '${AWS}' == 'OFF' and markers:
         pytest.skip("Don't run C/C++ function tests.")
+
     # Skip 'security' test if not explicitly marked
     for marker in item.iter_markers():
         if 'security' == marker.name and 'security' not in item.config.option.markexpr:
             pytest.skip('"security" marker not selected')
+
+    # Skip 'long_run' test if not explicitly marked
+    for marker in item.iter_markers():
+        if 'long_run' == marker.name and 'long_run' not in item.config.option.markexpr:
+            pytest.skip('"long_run" marker not selected')
 
 
 class SingleActivator:

@@ -1242,7 +1242,8 @@ protected:
                 if ( long_retry_period == 0 ) {
                      wait_duration = short_duration;
                 } else {
-                    if ( ( deadline - TClock::now() ) <= long_duration )
+                    uint32_t short_long_ratio = long_duration / long_duration;
+                    if ( ( deadline - TClock::now() ) <= (long_duration + (short_long_ratio >> 1) * long_duration)
                         wait_duration = short_duration;
                     else
                         wait_duration = long_duration;
