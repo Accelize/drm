@@ -67,6 +67,7 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
             remove(logpath)
 
 
+@pytest.mark.skip(reason='LGDN bug in async feature')
 @pytest.mark.minimum
 def test_health_period(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
@@ -121,6 +122,7 @@ def test_health_period(accelize_drm, conf_json, cred_json, async_handler, live_s
         wait_start = end
 
 
+@pytest.mark.skip(reason='LGDN bug in async feature')
 def test_health_period_modification(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test the asynchronous health feature can be modified dynamically.
@@ -174,6 +176,7 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
         wait_start = end
 
 
+@pytest.mark.skip(reason='LGDN bug in async feature')
 def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test the asynchronous health retry feature can be disabled.
@@ -229,6 +232,7 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
         wait_start = end
 
 
+@pytest.mark.skip(reason='LGDN bug in async feature')
 @pytest.mark.minimum
 def test_health_retry(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
@@ -287,6 +291,7 @@ def test_health_retry(accelize_drm, conf_json, cred_json, async_handler, live_se
     assert healthRetry - error_gap <= int(delta.total_seconds()) <= healthRetry + error_gap
 
 
+@pytest.mark.skip(reason='LGDN bug in async feature')
 def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test the asynchronous health retry can be modified dynamically.
@@ -350,6 +355,7 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
         assert retry_timeout - error_gap <= int(delta.total_seconds()) <= retry_timeout + error_gap
 
 
+@pytest.mark.skip(reason='LGDN bug in async feature')
 @pytest.mark.minimum
 def test_health_retry_sleep(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
@@ -413,6 +419,7 @@ def test_health_retry_sleep(accelize_drm, conf_json, cred_json, async_handler, l
     assert check_cnt > 0
 
 
+@pytest.mark.skip(reason='LGDN bug in async feature')
 def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test the asynchronous health retry sleep value when changed dynamically.
@@ -477,6 +484,7 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, asy
                 start = lend
 
 
+@pytest.mark.skip(reason='LGDN bug in async feature')
 @pytest.mark.minimum
 def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler, live_server, ws_admin):
     """
