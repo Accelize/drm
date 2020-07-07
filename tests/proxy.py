@@ -23,7 +23,6 @@ def create_app(url):
     @app.route('/get/', methods=['GET'])
     def get():
         global lock
-        print('loc.context =', loc.context)
         with lock:
             return jsonify(context)
 
@@ -57,6 +56,31 @@ def create_app(url):
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         return Response(dumps(response_json), response.status_code, headers)
+
+    # test_authentication_token_renewal
+    @app.route('/test_authentication_token_renewal/o/token/', methods=['GET', 'POST'])
+    def otoken__test_authentication_token_renewal():
+        #return redirect(request.url_root + '/o/token/', code=307)
+        global context
+        global lock
+        request_json = request.get_json()
+        new_url = url + '/o/token/'
+        response = get(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 200
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        with lock:
+            response_json['expires_in'] = context['expires_in']
+        return Response(dumps(response_json), response.status_code, headers)
+
+    @app.route('/test_authentication_token_renewal/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_authentication_token_renewal():
+        return redirect(request.url_root + '/auth/metering/health/', code=307)
+
+    @app.route('/test_authentication_token_renewal/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_authentication_token_renewal_genlicense():
+        return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
 
     # test_header_error_on_key functions
     @app.route('/test_header_error_on_key/o/token/', methods=['GET', 'POST'])

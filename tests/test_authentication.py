@@ -17,8 +17,6 @@ import requests
 from tests.conftest import wait_func_true
 
 
-PROXY_HOST = "127.0.0.1"
-
 def test_authentication_bad_token(accelize_drm, conf_json, cred_json, async_handler):
     """Test when a bad authentication token is used"""
 
@@ -115,9 +113,8 @@ def test_authentication_validity_after_deactivation(accelize_drm, conf_json, cre
         drm_manager.deactivate()
 
 
-@pytest.mark.long_run
 @pytest.mark.hwtst
-def test_authentication_token_renewal(accelize_drm, conf_json, cred_json, async_handler):
+def test_authentication_token_renewal(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """Test a different authentication token is given after expiration"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -125,6 +122,13 @@ def test_authentication_token_renewal(accelize_drm, conf_json, cred_json, async_
     async_cb.reset()
     conf_json.reset()
     cred_json.set_user('accelize_accelerator_test_02')
+
+    # Set initial context on the live server
+    expires_in = 5
+    context = {'expires_in':expires_in}
+    set_context(context)
+    assert get_context() == context
+
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,

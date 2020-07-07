@@ -1020,7 +1020,6 @@ def app(pytestconfig):
     url = _LICENSING_SERVERS[pytestconfig.getoption("server")]
     app = create_app(url)
     app.debug = pytestconfig.getoption("proxy_debug")
-    print('app.debug=', app.debug)
     return app
 
 
