@@ -7,7 +7,7 @@ import os
 from time import sleep
 from random import randint, randrange
 from datetime import datetime, timedelta
-from re import search
+from re import search, findall
 from tests.conftest import wait_deadline
 from os.path import realpath, isfile
 
