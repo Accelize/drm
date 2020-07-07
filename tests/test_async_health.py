@@ -5,7 +5,7 @@ Test asynchronous metering behaviors of DRM Library.
 import pytest
 from time import sleep
 from random import randrange
-from re import search, MULTILINE
+from re import search, findall, MULTILINE
 from dateutil import parser
 from itertools import groupby
 from flask import request, url_for
