@@ -42,7 +42,7 @@ Json::Value parseJsonFile(const std::string &file_path);
 const Json::Value& JVgetRequired( const Json::Value& json_value, const char* key, const Json::ValueType& type );
 const Json::Value& JVgetOptional( const Json::Value& json_value, const char* key, const Json::ValueType& type, const Json::Value& defaultValue = Json::nullValue );
 
-std::string exec_cmd( const char* cmd);
+std::string exec_cmd( const std::string cmd);
 }
 }
 

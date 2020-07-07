@@ -41,6 +41,7 @@ limitations under the License.
 #include "ws_client.h"
 #include "log.h"
 #include "utils.h"
+#include "csp.h"
 
 
 #pragma GCC diagnostic push
@@ -429,11 +430,6 @@ protected:
         return true;
     }
 
-    Json::Value getCspInfo() {
-        Json::Value csp_node = Json::nullValue;
-        return csp_node;
-    }
-
     void getHostAndCardInfo() {
 
         // Find xbutil if existing
@@ -442,7 +438,7 @@ protected:
 
         // Call xbutil to collect host and card data
         std::string cmd = fmt::format( "{} dump", mXbutil );
-        std::string cmd_out = exec_cmd( cmd.c_str() );
+        std::string cmd_out = exec_cmd( cmd );
 
         // Parse collected data and save to header
         Json::Value node = parseJsonString( cmd_out );
@@ -466,7 +462,11 @@ protected:
                     // Add XCLBIN UUID
                     mHostConfigData[key]["xclbin"] = itr->get("xclbin", Json::nullValue);
                     // Add CSP specific command
-                    mHostConfigData[key]["csp"] = getCspInfo();
+                    CspBase* csp = CspBase::make_csp();
+                    if ( csp != nullptr ) {
+                        mHostConfigData[key]["csp"] = csp->get_metadata();
+                        delete csp;
+                    }
                 }
             } catch( const std::exception &e ) {
                 Debug( "Could not extract Host Information for key {}", key );
@@ -1243,7 +1243,7 @@ protected:
                      wait_duration = short_duration;
                 } else {
                     uint32_t short_long_ratio = long_duration / long_duration;
-                    if ( ( deadline - TClock::now() ) <= (long_duration + (short_long_ratio >> 1) * long_duration)
+                    if ( ( deadline - TClock::now() ) <= (long_duration + (short_long_ratio >> 1) * long_duration) )
                         wait_duration = short_duration;
                     else
                         wait_duration = long_duration;

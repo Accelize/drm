@@ -249,11 +249,11 @@ const Json::Value& JVgetOptional( const Json::Value& jval,
 }
 
 
-std::string exec_cmd( const char* cmd) {
+std::string exec_cmd( const std::string cmd) {
     std::array<char, 128> buffer;
     std::string result;
     Debug( "Running command: {}", cmd );
-    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"), pclose);
     if (!pipe) {
         throw std::runtime_error("popen() failed!");
     }

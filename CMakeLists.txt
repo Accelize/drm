@@ -201,6 +201,7 @@ set(TARGET_SOURCES
     spdlog/src/color_sinks.cpp
     spdlog/src/file_sinks.cpp
     source/ws_client.cpp
+    source/csp.cpp
     source/drm_manager.cpp
     source/utils.cpp
     source/error.cpp
