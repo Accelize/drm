@@ -335,7 +335,7 @@ def test_versions_displayed_in_log_file(accelize_drm, conf_json, cred_json, asyn
         with open(log_path, 'rt') as f:
             log_content = f.read()
         assert search(r'drmlib\s*:\s*\d+\.\d+\.\d+', log_content)
-        assert search(r'libcurl\s*:(\s*\(?\+?\w+/\d+\.\d+(\.\d+)?\)?)+\n', log_content)
+        assert search(r'libcurl\s*:(\s+[^/]+/\d+\.\d+(\.\d+)?)+', log_content)
         assert search(r'jsoncpp\s*:\s*\d+\.\d+\.\d+\n', log_content)
         assert search(r'spdlog\s*:\s*\d+\.\d+\.\d+\n', log_content)
         async_cb.assert_NoError()

@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 #ifndef _H_ACCELIZE_COMMON_EXPORT
-    #define _H_ACCELIZE_COMMON_EXPORT
+#define _H_ACCELIZE_COMMON_EXPORT
 
     #ifdef  __cplusplus
         #ifdef BUILDING_DRMLIB
@@ -33,7 +33,7 @@ limitations under the License.
 
     #define Throw( errcode, ... ) do {                                          \
         Accelize::DRM::Exception except( errcode, fmt::format( __VA_ARGS__ ) ); \
-        if ( ( errcode != DRM_Exit ) && ( errcode != DRM_WSMayRetry ) )         \
+        if ( ( errcode != DRM_Exit ) && ( errcode != DRM_WSTimedOut ) && ( errcode != DRM_WSMayRetry ) )  \
             Error( __VA_ARGS__ );                                               \
         else                                                                    \
             Debug( __VA_ARGS__ );                                               \

@@ -11,6 +11,8 @@ from re import match, search, finditer, MULTILINE, IGNORECASE
 from time import sleep, time
 from json import loads, dumps
 from datetime import datetime, timedelta
+from flask import request, url_for
+
 from tests.conftest import wait_func_true
 
 
@@ -653,13 +655,13 @@ def test_retry_function(accelize_drm, conf_json, cred_json, async_handler):
         drm_manager0.activate()
         assert drm_manager0.get('license_status')
         start = datetime.now()
-        with pytest.raises(accelize_drm.exceptions.DRMWSTimedOut) as excinfo:
+        with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
             drm_manager1.activate()
         end = datetime.now()
         m = search(r'Timeout on License request after (\d+) attempts', str(excinfo.value))
         assert m is not None
         assert int(m.group(1)) > 1
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSTimedOut.error_code
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
         total_seconds = int((end - start).total_seconds())
         assert total_seconds >= timeout
         assert total_seconds <= timeout + 1
@@ -733,6 +735,7 @@ def test_curl_host_resolve(accelize_drm, conf_json, cred_json, async_handler):
     async_cb.assert_NoError()
 
 
+@pytest.mark.no_parallel
 @pytest.mark.minimum
 def test_http_header_api_version(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """Test the http header contains the expected API version"""
