@@ -11,7 +11,7 @@ from re import match, search, finditer, MULTILINE, IGNORECASE
 from time import sleep, time
 from json import loads
 from datetime import datetime, timedelta
-from flask import request, url_for
+from flask import request
 from dateutil import parser
 
 from tests.conftest import wait_func_true

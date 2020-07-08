@@ -8,7 +8,7 @@ from random import randrange
 from re import search, MULTILINE
 from dateutil import parser
 from itertools import groupby
-from flask import request, url_for
+from flask import request
 from requests import get, post
 
 from tests.conftest import wait_func_true

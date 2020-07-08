@@ -8,7 +8,7 @@ from random import randint
 from datetime import datetime, timedelta
 from re import search
 from json import loads, dumps
-from flask import request, url_for
+from flask import request
 from requests import get, post
 from tests.proxy import get_context, set_context
 
@@ -40,11 +40,8 @@ def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler, 
 
     # Set initial context on the live server
     context = {'cnt':0}
-    r = post(url_for('set', _external=True), json=context)
-    assert r.status_code == 200
-    r = get(url_for('get', _external=True))
-    assert r.status_code == 200
-    assert r.json() == context
+    set_context(context)
+    assert get_context() == context
 
     with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
         drm_manager.activate()
@@ -81,11 +78,8 @@ def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_
 
     # Set initial context on the live server
     context = {'cnt':0}
-    r = post(url_for('set', _external=True), json=context)
-    assert r.status_code == 200
-    r = get(url_for('get', _external=True))
-    assert r.status_code == 200
-    assert r.json() == context
+    set_context(context)
+    assert get_context() == context
 
     drm_manager.activate()
     try:
@@ -134,11 +128,8 @@ def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler, liv
 
     # Set initial context on the live server
     context = {'session_id':None, 'session_cnt':0, 'request_cnt':0}
-    r = post(url_for('set', _external=True), json=context)
-    assert r.status_code == 200
-    r = get(url_for('get', _external=True))
-    assert r.status_code == 200
-    assert r.json() == context
+    set_context(context)
+    assert get_context() == context
 
     # Start session #1 to record
     drm_manager.activate()
