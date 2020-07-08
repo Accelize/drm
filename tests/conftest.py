@@ -714,7 +714,7 @@ def conf_json(pytestconfig, tmpdir):
     if pytestconfig.getoption("logfile"):
         log_param['log_file_type'] = 1
         log_param['log_file_path'] = realpath("./drmlib_t%f_pid%d.log" % (time(), getpid()))
-        log_param['log_file_verbosity'] = pytestconfig.getoption("library_verbosity")
+        log_param['log_file_verbosity'] = 1
     json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param)
     json_conf.save()
     return json_conf

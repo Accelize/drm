@@ -417,10 +417,10 @@ def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, cred_json
     assert drm_manager2.get('session_status')
     assert drm_manager2.get('license_status')
     activators.autotest(is_activated=True)
+    assert drm_manager2.get('metered_data') == 10
     # Wait for license renewal
     sleep(lic_duration+2)
     assert drm_manager2.get('session_id') == session_id
-    assert drm_manager2.get('metered_data') == 10
     activators[0].generate_coin(10)
     activators[0].check_coin(drm_manager2.get('metered_data'))
     assert drm_manager2.get('metered_data') == 20
