@@ -61,6 +61,35 @@ def create_app(url):
         response_json = response.json()
         return Response(dumps(response_json), response.status_code, headers)
 
+    ##############################################################################
+    # test_authentication.py
+
+    # test_authentication_bad_token
+    @app.route('/test_authentication_bad_token/o/token/', methods=['GET', 'POST'])
+    def otoken__test_authentication_bad_token():
+        #return redirect(request.url_root + '/o/token/', code=307)
+        global context
+        global lock
+        request_json = request.get_json()
+        new_url = url + '/o/token/'
+        response = get(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 200, "Status code=%d, message=%s" % (response.status_code, response.text)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        with lock:
+            response_json['expires_in'] = context['expires_in']
+            response_json['access_token'] = context['access_token']
+        return Response(dumps(response_json), response.status_code, headers)
+
+    @app.route('/test_authentication_bad_token/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_authentication_bad_token():
+        return redirect(request.url_root + '/auth/metering/health/', code=307)
+
+    @app.route('/test_authentication_bad_token/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_authentication_bad_token_genlicense():
+        return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
+
     # test_authentication_token_renewal
     @app.route('/test_authentication_token_renewal/o/token/', methods=['GET', 'POST'])
     def otoken__test_authentication_token_renewal():

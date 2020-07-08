@@ -15,9 +15,10 @@ from multiprocessing import Process
 import requests
 
 from tests.conftest import wait_func_true
+from tests.proxy import get_context, set_context
 
 
-def test_authentication_bad_token(accelize_drm, conf_json, cred_json, async_handler):
+def test_authentication_bad_token(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """Test when a bad authentication token is used"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -36,6 +37,14 @@ def test_authentication_bad_token(accelize_drm, conf_json, cred_json, async_hand
     conf_json['settings']['log_file_path'] = file_log_path
     conf_json['settings']['log_file_type'] = file_log_type
     conf_json.save()
+
+    # Set initial context on the live server
+    expires_in = 5
+    access_token = 'BAD_TOKEN'
+    context = {'expires_in':expires_in, 'access_token':access_token}
+    set_context(context)
+    assert get_context() == context
+
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
@@ -44,20 +53,18 @@ def test_authentication_bad_token(accelize_drm, conf_json, cred_json, async_hand
         async_cb.callback
     )
     try:
-        drm_manager.set(bad_oauth2_token=1)
-        assert drm_manager.get('token_string') == 'BAD_TOKEN'
-        assert drm_manager.get('token_validity') == 1000
         with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
             drm_manager.activate()
         assert search(r'Timeout on License request after \d+ attempts', str(excinfo.value))
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
-        async_cb.assert_NoError()
+        assert drm_manager.get('token_string') == access_token
+        assert drm_manager.get('token_validity') == expires_in
         del drm_manager
-        drm_manager = None
         assert wait_func_true(lambda: isfile(file_log_path), 10)
         with open(file_log_path, 'rt') as f:
             file_log_content = f.read()
         assert search(r'\bAuthentication credentials were not provided\b', file_log_content)
+        async_cb.assert_NoError()
 
     finally:
         if drm_manager:
