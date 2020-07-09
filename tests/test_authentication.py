@@ -15,7 +15,7 @@ from multiprocessing import Process
 import requests
 from flask import request
 
-from tests.conftest import wait_func_true
+from tests.conftest import wait_func_true, wait_deadline
 from tests.proxy import get_context, set_context
 
 
@@ -41,9 +41,8 @@ def test_authentication_bad_token(accelize_drm, conf_json, cred_json, async_hand
     conf_json.save()
 
     # Set initial context on the live server
-    expires_in = 5
     access_token = 'BAD_TOKEN'
-    context = {'expires_in':expires_in, 'access_token':access_token}
+    context = {'access_token':access_token}
     set_context(context)
     assert get_context() == context
 
@@ -55,22 +54,21 @@ def test_authentication_bad_token(accelize_drm, conf_json, cred_json, async_hand
         async_cb.callback
     )
     try:
-        with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
-            drm_manager.activate()
-        assert search(r'Timeout on License request after \d+ attempts', str(excinfo.value))
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
-        assert drm_manager.get('token_string') == access_token
-        assert drm_manager.get('token_validity') == expires_in
+        try:
+            with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
+                drm_manager.activate()
+            assert search(r'Timeout on License request after \d+ attempts', str(excinfo.value))
+            assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
+            assert drm_manager.get('token_string') == access_token
+        finally:
+            drm_manager.deactivate()
         del drm_manager
-        assert wait_func_true(lambda: isfile(file_log_path), 10)
+        wait_func_true(lambda: isfile(file_log_path), 10)
         with open(file_log_path, 'rt') as f:
             file_log_content = f.read()
         assert search(r'\bAuthentication credentials were not provided\b', file_log_content)
         async_cb.assert_NoError()
-
     finally:
-        if drm_manager:
-            drm_manager.deactivate()
         if isfile(file_log_path):
             remove(file_log_path)
 
@@ -138,7 +136,7 @@ def test_authentication_token_renewal(accelize_drm, conf_json, cred_json, async_
     conf_json.save()
 
     # Set initial context on the live server
-    expires_in = 5
+    expires_in = 6
     context = {'expires_in':expires_in}
     set_context(context)
     assert get_context() == context
@@ -152,9 +150,15 @@ def test_authentication_token_renewal(accelize_drm, conf_json, cred_json, async_
     )
     try:
         drm_manager.activate()
+        start = datetime.now()
+        lic_duration = drm_manager.get('license_duration')
         token_string = drm_manager.get('token_string')
         token_time_left = drm_manager.get('token_time_left')
-        sleep(token_time_left + 1)
+        sleep(token_time_left)  # Wait expiration of token
+        # Compute expiration of license for the token to be renewed
+        q = int(expires_in / lic_duration)
+        next_lic_expiration = expires_in % (q * lic_duration)
+        sleep(next_lic_expiration + 2)  # Wait current license expiration
         assert drm_manager.get('token_string') != token_string
     finally:
         drm_manager.deactivate()

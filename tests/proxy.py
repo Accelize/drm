@@ -41,8 +41,6 @@ def create_app(url):
         request_json = request.get_json()
         new_url = url + '/auth/metering/health/'
         response = post(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
-                indent=4, sort_keys=True), response.status_code, response.text)
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
@@ -51,11 +49,8 @@ def create_app(url):
     @app.route('/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense():
         request_json = request.get_json()
-        print('request_json=', dumps(request_json, indent=4, sort_keys=True))
         new_url = url + '/auth/metering/genlicense/'
         response = post(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
-                indent=4, sort_keys=True), response.status_code, response.text)
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
@@ -67,18 +62,16 @@ def create_app(url):
     # test_authentication_bad_token
     @app.route('/test_authentication_bad_token/o/token/', methods=['GET', 'POST'])
     def otoken__test_authentication_bad_token():
-        #return redirect(request.url_root + '/o/token/', code=307)
         global context
         global lock
-        request_json = request.get_json()
-        new_url = url + '/o/token/'
-        response = get(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 200, "Status code=%d, message=%s" % (response.status_code, response.text)
+        new_url = request.url.replace(request.url_root+'test_authentication_bad_token', url)
+        response = post(new_url, data=request.form, headers=request.headers)
+        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request.form,
+                indent=4, sort_keys=True), response.status_code, response.text)
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
-            response_json['expires_in'] = context['expires_in']
             response_json['access_token'] = context['access_token']
         return Response(dumps(response_json), response.status_code, headers)
 
@@ -93,13 +86,12 @@ def create_app(url):
     # test_authentication_token_renewal
     @app.route('/test_authentication_token_renewal/o/token/', methods=['GET', 'POST'])
     def otoken__test_authentication_token_renewal():
-        #return redirect(request.url_root + '/o/token/', code=307)
         global context
         global lock
-        request_json = request.get_json()
         new_url = url + '/o/token/'
-        response = get(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 200, "Status code=%d, message=%s" % (response.status_code, response.text)
+        response = post(new_url, data=request.form, headers=request.headers)
+        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request.form,
+                indent=4, sort_keys=True), response.status_code, response.text)
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
@@ -226,7 +218,17 @@ def create_app(url):
 
     @app.route('/test_health_period_disabled/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_health_period_disabled():
-        return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
+        global context
+        new_url = request.url.replace(request.url_root+'test_health_period_disabled', url)
+        request_json = request.get_json()
+        response = post(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        response_json['metering']['healthPeriod'] = context['healthPeriod']
+        return Response(dumps(response_json), response.status_code, headers)
 
     @app.route('/test_health_period_disabled/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_health_period_disabled():

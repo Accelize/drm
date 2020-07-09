@@ -45,7 +45,7 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
     )
 
     # Set initial context on the live server
-    nb_health = 3
+    nb_health = 2
     healthPeriod = 2
     context = {'cnt':0, 'healthPeriod':healthPeriod, 'nb_health':nb_health, 'exit':False}
     set_context(context)
@@ -54,78 +54,28 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
     try:
         drm_manager.activate()
         try:
-            wait_func_true(lambda: get_context()['cnt'] > 0,
-                    timeout=healthPeriod * nb_health)
             assert drm_manager.get('health_period') == healthPeriod
             wait_func_true(lambda: get_context()['exit'],
-                    timeout=healthPeriod * nb_health)
-            sleep(healthPeriod * 2)
+                    timeout=healthPeriod * nb_health * 2)
+            sleep(1)
             assert drm_manager.get('health_period') == 0
             assert get_context()['cnt'] == nb_health + 1
         finally:
             drm_manager.deactivate()
-            del drm_manager
-        async_cb.assert_NoError()
-        assert wait_func_true(lambda: isfile(logpath), 10)
+        del drm_manager
+        wait_func_true(lambda: isfile(logpath), 10)
         with open(logpath, 'rt') as f:
             log_content = f.read()
+        assert search(r'Exiting background thread which checks health', log_content, MULTILINE)
         assert search(r'Health thread is disabled', log_content, MULTILINE)
+        assert search(r'Exiting background thread which checks health', log_content, MULTILINE)
+        async_cb.assert_NoError()
     finally:
         if isfile(logpath):
             remove(logpath)
 
 
-@pytest.mark.skip
-@pytest.mark.no_parallel
-def test_health_period(accelize_drm, conf_json, cred_json, async_handler, live_server):
-    """
-    Test the asynchronous health period is correct.
-    """
-    driver = accelize_drm.pytest_fpga_driver[0]
-    async_cb = async_handler.create()
-    async_cb.reset()
-
-    conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_health_period'
-    conf_json.save()
-
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-
-    # Set initial context on the live server
-    nb_health = 2
-    healthPeriod = 2
-    healthRetry = 0  # no retry
-    healthRetrySleep = 1
-    context = {'data': list(),
-               'healthPeriod':healthPeriod,
-               'healthRetry':healthRetry,
-               'healthRetrySleep':healthRetrySleep
-    }
-    set_context(context)
-    assert get_context() == context
-
-    drm_manager.activate()
-    try:
-        wait_func_true(lambda: len(get_context()['data']) > nb_health + 1,
-                timeout=(healthPeriod+3) * (nb_health+2))
-    finally:
-        drm_manager.deactivate()
-    async_cb.assert_NoError()
-    data_list = get_context()['data']
-    assert len(data_list) >= nb_health+1
-    wait_start = data_list.pop(0)[1]
-    for start, end in data_list:
-        delta = parser.parse(start) - parser.parse(wait_start)
-        assert int(delta.total_seconds()) == healthPeriod
-        wait_start = end
-
-
+@pytest.mark.skip(reason='Bug in async feature')
 @pytest.mark.no_parallel
 @pytest.mark.minimum
 def test_health_period_modification(accelize_drm, conf_json, cred_json, async_handler, live_server):
@@ -177,6 +127,7 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
         wait_start = end
 
 
+@pytest.mark.skip(reason='Bug in async feature')
 @pytest.mark.no_parallel
 @pytest.mark.minimum
 def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler, live_server):
@@ -230,62 +181,7 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
         wait_start = end
 
 
-@pytest.mark.skip
-@pytest.mark.no_parallel
-def test_health_retry(accelize_drm, conf_json, cred_json, async_handler, live_server):
-    """
-    Test the asynchronous health retry.
-    """
-    driver = accelize_drm.pytest_fpga_driver[0]
-    async_cb = async_handler.create()
-    async_cb.reset()
-
-    conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_health_retry'
-    conf_json.save()
-
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-
-    # Set initial context on the live server
-    healthPeriod = 3
-    healthRetry = 15
-    healthRetrySleep = 1
-    context = {'data': list(),
-               'healthPeriod':healthPeriod,
-               'healthRetry':healthRetry,
-               'healthRetrySleep':healthRetrySleep,
-               'exit':False
-    }
-    set_context(context)
-    assert get_context() == context
-
-    drm_manager.activate()
-    try:
-        wait_func_true(lambda: get_context()['exit'],
-                timeout=healthRetry*2)
-    finally:
-        drm_manager.deactivate()
-    async_cb.assert_NoError()
-    data_list = get_context()['data']
-    data0 = data_list.pop(0)
-    assert len(data_list) > 1
-    assert data0[0] == 0
-    # Check health_id is unchanged during the retry period
-    assert sum(map(lambda x: x[0], data_list)) == len(data_list)
-    # Check the retry period is correct
-    start = data_list[0][1]
-    end = data_list[-1][2]
-    delta = parser.parse(end) - parser.parse(start)
-    error_gap = drm_manager.get('health_retry_sleep') + 1
-    assert healthRetry - error_gap <= int(delta.total_seconds()) <= healthRetry + error_gap
-
-
+@pytest.mark.skip(reason='Bug in async feature')
 @pytest.mark.no_parallel
 @pytest.mark.minimum
 def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_handler, live_server):
@@ -348,67 +244,7 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
         assert retry_timeout - error_gap <= int(delta.total_seconds()) <= retry_timeout + error_gap
 
 
-@pytest.mark.skip
-@pytest.mark.no_parallel
-def test_health_retry_sleep(accelize_drm, conf_json, cred_json, async_handler, live_server):
-    """
-    Test the asynchronous health retry sleep value
-    """
-    driver = accelize_drm.pytest_fpga_driver[0]
-    async_cb = async_handler.create()
-    async_cb.reset()
-
-    conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_health_retry_sleep'
-    conf_json.save()
-
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-
-    # Set initial context on the live server
-    nb_health = 2
-    healthPeriod = 3
-    healthRetry = 4
-    healthRetrySleep = 2
-    context = {'data': list(),
-               'nb_health':nb_health,
-               'healthPeriod':healthPeriod,
-               'healthRetry':healthRetry,
-               'healthRetrySleep':healthRetrySleep,
-               'exit':False
-    }
-    set_context(context)
-    assert get_context() == context
-
-    drm_manager.activate()
-    try:
-        wait_func_true(lambda: get_context()['exit'],
-                timeout=(healthPeriod+3) * (nb_health+2))
-    finally:
-        drm_manager.deactivate()
-    async_cb.assert_NoError()
-    data_list = get_context()['data']
-    data0 = data_list.pop(0)
-    # Check the retry sleep period is correct
-    check_cnt = 0
-    for health_id, group in groupby(data_list, lambda x: x[0]):
-        group = list(group)
-        if len(group) < 2:
-            continue
-        assert len(group) >= 2
-        start = group[0][2]
-        end = group[1][1]
-        delta = parser.parse(end) - parser.parse(start)
-        assert int(delta.total_seconds()) == healthRetrySleep
-        check_cnt += 1
-    assert check_cnt > 0
-
-
+@pytest.mark.skip(reason='Bug in async feature')
 @pytest.mark.no_parallel
 @pytest.mark.minimum
 def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, async_handler, live_server):
@@ -472,6 +308,7 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, asy
                 start = lend
 
 
+@pytest.mark.skip(reason='Bug in async feature')
 @pytest.mark.no_parallel
 @pytest.mark.minimum
 def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler, live_server, ws_admin):
@@ -541,7 +378,7 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
     async_cb.assert_NoError()
 
 
-@pytest.mark.skip(reason='HDK is not yet ready to support synch and async metering request')
+@pytest.mark.skip(reason='Bug in async feature')
 @pytest.mark.no_parallel
 def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
@@ -592,7 +429,7 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_s
         async_cb.assert_NoError()
         data_list = get_context()['data']
         assert len(data_list) > nb_genlic
-        assert wait_func_true(lambda: isfile(logpath), 10)
+        wait_func_true(lambda: isfile(logpath), 10)
         with open(logpath, 'rt') as f:
             log_content = f.read()
         segment_idx_expected = 0
@@ -611,6 +448,3 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_s
     finally:
         if isfile(logpath):
             remove(logpath)
-
-
-

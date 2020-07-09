@@ -1707,8 +1707,10 @@ protected:
             mThreadExit = true;
         }
         mThreadExitCondVar.notify_all();
-        mThreadKeepAlive.get();     // Wait until the License thread ends
-        mThreadHealth.get();     // Wait until the Health thread ends
+        if ( mThreadKeepAlive.valid() )
+            mThreadKeepAlive.get();     // Wait until the License thread ends
+        if ( mThreadHealth.valid() )
+            mThreadHealth.get();     // Wait until the Health thread ends
         Debug( "Background threads stopped" );
         {
             std::lock_guard<std::mutex> lock( mThreadExitMtx );
@@ -1737,9 +1739,9 @@ protected:
 
             /// Extract asynchronous health parameters from response
             Json::Value metering_node = JVgetOptional( license_json, "metering", Json::objectValue, Json::nullValue );
-            mHealthPeriod = JVgetOptional( license_json, "healthPeriod", Json::uintValue, mHealthPeriod ).asUInt();
-            mHealthRetryTimeout = JVgetOptional( license_json, "healthRetry", Json::uintValue, mHealthRetryTimeout ).asUInt();
-            mHealthRetrySleep = JVgetOptional( license_json, "healthRetrySleep", Json::uintValue, mHealthRetrySleep ).asUInt();
+            mHealthPeriod = JVgetOptional( metering_node, "healthPeriod", Json::uintValue, mHealthPeriod ).asUInt();
+            mHealthRetryTimeout = JVgetOptional( metering_node, "healthRetry", Json::uintValue, mHealthRetryTimeout ).asUInt();
+            mHealthRetrySleep = JVgetOptional( metering_node, "healthRetrySleep", Json::uintValue, mHealthRetrySleep ).asUInt();
 
             // Check if an error occurred
             checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 5 ) );
@@ -1913,7 +1915,8 @@ public:
             }
             mThreadExit = false;
             startLicenseContinuityThread();
-            startHealthContinuityThread();
+            if ( mHealthPeriod )
+                startHealthContinuityThread();
             mSecurityStop = true;
         CATCH_AND_THROW
     }
@@ -2389,15 +2392,6 @@ public:
                         f_asynch_error( e.what() );
                         Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
                                custom_msg );
-                        break;
-                    }
-                    case ParameterKey::bad_product_id: {
-                        Warning( "Parameter '{}' (ID={}) is deprecated", key_str, key_id );
-                        break;
-                    }
-                    case ParameterKey::bad_oauth2_token: {
-                        Debug( "Set parameter '{}' (ID={}) to random value", key_str, key_id );
-                        getDrmWSClient().setOAuth2token( "BAD_TOKEN" );
                         break;
                     }
                     case ParameterKey::log_message_level: {

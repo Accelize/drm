@@ -6,8 +6,11 @@ import pytest
 from time import sleep
 from random import randint, randrange
 from datetime import datetime, timedelta
-from re import search
-from tests.conftest import wait_deadline
+from re import search, findall
+from os.path import realpath, isfile
+from os import remove
+
+from tests.conftest import wait_deadline, wait_func_true
 
 
 def test_metered_start_stop_in_raw(accelize_drm, conf_json, cred_json, async_handler):
@@ -480,7 +483,7 @@ def test_async_on_pause(accelize_drm, conf_json, cred_json, async_handler):
         finally:
             drm_manager.deactivate()
             del drm_manager
-        assert wait_func_true(lambda: isfile(logpath), 10)
+        wait_func_true(lambda: isfile(logpath), 10)
         with open(logpath, 'rt') as f:
             log_content = f.read()
         assert len(list(findall(r'"request"\s*:\s*"health"', log_content))) == 1

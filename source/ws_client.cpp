@@ -165,10 +165,9 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
     CurlSingleton::Init();
 
     // Set header of OAuth2 request
-    mOAUth2Request.setHostResolves( mHostResolvesJson );
     std::string oauth_url = url + std::string("/o/token/");
+    mOAUth2Request.setHostResolves( mHostResolvesJson );
     mOAUth2Request.setURL( oauth_url );
-    Debug( "OAuth URL: {}", oauth_url );
     std::stringstream ss;
     ss << "client_id=" << mClientId << "&client_secret=" << mClientSecret;
     ss << "&grant_type=client_credentials";
@@ -177,6 +176,8 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
     // Set URL of license and metering requests
     mLicenseUrl = url + std::string("/auth/metering/genlicense/");
     mHealthUrl = url + std::string("/auth/metering/health/");
+
+    Debug( "OAuth URL: {}", oauth_url );
     Debug( "Licensing URL: {}", mLicenseUrl );
     Debug( "Health URL: {}", mHealthUrl );
 }
@@ -184,12 +185,6 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
 int32_t DrmWSClient::getTokenTimeLeft() const {
     TClock::duration delta = mTokenExpirationTime - TClock::now();
     return (uint32_t)round( (double)delta.count() / 1000000000 );
-}
-
-void DrmWSClient::setOAuth2token( const std::string& token ) {
-    mOAuth2Token = token;
-    mTokenValidityPeriod = 1000;
-    mTokenExpirationTime = TClock::now() + std::chrono::seconds( mTokenValidityPeriod );
 }
 
 bool DrmWSClient::isTokenValid() const {

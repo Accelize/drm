@@ -145,7 +145,6 @@ public:
     int32_t getTokenTimeLeft() const;
     std::string getTokenString() const { return mOAuth2Token; }
 
-    void setOAuth2token( const std::string& token );
     void requestOAuth2token(TClock::time_point deadline);
 
     Json::Value requestLicense( const Json::Value& json_req, TClock::time_point deadline );

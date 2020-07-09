@@ -828,7 +828,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         msg = 'This line should appear in log file'
         drm_manager.set(log_message=msg)
         del drm_manager
-        assert wait_func_true(lambda: isfile(logpath), 10)
+        wait_func_true(lambda: isfile(logpath), 10)
         with open(logpath, 'rt') as f:
             log_content = f.read()
         assert "critical" in log_content
