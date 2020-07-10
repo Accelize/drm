@@ -157,8 +157,8 @@ def test_authentication_token_renewal(accelize_drm, conf_json, cred_json, async_
         sleep(token_time_left)  # Wait expiration of token
         # Compute expiration of license for the token to be renewed
         q = int(expires_in / lic_duration)
-        next_lic_expiration = expires_in % (q * lic_duration)
-        sleep(next_lic_expiration + 2)  # Wait current license expiration
+        next_lic_expiration = ((q+1) * lic_duration) % expires_in
+        sleep(next_lic_expiration + 5)  # Wait current license expiration
         assert drm_manager.get('token_string') != token_string
     finally:
         drm_manager.deactivate()

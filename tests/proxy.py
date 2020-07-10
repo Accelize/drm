@@ -328,15 +328,19 @@ def create_app(url):
             new_url = request.url.replace(request.url_root+'test_health_retry_disabled', url)
             request_json = request.get_json()
             health_id = request_json['health_id']
-            response = post(new_url, json=request_json, headers=request.headers)
-            assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
-                    indent=4, sort_keys=True), response.status_code, response.text)
-            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-            response_json = response.json()
-            response_json['metering']['healthPeriod'] = context['healthPeriod']
-            response_json['metering']['healthRetry'] = 0
-            response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
+            if len(context['data']) <= 1:
+                response = post(new_url, json=request_json, headers=request.headers)
+                assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                        indent=4, sort_keys=True), response.status_code, response.text)
+                excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+                headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+                response_json = response.json()
+                response_json['metering']['healthPeriod'] = context['healthPeriod']
+                response_json['metering']['healthRetry'] = 0
+                response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
+                context['post'] = (response_json, headers)
+            else:
+                response_json, headers = context['post']
             if len(context['data']) > 1:
                 response.status_code = 408
             context['data'].append( (health_id,start,str(datetime.now())) )

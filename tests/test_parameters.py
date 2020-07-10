@@ -56,8 +56,6 @@ _PARAM_LIST = ('license_type',
                'page_mailbox',
                'hw_report',
                'trigger_async_callback',
-               'bad_product_id',
-               'bad_oauth2_token',
                'log_message',
                'hdk_compatibility',
                'health_period',
@@ -798,9 +796,6 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     drm_manager.deactivate()
     async_cb.reset()
     print("Test parameter 'trigger_async_callback': PASS")
-
-    # Test parameter: bad_oauth2_token
-    # => Skipped: Tested in test_configuration_file_with_bad_authentication
 
     # Test parameter: ParameterKeyCount
     assert drm_manager.get('ParameterKeyCount') == len(_PARAM_LIST)
