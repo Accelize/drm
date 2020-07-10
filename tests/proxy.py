@@ -575,17 +575,20 @@ def create_app(url):
             new_url = request.url.replace(request.url_root+'test_long_to_short_retry_switch', url)
             request_json = request.get_json()
             request_type = request_json['request']
-            response = post(new_url, json=request_json, headers=request.headers)
-            assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
-                    indent=4, sort_keys=True), response.status_code, response.text)
-            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-            response_json = response.json()
-            if len(context['data']) == 0:
-                timeoutSecond = context['timeoutSecondFirst2']
+            if len(context['data']) < 2 or request_json['request'] != 'running':
+                response = post(new_url, json=request_json, headers=request.headers)
+                assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                        indent=4, sort_keys=True), response.status_code, response.text)
+                excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+                headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+                response_json = response.json()
+                if len(context['data']) == 0:
+                    timeoutSecond = context['timeoutSecondFirst2']
+                else:
+                    timeoutSecond = context['timeoutSecond']
+                context['post'] = (response_json, headers)
             else:
-                timeoutSecond = context['timeoutSecond']
-            if len(context['data']) >= 2 and request_json['request'] == 'running':
+                response_json, headers = context['post']
                 response.status_code = 408
             response_json['metering']['timeoutSecond'] = timeoutSecond
             context['data'].append( (request_type,start,str(datetime.now())) )
