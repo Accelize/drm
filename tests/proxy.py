@@ -335,7 +335,7 @@ def create_app(url):
                 response_json, headers = context['post']
                 response_status_code = 408
             context['data'].append( (health_id,start,str(datetime.now())) )
-            return Response(dumps(response_json), response_ , headers)
+            return Response(dumps(response_json), response_status_code, headers)
 
     # test_health_retry_modification functions
     @app.route('/test_health_retry_modification/o/token/', methods=['GET', 'POST'])
