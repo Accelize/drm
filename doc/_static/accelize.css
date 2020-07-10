@@ -3,14 +3,18 @@
     background-repeat: no-repeat;
     background-size: contain;
     background-position: top;
-    background-color: #ea7222
+    background-color: #46a5da
 }
 
 .wy-side-nav-search input[type="text"] {
-    border-color: #ea7222
+    border-color: #46a5da
 }
 
 .wy-side-nav-search > a, .wy-side-nav-search .wy-dropdown > a {
-    color: #ea7222
+    color: #46a5da
+}
+
+.wy-side-nav-search .wy-dropdown > a.icon img.logo, .wy-side-nav-search > a.icon img.logo {
+    margin-top: 1.85em;
 }
 
