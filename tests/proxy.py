@@ -534,7 +534,7 @@ def create_app(url):
             new_url = request.url.replace(request.url_root+'test_long_to_short_retry_switch', url)
             request_json = request.get_json()
             request_type = request_json['request']
-            if context['cnt'] < 2 or request_json['request'] != 'running':
+            if context['cnt'] < 2 or request_type == 'close':
                 response = post(new_url, json=request_json, headers=request.headers)
                 assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                         indent=4, sort_keys=True), response.status_code, response.text)
@@ -572,7 +572,7 @@ def create_app(url):
             start = str(datetime.now())
             request_json = request.get_json()
             request_type = request_json['request']
-            if len(context['data']) < 2 or request_type == 'close':
+            if context['cnt'] < 2 or request_type == 'close':
                 new_url = request.url.replace(request.url_root+'test_retry_on_no_connection', url)
                 response = post(new_url, json=request_json, headers=request.headers)
                 excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
@@ -583,7 +583,8 @@ def create_app(url):
             else:
                 sleep(context['timeoutSecond'] + 1)
                 ret = ('', 204)
-            context['data'].append( (request_type, start, str(datetime.now())) )
+                context['data'].append( (request_type, start, str(datetime.now())) )
+            context['cnt'] += 1
             return ret
 
     ##############################################################################
