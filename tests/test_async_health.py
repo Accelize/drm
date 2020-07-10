@@ -54,7 +54,7 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
     try:
         drm_manager.activate()
         try:
-            assert drm_manager.get('health_period') == healthPeriod
+            assert drm_manager.get('health_period') == 300
             wait_func_true(lambda: get_context()['exit'],
                     timeout=healthPeriod * nb_health * 2)
             sleep(1)
@@ -410,9 +410,7 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_s
         healthPeriod = 1
         healthRetry = 0  # no retry
         timeoutSecond = 6
-        context = {'health_cnt':0,
-                   'genlic_cnt':0,
-                   'healthPeriod':healthPeriod,
+        context = {'healthPeriod':healthPeriod,
                    'healthRetry':healthRetry,
                    'timeoutSecond':timeoutSecond
         }

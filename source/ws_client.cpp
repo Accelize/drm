@@ -74,7 +74,7 @@ long CurlEasyPost::perform( std::string* resp, std::chrono::steady_clock::time_p
     curl_easy_setopt( curl, CURLOPT_WRITEDATA, (void*)resp );
     curl_easy_setopt( curl, CURLOPT_ERRORBUFFER, errbuff.data() );
     curl_easy_setopt( curl, CURLOPT_FOLLOWLOCATION, 1L );
-    curl_easy_setopt( curl, CURLOPT_CONNECTTIMEOUT_MS, cConnectionTimeout );
+    curl_easy_setopt( curl, CURLOPT_CONNECTTIMEOUT, cConnectionTimeout );
 
     { // Compute timeout
         std::chrono::milliseconds timeout = std::chrono::duration_cast<std::chrono::milliseconds>( deadline - std::chrono::steady_clock::now() );

@@ -44,7 +44,7 @@ public:
 // RAII for Curl easy
 class CurlEasyPost {
 private:
-    const ulong cConnectionTimeout = 4000L;  // In milliseconds
+    const ulong cConnectionTimeout = 10L;  // In seconds
     CURL *curl = NULL;
     struct curl_slist *headers = NULL;
     struct curl_slist *host_resolve_list = NULL;
