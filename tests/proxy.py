@@ -338,13 +338,13 @@ def create_app(url):
                 response_json['metering']['healthPeriod'] = context['healthPeriod']
                 response_json['metering']['healthRetry'] = 0
                 response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
+                response_status_code = response.status_code
                 context['post'] = (response_json, headers)
             else:
                 response_json, headers = context['post']
-            if len(context['data']) > 1:
-                response.status_code = 408
+                response_status_code = 408
             context['data'].append( (health_id,start,str(datetime.now())) )
-            return Response(dumps(response_json), response.status_code, headers)
+            return Response(dumps(response_json), response_status_code, headers)
 
     # test_health_retry functions
     @app.route('/test_health_retry/o/token/', methods=['GET', 'POST'])
@@ -587,12 +587,13 @@ def create_app(url):
                 else:
                     timeoutSecond = context['timeoutSecond']
                 context['post'] = (response_json, headers)
+                response_status_code = response.status_code
             else:
                 response_json, headers = context['post']
-                response.status_code = 408
+                response_status_code = 408
             response_json['metering']['timeoutSecond'] = timeoutSecond
             context['data'].append( (request_type,start,str(datetime.now())) )
-            return Response(dumps(response_json), response.status_code, headers)
+            return Response(dumps(response_json), response_status_code, headers)
 
     # test_retry_on_no_connection functions
     @app.route('/test_retry_on_no_connection/o/token/', methods=['GET', 'POST'])
