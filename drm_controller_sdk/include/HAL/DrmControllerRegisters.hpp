@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegisters.hpp
-*  \version   4.1.0.0
-*  \date      March 2020
+*  \version   4.2.0.0
+*  \date      July 2020
 *  \brief     Class DrmControllerRegisters defines low level procedures
 *             for access to all registers.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,6 +35,7 @@
 #include <HAL/DrmControllerRegistersStrategy_v4_0_0.hpp>
 #include <HAL/DrmControllerRegistersStrategy_v4_0_1.hpp>
 #include <HAL/DrmControllerRegistersStrategy_v4_1_0.hpp>
+#include <HAL/DrmControllerRegistersStrategy_v4_2_0.hpp>
 
 /**
 *   \namespace DrmControllerLibrary
@@ -978,6 +979,42 @@ namespace DrmControllerLibrary {
       *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
       **/
       unsigned int writeMailboxFileRegister(const std::vector<std::string> &readWriteMailboxData, unsigned int &readWriteMailboxWordNumber) const;
+
+      /** readAdaptativeProportionTestFailuresRegister
+      *   \brief Read the Adaptative Proportion Test Failures register and get the value.
+      *   This method will access to the system bus to read the Adaptative Proportion Test Failures register.
+      *   \param[out] adaptativeProportionTestFailures is the Adaptative Proportion Test Failures value.
+      *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
+      *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+      **/
+      unsigned int readAdaptativeProportionTestFailuresRegister(std::vector<unsigned int> &adaptativeProportionTestFailures) const;
+
+      /** readAdaptativeProportionTestFailuresRegister
+      *   \brief Read the Adaptative Proportion Test Failures register and get the value.
+      *   This method will access to the system bus to read the Adaptative Proportion Test Failures register.
+      *   \param[out] adaptativeProportionTestFailures is the Adaptative Proportion Test Failures value.
+      *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
+      *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+      **/
+      unsigned int readAdaptativeProportionTestFailuresRegister(std::string &adaptativeProportionTestFailures) const;
+
+      /** readRepetitionCountTestFailuresRegister
+      *   \brief Read the Repetition Count Test Failures register and get the value.
+      *   This method will access to the system bus to read the Repetition Count Test Failures register.
+      *   \param[out] repetitionCountTestFailures is the Repetition Count Test Failures value.
+      *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
+      *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+      **/
+      unsigned int readRepetitionCountTestFailuresRegister(std::vector<unsigned int> &repetitionCountTestFailures) const;
+
+      /** readRepetitionCountTestFailuresRegister
+      *   \brief Read the Repetition Count Test Failures register and get the value.
+      *   This method will access to the system bus to read the Repetition Count Test Failures register.
+      *   \param[out] repetitionCountTestFailures is the Repetition Count Test Failures value.
+      *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
+      *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+      **/
+      unsigned int readRepetitionCountTestFailuresRegister(std::string &repetitionCountTestFailures) const;
 
       /** throwFunctionalityDisabledException
       *   \param[in]  expectedStatus is the value of the status to be expected.

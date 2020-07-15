@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegistersStrategyInterface.cpp
-*  \version   4.1.0.0
-*  \date      March 2020
+*  \version   4.2.0.0
+*  \date      July 2020
 *  \brief     Class DrmControllerRegistersBase defines low level procedures for registers access.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.
@@ -156,6 +156,36 @@ unsigned int DrmControllerRegistersStrategyInterface::readSaasChallengeRegister(
   return errorCode;
 }
 
+/** readAdaptativeProportionTestFailuresRegister
+*   \brief Read the Adaptative Proportion Test Failures register and get the value.
+*   This method will access to the system bus to read the Adaptative Proportion Test Failures register.
+*   \param[out] adaptativeProportionTestFailures is the Adaptative Proportion Test Failures value.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegistersStrategyInterface::readAdaptativeProportionTestFailuresRegister(std::string &adaptativeProportionTestFailures) const {
+  std::vector<unsigned int> tmpAdaptativeProportionTestFailures;
+  unsigned int errorCode = readAdaptativeProportionTestFailuresRegister(tmpAdaptativeProportionTestFailures);
+  if (errorCode != mDrmApi_NO_ERROR) return errorCode;
+  adaptativeProportionTestFailures = DrmControllerDataConverter::binaryToHexString(tmpAdaptativeProportionTestFailures);
+  return errorCode;
+}
+
+/** readRepetitionCountTestFailuresRegister
+*   \brief Read the Repetition Count Test Failures register and get the value.
+*   This method will access to the system bus to read the Repetition Count Test Failures register.
+*   \param[out] repetitionCountTestFailures is the Repetition Count Test Failures value.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegistersStrategyInterface::readRepetitionCountTestFailuresRegister(std::string &repetitionCountTestFailures) const {
+  std::vector<unsigned int> tmpRepetitionCountTestFailures;
+  unsigned int errorCode = readRepetitionCountTestFailuresRegister(tmpRepetitionCountTestFailures);
+  if (errorCode != mDrmApi_NO_ERROR) return errorCode;
+  repetitionCountTestFailures = DrmControllerDataConverter::binaryToHexString(tmpRepetitionCountTestFailures);
+  return errorCode;
+}
+
 /** readLicenseTimerCounterRegister
 *   \brief Read the license timer counter register and get the value.
 *   This method will access to the system bus to read the license timer counter register.
@@ -227,6 +257,8 @@ void DrmControllerRegistersStrategyInterface::printHwReport(std::ostream &file) 
   printTraceFileHwReport(file);
   printMeteringFileHwReport(file);
   printMailBoxFileHwReport(file);
+  printAdaptativeProportionTestFailuresHwReport(file);
+  printRepetitionCountTestFailuresHwReport(file);
   file << std::endl << footer() << std::endl << std::endl;
 }
 
