@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegistersStrategy_v3_0_0.cpp
-*  \version   4.1.0.0
-*  \date      March 2020
+*  \version   4.2.0.0
+*  \date      July 2020
 *  \brief     Class DrmControllerRegistersStrategy_v3_0_0 defines strategy for register access of drm controller v3.0.0.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License") {
 
@@ -1169,6 +1169,30 @@ unsigned int DrmControllerRegistersStrategy_v3_0_0::readMailboxFileRegister(unsi
   return mDrmApi_UNSUPPORTED_FEATURE_ERROR;
 }
 
+/** readAdaptativeProportionTestFailuresRegister
+*   \brief Read the Adaptative Proportion Test Failures register and get the value.
+*   This method will access to the system bus to read the Adaptative Proportion Test Failures register.
+*   \param[out] adaptativeProportionTestFailures is the Adaptative Proportion Test Failures value.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegistersStrategy_v3_0_0::readAdaptativeProportionTestFailuresRegister(std::vector<unsigned int> &adaptativeProportionTestFailures) const {
+ throwUnsupportedFeatureException("Adaptative Proportion Test Failures Registers", DRM_CONTROLLER_V3_0_0_SUPPORTED_VERSION);
+  return mDrmApi_UNSUPPORTED_FEATURE_ERROR;
+}
+
+/** readRepetitionCountTestFailuresRegister
+*   \brief Read the Repetition Count Test Failures register and get the value.
+*   This method will access to the system bus to read the Repetition Count Test Failures register.
+*   \param[out] repetitionCountTestFailures is the Repetition Count Test Failures value.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegistersStrategy_v3_0_0::readRepetitionCountTestFailuresRegister(std::vector<unsigned int> &repetitionCountTestFailures) const {
+  throwUnsupportedFeatureException("Repetition Count Test Failures Registers", DRM_CONTROLLER_V3_0_0_SUPPORTED_VERSION);
+  return mDrmApi_UNSUPPORTED_FEATURE_ERROR;
+}
+
 /** writeMailboxFileRegister
 *   \brief Write the mailbox file.
 *   This method will access to the system bus to write the mailbox file.
@@ -1548,3 +1572,17 @@ void DrmControllerRegistersStrategy_v3_0_0::printTraceFileHwReport(std::ostream 
 *   \param[in] file is the stream to use for the data print.
 **/
 void DrmControllerRegistersStrategy_v3_0_0::printMailBoxFileHwReport(std::ostream &file) const { }
+
+/** printAdaptativeProportionTestFailures
+*   \brief Display the value of the Adaptative Proportion Test Failures.
+*   \param[in] file is the stream to use for the data print.
+**/
+void DrmControllerRegistersStrategy_v3_0_0::printAdaptativeProportionTestFailuresHwReport(std::ostream &file) const { }
+  
+
+/** printRepetitionCountTestFailures
+*   \brief Display the value of the Repetition Count Test Failures.
+*   \param[in] file is the stream to use for the data print.
+**/
+void DrmControllerRegistersStrategy_v3_0_0::printRepetitionCountTestFailuresHwReport(std::ostream &file) const { }
+  

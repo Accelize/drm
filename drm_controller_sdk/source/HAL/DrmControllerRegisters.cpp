@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegisters.cpp
-*  \version   4.1.0.0
-*  \date      March 2020
+*  \version   4.2.0.0
+*  \date      July 2020
 *  \brief     Class DrmControllerRegisters defines low level procedures
 *             for access to all registers.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
@@ -925,6 +925,50 @@ unsigned int DrmControllerRegisters::readDrmVersionRegister(std::string &drmVers
   return mDrmControllerRegistersStrategyInterface->readDrmVersionRegister(drmVersion);
 }
 
+/** readAdaptativeProportionTestFailuresRegister
+*   \brief Read the Adaptative Proportion Test Failures register and get the value.
+*   This method will access to the system bus to read the Adaptative Proportion Test Failures register.
+*   \param[out] adaptativeProportionTestFailures is the Adaptative Proportion Test Failures value.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegisters::readAdaptativeProportionTestFailuresRegister(std::vector<unsigned int> &adaptativeProportionTestFailures) const {
+  return mDrmControllerRegistersStrategyInterface->readAdaptativeProportionTestFailuresRegister(adaptativeProportionTestFailures);
+}
+
+/** readAdaptativeProportionTestFailuresRegister
+*   \brief Read the Adaptative Proportion Test Failures register and get the value.
+*   This method will access to the system bus to read the Adaptative Proportion Test Failures register.
+*   \param[out] adaptativeProportionTestFailures is the Adaptative Proportion Test Failures value.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegisters::readAdaptativeProportionTestFailuresRegister(std::string &adaptativeProportionTestFailures) const {
+  return mDrmControllerRegistersStrategyInterface->readAdaptativeProportionTestFailuresRegister(adaptativeProportionTestFailures);
+}
+
+/** readRepetitionCountTestFailuresRegister
+*   \brief Read the Repetition CountTest Failures register and get the value.
+*   This method will access to the system bus to read the Repetition Count Test Failures register.
+*   \param[out] repetitionCountTestFailures is the Repetition Count Test Failures value.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegisters::readRepetitionCountTestFailuresRegister(std::vector<unsigned int> &repetitionCountTestFailures) const {
+  return mDrmControllerRegistersStrategyInterface->readRepetitionCountTestFailuresRegister(repetitionCountTestFailures);
+}
+
+/** readRepetitionCountTestFailuresRegister
+*   \brief Read the Repetition Count Test Failures register and get the value.
+*   This method will access to the system bus to read the Repetition Count Test Failures register.
+*   \param[out] repetitionCountTestFailures is the Repetition Count Test Failures value.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegisters::readRepetitionCountTestFailuresRegister(std::string &repetitionCountTestFailures) const {
+  return mDrmControllerRegistersStrategyInterface->readRepetitionCountTestFailuresRegister(repetitionCountTestFailures);
+}
+
 /** readLogsRegister
 *   \brief Read the logs register and get the value.
 *   This method will access to the system bus to read the logs register.
@@ -1318,6 +1362,7 @@ DrmControllerRegisters::tDrmControllerRegistersStrategyDictionary DrmControllerR
   strategies[DRM_CONTROLLER_V4_0_0_SUPPORTED_VERSION] = new DrmControllerRegistersStrategy_v4_0_0(readRegisterFunction, writeRegisterFunction);
   strategies[DRM_CONTROLLER_V4_0_1_SUPPORTED_VERSION] = new DrmControllerRegistersStrategy_v4_0_1(readRegisterFunction, writeRegisterFunction);
   strategies[DRM_CONTROLLER_V4_1_0_SUPPORTED_VERSION] = new DrmControllerRegistersStrategy_v4_1_0(readRegisterFunction, writeRegisterFunction);
+  strategies[DRM_CONTROLLER_V4_2_0_SUPPORTED_VERSION] = new DrmControllerRegistersStrategy_v4_2_0(readRegisterFunction, writeRegisterFunction);
   return strategies;
 }
 

@@ -431,7 +431,6 @@ protected:
     }
 
     void getHostAndCardInfo() {
-
         // Find xbutil if existing
         if ( !findXrtUtility() )
             return;
@@ -878,16 +877,14 @@ protected:
     void checkSessionIDFromWS( const Json::Value license_json ) const {
         std::string ws_sessionID = license_json["metering"]["sessionId"].asString();
         if ( !mSessionID.empty() && ( mSessionID != ws_sessionID ) ) {
-            Warning( "Session ID mismatch: WebService returns '{}' but '{}' is expected",
-                ws_sessionID, mSessionID ); //LCOV_EXCL_LINE
+            Warning( "Session ID mismatch: WebService returns '{}' but '{}' is expected", ws_sessionID, mSessionID ); //LCOV_EXCL_LINE
         }
     }
 
     void checkSessionIDFromDRM( const Json::Value license_json ) const {
         std::string drm_sessionID = license_json["sessionId"].asString();
         if ( !mSessionID.empty() && ( mSessionID != drm_sessionID ) ) {
-            Warning( "Session ID mismatch: DRM IP returns '{}' but '{}' is expected",
-                drm_sessionID, mSessionID ); //LCOV_EXCL_LINE
+            Warning( "Session ID mismatch: DRM IP returns '{}' but '{}' is expected", drm_sessionID, mSessionID ); //LCOV_EXCL_LINE
         }
     }
 
@@ -1397,7 +1394,6 @@ protected:
                 lic_attempt ++;
                 if ( retry_period == 0 ) {
                     // No retry
-                    Warning( "Attempt #{} to send a new Health request failed with message: {}.", lic_attempt, e.what() );
                     return Json::nullValue;
                 }
                 // Perform retry

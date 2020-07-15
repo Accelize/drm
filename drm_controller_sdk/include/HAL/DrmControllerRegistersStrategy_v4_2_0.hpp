@@ -1,8 +1,8 @@
 /**
-*  \file      DrmControllerRegistersStrategy_v3_2_2.hpp
+*  \file      DrmControllerRegistersStrategy_v4_1_0.hpp
 *  \version   4.2.0.0
 *  \date      July 2020
-*  \brief     Class DrmControllerRegistersStrategy_v3_2_2 defines strategy for register access of drm controller v3.2.2.
+*  \brief     Class DrmControllerRegistersStrategy_v4_1_0 defines strategy for register access of drm controller v4.1.0.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.
 *             You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -13,8 +13,8 @@
 *             limitations under the License.
 **/
 
-#ifndef __DRM_CONTROLLER_REGISTERS_STRATEGY_V3_2_2_HPP__
-#define __DRM_CONTROLLER_REGISTERS_STRATEGY_V3_2_2_HPP__
+#ifndef __DRM_CONTROLLER_REGISTERS_STRATEGY_V4_2_0_HPP__
+#define __DRM_CONTROLLER_REGISTERS_STRATEGY_V4_2_0_HPP__
 
 #include <iostream>
 #include <string>
@@ -27,43 +27,45 @@
 #include <HAL/DrmControllerRegistersStrategyInterface.hpp>
 
 // version of the DRM Controller supported by this class
-#define DRM_CONTROLLER_V3_2_2_SUPPORTED_VERSION "3.2.2" /**<Definition of the version of the supported DRM Controller.**/
+#define DRM_CONTROLLER_V4_2_0_SUPPORTED_VERSION "4.2.0" /**<Definition of the version of the supported DRM Controller.**/
 
 // Name of the registers.
-#define DRM_CONTROLLER_V3_2_2_PAGE_REGISTER_NAME    "DrmPageRegister" /**<Definition of the name of the page register.**/
-#define DRM_CONTROLLER_V3_2_2_INDEXED_REGISTER_NAME "DrmRegisterLine" /**<Definition of the base name of indexed registers.**/
+#define DRM_CONTROLLER_V4_2_0_PAGE_REGISTER_NAME    "DrmPageRegister" /**<Definition of the name of the page register.**/
+#define DRM_CONTROLLER_V4_2_0_INDEXED_REGISTER_NAME "DrmRegisterLine" /**<Definition of the base name of indexed registers.**/
 
 // Size of registers
-#define DRM_CONTROLLER_V3_2_2_COMMAND_SIZE               9   /**<Definition of the register size for the command register.**/
-#define DRM_CONTROLLER_V3_2_2_LICENSE_START_ADDRESS_SIZE 64  /**<Definition of the register size for the license start address register.**/
-#define DRM_CONTROLLER_V3_2_2_LICENSE_TIMER_SIZE         384 /**<Definition of the register size for the license timer register.**/
-#define DRM_CONTROLLER_V3_2_2_STATUS_SIZE                32  /**<Definition of the register size for the status register.**/
-#define DRM_CONTROLLER_V3_2_2_ERROR_SIZE                 32  /**<Definition of the register size for the error register.**/
-#define DRM_CONTROLLER_V3_2_2_DEVICE_DNA_SIZE            128 /**<Definition of the register size for the device dna register.**/
-#define DRM_CONTROLLER_V3_2_2_SAAS_CHALLENGE_SIZE        128 /**<Definition of the register size for the saas challenge register.**/
-#define DRM_CONTROLLER_V3_2_2_LICENSE_TIMER_COUNTER_SIZE 64  /**<Definition of the register size for the license timer counter register.**/
-#define DRM_CONTROLLER_V3_2_2_VERSION_SIZE               24  /**<Definition of the register size for the version register.**/
-#define DRM_CONTROLLER_V3_2_2_VLNV_WORD_SIZE             64  /**<Definition of the register size for the vlnv word.**/
-#define DRM_CONTROLLER_V3_2_2_LICENSE_WORD_SIZE          128 /**<Definition of the register size for the license word.**/
-#define DRM_CONTROLLER_V3_2_2_TRACE_WORD_SIZE            64  /**<Definition of the register size for the trace word.**/
-#define DRM_CONTROLLER_V3_2_2_METERING_WORD_SIZE         128 /**<Definition of the register size for the metering word.**/
-#define DRM_CONTROLLER_V3_2_2_MAILBOX_WORD_SIZE          32  /**<Definition of the register size for the mailbox word.**/
+#define DRM_CONTROLLER_V4_2_0_COMMAND_SIZE               9   /**<Definition of the register size for the command register.**/
+#define DRM_CONTROLLER_V4_2_0_LICENSE_START_ADDRESS_SIZE 64  /**<Definition of the register size for the license start address register.**/
+#define DRM_CONTROLLER_V4_2_0_LICENSE_TIMER_SIZE         384 /**<Definition of the register size for the license timer register.**/
+#define DRM_CONTROLLER_V4_2_0_STATUS_SIZE                32  /**<Definition of the register size for the status register.**/
+#define DRM_CONTROLLER_V4_2_0_ERROR_SIZE                 32  /**<Definition of the register size for the error register.**/
+#define DRM_CONTROLLER_V4_2_0_DEVICE_DNA_SIZE            128 /**<Definition of the register size for the device dna register.**/
+#define DRM_CONTROLLER_V4_2_0_SAAS_CHALLENGE_SIZE        128 /**<Definition of the register size for the saas challenge register.**/
+#define DRM_CONTROLLER_V4_2_0_LICENSE_TIMER_COUNTER_SIZE 64  /**<Definition of the register size for the license timer counter register.**/
+#define DRM_CONTROLLER_V4_2_0_VERSION_SIZE               24  /**<Definition of the register size for the version register.**/
+#define DRM_CONTROLLER_V4_2_0_ADAPTATIVE_PROPORTION_TEST_FAILURES_SIZE                  16  /**<Definition of the register size for the Adaptative Proportion Test Failures register.**/
+#define DRM_CONTROLLER_V4_2_0_REPETITION_COUNT_TEST_FAILURES_SIZE                  16  /**<Definition of the register size for the Repetition Count Test Failures register.**/
+#define DRM_CONTROLLER_V4_2_0_VLNV_WORD_SIZE             64  /**<Definition of the register size for the vlnv word.**/
+#define DRM_CONTROLLER_V4_2_0_LICENSE_WORD_SIZE          128 /**<Definition of the register size for the license word.**/
+#define DRM_CONTROLLER_V4_2_0_TRACE_WORD_SIZE            64  /**<Definition of the register size for the trace word.**/
+#define DRM_CONTROLLER_V4_2_0_METERING_WORD_SIZE         128 /**<Definition of the register size for the metering word.**/
+#define DRM_CONTROLLER_V4_2_0_MAILBOX_WORD_SIZE          32  /**<Definition of the register size for the mailbox word.**/
 
-#define DRM_CONTROLLER_V3_2_2_NUMBER_OF_TRACES_PER_IP 3 /**<Definition of the number of traces per ip.**/
+#define DRM_CONTROLLER_V4_2_0_NUMBER_OF_TRACES_PER_IP 3 /**<Definition of the number of traces per ip.**/
 
-#define DRM_CONTROLLER_V3_2_2_VLNV_NUMBER_OF_ADDITIONAL_WORDS     1 /**<Definition of the number of additional words for the vlnv file.**/
-#define DRM_CONTROLLER_V3_2_2_METERING_NUMBER_OF_ADDITIONAL_WORDS 3 /**<Definition of the number of additional words for the metering file.**/
-#define DRM_CONTROLLER_V3_2_2_MAILBOX_NUMBER_OF_ADDITIONAL_WORDS  1 /**<Definition of the number of additional words for the mailbox file.**/
+#define DRM_CONTROLLER_V4_2_0_VLNV_NUMBER_OF_ADDITIONAL_WORDS     1 /**<Definition of the number of additional words for the vlnv file.**/
+#define DRM_CONTROLLER_V4_2_0_METERING_NUMBER_OF_ADDITIONAL_WORDS 3 /**<Definition of the number of additional words for the metering file.**/
+#define DRM_CONTROLLER_V4_2_0_MAILBOX_NUMBER_OF_ADDITIONAL_WORDS  1 /**<Definition of the number of additional words for the mailbox file.**/
 
-#define DRM_CONTROLLER_V3_2_2_LICENSE_HEADER_BLOCK_SIZE 7 /**<Definition of the number of license word used for the header block.**/
-#define DRM_CONTROLLER_V3_2_2_LICENSE_IP_BLOCK_SIZE     4 /**<Definition of the number of license word used for an ip block.**/
+#define DRM_CONTROLLER_V4_2_0_LICENSE_HEADER_BLOCK_SIZE 7 /**<Definition of the number of license word used for the header block.**/
+#define DRM_CONTROLLER_V4_2_0_LICENSE_IP_BLOCK_SIZE     4 /**<Definition of the number of license word used for an ip block.**/
 
-#define DRM_CONTROLLER_V3_2_2_NUMBER_OF_ERROR_CODES     22 /**<Definition of the number of error codes.**/
+#define DRM_CONTROLLER_V4_2_0_NUMBER_OF_ERROR_CODES     22 /**<Definition of the number of error codes.**/
 
-#define DRM_CONTROLLER_V3_2_2_METERING_FILE_HEADER_POSITION                 0 /**<Definition of the position of the metering file header.**/
-#define DRM_CONTROLLER_V3_2_2_METERING_FILE_LICENSE_TIMER_COUNT_POSITION    1 /**<Definition of the position of the license timer in the metering file.**/
-#define DRM_CONTROLLER_V3_2_2_METERING_FILE_FIRST_IP_METERING_DATA_POSITION 2 /**<Definition of the position of the first metering data in the metering file.**/
-#define DRM_CONTROLLER_V3_2_2_METERING_FILE_MAC_FROM_END_POSITION           0 /**<Definition of the position of the mac from the end of the metering file.**/
+#define DRM_CONTROLLER_V4_2_0_METERING_FILE_HEADER_POSITION                 0 /**<Definition of the position of the metering file header.**/
+#define DRM_CONTROLLER_V4_2_0_METERING_FILE_LICENSE_TIMER_COUNT_POSITION    1 /**<Definition of the position of the license timer in the metering file.**/
+#define DRM_CONTROLLER_V4_2_0_METERING_FILE_FIRST_IP_METERING_DATA_POSITION 2 /**<Definition of the position of the first metering data in the metering file.**/
+#define DRM_CONTROLLER_V4_2_0_METERING_FILE_MAC_FROM_END_POSITION           0 /**<Definition of the position of the mac from the end of the metering file.**/
 
 /**
 *   \namespace DrmControllerLibrary
@@ -71,27 +73,27 @@
 namespace DrmControllerLibrary {
 
   /**
-  *   \class    DrmControllerRegistersStrategy_v3_2_2 DrmControllerRegistersStrategy_v3_2_2.hpp "include/HAL/DrmControllerRegistersStrategy_v3_2_2.hpp"
-  *   \brief    Class DrmControllerRegistersStrategy_v3_2_2 defines strategy for register access of drm controller v3.1.0.
+  *   \class    DrmControllerRegistersStrategy_v4_2_0 DrmControllerRegistersStrategy_v4_2_0.hpp "include/HAL/DrmControllerRegistersStrategy_v4_2_0.hpp"
+  *   \brief    Class DrmControllerRegistersStrategy_v4_2_0 defines strategy for register access of drm controller v4.2.0.
   **/
-  class DrmControllerRegistersStrategy_v3_2_2: public DrmControllerRegistersStrategyInterface {
+  class DrmControllerRegistersStrategy_v4_2_0: public DrmControllerRegistersStrategyInterface {
 
     // public members, functions ...
     public:
 
-      /** DrmControllerRegistersStrategy_v3_2_2
+      /** DrmControllerRegistersStrategy_v4_2_0
       *   \brief Class constructor.
       *   \param[in] readRegisterFunction function pointer to read 32 bits register.
       *              The function pointer shall have the following prototype "unsigned int f(const std::string&, unsigned int&)".
       *   \param[in] writeRegisterFunction function pointer to write 32 bits register.
       *              The function pointer shall have the following prototype "unsigned int f(const std::string&, unsigned int)".
       **/
-      DrmControllerRegistersStrategy_v3_2_2(tDrmReadRegisterFunction readRegisterFunction, tDrmWriteRegisterFunction writeRegisterFunction);
+      DrmControllerRegistersStrategy_v4_2_0(tDrmReadRegisterFunction readRegisterFunction, tDrmWriteRegisterFunction writeRegisterFunction);
 
-      /** ~DrmControllerRegistersStrategy_v3_2_2
+      /** ~DrmControllerRegistersStrategy_v4_2_0
       *   \brief Class destructor.
       **/
-      virtual ~DrmControllerRegistersStrategy_v3_2_2();
+      virtual ~DrmControllerRegistersStrategy_v4_2_0();
 
       /** writeRegistersPageRegister
       *   \brief Write the page register to select the registers page.
@@ -918,7 +920,7 @@ namespace DrmControllerLibrary {
       *   \return Returns the error message.
       **/
       virtual const char* getDrmErrorRegisterMessage(const unsigned char &errorRegister) const;
-
+      
       /** readAdaptativeProportionTestFailuresRegister
       *   \brief Read the Adaptative Proportion Test Failures register and get the value.
       *   This method will access to the system bus to read the Adaptative Proportion Test Failures register.
@@ -1179,11 +1181,14 @@ namespace DrmControllerLibrary {
       const unsigned int mSaasChallengeRegisterWordNumber;
       const unsigned int mSampledLicenseTimerCountRegisterWordNumber;
       const unsigned int mVersionRegisterWordNumber;
+      const unsigned int mAdaptativeProportionTestFailuresRegisterWordNumber;
+      const unsigned int mRepetitionCountTestFailuresRegisterWordNumber;
       const unsigned int mVlnvWordRegisterWordNumber;
       const unsigned int mLicenseWordRegisterWordNumber;
       const unsigned int mTraceWordRegisterWordNumber;
       const unsigned int mMeteringWordRegisterWordNumber;
       const unsigned int mMailboxWordRegisterWordNumber;
+      
 
       // start index of each registers
       const unsigned int mCommandRegisterStartIndex;
@@ -1195,13 +1200,15 @@ namespace DrmControllerLibrary {
       const unsigned int mSaasChallengeRegisterStartIndex;
       const unsigned int mSampledLicenseTimerCountRegisterStartIndex;
       const unsigned int mVersionRegisterStartIndex;
+      const unsigned int mAdaptativeProportionTestFailuresRegisterStartIndex;
+      const unsigned int mRepetitionCountTestFailuresRegisterStartIndex;
       const unsigned int mLogsRegisterStartIndex;
       const unsigned int mVlnvWordRegisterStartIndex;
       const unsigned int mLicenseWordRegisterStartIndex;
       const unsigned int mTraceWordRegisterStartIndex;
       const unsigned int mMeteringWordRegisterStartIndex;
       const unsigned int mMailboxWordRegisterStartIndex;
-
+      
       // number of traces per ip
       const unsigned int mNumberOfTracesPerIp;
 
@@ -1389,10 +1396,10 @@ namespace DrmControllerLibrary {
       } tDrmErrorRegisterMessages;
 
       const unsigned int mDrmErrorRegisterMessagesArraySize ;
-      const tDrmErrorRegisterMessages mDrmErrorRegisterMessagesArray[DRM_CONTROLLER_V3_2_2_NUMBER_OF_ERROR_CODES];
+      const tDrmErrorRegisterMessages mDrmErrorRegisterMessagesArray[DRM_CONTROLLER_V4_2_0_NUMBER_OF_ERROR_CODES];
 
-  }; // class DrmControllerRegistersStrategy_v3_2_2
+  }; // class DrmControllerRegistersStrategy_v4_2_0
 
 } // namespace DrmControllerLibrary
 
-#endif // __DRM_CONTROLLER_REGISTERS_STRATEGY_V3_2_2_HPP__
+#endif // __DRM_CONTROLLER_REGISTERS_STRATEGY_V4_2_0_HPP__

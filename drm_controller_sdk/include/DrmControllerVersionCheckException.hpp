@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerVersionCheckException.hpp
-*  \version   4.1.0.0
-*  \date      March 2020
+*  \version   4.2.0.0
+*  \date      July 2020
 *  \brief     Class DrmControllerVersionCheckException defines procedures
 *             for version check exceptions reporting, inherihts from std::exception.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");

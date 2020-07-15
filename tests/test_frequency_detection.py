@@ -170,7 +170,7 @@ def test_drm_manager_frequency_detection_method1(accelize_drm, conf_json, cred_j
         )
         assert drm_manager.get('frequency_detection_method') == 1
         del drm_manager
-        assert wait_func_true(lambda: isfile(logpath), 10)
+        wait_func_true(lambda: isfile(logpath), 10)
         with open(logpath, 'rt') as f:
             log_content = f.read()
         assert "Use dedicated counter to compute DRM frequency (method 1)" in log_content
@@ -249,7 +249,7 @@ def test_drm_manager_frequency_detection_method2(accelize_drm, conf_json, cred_j
         assert drm_manager.get('frequency_detection_method') == 2
         drm_manager.deactivate()
         del drm_manager
-        assert wait_func_true(lambda: isfile(logpath), 10)
+        wait_func_true(lambda: isfile(logpath), 10)
         with open(logpath, 'rt') as f:
             log_content = f.read()
         assert "Use license timer counter to compute DRM frequency (method 2)" in log_content

@@ -56,8 +56,6 @@ _PARAM_LIST = ('license_type',
                'page_mailbox',
                'hw_report',
                'trigger_async_callback',
-               'bad_product_id',
-               'bad_oauth2_token',
                'log_message',
                'hdk_compatibility',
                'health_period',
@@ -799,9 +797,6 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     async_cb.reset()
     print("Test parameter 'trigger_async_callback': PASS")
 
-    # Test parameter: bad_oauth2_token
-    # => Skipped: Tested in test_configuration_file_with_bad_authentication
-
     # Test parameter: ParameterKeyCount
     assert drm_manager.get('ParameterKeyCount') == len(_PARAM_LIST)
     async_cb.assert_NoError()
@@ -828,7 +823,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         msg = 'This line should appear in log file'
         drm_manager.set(log_message=msg)
         del drm_manager
-        assert wait_func_true(lambda: isfile(logpath), 10)
+        wait_func_true(lambda: isfile(logpath), 10)
         with open(logpath, 'rt') as f:
             log_content = f.read()
         assert "critical" in log_content

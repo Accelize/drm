@@ -41,7 +41,6 @@ def create_app(url):
         request_json = request.get_json()
         new_url = url + '/auth/metering/health/'
         response = post(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json, indent=4, sort_keys=True), response.status_code, response.text)
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
@@ -49,27 +48,64 @@ def create_app(url):
 
     @app.route('/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense():
-        global context
-        global lock
         request_json = request.get_json()
-        #print('request_json=', dumps(request_json, indent=4, sort_keys=True))
         new_url = url + '/auth/metering/genlicense/'
         response = post(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json, indent=4, sort_keys=True), response.status_code, response.text)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        return Response(dumps(response_json), response.status_code, headers)
+
+    ##############################################################################
+    # test_authentication.py
+
+    # test_authentication_bad_token
+    @app.route('/test_authentication_bad_token/o/token/', methods=['GET', 'POST'])
+    def otoken__test_authentication_bad_token():
+        global context
+        global lock
+        new_url = request.url.replace(request.url_root+'test_authentication_bad_token', url)
+        response = post(new_url, data=request.form, headers=request.headers)
+        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request.form,
+                indent=4, sort_keys=True), response.status_code, response.text)
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
-            if 'timeoutSecond' in context:
-                response_json['metering']['timeoutSecond'] = context['timeoutSecond']
-            if 'healthPeriod' in context:
-                response_json['metering']['healthPeriod'] = context['healthPeriod']
-            if 'healthRetry' in context:
-                response_json['metering']['healthRetry'] = context['healthRetry']
-            if 'healthRetrySleep' in context:
-                response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
-        #print('response_json=', dumps(response_json, indent=4, sort_keys=True))
+            response_json['access_token'] = context['access_token']
         return Response(dumps(response_json), response.status_code, headers)
+
+    @app.route('/test_authentication_bad_token/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_authentication_bad_token():
+        return redirect(request.url_root + '/auth/metering/health/', code=307)
+
+    @app.route('/test_authentication_bad_token/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_authentication_bad_token_genlicense():
+        return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
+
+    # test_authentication_token_renewal
+    @app.route('/test_authentication_token_renewal/o/token/', methods=['GET', 'POST'])
+    def otoken__test_authentication_token_renewal():
+        global context
+        global lock
+        new_url = url + '/o/token/'
+        response = post(new_url, data=request.form, headers=request.headers)
+        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request.form,
+                indent=4, sort_keys=True), response.status_code, response.text)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        with lock:
+            response_json['expires_in'] = context['expires_in']
+        return Response(dumps(response_json), response.status_code, headers)
+
+    @app.route('/test_authentication_token_renewal/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_authentication_token_renewal():
+        return redirect(request.url_root + '/auth/metering/health/', code=307)
+
+    @app.route('/test_authentication_token_renewal/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_authentication_token_renewal_genlicense():
+        return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
 
     ##############################################################################
     # test_drm_license_error.py
@@ -87,21 +123,22 @@ def create_app(url):
     def genlicense__test_header_error_on_key_genlicense():
         global context
         global lock
+        new_url = request.url.replace(request.url_root+'test_header_error_on_key', url)
+        request_json = request.get_json()
+        response = post(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text)
+        response_json = response.json()
         with lock:
-            context['cnt'] += 1
-            new_url = request.url.replace(request.url_root+'test_header_error_on_key', url)
-            request_json = request.get_json()
-            response = post(new_url, json=request_json, headers=request.headers)
-            assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json, indent=4, sort_keys=True), response.status_code, response.text)
-            response_json = response.json()
-            if context['cnt'] == 1:
+            if context['cnt'] == 0:
                 dna, lic_json = list(response_json['license'].items())[0]
                 key = lic_json['key']
                 key = '1' + key[1:] if key[0] == '0' else '0' + key[1:]
                 response_json['license'][dna]['key'] = key
-            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-            return Response(dumps(response_json), response.status_code, headers)
+            context['cnt'] += 1
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        return Response(dumps(response_json), response.status_code, headers)
 
     # test_header_error_on_licenseTimer functions
     @app.route('/test_header_error_on_licenseTimer/o/token/', methods=['GET', 'POST'])
@@ -116,21 +153,22 @@ def create_app(url):
     def genlicense__test_header_error_on_licenseTimer():
         global context
         global lock
+        new_url = request.url.replace(request.url_root+'test_header_error_on_licenseTimer', url)
+        request_json = request.get_json()
+        response = post(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text)
+        response_json = response.json()
         with lock:
-            context['cnt'] += 1
-            new_url = request.url.replace(request.url_root+'test_header_error_on_licenseTimer', url)
-            request_json = request.get_json()
-            response = post(new_url, json=request_json, headers=request.headers)
-            assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json, indent=4, sort_keys=True), response.status_code, response.text)
-            response_json = response.json()
-            if context['cnt'] == 2:
+            if context['cnt'] == 1:
                 dna, lic_json = list(response_json['license'].items())[0]
                 timer = lic_json['licenseTimer']
                 timer = '1' + timer[1:] if timer[0] == '0' else '0' + timer[1:]
                 response_json['license'][dna]['licenseTimer'] = timer
-            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-            return Response(dumps(response_json), response.status_code, headers)
+            context['cnt'] += 1
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        return Response(dumps(response_json), response.status_code, headers)
 
     # test_session_id_error functions
     @app.route('/test_session_id_error/o/token/', methods=['GET', 'POST'])
@@ -145,14 +183,15 @@ def create_app(url):
     def genlicense__test_session_id_error():
         global context
         global lock
+        new_url = request.url.replace(request.url_root+'test_session_id_error', url)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        request_json = request.get_json()
+        response = post(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text)
+        response_json = response.json()
+        response_session_id = response_json['metering']['sessionId']
         with lock:
-            new_url = request.url.replace(request.url_root+'test_session_id_error', url)
-            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-            request_json = request.get_json()
-            response = post(new_url, json=request_json, headers=request.headers)
-            assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json, indent=4, sort_keys=True), response.status_code, response.text)
-            response_json = response.json()
-            response_session_id = response_json['metering']['sessionId']
             if context['session_id'] != response_session_id:
                 context['session_cnt'] += 1
                 context['request_cnt'] = 0
@@ -179,55 +218,37 @@ def create_app(url):
 
     @app.route('/test_health_period_disabled/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_health_period_disabled():
-        return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
+        new_url = request.url.replace(request.url_root+'test_health_period_disabled', url)
+        request_json = request.get_json()
+        response = post(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        response_json['metering']['healthPeriod'] = 300
+        return Response(dumps(response_json), response.status_code, headers)
 
     @app.route('/test_health_period_disabled/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_health_period_disabled():
         global context
         global lock
+        new_url = request.url.replace(request.url_root+'test_health_period_disabled', url)
+        request_json = request.get_json()
+        response = post(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
         with lock:
-            new_url = request.url.replace(request.url_root+'test_health_period_disabled', url)
-            request_json = request.get_json()
-            context['cnt'] += 1
-            response = post(new_url, json=request_json, headers=request.headers)
-            assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json, indent=4, sort_keys=True), response.status_code, response.text)
-            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-            response_json = response.json()
-            if context['cnt'] <= context['nb_health']:
+            if context['cnt'] < context['nb_health']:
                 response_json['metering']['healthPeriod'] = context['healthPeriod']
             else:
                 response_json['metering']['healthPeriod'] = 0
                 context['exit'] = True
-            return Response(dumps(response_json), response.status_code, headers)
-
-    # test_health_period functions
-    @app.route('/test_health_period/o/token/', methods=['GET', 'POST'])
-    def otoken__test_health_period():
-        return redirect(request.url_root + '/o/token/', code=307)
-
-    @app.route('/test_health_period/auth/metering/genlicense/', methods=['GET', 'POST'])
-    def genlicense__test_health_period():
-        return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
-
-    @app.route('/test_health_period/auth/metering/health/', methods=['GET', 'POST'])
-    def health__test_health_period():
-        global context
-        global lock
-        with lock:
-            start = str(datetime.now())
-            new_url = request.url.replace(request.url_root+'test_health_period', url)
-            request_json = request.get_json()
-            response = post(new_url, json=request_json, headers=request.headers)
-            assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json, indent=4, sort_keys=True), response.status_code, response.text)
-            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-            response_json = response.json()
-            response_json['metering']['healthPeriod'] = context['healthPeriod']
-            response_json['metering']['healthRetry'] = context['healthRetry']
-            response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
-            context['data'].append( (start,str(datetime.now())) )
-            return Response(dumps(response_json), response.status_code, headers)
+            context['cnt'] += 1
+        return Response(dumps(response_json), response.status_code, headers)
 
     # test_health_period_modification functions
     @app.route('/test_health_period_modification/o/token/', methods=['GET', 'POST'])
@@ -236,27 +257,37 @@ def create_app(url):
 
     @app.route('/test_health_period_modification/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_health_period_modification():
-        return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
+        new_url = request.url.replace(request.url_root+'test_health_period_disabled', url)
+        request_json = request.get_json()
+        response = post(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        response_json['metering']['healthPeriod'] = 300
+        return Response(dumps(response_json), response.status_code, headers)
 
     @app.route('/test_health_period_modification/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_health_period_modification():
         global context
         global lock
+        start = str(datetime.now())
+        new_url = request.url.replace(request.url_root+'test_health_period_modification', url)
+        request_json = request.get_json()
+        response = post(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
         with lock:
-            start = str(datetime.now())
-            new_url = request.url.replace(request.url_root+'test_health_period_modification', url)
-            request_json = request.get_json()
-            response = post(new_url, json=request_json, headers=request.headers)
-            assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json, indent=4, sort_keys=True), response.status_code, response.text)
-            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-            response_json = response.json()
             response_json['metering']['healthPeriod'] = context['healthPeriod']
             response_json['metering']['healthRetry'] = context['healthRetry']
             response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
             context['healthPeriod'] += 1
             context['data'].append( (start,str(datetime.now())) )
-            return Response(dumps(response_json), response.status_code, headers)
+        return Response(dumps(response_json), response.status_code, headers)
 
     # test_health_retry_disabled functions
     @app.route('/test_health_retry_disabled/o/token/', methods=['GET', 'POST'])
@@ -265,63 +296,43 @@ def create_app(url):
 
     @app.route('/test_health_retry_disabled/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_health_retry_disabled():
-        return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
+        new_url = request.url.replace(request.url_root+'test_health_period_disabled', url)
+        request_json = request.get_json()
+        response = post(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        response_json['metering']['healthPeriod'] = 300
+        return Response(dumps(response_json), response.status_code, headers)
 
     @app.route('/test_health_retry_disabled/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_health_retry_disabled():
         global context
         global lock
+        start = str(datetime.now())
+        new_url = request.url.replace(request.url_root+'test_health_retry_disabled', url)
+        request_json = request.get_json()
+        health_id = request_json['health_id']
         with lock:
-            start = str(datetime.now())
-            new_url = request.url.replace(request.url_root+'test_health_retry_disabled', url)
-            request_json = request.get_json()
-            health_id = request_json['health_id']
-            response = post(new_url, json=request_json, headers=request.headers)
-            assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json, indent=4, sort_keys=True), response.status_code, response.text)
-            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-            response_json = response.json()
-            response_json['metering']['healthPeriod'] = context['healthPeriod']
-            response_json['metering']['healthRetry'] = 0
-            response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
-            if len(context['data']) > 1:
-                response.status_code = 408
-            context['data'].append( (health_id,start,str(datetime.now())) )
-            return Response(dumps(response_json), response.status_code, headers)
-
-    # test_health_retry functions
-    @app.route('/test_health_retry/o/token/', methods=['GET', 'POST'])
-    def otoken__test_health_retry():
-        return redirect(request.url_root + '/o/token/', code=307)
-
-    @app.route('/test_health_retry/auth/metering/genlicense/', methods=['GET', 'POST'])
-    def genlicense__test_health_retry():
-        return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
-
-    @app.route('/test_health_retry/auth/metering/health/', methods=['GET', 'POST'])
-    def health__test_health_retry():
-        global context
-        global lock
-        with lock:
-            start = str(datetime.now())
-            new_url = request.url.replace(request.url_root+'test_health_retry', url)
-            request_json = request.get_json()
-            health_id = request_json['health_id']
-            response = post(new_url, json=request_json, headers=request.headers)
-            assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json, indent=4, sort_keys=True), response.status_code, response.text)
-            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-            response_json = response.json()
-            response_json['metering']['healthPeriod'] = context['healthPeriod']
-            response_json['metering']['healthRetry'] = context['healthRetry']
-            response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
-            if len(context['data']) >= 1:
-                response.status_code = 408
-            if health_id <= 1:
-                context['data'].append( (health_id,start,str(datetime.now())) )
+            if len(context['data']) <= 1:
+                response = post(new_url, json=request_json, headers=request.headers)
+                assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                        indent=4, sort_keys=True), response.status_code, response.text)
+                excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+                headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+                response_json = response.json()
+                response_json['metering']['healthPeriod'] = context['healthPeriod']
+                response_json['metering']['healthRetry'] = 0
+                response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
+                response_status_code = response.status_code
+                context['post'] = (response_json, headers)
             else:
-                context['exit'] = True
-            return Response(dumps(response_json), response.status_code, headers)
+                response_json, headers = context['post']
+                response_status_code = 408
+            context['data'].append( (health_id,start,str(datetime.now())) )
+        return Response(dumps(response_json), response_status_code, headers)
 
     # test_health_retry_modification functions
     @app.route('/test_health_retry_modification/o/token/', methods=['GET', 'POST'])
@@ -330,7 +341,16 @@ def create_app(url):
 
     @app.route('/test_health_retry_modification/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_health_retry_modification():
-        return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
+        new_url = request.url.replace(request.url_root+'test_health_period_disabled', url)
+        request_json = request.get_json()
+        response = post(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        response_json['metering']['healthPeriod'] = 300
+        return Response(dumps(response_json), response.status_code, headers)
 
     @app.route('/test_health_retry_modification/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_health_retry_modification():
@@ -339,71 +359,28 @@ def create_app(url):
         start = str(datetime.now())
         new_url = request.url.replace(request.url_root+'test_health_retry_modification', url)
         request_json = request.get_json()
-        health_id = int(request_json['health_id'])
+        health_id = request_json['health_id']
         with lock:
-            if health_id % 2:
-                # Good request
-                retry_timeout = int(context['healthRetryStep'])*((health_id+1)>>1)
-                context['healthRetry'] = retry_timeout
+            if len(context['data']) < 1:
                 response = post(new_url, json=request_json, headers=request.headers)
-                assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % \
-                        (dumps(request_json, indent=4, sort_keys=True), response.status_code, response.text)
+                assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                        indent=4, sort_keys=True), response.status_code, response.text)
                 excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
                 headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
                 response_json = response.json()
                 response_json['metering']['healthPeriod'] = context['healthPeriod']
                 response_json['metering']['healthRetry'] = context['healthRetry']
                 response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
-                return Response(dumps(response_json), response.status_code, headers)
+                response_status_code = response.status_code
+                context['post'] = (response_json, headers)
             else:
-                # Retry request
-                retry_timeout = context['healthRetry']
-                response = post(new_url, json=request_json, headers=request.headers)
-                assert response.status_code in [200, 400]
-                response.status_code = 408
-                if retry_timeout not in context['data'].keys():
-                    if len(context['data']) < context['nb_run']:
-                        context['data'][retry_timeout] = list()
-                    else:
-                        context['exit'] = True
-                if retry_timeout in context['data'].keys():
-                    context['data'][retry_timeout].append( (health_id, start, str(datetime.now())) )
-                return Response(dumps(response.json()), response.status_code)
-
-
-    # test_health_retry_sleep functions
-    @app.route('/test_health_retry_sleep/o/token/', methods=['GET', 'POST'])
-    def otoken__test_health_retry_sleep():
-        return redirect(request.url_root + '/o/token/', code=307)
-
-    @app.route('/test_health_retry_sleep/auth/metering/genlicense/', methods=['GET', 'POST'])
-    def genlicense__test_health_retry_sleep():
-        return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
-
-    @app.route('/test_health_retry_sleep/auth/metering/health/', methods=['GET', 'POST'])
-    def health__test_health_retry_sleep():
-        global context
-        global lock
-        with lock:
-            start = str(datetime.now())
-            new_url = request.url.replace(request.url_root+'test_health_retry_sleep', url)
-            request_json = request.get_json()
-            health_id = request_json['health_id']
-            response = post(new_url, json=request_json, headers=request.headers)
-            assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json, indent=4, sort_keys=True), response.status_code, response.text)
-            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-            response_json = response.json()
-            response_json['metering']['healthPeriod'] = context['healthPeriod']
-            response_json['metering']['healthRetry'] = context['healthRetry']
-            response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
-            if len(context['data']) >= 1:
-                response.status_code = 408
-            if health_id <= context['nb_health']:
+                response_json, headers = context['post']
+                response_status_code = 408
+            if health_id <= 1:
                 context['data'].append( (health_id,start,str(datetime.now())) )
             else:
                 context['exit'] = True
-            return Response(dumps(response_json), response.status_code, headers)
+        return Response(dumps(response_json), response_status_code, headers)
 
     # test_health_retry_sleep_modification functions
     @app.route('/test_health_retry_sleep_modification/o/token/', methods=['GET', 'POST'])
@@ -412,32 +389,46 @@ def create_app(url):
 
     @app.route('/test_health_retry_sleep_modification/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_health_retry_sleep_modification():
-        return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
+        new_url = request.url.replace(request.url_root+'test_health_period_disabled', url)
+        request_json = request.get_json()
+        response = post(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        response_json['metering']['healthPeriod'] = 300
+        return Response(dumps(response_json), response.status_code, headers)
 
     @app.route('/test_health_retry_sleep_modification/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_health_retry_sleep_modification():
         global context
         global lock
+        start = str(datetime.now())
+        new_url = request.url.replace(request.url_root+'test_health_retry_sleep_modification', url)
+        request_json = request.get_json()
+        health_id = request_json['health_id']
         with lock:
-            start = str(datetime.now())
-            new_url = request.url.replace(request.url_root+'test_health_retry_sleep_modification', url)
-            request_json = request.get_json()
-            health_id = request_json['health_id']
-            response = post(new_url, json=request_json, headers=request.headers)
-            assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json, indent=4, sort_keys=True), response.status_code, response.text)
-            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-            response_json = response.json()
-            response_json['metering']['healthPeriod'] = context['healthPeriod']
-            response_json['metering']['healthRetry'] = context['healthRetry']
-            response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
-            if len(context['data']) >= 1:
-                response.status_code = 408
+            if len(context['data']) < 1:
+                response = post(new_url, json=request_json, headers=request.headers)
+                assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                        indent=4, sort_keys=True), response.status_code, response.text)
+                excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+                headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+                response_json = response.json()
+                response_json['metering']['healthPeriod'] = context['healthPeriod']
+                response_json['metering']['healthRetry'] = context['healthRetry']
+                response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
+                response_status_code = response.status_code
+                context['post'] = (response_json, headers)
+            else:
+                response_json, headers = context['post']
+                response_status_code = 408
             if health_id <= 1:
                 context['data'].append( (health_id,start,str(datetime.now())) )
             else:
                 context['exit'] = True
-            return Response(dumps(response_json), response.status_code, headers)
+        return Response(dumps(response_json), response_status_code, headers)
 
     # test_health_metering_data functions
     @app.route('/test_health_metering_data/o/token/', methods=['GET', 'POST'])
@@ -446,25 +437,35 @@ def create_app(url):
 
     @app.route('/test_health_metering_data/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_health_metering_data():
-        return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
+        new_url = request.url.replace(request.url_root+'test_health_period_disabled', url)
+        request_json = request.get_json()
+        response = post(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        response_json['metering']['healthPeriod'] = 300
+        return Response(dumps(response_json), response.status_code, headers)
 
     @app.route('/test_health_metering_data/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_health_metering_data():
         global context
         global lock
+        new_url = request.url.replace(request.url_root+'test_health_metering_data', url)
+        request_json = request.get_json()
+        health_id = request_json['health_id']
+        response = post(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
         with lock:
-            new_url = request.url.replace(request.url_root+'test_health_metering_data', url)
-            request_json = request.get_json()
-            health_id = request_json['health_id']
-            response = post(new_url, json=request_json, headers=request.headers)
-            assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json, indent=4, sort_keys=True), response.status_code, response.text)
-            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-            response_json = response.json()
             response_json['metering']['healthPeriod'] = context['healthPeriod']
             response_json['metering']['healthRetry'] = context['healthRetry']
             context['health_id']= health_id
-            return Response(dumps(response_json), response.status_code, headers)
+        return Response(dumps(response_json), response.status_code, headers)
 
     # test_segment_index functions
     @app.route('/test_segment_index/o/token/', methods=['GET', 'POST'])
@@ -475,34 +476,34 @@ def create_app(url):
     def genlicense__test_segment_index():
         global context
         global lock
+        new_url = request.url.replace(request.url_root+'test_segment_index', url)
+        request_json = request.get_json()
+        response = post(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
         with lock:
-            new_url = request.url.replace(request.url_root+'test_segment_index', url)
-            request_json = request.get_json()
-            context['genlic_cnt'] += 1
-            response = post(new_url, json=request_json, headers=request.headers)
-            assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json, indent=4, sort_keys=True), response.status_code, response.text)
-            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-            response_json = response.json()
             response_json['metering']['timeoutSecond'] = context['timeoutSecond']
-            return Response(dumps(response_json), response.status_code, headers)
+        return Response(dumps(response_json), response.status_code, headers)
 
     @app.route('/test_segment_index/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_segment_index():
         global context
         global lock
+        new_url = request.url.replace(request.url_root+'test_segment_index', url)
+        request_json = request.get_json()
+        response = post(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
         with lock:
-            new_url = request.url.replace(request.url_root+'test_segment_index', url)
-            request_json = request.get_json()
-            context['health_cnt'] += 1
-            response = post(new_url, json=request_json, headers=request.headers)
-            assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json, indent=4, sort_keys=True), response.status_code, response.text)
-            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-            response_json = response.json()
             response_json['metering']['healthPeriod'] = context['healthPeriod']
             response_json['metering']['healthRetry'] = context['healthRetry']
-            return Response(dumps(response_json), response.status_code, headers)
+        return Response(dumps(response_json), response.status_code, headers)
 
     ##############################################################################
     # test_retry_mechanism.py
@@ -525,20 +526,26 @@ def create_app(url):
             new_url = request.url.replace(request.url_root+'test_long_to_short_retry_switch', url)
             request_json = request.get_json()
             request_type = request_json['request']
-            response = post(new_url, json=request_json, headers=request.headers)
-            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-            response_json = response.json()
-            if len(context['data']) == 0:
-                timeoutSecond = context['timeoutSecondFirst2']
-            else:
-                timeoutSecond = context['timeoutSecond']
-            if len(context['data']) >= 2 and request_json['request'] == 'running':
-                response.status_code = 408
-            if 'metering' in response_json.keys():
+            if context['cnt'] < 2 or request_type == 'close':
+                response = post(new_url, json=request_json, headers=request.headers)
+                assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                        indent=4, sort_keys=True), response.status_code, response.text)
+                excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+                headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+                response_json = response.json()
+                if context['cnt'] == 0:
+                    timeoutSecond = context['timeoutSecondFirst2']
+                else:
+                    timeoutSecond = context['timeoutSecond']
                 response_json['metering']['timeoutSecond'] = timeoutSecond
-            context['data'].append( (request_type,start,str(datetime.now())) )
-            return Response(dumps(response_json), response.status_code, headers)
+                context['post'] = (response_json, headers)
+                response_status_code = response.status_code
+            else:
+                response_json, headers = context['post']
+                response_status_code = 408
+                context['data'].append( (request_type,start,str(datetime.now())) )
+            context['cnt'] += 1
+        return Response(dumps(response_json), response_status_code, headers)
 
     # test_retry_on_no_connection functions
     @app.route('/test_retry_on_no_connection/o/token/', methods=['GET', 'POST'])
@@ -553,23 +560,27 @@ def create_app(url):
     def genlicense__test_retry_on_no_connection():
         global context
         global lock
-        with lock:
-            start = str(datetime.now())
-            request_json = request.get_json()
-            request_type = request_json['request']
-            if len(context['data']) < 2 or request_type == 'close':
-                new_url = request.url.replace(request.url_root+'test_retry_on_no_connection', url)
-                response = post(new_url, json=request_json, headers=request.headers)
-                excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-                headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-                response_json = response.json()
-                response_json['metering']['timeoutSecond'] = context['timeoutSecond']
-                ret = Response(dumps(response_json), response.status_code, headers)
-            else:
-                sleep(context['timeoutSecond'] + 1)
-                ret = ('', 204)
-            context['data'].append( (request_type, start, str(datetime.now())) )
-            return ret
+        start = str(datetime.now())
+        print('ENTER**********************')
+        print('cnt=', context['cnt'])
+        request_json = request.get_json()
+        request_type = request_json['request']
+        try:
+            with lock:
+                if context['cnt'] < 2 or request_type == 'close':
+                    new_url = request.url.replace(request.url_root+'test_retry_on_no_connection', url)
+                    response = post(new_url, json=request_json, headers=request.headers)
+                    excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+                    headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+                    response_json = response.json()
+                    response_json['metering']['timeoutSecond'] = context['timeoutSecond']
+                    return Response(dumps(response_json), response.status_code, headers)
+                sleep_period = context['timeoutSecond'] + 1
+            sleep(sleep_period)
+            return ('', 204)
+        finally:
+            with lock:
+                context['cnt'] += 1
 
     ##############################################################################
     # test_unittest_on_hw.py
@@ -585,18 +596,15 @@ def create_app(url):
 
     @app.route('/test_http_header_api_version/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_http_header_api_version():
-        global context
-        global lock
-        with lock:
-            start = str(datetime.now())
-            new_url = request.url.replace(request.url_root+'test_http_header_api_version', url)
-            request_json = request.get_json()
-            assert search(r'Accept:.*application/vnd\.accelize\.v1\+json', str(request.headers))
-            response = post(new_url, json=request_json, headers=request.headers)
-            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-            response_json = response.json()
-            return Response(dumps(response_json), response.status_code, headers)
+        start = str(datetime.now())
+        new_url = request.url.replace(request.url_root+'test_http_header_api_version', url)
+        request_json = request.get_json()
+        assert search(r'Accept:.*application/vnd\.accelize\.v1\+json', str(request.headers))
+        response = post(new_url, json=request_json, headers=request.headers)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        return Response(dumps(response_json), response.status_code, headers)
 
     return app
 
@@ -610,4 +618,5 @@ def get_context():
 def set_context(data):
     r = post(url_for('set', _external=True), json=data)
     assert r.status_code == 200
+
 

@@ -3,15 +3,14 @@
 Test metering and floating behaviors of DRM Library.
 """
 import pytest
-from os import remove
 from time import sleep
 from random import randint, randrange
 from datetime import datetime, timedelta
 from re import search, findall
-from tests.conftest import wait_deadline
 from os.path import realpath, isfile
+from os import remove
 
-from tests.conftest import wait_func_true
+from tests.conftest import wait_deadline, wait_func_true
 
 
 def test_metered_start_stop_in_raw(accelize_drm, conf_json, cred_json, async_handler):
@@ -424,12 +423,12 @@ def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, cred_json
     activators.autotest(is_activated=True)
     assert drm_manager2.get('metered_data') == 10
     # Wait for license renewal
-    wait_deadline(start, lic_duration+2)
+    sleep(lic_duration+2)
+    assert drm_manager2.get('session_id') == session_id
+    assert drm_manager2.get('license_duration') == lic_duration
     activators[0].generate_coin(10)
     activators[0].check_coin(drm_manager2.get('metered_data'))
     assert drm_manager2.get('metered_data') == 20
-    assert drm_manager2.get('license_duration') == lic_duration
-    assert drm_manager2.get('session_id') == session_id
     drm_manager2.deactivate()
     assert not drm_manager2.get('session_status')
     assert not drm_manager2.get('license_status')
@@ -484,7 +483,7 @@ def test_async_on_pause(accelize_drm, conf_json, cred_json, async_handler):
         finally:
             drm_manager.deactivate()
             del drm_manager
-        assert wait_func_true(lambda: isfile(logpath), 10)
+        wait_func_true(lambda: isfile(logpath), 10)
         with open(logpath, 'rt') as f:
             log_content = f.read()
         assert len(list(findall(r'"request"\s*:\s*"health"', log_content))) == 1

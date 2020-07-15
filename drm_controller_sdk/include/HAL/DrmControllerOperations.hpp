@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerOperations.hpp
-*  \version   4.1.0.0
-*  \date      March 2020
+*  \version   4.2.0.0
+*  \date      July 2020
 *  \brief     Class DrmControllerOperations is an abstraction level to execute operations.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.
@@ -89,6 +89,22 @@ namespace DrmControllerLibrary {
       *   \return Returns the error code produced by the read/write register function.
       **/
       unsigned int extractDrmVersion(std::string &drmVersion) const;
+      
+      /** extractAdaptativeProportionTestFailures
+      *   \brief Extract the Adaptative Proportion Test Failures of the DRM controller.
+      *   This method will access to the system bus to extract the Adaptative Proportion Test Failures.
+      *   \param[out] adaptativeProportionTestFailures is the value of the Adaptative Proportion Test Failures.
+      *   \return Returns the error code produced by the read/write register function.
+      **/
+      unsigned int extractAdaptativeProportionTestFailures(std::string &adaptativeProportionTestFailures) const;
+
+      /** extractRepetitionCountTestFailures
+      *   \brief Extract the Repetition Count Test Failures of the DRM controller.
+      *   This method will access to the system bus to extract the Repetition Count Test Failures.
+      *   \param[out] repetitionCountTestFailures is the value of the Repetition Count Test Failures.
+      *   \return Returns the error code produced by the read/write register function.
+      **/
+      unsigned int extractRepetitionCountTestFailures(std::string &repetitionCountTestFailures) const;
 
       /** extractDna
       *   \brief Extract the dna value.

@@ -116,8 +116,6 @@ page_meteringfile              string    Read-only     NA                      r
 page_mailbox                   string    Read-only     NA                      return nothing, print all registers in the Mailbox page
 hw_report                      string    Read-only     NA                      return nothing, print the Algodone HW report
 trigger_async_callback         string    Write-only    No                      only for testing, call the asynchronous error callback with the given message
-bad_product_id                 bool      Write-only    No                      only for testing, uses a bad product ID
-bad_oauth2_token               bool      Write-only    No                      only for testing, uses a bad token
 log_message                    string    Write-only    No                      only for testing, insert a message with the value as content
 =============================  ========  ============  ======================  =============================================
 

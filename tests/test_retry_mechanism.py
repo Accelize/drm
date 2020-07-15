@@ -11,7 +11,7 @@ from re import match, search, finditer, MULTILINE, IGNORECASE
 from time import sleep, time
 from json import loads
 from datetime import datetime, timedelta
-from flask import request, url_for
+from flask import request
 from dateutil import parser
 
 from tests.conftest import wait_func_true
@@ -70,6 +70,7 @@ def test_retry_disabled(accelize_drm, conf_json, cred_json, async_handler):
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
     finally:
         drm_manager0.deactivate()
+        drm_manager1.deactivate()
         assert not drm_manager0.get('license_status')
         assert not drm_manager1.get('license_status')
         async_cb0.assert_NoError()
@@ -165,7 +166,8 @@ def test_long_to_short_retry_switch(accelize_drm, conf_json, cred_json, async_ha
         async_cb.callback
     )
 
-    context = {'data': list(),
+    context = {'data':list(),
+               'cnt':0,
                'timeoutSecondFirst2':timeoutSecondFirst2,
                'timeoutSecond':timeoutSecond
     }
@@ -185,24 +187,20 @@ def test_long_to_short_retry_switch(accelize_drm, conf_json, cred_json, async_ha
     data_list = context['data']
     nb_long_retry = int(timeoutSecond / retryLongPeriod)
     nb_short_retry = int(retryLongPeriod / retryShortPeriod)
-    assert nb_long_retry <= len(data_list) <= (nb_long_retry-1+1.5*nb_short_retry)
-    data = data_list.pop(0)    # Remove 'open' request
-    assert data[0] == 'open'
-    prev_lic = parser.parse(data[2])
-    data = data_list.pop(0)    # Remove 1st 'running' request
+    assert (nb_long_retry+nb_short_retry) <= len(data_list) <= (1+nb_long_retry+nb_short_retry)
+    data = data_list.pop(0)
     assert data[0] == 'running'
-    lic_delta = int((parser.parse(data[1]) - prev_lic).total_seconds())
-    assert lic_delta < 1
     prev_lic = parser.parse(data[2])
     for i, (type, start, end) in enumerate(data_list):
         lic_delta = int((parser.parse(start) - prev_lic).total_seconds())
         prev_lic = parser.parse(end)
-        if i < nb_long_retry:
+        if i < nb_long_retry-1:
             assert (retryLongPeriod-1) <= lic_delta <= (retryLongPeriod+1)
         else:
             assert (retryShortPeriod-1) <= lic_delta <= (retryShortPeriod+1)
 
 
+@pytest.mark.skip(reason='FIXME: waiting new refactoring of request timeout')
 @pytest.mark.no_parallel
 def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
@@ -212,14 +210,21 @@ def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handle
     async_cb = async_handler.create()
     async_cb.reset()
 
-    retryShortPeriod = 3
-    retryLongPeriod = 10
-    timeoutSecond = 20
+    retryShortPeriod = 2
+    retryLongPeriod = 5
+    timeoutSecond = 10
+    nb_long_retry = int(timeoutSecond / retryLongPeriod)
+    nb_short_retry = int(retryLongPeriod / retryShortPeriod)
+    nb_retry = nb_long_retry + nb_short_retry
 
     conf_json.reset()
     conf_json['licensing']['url'] = request.url + 'test_retry_on_no_connection'
     conf_json['settings']['ws_retry_period_short'] = retryShortPeriod
     conf_json['settings']['ws_retry_period_long'] = retryLongPeriod
+    logpath = realpath("./test_retry_on_no_connection.%d.log" % randrange(0xFFFFFFFF))
+    conf_json['settings']['log_file_verbosity'] = 1
+    conf_json['settings']['log_file_type'] = 1
+    conf_json['settings']['log_file_path'] = logpath
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(
@@ -230,7 +235,7 @@ def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handle
         async_cb.callback
     )
 
-    context = {'data': list(),
+    context = {'cnt':0,
                'timeoutSecond':timeoutSecond
     }
     set_context(context)
@@ -242,27 +247,16 @@ def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handle
                 timeout=timeoutSecond*2)
     finally:
         drm_manager.deactivate()
+    del drm_manager
     assert async_cb.was_called
-    assert 'Timeout on License' in async_cb.message
+    assert re.search(r'Timeout on License request after %d attempts' % nb_retry,
+            async_cb.message)
     assert async_cb.errcode == accelize_drm.exceptions.DRMWSError.error_code
-    context = get_context()
-    data_list = context['data']
-    nb_long_retry = int(timeoutSecond / retryLongPeriod)
-    nb_short_retry = int(retryLongPeriod / retryShortPeriod)
-    assert (nb_long_retry+nb_short_retry) <= len(data_list) <= (1+nb_long_retry+nb_short_retry)
-    data = data_list.pop(0)    # Remove 'open' request
-    assert data[0] == 'open'
-    prev_lic = parser.parse(data[2])
-    data = data_list.pop(0)    # Remove 1st 'running' request
-    assert data[0] == 'running'
-    lic_delta = int((parser.parse(data[1]) - prev_lic).total_seconds())
-    assert lic_delta < 1
-    prev_lic = parser.parse(data[2])
-    for i, (type, start, end) in enumerate(data_list):
-        lic_delta = int((parser.parse(start) - prev_lic).total_seconds())
-        prev_lic = parser.parse(end)
-        if i < nb_long_retry:
-            assert (retryLongPeriod - 1) <= lic_delta <= (retryLongPeriod + 1)
-        else:
-            assert (retryShortPeriod - 1) <= lic_delta <= (retryShortPeriod + 1)
+    wait_func_true(lambda: isfile(logpath), 10)
+    with open(logpath, 'rt') as f:
+        log_content = f.read()
+    attempts_list = findall(r'Attempt #(\d+) to obtain a new License failed with message', log_content)
+    assert len(attempts_list) == nb_retry
+    assert sorted(list(attempts_list)) == list(range(1,nb_retry+1))
+
 

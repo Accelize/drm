@@ -32,6 +32,7 @@ currently supported by the DRM HDK:
        * Vivado 2018.2.xdf
        * Vivado 2018.3
        * Vivado 2019.1
+       * Vivado 2019.2
      - * Ultrascale+
        * Ultrascale
        * Virtex 7
@@ -319,6 +320,12 @@ protected IP cores.
 
 Simulate your design
 ====================
+
+Requirements:
+
+* Modelsim 17.1
+* Vivado 2017.4
+
 
 The user can find a simulation model of the DRM Activator, drm_activator_0xVVVVLLLLNNNNVVVV_sim.(sv,vhdl),
 in the DRM_HDK/vendor_library_name_version/sim folder.

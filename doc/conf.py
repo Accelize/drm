@@ -40,7 +40,7 @@ html_theme_options = {
 }
 
 # Enable Accelize Theme
-html_favicon = '_static/favicon.ico'
+html_favicon = '_static/Accelize_logo-150x150.png'
 html_logo = '_static/logo.png'
 html_show_sourcelink = False
 html_show_sphinx = False

@@ -719,7 +719,7 @@ def conf_json(pytestconfig, tmpdir):
         log_param['log_format'] = '[%^%=8l%$] %-6t, %v'
     if pytestconfig.getoption("logfile"):
         log_param['log_file_type'] = 1
-        log_param['log_file_path'] = realpath("./drmlib_t%f_pid%d.log" % (time(), getpid()))
+        log_param['log_file_path'] = realpath("./tox_drmlib_t%f_pid%d.log" % (time(), getpid()))
         log_param['log_file_verbosity'] = 1
     json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param)
     json_conf.save()
@@ -842,9 +842,8 @@ def wait_func_true(func, timeout=None, sleep_time=1):
     while not func():
         if timeout:
             if (datetime.now() - start) > timedelta(seconds=timeout):
-                return False
+                raise RuntimeError('Timeout!')
         sleep(sleep_time)
-    return True
 
 
 def wait_deadline(start_time, duration):

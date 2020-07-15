@@ -246,7 +246,7 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
                     sleep(1)
             activators.autotest(is_activated=False)
             del drm_manager
-            assert wait_func_true(lambda: isfile(logpath), 10)
+            wait_func_true(lambda: isfile(logpath), 10)
             if no_err:
                 session_cnt += 1
         async_cb.assert_NoError()
