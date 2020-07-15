@@ -255,7 +255,7 @@ def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handle
     wait_func_true(lambda: isfile(logpath), 10)
     with open(logpath, 'rt') as f:
         log_content = f.read()
-    attempts_list = findall(r'Attempt #(\d+) to obtain a new License failed with message', log_content):
+    attempts_list = findall(r'Attempt #(\d+) to obtain a new License failed with message', log_content)
     assert len(attempts_list) == nb_retry
     assert sorted(list(attempts_list)) == list(range(1,nb_retry+1))
 
