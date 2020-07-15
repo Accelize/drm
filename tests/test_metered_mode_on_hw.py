@@ -3,7 +3,7 @@
 Test metering and floating behaviors of DRM Library.
 """
 import pytest
-import os
+from os import remove
 from time import sleep
 from random import randint, randrange
 from datetime import datetime, timedelta
@@ -491,7 +491,7 @@ def test_async_on_pause(accelize_drm, conf_json, cred_json, async_handler):
     finally:
         async_cb.assert_NoError()
         if isfile(logpath):
-            os.remove(logpath)
+            remove(logpath)
 
 
 @pytest.mark.minimum
