@@ -5,7 +5,7 @@ Test asynchronous metering behaviors of DRM Library.
 import pytest
 from time import sleep
 from random import randrange
-from re import search, MULTILINE
+from re import search, findall, MULTILINE
 from dateutil import parser
 from itertools import groupby
 from flask import request
@@ -17,7 +17,7 @@ from tests.proxy import get_context, set_context
 
 @pytest.mark.no_parallel
 @pytest.mark.minimum
-def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handler, live_server):
+def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handler, live_server, artifacts):
     """
     Test the asynchronous health feature can be disabled.
     """
@@ -54,12 +54,13 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
     try:
         drm_manager.activate()
         try:
-            assert drm_manager.get('health_period') == 300
+            assert drm_manager.get('health_period') == healthPeriod
             wait_func_true(lambda: get_context()['exit'],
-                    timeout=healthPeriod * nb_health * 2)
-            sleep(1)
+                    timeout=healthPeriod * (nb_health + 1) * 2)
             assert drm_manager.get('health_period') == 0
-            assert get_context()['cnt'] == nb_health + 1
+            assert get_context()['cnt'] == nb_health
+            sleep(healthPeriod + 1)
+            assert get_context()['cnt'] == nb_health
         finally:
             drm_manager.deactivate()
         del drm_manager
@@ -69,7 +70,11 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
         assert search(r'Exiting background thread which checks health', log_content, MULTILINE)
         assert search(r'Health thread is disabled', log_content, MULTILINE)
         assert search(r'Exiting background thread which checks health', log_content, MULTILINE)
+        health_req = findall(r'"request"\s*:\s*"health"', log_content)
+        assert len(list(health_req)) == nb_health
         async_cb.assert_NoError()
+    except AssertionError:
+        artifacts.save_path(logpath)
     finally:
         if isfile(logpath):
             remove(logpath)
