@@ -17,7 +17,7 @@ This library provides **API** for :
 * C++
 * Python
 
-Interested in AccelDRM ? Checkout our [Documentation](http://accelize.s3-website-eu-west-1.amazonaws.com/documentation/stable)!
+Interested in Accelize DRM ? Checkout our [Documentation](https://tech.accelize.com/documentation/stable)!
 
 # :key: Accelize licensing solution
 
@@ -31,7 +31,7 @@ encrypted license file, stored locally on the server that hosts the FPGA card.
 A server-based scheme implemented by delivering license keys from a license server.
 Specifically, the license server delivers a regular stream of time-limited single-use license keys.
 
-Take a look at our [documentation](http://accelize.s3-website-eu-west-1.amazonaws.com/documentation/stable/#licensing-modes) for more information !
+Take a look at our [documentation](https://tech.accelize.com/documentation/stable/#licensing-modes) for more information !
 
 # :wrench: Accelize Architecture Overview
 
@@ -47,7 +47,7 @@ The DRM client is delivered as a DRM Library in C/C++ and Python.
 licensing and handles user authentication, licensing and metering. Upon special request,
 the DRM Web Service can deployed on-premise.
 
-More information in our [documentation](http://accelize.s3-website-eu-west-1.amazonaws.com/documentation/stable/#licensing-modes) !
+More information in our [documentation](https://tech.accelize.com/documentation/stable/#licensing-modes) !
 
 ## :computer: Accelize Distribution Platform
 

@@ -6,7 +6,7 @@ SW & HW Accelize Solution documentation.
 ## Last stable
 
 The last stable version of the documentation is available already compiled 
-[here](http://accelize.s3-website-eu-west-1.amazonaws.com/documentation/stable).
+[here](https://tech.accelize.com/documentation/stable).
 
 ## License
 
