@@ -279,7 +279,7 @@ class SingleActivator:
             coins (int): Number of coins to compare to.
         """
         assert self.metering_data == coins
-
+        
 
 class ActivatorsInFPGA:
     """
