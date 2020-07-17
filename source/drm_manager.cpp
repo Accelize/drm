@@ -959,7 +959,15 @@ protected:
         // Fulfill with Product information
         if ( !mailboxReadOnly.empty() ) {
             try {
-                json_output["product"] = parseJsonString( mailboxReadOnly );
+                Json::Value product_info = parseJsonString( mailboxReadOnly );
+                if ( product_info.isMember( "product_id" ) )
+                    json_output["product"] = product_info["product_id"];
+                else
+                    json_output["product"] = product_info;
+                if ( product_info.isMember( "pkg_version" ) )
+                    json_output["pkg_version"] = product_info["pkg_version"];
+                if ( product_info.isMember( "dna_type" ) )
+                    json_output["dna_type"] = product_info["dna_type"];
             } catch( const Exception &e ) {
                 if ( e.getErrCode() == DRM_BadFormat )
                     Throw( DRM_BadFormat, "Failed to parse Read-Only Mailbox in DRM Controller: {}", e.what() );

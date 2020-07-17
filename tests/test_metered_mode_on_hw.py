@@ -121,8 +121,7 @@ def test_metered_start_stop_short_time(accelize_drm, conf_json, cred_json, async
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
-        coins = drm_manager.get('metered_data')
-        assert coins == 0
+        assert drm_manager.get('metered_data') == 0
         async_cb.assert_NoError()
     finally:
         drm_manager.deactivate()
@@ -312,6 +311,7 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
         driver.write_register_callback,
         async_cb.callback
     )
+    nb_pause_resume = 3
     try:
         assert not drm_manager.get('session_status')
         assert not drm_manager.get('license_status')
@@ -326,8 +326,7 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
         assert len(session_id) > 0
         lic_duration = drm_manager.get('license_duration')
         activators.autotest(is_activated=True)
-        coins = drm_manager.get('metered_data')
-        for i in range(3):
+        for i in range(nb_pause_resume):
             new_coins = randint(1, 100)
             activators[0].generate_coin(new_coins)
             activators[0].check_coin(drm_manager.get('metered_data'))
@@ -336,9 +335,8 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
             assert drm_manager.get('session_status')
             assert drm_manager.get('license_status')
             assert drm_manager.get('session_id') == session_id
-            # Wait randomly
-            nb_lic_expired = int((datetime.now() - start).total_seconds() / lic_duration)
-            random_wait = randint((nb_lic_expired+2)*lic_duration-2, (nb_lic_expired+2)*lic_duration+2)
+            # Wait randomly at the limit of the expiration
+            random_wait = randint(lic_duration*2-2, lic_duration*2+2)
             wait_deadline(start, random_wait)
             drm_manager.activate(True)
             start = datetime.now()

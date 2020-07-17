@@ -218,6 +218,8 @@ def create_app(url):
 
     @app.route('/test_health_period_disabled/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_health_period_disabled():
+        global context
+        global lock
         new_url = request.url.replace(request.url_root+'test_health_period_disabled', url)
         request_json = request.get_json()
         response = post(new_url, json=request_json, headers=request.headers)
@@ -226,7 +228,8 @@ def create_app(url):
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
-        response_json['metering']['healthPeriod'] = 300
+        with lock:
+            response_json['metering']['healthPeriod'] = context['healthPeriod']
         return Response(dumps(response_json), response.status_code, headers)
 
     @app.route('/test_health_period_disabled/auth/metering/health/', methods=['GET', 'POST'])
@@ -242,12 +245,12 @@ def create_app(url):
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
+            context['cnt'] += 1
             if context['cnt'] < context['nb_health']:
                 response_json['metering']['healthPeriod'] = context['healthPeriod']
             else:
                 response_json['metering']['healthPeriod'] = 0
                 context['exit'] = True
-            context['cnt'] += 1
         return Response(dumps(response_json), response.status_code, headers)
 
     # test_health_period_modification functions
@@ -257,7 +260,7 @@ def create_app(url):
 
     @app.route('/test_health_period_modification/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_health_period_modification():
-        new_url = request.url.replace(request.url_root+'test_health_period_disabled', url)
+        new_url = request.url.replace(request.url_root+'test_health_period_modification', url)
         request_json = request.get_json()
         response = post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
@@ -341,7 +344,7 @@ def create_app(url):
 
     @app.route('/test_health_retry_modification/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_health_retry_modification():
-        new_url = request.url.replace(request.url_root+'test_health_period_disabled', url)
+        new_url = request.url.replace(request.url_root+'test_health_retry_modification', url)
         request_json = request.get_json()
         response = post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
@@ -389,7 +392,7 @@ def create_app(url):
 
     @app.route('/test_health_retry_sleep_modification/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_health_retry_sleep_modification():
-        new_url = request.url.replace(request.url_root+'test_health_period_disabled', url)
+        new_url = request.url.replace(request.url_root+'test_health_retry_sleep_modification', url)
         request_json = request.get_json()
         response = post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
@@ -437,7 +440,7 @@ def create_app(url):
 
     @app.route('/test_health_metering_data/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_health_metering_data():
-        new_url = request.url.replace(request.url_root+'test_health_period_disabled', url)
+        new_url = request.url.replace(request.url_root+'test_health_metering_data', url)
         request_json = request.get_json()
         response = post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
