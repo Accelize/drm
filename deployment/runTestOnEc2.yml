@@ -74,7 +74,7 @@ jobs:
           EOF
         displayName: Create Accelize credentials file
 
-      - script: sudo -E tox -e
+      - script: sudo -E tox -p all -e
                 aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug
                 -- --cred=$(Build.SourcesDirectory)/cred.json --server=$(meteringServer) --artifacts_dir=$(Build.SourcesDirectory)/artifacts ${{ config.tox_extra_option }}
         displayName: Run tests with Tox
