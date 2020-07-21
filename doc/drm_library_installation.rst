@@ -15,11 +15,12 @@ tests:
 
 * RHEL/Centos 7
 * Ubuntu 18.04 LTS Bionic
-* Ubuntu 16.04 LTS Xenial
 
 Following OS are minimally tested only (without hardware):
 
 * RHEL/Centos 8
+* Ubuntu 16.04 LTS Xenial
+* Ubuntu 20.04 LTS Focal
 * Fedora (2 latest stable versions)
 * Ubuntu (2 latest stable versions)
 * Debian 10 Buster
@@ -72,10 +73,10 @@ To install the repository, run the following commands:
     sudo apt install -y apt-transport-https software-properties-common lsb-release gnupg curl
 
     # Add Accelize GPG public key for package signature verification
-    curl -fsSL https://accelize.s3.amazonaws.com/gpg | sudo apt-key add -
+    curl -fsSL https://tech.accelize.com/gpg | sudo apt-key add -
 
     # Install repository
-    sudo add-apt-repository "deb https://accelize.s3.amazonaws.com/deb $(lsb_release -cs) stable"
+    sudo add-apt-repository "deb https://tech.accelize.com/deb $(lsb_release -cs) stable"
     sudo apt update
 
 
@@ -91,25 +92,16 @@ To install the Accelize repository, run the following commands:
     sudo dnf install -y 'dnf-command(config-manager)'
 
     # Install repository
-    sudo dnf config-manager --add-repo https://accelize.s3.amazonaws.com/rpm/accelize_stable.repo
+    sudo dnf config-manager --add-repo https://tech.accelize.com/rpm/accelize_stable.repo
 
 .. code-block:: bash
-    :caption: On RHEL 7
+    :caption: On RHEL 7, CentOS 7
 
     # Ensure that config manager is installed
     sudo yum install -y yum-utils
 
      # Install Accelize repository:
-    sudo yum-config-manager --add-repo https://accelize.s3.amazonaws.com/rpm/accelize_stable_rhel7.repo
-
-.. code-block:: bash
-    :caption: On CentOS 7
-
-    # Ensure that config manager is installed
-    sudo yum install -y yum-utils
-
-     # Install Accelize repository:
-    sudo yum-config-manager --add-repo https://accelize.s3.amazonaws.com/rpm/accelize_stable.repo
+    sudo yum-config-manager --add-repo https://tech.accelize.com/rpm/accelize_stable.repo
 
 
 Python Library package
