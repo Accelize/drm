@@ -3,12 +3,43 @@
 Test node-locked behavior of DRM Library.
 """
 import pytest
+from itertools import groupby
 from re import match, search, IGNORECASE
+
+
+def test_hdk_stability_on_programming(accelize_drm, conf_json, cred_json, async_handler):
+    """Test reprogramming multiple times does not produce any issue"""
+    driver = accelize_drm.pytest_fpga_driver[0]
+    image_id = driver.fpga_image
+    async_cb = async_handler.create()
+    async_cb.reset()
+    drm_manager = None
+
+    nb_reset = 10
+    for i in range(nb_reset):
+        # Program FPGA with lastest HDK per major number
+        driver.program_fpga(image_id)
+
+        # Test no compatibility issue
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+        try:
+            assert not drm_manager.get('license_status')
+            drm_manager.activate()
+            assert drm_manager.get('license_status')
+        finally:
+            drm_manager.deactivate()
+            assert not drm_manager.get('license_status')
+        async_cb.assert_NoError()
 
 
 @pytest.mark.minimum
 def test_uncompatibilities(accelize_drm, conf_json, cred_json, async_handler):
-    from itertools import groupby
     """Test API is not compatible with DRM HDK inferior major number"""
     refdesign = accelize_drm.pytest_ref_designs
     hdk_version = accelize_drm.pytest_hdk_version
@@ -75,7 +106,6 @@ def test_uncompatibilities(accelize_drm, conf_json, cred_json, async_handler):
 
 @pytest.mark.minimum
 def test_hdk_compatibility(accelize_drm, conf_json, cred_json, async_handler):
-    from itertools import groupby
     """Test API is compatible with DRM HDK with the same major number"""
     refdesign = accelize_drm.pytest_ref_designs
     hdk_version = accelize_drm.pytest_hdk_version
