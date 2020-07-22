@@ -403,6 +403,7 @@ def test_tmp_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, 
                     try:
                         activators[0].check_coin(drm_manager.get('metered_data'))
                     except AssertionError:
+                        print("ERROR!!!!!!!!!!")
                         loopIdxList.append(str(i))
                         break
                     drm_manager.deactivate(True)
@@ -427,8 +428,9 @@ def test_tmp_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, 
             async_cb.assert_NoError()
         finally:
             drm_manager.deactivate()
-            print('Failed after %d pause' % loopIdxList[-1])
-    print('loopIdx:', ', '.join(list(map(int,loopIdxList))))
+            if loopIdxList:
+                print('Failed after %s pause' % loopIdxList[-1])
+    print('loopIdx:', ', '.join(loopIdxList))
 
 
 @pytest.mark.hwtst

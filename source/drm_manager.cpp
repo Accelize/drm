@@ -208,7 +208,9 @@ protected:
         unsigned int errcode = DRM_OK;                                                 \
         try {                                                                          \
             errcode = func;                                                            \
+            Debug( "{} returned {}", #func, errcode );                                 \ 
         } catch( const std::exception &e ) {                                           \
+            Debug( "{} threw an exception", #func );                                   \
             Throw( DRM_CtlrError, e.what() );                                          \
         }                                                                              \
         if ( errcode )                                                                 \
