@@ -403,6 +403,6 @@ stages:
 
                       Packages available on Accelize repository.
 
-                      See the [documentation](http://accelize.com/docs) for more information.
+                      See the [documentation](https://tech.accelize.com/documentation/stable/) for more information.
                     changeLogCompareToRelease: lastFullRelease
                     changeLogType: commitBased
