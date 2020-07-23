@@ -968,11 +968,11 @@ protected:
             Debug( "Build health request #{}", mHealthCounter );
             {
                 std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-                if ( isNodeLockedMode() || isLicenseActive() ) {
+                if ( isNodeLockedMode() || isSessionRunning() ) {
                     checkDRMCtlrRet( getDrmController().asynchronousExtractMeteringFile(
                             numberOfDetectedIps, saasChallenge, meteringFile ) );
                 } else {
-                    warning( "Cannot access metering data when no license is active" );
+                    Warning( "Cannot access metering data when no session is running" );
                 }
             }
         }

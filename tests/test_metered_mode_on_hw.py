@@ -697,3 +697,70 @@ def test_floating_limits(accelize_drm, conf_json, cred_json, async_handler):
         drm_manager1.deactivate()
         assert not drm_manager1.get('license_status')
         async_cb1.assert_NoError()
+
+
+def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handler):
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    activators = accelize_drm.pytest_fpga_activators[0]
+    activators.reset_coin()
+    activators.autotest()
+    cred_json.set_user('accelize_accelerator_test_02')
+    conf_json.reset()
+    logpath = realpath("./test_async_call_during_pause.%d.log" % randrange(0xFFFFFFFF))
+    conf_json['settings']['log_file_verbosity'] = 2
+    conf_json['settings']['log_file_type'] = 1
+    conf_json['settings']['log_file_path'] = logpath
+    conf_json.save()
+    async_cb.reset()
+
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    activators[0].reset_coin()
+    assert not drm_manager.get('session_status')
+    assert not drm_manager.get('license_status')
+    activators.autotest(is_activated=False)
+    activators[0].generate_coin(randint(1,100))
+    assert drm_manager.get('metered_data') == 0
+    drm_manager.activate()
+    try:
+        assert drm_manager.get('metered_data') == 0
+        coins = randint(1,100)
+        activators[0].generate_coin(coins)
+        activators[0].check_coin(drm_manager.get('metered_data'))
+        drm_manager.deactivate(True)
+        sleep(1)
+        #assert drm_manager.get('metered_data') == coins
+        activators[0].check_coin(drm_manager.get('metered_data'))
+        assert drm_manager.get('session_status')
+        assert drm_manager.get('license_status')
+        session_id = drm_manager.get('session_id')
+        assert len(session_id) > 0
+        lic_duration = drm_manager.get('license_duration')
+        activators.autotest(is_activated=True)
+        sleep(lic_duration * 2 + 1)
+        activators.autotest(is_activated=False)
+        assert not drm_manager.get('license_status')
+        assert drm_manager.get('session_status')
+        assert session_id == drm_manager.get('session_id')
+        #assert drm_manager.get('metered_data') == coins
+        activators[0].check_coin(drm_manager.get('metered_data'))
+        activators[0].generate_coin(5)
+        activators[0].check_coin(drm_manager.get('metered_data'))
+        assert drm_manager.get('metered_data') == coins
+    finally:
+        drm_manager.deactivate()
+    assert drm_manager.get('metered_data') == 0
+    del drm_manager
+    wait_func_true(lambda: isfile(logpath), 10)
+    with open(logpath, 'rt') as f:
+        log_content = f.read()
+    assert len(list(findall(r'Warning\b.*\bCannot access metering data when no session is running', log_content))) == 2
+    if isfile(logpath):
+        remove(logpath)
+    async_cb.assert_NoError()
