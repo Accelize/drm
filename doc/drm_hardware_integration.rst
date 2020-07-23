@@ -820,6 +820,8 @@ A CDC mechanism is implemented in the DRM Activator IP to handle different clock
 The associated CDC constraints shall be defined in your project. Because the sources are encrypted
 you will find in the names of the CDC elements to constrain in the SDC files in the ``syn/contraints`` folder.
 
+.. note:: The path in the SDC constraint file must be adapted to match your design hierarchy.
+
 
 .. _Accelize: https://www.accelize.com/contact-us
 
