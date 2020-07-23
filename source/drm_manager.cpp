@@ -102,6 +102,8 @@ protected:
 
     const uint32_t LICENSE_DURATION_DEFAULT = 30;
 
+    const double ACTIVATIONCODE_TRANSMISSION_TIMEOUT_MS = 2000.0;
+
 
 #ifdef _WIN32
     const char path_sep = '\\';
@@ -970,7 +972,7 @@ protected:
                     checkDRMCtlrRet( getDrmController().asynchronousExtractMeteringFile(
                             numberOfDetectedIps, saasChallenge, meteringFile ) );
                 } else {
-                    Debug( "Cannot access metering data when no license is active" );
+                    warning( "Cannot access metering data when no license is active" );
                 }
             }
         }
@@ -1041,12 +1043,13 @@ protected:
     }
 
     bool isReadyForNewLicense() const {
-        bool ret( false );
+        uint32_t numberOfLicenseTimerLoaded;
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
         checkDRMCtlrRet( getDrmController().writeRegistersPageRegister() );
-        checkDRMCtlrRet( getDrmController().readLicenseTimerInitLoadedStatusRegister( ret ) );
-        Debug( "DRM readiness to receive a new license: {}", !ret );
-        return !ret;
+        checkDRMCtlrRet( getDrmController().readNumberOfLicenseTimerLoadedStatusRegister( numberOfLicenseTimerLoaded ) );
+        bool readiness = ( numberOfLicenseTimerLoaded < 2 );
+        Debug( "DRM readiness to receive a new license: {} (# loaded licenses = {})", readiness, numberOfLicenseTimerLoaded );
+        return readiness;
     }
 
     bool isLicenseActive() const {
@@ -1186,19 +1189,22 @@ protected:
 
         if ( mLicenseCounter == 0 ) {
             // Load key
-            bool activationDone = false;
+            bool activationDone( false );
             uint8_t activationErrorCode;
             checkDRMCtlrRet( getDrmController().activate( licenseKey, activationDone, activationErrorCode ) );
             if ( activationErrorCode ) {
                 Throw( DRM_CtlrError, "Failed to activate license on DRM controller, activationErr: 0x{:x}",
                       activationErrorCode );
             }
+            if ( !activationDone )
+                Throw( DRM_CtlrError, "Failed to activate license on DRM controller, activationDone: {}",
+                      activationDone );
             Debug( "Wrote license key of session ID: {}", mSessionID );
         }
 
         // Load license timer
         if ( !isNodeLockedMode() ) {
-            bool licenseTimerEnabled = false;
+            bool licenseTimerEnabled( false );
             checkDRMCtlrRet(
                     getDrmController().loadLicenseTimerInit( licenseTimer, licenseTimerEnabled ) );
             if ( !licenseTimerEnabled ) {
@@ -1208,6 +1214,26 @@ protected:
             }
             Debug( "Wrote license timer #{} of session ID {} for a duration of {} seconds",
                     mLicenseCounter, mSessionID, mLicenseDuration );
+
+            bool activationCodesTransmitted( false );
+            TClock::duration timeSpan;
+            double mseconds( 0.0 );
+            TClock::time_point timeStart = TClock::now();
+
+            while( mseconds < ACTIVATIONCODE_TRANSMISSION_TIMEOUT_MS ) {
+                checkDRMCtlrRet(
+                        getDrmController().readActivationCodesTransmittedStatusRegister( activationCodesTransmitted ) );
+                timeSpan = TClock::now() - timeStart;
+                mseconds = 1000.0 * double( timeSpan.count() ) * TClock::period::num / TClock::period::den;
+                if ( activationCodesTransmitted ) {
+                    Debug( "License #{} transmitted after {} ms", mLicenseCounter, mseconds );
+                    break;
+                }
+                Debug( "License #{} not transmitted yet after {} ms", mLicenseCounter, mseconds );
+            }
+            if ( !activationCodesTransmitted ) {
+                Unreachable( "DRM Controller could not transmit Licence #{} to activators", mLicenseCounter ); //LCOV_EXCL_LINE
+            }
         }
 
         // Check DRM Controller has switched to the right license mode
@@ -1483,7 +1509,7 @@ protected:
 
             // Wait until counter starts decrementing
             while (1) {
-                if (getTimerCounterValue() < counterStart) {
+                if ( getTimerCounterValue() < counterStart ) {
                     counterStart = getTimerCounterValue();
                     timeStart = TClock::now();
                     break;

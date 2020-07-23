@@ -105,7 +105,7 @@ def test_uncompatibilities(accelize_drm, conf_json, cred_json, async_handler):
 
 
 @pytest.mark.minimum
-def test_hdk_compatibility(accelize_drm, conf_json, cred_json, async_handler):
+def test_compatibilities(accelize_drm, conf_json, cred_json, async_handler):
     """Test API is compatible with DRM HDK with the same major number"""
     refdesign = accelize_drm.pytest_ref_designs
     hdk_version = accelize_drm.pytest_hdk_version
@@ -141,7 +141,7 @@ def test_hdk_compatibility(accelize_drm, conf_json, cred_json, async_handler):
                 print('Test compatible HDK: HDK version %s is not in the range ]%s : %s[: skip version' % (num, HDK_Limit, current_num))
                 continue
 
-            print('Testing HDK version %s is compatbile ...' % num)
+            print('Testing HDK version %s is compatible ...' % num)
             # Program FPGA with lastest HDK per major number
             hdk = sorted((e[1] for e in versions))[-1]
             image_id = refdesign.get_image_id(hdk)
