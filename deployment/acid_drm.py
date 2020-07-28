@@ -80,7 +80,7 @@ def publish_packages(pkg_source, versions_json, deb_repo, rpm_repo,
     tag = get_drm_version()
     prerelease = '-' in tag
     component = 'prerelease' if prerelease else 'stable'
-    repo_base_url = "https://accelize.s3.amazonaws.com"
+    repo_base_url = "https://tech.accelize.com"
 
     deb_conf = {
         'Origin': 'Accelize',

@@ -120,7 +120,7 @@ The Accelize DRM solution comprises 3 layers:
 Semantic Versioning
 -------------------
 
-We comply to the semantic versioning defined by `semver.org <https://semver.org>`_.
+We comply with the semantic versioning defined by `semver.org <https://semver.org>`_.
 
 Given a version number MAJOR.MINOR.PATCH, increment the:
 

@@ -55,8 +55,7 @@ basic ``conf.json`` file content:
             "url": "https://master.metering.accelize.com"
         },
         "drm": {
-            "frequency_mhz": 125,
-            "drm_ctrl_base_addr": 0
+            "frequency_mhz": 125
         },
         "design": {
             "boardType": "ISV custom data"
