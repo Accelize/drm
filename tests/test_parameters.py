@@ -7,7 +7,8 @@ from os import remove, getpid
 from os.path import isfile, realpath
 from re import match, search, finditer
 from time import sleep, time
-from tests.conftest import wait_func_true
+
+from tests.conftest import wait_func_true, whoami
 
 
 LOG_FORMAT_SHORT = "[%^%=8l%$] %-6t, %v"

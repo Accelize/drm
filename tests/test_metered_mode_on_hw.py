@@ -10,7 +10,7 @@ from re import search, findall
 from os.path import realpath, isfile
 from os import remove
 
-from tests.conftest import wait_deadline, wait_func_true
+from tests.conftest import wait_deadline, wait_func_true, whoami
 
 
 def test_metered_start_stop_in_raw(accelize_drm, conf_json, cred_json, async_handler):

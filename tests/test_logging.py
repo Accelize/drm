@@ -236,7 +236,7 @@ def test_file_rotating_parameters(accelize_drm, conf_json, cred_json, async_hand
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
-    log_path = accelize_drm.create_log_path(whoami() + '_log_type%d' % log_type)
+    log_path = accelize_drm.create_log_path(whoami())
     log_type = 2
     msg = 'This is a message'
     verbosity = accelize_drm.create_log_level(2)
@@ -293,7 +293,7 @@ def test_versions_displayed_in_log_file(accelize_drm, conf_json, cred_json, asyn
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
-    log_path = accelize_drm.create_log_path(whoami() + '_log_type%d' % log_type)
+    log_path = accelize_drm.create_log_path(whoami())
     log_type = 1
     verbosity = accelize_drm.create_log_level(5)
 
@@ -331,7 +331,7 @@ def test_log_file_parameters_modifiability(accelize_drm, conf_json, cred_json, a
     async_cb = async_handler.create()
 
     log_verbosity = 3
-    log_path = accelize_drm.create_log_path(whoami() + '_log_type%d' % log_type)
+    log_path = accelize_drm.create_log_path(whoami())
     log_format = LOG_FORMAT_LONG
     log_type = 2
     log_rotating_size = 10  # =10KB

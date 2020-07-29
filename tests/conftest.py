@@ -540,7 +540,7 @@ def accelize_drm(pytestconfig):
                 return log_path
 
     # Define function to create log file verbosity with regard of --logfile
-    def create_log_verbosity(verbosity):
+    def create_log_level(verbosity):
         verb_option = int(pytestconfig.getoption("logfile"))
         if verbosity > verb_option:
             return verb_option
@@ -570,7 +570,7 @@ def accelize_drm(pytestconfig):
     _accelize_drm.pytest_params = param2dict(pytestconfig.getoption("params"))
     _accelize_drm.pytest_artifacts_dir = pytest_artifacts_dir
     _accelize_drm.create_log_path = create_log_path
-    _accelize_drm.create_log_verbosity = create_log_verbosity
+    _accelize_drm.create_log_level = create_log_level
 
     return _accelize_drm
 

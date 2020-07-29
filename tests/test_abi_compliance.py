@@ -121,7 +121,7 @@ def get_reference_versions(tmp_dir, abi_version):
     """
     tags = _run(['git', 'ls-remote', '--tags', REPOSITORY_PATH]).stdout
     versions = {
-        tag.group(1) : join(tmp_dir, tag.group(1))) for tag in list(map(
+        tag.group(1) : join(tmp_dir, tag.group(1)) for tag in list(map(
                 lambda x: re.search(r'v((\d+)\.\d+\.\d+)$', x), tags.splitlines()))
             if (tag and int(tag.group(2))==abi_version) }
     for k,v in sorted(versions.items(), key=lambda x: x[0], reverse=True):
@@ -159,11 +159,11 @@ def test_abi_compliance(accelize_drm):
                 lib_path (str): Library directory.
                 futures (list): Future list.
             """
-            include = os.path.join(lib_path, 'include')
+            include = join(lib_path, 'include')
             for lib_name in LIB_NAMES:
                 futures.append(executor.submit(
                     dump_abi, join(accelize_drm.pytest_artifacts_dir,'%s_%s.abidump' % (lib_name, lib_version)),
-                    os.path.join(lib_path, '%s.so' % lib_name), include,
+                    join(lib_path, '%s.so' % lib_name), include,
                     lib_version, lib_name))
 
         # Get reference versions
