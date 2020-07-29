@@ -194,7 +194,7 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
     async_cb.reset()
     cred_json.set_user(access_key)
     conf_json.reset()
-    logpath = realpath("./drmlib.%d.%d.log" % (time(), randrange(0xFFFFFFFF)))
+    logpath = accelize_drm.create_log_path(whoami())
     conf_json['settings']['log_file_verbosity'] = 1
     conf_json['settings']['log_file_type'] = 1
     conf_json['settings']['log_file_path'] = logpath

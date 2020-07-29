@@ -166,7 +166,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     # Test parameter: log_file_path
     async_cb.reset()
     conf_json.reset()
-    exp_value = realpath("./drmlib.%d.%s.log" % (getpid(), time()))
+    exp_value = accelize_drm.create_log_path(whoami())
     conf_json['settings']['log_file_path'] = exp_value
     conf_json.save()
     drm_manager = accelize_drm.DrmManager(
@@ -178,6 +178,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     )
     assert drm_manager.get('log_file_path') == exp_value
     async_cb.assert_NoError()
+    remove(exp_value)
     print("Test parameter 'log_file_path': PASS")
 
     # Test parameter: log_file_type
@@ -805,33 +806,31 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     # Test parameter: log_message
     async_cb.reset()
     conf_json.reset()
-    logpath = realpath("./drmlib.%d.%s.log" % (getpid(), time()))
+    logpath = accelize_drm.create_log_path(whoami())
     verbosity = 5
     conf_json['settings']['log_file_verbosity'] = verbosity
     conf_json['settings']['log_file_type'] = 1
     conf_json['settings']['log_file_path'] = logpath
     conf_json.save()
-    try:
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        drm_manager.set(log_message_level=verbosity)
-        msg = 'This line should appear in log file'
-        drm_manager.set(log_message=msg)
-        del drm_manager
-        wait_func_true(lambda: isfile(logpath), 10)
-        with open(logpath, 'rt') as f:
-            log_content = f.read()
-        assert "critical" in log_content
-        assert msg in log_content
-    finally:
-        if isfile(logpath):
-            remove(logpath)
+
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    drm_manager.set(log_message_level=verbosity)
+    msg = 'This line should appear in log file'
+    drm_manager.set(log_message=msg)
+    del drm_manager
+    wait_func_true(lambda: isfile(logpath), 10)
+    with open(logpath, 'rt') as f:
+        log_content = f.read()
+    assert "critical" in log_content
+    assert msg in log_content
     async_cb.assert_NoError()
+    remove(logpath)
     print("Test parameter 'log_message': PASS")
 
     # Test parameter: hdk_compatibility

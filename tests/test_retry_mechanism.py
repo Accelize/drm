@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 from flask import request
 from dateutil import parser
 
-from tests.conftest import wait_func_true
+from tests.conftest import wait_func_true, whoami
 from tests.proxy import get_context, set_context
 
 
@@ -221,8 +221,8 @@ def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handle
     conf_json['licensing']['url'] = request.url + 'test_retry_on_no_connection'
     conf_json['settings']['ws_retry_period_short'] = retryShortPeriod
     conf_json['settings']['ws_retry_period_long'] = retryLongPeriod
-    logpath = realpath("./test_retry_on_no_connection.%d.log" % randrange(0xFFFFFFFF))
-    conf_json['settings']['log_file_verbosity'] = 1
+    logpath = accelize_drm.create_log_path(whoami())
+    conf_json['settings']['log_file_verbosity'] = accelize_drm.create_log_level(1)
     conf_json['settings']['log_file_type'] = 1
     conf_json['settings']['log_file_path'] = logpath
     conf_json.save()

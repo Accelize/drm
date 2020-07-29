@@ -108,12 +108,12 @@ def build_tag_version(version, path):
     return version, path
 
 
-def get_reference_versions(tmpdir, abi_version):
+def get_reference_versions(tmp_dir, abi_version):
     """
     Get reference versions (Same ABI, ignoring "patch" versions).
 
     Args:
-        tmpdir: pytest tmpdir from test
+        tmp_dir: temporary directory for test
         abi_version: (str): ABI version.
 
     Returns:
@@ -121,7 +121,7 @@ def get_reference_versions(tmpdir, abi_version):
     """
     tags = _run(['git', 'ls-remote', '--tags', REPOSITORY_PATH]).stdout
     versions = {
-        tag.group(1) : str(tmpdir.join(tag.group(1))) for tag in list(map(
+        tag.group(1) : join(tmp_dir, tag.group(1))) for tag in list(map(
                 lambda x: re.search(r'v((\d+)\.\d+\.\d+)$', x), tags.splitlines()))
             if (tag and int(tag.group(2))==abi_version) }
     for k,v in sorted(versions.items(), key=lambda x: x[0], reverse=True):
@@ -129,7 +129,7 @@ def get_reference_versions(tmpdir, abi_version):
     return versions
 
 
-def test_abi_compliance(tmpdir, accelize_drm, artifacts):
+def test_abi_compliance(accelize_drm):
     """
     Test the ABI/API compliance of the lib_name.
     """
@@ -162,14 +162,13 @@ def test_abi_compliance(tmpdir, accelize_drm, artifacts):
             include = os.path.join(lib_path, 'include')
             for lib_name in LIB_NAMES:
                 futures.append(executor.submit(
-                    dump_abi, str(tmpdir.join(
-                        '%s_%s.abidump' % (lib_name, lib_version))),
+                    dump_abi, join(accelize_drm.pytest_artifacts_dir,'%s_%s.abidump' % (lib_name, lib_version)),
                     os.path.join(lib_path, '%s.so' % lib_name), include,
                     lib_version, lib_name))
 
         # Get reference versions
         abi_version = accelize_drm.get_api_version().major
-        versions = executor.submit(get_reference_versions, tmpdir, abi_version)
+        versions = executor.submit(get_reference_versions, accelize_drm.pytest_artifacts_dir, abi_version)
 
         # Build reference versions
         versions = versions.result()
@@ -198,7 +197,7 @@ def test_abi_compliance(tmpdir, accelize_drm, artifacts):
         # Compare current ABI / API dumps with reference versions
         for future in as_completed(dump_tag_futures):
             version, dump_file, name = future.result()
-            report_file = str(tmpdir.join('%s%s.html' % (name, version)))
+            report_file = join(accelize_drm.pytest_artifacts_dir, '%s%s.html' % (name, version))
             reports[' '.join((name, version))] = (
                 report_file,
                 executor.submit(
@@ -219,7 +218,5 @@ def test_abi_compliance(tmpdir, accelize_drm, artifacts):
             abi_broken = True
         else:
             print('Comparison against %s shows no issue:\n%s\n' % (title, stdout))
-        # Save html report to artifact folder
-        artifacts.save_path(report_file)
 
     assert not abi_broken

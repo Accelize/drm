@@ -17,7 +17,7 @@ from tests.proxy import get_context, set_context
 
 @pytest.mark.no_parallel
 @pytest.mark.minimum
-def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handler, live_server, artifacts):
+def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test the asynchronous health feature can be disabled.
     """
@@ -30,8 +30,8 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
 
     conf_json.reset()
     conf_json['licensing']['url'] = request.url + 'test_health_period_disabled'
-    logpath = realpath("./test_health_disabled.%d.log" % randrange(0xFFFFFFFF))
-    conf_json['settings']['log_file_verbosity'] = 1
+    logpath = accelize_drm.create_log_path(whoami())
+    conf_json['settings']['log_file_verbosity'] = accelize_drm.create_log_level(1)
     conf_json['settings']['log_file_type'] = 1
     conf_json['settings']['log_file_path'] = logpath
     conf_json.save()
@@ -51,33 +51,29 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
     set_context(context)
     assert get_context() == context
 
+    drm_manager.activate()
     try:
-        drm_manager.activate()
-        try:
-            assert drm_manager.get('health_period') == healthPeriod
-            wait_func_true(lambda: get_context()['exit'],
-                    timeout=healthPeriod * (nb_health + 1) * 2)
-            assert drm_manager.get('health_period') == 0
-            assert get_context()['cnt'] == nb_health
-            sleep(healthPeriod + 1)
-            assert get_context()['cnt'] == nb_health
-        finally:
-            drm_manager.deactivate()
-        del drm_manager
-        wait_func_true(lambda: isfile(logpath), 10)
-        with open(logpath, 'rt') as f:
-            log_content = f.read()
-        assert search(r'Exiting background thread which checks health', log_content, MULTILINE)
-        assert search(r'Health thread is disabled', log_content, MULTILINE)
-        assert search(r'Exiting background thread which checks health', log_content, MULTILINE)
-        health_req = findall(r'"request"\s*:\s*"health"', log_content)
-        assert len(list(health_req)) == nb_health
-        async_cb.assert_NoError()
-    except AssertionError:
-        artifacts.save_path(logpath)
+        assert drm_manager.get('health_period') == healthPeriod
+        wait_func_true(lambda: get_context()['exit'],
+                timeout=healthPeriod * (nb_health + 1) * 2)
+        assert drm_manager.get('health_period') == 0
+        assert get_context()['cnt'] == nb_health
+        sleep(healthPeriod + 1)
+        assert get_context()['cnt'] == nb_health
     finally:
-        if isfile(logpath):
-            remove(logpath)
+        drm_manager.deactivate()
+    del drm_manager
+    wait_func_true(lambda: isfile(logpath), 10)
+    with open(logpath, 'rt') as f:
+        log_content = f.read()
+    assert search(r'Exiting background thread which checks health', log_content, MULTILINE)
+    assert search(r'Health thread is disabled', log_content, MULTILINE)
+    assert search(r'Exiting background thread which checks health', log_content, MULTILINE)
+    health_req = findall(r'"request"\s*:\s*"health"', log_content)
+    assert len(list(health_req)) == nb_health
+    async_cb.assert_NoError()
+    if isfile(logpath):
+        remove(logpath)
 
 
 #@pytest.mark.skip(reason='Bug in async feature')
@@ -395,8 +391,8 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_s
 
     conf_json.reset()
     conf_json['licensing']['url'] = request.url + 'test_saturate_health_and_genlicense'
-    logpath = realpath("./test_segment_index.%d.log" % randrange(0xFFFFFFFF))
-    conf_json['settings']['log_file_verbosity'] = 1
+    logpath = accelize_drm.create_log_path(whoami())
+    conf_json['settings']['log_file_verbosity'] = accelize_drm.create_log_level(1)
     conf_json['settings']['log_file_type'] = 1
     conf_json['settings']['log_file_path'] = logpath
     conf_json.save()

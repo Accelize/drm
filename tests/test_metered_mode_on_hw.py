@@ -446,48 +446,45 @@ def test_async_on_pause(accelize_drm, conf_json, cred_json, async_handler):
     activators = accelize_drm.pytest_fpga_activators[0]
     cred_json.set_user('accelize_accelerator_test_02')
     conf_json.reset()
-    logpath = realpath("./test_segment_index.%d.log" % randrange(0xFFFFFFFF))
+    logpath = accelize_drm.create_log_path(whoami())
     conf_json['settings']['log_file_verbosity'] = 1
     conf_json['settings']['log_file_type'] = 1
     conf_json['settings']['log_file_path'] = logpath
     conf_json.save()
 
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
     try:
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        try:
-            assert not drm_manager.get('session_status')
-            assert not drm_manager.get('license_status')
-            activators.autotest(is_activated=False)
-            drm_manager.activate()
-            start = datetime.now()
-            lic_duration = drm_manager.get('license_duration')
-            assert drm_manager.get('session_status')
-            assert drm_manager.get('license_status')
-            session_id = drm_manager.get('session_id')
-            assert len(session_id) > 0
-            activators.autotest(is_activated=True)
-            drm_manager.deactivate(True) # Pause session
-            assert drm_manager.get('session_status')
-            assert drm_manager.get('license_status')
-            assert drm_manager.get('session_id') == session_id
-            activators.autotest(is_activated=True)
-        finally:
-            drm_manager.deactivate()
-            del drm_manager
-        wait_func_true(lambda: isfile(logpath), 10)
-        with open(logpath, 'rt') as f:
-            log_content = f.read()
-        assert len(list(findall(r'"request"\s*:\s*"health"', log_content))) == 1
+        assert not drm_manager.get('session_status')
+        assert not drm_manager.get('license_status')
+        activators.autotest(is_activated=False)
+        drm_manager.activate()
+        start = datetime.now()
+        lic_duration = drm_manager.get('license_duration')
+        assert drm_manager.get('session_status')
+        assert drm_manager.get('license_status')
+        session_id = drm_manager.get('session_id')
+        assert len(session_id) > 0
+        activators.autotest(is_activated=True)
+        drm_manager.deactivate(True) # Pause session
+        assert drm_manager.get('session_status')
+        assert drm_manager.get('license_status')
+        assert drm_manager.get('session_id') == session_id
+        activators.autotest(is_activated=True)
     finally:
-        async_cb.assert_NoError()
-        if isfile(logpath):
-            remove(logpath)
+        drm_manager.deactivate()
+    del drm_manager
+    wait_func_true(lambda: isfile(logpath), 10)
+    with open(logpath, 'rt') as f:
+        log_content = f.read()
+    assert len(list(findall(r'"request"\s*:\s*"health"', log_content))) == 1
+    async_cb.assert_NoError()
+    remove(logpath)
 
 
 @pytest.mark.minimum
@@ -707,8 +704,8 @@ def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handl
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_02')
     conf_json.reset()
-    logpath = realpath("./test_async_call_during_pause.%d.log" % randrange(0xFFFFFFFF))
-    conf_json['settings']['log_file_verbosity'] = 2
+    logpath = accelize_drm.create_log_path(whoami())
+    conf_json['settings']['log_file_verbosity'] = accelize_drm.create_log_level(2)
     conf_json['settings']['log_file_type'] = 1
     conf_json['settings']['log_file_path'] = logpath
     conf_json.save()
@@ -761,6 +758,5 @@ def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handl
     with open(logpath, 'rt') as f:
         log_content = f.read()
     assert len(list(findall(r'Warning\b.*\bCannot access metering data when no session is running', log_content))) == 2
-    if isfile(logpath):
-        remove(logpath)
     async_cb.assert_NoError()
+    remove(logpath)

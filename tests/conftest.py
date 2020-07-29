@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Configure Pytest"""
 import pytest
+import sys
 
 from copy import deepcopy
 from json import dump, load, dumps
@@ -113,6 +114,10 @@ def param2dict(param_list):
     return d
 
 
+def whoami():
+    return sys._getframe(1).f_code.co_name
+
+
 # Pytest configuration
 def pytest_addoption(parser):
     """
@@ -146,6 +151,8 @@ def pytest_addoption(parser):
         "--no_clear_fpga", action="store_true", help='Bypass clearing of FPGA at start-up')
     parser.addoption(
         "--logfile", action="store_true", help='Save log to file')
+    parser.addoption(
+        "--logfilelevel", action="store", type=int, default=1, choices=(0,1,2,3,4,5), help='Specify verbosity for --logfile')
     parser.addoption(
         "--proxy_debug", action="store_true", default=False,
         help='Activate debug for proxy')
@@ -449,12 +456,6 @@ def accelize_drm(pytestconfig):
     if build_source_dir.startswith('@'):
         build_source_dir = realpath('.')
 
-    # Create pytest artifacts directory
-    pytest_artifacts_dir = join(pytestconfig.getoption("artifacts_dir"), 'pytest_artifacts')
-    if not isdir(pytest_artifacts_dir):
-        makedirs(pytest_artifacts_dir)
-    print('pytest artifacts directory: ', pytest_artifacts_dir)
-
     # Get Ref Designs available
     ref_designs = RefDesign(join(build_source_dir, 'tests', 'refdesigns', fpga_driver_name))
 
@@ -523,6 +524,29 @@ def accelize_drm(pytestconfig):
             raise IOError('No activator found on slot #%d' % driver._fpga_slot_id)
         print('Found %d activator(s) on slot #%d' % (len(base_addr_list), driver._fpga_slot_id))
 
+    # Create pytest artifacts directory
+    pytest_artifacts_dir = join(pytestconfig.getoption("artifacts_dir"), 'pytest_artifacts')
+    if not isdir(pytest_artifacts_dir):
+        makedirs(pytest_artifacts_dir)
+    print('pytest artifacts directory: ', pytest_artifacts_dir)
+
+    # Define function to create log file path
+    def create_log_path(prefix=None):
+        if prefix is None:
+            prefix = "pytest_drmlib"
+        while True:
+            log_path = realpath(join(pytest_artifacts_dir, "%s.%s.%d.log" % (prefix, time(), getpid())))
+            if not isfile(log_path):
+                return log_path
+
+    # Define function to create log file verbosity with regard of --logfile
+    def create_log_verbosity(verbosity):
+        verb_option = int(pytestconfig.getoption("logfile"))
+        if verbosity > verb_option:
+            return verb_option
+        else:
+           return verbosity
+
     # Store some values for access in tests
     import accelize_drm as _accelize_drm
     _accelize_drm.pytest_new_freq_method_supported = fpga_driver[0].read_register(drm_ctrl_base_addr + 0xFFF8) == 0x60DC0DE0
@@ -545,6 +569,8 @@ def accelize_drm(pytestconfig):
         *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
     _accelize_drm.pytest_params = param2dict(pytestconfig.getoption("params"))
     _accelize_drm.pytest_artifacts_dir = pytest_artifacts_dir
+    _accelize_drm.create_log_path = create_log_path
+    _accelize_drm.create_log_verbosity = create_log_verbosity
 
     return _accelize_drm
 
@@ -724,7 +750,7 @@ def conf_json(pytestconfig, tmpdir):
     if pytestconfig.getoption("logfile"):
         log_param['log_file_type'] = 1
         log_param['log_file_path'] = realpath("./tox_drmlib_t%f_pid%d.log" % (time(), getpid()))
-        log_param['log_file_verbosity'] = 1
+        log_param['log_file_verbosity'] = pytestconfig.getoption("logfilelevel")
     json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param)
     json_conf.save()
     return json_conf

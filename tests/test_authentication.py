@@ -26,12 +26,9 @@ def test_authentication_bad_token(accelize_drm, conf_json, cred_json, async_hand
     async_cb = async_handler.create()
     async_cb.reset()
 
-    file_log_level = 3
+    file_log_level = accelize_drm.create_log_level(3)
     file_log_type = 1
-    file_log_path = realpath("./drmlib-%d.log" % getpid())
-    if isfile(file_log_path):
-        remove(file_log_path)
-    assert not isfile(file_log_path)
+    file_log_path = accelize_drm.create_log_path(whoami())
 
     conf_json.reset()
     conf_json['licensing']['url'] = request.url + 'test_authentication_bad_token'
@@ -54,23 +51,20 @@ def test_authentication_bad_token(accelize_drm, conf_json, cred_json, async_hand
         async_cb.callback
     )
     try:
-        try:
-            with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
-                drm_manager.activate()
-            assert search(r'Timeout on License request after \d+ attempts', str(excinfo.value))
-            assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
-            assert drm_manager.get('token_string') == access_token
-        finally:
-            drm_manager.deactivate()
-        del drm_manager
-        wait_func_true(lambda: isfile(file_log_path), 10)
-        with open(file_log_path, 'rt') as f:
-            file_log_content = f.read()
-        assert search(r'\bAuthentication credentials were not provided\b', file_log_content)
-        async_cb.assert_NoError()
+        with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
+            drm_manager.activate()
+        assert search(r'Timeout on License request after \d+ attempts', str(excinfo.value))
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
+        assert drm_manager.get('token_string') == access_token
     finally:
-        if isfile(file_log_path):
-            remove(file_log_path)
+        drm_manager.deactivate()
+    del drm_manager
+    wait_func_true(lambda: isfile(file_log_path), 10)
+    with open(file_log_path, 'rt') as f:
+        file_log_content = f.read()
+    assert search(r'\bAuthentication credentials were not provided\b', file_log_content)
+    async_cb.assert_NoError()
+    remove(file_log_path)
 
 
 def test_authentication_validity_after_deactivation(accelize_drm, conf_json, cred_json, async_handler):
@@ -78,17 +72,10 @@ def test_authentication_validity_after_deactivation(accelize_drm, conf_json, cre
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-
-    file_log_level = 3
-    file_log_type = 1
-    file_log_path = realpath("./drmlib-%d.log" % getpid())
-    if isfile(file_log_path):
-        remove(file_log_path)
-    assert not isfile(file_log_path)
-
     async_cb.reset()
     conf_json.reset()
     cred_json.set_user('accelize_accelerator_test_02')
+
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
