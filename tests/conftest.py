@@ -541,7 +541,9 @@ def accelize_drm(pytestconfig):
 
     # Define function to create log file verbosity with regard of --logfile
     def create_log_level(verbosity):
-        verb_option = int(pytestconfig.getoption("logfile"))
+        if not pytestconfig.getoption("logfile"):
+            return verbosity
+        verb_option = int(pytestconfig.getoption("logfilelevel"))
         if verbosity > verb_option:
             return verb_option
         else:

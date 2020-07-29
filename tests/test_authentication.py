@@ -15,7 +15,7 @@ from multiprocessing import Process
 import requests
 from flask import request
 
-from tests.conftest import wait_func_true, wait_deadline
+from tests.conftest import wait_func_true, wait_deadline, whoami
 from tests.proxy import get_context, set_context
 
 

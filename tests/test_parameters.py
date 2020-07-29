@@ -179,7 +179,6 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     )
     assert drm_manager.get('log_file_path') == exp_value
     async_cb.assert_NoError()
-    remove(exp_value)
     print("Test parameter 'log_file_path': PASS")
 
     # Test parameter: log_file_type
