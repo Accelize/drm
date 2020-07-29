@@ -118,7 +118,7 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
 
     drm_manager.activate()
     try:
-        wait_func_true(lambda: len(get_context()['data']) >= nb_health*2,
+        wait_func_true(lambda: len(get_context()['data']) >= nb_health,
                 timeout=(healthPeriod+3) * (nb_health+2))
     finally:
         drm_manager.deactivate()
@@ -168,13 +168,13 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
 
     drm_manager.activate()
     try:
-        wait_func_true(lambda: len(get_context()['data']) >= (nb_health + 1),
+        wait_func_true(lambda: len(get_context()['data']) >= nb_health,
                 timeout=(healthPeriod+3) * (nb_health+2))
     finally:
         drm_manager.deactivate()
     async_cb.assert_NoError()
     data_list = get_context()['data']
-    assert len(data_list) >= nb_health+1
+    assert len(data_list) >= nb_health
     # Check there is no duplicated health_id
     id_list = tuple(map(lambda x: x[0], data_list))
     assert id_list == tuple(set(id_list))

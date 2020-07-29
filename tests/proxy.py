@@ -16,10 +16,6 @@ def create_app(url):
     #environ['FLASK_ENV'] = 'development'
     url = url.rstrip('/')
 
-    @app.errorhandler(Exception)
-    def handle_exception(e):
-        return 'Unexpected Proxy internal error: %s' % str(e), 404
-
     @app.route('/get/', methods=['GET'])
     def get():
         global lock
@@ -641,9 +637,9 @@ def create_app(url):
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
-        with lock:
-            response_json['metering']['timeoutSecond'] = context['timeoutSecond']
-            response_json['metering']['healthPeriod'] = context['healthPeriod']
+        if 'metering' in response_json.keys():
+            with lock:
+                response_json['metering']['healthPeriod'] = context['healthPeriod']
         return Response(dumps(response_json), response.status_code, headers)
 
     @app.route('/test_topic0_corrupted_segment_index/auth/metering/health/', methods=['GET', 'POST'])
@@ -664,12 +660,9 @@ def create_app(url):
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
-        with lock:
-            response_json['metering']['healthPeriod'] = context['healthPeriod']
-            response_json['metering']['healthRetry'] = context['healthRetry']
-            response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
-            context['healthPeriod'] += 1
-            context['data'].append( (start,str(datetime.now())) )
+        if 'metering' in response_json.keys():
+            with lock:
+                response_json['metering']['healthPeriod'] = context['healthPeriod']
         return Response(dumps(response_json), response.status_code, headers)
 
     return app

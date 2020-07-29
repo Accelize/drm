@@ -36,33 +36,19 @@ def test_topic0_corrupted_segment_index(accelize_drm, conf_json, cred_json, asyn
     )
 
     # Set initial context on the live server
-    nb_health = 100
-    timeoutSecond = 2
-    healthPeriod = 2
-    healthRetry = 0  # no retry
-    healthRetrySleep = 1
-    context = {'data': list(),
-               'licenseExpired':licenseExpired,
-               'healthPeriod':healthPeriod,
-               'healthRetry':healthRetry,
-               'healthRetrySleep':healthRetrySleep
+    healthPeriod = 10
+    context = {'error':0,
+               'healthPeriod':healthPeriod
     }
     set_context(context)
     assert get_context() == context
 
     drm_manager.activate()
     try:
-        last_len = 0
-        def f():
-            c = get_context()
-            new_len = len(c['data'])
-            print('New len =', new_len)
-            return (new_len >= nb_health) or c['error']
-        wait_func_true(f), timeout=(healthPeriod+3) * nb_health)
+        wait_func_true(lambda: get_context()['error'])
     finally:
         drm_manager.deactivate()
     async_cb.assert_NoError()
-    assert len(get_context()['data']) >= nb_health
 
 
 @pytest.mark.lgdn
@@ -142,5 +128,4 @@ def test_topic1_corrupted_metering(accelize_drm, conf_json, cred_json, async_han
             async_cb.assert_NoError()
         finally:
             drm_manager.deactivate()
-
 
