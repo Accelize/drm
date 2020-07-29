@@ -210,7 +210,7 @@ protected:
         unsigned int errcode = DRM_OK;                                                 \
         try {                                                                          \
             errcode = func;                                                            \
-            Debug( "{} returned {}", #func, errcode );                                 \ 
+            Debug( "{} returned {}", #func, errcode );                                 \
         } catch( const std::exception &e ) {                                           \
             Debug( "{} threw an exception", #func );                                   \
             Throw( DRM_CtlrError, e.what() );                                          \
@@ -1229,7 +1229,7 @@ protected:
                     Debug( "License #{} transmitted after {} ms", mLicenseCounter, mseconds );
                     break;
                 }
-                Debug( "License #{} not transmitted yet after {} ms", mLicenseCounter, mseconds );
+                Debug2( "License #{} not transmitted yet after {} ms", mLicenseCounter, mseconds );
             }
             if ( !activationCodesTransmitted ) {
                 Unreachable( "DRM Controller could not transmit Licence #{} to activators", mLicenseCounter ); //LCOV_EXCL_LINE
@@ -1783,7 +1783,7 @@ protected:
             checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 5 ) );
         }
         Debug( "Released metering access mutex from startSession" );
-        Info( "New DRM session started." );
+        Info( "New DRM session {} started.", mSessionID );
     }
 
     void resumeSession() {
@@ -1827,11 +1827,13 @@ protected:
         }
         Debug( "Released metering access mutex from stopSession" );
 
-        /// Clear Session IS
-        Debug( "Clearing session ID: {}", mSessionID );
-        mSessionID = std::string("");
+        Info( "DRM session {} stopped.", mSessionID );
 
-        Info( "DRM session stopped." );
+        /// Clear Session ID
+        Debug2( "Clearing session ID: {}", mSessionID );
+        mSessionID = std::string("");
+        /// Clear security flag
+        Debug2( "Clearing stop security flag" );
         mSecurityStop = false;
     }
 

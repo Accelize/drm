@@ -199,6 +199,16 @@ def pytest_runtest_setup(item):
     if markers and skip_endurance:
         pytest.skip("Don't run endurance tests.")
 
+    # Check lgdn tests
+    m_option = item.config.getoption('-m')
+    if search(r'\blgdn\b', m_option) and not search(r'\nnot\n\s+\blgdn\b', m_option):
+        skip_lgdn = False
+    else:
+        skip_lgdn = True
+    markers = tuple(item.iter_markers(name='lgdn'))
+    if markers and skip_lgdn:
+        pytest.skip("Don't run LGDN tests.")
+
     # Check AWS execution
     markers = tuple(item.iter_markers(name='aws'))
     if '${AWS}' == 'OFF' and markers:
@@ -279,7 +289,7 @@ class SingleActivator:
             coins (int): Number of coins to compare to.
         """
         assert self.metering_data == coins
-        
+
 
 class ActivatorsInFPGA:
     """

@@ -6,14 +6,69 @@ import pytest
 from time import sleep
 from random import randint
 from datetime import datetime
+from itertools import groupby
+from re import match
+from flask import request
 
-from tests.conftest import wait_deadline
+from tests.conftest import wait_deadline, wait_func_true
+from tests.proxy import get_context, set_context
+
+
+@pytest.mark.lgdn
+def test_topic0_corrupted_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_server):
+    """
+    Test to reproduce the issue that corrupts the segment ID with both async and syn requests.
+    """
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    async_cb.reset()
+
+    conf_json.reset()
+    conf_json['licensing']['url'] = request.url + 'test_topic0_corrupted_segment_index'
+    conf_json.save()
+
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+
+    # Set initial context on the live server
+    nb_health = 100
+    timeoutSecond = 2
+    healthPeriod = 2
+    healthRetry = 0  # no retry
+    healthRetrySleep = 1
+    context = {'data': list(),
+               'licenseExpired':licenseExpired,
+               'healthPeriod':healthPeriod,
+               'healthRetry':healthRetry,
+               'healthRetrySleep':healthRetrySleep
+    }
+    set_context(context)
+    assert get_context() == context
+
+    drm_manager.activate()
+    try:
+        last_len = 0
+        def f():
+            c = get_context()
+            new_len = len(c['data'])
+            print('New len =', new_len)
+            return (new_len >= nb_health) or c['error']
+        wait_func_true(f), timeout=(healthPeriod+3) * nb_health)
+    finally:
+        drm_manager.deactivate()
+    async_cb.assert_NoError()
+    assert len(get_context()['data']) >= nb_health
 
 
 @pytest.mark.lgdn
 def test_topic1_corrupted_metering(accelize_drm, conf_json, cred_json, async_handler):
     """
-    Test no error occurs in normal start/stop metering mode during a long period of time
+    Test to reproduce the metering corruption issue on pause/resume operating mode
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -87,3 +142,5 @@ def test_topic1_corrupted_metering(accelize_drm, conf_json, cred_json, async_han
             async_cb.assert_NoError()
         finally:
             drm_manager.deactivate()
+
+

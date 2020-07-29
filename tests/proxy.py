@@ -16,6 +16,10 @@ def create_app(url):
     #environ['FLASK_ENV'] = 'development'
     url = url.rstrip('/')
 
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        return 'Unexpected Proxy internal error: %s' % str(e), 404
+
     @app.route('/get/', methods=['GET'])
     def get():
         global lock
@@ -260,6 +264,8 @@ def create_app(url):
 
     @app.route('/test_health_period_modification/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_health_period_modification():
+        global context
+        global lock
         new_url = request.url.replace(request.url_root+'test_health_period_modification', url)
         request_json = request.get_json()
         response = post(new_url, json=request_json, headers=request.headers)
@@ -268,7 +274,8 @@ def create_app(url):
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
-        response_json['metering']['healthPeriod'] = 300
+        with lock:
+            response_json['metering']['healthPeriod'] = context['healthPeriod']
         return Response(dumps(response_json), response.status_code, headers)
 
     @app.route('/test_health_period_modification/auth/metering/health/', methods=['GET', 'POST'])
@@ -299,7 +306,7 @@ def create_app(url):
 
     @app.route('/test_health_retry_disabled/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_health_retry_disabled():
-        new_url = request.url.replace(request.url_root+'test_health_period_disabled', url)
+        new_url = request.url.replace(request.url_root+'test_health_retry_disabled', url)
         request_json = request.get_json()
         response = post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
@@ -607,6 +614,62 @@ def create_app(url):
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
+        return Response(dumps(response_json), response.status_code, headers)
+
+    ##############################################################################
+    # test_lgdn_topics.py
+
+    # test_topic0_corrupted_segment_index functions
+    @app.route('/test_topic0_corrupted_segment_index/o/token/', methods=['GET', 'POST'])
+    def otoken__test_topic0_corrupted_segment_index():
+        return redirect(request.url_root + '/o/token/', code=307)
+
+    @app.route('/test_topic0_corrupted_segment_index/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_topic0_corrupted_segment_index():
+        global context
+        global lock
+        new_url = request.url.replace(request.url_root+'test_topic0_corrupted_segment_index', url)
+        request_json = request.get_json()
+        response = post(new_url, json=request_json, headers=request.headers)
+        try:
+            assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text)
+        except AssertionError as e:
+            if 'Metering information is not consistent' in str(e):
+                with lock:
+                    context['error'] += 1
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        with lock:
+            response_json['metering']['timeoutSecond'] = context['timeoutSecond']
+            response_json['metering']['healthPeriod'] = context['healthPeriod']
+        return Response(dumps(response_json), response.status_code, headers)
+
+    @app.route('/test_topic0_corrupted_segment_index/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_topic0_corrupted_segment_index():
+        global context
+        global lock
+        start = str(datetime.now())
+        new_url = request.url.replace(request.url_root+'test_topic0_corrupted_segment_index', url)
+        request_json = request.get_json()
+        response = post(new_url, json=request_json, headers=request.headers)
+        try:
+            assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text)
+        except AssertionError as e:
+            if 'Metering information is not consistent' in str(e):
+                with lock:
+                    context['error'] += 1
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        with lock:
+            response_json['metering']['healthPeriod'] = context['healthPeriod']
+            response_json['metering']['healthRetry'] = context['healthRetry']
+            response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
+            context['healthPeriod'] += 1
+            context['data'].append( (start,str(datetime.now())) )
         return Response(dumps(response_json), response.status_code, headers)
 
     return app
