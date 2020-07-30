@@ -10,8 +10,10 @@ from dateutil import parser
 from itertools import groupby
 from flask import request
 from requests import get, post
+from os import remove
+from os.path import realpath, isfile
 
-from tests.conftest import wait_func_true
+from tests.conftest import wait_func_true, whoami
 from tests.proxy import get_context, set_context
 
 
@@ -21,9 +23,6 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
     """
     Test the asynchronous health feature can be disabled.
     """
-    from os import remove
-    from os.path import realpath, isfile
-
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
@@ -289,7 +288,7 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, asy
         drm_manager.activate()
         try:
             wait_func_true(lambda: get_context()['exit'],
-                timeout=healthRetry*2)
+                timeout=(healthRetry + healthRetry)*2)
         finally:
             drm_manager.deactivate()
 
@@ -338,8 +337,7 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
     # Set initial context on the live server
     healthPeriod = 1
     healthRetry = 0  # No retry
-    context = {'data': list(),
-               'health_id':0,
+    context = {'health_id':0,
                'healthPeriod':healthPeriod,
                'healthRetry':healthRetry
     }
@@ -348,11 +346,10 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
 
     def wait_and_check_on_next_health(drm):
         next_health_id = get_context()['health_id'] + 1
-        wait_func_true(lambda: get_context()['health_id'] >= next_health_id,
-                timeout=healthPeriod*3)
+        wait_func_true(lambda: get_context()['health_id'] >= next_health_id)
         session_id = drm.get('session_id')
         saas_data = ws_admin.get_last_metering_information(session_id)
-        assert saas_data['session'] == drm.get('session_id')
+        assert saas_data['session'] == session_id
         assert saas_data['metering'] == drm.get('metered_data')
 
     drm_manager.activate()
@@ -370,10 +367,10 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
         activators[0].check_coin(drm_manager.get('metered_data'))
         wait_and_check_on_next_health(drm_manager)
         # Third round with 80 more units for a total of 100 units
-        activators[0].generate_coin(30)
+        activators[0].generate_coin(80)
         activators[0].check_coin(drm_manager.get('metered_data'))
         wait_and_check_on_next_health(drm_manager)
-        assert drm_manager.get('metered_data') == 50
+        assert drm_manager.get('metered_data') == 100
     finally:
         drm_manager.deactivate()
     async_cb.assert_NoError()
@@ -390,60 +387,60 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_s
     async_cb.reset()
 
     conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_saturate_health_and_genlicense'
+    conf_json['licensing']['url'] = request.url + 'test_segment_index'
     logpath = accelize_drm.create_log_path(whoami())
     conf_json['settings']['log_file_verbosity'] = accelize_drm.create_log_level(1)
     conf_json['settings']['log_file_type'] = 1
     conf_json['settings']['log_file_path'] = logpath
     conf_json.save()
 
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+
+    # Set initial context on the live server
+    nb_genlic = 4
+    healthPeriod = 1
+    healthRetry = 0  # no retry
+    timeoutSecond = 2
+    context = {'nb_genlic':0,
+               'healthPeriod':healthPeriod,
+               'healthRetry':healthRetry,
+               'timeoutSecond':timeoutSecond
+    }
+    set_context(context)
+    assert get_context() == context
+
+    drm_manager.activate()
     try:
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-
-        # Set initial context on the live server
-        nb_genlic = 4
-        healthPeriod = 1
-        healthRetry = 0  # no retry
-        timeoutSecond = 6
-        context = {'healthPeriod':healthPeriod,
-                   'healthRetry':healthRetry,
-                   'timeoutSecond':timeoutSecond
-        }
-        set_context(context)
-        assert get_context() == context
-
-        drm_manager.activate()
-        try:
-            wait_func_true(lambda: get_context()['nb_genlic'] >= nb_genlic,
-                    timeout=(nb_genlic+1)*timeoutSecond)
-        finally:
-            drm_manager.deactivate()
-            del drm_manager
-        async_cb.assert_NoError()
-        data_list = get_context()['data']
-        assert len(data_list) > nb_genlic
-        wait_func_true(lambda: isfile(logpath), 10)
-        with open(logpath, 'rt') as f:
-            log_content = f.read()
-        segment_idx_expected = 0
-        for m in findall(r'"meteringFile"\s*:\s*"([^"]*)"', log_content):
-            assert len(m) > 0
-            session_id = m[0:16]
-            close_flag = m[20]
-            segment_idx = int(m[24:32],16)
-            if session_id == "0000000000000000":
-                assert close_flag == '0'
-                assert segment_idx == 0
-            assert segment_idx == segment_idx_expected
-            segment_idx_expected += 1
-            if close_flag == '1':
-                segment_idx_expected = 0
+        wait_func_true(lambda: get_context()['nb_genlic'] >= nb_genlic,
+                timeout=(nb_genlic+1)*timeoutSecond)
+        session_id_exp = drm_manager.get('session_id')
     finally:
-        if isfile(logpath):
-            remove(logpath)
+        drm_manager.deactivate()
+        del drm_manager
+    async_cb.assert_NoError()
+    wait_func_true(lambda: isfile(logpath), 10)
+    with open(logpath, 'rt') as f:
+        log_content = f.read()
+    segment_idx_expected = 0
+    for m in findall(r'"meteringFile"\s*:\s*"([^"]*)"', log_content):
+        assert len(m) > 0
+        session_id = m[0:16]
+        close_flag = m[20]
+        segment_idx = int(m[24:32],16)
+        if session_id == "0000000000000000":
+            assert close_flag == '0'
+            assert segment_idx == 0
+        else:
+            assert session_id == session_id_exp
+        assert segment_idx == segment_idx_expected
+        segment_idx_expected += 1
+        if close_flag == '1':
+            segment_idx_expected = 0
+    remove(logpath)
+

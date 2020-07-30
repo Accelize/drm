@@ -17,10 +17,8 @@ REPOSITORY_PATH = 'https://github.com/Accelize/drmlib'
 def _run(*command, **kwargs):
     """
     Run a command.
-
     Args:
         command (list of str):
-
     Returns:
         subprocess.CompletedProcess
     """
@@ -37,7 +35,6 @@ def _run(*command, **kwargs):
 def make(path, target=None):
     """
     Make.
-
     Args:
         path (str): Path of sources to make.
         target (str): Target
@@ -49,7 +46,6 @@ def make(path, target=None):
 def dump_abi(dump_file, so_file, include, version, name):
     """
     Dump library ABI.
-
     Args:
         dump_file (str): Path to target ".abidump" file
         so_file (str): Path to source "libaccelize_drm.so" or
@@ -57,7 +53,6 @@ def dump_abi(dump_file, so_file, include, version, name):
         include (str): Path to public headers "include" directory.
         version (str): Library version
         name (str): Library name.
-
     Returns:
         tuple of str: version and dump_file
     """
@@ -71,13 +66,11 @@ def dump_abi(dump_file, so_file, include, version, name):
 def checks_abi_compliance(old_dump, new_dump, name, report_path):
     """
     Checks ABI compliance.
-
     Args:
         old_dump (str): Path to old library version dump.
         new_dump (str): Path to new library version dump.
         name (str): Library name.
         report_path (str): HTML report path.
-
     Returns:
         str: Report
     """
@@ -88,11 +81,9 @@ def checks_abi_compliance(old_dump, new_dump, name, report_path):
 def build_tag_version(version, path):
     """
     Clone and make DRMlib previous versions sources
-
     Args:
         version (str): version to clone.
         path (str): Path to target directory.
-
     Returns:
         tuple of str: version and path
     """
@@ -108,20 +99,18 @@ def build_tag_version(version, path):
     return version, path
 
 
-def get_reference_versions(tmp_dir, abi_version):
+def get_reference_versions(tmpdir, abi_version):
     """
     Get reference versions (Same ABI, ignoring "patch" versions).
-
     Args:
-        tmp_dir: temporary directory for test
+        tmpdir: pytest tmpdir from test
         abi_version: (str): ABI version.
-
     Returns:
         dict: version, directory
     """
     tags = _run(['git', 'ls-remote', '--tags', REPOSITORY_PATH]).stdout
     versions = {
-        tag.group(1) : join(tmp_dir, tag.group(1)) for tag in list(map(
+        tag.group(1) : str(tmpdir.join(tag.group(1))) for tag in list(map(
                 lambda x: re.search(r'v((\d+)\.\d+\.\d+)$', x), tags.splitlines()))
             if (tag and int(tag.group(2))==abi_version) }
     for k,v in sorted(versions.items(), key=lambda x: x[0], reverse=True):
@@ -129,7 +118,7 @@ def get_reference_versions(tmp_dir, abi_version):
     return versions
 
 
-def test_abi_compliance(accelize_drm):
+def test_abi_compliance(tmpdir, accelize_drm):
     """
     Test the ABI/API compliance of the lib_name.
     """
@@ -153,7 +142,6 @@ def test_abi_compliance(accelize_drm):
         def dumps_library(lib_version, lib_path, futures):
             """
             Dumps a version asynchronously.
-
             Args:
                 lib_version (str): version.
                 lib_path (str): Library directory.
@@ -162,13 +150,14 @@ def test_abi_compliance(accelize_drm):
             include = join(lib_path, 'include')
             for lib_name in LIB_NAMES:
                 futures.append(executor.submit(
-                    dump_abi, join(accelize_drm.pytest_artifacts_dir,'%s_%s.abidump' % (lib_name, lib_version)),
+                    dump_abi, str(tmpdir.join(
+                        '%s_%s.abidump' % (lib_name, lib_version))),
                     join(lib_path, '%s.so' % lib_name), include,
                     lib_version, lib_name))
 
         # Get reference versions
         abi_version = accelize_drm.get_api_version().major
-        versions = executor.submit(get_reference_versions, accelize_drm.pytest_artifacts_dir, abi_version)
+        versions = executor.submit(get_reference_versions, tmpdir, abi_version)
 
         # Build reference versions
         versions = versions.result()
