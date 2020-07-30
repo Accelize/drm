@@ -404,13 +404,11 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_s
 
     # Set initial context on the live server
     nb_genlic = 4
-    healthPeriod = 1
+    healthPeriod = 10
     healthRetry = 0  # no retry
-    timeoutSecond = 2
     context = {'nb_genlic':0,
                'healthPeriod':healthPeriod,
-               'healthRetry':healthRetry,
-               'timeoutSecond':timeoutSecond
+               'healthRetry':healthRetry
     }
     set_context(context)
     assert get_context() == context
@@ -418,7 +416,7 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_s
     drm_manager.activate()
     try:
         wait_func_true(lambda: get_context()['nb_genlic'] >= nb_genlic,
-                timeout=(nb_genlic+1)*timeoutSecond)
+                timeout=(healthPeriod+1)*timeoutSecond * 2)
         session_id_exp = drm_manager.get('session_id')
     finally:
         drm_manager.deactivate()
