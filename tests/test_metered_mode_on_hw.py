@@ -757,6 +757,6 @@ def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handl
     wait_func_true(lambda: isfile(logpath), 10)
     with open(logpath, 'rt') as f:
         log_content = f.read()
-    assert len(list(findall(r'Warning\b.*\bCannot access metering data when no session is running', log_content))) == 2
+    assert len(list(findall(r'warning\b.*\bCannot access metering data when no session is running', log_content))) == 2
     async_cb.assert_NoError()
     remove(logpath)

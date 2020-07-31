@@ -16,7 +16,15 @@ def create_app(url):
     #os.environ['WERKZEUG_RUN_MAIN'] = 'true'
     os.environ['FLASK_ENV'] = 'development'
     url = url.rstrip('/')
-
+    '''
+    @app.errorhandler(Exception)
+    def all_exception_handler(error):
+        global context, lock
+        with lock:
+            if context:
+                context['exception'] = str(error)
+        return 'Proxy caught exception: %s' % str(error), 500
+    '''
     @app.route('/get/', methods=['GET'])
     def get():
         global lock
@@ -484,7 +492,8 @@ def create_app(url):
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
-            response_json['metering']['timeoutSecond'] = context['timeoutSecond']
+            response_json['metering']['healthPeriod'] = context['healthPeriod']
+            response_json['metering']['healthRetry'] = context['healthRetry']
             context['nb_genlic'] += 1
         return Response(dumps(response_json), response.status_code, headers)
 
@@ -667,4 +676,11 @@ def set_context(data):
     r = post(url_for('set', _external=True), json=data)
     assert r.status_code == 200
 
+
+def get_proxy_error():
+    r = get_context()
+    try:
+        return r['exception']
+    except KeyError:
+        return None
 

@@ -14,7 +14,7 @@ from os import remove
 from os.path import realpath, isfile
 
 from tests.conftest import wait_func_true, whoami
-from tests.proxy import get_context, set_context
+from tests.proxy import get_context, set_context, get_proxy_error
 
 
 @pytest.mark.no_parallel
@@ -70,9 +70,9 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
     assert search(r'Exiting background thread which checks health', log_content, MULTILINE)
     health_req = findall(r'"request"\s*:\s*"health"', log_content)
     assert len(list(health_req)) == nb_health
+    assert get_proxy_error() is None
     async_cb.assert_NoError()
-    if isfile(logpath):
-        remove(logpath)
+    remove(logpath)
 
 
 #@pytest.mark.skip(reason='Bug in async feature')
@@ -125,6 +125,7 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
         delta = parser.parse(start) - parser.parse(wait_start)
         assert int(delta.total_seconds()) == healthPeriod + i
         wait_start = end
+    assert get_proxy_error() is None
 
 
 #@pytest.mark.skip(reason='Bug in async feature')
@@ -179,6 +180,7 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
         delta = parser.parse(start) - parser.parse(wait_start)
         assert int(delta.total_seconds()) == healthPeriod
         wait_start = end
+    assert get_proxy_error() is None
 
 
 #@pytest.mark.skip(reason='Bug in async feature')
@@ -242,6 +244,7 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
         delta = parser.parse(end) - parser.parse(start)
         error_gap = drm_manager.get('health_retry_sleep') + 1
         assert retry_timeout - error_gap <= int(delta.total_seconds()) <= retry_timeout + error_gap
+        assert get_proxy_error() is None
 
 
 #@pytest.mark.skip(reason='Bug in async feature')
@@ -306,6 +309,7 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, asy
                 delta = parser.parse(lstart) - parser.parse(start)
                 assert int(delta.total_seconds()) == health_retry_sleep
                 start = lend
+        assert get_proxy_error() is None
 
 
 #@pytest.mark.skip(reason='Bug in async feature')
@@ -373,6 +377,7 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
         assert drm_manager.get('metered_data') == 100
     finally:
         drm_manager.deactivate()
+    assert get_proxy_error() is None
     async_cb.assert_NoError()
 
 
@@ -403,8 +408,8 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_s
     )
 
     # Set initial context on the live server
-    nb_genlic = 4
-    healthPeriod = 10
+    nb_genlic = 3
+    healthPeriod = 300
     healthRetry = 0  # no retry
     context = {'nb_genlic':0,
                'healthPeriod':healthPeriod,
@@ -413,10 +418,25 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_s
     set_context(context)
     assert get_context() == context
 
+    # First, get license duration to align health period on it
     drm_manager.activate()
+    lic_dur = drm_manager.get('license_duration')
+    drm_manager.deactivate()
+
+    # Adjust health period to license duration
+    healthPeriod = lic_dur
+    context = {'nb_genlic':0,
+               'healthPeriod':healthPeriod,
+               'healthRetry':healthRetry
+    }
+    set_context(context)
+    assert get_context() == context
+
+    drm_manager.activate()
+    assert drm_manager.get('health_period') == healthPeriod
     try:
         wait_func_true(lambda: get_context()['nb_genlic'] >= nb_genlic,
-                timeout=(healthPeriod+1)*timeoutSecond * 2)
+                timeout=lic_dur * nb_genlic + 2)
         session_id_exp = drm_manager.get('session_id')
     finally:
         drm_manager.deactivate()
@@ -440,5 +460,5 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_s
         segment_idx_expected += 1
         if close_flag == '1':
             segment_idx_expected = 0
+    assert get_proxy_error() is None
     remove(logpath)
-
