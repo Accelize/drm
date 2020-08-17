@@ -1,6 +1,6 @@
 /**
 *  \file      DrmControllerLicenseFileSizeException.hpp
-*  \version   4.2.0.0
+*  \version   4.2.1.0
 *  \date      July 2020
 *  \brief     Class DrmControllerLicenseFileSizeException defines procedures
 *             for license file size exceptions reporting, inherihts from std::exception.
