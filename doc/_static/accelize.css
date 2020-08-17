@@ -1,5 +1,5 @@
 .wy-side-nav-search {
-    background-image: url("background.png");
+    background-image: url("background.jpg");
     background-repeat: no-repeat;
     background-size: contain;
     background-position: top;
@@ -14,7 +14,11 @@
     color: #46a5da
 }
 
-.wy-side-nav-search .wy-dropdown > a.icon img.logo, .wy-side-nav-search > a.icon img.logo {
-    margin-top: 1.85em;
+.wy-side-nav-search .version {
+    color: #FFF !important;
+    text-align: right;
 }
 
+.wy-side-nav-search .icon-home {
+    opacity: 0;
+}
