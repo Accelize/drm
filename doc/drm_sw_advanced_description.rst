@@ -117,14 +117,18 @@ page_mailbox                   string    Read-only     NA                      r
 hw_report                      string    Read-only     NA                      return nothing, print the Algodone HW report
 trigger_async_callback         string    Write-only    No                      only for testing, call the asynchronous error callback with the given message
 log_message                    string    Write-only    No                      only for testing, insert a message with the value as content
+hdk_compatibility              string    Read-only     NA                      only for testing, return the lower version of the HDK it is compatible with
+health_period                  uint32_t  Read-only     >=0                     return the current value of the health period. 0 means the asychronous feature is disabled
+health_retry                   uint32_t  Read-only     >=0                     return the current value of the health retry timeout. 0 means there will be no retry
+health_retry_sleep             uint32_t  Read-only     >=0                     return the current value of the health retry sleep
 =============================  ========  ============  ======================  =============================================
 
 
 Detailed explanation
 --------------------
 
-Retry mechanism
-~~~~~~~~~~~~~~~
+Retry mechanism for the license request
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 There are 2 types of retry mechanisms:
 

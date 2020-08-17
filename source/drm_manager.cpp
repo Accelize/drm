@@ -176,9 +176,9 @@ protected:
     Json::Value mHeaderJsonRequest;
 
     // Health/Asynchronous metering parameters
-    uint32_t mHealthPeriod;
-    uint32_t mHealthRetryTimeout;
-    uint32_t mHealthRetrySleep;
+    uint32_t mHealthPeriod;             ///< Time in seconds before performing the next health request
+    uint32_t mHealthRetryTimeout;       ///< Timeout in seconds for the health request
+    uint32_t mHealthRetrySleep;         ///< Time in seconds before perforing a new health retry
 
     // thread to maintain license alive
     uint32_t mLicenseCounter = 0;
@@ -1695,7 +1695,7 @@ protected:
                             mHealthPeriod = healthPeriod;
                             mHealthRetryTimeout = healthRetryTimeout;
                             mHealthRetrySleep = healthRetrySleep;
-                            Debug( "Updating Health parameters with new values: healthPeriod={}, healthRetry={}, healthRetrySleep={}",
+                            Debug( "Updating Health parameters with new values: healthPeriod={}s, healthRetry={}s, healthRetrySleep={}s",
                                 mHealthPeriod, mHealthRetryTimeout, mHealthRetrySleep );
                             if ( mHealthPeriod == 0 ) {
                                 Warning( "Health thread is disabled" );
@@ -1711,11 +1711,11 @@ protected:
                                 Debug( "Health retry is enabled" );
                             }
                         } else {
-                            Debug( "Keep same Health parameters: healthPeriod={}, healthRetry={}, healthRetrySleep={}",
+                            Debug( "Keep same Health parameters: healthPeriod={}s, healthRetry={}s, healthRetrySleep={}s",
                                 mHealthPeriod, mHealthRetryTimeout, mHealthRetrySleep );
                         }
                     } else {
-                        Debug( "Keep same Health parameters: healthPeriod={}, healthRetry={}, healthRetrySleep={}",
+                        Debug( "Keep same Health parameters: healthPeriod={}s, healthRetry={}s, healthRetrySleep={}s",
                             mHealthPeriod, mHealthRetryTimeout, mHealthRetrySleep );
                     }
                 }
