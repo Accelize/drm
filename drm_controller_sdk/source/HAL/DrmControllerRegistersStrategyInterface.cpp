@@ -1,6 +1,6 @@
 /**
 *  \file      DrmControllerRegistersStrategyInterface.cpp
-*  \version   4.2.1.0
+*  \version   4.2.0.0
 *  \date      July 2020
 *  \brief     Class DrmControllerRegistersBase defines low level procedures for registers access.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
@@ -156,18 +156,18 @@ unsigned int DrmControllerRegistersStrategyInterface::readSaasChallengeRegister(
   return errorCode;
 }
 
-/** readAdaptiveProportionTestFailuresRegister
-*   \brief Read the Adaptive Proportion Test Failures register and get the value.
-*   This method will access to the system bus to read the Adaptive Proportion Test Failures register.
-*   \param[out] adaptiveProportionTestFailures is the Adaptive Proportion Test Failures value.
+/** readAdaptativeProportionTestFailuresRegister
+*   \brief Read the Adaptative Proportion Test Failures register and get the value.
+*   This method will access to the system bus to read the Adaptative Proportion Test Failures register.
+*   \param[out] adaptativeProportionTestFailures is the Adaptative Proportion Test Failures value.
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategyInterface::readAdaptiveProportionTestFailuresRegister(std::string &adaptiveProportionTestFailures) const {
-  std::vector<unsigned int> tmpAdaptiveProportionTestFailures;
-  unsigned int errorCode = readAdaptiveProportionTestFailuresRegister(tmpAdaptiveProportionTestFailures);
+unsigned int DrmControllerRegistersStrategyInterface::readAdaptativeProportionTestFailuresRegister(std::string &adaptativeProportionTestFailures) const {
+  std::vector<unsigned int> tmpAdaptativeProportionTestFailures;
+  unsigned int errorCode = readAdaptativeProportionTestFailuresRegister(tmpAdaptativeProportionTestFailures);
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
-  adaptiveProportionTestFailures = DrmControllerDataConverter::binaryToHexString(tmpAdaptiveProportionTestFailures);
+  adaptativeProportionTestFailures = DrmControllerDataConverter::binaryToHexString(tmpAdaptativeProportionTestFailures);
   return errorCode;
 }
 
@@ -257,7 +257,7 @@ void DrmControllerRegistersStrategyInterface::printHwReport(std::ostream &file) 
   printTraceFileHwReport(file);
   printMeteringFileHwReport(file);
   printMailBoxFileHwReport(file);
-  printAdaptiveProportionTestFailuresHwReport(file);
+  printAdaptativeProportionTestFailuresHwReport(file);
   printRepetitionCountTestFailuresHwReport(file);
   file << std::endl << footer() << std::endl << std::endl;
 }

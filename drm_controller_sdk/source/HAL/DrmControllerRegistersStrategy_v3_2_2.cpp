@@ -1,6 +1,6 @@
 /**
 *  \file      DrmControllerRegistersStrategy_v3_2_2.cpp
-*  \version   4.2.1.0
+*  \version   4.2.0.0
 *  \date      July 2020
 *  \brief     Class DrmControllerRegistersStrategy_v3_2_2 defines strategy for register access of drm controller v3.2.2.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License") {
@@ -763,34 +763,6 @@ unsigned int DrmControllerRegistersStrategy_v3_2_2::waitLicenseMeteringStatusReg
   return errorCode;
 }
 
-/** readSecurityAlertStatusRegister
-*   \brief Read the status register and get the Security Alert status bit.
-*   This method will access to the system bus to read the status register.
-*   \param[out] securityAlert is the value of the status bit Security Alert.
-*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
-*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
-**/
-unsigned int DrmControllerRegistersStrategy_v3_2_2::readSecurityAlertStatusRegister(bool &securityAlert) const {
-  throwUnsupportedFeatureException("Security Alert status", DRM_CONTROLLER_V3_2_2_SUPPORTED_VERSION);
-  return mDrmApi_UNSUPPORTED_FEATURE_ERROR;
-}
-
-/** waitSecurityAlertStatusRegister
-*   \brief Wait Security Alert status register to reach specified value.
-*   This method will access to the system bus to read the status register.
-*   \param[in]  timeout is the timeout value in micro seconds.
-*   \param[in]  expected is the value of the status to be expected.
-*   \param[out] actual is the value of the status bit read.
-*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, mDrmApi_HARDWARE_TIMEOUT_ERROR if a timeout occured, errors from read/write register functions otherwize.
-*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
-*   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
-**/
-unsigned int DrmControllerRegistersStrategy_v3_2_2::waitSecurityAlertStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
-  throwUnsupportedFeatureException("Security Alert status", DRM_CONTROLLER_V3_2_2_SUPPORTED_VERSION);
-  return mDrmApi_UNSUPPORTED_FEATURE_ERROR;
-}
-
-
 /** readNumberOfLicenseTimerLoadedStatusRegister
 *   \brief Read the status register and get the number of license timer loaded.
 *   This method will access to the system bus to read the status register.
@@ -1230,15 +1202,15 @@ unsigned int DrmControllerRegistersStrategy_v3_2_2::readMailboxFileRegister(unsi
   return errorCode;
 }
 
-/** readAdaptiveProportionTestFailuresRegister
-*   \brief Read the Adaptive Proportion Test Failures register and get the value.
-*   This method will access to the system bus to read the Adaptive Proportion Test Failures register.
-*   \param[out] adaptiveProportionTestFailures is the Adaptive Proportion Test Failures value.
+/** readAdaptativeProportionTestFailuresRegister
+*   \brief Read the Adaptative Proportion Test Failures register and get the value.
+*   This method will access to the system bus to read the Adaptative Proportion Test Failures register.
+*   \param[out] adaptativeProportionTestFailures is the Adaptative Proportion Test Failures value.
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_2_2::readAdaptiveProportionTestFailuresRegister(std::vector<unsigned int> &adaptiveProportionTestFailures) const {
- throwUnsupportedFeatureException("Adaptive Proportion Test Failures Registers", DRM_CONTROLLER_V3_2_2_SUPPORTED_VERSION);
+unsigned int DrmControllerRegistersStrategy_v3_2_2::readAdaptativeProportionTestFailuresRegister(std::vector<unsigned int> &adaptativeProportionTestFailures) const {
+ throwUnsupportedFeatureException("Adaptative Proportion Test Failures Registers", DRM_CONTROLLER_V3_2_2_SUPPORTED_VERSION);
   return mDrmApi_UNSUPPORTED_FEATURE_ERROR;
 }
 
@@ -1789,11 +1761,11 @@ std::vector<unsigned int> DrmControllerRegistersStrategy_v3_2_2::getMeteringFile
                                    prev(meteringFile.end(),mMeteringFileMacWordFromEndPosition*mMeteringWordRegisterWordNumber));
 }
 
-/** printAdaptiveProportionTestFailures
-*   \brief Display the value of the Adaptive Proportion Test Failures.
+/** printAdaptativeProportionTestFailures
+*   \brief Display the value of the Adaptative Proportion Test Failures.
 *   \param[in] file is the stream to use for the data print.
 **/
-void DrmControllerRegistersStrategy_v3_2_2::printAdaptiveProportionTestFailuresHwReport(std::ostream &file) const { }
+void DrmControllerRegistersStrategy_v3_2_2::printAdaptativeProportionTestFailuresHwReport(std::ostream &file) const { }
   
 /** printRepetitionCountTestFailures
 *   \brief Display the value of the Repetition Count Test Failures.

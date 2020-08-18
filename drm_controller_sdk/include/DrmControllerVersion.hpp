@@ -1,6 +1,6 @@
 /**
 *  \file      DrmControllerVersion.hpp
-*  \version   4.2.1.0
+*  \version   4.2.0.0
 *  \date      July 2020
 *  \brief     Class DrmControllerVersion defines procedures
 *             for hardware versus SDK versions checks.

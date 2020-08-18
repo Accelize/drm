@@ -154,7 +154,6 @@ set(DRM_CONTROLLER_SDK_SOURCES
 	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v4_0_1.cpp
 	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v4_1_0.cpp
 	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v4_2_0.cpp
-	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v4_2_1.cpp
 )
 include_directories(drm_controller_sdk/include)
 set_source_files_properties(${DRM_CONTROLLER_SDK_SOURCES} PROPERTIES COMPILE_FLAGS "-Wno-unused-parameter")
