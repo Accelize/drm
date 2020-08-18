@@ -77,37 +77,38 @@ public:
     CurlEasyPost();
     ~CurlEasyPost();
 
-    long perform(std::string* resp, std::chrono::steady_clock::time_point deadline);
+    long perform( std::string* resp, std::chrono::steady_clock::time_point& deadline );
+    long perform( std::string* resp, std::chrono::milliseconds& timeout );
     double getTotalTime();
 
     void setHostResolves( const Json::Value& host_json );
 
     template<class T>
     void setURL(T&& url) {
-        data.push_back(std::forward<T>(url));
-        curl_easy_setopt(curl, CURLOPT_URL, data.back().c_str());
+        data.push_back( std::forward<T>(url) );
+        curl_easy_setopt( curl, CURLOPT_URL, data.back().c_str() );
     }
 
     template<class T>
-    void appendHeader(T&& header) {
-        data.push_back(std::forward<T>(header));
+    void appendHeader( T&& header ) {
+        data.push_back( std::forward<T>(header) );
         Debug2( "Add {} to CURL header", std::forward<T>(header) );
-        headers = curl_slist_append(headers, data.back().c_str());
+        headers = curl_slist_append( headers, data.back().c_str() );
     }
 
     template<class T>
-    void setPostFields(T&& postfields) {
-        data.push_back(std::forward<T>(postfields));
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, data.back().size());
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.back().c_str());
+    void setPostFields( T&& postfields ) {
+        data.push_back( std::forward<T>(postfields) );
+        curl_easy_setopt( curl, CURLOPT_POSTFIELDSIZE, data.back().size() );
+        curl_easy_setopt( curl, CURLOPT_POSTFIELDS, data.back().c_str() );
     }
 
 protected:
 
-    static size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
+    static size_t write_callback( void *contents, size_t size, size_t nmemb, void *userp ) {
         auto *s = (std::string*)userp;
         size_t realsize = size * nmemb;
-        s->append((const char*)contents, realsize);
+        s->append( (const char*)contents, realsize );
         return realsize;
     }
 };
