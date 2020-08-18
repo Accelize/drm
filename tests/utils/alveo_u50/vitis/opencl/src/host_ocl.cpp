@@ -11,8 +11,6 @@ Description: Vitis DRM Controller Register access
 #include <string.h>
 #include <vector>
 #include <uuid/uuid.h>
-
-
 #include <fstream>
 #include <iomanip>
 #include <string.h>

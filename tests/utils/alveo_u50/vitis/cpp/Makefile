@@ -5,7 +5,7 @@ MODE := hw
 DSA := xilinx_u50_gen3x16_xdma_201920_3
 
 # sources
-HOST_SRC := src/host_cpp.2.cpp
+HOST_SRC := src/host_cpp.cpp
 KRNL_SRC := kernel.cpp
 
 # kernel targets
