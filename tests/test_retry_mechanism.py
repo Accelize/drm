@@ -7,7 +7,7 @@ import gc
 from glob import glob
 from os import remove, getpid
 from os.path import getsize, isfile, dirname, join, realpath
-from re import match, search, finditer, MULTILINE, IGNORECASE
+from re import match, search, finditer, findall, MULTILINE, IGNORECASE
 from time import sleep, time
 from json import loads
 from datetime import datetime, timedelta
@@ -200,7 +200,7 @@ def test_long_to_short_retry_switch(accelize_drm, conf_json, cred_json, async_ha
             assert (retryShortPeriod-1) <= lic_delta <= (retryShortPeriod+1)
 
 
-@pytest.mark.skip(reason='FIXME: waiting new refactoring of request timeout')
+#@pytest.mark.skip(reason='FIXME: waiting new refactoring of request timeout')
 @pytest.mark.no_parallel
 def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
@@ -210,11 +210,12 @@ def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handle
     async_cb = async_handler.create()
     async_cb.reset()
 
-    retryShortPeriod = 2
-    retryLongPeriod = 5
+    retryShortPeriod = 5
+    retryLongPeriod = 20
+    licDuration = 60
     timeoutSecond = 10
-    nb_long_retry = int(timeoutSecond / retryLongPeriod)
-    nb_short_retry = int(retryLongPeriod / retryShortPeriod)
+    nb_long_retry = int(licDuration / (retryLongPeriod + timeoutSecond + 1))
+    nb_short_retry = int(retryLongPeriod / (retryShortPeriod + timeoutSecond + 1)) + 1
     nb_retry = nb_long_retry + nb_short_retry
 
     conf_json.reset()
@@ -236,7 +237,7 @@ def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handle
     )
 
     context = {'cnt':0,
-               'timeoutSecond':timeoutSecond
+               'timeoutSecond':licDuration
     }
     set_context(context)
     assert get_context() == context
@@ -244,19 +245,18 @@ def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handle
     drm_manager.activate()
     try:
         wait_func_true(lambda: async_cb.was_called,
-                timeout=timeoutSecond*2)
+                timeout=licDuration*2)
     finally:
         drm_manager.deactivate()
     del drm_manager
     assert async_cb.was_called
-    assert re.search(r'Timeout on License request after %d attempts' % nb_retry,
+    assert search(r'Timeout on License request after %d attempts' % nb_retry,
             async_cb.message)
     assert async_cb.errcode == accelize_drm.exceptions.DRMWSError.error_code
     wait_func_true(lambda: isfile(logpath), 10)
     with open(logpath, 'rt') as f:
         log_content = f.read()
-    attempts_list = findall(r'Attempt #(\d+) to obtain a new License failed with message', log_content)
+    attempts_list = [int(e) for e in findall(r'Attempt #(\d+) to obtain a new License failed with message', log_content)]
     assert len(attempts_list) == nb_retry
     assert sorted(list(attempts_list)) == list(range(1,nb_retry+1))
-
 
