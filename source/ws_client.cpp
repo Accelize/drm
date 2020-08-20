@@ -99,8 +99,9 @@ long CurlEasyPost::perform( std::string* resp, std::chrono::milliseconds& timeou
 
 long CurlEasyPost::perform( std::string* resp, std::chrono::steady_clock::time_point& deadline ) {
     std::chrono::milliseconds timeout = std::chrono::duration_cast<std::chrono::milliseconds>( deadline - std::chrono::steady_clock::now() );
-    if ( timeout >= cConnectionTimeout )
-        timeout = cConnectionTimeout;
+    std::chrono::milliseconds limit( cConnectionTimeout * 1000 );
+    if ( timeout >= limit )
+        timeout = limit;
     return perform( resp, timeout );
 }
 
