@@ -200,7 +200,6 @@ def test_long_to_short_retry_switch(accelize_drm, conf_json, cred_json, async_ha
             assert (retryShortPeriod-1) <= lic_delta <= (retryShortPeriod+1)
 
 
-#@pytest.mark.skip(reason='FIXME: waiting new refactoring of request timeout')
 @pytest.mark.no_parallel
 def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
@@ -213,15 +212,16 @@ def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handle
     retryShortPeriod = 5
     retryLongPeriod = 20
     licDuration = 60
-    timeoutSecond = 10
-    nb_long_retry = int(licDuration / (retryLongPeriod + timeoutSecond + 1))
-    nb_short_retry = int(retryLongPeriod / (retryShortPeriod + timeoutSecond + 1)) + 1
+    requestTimeout = 5
+    nb_long_retry = int(licDuration / (retryLongPeriod + requestTimeout + 1))
+    nb_short_retry = int(retryLongPeriod / (retryShortPeriod + requestTimeout + 1)) + 1
     nb_retry = nb_long_retry + nb_short_retry
 
     conf_json.reset()
     conf_json['licensing']['url'] = request.url + 'test_retry_on_no_connection'
     conf_json['settings']['ws_retry_period_short'] = retryShortPeriod
     conf_json['settings']['ws_retry_period_long'] = retryLongPeriod
+    conf_json['settings']['ws_request_timeout'] = requestTimeout
     logpath = accelize_drm.create_log_path(whoami())
     conf_json['settings']['log_file_verbosity'] = accelize_drm.create_log_level(1)
     conf_json['settings']['log_file_type'] = 1
@@ -259,4 +259,3 @@ def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handle
     attempts_list = [int(e) for e in findall(r'Attempt #(\d+) to obtain a new License failed with message', log_content)]
     assert len(attempts_list) == nb_retry
     assert sorted(list(attempts_list)) == list(range(1,nb_retry+1))
-

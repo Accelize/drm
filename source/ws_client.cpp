@@ -29,10 +29,11 @@ namespace Accelize {
 namespace DRM {
 
 
-CurlEasyPost::CurlEasyPost() {
+CurlEasyPost::CurlEasyPost( ulong requestTime ) {
     curl = curl_easy_init();
     if ( !curl )
         Throw( DRM_ExternFail, "Curl : cannot init curl_easy" );
+    mRequestTimeout = requestTime;
 }
 
 CurlEasyPost::~CurlEasyPost() {
@@ -74,7 +75,7 @@ long CurlEasyPost::perform( std::string* resp, std::chrono::milliseconds& timeou
     curl_easy_setopt( curl, CURLOPT_WRITEDATA, (void*)resp );
     curl_easy_setopt( curl, CURLOPT_ERRORBUFFER, errbuff.data() );
     curl_easy_setopt( curl, CURLOPT_FOLLOWLOCATION, 1L );
-    curl_easy_setopt( curl, CURLOPT_CONNECTTIMEOUT, cConnectionTimeout );
+    curl_easy_setopt( curl, CURLOPT_CONNECTTIMEOUT, mRequestTimeout );
     // Compute timeout
     if ( timeout <= std::chrono::milliseconds( 0 ) )
         Throw( DRM_WSTimedOut, "Did not perform HTTP request to Accelize webservice because deadline is reached." );
@@ -99,7 +100,7 @@ long CurlEasyPost::perform( std::string* resp, std::chrono::milliseconds& timeou
 
 long CurlEasyPost::perform( std::string* resp, std::chrono::steady_clock::time_point& deadline ) {
     std::chrono::milliseconds timeout = std::chrono::duration_cast<std::chrono::milliseconds>( deadline - std::chrono::steady_clock::now() );
-    std::chrono::milliseconds limit( cConnectionTimeout * 1000 );
+    std::chrono::milliseconds limit( mRequestTimeout * 1000 );
     if ( timeout >= limit )
         timeout = limit;
     return perform( resp, timeout );
@@ -132,6 +133,12 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
         mHostResolvesJson = JVgetOptional( webservice_json, "host_resolves", Json::objectValue );
 
         url = JVgetRequired( webservice_json, "url", Json::stringValue ).asString();
+
+        Json::Value settings = JVgetOptional( conf_json, "settings", Json::objectValue );
+        mRequestTimeout = JVgetOptional( settings, "ws_request_timeout",
+                        Json::uintValue, cRequestTimeout).asUInt();
+        if ( mRequestTimeout == 0 )
+            Throw( DRM_BadArg, "ws_request_timeout must not be 0");
 
     } catch( Exception &e ) {
         Throw( e.getErrCode(), "Error with service configuration file '{}': {}",
@@ -178,6 +185,7 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
     ss << "client_id=" << mClientId << "&client_secret=" << mClientSecret;
     ss << "&grant_type=client_credentials";
     mOAUth2Request.setPostFields( ss.str() );
+    mOAUth2Request.setRequestTimeout( mRequestTimeout );
 
     // Set URL of license and metering requests
     mLicenseUrl = url + std::string("/auth/metering/genlicense/");
@@ -262,6 +270,7 @@ Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Val
 
     // Create new request
     CurlEasyPost req;
+    reg.setRequestTimeout( mRequestTimeout );
     req.setHostResolves( mHostResolvesJson );
     req.setURL( url );
     req.appendHeader( "Accept: application/vnd.accelize.v1+json" );

@@ -44,12 +44,12 @@ public:
 // RAII for Curl easy
 class CurlEasyPost {
 private:
-    const ulong cConnectionTimeout = 10L;  // In seconds
     CURL *curl = NULL;
     struct curl_slist *headers = NULL;
     struct curl_slist *host_resolve_list = NULL;
     std::list<std::string> data; // keep data until request performed
     std::array<char, CURL_ERROR_SIZE> errbuff;
+    uint32_t mRequestTimeout;
 
 public:
 
@@ -74,7 +74,7 @@ public:
                 ;
     }
 
-    CurlEasyPost();
+    CurlEasyPost( const ulong connectionTimeout );
     ~CurlEasyPost();
 
     long perform( std::string* resp, std::chrono::steady_clock::time_point& deadline );
@@ -103,6 +103,8 @@ public:
         curl_easy_setopt( curl, CURLOPT_POSTFIELDS, data.back().c_str() );
     }
 
+    void setRequestTimeout( const uint32_t requestTimeout ) { mRequestTimeout = requestTimeout; }
+
 protected:
 
     static size_t write_callback( void *contents, size_t size, size_t nmemb, void *userp ) {
@@ -119,6 +121,7 @@ protected:
 class DrmWSClient {
 
     const uint32_t cTokenExpirationMargin = 30;
+    const uint32_t cRequestTimeout = 30;
 
 protected:
 
@@ -134,6 +137,7 @@ protected:
     uint32_t mTokenExpirationMargin;            /// OAuth2 token expiration margin in seconds
     TClock::time_point mTokenExpirationTime;    /// OAuth2 expiration time
     CurlEasyPost mOAUth2Request;
+    uint32_t mRequestTimeout;
 
     bool isTokenValid() const;
     Json::Value requestMetering( const std::string url, const Json::Value& json_req, TClock::time_point deadline );
@@ -150,7 +154,6 @@ public:
 
     Json::Value requestLicense( const Json::Value& json_req, TClock::time_point deadline );
     Json::Value requestHealth( const Json::Value& json_req, TClock::time_point deadline );
-
 };
 
 }
