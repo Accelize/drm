@@ -516,6 +516,38 @@ def create_app(url):
     ##############################################################################
     # test_retry_mechanism.py
 
+    # test_api_retry_disabled functions
+    @app.route('/test_api_retry/o/token/', methods=['GET', 'POST'])
+    def otoken__test_api_retry():
+        return redirect(request.url_root + '/o/token/', code=307)
+
+    @app.route('/test_api_retry/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_api_retry():
+        return redirect(request.url_root + '/auth/metering/health/', code=307)
+
+    @app.route('/test_api_retry/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_api_retry():
+        global context, lock
+        start = str(datetime.now())
+        new_url = request.url.replace(request.url_root+'test_api_retry', url)
+        request_json = request.get_json()
+        request_type = request_json['request']
+        with lock:
+            if context['cnt'] == 0:
+                response = post(new_url, json=request_json, headers=request.headers)
+                assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                        indent=4, sort_keys=True), response.status_code, response.text)
+                excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+                headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+                response_json = response.json()
+                response_status_code = 408
+                context['post'] = (response_json, headers)
+            else:
+                response_json, headers = context['post']
+            response_status_code = 408
+            context['cnt'] += 1
+        return Response(dumps(response_json), response_status_code, headers)
+
     # test_long_to_short_retry_switch functions
     @app.route('/test_long_to_short_retry_switch/o/token/', methods=['GET', 'POST'])
     def otoken__test_long_to_short_retry_switch():

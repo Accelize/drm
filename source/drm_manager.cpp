@@ -104,6 +104,8 @@ protected:
 
     const double ACTIVATIONCODE_TRANSMISSION_TIMEOUT_MS = 2000.0;
 
+    const cDefaultTimePoint = TClock::time_point();
+
 
 #ifdef _WIN32
     const char path_sep = '\\';
@@ -181,19 +183,19 @@ protected:
     uint32_t mHealthRetryTimeout;       ///< Timeout in seconds for the health request
     uint32_t mHealthRetrySleep;         ///< Time in seconds before perforing a new health retry
 
-    // thread to maintain license alive
+    // Thread to maintain license alive
     uint32_t mLicenseCounter = 0;
     std::future<void> mThreadKeepAlive;
+    TClock::time_point mExpirationTime;
 
-    // thread to maintain health alive
+    // Thread to maintain health alive
     mutable uint32_t mHealthCounter = 0;
     std::future<void> mThreadHealth;
 
-    // All thread exit elements
+    // Threads exit elements
     std::mutex mThreadExitMtx;
     std::condition_variable mThreadExitCondVar;
     bool mThreadExit{false};
-
 
     // Debug parameters
     spdlog::level::level_enum mDebugMessageLevel;
@@ -1064,12 +1066,12 @@ protected:
     }
 
     Json::Value getLicense( const Json::Value& request_json, const uint32_t& timeout,
-            uint32_t short_retry_period = 0, uint32_t long_retry_period = 0 ) {
+            uint32_t short_retry_period = -1, uint32_t long_retry_period = -1 ) {
         TClock::time_point deadline;
         if ( timeout == 0 ) {
             deadline = TClock::now() + std::chrono::seconds( mWSRequestTimeout );
-            short_retry_period = 0;
-            long_retry_period = 0;
+            short_retry_period = -1;
+            long_retry_period = -1;
         } else {
             deadline = TClock::now() + std::chrono::seconds( timeout );
         }
@@ -1077,7 +1079,7 @@ protected:
     }
 
     Json::Value getLicense( const Json::Value& request_json, const TClock::time_point& deadline,
-            const uint32_t& short_retry_period = 0, const uint32_t& long_retry_period = 0 ) {
+            const uint32_t& short_retry_period = -1, const uint32_t& long_retry_period = -1 ) {
 
         TClock::duration long_duration = std::chrono::seconds( long_retry_period );
         TClock::duration short_duration = std::chrono::seconds( short_retry_period );
@@ -1104,11 +1106,11 @@ protected:
                 }
                 // It is retryable
                 oauth_attempt ++;
-                if ( short_retry_period == 0 ) {
+                if ( short_retry_period == -1 ) {
                     // No retry
                     throw;
                 }
-                if ( long_retry_period == 0 ) {
+                if ( long_retry_period == -1 ) {
                      wait_duration = short_duration;
                 } else {
                     if ( ( deadline - TClock::now() ) <= long_duration )
@@ -1137,12 +1139,12 @@ protected:
                 }
                 // It is retryable
                 lic_attempt ++;
-                if ( short_retry_period == 0 ) {
+                if ( short_retry_period == -1 ) {
                     // No retry
                     throw;
                 }
                 // Evaluate the next retry
-                if ( long_retry_period == 0 ) {
+                if ( long_retry_period == -1 ) {
                      wait_duration = short_duration;
                 } else {
                     if ( ( deadline - TClock::now() ) <= long_duration )
@@ -1244,8 +1246,8 @@ protected:
             if ( !activationCodesTransmitted ) {
                 Unreachable( "DRM Controller could not transmit Licence #{} to activators. ", mLicenseCounter ); //LCOV_EXCL_LINE
             }
+            mExpirationTime += std::chrono::seconds( mLicenseDuration );
         }
-
         // Check DRM Controller has switched to the right license mode
         bool is_nodelocked = isDrmCtrlInNodelock();
         bool is_metered = isDrmCtrlInMetering();
@@ -1267,9 +1269,8 @@ protected:
     }
 
     Json::Value postHealth( const Json::Value& request_json, const TClock::time_point& deadline,
-            const uint32_t& retry_period = 0 ) {
+            const uint32_t& retry_period = -1 ) {
 
-        TClock::duration retry_duration = std::chrono::seconds( retry_period );
         bool token_valid(false);
         uint32_t oauth_attempt = 0;
         uint32_t lic_attempt = 0;
@@ -1293,10 +1294,11 @@ protected:
                 }
                 // It is retryable
                 oauth_attempt ++;
-                if ( retry_period == 0 ) {
+                if ( retry_period == -1 ) {
                     // No retry
                     return Json::nullValue;
                 }
+                TClock::duration retry_duration = std::chrono::seconds( retry_period );
                 Warning( "Attempt #{} to obtain a new OAuth2 token failed with message: {}. New attempt planned in {} seconds",
                         oauth_attempt, e.what(), retry_duration.count()/1000000000 );
                 // Wait a bit before retrying
@@ -1320,7 +1322,7 @@ protected:
                 }
                 // It is retryable
                 lic_attempt ++;
-                if ( retry_period == 0 ) {
+                if ( retry_period == -1 ) {
                     // No retry
                     return Json::nullValue;
                 }
@@ -1410,9 +1412,7 @@ protected:
                 Json::Value request_json = parseJsonFile( mNodeLockRequestFilePath );
                 Debug( "Parsed Node-locked License Request file: {}", request_json .toStyledString() );
                 /// - Send request to web service and receive the new license
-                TClock::time_point deadline =
-                        TClock::now() + std::chrono::seconds( mWSApiRetryDuration );
-                license_json = getLicense( request_json, deadline, mWSRetryPeriodShort );
+                license_json = getLicense( request_json, mWSApiRetryDuration, mWSRetryPeriodShort );
                 /// - Save the license to file
                 saveJsonToFile( mNodeLockLicenseFilePath, license_json );
                 Debug( "Requested and saved new node-locked license file: {}", mNodeLockLicenseFilePath );
@@ -1605,6 +1605,7 @@ protected:
         }
 
         mThreadKeepAlive = std::async( std::launch::async, [ this ]() {
+            TClock::time_point deadline;
             Debug( "Starting background thread which maintains licensing" );
             try {
 
@@ -1632,11 +1633,8 @@ protected:
                             Debug( "Requesting new license #{} now", mLicenseCounter );
                             Json::Value request_json = getMeteringRunning();
 
-                            /// Retry Web Service request loop
-                            TClock::time_point polling_deadline = TClock::now() + std::chrono::seconds( mLicenseDuration );
-
                             /// Attempt to get the next license
-                            Json::Value license_json = getLicense( request_json, polling_deadline, mWSRetryPeriodShort, mWSRetryPeriodLong );
+                            Json::Value license_json = getLicense( request_json, mExpirationTime, mWSRetryPeriodShort, mWSRetryPeriodLong );
 
                             /// New license has been received: now send it to the DRM Controller
                             setLicense( license_json );
@@ -1649,6 +1647,8 @@ protected:
                         TClock::duration wait_duration = std::chrono::seconds( licenseTimeLeft + 1 );
                         Debug( "License thread sleeping {} seconds before checking DRM Controller readiness", licenseTimeLeft );
                         sleepOrExit( wait_duration );
+                        //  resync expiration time
+                        mExpirationTime = TClock::now() + std::chrono::seconds( mLicenseDuration );
                     }
                 }
                 Debug( "Released metering access mutex from licensing thread" );
@@ -1947,6 +1947,7 @@ public:
                 Throw( DRM_BadUsage, "DRM Controller is locked in Node-Locked licensing mode: "
                                     "To use other modes you must reprogram the FPGA device." );
             }
+            mExpirationTime = TClock::now();
             if ( isRunning && resume_session_request ) {
                 resumeSession();
             } else {
