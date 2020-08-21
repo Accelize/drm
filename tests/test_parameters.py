@@ -406,14 +406,13 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json.reset()
     conf_json['settings'] = {'ws_api_retry_duration': 0}
     conf_json.save()
-    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
+    accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
     assert "ws_api_retry_duration must not be 0" in str(excinfo.value)
     err_code = async_handler.get_error_code(str(excinfo.value))
     assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
