@@ -43,7 +43,10 @@ public:
 
 // RAII for Curl easy
 class CurlEasyPost {
+
 private:
+    const uint32_t cRequestTimeout = 30;
+
     CURL *curl = NULL;
     struct curl_slist *headers = NULL;
     struct curl_slist *host_resolve_list = NULL;
@@ -74,7 +77,7 @@ public:
                 ;
     }
 
-    CurlEasyPost( const ulong connectionTimeout );
+    CurlEasyPost();
     ~CurlEasyPost();
 
     long perform( std::string* resp, std::chrono::steady_clock::time_point& deadline );

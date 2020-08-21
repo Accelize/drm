@@ -1,6 +1,6 @@
 /**
 *  \file      DrmControllerDataConverter.cpp
-*  \version   4.2.0.0
+*  \version   4.2.1.0
 *  \date      July 2020
 *  \brief     Class DrmController is used as a top level component in the user application.
 *             It provides top level procedures related to the  DRM Controller component.

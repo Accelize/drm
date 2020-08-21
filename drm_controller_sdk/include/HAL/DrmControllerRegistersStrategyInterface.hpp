@@ -1,6 +1,6 @@
 /**
 *  \file      DrmControllerRegistersStrategyInterface.hpp
-*  \version   4.2.0.0
+*  \version   4.2.1.0
 *  \date      July 2020
 *  \brief     Class DrmControllerRegistersStrategyInterface defines strategy interface for register access.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
@@ -604,6 +604,28 @@ namespace DrmControllerLibrary {
       **/
       virtual unsigned int waitLicenseMeteringStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const = 0;
 
+      /** readSecurityAlertStatusRegister
+      *   \brief Read the status register and get the Security Alert status bit.
+      *   This method will access to the system bus to read the status register.
+      *   \param[out] securityAlert is the value of the status bit Security Alert.
+      *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
+      *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+      **/
+      virtual unsigned int readSecurityAlertStatusRegister(bool &securityAlert) const = 0;
+
+      /** waitSecurityAlertStatusRegister
+      *   \brief Wait Security Alert status register to reach specified value.
+      *   This method will access to the system bus to read the status register.
+      *   \param[in]  timeout is the timeout value in micro seconds.
+      *   \param[in]  expected is the value of the status to be expected.
+      *   \param[out] actual is the value of the status bit read.
+      *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, mDrmApi_HARDWARE_TIMEOUT_ERROR if a timeout occured, errors from read/write register functions otherwize.
+      *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+      *   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
+      **/
+      virtual unsigned int waitSecurityAlertStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const = 0;
+
+
       /** readNumberOfLicenseTimerLoadedStatusRegister
       *   \brief Read the status register and get the number of license timer loaded.
       *   This method will access to the system bus to read the status register.
@@ -786,23 +808,23 @@ namespace DrmControllerLibrary {
       **/
       unsigned int readDrmVersionRegister(std::string &drmVersion) const;
       
-      /** readAdaptativeProportionTestFailuresRegister
-      *   \brief Read the Adaptative Proportion Test Failures register and get the value.
-      *   This method will access to the system bus to read the Adaptative Proportion Test Failures register.
-      *   \param[out] adaptativeProportionTestFailures is the Adaptative Proportion Test Failures value.
+      /** readAdaptiveProportionTestFailuresRegister
+      *   \brief Read the Adaptive Proportion Test Failures register and get the value.
+      *   This method will access to the system bus to read the Adaptive Proportion Test Failures register.
+      *   \param[out] adaptiveProportionTestFailures is the Adaptive Proportion Test Failures value.
       *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwise.
       *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
       **/
-      virtual unsigned int readAdaptativeProportionTestFailuresRegister(std::vector<unsigned int> &adaptativeProportionTestFailures) const = 0;
+      virtual unsigned int readAdaptiveProportionTestFailuresRegister(std::vector<unsigned int> &adaptiveProportionTestFailures) const = 0;
 
-      /** readAdaptativeProportionTestFailuresRegister
-      *   \brief Read the Adaptative Proportion Test Failures register and get the value.
-      *   This method will access to the system bus to read the Adaptative Proportion Test Failures register.
-      *   \param[out] adaptativeProportionTestFailures is the Adaptative Proportion Test Failures value.
+      /** readAdaptiveProportionTestFailuresRegister
+      *   \brief Read the Adaptive Proportion Test Failures register and get the value.
+      *   This method will access to the system bus to read the Adaptive Proportion Test Failures register.
+      *   \param[out] adaptiveProportionTestFailures is the Adaptive Proportion Test Failures value.
       *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwise.
       *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
       **/
-      unsigned int readAdaptativeProportionTestFailuresRegister(std::string &adaptativeProportionTestFailures) const;
+      unsigned int readAdaptiveProportionTestFailuresRegister(std::string &adaptiveProportionTestFailures) const;
 
       /** readRepetitionCountTestFailuresRegister
       *   \brief Read the Repetition Count Test Failures register and get the value.
@@ -1250,11 +1272,11 @@ namespace DrmControllerLibrary {
       **/
       virtual void printMailBoxFileHwReport(std::ostream &file) const = 0;
       
-      /** printAdaptativeProportionTestFailures
-      *   \brief Display the value of the Adaptative Proportion Test Failures.
+      /** printAdaptiveProportionTestFailures
+      *   \brief Display the value of the Adaptive Proportion Test Failures.
       *   \param[in] file is the stream to use for the data print.
       **/
-      virtual void printAdaptativeProportionTestFailuresHwReport(std::ostream &file) const = 0;
+      virtual void printAdaptiveProportionTestFailuresHwReport(std::ostream &file) const = 0;
       
       /** printRepetitionCountTestFailuresHwReport;
       *   \brief Display the value of the Repetition Count Test Failures.

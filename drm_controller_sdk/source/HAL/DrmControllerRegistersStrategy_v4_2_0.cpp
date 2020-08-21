@@ -1,8 +1,8 @@
 /**
-*  \file      DrmControllerRegistersStrategy_v4_1_0.cpp
-*  \version   4.2.0.0
+*  \file      DrmControllerRegistersStrategy_v4_2_0.cpp
+*  \version   4.2.1.0
 *  \date      July 2020
-*  \brief     Class DrmControllerRegistersStrategy_v4_1_0 defines strategy for register access of drm controller v4.1.0.
+*  \brief     Class DrmControllerRegistersStrategy_v4_2_0 defines strategy for register access of drm controller v4.2.0.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License") {
 
 }
@@ -43,7 +43,7 @@ DrmControllerRegistersStrategy_v4_2_0::DrmControllerRegistersStrategy_v4_2_0(tDr
   mSaasChallengeRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V4_2_0_SAAS_CHALLENGE_SIZE)),
   mSampledLicenseTimerCountRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V4_2_0_LICENSE_TIMER_COUNTER_SIZE)),
   mVersionRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V4_2_0_VERSION_SIZE)),
-  mAdaptativeProportionTestFailuresRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V4_2_0_ADAPTATIVE_PROPORTION_TEST_FAILURES_SIZE)),
+  mAdaptiveProportionTestFailuresRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V4_2_0_ADAPTIVE_PROPORTION_TEST_FAILURES_SIZE)),
   mRepetitionCountTestFailuresRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V4_2_0_REPETITION_COUNT_TEST_FAILURES_SIZE)),
   mVlnvWordRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V4_2_0_VLNV_WORD_SIZE)),
   mLicenseWordRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V4_2_0_LICENSE_WORD_SIZE)),
@@ -59,8 +59,8 @@ DrmControllerRegistersStrategy_v4_2_0::DrmControllerRegistersStrategy_v4_2_0(tDr
   mSaasChallengeRegisterStartIndex(mDnaRegisterStartIndex+mDnaRegisterWordNumber),
   mSampledLicenseTimerCountRegisterStartIndex(mSaasChallengeRegisterStartIndex+mSaasChallengeRegisterWordNumber),
   mVersionRegisterStartIndex(mSampledLicenseTimerCountRegisterStartIndex+mSampledLicenseTimerCountRegisterWordNumber),
-  mAdaptativeProportionTestFailuresRegisterStartIndex(mVersionRegisterStartIndex+mVersionRegisterWordNumber),
-  mRepetitionCountTestFailuresRegisterStartIndex(mAdaptativeProportionTestFailuresRegisterStartIndex+mAdaptativeProportionTestFailuresRegisterWordNumber),
+  mAdaptiveProportionTestFailuresRegisterStartIndex(mVersionRegisterStartIndex+mVersionRegisterWordNumber),
+  mRepetitionCountTestFailuresRegisterStartIndex(mAdaptiveProportionTestFailuresRegisterStartIndex+mAdaptiveProportionTestFailuresRegisterWordNumber),
   mLogsRegisterStartIndex(mRepetitionCountTestFailuresRegisterStartIndex+mRepetitionCountTestFailuresRegisterWordNumber),
   mVlnvWordRegisterStartIndex(0),
   mLicenseWordRegisterStartIndex(0),
@@ -761,6 +761,34 @@ unsigned int DrmControllerRegistersStrategy_v4_2_0::waitLicenseMeteringStatusReg
   return errorCode;
 }
 
+/** readSecurityAlertStatusRegister
+*   \brief Read the status register and get the Security Alert status bit.
+*   This method will access to the system bus to read the status register.
+*   \param[out] securityAlert is the value of the status bit Security Alert.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegistersStrategy_v4_2_0::readSecurityAlertStatusRegister(bool &securityAlert) const {
+  throwUnsupportedFeatureException("Security Alert status", DRM_CONTROLLER_V4_2_0_SUPPORTED_VERSION);
+  return mDrmApi_UNSUPPORTED_FEATURE_ERROR;
+}
+
+/** waitSecurityAlertStatusRegister
+*   \brief Wait Security Alert status register to reach specified value.
+*   This method will access to the system bus to read the status register.
+*   \param[in]  timeout is the timeout value in micro seconds.
+*   \param[in]  expected is the value of the status to be expected.
+*   \param[out] actual is the value of the status bit read.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, mDrmApi_HARDWARE_TIMEOUT_ERROR if a timeout occured, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+*   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegistersStrategy_v4_2_0::waitSecurityAlertStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
+  throwUnsupportedFeatureException("Security Alert status", DRM_CONTROLLER_V4_2_0_SUPPORTED_VERSION);
+  return mDrmApi_UNSUPPORTED_FEATURE_ERROR;
+}
+
+
 /** readNumberOfLicenseTimerLoadedStatusRegister
 *   \brief Read the status register and get the number of license timer loaded.
 *   This method will access to the system bus to read the status register.
@@ -960,17 +988,17 @@ unsigned int DrmControllerRegistersStrategy_v4_2_0::readDrmVersionRegister(unsig
   return readRegisterAtIndex(mVersionRegisterStartIndex, drmVersion);
 }
 
-/** readAdaptativeProportionTestFailuresRegister
-*   \brief Read the Adaptative Proportion Test Failures register and get the value.
-*   This method will access to the system bus to read the Adaptative Proportion Test Failures register.
-*   \param[out] adaptativeProportionTestFailures is the Adaptative Proportion Test Failures value.
+/** readAdaptiveProportionTestFailuresRegister
+*   \brief Read the Adaptive Proportion Test Failures register and get the value.
+*   This method will access to the system bus to read the Adaptive Proportion Test Failures register.
+*   \param[out] adaptiveProportionTestFailures is the Adaptive Proportion Test Failures value.
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v4_2_0::readAdaptativeProportionTestFailuresRegister(std::vector<unsigned int> &adaptativeProportionTestFailures) const {
+unsigned int DrmControllerRegistersStrategy_v4_2_0::readAdaptiveProportionTestFailuresRegister(std::vector<unsigned int> &adaptiveProportionTestFailures) const {
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
-  return readRegisterListFromIndex(mAdaptativeProportionTestFailuresRegisterStartIndex, mAdaptativeProportionTestFailuresRegisterWordNumber, adaptativeProportionTestFailures);
+  return readRegisterListFromIndex(mAdaptiveProportionTestFailuresRegisterStartIndex, mAdaptiveProportionTestFailuresRegisterWordNumber, adaptiveProportionTestFailures);
 }
 
 /** readRepetitionCountTestFailuresRegister
@@ -1578,15 +1606,15 @@ void DrmControllerRegistersStrategy_v4_2_0::printSaasChallengeHwReport(std::ostr
   file << registerValue(saasChallenge, "SAAS CHALLENGE") << std::endl;
 }
 
-/** printAdaptativeProportionTestFailures
-*   \brief Display the value of the Adaptative Proportion Test Failures.
+/** printAdaptiveProportionTestFailures
+*   \brief Display the value of the Adaptive Proportion Test Failures.
 *   \param[in] file is the stream to use for the data print.
 **/
-void DrmControllerRegistersStrategy_v4_2_0::printAdaptativeProportionTestFailuresHwReport(std::ostream &file) const {
-  std::string adaptativeProportionTestFailures;
-  if (DrmControllerRegistersStrategyInterface::readAdaptativeProportionTestFailuresRegister(adaptativeProportionTestFailures) != mDrmApi_NO_ERROR) return;
-  file << registerName("ADAPTATIVE PROPORTION TEST FAILURES") << std::endl;
-  file << registerValue(adaptativeProportionTestFailures, "ADAPTATIVE PROPORTION TEST FAILURES") << std::endl;
+void DrmControllerRegistersStrategy_v4_2_0::printAdaptiveProportionTestFailuresHwReport(std::ostream &file) const {
+  std::string adaptiveProportionTestFailures;
+  if (DrmControllerRegistersStrategyInterface::readAdaptiveProportionTestFailuresRegister(adaptiveProportionTestFailures) != mDrmApi_NO_ERROR) return;
+  file << registerName("ADAPTIVE PROPORTION TEST FAILURES") << std::endl;
+  file << registerValue(adaptiveProportionTestFailures, "ADAPTIVE PROPORTION TEST FAILURES") << std::endl;
 }
 
 /** printRepetitionCountTestFailures

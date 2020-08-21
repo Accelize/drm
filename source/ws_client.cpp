@@ -29,11 +29,11 @@ namespace Accelize {
 namespace DRM {
 
 
-CurlEasyPost::CurlEasyPost( ulong requestTime ) {
+CurlEasyPost::CurlEasyPost() {
+    mRequestTimeout = cRequestTimeout;
     curl = curl_easy_init();
     if ( !curl )
         Throw( DRM_ExternFail, "Curl : cannot init curl_easy" );
-    mRequestTimeout = requestTime;
 }
 
 CurlEasyPost::~CurlEasyPost() {
@@ -270,7 +270,7 @@ Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Val
 
     // Create new request
     CurlEasyPost req;
-    reg.setRequestTimeout( mRequestTimeout );
+    req.setRequestTimeout( mRequestTimeout );
     req.setHostResolves( mHostResolvesJson );
     req.setURL( url );
     req.appendHeader( "Accept: application/vnd.accelize.v1+json" );
