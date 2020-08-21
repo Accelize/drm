@@ -104,9 +104,6 @@ protected:
 
     const double ACTIVATIONCODE_TRANSMISSION_TIMEOUT_MS = 2000.0;
 
-    const cDefaultTimePoint = TClock::time_point();
-
-
 #ifdef _WIN32
     const char path_sep = '\\';
 # else
@@ -1274,6 +1271,7 @@ protected:
         bool token_valid(false);
         uint32_t oauth_attempt = 0;
         uint32_t lic_attempt = 0;
+        TClock::duration retry_duration = std::chrono::seconds( retry_period );
 
         while ( 1 ) {
             token_valid = false;
@@ -1298,7 +1296,6 @@ protected:
                     // No retry
                     return Json::nullValue;
                 }
-                TClock::duration retry_duration = std::chrono::seconds( retry_period );
                 Warning( "Attempt #{} to obtain a new OAuth2 token failed with message: {}. New attempt planned in {} seconds",
                         oauth_attempt, e.what(), retry_duration.count()/1000000000 );
                 // Wait a bit before retrying

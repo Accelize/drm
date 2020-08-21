@@ -413,12 +413,9 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
         driver.write_register_callback,
         async_cb.callback
     )
-    assert "ws_api_retry_duration must not be 0" in str(excinfo.value)
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
     async_cb.reset()
     conf_json.reset()
-    exp_value = 2*orig_api_retry_duration
+    exp_value = orig_api_retry_duration + 1
     conf_json['settings'] = {'ws_api_retry_duration': exp_value}
     conf_json.save()
     drm_manager = accelize_drm.DrmManager(
