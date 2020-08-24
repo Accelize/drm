@@ -350,9 +350,9 @@ In addition to the simulation top-level, you'll find in the ``sim`` folder the f
 ModelSim Compilation and Simulation
 -----------------------------------
 
-.. important:: DRM VHDL source files HAVE to be compile under "drm_library" library.
-               When the design instantiates multiple different activators, they must also
-               be compiled in their own library, for example "drm_0xVVVVLLLLNNNNVVVV_library".
+.. important:: DRM Controller VHDL source files MUST be compile under "drm_library" library.
+               DRM Activator files must compiled in their own library, for example "drm_0xVVVVLLLLNNNNVVVV_library".
+               See examples below.
 
 Create libraries
 ^^^^^^^^^^^^^^^^
@@ -498,9 +498,9 @@ Please communicate this error code when you contact Accelize_ for assistance.
 Synthesize and implement your design
 ====================================
 
-.. important:: DRM VHDL source files HAVE to be compiled under "drm_library" library.
-               When the design instantiates multiple different activators, they must also
-               be compiled in their own library, for example "drm_0xVVVVLLLLNNNNVVVV_library".
+.. important:: DRM Controller VHDL source files MUST be compile under "drm_library" library.
+               DRM Activator files must compiled in their own library, for example "drm_0xVVVVLLLLNNNNVVVV_library".
+               See examples below.
 
 Xilinx(R) Vivado
 -------------
@@ -568,9 +568,6 @@ Or a TCL script:
       drm_hdk/activator_VLNV/syn/drm_activator_0xVVVVLLLLNNNNVVVV.vhdl
    }
 
-.. note:: When there is a single activator in your design, you can compile
-          all VHDL source files under a single library ``drm_library``.
-
 Verilog
 ^^^^^^^
 
@@ -630,9 +627,6 @@ Or via TCL script:
    read_verilog -sv {
       drm_hdk/activator_VLNV/syn/drm_activator_0xVVVVLLLLNNNNVVVV.sv
    }
-
-.. note:: When there is a single activator in your design, you can compile
-          all VHDL source files under a single library ``drm_library``.
 
 Generated warnings
 ^^^^^^^^^^^^^^^^^^

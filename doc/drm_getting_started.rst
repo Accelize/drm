@@ -55,7 +55,8 @@ Synthesize and implement your FPGA design
 
 1. Add the DRM HDK files to your synthesis script.
 
-   .. warning:: HDK source files must be compiled under the library ``drm_library``
+   .. warning:: DRM Conbtroller VHDL source files must be compiled under the library ``drm_library`` and
+                DRM Activator VHDL source files must be compiled under the library ``drm_0xVVVVLLLLNNNNVVVV_library``
                 or the synthesis will fail.
 
 2. To simulate your design, use the simulation source file in the HDK.
