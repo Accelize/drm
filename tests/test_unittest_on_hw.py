@@ -87,14 +87,15 @@ def test_backward_compatibility(accelize_drm, conf_json, cred_json, async_handle
     if hdk_version is None:
         pytest.skip("FPGA image is not corresponding to a known HDK version")
 
-    current_major = int(match(r'^(\d+)\.', hdk_version).group(1))
+    current_major = float(match(r'^(\d+\.\d+)\.', hdk_version).group(1))
     driver = accelize_drm.pytest_fpga_driver[0]
     fpga_image_bkp = driver.fpga_image
     async_cb = async_handler.create()
     drm_manager = None
 
     try:
-        refdesignByMajor = ((int(match(r'^(\d+)\.', x).group(1)), x) for x in refdesign.hdk_versions)
+        refdesignByMajor = ((float(match(r'^(\d+\.\d+)\.', x).group(1)), x) for x in refdesign.hdk_versions)
+        HDK_Limit = 3.1
 
         for major, versions in groupby(refdesignByMajor, lambda x: x[0]):
             if major >= current_major:
@@ -105,8 +106,8 @@ def test_backward_compatibility(accelize_drm, conf_json, cred_json, async_handle
             image_id = refdesign.get_image_id(hdk)
             driver.program_fpga(image_id)
             # Test compatibility issue
-            with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
-                async_cb.reset()
+            async_cb.reset()
+            try:
                 drm_manager = accelize_drm.DrmManager(
                     conf_json.path,
                     cred_json.path,
@@ -114,13 +115,19 @@ def test_backward_compatibility(accelize_drm, conf_json, cred_json, async_handle
                     driver.write_register_callback,
                     async_cb.callback
                 )
-            hit = False
-            if 'Unable to find DRM Controller registers' in str(excinfo.value):
-                hit =True
-            if search(r'This DRM Library version \S+ is not compatible with the DRM HDK version', str(excinfo.value)):
-                hit =True
-            assert hit
-            assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
+                if major < HDK_Limit:
+                    raise AssertionError('HDK %s is not compatible but DRMLib did not raise an exception.' % hdk)
+            except accelize_drm.exceptions.DRMCtlrError as excinfo:
+                if major < HDK_Limit:
+                    hit = False
+                    if 'Unable to find DRM Controller registers' in str(excinfo):
+                        hit =True
+                    if search(r'This DRM Library version \S+ is not compatible with the DRM HDK version', str(excinfo)):
+                        hit =True
+                    assert hit
+                    assert async_handler.get_error_code(str(excinfo)) == accelize_drm.exceptions.DRMCtlrError.error_code
+                else:
+                    raise AssertionError('HDK %s is compatible but DRMLib raised an exception.' % hdk)
             async_cb.assert_NoError()
             print('Test compatibility with %s: PASS' % hdk)
 
