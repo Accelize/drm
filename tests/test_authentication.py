@@ -19,6 +19,7 @@ from tests.conftest import wait_func_true, wait_deadline, whoami
 from tests.proxy import get_context, set_context
 
 
+@pytest.mark.no_parallel
 def test_authentication_bad_token(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """Test when a bad authentication token is used"""
 
@@ -109,6 +110,7 @@ def test_authentication_validity_after_deactivation(accelize_drm, conf_json, cre
         drm_manager.deactivate()
 
 
+@pytest.mark.no_parallel
 @pytest.mark.hwtst
 def test_authentication_token_renewal(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """Test a different authentication token is given after expiration"""

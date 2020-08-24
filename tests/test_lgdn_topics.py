@@ -14,6 +14,7 @@ from tests.conftest import wait_deadline, wait_func_true
 from tests.proxy import get_context, set_context
 
 
+@pytest.mark.no_parallel
 @pytest.mark.lgdn
 def test_topic0_corrupted_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """

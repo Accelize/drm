@@ -18,6 +18,7 @@ from tests.conftest import wait_func_true, whoami
 from tests.proxy import get_context, set_context
 
 
+@pytest.mark.no_parallel
 def test_api_retry_disabled(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test retry mechanism is disabled on API function (not including the retry in background thread)
@@ -53,6 +54,7 @@ def test_api_retry_disabled(accelize_drm, conf_json, cred_json, async_handler, l
     async_cb.assert_NoError()
 
 
+@pytest.mark.no_parallel
 def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test retry mechanism is working on API function (not including the retry in background thread)
@@ -87,13 +89,14 @@ def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler, li
     with open(logpath, 'rt') as f:
         log_content = f.read()
     assert 'Metering Web Service error 408' in log_content
-    assert 'DRM WS request failed' inlog_content
+    assert 'DRM WS request failed' in log_content
     m = search(r'Timeout on License request after (\d+) attempts', log_content)
     assert m is not None
     assert int(m.group(1)) > 1
     async_cb.assert_NoError()
 
 
+@pytest.mark.no_parallel
 def test_long_to_short_retry_switch(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test the number of expected retris and the gap between 2 retries are correct when a retryable error is returned
@@ -155,6 +158,7 @@ def test_long_to_short_retry_switch(accelize_drm, conf_json, cred_json, async_ha
             assert (retryShortPeriod-1) <= lic_delta <= (retryShortPeriod+1)
 
 
+@pytest.mark.no_parallel
 def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test the number of expected retris and the gap between 2 retries are correct when the requests are lost

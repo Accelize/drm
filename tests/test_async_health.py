@@ -75,7 +75,6 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
     remove(logpath)
 
 
-#@pytest.mark.skip(reason='Bug in async feature')
 @pytest.mark.no_parallel
 @pytest.mark.minimum
 def test_health_period_modification(accelize_drm, conf_json, cred_json, async_handler, live_server):
@@ -128,7 +127,6 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
     assert get_proxy_error() is None
 
 
-#@pytest.mark.skip(reason='Bug in async feature')
 @pytest.mark.no_parallel
 @pytest.mark.minimum
 def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler, live_server):
@@ -183,7 +181,6 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
     assert get_proxy_error() is None
 
 
-#@pytest.mark.skip(reason='Bug in async feature')
 @pytest.mark.no_parallel
 @pytest.mark.minimum
 def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_handler, live_server):
@@ -247,7 +244,6 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
         assert get_proxy_error() is None
 
 
-#@pytest.mark.skip(reason='Bug in async feature')
 @pytest.mark.no_parallel
 @pytest.mark.minimum
 def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, async_handler, live_server):
@@ -312,7 +308,6 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, asy
         assert get_proxy_error() is None
 
 
-#@pytest.mark.skip(reason='Bug in async feature')
 @pytest.mark.no_parallel
 @pytest.mark.minimum
 def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler, live_server, ws_admin):
@@ -381,7 +376,6 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
     async_cb.assert_NoError()
 
 
-#@pytest.mark.skip(reason='Bug in async feature')
 @pytest.mark.no_parallel
 def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
