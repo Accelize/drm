@@ -516,7 +516,7 @@ def create_app(url):
     ##############################################################################
     # test_retry_mechanism.py
 
-    # test_api_retry_disabled functions
+    # test_api_retry functions
     @app.route('/test_api_retry/o/token/', methods=['GET', 'POST'])
     def otoken__test_api_retry():
         return redirect(request.url_root + '/o/token/', code=307)

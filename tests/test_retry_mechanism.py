@@ -34,6 +34,9 @@ def test_api_retry_disabled(accelize_drm, conf_json, cred_json, async_handler, l
     conf_json['settings']['log_file_path'] = logpath
     conf_json['settings']['log_file_type'] = 1
     conf_json.save()
+    context = {'cnt':0}
+    set_context(context)
+    assert get_context() == context
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
@@ -70,6 +73,9 @@ def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler, li
     conf_json['settings']['log_file_path'] = logpath
     conf_json['settings']['log_file_type'] = 1
     conf_json.save()
+    context = {'cnt':0}
+    set_context(context)
+    assert get_context() == context
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
