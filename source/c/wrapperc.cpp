@@ -31,7 +31,7 @@ const char * DrmManager_getApiVersion() {
 
 void checkPointer(void *p) {
     if ( p == NULL )
-        Throw( DRM_BadArg, "Provided pointer is NULL" );
+        Throw( DRM_BadArg, "Provided pointer is NULL" );    //LCOV_EXCL_LINE
 }
 
 /* Help macros TRY/CATCH to return code error */
