@@ -92,7 +92,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     orig_retry_period_long = drm_manager.get('ws_retry_period_long')
     orig_retry_period_short = drm_manager.get('ws_retry_period_short')
     orig_api_retry_duration = drm_manager.get('ws_api_retry_duration')
-    orig_response_timeout = drm_manager.get('ws_request_timeout')
+    orig_request_timeout = drm_manager.get('ws_request_timeout')
 
     # Test parameter: log_verbosity
     from random import choice
@@ -769,7 +769,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     drm_manager.set(ws_retry_period_long=exp_value)
     assert drm_manager.get('ws_retry_period_long') == exp_value
     drm_manager.set(ws_retry_period_long=orig_retry_period_long)  # Restore original value
-    async_cb.assert_NoError(async_cb.assert_NoError)
+    async_cb.assert_NoError()
     print("Test parameter 'ws_retry_period_long': PASS")
 
     # Test parameter: ws_retry_period_short
@@ -785,29 +785,27 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     drm_manager.set(ws_retry_period_short=exp_value)
     assert drm_manager.get('ws_retry_period_short') == exp_value
     drm_manager.set(ws_retry_period_short=orig_retry_period_short)  # Restore original value
-    async_cb.assert_NoError(async_cb.assert_NoError)
+    async_cb.assert_NoError()
     print("Test parameter 'ws_retry_period_short': PASS")
 
     # Test parameter: ws_api_retry_duration
     orig_api_retry_duration = drm_manager.get('ws_api_retry_duration')  # Save original value
-    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        drm_manager.set(ws_api_retry_duration=0)
-    assert "ws_api_retry_duration must not be 0" in str(excinfo.value)
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
+    exp_value = 0
+    drm_manager.set(ws_api_retry_duration=exp_value)
+    assert drm_manager.get('ws_api_retry_duration') == exp_value
     exp_value = orig_api_retry_duration + 100
     drm_manager.set(ws_api_retry_duration=exp_value)
     assert drm_manager.get('ws_api_retry_duration') == exp_value
     drm_manager.set(ws_api_retry_duration=orig_api_retry_duration)  # Restore original value
-    async_cb.assert_NoError(async_cb.assert_NoError)
+    async_cb.assert_NoError()
     print("Test parameter 'ws_api_retry_duration': PASS")
 
     # Test parameter: ws_request_timeout
     orig_request_timeout = drm_manager.get('ws_request_timeout') + 100
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         drm_manager.set(ws_request_timeout=0)
-    assert "ws_request_timeout must not be 0" in str(excinfo.value)
-    async_cb.assert_NoError(async_cb.assert_NoError)
+    assert "Parameter 'ws_request_timeout' cannot be overwritten" in str(excinfo.value)
+    async_cb.assert_NoError()
     print("Test parameter 'ws_request_timeout': PASS")
 
     # Test parameter: log_message_level

@@ -1063,7 +1063,7 @@ protected:
     }
 
     Json::Value getLicense( const Json::Value& request_json, const uint32_t& timeout,
-            uint32_t short_retry_period = -1, uint32_t long_retry_period = -1 ) {
+            int32_t short_retry_period = -1, int32_t long_retry_period = -1 ) {
         TClock::time_point deadline;
         if ( timeout == 0 ) {
             deadline = TClock::now() + std::chrono::seconds( mWSRequestTimeout );
@@ -1076,7 +1076,7 @@ protected:
     }
 
     Json::Value getLicense( const Json::Value& request_json, const TClock::time_point& deadline,
-            const uint32_t& short_retry_period = -1, const uint32_t& long_retry_period = -1 ) {
+            const int32_t& short_retry_period = -1, const int32_t& long_retry_period = -1 ) {
 
         TClock::duration long_duration = std::chrono::seconds( long_retry_period );
         TClock::duration short_duration = std::chrono::seconds( short_retry_period );
@@ -1266,7 +1266,7 @@ protected:
     }
 
     Json::Value postHealth( const Json::Value& request_json, const TClock::time_point& deadline,
-            const uint32_t& retry_period = -1 ) {
+            const int32_t& retry_period = -1 ) {
 
         bool token_valid(false);
         uint32_t oauth_attempt = 0;
@@ -2434,12 +2434,6 @@ public:
                         mWSApiRetryDuration = (*it).asUInt();
                         Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
                                mWSApiRetryDuration );
-                        break;
-                    }
-                    case ParameterKey::ws_request_timeout: {
-                        mWSRequestTimeout = (*it).asUInt();
-                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
-                               mWSRequestTimeout );
                         break;
                     }
                     case ParameterKey::trigger_async_callback: {
