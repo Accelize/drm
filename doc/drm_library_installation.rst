@@ -232,8 +232,8 @@ Run the following command:
 Installation from source
 ------------------------
 
-The installation from source is only recommended if there is no package
-available for your configuration or to contribute to the DRM library.
+.. warning:: The installation from source is only recommended if there
+             is no package available for your configuration.
 
 This is equivalent to install the C/C++ library package, the C/C++ library
 development package and optionally the Python library package.
@@ -407,3 +407,96 @@ Once installed, the role can be used in your Ansible playbooks:
 
 For more information on the role and its variables. See the
 `role Ansible Galaxy page <https://galaxy.ansible.com/accelize/accelize_drm>`_.
+
+Uninstallation
+--------------
+
+This section explains how to uninstall the Accelize DRM library.
+
+From packages
+`````````````
+
+To uninstall the Accelize DRM library when installed from packages,
+simply run the following commands:
+
+.. code-block:: bash
+    :caption: On Debian, Ubuntu
+
+    sudo apt-get purge --auto-remove -y libaccelize-drm libaccelize-drm-dev python3-accelize-drm
+
+.. code-block:: bash
+    :caption: On Fedora, RHEL 8, CentOS 8
+
+    sudo dnf erase -y libaccelize-drm libaccelize-drm-devel python3-accelize-drm
+
+.. code-block:: bash
+    :caption: On RHEL 7, CentOS 7
+
+    sudo yum erase -y libaccelize-drm libaccelize-drm-devel python3-accelize-drm
+
+From sources
+````````````
+
+To uninstall the Accelize DRM library when installed from sources:
+
+* First go back in the directory where you cloned the Accelize DRM repository.
+
+* Then, move in the previously created `build` directory:
+
+.. code-block:: bash
+
+    cd build
+
+* Finally, uninstall files and directories using the CMake installation manifest
+
+.. code-block:: bash
+
+    for name in $(cat install_manifest.txt)
+    do
+        sudo rm -f "$name"
+        sudo rmdir -p --ignore-fail-on-non-empty "$(dirname "$name")"
+    done
+
+You may also uninstall packages you have installed to build the Accelize DRM.
+
+From Ansible
+````````````
+
+When installed using Ansible with default parameters, the uninstallation
+method is the same as from packages.
+
+If `accelize_drm_from_source` was set to `true` and `accelize_drm_git_clone` was
+specified the uninstallation method is the same as from sources.
+Commands must be run from the `accelize_drm_git_clone` directory in this case.
+
+
+Manual clean up
+```````````````
+
+.. warning:: This method is only recommanded if the previous methods are not possibles.
+
+To remove the Accelize DRM manually, run the following:
+
+.. code-block:: bash
+
+    # Remove C/C++ library
+    sudo rm -f /usr/local/lib/libaccelize_drm*
+    sudo rm -f /usr/local/lib64/libaccelize_drm*
+    sudo rm -f /usr/lib/libaccelize_drm*
+    sudo rm -f /usr/lib64/libaccelize_drm*
+
+    # Remove C/C++ library headers and license
+    sudo rm -rf /usr/local/include/accelize
+    sudo rm -rf /usr/include/accelize
+    sudo rm -rf /usr/local/share/licenses/accelize
+    sudo rm -rf /usr/share/licenses/accelize
+
+    # Remove Python package
+    for name in $(sudo python3 -c "import sys;print('\\n'.join(path for path in sys.path if path))")
+    do
+        sudo rm -rf "$name/accelize_drm"
+        sudo rm -rf "$name/python_accelize_drm"*
+    done
+
+Some parts of this command may fail. This script tries to remove the Accelize DRM at
+different possible installation locations.
