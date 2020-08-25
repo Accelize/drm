@@ -783,17 +783,21 @@ protected:
         return drmVersion;
     }
 
-    void checkSessionIDFromWS( const Json::Value license_json ) const {
+    void checkSessionIDFromWS( const Json::Value license_json ) {
         std::string ws_sessionID = license_json["metering"]["sessionId"].asString();
         if ( !mSessionID.empty() && ( mSessionID != ws_sessionID ) ) {
             Warning( "Session ID mismatch: WebService returns '{}' but '{}' is expected", ws_sessionID, mSessionID ); //LCOV_EXCL_LINE
+        } else if ( mSessionID.empty() ) {
+            mSessionID = ws_sessionID;
         }
     }
 
-    void checkSessionIDFromDRM( const Json::Value license_json ) const {
+    void checkSessionIDFromDRM( const Json::Value license_json ) {
         std::string drm_sessionID = license_json["sessionId"].asString();
         if ( !mSessionID.empty() && ( mSessionID != drm_sessionID ) ) {
             Warning( "Session ID mismatch: DRM IP returns '{}' but '{}' is expected", drm_sessionID, mSessionID ); //LCOV_EXCL_LINE
+        } else if ( mSessionID.empty() ) {
+            mSessionID = drm_sessionID;
         }
     }
 
@@ -910,7 +914,7 @@ protected:
         return json_request;
     }
 
-    Json::Value getMeteringRunning() const {
+    Json::Value getMeteringRunning() {
         Json::Value json_request( mHeaderJsonRequest );
         uint32_t numberOfDetectedIps;
         std::string saasChallenge;
@@ -934,7 +938,7 @@ protected:
         return json_request;
     }
 
-    Json::Value getMeteringStop() const {
+    Json::Value getMeteringStop() {
         Json::Value json_request( mHeaderJsonRequest );
         uint32_t numberOfDetectedIps;
         std::string saasChallenge;
@@ -1223,28 +1227,30 @@ protected:
             }
             Debug( "Wrote license timer #{} of session ID {} for a duration of {} seconds",
                     mLicenseCounter, mSessionID, mLicenseDuration );
-
-            bool activationCodesTransmitted( false );
-            TClock::duration timeSpan;
-            double mseconds( 0.0 );
-            TClock::time_point timeStart = TClock::now();
-
-            while( mseconds < ACTIVATIONCODE_TRANSMISSION_TIMEOUT_MS ) {
-                checkDRMCtlrRet(
-                        getDrmController().readActivationCodesTransmittedStatusRegister( activationCodesTransmitted ) );
-                timeSpan = TClock::now() - timeStart;
-                mseconds = 1000.0 * double( timeSpan.count() ) * TClock::period::num / TClock::period::den;
-                if ( activationCodesTransmitted ) {
-                    Debug( "License #{} transmitted after {} ms", mLicenseCounter, mseconds );
-                    break;
-                }
-                Debug2( "License #{} not transmitted yet after {} ms", mLicenseCounter, mseconds );
-            }
-            if ( !activationCodesTransmitted ) {
-                Unreachable( "DRM Controller could not transmit Licence #{} to activators. ", mLicenseCounter ); //LCOV_EXCL_LINE
-            }
-            mExpirationTime += std::chrono::seconds( mLicenseDuration );
         }
+
+        // Wait until license has been pushed to Activator's port
+        bool activationCodesTransmitted( false );
+        TClock::duration timeSpan;
+        double mseconds( 0.0 );
+        TClock::time_point timeStart = TClock::now();
+
+        while( mseconds < ACTIVATIONCODE_TRANSMISSION_TIMEOUT_MS ) {
+            checkDRMCtlrRet(
+                    getDrmController().readActivationCodesTransmittedStatusRegister( activationCodesTransmitted ) );
+            timeSpan = TClock::now() - timeStart;
+            mseconds = 1000.0 * double( timeSpan.count() ) * TClock::period::num / TClock::period::den;
+            if ( activationCodesTransmitted ) {
+                Debug( "License #{} transmitted after {} ms", mLicenseCounter, mseconds );
+                break;
+            }
+            Debug2( "License #{} not transmitted yet after {} ms", mLicenseCounter, mseconds );
+        }
+        if ( !activationCodesTransmitted ) {
+            Unreachable( "DRM Controller could not transmit Licence #{} to activators. ", mLicenseCounter ); //LCOV_EXCL_LINE
+        }
+        mExpirationTime += std::chrono::seconds( mLicenseDuration );
+
         // Check DRM Controller has switched to the right license mode
         bool is_nodelocked = isDrmCtrlInNodelock();
         bool is_metered = isDrmCtrlInMetering();

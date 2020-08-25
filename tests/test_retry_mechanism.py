@@ -174,7 +174,7 @@ def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handle
     async_cb = async_handler.create()
     async_cb.reset()
 
-    retryShortPeriod = 5
+    retryShortPeriod = 2
     retryLongPeriod = 20
     licDuration = 60
     requestTimeout = 5
