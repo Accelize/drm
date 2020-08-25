@@ -13,6 +13,7 @@ from json import loads
 from datetime import datetime, timedelta
 from flask import request
 from dateutil import parser
+from math import ceil
 
 from tests.conftest import wait_func_true, whoami
 from tests.proxy import get_context, set_context
@@ -28,15 +29,12 @@ def test_api_retry_disabled(accelize_drm, conf_json, cred_json, async_handler, l
     async_cb.reset()
     conf_json.reset()
     conf_json['licensing']['url'] = request.url + 'test_api_retry'
-    conf_json['settings']['ws_api_retry_period'] = 0  # Disable retry on function call
+    conf_json['settings']['ws_api_retry_duration'] = 0  # Disable retry on function call
     logpath = accelize_drm.create_log_path(whoami())
-    conf_json['settings']['log_file_verbosity'] = accelize_drm.create_log_level(1)
+    conf_json['settings']['log_file_verbosity'] = accelize_drm.create_log_level(2)
     conf_json['settings']['log_file_path'] = logpath
     conf_json['settings']['log_file_type'] = 1
     conf_json.save()
-    context = {'cnt':0}
-    set_context(context)
-    assert get_context() == context
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
@@ -49,11 +47,14 @@ def test_api_retry_disabled(accelize_drm, conf_json, cred_json, async_handler, l
     with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
         drm_manager.activate()
     end = datetime.now()
+    del drm_manager
     assert (end - start).total_seconds() < 1
+    wait_func_true(lambda: isfile(logpath), 10)
     with open(logpath, 'rt') as f:
         log_content = f.read()
-    assert 'Metering Web Service error 408' in log_content
-    assert 'DRM WS request failed' in log_content
+    assert search(r'\[\s*critical\s*\]\s*\d+\s*,\s*\[errCode=\d+\]\s*Metering Web Service error 408',
+            log_content, IGNORECASE)
+    assert not search(r'attempt', log_content, IGNORECASE)
     async_cb.assert_NoError()
 
 
@@ -65,17 +66,15 @@ def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler, li
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
+    retry_duration = 10
     conf_json.reset()
     conf_json['licensing']['url'] = request.url + 'test_api_retry'
-    conf_json['settings']['ws_api_retry_period'] = 0  # Disable retry on function call
+    conf_json['settings']['ws_api_retry_duration'] = retry_duration  # Set retry duration to 10s
     logpath = accelize_drm.create_log_path(whoami())
-    conf_json['settings']['log_file_verbosity'] = accelize_drm.create_log_level(1)
+    conf_json['settings']['log_file_verbosity'] = accelize_drm.create_log_level(2)
     conf_json['settings']['log_file_path'] = logpath
     conf_json['settings']['log_file_type'] = 1
     conf_json.save()
-    context = {'cnt':0}
-    set_context(context)
-    assert get_context() == context
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
@@ -84,21 +83,23 @@ def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler, li
         async_cb.callback
     )
     assert not drm_manager.get('license_status')
+    retry_sleep = drm_manager.get('ws_retry_period_short')
     start = datetime.now()
-    with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
+    with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
         drm_manager.activate()
     end = datetime.now()
+    del drm_manager
     total_seconds = int((end - start).total_seconds())
-    assert total_seconds >= timeout
-    assert total_seconds <= timeout + 1
-    assert (end - start).total_seconds() < 1
+    assert retry_duration <= total_seconds <= retry_duration + 1
+    wait_func_true(lambda: isfile(logpath), 10)
     with open(logpath, 'rt') as f:
         log_content = f.read()
-    assert 'Metering Web Service error 408' in log_content
-    assert 'DRM WS request failed' in log_content
-    m = search(r'Timeout on License request after (\d+) attempts', log_content)
+    m = search(r'\[\s*critical\s*\]\s*\d+\s*,\s*\[errCode=\d+\]\s*Timeout on License request after (\d+) attempts',
+            log_content, IGNORECASE)
     assert m is not None
-    assert int(m.group(1)) > 1
+    nb_attempts = int(m.group(1))
+    nb_attempts_expected = retry_duration / retry_sleep
+    assert nb_attempts_expected - 1 <= nb_attempts <= nb_attempts_expected + 1
     async_cb.assert_NoError()
 
 
@@ -177,8 +178,10 @@ def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handle
     retryLongPeriod = 20
     licDuration = 60
     requestTimeout = 5
-    nb_long_retry = int(licDuration / (retryLongPeriod + requestTimeout + 1))
-    nb_short_retry = int(retryLongPeriod / (retryShortPeriod + requestTimeout + 1)) + 1
+    nb_long_retry = ceil((licDuration - retryLongPeriod)/(retryLongPeriod + requestTimeout))
+    print('nb_long_retry=', nb_long_retry, type(nb_long_retry))
+    nb_short_retry = ceil((licDuration - nb_long_retry*(retryLongPeriod + requestTimeout)) / (retryShortPeriod + requestTimeout))
+    print('nb_short_retry=', nb_short_retry, type(nb_short_retry))
     nb_retry = nb_long_retry + nb_short_retry
 
     conf_json.reset()
@@ -214,9 +217,11 @@ def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handle
         drm_manager.deactivate()
     del drm_manager
     assert async_cb.was_called
-    assert search(r'Timeout on License request after %d attempts' % nb_retry,
-            async_cb.message)
     assert async_cb.errcode == accelize_drm.exceptions.DRMWSError.error_code
+    m = search(r'Timeout on License request after (\d+) attempts', async_cb.message)
+    assert m is not None
+    nb_attempts = int(m.group(1))
+    assert nb_retry == nb_attempts
     wait_func_true(lambda: isfile(logpath), 10)
     with open(logpath, 'rt') as f:
         log_content = f.read()
