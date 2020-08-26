@@ -91,7 +91,6 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     orig_retry_period_long = drm_manager.get('ws_retry_period_long')
     orig_retry_period_short = drm_manager.get('ws_retry_period_short')
     orig_response_timeout = drm_manager.get('ws_request_timeout')
-    orig_host_data_verbosity = drm_manager.get('host_data_verbosity')
 
     # Test parameter: log_verbosity
     from random import choice
