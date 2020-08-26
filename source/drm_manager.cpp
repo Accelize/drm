@@ -90,6 +90,7 @@ protected:
     enum class eLogFileType: uint8_t {NONE=0, BASIC, ROTATING};
     enum class eLicenseType: uint8_t {METERED, NODE_LOCKED, NONE};
     enum class eMailboxOffset: uint8_t {MB_LOCK_DRM=0, MB_CUSTOM_FIELD, MB_USER};
+    enum class eHostDataVerbosity: uint8_t {FULL=0, PARTIAL, NONE};
 
     // Design constants
     const uint32_t HDK_COMPATIBILITY_LIMIT_MAJOR = 3;
@@ -196,6 +197,7 @@ protected:
     std::string mXrtPath;
     std::string mXbutil;
     Json::Value mHostConfigData;
+    eHostDataVerbosity mHostDataVerbosity = eHostDataVerbosity::PARTIAL;
 
     // Debug parameters
     spdlog::level::level_enum mDebugMessageLevel;
@@ -284,6 +286,8 @@ protected:
                         Json::uintValue, mWSRequestTimeout).asUInt();
                 if ( mWSRequestTimeout == 0 )
                     Throw( DRM_BadArg, "ws_request_timeout must not be 0");
+                mHostDataVerbosity = JVgetOptional( param_lib, "host_data_verbosity",
+                        Json::uintValue, mHostDataVerbosity).asUInt();
             }
             mHealthPeriod = 0;
             mHealthRetryTimeout = mWSRequestTimeout;
@@ -431,6 +435,14 @@ protected:
     }
 
     void getHostAndCardInfo() {
+
+        Debug( "Host and card data verbosity: {}", (uint32_t)mHostDataVerbosity );
+
+        // Depending on the host data verbosity
+        if ( host_data_verbosity == eHostDataVerbosity::NONE ) {
+            return;
+        }
+
         // Find xbutil if existing
         if ( !findXrtUtility() )
             return;
@@ -442,40 +454,48 @@ protected:
 
             // Parse collected data and save to header
             Json::Value node = parseJsonString( cmd_out );
-            for(Json::Value::iterator itr=node.begin(); itr!=node.end(); ++itr) {
-                std::string key = itr.key().asString();
-                try {
-                    if (   ( key == "version" )
-                        || ( key == "system" )
-                        || ( key == "runtime" )
-                       )
-                        mHostConfigData[key] = *itr;
-                    else if ( key == "board" ) {
-                        //  Add general info node
-                        mHostConfigData[key]["info"] = itr->get("info", Json::nullValue);
-                        // Try to get the number of kernels
-                        Json::Value compute_unit_node = itr->get("compute_unit", Json::nullValue);
-                        if ( compute_unit_node != Json::nullValue )
-                            mHostConfigData[key]["compute_unit"] = compute_unit_node.size();
-                        else
-                            mHostConfigData[key]["compute_unit"] = -1;
-                        // Add XCLBIN UUID
-                        mHostConfigData[key]["xclbin"] = itr->get("xclbin", Json::nullValue);
-                        // Add CSP specific command
-                        CspBase* csp = CspBase::make_csp();
-                        if ( csp != nullptr ) {
-                            mHostConfigData[key]["csp"] = csp->get_metadata();
-                            delete csp;
+
+            if ( host_data_verbosity == eHostDataVerbosity::FULL ) {
+                // Verbosity is FULL
+                mHostConfigData = node;
+
+            } else {
+                // Verbosity is PARTIAL
+                for(Json::Value::iterator itr=node.begin(); itr!=node.end(); ++itr) {
+                    std::string key = itr.key().asString();
+                    try {
+                        if (   ( key == "version" )
+                            || ( key == "system" )
+                            || ( key == "runtime" )
+                           )
+                            mHostConfigData[key] = *itr;
+                        else if ( key == "board" ) {
+                            //  Add general info node
+                            mHostConfigData[key]["info"] = itr->get("info", Json::nullValue);
+                            // Try to get the number of kernels
+                            Json::Value compute_unit_node = itr->get("compute_unit", Json::nullValue);
+                            if ( compute_unit_node != Json::nullValue )
+                                mHostConfigData[key]["compute_unit"] = compute_unit_node.size();
+                            else
+                                mHostConfigData[key]["compute_unit"] = -1;
+                            // Add XCLBIN UUID
+                            mHostConfigData[key]["xclbin"] = itr->get("xclbin", Json::nullValue);
+                            // Add CSP specific command
+                            CspBase* csp = CspBase::make_csp();
+                            if ( csp != nullptr ) {
+                                mHostConfigData[key]["csp"] = csp->get_metadata();
+                                delete csp;
+                            }
                         }
+                    } catch( const std::exception &e ) {
+                        Debug( "Could not extract Host Information for key {}", key );
                     }
-                } catch( const std::exception &e ) {
-                    Debug( "Could not extract Host Information for key {}", key );
                 }
             }
             Debug( "Host and card information:\n{}", mHostConfigData.toStyledString() );
 
         } catch( const std::exception &e ) {
-            Warning( "Error when retreiving host and card information: {}", e.what() );
+            Warning( "Error when retrieving host and card information: {}", e.what() );
         }
     }
 
@@ -496,6 +516,9 @@ protected:
         settings["health_period"] = mHealthPeriod;
         settings["health_retry"] = mHealthRetryTimeout;
         settings["health_retry_sleep"] = mHealthRetrySleep;
+        settings["ws_api_retry_duration"] = ;
+        settings["host_data_verbosity"] = mHostDataVerbosity;
+        y
         return settings;
     }
 
@@ -2065,7 +2088,7 @@ public:
                 Debug2( "Getting parameter '{}'", key_str );
                 switch( key_id ) {
                     case ParameterKey::log_verbosity: {
-                        int32_t logVerbosity = static_cast<int>( sLogConsoleVerbosity );
+                        uint32_t logVerbosity = static_cast<uint32_t>( sLogConsoleVerbosity );
                         json_value[key_str] = logVerbosity;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                 logVerbosity );
@@ -2078,7 +2101,7 @@ public:
                         break;
                     }
                     case ParameterKey::log_file_verbosity: {
-                        int32_t logVerbosity = static_cast<int>( sLogFileVerbosity );
+                        uint32_t logVerbosity = static_cast<uint32_t>( sLogFileVerbosity );
                         json_value[key_str] = logVerbosity;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                 logVerbosity );
@@ -2324,7 +2347,7 @@ public:
                         break;
                     }
                     case ParameterKey::log_message_level: {
-                        int32_t msgLevel = static_cast<int>( mDebugMessageLevel );
+                        uint32_t msgLevel = static_cast<uint32_t>( mDebugMessageLevel );
                         json_value[key_str] = msgLevel;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                msgLevel );
@@ -2373,8 +2396,15 @@ public:
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id, mHealthRetrySleep );
                         break;
                     }
+                    case ParameterKey::host_data_verbosity: {
+                        uint32_t dataLevel = static_cast<uint32_t>( mHostDataVerbosity );
+                        json_value[key_str] = dataLevel;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                               dataLevel );
+                        break;
+                    }
                     case ParameterKey::ParameterKeyCount: {
-                        uint32_t count = static_cast<int>( ParameterKeyCount );
+                        uint32_t count = static_cast<uint32_t>( ParameterKeyCount );
                         json_value[key_str] = count;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                count );
