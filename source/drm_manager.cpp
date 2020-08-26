@@ -253,23 +253,23 @@ protected:
             if ( param_lib != Json::nullValue ) {
                 // Console logging
                 sLogConsoleVerbosity = static_cast<spdlog::level::level_enum>( JVgetOptional(
-                        param_lib, "log_verbosity", Json::intValue, (int)sLogConsoleVerbosity ).asInt());
+                        param_lib, "log_verbosity", Json::uintValue, (uint32_t)sLogConsoleVerbosity ).asUInt());
                 sLogConsoleFormat = JVgetOptional(
                         param_lib, "log_format", Json::stringValue, sLogConsoleFormat ).asString();
 
                 // File logging
                 sLogFileVerbosity = static_cast<spdlog::level::level_enum>( JVgetOptional(
-                        param_lib, "log_file_verbosity", Json::intValue, (int)sLogFileVerbosity ).asInt() );
+                        param_lib, "log_file_verbosity", Json::uintValue, (uint32_t)sLogFileVerbosity ).asUInt() );
                 sLogFileFormat = JVgetOptional(
                         param_lib, "log_file_format", Json::stringValue, sLogFileFormat ).asString();
                 sLogFilePath = JVgetOptional(
                         param_lib, "log_file_path", Json::stringValue, sLogFilePath ).asString();
                 sLogFileType = static_cast<eLogFileType>( JVgetOptional(
-                        param_lib, "log_file_type", Json::intValue, (int)sLogFileType ).asInt() );
+                        param_lib, "log_file_type", Json::uintValue, (uint32_t)sLogFileType ).asUInt() );
                 sLogFileRotatingSize = JVgetOptional( param_lib, "log_file_rotating_size",
-                        Json::intValue, (int)sLogFileRotatingSize ).asInt();
+                        Json::uintValue, (uint32_t)sLogFileRotatingSize ).asUInt();
                 sLogFileRotatingNum = JVgetOptional( param_lib, "log_file_rotating_num",
-                        Json::intValue, (int)sLogFileRotatingNum ).asInt();
+                        Json::uintValue, (uint32_t)sLogFileRotatingNum ).asUInt();
 
                 // Frequency detection
                 mFrequencyDetectionPeriod = JVgetOptional( param_lib, "frequency_detection_period",
@@ -286,8 +286,8 @@ protected:
                         Json::uintValue, mWSRequestTimeout).asUInt();
                 if ( mWSRequestTimeout == 0 )
                     Throw( DRM_BadArg, "ws_request_timeout must not be 0");
-                mHostDataVerbosity = JVgetOptional( param_lib, "host_data_verbosity",
-                        Json::uintValue, mHostDataVerbosity).asUInt();
+                mHostDataVerbosity = static_cast<eHostDataVerbosity>( JVgetOptional(
+                        param_lib, "host_data_verbosity", Json::uintValue, mHostDataVerbosity).asUInt() );
             }
             mHealthPeriod = 0;
             mHealthRetryTimeout = mWSRequestTimeout;
