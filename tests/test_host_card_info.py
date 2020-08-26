@@ -24,6 +24,7 @@ def test_host_data_verbosity(accelize_drm, conf_json, cred_json, async_handler):
 
     # Get full data
     conf_json['settings']['host_data_verbosity'] = 0
+    conf_json.save()
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
@@ -39,6 +40,7 @@ def test_host_data_verbosity(accelize_drm, conf_json, cred_json, async_handler):
 
     # Get partial data
     conf_json['settings']['host_data_verbosity'] = 1
+    conf_json.save()
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
@@ -53,6 +55,7 @@ def test_host_data_verbosity(accelize_drm, conf_json, cred_json, async_handler):
 
     # Get none data
     conf_json['settings']['host_data_verbosity'] = 2
+    conf_json.save()
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
@@ -75,6 +78,7 @@ def test_format(accelize_drm, conf_json, cred_json, async_handler):
     async_cb.reset()
     conf_json.reset()
     conf_json['settings']['host_data_verbosity'] = 0
+    conf_json.save()
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
