@@ -61,7 +61,8 @@ _PARAM_LIST = ('license_type',
                'health_period',
                'health_retry',
                'health_retry_sleep',
-               'host_data_verbosity'
+               'host_data_verbosity',
+               'host_data'
 )
 
 
@@ -957,6 +958,27 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
     async_cb.assert_NoError()
     print("Test parameter 'host_data_verbosity': PASS")
+
+
+    # Test parameter: host_data
+    async_cb.reset()
+    conf_json.reset()
+    conf_json['settings'] = {'host_data': 0}
+    conf_json.save()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    assert type(drm_manager.get('host_data')) == dict
+    assert len(drm_manager.get('host_data'))
+    assert 'info' in drm_manager.get('host_data')
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+        drm_manager.set('host_data'))
+    async_cb.assert_NoError()
+    print("Test parameter 'host_data': PASS")
 
 
 def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cred_json,

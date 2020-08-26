@@ -2404,6 +2404,12 @@ public:
                                dataLevel );
                         break;
                     }
+                    case ParameterKey::host_data: {
+                        json_value[key_str] = mHostConfigData;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                               mHostConfigData.toStyledString() );
+                        break;
+                    }
                     case ParameterKey::ParameterKeyCount: {
                         uint32_t count = static_cast<uint32_t>( ParameterKeyCount );
                         json_value[key_str] = count;

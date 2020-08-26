@@ -47,3 +47,4 @@ PARAMETERKEY_ITEM( health_period )                  ///< Read-only, return the c
 PARAMETERKEY_ITEM( health_retry )                   ///< Read-only, return the current value of the health retry timeout
 PARAMETERKEY_ITEM( health_retry_sleep )             ///< Read-only, return the current value of the health retry sleep
 PARAMETERKEY_ITEM( host_data_verbosity )            ///< Read-(write), read (and write) the level of verbosity for the amont of host and card data collected. Set only from configuration file (no override from C code)
+PARAMETERKEY_ITEM( host_data )                      ///< Read-only, read the host and card information
