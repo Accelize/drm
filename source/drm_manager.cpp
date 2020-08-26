@@ -435,43 +435,48 @@ protected:
         if ( !findXrtUtility() )
             return;
 
-        // Call xbutil to collect host and card data
-        std::string cmd = fmt::format( "{} dump", mXbutil );
-        std::string cmd_out = exec_cmd( cmd );
+        try {
+            // Call xbutil to collect host and card data
+            std::string cmd = fmt::format( "{} dump", mXbutil );
+            std::string cmd_out = exec_cmd( cmd );
 
-        // Parse collected data and save to header
-        Json::Value node = parseJsonString( cmd_out );
-        for(Json::Value::iterator itr=node.begin(); itr!=node.end(); ++itr) {
-            std::string key = itr.key().asString();
-            try {
-                if (   ( key == "version" )
-                    || ( key == "system" )
-                    || ( key == "runtime" )
-                   )
-                    mHostConfigData[key] = *itr;
-                else if ( key == "board" ) {
-                    //  Add general info node
-                    mHostConfigData[key]["info"] = itr->get("info", Json::nullValue);
-                    // Try to get the number of kernels
-                    Json::Value compute_unit_node = itr->get("compute_unit", Json::nullValue);
-                    if ( compute_unit_node != Json::nullValue )
-                        mHostConfigData[key]["compute_unit"] = compute_unit_node.size();
-                    else
-                        mHostConfigData[key]["compute_unit"] = -1;
-                    // Add XCLBIN UUID
-                    mHostConfigData[key]["xclbin"] = itr->get("xclbin", Json::nullValue);
-                    // Add CSP specific command
-                    CspBase* csp = CspBase::make_csp();
-                    if ( csp != nullptr ) {
-                        mHostConfigData[key]["csp"] = csp->get_metadata();
-                        delete csp;
+            // Parse collected data and save to header
+            Json::Value node = parseJsonString( cmd_out );
+            for(Json::Value::iterator itr=node.begin(); itr!=node.end(); ++itr) {
+                std::string key = itr.key().asString();
+                try {
+                    if (   ( key == "version" )
+                        || ( key == "system" )
+                        || ( key == "runtime" )
+                       )
+                        mHostConfigData[key] = *itr;
+                    else if ( key == "board" ) {
+                        //  Add general info node
+                        mHostConfigData[key]["info"] = itr->get("info", Json::nullValue);
+                        // Try to get the number of kernels
+                        Json::Value compute_unit_node = itr->get("compute_unit", Json::nullValue);
+                        if ( compute_unit_node != Json::nullValue )
+                            mHostConfigData[key]["compute_unit"] = compute_unit_node.size();
+                        else
+                            mHostConfigData[key]["compute_unit"] = -1;
+                        // Add XCLBIN UUID
+                        mHostConfigData[key]["xclbin"] = itr->get("xclbin", Json::nullValue);
+                        // Add CSP specific command
+                        CspBase* csp = CspBase::make_csp();
+                        if ( csp != nullptr ) {
+                            mHostConfigData[key]["csp"] = csp->get_metadata();
+                            delete csp;
+                        }
                     }
+                } catch( const std::exception &e ) {
+                    Debug( "Could not extract Host Information for key {}", key );
                 }
-            } catch( const std::exception &e ) {
-                Debug( "Could not extract Host Information for key {}", key );
             }
+            Debug( "Host and card information:\n{}", mHostConfigData.toStyledString() );
+
+        } catch( const std::exception &e ) {
+            Warning( "Error when retreiving host and card information: {}", e.what() );
         }
-        Debug( "Host and card information:\n{}", mHostConfigData.toStyledString() );
     }
 
     Json::Value buildSettingsNode() {
@@ -2506,15 +2511,6 @@ public:
                         f_asynch_error( e.what() );
                         Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
                                custom_msg );
-                        break;
-                    }
-                    case ParameterKey::bad_product_id: {
-                        Warning( "Parameter '{}' (ID={}) is deprecated", key_str, key_id );
-                        break;
-                    }
-                    case ParameterKey::bad_oauth2_token: {
-                        Debug( "Set parameter '{}' (ID={}) to random value", key_str, key_id );
-                        getDrmWSClient().setOAuth2token( "BAD_TOKEN" );
                         break;
                     }
                     case ParameterKey::log_message_level: {
