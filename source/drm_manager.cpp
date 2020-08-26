@@ -277,7 +277,7 @@ protected:
                 mFrequencyDetectionThreshold = JVgetOptional( param_lib, "frequency_detection_threshold",
                         Json::uintValue, mFrequencyDetectionThreshold).asDouble();
 
-                // Others
+                // Retry parameters
                 mWSRetryPeriodLong = JVgetOptional( param_lib, "ws_retry_period_long",
                         Json::uintValue, mWSRetryPeriodLong).asUInt();
                 mWSRetryPeriodShort = JVgetOptional( param_lib, "ws_retry_period_short",
@@ -286,8 +286,10 @@ protected:
                         Json::uintValue, mWSRequestTimeout).asUInt();
                 if ( mWSRequestTimeout == 0 )
                     Throw( DRM_BadArg, "ws_request_timeout must not be 0");
+
+                // Host and Card information
                 mHostDataVerbosity = static_cast<eHostDataVerbosity>( JVgetOptional(
-                        param_lib, "host_data_verbosity", Json::uintValue, mHostDataVerbosity).asUInt() );
+                        param_lib, "host_data_verbosity", Json::uintValue, (uint32_t)mHostDataVerbosity ).asUInt() );
             }
             mHealthPeriod = 0;
             mHealthRetryTimeout = mWSRequestTimeout;
@@ -436,10 +438,10 @@ protected:
 
     void getHostAndCardInfo() {
 
-        Debug( "Host and card data verbosity: {}", (uint32_t)mHostDataVerbosity );
+        Debug( "Host and card data verbosity: {}", static_cast<uint32_t>( mHostDataVerbosity ) );
 
         // Depending on the host data verbosity
-        if ( host_data_verbosity == eHostDataVerbosity::NONE ) {
+        if ( mHostDataVerbosity == eHostDataVerbosity::NONE ) {
             return;
         }
 
@@ -455,7 +457,7 @@ protected:
             // Parse collected data and save to header
             Json::Value node = parseJsonString( cmd_out );
 
-            if ( host_data_verbosity == eHostDataVerbosity::FULL ) {
+            if ( mHostDataVerbosity == eHostDataVerbosity::FULL ) {
                 // Verbosity is FULL
                 mHostConfigData = node;
 
@@ -505,19 +507,19 @@ protected:
         settings["bypass_frequency_detection"] = mBypassFrequencyDetection;
         settings["frequency_detection_threshold"] = mFrequencyDetectionThreshold;
         settings["frequency_detection_period"] = mFrequencyDetectionPeriod;
-        settings["log_file_type"] = (int32_t)sLogFileType;
-        settings["log_file_rotating_size"] = (uint32_t)sLogFileRotatingSize;
-        settings["log_file_rotating_num"] = (uint32_t)sLogFileRotatingNum;
-        settings["log_file_verbosity"] = static_cast<int>( sLogFileVerbosity );
-        settings["log_verbosity"] = static_cast<int>( sLogConsoleVerbosity );
+        settings["log_file_type"] = static_cast<uint32_t>( sLogFileType );
+        settings["log_file_rotating_size"] = static_cast<uint32_t>( sLogFileRotatingSize );
+        settings["log_file_rotating_num"] = static_cast<uint32_t>( sLogFileRotatingNum );
+        settings["log_file_verbosity"] = static_cast<uint32_t>( sLogFileVerbosity );
+        settings["log_verbosity"] = static_cast<uint32_t>( sLogConsoleVerbosity );
         settings["ws_retry_period_long"] = mWSRetryPeriodLong;
         settings["ws_retry_period_short"] = mWSRetryPeriodShort;
         settings["ws_request_timeout"] = mWSRequestTimeout;
         settings["health_period"] = mHealthPeriod;
         settings["health_retry"] = mHealthRetryTimeout;
         settings["health_retry_sleep"] = mHealthRetrySleep;
-        settings["ws_api_retry_duration"] = ;
-        settings["host_data_verbosity"] = mHostDataVerbosity;
+        // FIXME settings["ws_api_retry_duration"] = ;
+        settings["host_data_verbosity"] = static_cast<uint32_t>( mHostDataVerbosity );
         y
         return settings;
     }
