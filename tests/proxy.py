@@ -516,6 +516,24 @@ def create_app(url):
     ##############################################################################
     # test_retry_mechanism.py
 
+    # test_api_retry functions
+    @app.route('/test_api_retry/o/token/', methods=['GET', 'POST'])
+    def otoken__test_api_retry():
+        return redirect(request.url_root + '/o/token/', code=307)
+
+    @app.route('/test_api_retry/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_api_retry():
+        return redirect(request.url_root + '/auth/metering/health/', code=307)
+
+    @app.route('/test_api_retry/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_api_retry():
+        global context, lock
+        start = str(datetime.now())
+        new_url = request.url.replace(request.url_root+'test_api_retry', url)
+        request_json = request.get_json()
+        request_type = request_json['request']
+        return ({'error':'Force retry for testing'}, 408)
+
     # test_long_to_short_retry_switch functions
     @app.route('/test_long_to_short_retry_switch/o/token/', methods=['GET', 'POST'])
     def otoken__test_long_to_short_retry_switch():
@@ -566,27 +584,23 @@ def create_app(url):
     @app.route('/test_retry_on_no_connection/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_retry_on_no_connection():
         global context, lock
-        start = str(datetime.now())
-        print('ENTER**********************')
-        print('cnt=', context['cnt'])
         request_json = request.get_json()
         request_type = request_json['request']
-        try:
-            with lock:
-                if context['cnt'] < 2 or request_type == 'close':
-                    new_url = request.url.replace(request.url_root+'test_retry_on_no_connection', url)
-                    response = post(new_url, json=request_json, headers=request.headers)
-                    excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-                    headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-                    response_json = response.json()
-                    response_json['metering']['timeoutSecond'] = context['timeoutSecond']
-                    return Response(dumps(response_json), response.status_code, headers)
-                sleep_period = context['timeoutSecond'] + 1
-            sleep(sleep_period)
+        with lock:
+            cnt = context['cnt']
+            context['cnt'] += 1
+        if cnt < 1 or request_type == 'close':
+            new_url = request.url.replace(request.url_root+'test_retry_on_no_connection', url)
+            response = post(new_url, json=request_json, headers=request.headers)
+            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+            response_json = response.json()
+            response_json['metering']['timeoutSecond'] = context['timeoutSecond']
+            return Response(dumps(response_json), response.status_code, headers)
+        else:
+            sleep(context['timeoutSecond'])
             return ('', 204)
-        finally:
-            with lock:
-                context['cnt'] += 1
+
 
     ##############################################################################
     # test_unittest_on_hw.py
@@ -602,7 +616,6 @@ def create_app(url):
 
     @app.route('/test_http_header_api_version/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_http_header_api_version():
-        start = str(datetime.now())
         new_url = request.url.replace(request.url_root+'test_http_header_api_version', url)
         request_json = request.get_json()
         assert search(r'Accept:.*application/vnd\.accelize\.v1\+json', str(request.headers))
@@ -644,7 +657,6 @@ def create_app(url):
     @app.route('/test_topic0_corrupted_segment_index/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_topic0_corrupted_segment_index():
         global context, lock
-        start = str(datetime.now())
         new_url = request.url.replace(request.url_root+'test_topic0_corrupted_segment_index', url)
         request_json = request.get_json()
         response = post(new_url, json=request_json, headers=request.headers)

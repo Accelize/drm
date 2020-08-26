@@ -104,7 +104,6 @@ protected:
 
     const double ACTIVATIONCODE_TRANSMISSION_TIMEOUT_MS = 2000.0;
 
-
 #ifdef _WIN32
     const char path_sep = '\\';
 # else
@@ -150,7 +149,8 @@ protected:
     // License related properties
     uint32_t mWSRetryPeriodLong  = 60;    ///< Time in seconds before the next request attempt to the Web Server when the time left before timeout is large
     uint32_t mWSRetryPeriodShort = 2;     ///< Time in seconds before the next request attempt to the Web Server when the time left before timeout is short
-    uint32_t mWSRequestTimeout   = 10;    ///< Time in seconds during which retries occur on activate and deactivate functions
+    uint32_t mWSApiRetryDuration = 10;    ///< Period of time in seconds during which retries occur on activate and deactivate functions
+    uint32_t mWSRequestTimeout   = 10;    ///< Time in seconds for a request to complete
 
     eLicenseType mLicenseType = eLicenseType::METERED;
     uint32_t mLicenseDuration = 0;        ///< Time duration in seconds of the license
@@ -180,19 +180,19 @@ protected:
     uint32_t mHealthRetryTimeout;       ///< Timeout in seconds for the health request
     uint32_t mHealthRetrySleep;         ///< Time in seconds before perforing a new health retry
 
-    // thread to maintain license alive
+    // Thread to maintain license alive
     uint32_t mLicenseCounter = 0;
     std::future<void> mThreadKeepAlive;
+    TClock::time_point mExpirationTime;
 
-    // thread to maintain health alive
+    // Thread to maintain health alive
     mutable uint32_t mHealthCounter = 0;
     std::future<void> mThreadHealth;
 
-    // All thread exit elements
+    // Threads exit elements
     std::mutex mThreadExitMtx;
     std::condition_variable mThreadExitCondVar;
     bool mThreadExit{false};
-
 
     // Debug parameters
     spdlog::level::level_enum mDebugMessageLevel;
@@ -278,6 +278,8 @@ protected:
                         Json::uintValue, mWSRetryPeriodLong).asUInt();
                 mWSRetryPeriodShort = JVgetOptional( param_lib, "ws_retry_period_short",
                         Json::uintValue, mWSRetryPeriodShort).asUInt();
+                mWSApiRetryDuration = JVgetOptional( param_lib, "ws_api_retry_duration",
+                        Json::uintValue, mWSApiRetryDuration).asUInt();
                 mWSRequestTimeout = JVgetOptional( param_lib, "ws_request_timeout",
                         Json::uintValue, mWSRequestTimeout).asUInt();
                 if ( mWSRequestTimeout == 0 )
@@ -781,17 +783,21 @@ protected:
         return drmVersion;
     }
 
-    void checkSessionIDFromWS( const Json::Value license_json ) const {
+    void checkSessionIDFromWS( const Json::Value license_json ) {
         std::string ws_sessionID = license_json["metering"]["sessionId"].asString();
         if ( !mSessionID.empty() && ( mSessionID != ws_sessionID ) ) {
             Warning( "Session ID mismatch: WebService returns '{}' but '{}' is expected", ws_sessionID, mSessionID ); //LCOV_EXCL_LINE
+        } else if ( mSessionID.empty() ) {
+            mSessionID = ws_sessionID;
         }
     }
 
-    void checkSessionIDFromDRM( const Json::Value license_json ) const {
+    void checkSessionIDFromDRM( const Json::Value license_json ) {
         std::string drm_sessionID = license_json["sessionId"].asString();
         if ( !mSessionID.empty() && ( mSessionID != drm_sessionID ) ) {
             Warning( "Session ID mismatch: DRM IP returns '{}' but '{}' is expected", drm_sessionID, mSessionID ); //LCOV_EXCL_LINE
+        } else if ( mSessionID.empty() ) {
+            mSessionID = drm_sessionID;
         }
     }
 
@@ -908,7 +914,7 @@ protected:
         return json_request;
     }
 
-    Json::Value getMeteringRunning() const {
+    Json::Value getMeteringRunning() {
         Json::Value json_request( mHeaderJsonRequest );
         uint32_t numberOfDetectedIps;
         std::string saasChallenge;
@@ -932,7 +938,7 @@ protected:
         return json_request;
     }
 
-    Json::Value getMeteringStop() const {
+    Json::Value getMeteringStop() {
         Json::Value json_request( mHeaderJsonRequest );
         uint32_t numberOfDetectedIps;
         std::string saasChallenge;
@@ -1061,13 +1067,20 @@ protected:
     }
 
     Json::Value getLicense( const Json::Value& request_json, const uint32_t& timeout,
-            const uint32_t& short_retry_period = 0, const uint32_t& long_retry_period = 0 ) {
-        TClock::time_point deadline = TClock::now() + std::chrono::seconds( timeout );
+            int32_t short_retry_period = -1, int32_t long_retry_period = -1 ) {
+        TClock::time_point deadline;
+        if ( timeout == 0 ) {
+            deadline = TClock::now() + std::chrono::seconds( mWSRequestTimeout );
+            short_retry_period = -1;
+            long_retry_period = -1;
+        } else {
+            deadline = TClock::now() + std::chrono::seconds( timeout );
+        }
         return getLicense( request_json, deadline, short_retry_period, long_retry_period );
     }
 
     Json::Value getLicense( const Json::Value& request_json, const TClock::time_point& deadline,
-            const uint32_t& short_retry_period = 0, const uint32_t& long_retry_period = 0 ) {
+            const int32_t& short_retry_period = -1, const int32_t& long_retry_period = -1 ) {
 
         TClock::duration long_duration = std::chrono::seconds( long_retry_period );
         TClock::duration short_duration = std::chrono::seconds( short_retry_period );
@@ -1094,11 +1107,11 @@ protected:
                 }
                 // It is retryable
                 oauth_attempt ++;
-                if ( short_retry_period == 0 ) {
+                if ( short_retry_period == -1 ) {
                     // No retry
                     throw;
                 }
-                if ( long_retry_period == 0 ) {
+                if ( long_retry_period == -1 ) {
                      wait_duration = short_duration;
                 } else {
                     if ( ( deadline - TClock::now() ) <= long_duration )
@@ -1127,12 +1140,12 @@ protected:
                 }
                 // It is retryable
                 lic_attempt ++;
-                if ( short_retry_period == 0 ) {
+                if ( short_retry_period == -1 ) {
                     // No retry
                     throw;
                 }
                 // Evaluate the next retry
-                if ( long_retry_period == 0 ) {
+                if ( long_retry_period == -1 ) {
                      wait_duration = short_duration;
                 } else {
                     if ( ( deadline - TClock::now() ) <= long_duration )
@@ -1214,27 +1227,29 @@ protected:
             }
             Debug( "Wrote license timer #{} of session ID {} for a duration of {} seconds",
                     mLicenseCounter, mSessionID, mLicenseDuration );
-
-            bool activationCodesTransmitted( false );
-            TClock::duration timeSpan;
-            double mseconds( 0.0 );
-            TClock::time_point timeStart = TClock::now();
-
-            while( mseconds < ACTIVATIONCODE_TRANSMISSION_TIMEOUT_MS ) {
-                checkDRMCtlrRet(
-                        getDrmController().readActivationCodesTransmittedStatusRegister( activationCodesTransmitted ) );
-                timeSpan = TClock::now() - timeStart;
-                mseconds = 1000.0 * double( timeSpan.count() ) * TClock::period::num / TClock::period::den;
-                if ( activationCodesTransmitted ) {
-                    Debug( "License #{} transmitted after {} ms", mLicenseCounter, mseconds );
-                    break;
-                }
-                Debug2( "License #{} not transmitted yet after {} ms", mLicenseCounter, mseconds );
-            }
-            if ( !activationCodesTransmitted ) {
-                Unreachable( "DRM Controller could not transmit Licence #{} to activators", mLicenseCounter ); //LCOV_EXCL_LINE
-            }
         }
+
+        // Wait until license has been pushed to Activator's port
+        bool activationCodesTransmitted( false );
+        TClock::duration timeSpan;
+        double mseconds( 0.0 );
+        TClock::time_point timeStart = TClock::now();
+
+        while( mseconds < ACTIVATIONCODE_TRANSMISSION_TIMEOUT_MS ) {
+            checkDRMCtlrRet(
+                    getDrmController().readActivationCodesTransmittedStatusRegister( activationCodesTransmitted ) );
+            timeSpan = TClock::now() - timeStart;
+            mseconds = 1000.0 * double( timeSpan.count() ) * TClock::period::num / TClock::period::den;
+            if ( activationCodesTransmitted ) {
+                Debug( "License #{} transmitted after {} ms", mLicenseCounter, mseconds );
+                break;
+            }
+            Debug2( "License #{} not transmitted yet after {} ms", mLicenseCounter, mseconds );
+        }
+        if ( !activationCodesTransmitted ) {
+            Unreachable( "DRM Controller could not transmit Licence #{} to activators. ", mLicenseCounter ); //LCOV_EXCL_LINE
+        }
+        mExpirationTime += std::chrono::seconds( mLicenseDuration );
 
         // Check DRM Controller has switched to the right license mode
         bool is_nodelocked = isDrmCtrlInNodelock();
@@ -1257,12 +1272,12 @@ protected:
     }
 
     Json::Value postHealth( const Json::Value& request_json, const TClock::time_point& deadline,
-            const uint32_t& retry_period = 0 ) {
+            const int32_t& retry_period = -1 ) {
 
-        TClock::duration retry_duration = std::chrono::seconds( retry_period );
         bool token_valid(false);
         uint32_t oauth_attempt = 0;
         uint32_t lic_attempt = 0;
+        TClock::duration retry_duration = std::chrono::seconds( retry_period );
 
         while ( 1 ) {
             token_valid = false;
@@ -1283,7 +1298,7 @@ protected:
                 }
                 // It is retryable
                 oauth_attempt ++;
-                if ( retry_period == 0 ) {
+                if ( retry_period == -1 ) {
                     // No retry
                     return Json::nullValue;
                 }
@@ -1310,7 +1325,7 @@ protected:
                 }
                 // It is retryable
                 lic_attempt ++;
-                if ( retry_period == 0 ) {
+                if ( retry_period == -1 ) {
                     // No retry
                     return Json::nullValue;
                 }
@@ -1400,9 +1415,7 @@ protected:
                 Json::Value request_json = parseJsonFile( mNodeLockRequestFilePath );
                 Debug( "Parsed Node-locked License Request file: {}", request_json .toStyledString() );
                 /// - Send request to web service and receive the new license
-                TClock::time_point deadline =
-                        TClock::now() + std::chrono::seconds( mWSRequestTimeout );
-                license_json = getLicense( request_json, deadline, mWSRetryPeriodShort );
+                license_json = getLicense( request_json, mWSApiRetryDuration, mWSRetryPeriodShort );
                 /// - Save the license to file
                 saveJsonToFile( mNodeLockLicenseFilePath, license_json );
                 Debug( "Requested and saved new node-locked license file: {}", mNodeLockLicenseFilePath );
@@ -1622,11 +1635,8 @@ protected:
                             Debug( "Requesting new license #{} now", mLicenseCounter );
                             Json::Value request_json = getMeteringRunning();
 
-                            /// Retry Web Service request loop
-                            TClock::time_point polling_deadline = TClock::now() + std::chrono::seconds( mLicenseDuration );
-
                             /// Attempt to get the next license
-                            Json::Value license_json = getLicense( request_json, polling_deadline, mWSRetryPeriodShort, mWSRetryPeriodLong );
+                            Json::Value license_json = getLicense( request_json, mExpirationTime, mWSRetryPeriodShort, mWSRetryPeriodLong );
 
                             /// New license has been received: now send it to the DRM Controller
                             setLicense( license_json );
@@ -1639,6 +1649,8 @@ protected:
                         TClock::duration wait_duration = std::chrono::seconds( licenseTimeLeft + 1 );
                         Debug( "License thread sleeping {} seconds before checking DRM Controller readiness", licenseTimeLeft );
                         sleepOrExit( wait_duration );
+                        //  resync expiration time
+                        mExpirationTime = TClock::now() + std::chrono::seconds( mLicenseDuration );
                     }
                 }
                 Debug( "Released metering access mutex from licensing thread" );
@@ -1770,7 +1782,7 @@ protected:
             Json::Value request_json = getMeteringStart();
 
             // Send request and receive new license
-            Json::Value license_json = getLicense( request_json, mWSRequestTimeout, mWSRetryPeriodShort );
+            Json::Value license_json = getLicense( request_json, mWSApiRetryDuration, mWSRetryPeriodShort );
             setLicense( license_json );
 
             /// Extract asynchronous health parameters from response
@@ -1797,7 +1809,7 @@ protected:
                 Json::Value request_json = getMeteringRunning();
 
                 // Send license request to web service
-                Json::Value license_json = getLicense( request_json, mWSRequestTimeout, mWSRetryPeriodShort );
+                Json::Value license_json = getLicense( request_json, mWSApiRetryDuration, mWSRetryPeriodShort );
 
                 // Provision license on DRM controller
                 setLicense( license_json );
@@ -1821,7 +1833,7 @@ protected:
             request_json = getMeteringStop();
 
             // Send last metering information
-            Json::Value license_json = getLicense( request_json, mWSRequestTimeout, mWSRetryPeriodShort );
+            Json::Value license_json = getLicense( request_json, mWSApiRetryDuration, mWSRetryPeriodShort );
             checkSessionIDFromWS( license_json );
             Debug( "Session ID {} stopped and last metering data uploaded", mSessionID );
         }
@@ -1840,7 +1852,7 @@ protected:
     void pauseSession() {
         stopThread();
         mSecurityStop = false;
-        performHealth(mWSRequestTimeout, 0);
+        performHealth(mWSApiRetryDuration, 0);
         Info( "DRM session paused." );
     }
 
@@ -1927,6 +1939,7 @@ public:
             Debug( "Calling 'activate' with 'resume_session_request'={}", resume_session_request );
 
             bool isRunning = isSessionRunning();
+            mExpirationTime = TClock::now();
 
             if ( isNodeLockedMode() ) {
                 // Install the node-locked license
@@ -2236,10 +2249,16 @@ public:
                                mWSRetryPeriodShort );
                         break;
                     }
-                    case ParameterKey::ws_request_timeout: {
-                        json_value[key_str] = mWSRequestTimeout ;
+                    case ParameterKey::ws_api_retry_duration: {
+                        json_value[key_str] = mWSApiRetryDuration ;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
-                               mWSRequestTimeout  );
+                               mWSApiRetryDuration );
+                        break;
+                    }
+                    case ParameterKey::ws_request_timeout: {
+                        json_value[key_str] = mWSRequestTimeout;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                               mWSRequestTimeout );
                         break;
                     }
                     case ParameterKey::log_message_level: {
@@ -2416,12 +2435,10 @@ public:
                                mWSRetryPeriodShort );
                         break;
                     }
-                    case ParameterKey::ws_request_timeout: {
-                        mWSRequestTimeout  = (*it).asUInt();
+                    case ParameterKey::ws_api_retry_duration: {
+                        mWSApiRetryDuration = (*it).asUInt();
                         Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
-                               mWSRequestTimeout  );
-                        if ( mWSRequestTimeout == 0 )
-                            Throw( DRM_BadArg, "ws_request_timeout must not be 0");
+                               mWSApiRetryDuration );
                         break;
                     }
                     case ParameterKey::trigger_async_callback: {

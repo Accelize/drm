@@ -70,10 +70,13 @@ def test_uncompatibilities(accelize_drm, conf_json, cred_json, async_handler):
         current_num = float(match(r'^(\d+.\d+)', hdk_version).group(1))
         refdesignByMajor = ((float(match(r'^(\d+.\d+)', x).group(1)), x) for x in refdesign.hdk_versions)
 
+        tested = False
+
         for num, versions in groupby(refdesignByMajor, lambda x: x[0]):
             if HDK_Limit <= num and num <= current_num:
                 print('Test uncompatible HDK: HDK version %s is in the compatiblity range[%s : %s]: skip version' % (num, HDK_Limit, current_num))
                 continue
+            tested = True
 
             print('Testing HDK version %s is not compatible ...' % num)
             # Program FPGA with older HDK
@@ -96,6 +99,7 @@ def test_uncompatibilities(accelize_drm, conf_json, cred_json, async_handler):
             if search(r'This DRM Library version \S+ is not compatible with the DRM HDK version', str(excinfo.value), IGNORECASE):
                 hit =True
             assert hit
+        assert tested
 
     finally:
         if drm_manager:
@@ -135,11 +139,13 @@ def test_compatibilities(accelize_drm, conf_json, cred_json, async_handler):
         # Then test all HDK versions that are compatible
         current_num = float(match(r'^(\d+.\d+)', hdk_version).group(1))
         refdesignByMajor = ((float(match(r'^(\d+.\d+)', x).group(1)), x) for x in refdesign.hdk_versions)
+        tested = False
 
         for num, versions in groupby(refdesignByMajor, lambda x: x[0]):
             if num < HDK_Limit or num > current_num:
                 print('Test compatible HDK: HDK version %s is not in the range ]%s : %s[: skip version' % (num, HDK_Limit, current_num))
                 continue
+            tested = True
 
             print('Testing HDK version %s is compatible ...' % num)
             # Program FPGA with lastest HDK per major number
@@ -161,6 +167,7 @@ def test_compatibilities(accelize_drm, conf_json, cred_json, async_handler):
             drm_manager.deactivate()
             assert not drm_manager.get('license_status')
             async_cb.assert_NoError()
+        assert tested
     finally:
         if drm_manager:
             del drm_manager

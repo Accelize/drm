@@ -30,26 +30,32 @@ namespace DRM {
 
 // RAII for Curl global init/cleanup
 class CurlSingleton {
+
 private:
     CurlSingleton() { curl_global_init(CURL_GLOBAL_ALL); }
     ~CurlSingleton() { curl_global_cleanup(); }
+
 public:
     static void Init() {
         static CurlSingleton g_curl;
         (void) g_curl;
     }
+
 };
 
 
 // RAII for Curl easy
 class CurlEasyPost {
+
 private:
-    const ulong cConnectionTimeout = 10L;  // In seconds
+    const uint32_t cRequestTimeout = 30;  // In seconds
+
     CURL *curl = NULL;
     struct curl_slist *headers = NULL;
     struct curl_slist *host_resolve_list = NULL;
     std::list<std::string> data; // keep data until request performed
     std::array<char, CURL_ERROR_SIZE> errbuff;
+    uint32_t mRequestTimeout;
 
 public:
 
@@ -77,39 +83,43 @@ public:
     CurlEasyPost();
     ~CurlEasyPost();
 
-    long perform(std::string* resp, std::chrono::steady_clock::time_point deadline);
+    long perform( std::string* resp, std::chrono::steady_clock::time_point& deadline );
+    long perform( std::string* resp, std::chrono::milliseconds& timeout );
     double getTotalTime();
 
     void setHostResolves( const Json::Value& host_json );
 
     template<class T>
     void setURL(T&& url) {
-        data.push_back(std::forward<T>(url));
-        curl_easy_setopt(curl, CURLOPT_URL, data.back().c_str());
+        data.push_back( std::forward<T>(url) );
+        curl_easy_setopt( curl, CURLOPT_URL, data.back().c_str() );
     }
 
     template<class T>
-    void appendHeader(T&& header) {
-        data.push_back(std::forward<T>(header));
+    void appendHeader( T&& header ) {
+        data.push_back( std::forward<T>(header) );
         Debug2( "Add {} to CURL header", std::forward<T>(header) );
-        headers = curl_slist_append(headers, data.back().c_str());
+        headers = curl_slist_append( headers, data.back().c_str() );
     }
 
     template<class T>
-    void setPostFields(T&& postfields) {
-        data.push_back(std::forward<T>(postfields));
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, data.back().size());
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.back().c_str());
+    void setPostFields( T&& postfields ) {
+        data.push_back( std::forward<T>(postfields) );
+        curl_easy_setopt( curl, CURLOPT_POSTFIELDSIZE, data.back().size() );
+        curl_easy_setopt( curl, CURLOPT_POSTFIELDS, data.back().c_str() );
     }
+
+    void setRequestTimeout( const uint32_t requestTimeout ) { mRequestTimeout = requestTimeout; }
 
 protected:
 
-    static size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
+    static size_t write_callback( void *contents, size_t size, size_t nmemb, void *userp ) {
         auto *s = (std::string*)userp;
         size_t realsize = size * nmemb;
-        s->append((const char*)contents, realsize);
+        s->append( (const char*)contents, realsize );
         return realsize;
     }
+
 };
 
 
@@ -117,7 +127,8 @@ protected:
  get license and send metering data*/
 class DrmWSClient {
 
-    const uint32_t cTokenExpirationMargin = 30;
+    const uint32_t cTokenExpirationMargin = 30;  // In seconds
+    const uint32_t cRequestTimeout = 30;         // In seconds
 
 protected:
 
@@ -133,6 +144,7 @@ protected:
     uint32_t mTokenExpirationMargin;            /// OAuth2 token expiration margin in seconds
     TClock::time_point mTokenExpirationTime;    /// OAuth2 expiration time
     CurlEasyPost mOAUth2Request;
+    uint32_t mRequestTimeout;
 
     bool isTokenValid() const;
     Json::Value requestMetering( const std::string url, const Json::Value& json_req, TClock::time_point deadline );

@@ -1,4 +1,4 @@
-![Screenshot](images/AccelDRM_lock.png)
+![Screenshot](doc/_static/AccelDRM_lock.png)
 
 [![Build Status](https://dev.azure.com/Accelize/DRM/_apis/build/status/DRM%20Library?branchName=master)](https://dev.azure.com/Accelize/DRM/_build/latest?definitionId=2&branchName=master)[![codecov](https://codecov.io/gh/Accelize/drmlib/branch/master/graph/badge.svg)](https://codecov.io/gh/Accelize/drmlib)
 

@@ -61,7 +61,8 @@ _PARAM_LIST = ('license_type',
                'hdk_compatibility',
                'health_period',
                'health_retry',
-               'health_retry_sleep'
+               'health_retry_sleep',
+               'ws_api_retry_duration'
 )
 
 
@@ -90,7 +91,8 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     orig_frequency_detect_threshold = drm_manager.get('frequency_detection_threshold')
     orig_retry_period_long = drm_manager.get('ws_retry_period_long')
     orig_retry_period_short = drm_manager.get('ws_retry_period_short')
-    orig_response_timeout = drm_manager.get('ws_request_timeout')
+    orig_api_retry_duration = drm_manager.get('ws_api_retry_duration')
+    orig_request_timeout = drm_manager.get('ws_request_timeout')
 
     # Test parameter: log_verbosity
     from random import choice
@@ -399,6 +401,35 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     async_cb.assert_NoError()
     print("Test parameter 'ws_retry_period_short': PASS")
 
+    # Test parameter: ws_api_retry_duration
+    async_cb.reset()
+    conf_json.reset()
+    conf_json['settings'] = {'ws_api_retry_duration': 0}
+    conf_json.save()
+    accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    async_cb.reset()
+    conf_json.reset()
+    exp_value = orig_api_retry_duration + 1
+    conf_json['settings'] = {'ws_api_retry_duration': exp_value}
+    conf_json.save()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    value = drm_manager.get('ws_api_retry_duration')
+    assert value == exp_value
+    async_cb.assert_NoError()
+    print("Test parameter 'ws_api_retry_duration': PASS")
+
     # Test parameter: ws_request_timeout
     async_cb.reset()
     conf_json.reset()
@@ -415,10 +446,9 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     assert "ws_request_timeout must not be 0" in str(excinfo.value)
     err_code = async_handler.get_error_code(str(excinfo.value))
     assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
-
     async_cb.reset()
     conf_json.reset()
-    exp_value = 2*orig_response_timeout
+    exp_value = 2*orig_request_timeout
     conf_json['settings'] = {'ws_request_timeout': exp_value}
     conf_json.save()
     drm_manager = accelize_drm.DrmManager(
@@ -739,7 +769,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     drm_manager.set(ws_retry_period_long=exp_value)
     assert drm_manager.get('ws_retry_period_long') == exp_value
     drm_manager.set(ws_retry_period_long=orig_retry_period_long)  # Restore original value
-    async_cb.assert_NoError(async_cb.assert_NoError)
+    async_cb.assert_NoError()
     print("Test parameter 'ws_retry_period_long': PASS")
 
     # Test parameter: ws_retry_period_short
@@ -755,21 +785,27 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     drm_manager.set(ws_retry_period_short=exp_value)
     assert drm_manager.get('ws_retry_period_short') == exp_value
     drm_manager.set(ws_retry_period_short=orig_retry_period_short)  # Restore original value
-    async_cb.assert_NoError(async_cb.assert_NoError)
+    async_cb.assert_NoError()
     print("Test parameter 'ws_retry_period_short': PASS")
 
+    # Test parameter: ws_api_retry_duration
+    orig_api_retry_duration = drm_manager.get('ws_api_retry_duration')  # Save original value
+    exp_value = 0
+    drm_manager.set(ws_api_retry_duration=exp_value)
+    assert drm_manager.get('ws_api_retry_duration') == exp_value
+    exp_value = orig_api_retry_duration + 100
+    drm_manager.set(ws_api_retry_duration=exp_value)
+    assert drm_manager.get('ws_api_retry_duration') == exp_value
+    drm_manager.set(ws_api_retry_duration=orig_api_retry_duration)  # Restore original value
+    async_cb.assert_NoError()
+    print("Test parameter 'ws_api_retry_duration': PASS")
+
     # Test parameter: ws_request_timeout
-    orig_response_timeout = drm_manager.get('ws_request_timeout')  # Save original value
+    orig_request_timeout = drm_manager.get('ws_request_timeout') + 100
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         drm_manager.set(ws_request_timeout=0)
-    assert "ws_request_timeout must not be 0" in str(excinfo.value)
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
-    exp_value = orig_response_timeout + 100
-    drm_manager.set(ws_request_timeout=exp_value)
-    assert drm_manager.get('ws_request_timeout') == exp_value
-    drm_manager.set(ws_request_timeout=orig_response_timeout)  # Restore original value
-    async_cb.assert_NoError(async_cb.assert_NoError)
+    assert "Parameter 'ws_request_timeout' cannot be overwritten" in str(excinfo.value)
+    async_cb.assert_NoError()
     print("Test parameter 'ws_request_timeout': PASS")
 
     # Test parameter: log_message_level
@@ -872,7 +908,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         driver.write_register_callback,
         async_cb.callback
     )
-    assert drm_manager.get('health_retry') == drm_manager.get('ws_request_timeout')
+    assert drm_manager.get('health_retry') == drm_manager.get('ws_api_retry_duration')
     async_cb.assert_NoError()
     print("Test parameter 'health_retry': PASS")
 
@@ -936,7 +972,7 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
         cred_json.set_user('accelize_accelerator_test_02')
         conf_json.reset()
         conf_json['licensing']['url'] = "http://acme.com"
-        conf_json['settings']['ws_request_timeout'] = 5
+        conf_json['settings']['ws_api_retry_duration'] = 5
         conf_json['settings']['ws_retry_period_short'] = 1
         conf_json.save()
         assert conf_json['licensing']['url'] == "http://acme.com"

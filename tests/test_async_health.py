@@ -75,7 +75,6 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
     remove(logpath)
 
 
-#@pytest.mark.skip(reason='Bug in async feature')
 @pytest.mark.no_parallel
 @pytest.mark.minimum
 def test_health_period_modification(accelize_drm, conf_json, cred_json, async_handler, live_server):
@@ -128,7 +127,6 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
     assert get_proxy_error() is None
 
 
-#@pytest.mark.skip(reason='Bug in async feature')
 @pytest.mark.no_parallel
 @pytest.mark.minimum
 def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler, live_server):
@@ -183,7 +181,6 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
     assert get_proxy_error() is None
 
 
-#@pytest.mark.skip(reason='Bug in async feature')
 @pytest.mark.no_parallel
 @pytest.mark.minimum
 def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_handler, live_server):
@@ -247,7 +244,6 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
         assert get_proxy_error() is None
 
 
-#@pytest.mark.skip(reason='Bug in async feature')
 @pytest.mark.no_parallel
 @pytest.mark.minimum
 def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, async_handler, live_server):
@@ -312,7 +308,6 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, asy
         assert get_proxy_error() is None
 
 
-#@pytest.mark.skip(reason='Bug in async feature')
 @pytest.mark.no_parallel
 @pytest.mark.minimum
 def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler, live_server, ws_admin):
@@ -339,7 +334,7 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
     )
 
     # Set initial context on the live server
-    healthPeriod = 1
+    healthPeriod = 3
     healthRetry = 0  # No retry
     context = {'health_id':0,
                'healthPeriod':healthPeriod,
@@ -356,9 +351,11 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
         assert saas_data['session'] == session_id
         assert saas_data['metering'] == drm.get('metered_data')
 
+    assert not drm_manager.get('license_status')
     drm_manager.activate()
     try:
         # First round without no unit
+        assert drm_manager.get('license_status')
         assert drm_manager.get('metered_data') == 0
         activators[0].check_coin(drm_manager.get('metered_data'))
         wait_and_check_on_next_health(drm_manager)
@@ -377,11 +374,12 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
         assert drm_manager.get('metered_data') == 100
     finally:
         drm_manager.deactivate()
+        assert not drm_manager.get('license_status')
     assert get_proxy_error() is None
     async_cb.assert_NoError()
 
 
-#@pytest.mark.skip(reason='Bug in async feature')
+@pytest.mark.skip(reason='Segment index corruption issue to be fixed')
 @pytest.mark.no_parallel
 def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
