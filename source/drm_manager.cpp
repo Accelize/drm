@@ -520,7 +520,6 @@ protected:
         settings["health_retry_sleep"] = mHealthRetrySleep;
         // FIXME settings["ws_api_retry_duration"] = ;
         settings["host_data_verbosity"] = static_cast<uint32_t>( mHostDataVerbosity );
-        y
         return settings;
     }
 
