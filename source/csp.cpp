@@ -31,10 +31,10 @@ Json::Value Aws::get_metadata() {
     Json::Value metadata = Json::nullValue;
     // Using IMDSv2 method
     // Get token
-    std::string cmd = "curl -X PUT \"http://169.254.169.254/latest/api/token\" -H \"X-aws-ec2-metadata-token-ttl-seconds: 21600\"";
+    std::string cmd = "curl -s -X PUT \"http://169.254.169.254/latest/api/token\" -H \"X-aws-ec2-metadata-token-ttl-seconds: 21600\"";
     std::string token = exec_cmd( cmd );
     // Create base command
-    std::string base_cmd = fmt::format( "curl -H \"X-aws-ec2-metadata-token: {}\" http://169.254.169.254/latest", token);
+    std::string base_cmd = fmt::format( "curl -s -H \"X-aws-ec2-metadata-token: {}\" http://169.254.169.254/latest", token);
     // Get metatdata
     metadata["instance_id"] = exec_cmd( fmt::format( "{}/meta-data/instance-id", base_cmd ) );
     metadata["instance_type"] = exec_cmd( fmt::format( "{}/meta-data/instance-type", base_cmd ) );
@@ -51,7 +51,7 @@ Alibaba::Alibaba():CspBase("Alibaba") {}
 Json::Value Alibaba::get_metadata() {
     Json::Value metadata = Json::nullValue;
     // Create base command
-    std::string base_cmd( "curl http://100.100.100.200/latest/meta-data" );
+    std::string base_cmd( "curl -s http://100.100.100.200/latest/meta-data" );
     // Append commands to list
     metadata["instance_id"] = exec_cmd( fmt::format( "{}/instance-id", base_cmd ) );
     metadata["instance_type"] = exec_cmd( fmt::format( "{}/instance/instance-type", base_cmd ) );

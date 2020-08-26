@@ -944,6 +944,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     assert drm_manager.get('host_data_verbosity') == 1
     expectVal = 0
     conf_json['settings']['host_data_verbosity'] = expectVal
+    conf_json.save()
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
@@ -958,7 +959,6 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
     async_cb.assert_NoError()
     print("Test parameter 'host_data_verbosity': PASS")
-
 
     # Test parameter: host_data
     async_cb.reset()
@@ -975,7 +975,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     assert type(drm_manager.get('host_data')) == dict
     assert len(drm_manager.get('host_data'))
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        drm_manager.set('host_data')
+        drm_manager.set(host_data={'test':'test'})
     async_cb.assert_NoError()
     print("Test parameter 'host_data': PASS")
 

@@ -3,14 +3,6 @@
 Test host and card information releated feature
 """
 import pytest
-from time import sleep
-from random import randint, randrange
-from datetime import datetime, timedelta
-from re import search, findall
-from os.path import realpath, isfile
-from os import remove
-
-from tests.conftest import wait_deadline, wait_func_true
 
 
 def test_host_data_verbosity(accelize_drm, conf_json, cred_json, async_handler):
@@ -64,9 +56,9 @@ def test_host_data_verbosity(accelize_drm, conf_json, cred_json, async_handler):
         async_cb.callback
     )
     assert drm_manager.get('host_data_verbosity') == 2
-    data_partial = drm_manager.get('host_data')
-    assert type(data_partial) == dict
-    assert len(data_partial) == 0
+    data_none = drm_manager.get('host_data')
+    assert type(data_none) == type(None)
+    assert len(data_full) > len(data_partial) > 0
 
 
 def test_format(accelize_drm, conf_json, cred_json, async_handler):
@@ -87,8 +79,14 @@ def test_format(accelize_drm, conf_json, cred_json, async_handler):
         async_cb.callback
     )
     assert drm_manager.get('host_data_verbosity') == 0
-    data = drm_manager.get('host_data_verbosity')
+    data = drm_manager.get('host_data')
     assert type(data) == dict
     assert len(data)
-    assert 'info' in data.keys()
+    assert 'board' in data.keys()
+    assert 'error' in data['board'].keys()
+    assert 'info' in data['board'].keys()
+    assert 'dsa_name' in data['board']['info'].keys()
+    assert 'xclbin' in data['board'].keys()
+    assert 'runtime' in data.keys()
+    assert 'system' in data.keys()
     async_cb.assert_NoError()
