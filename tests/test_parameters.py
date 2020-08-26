@@ -974,9 +974,8 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     )
     assert type(drm_manager.get('host_data')) == dict
     assert len(drm_manager.get('host_data'))
-    assert 'info' in drm_manager.get('host_data')
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        drm_manager.set('host_data'))
+        drm_manager.set('host_data')
     async_cb.assert_NoError()
     print("Test parameter 'host_data': PASS")
 
