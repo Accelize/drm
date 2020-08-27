@@ -23,6 +23,13 @@ limitations under the License.
 namespace Accelize {
 namespace DRM {
 
+const char PATH_SEP =
+#ifdef _WIN32
+                     '\\';
+#else
+                     '/';
+#endif
+
 std::string getDirName( const std::string& full_path );
 bool isDir( const std::string& dir_path );
 bool isFile( const std::string& file_path );
@@ -35,7 +42,9 @@ Json::Value parseJsonFile(const std::string &file_path);
 const Json::Value& JVgetRequired( const Json::Value& json_value, const char* key, const Json::ValueType& type );
 const Json::Value& JVgetOptional( const Json::Value& json_value, const char* key, const Json::ValueType& type, const Json::Value& defaultValue = Json::nullValue );
 
+std::string exec_cmd( const std::string cmd);
 }
 }
 
 #endif // _H_ACCELIZE_METERING_UTILS
+

@@ -41,6 +41,7 @@ limitations under the License.
 #include "ws_client.h"
 #include "log.h"
 #include "utils.h"
+#include "csp.h"
 
 
 #pragma GCC diagnostic push
@@ -89,6 +90,7 @@ protected:
     enum class eLogFileType: uint8_t {NONE=0, BASIC, ROTATING};
     enum class eLicenseType: uint8_t {METERED, NODE_LOCKED, NONE};
     enum class eMailboxOffset: uint8_t {MB_LOCK_DRM=0, MB_CUSTOM_FIELD, MB_USER};
+    enum class eHostDataVerbosity: uint8_t {FULL=0, PARTIAL, NONE};
 
     // Design constants
     const uint32_t HDK_COMPATIBILITY_LIMIT_MAJOR = 3;
@@ -194,6 +196,13 @@ protected:
     std::condition_variable mThreadExitCondVar;
     bool mThreadExit{false};
 
+    // XRT PATH
+    std::string mXrtPath;
+    std::string mXbutil;
+    Json::Value mHostConfigData;
+    eHostDataVerbosity mHostDataVerbosity = eHostDataVerbosity::PARTIAL;
+    Json::Value mSettings;
+
     // Debug parameters
     spdlog::level::level_enum mDebugMessageLevel;
 
@@ -249,23 +258,23 @@ protected:
             if ( param_lib != Json::nullValue ) {
                 // Console logging
                 sLogConsoleVerbosity = static_cast<spdlog::level::level_enum>( JVgetOptional(
-                        param_lib, "log_verbosity", Json::intValue, (int)sLogConsoleVerbosity ).asInt());
+                        param_lib, "log_verbosity", Json::uintValue, (uint32_t)sLogConsoleVerbosity ).asUInt());
                 sLogConsoleFormat = JVgetOptional(
                         param_lib, "log_format", Json::stringValue, sLogConsoleFormat ).asString();
 
                 // File logging
                 sLogFileVerbosity = static_cast<spdlog::level::level_enum>( JVgetOptional(
-                        param_lib, "log_file_verbosity", Json::intValue, (int)sLogFileVerbosity ).asInt() );
+                        param_lib, "log_file_verbosity", Json::uintValue, (uint32_t)sLogFileVerbosity ).asUInt() );
                 sLogFileFormat = JVgetOptional(
                         param_lib, "log_file_format", Json::stringValue, sLogFileFormat ).asString();
                 sLogFilePath = JVgetOptional(
                         param_lib, "log_file_path", Json::stringValue, sLogFilePath ).asString();
                 sLogFileType = static_cast<eLogFileType>( JVgetOptional(
-                        param_lib, "log_file_type", Json::intValue, (int)sLogFileType ).asInt() );
+                        param_lib, "log_file_type", Json::uintValue, (uint32_t)sLogFileType ).asUInt() );
                 sLogFileRotatingSize = JVgetOptional( param_lib, "log_file_rotating_size",
-                        Json::intValue, (int)sLogFileRotatingSize ).asInt();
+                        Json::uintValue, (uint32_t)sLogFileRotatingSize ).asUInt();
                 sLogFileRotatingNum = JVgetOptional( param_lib, "log_file_rotating_num",
-                        Json::intValue, (int)sLogFileRotatingNum ).asInt();
+                        Json::uintValue, (uint32_t)sLogFileRotatingNum ).asUInt();
 
                 // Frequency detection
                 mFrequencyDetectionPeriod = JVgetOptional( param_lib, "frequency_detection_period",
@@ -273,7 +282,7 @@ protected:
                 mFrequencyDetectionThreshold = JVgetOptional( param_lib, "frequency_detection_threshold",
                         Json::uintValue, mFrequencyDetectionThreshold).asDouble();
 
-                // Others
+                // Retry parameters
                 mWSRetryPeriodLong = JVgetOptional( param_lib, "ws_retry_period_long",
                         Json::uintValue, mWSRetryPeriodLong).asUInt();
                 mWSRetryPeriodShort = JVgetOptional( param_lib, "ws_retry_period_short",
@@ -284,6 +293,10 @@ protected:
                         Json::uintValue, mWSRequestTimeout).asUInt();
                 if ( mWSRequestTimeout == 0 )
                     Throw( DRM_BadArg, "ws_request_timeout must not be 0");
+
+                // Host and Card information
+                mHostDataVerbosity = static_cast<eHostDataVerbosity>( JVgetOptional(
+                        param_lib, "host_data_verbosity", Json::uintValue, (uint32_t)mHostDataVerbosity ).asUInt() );
             }
             mHealthPeriod = 0;
             mHealthRetryTimeout = mWSRequestTimeout;
@@ -321,6 +334,9 @@ protected:
                 mBypassFrequencyDetection = JVgetOptional( conf_drm, "bypass_frequency_detection", Json::booleanValue,
                         mBypassFrequencyDetection ).asBool();
             }
+
+            // If possible extract host and card information
+            getHostAndCardInfo();
 
         } catch( const Exception &e ) {
             if ( e.getErrCode() != DRM_BadFormat )
@@ -401,6 +417,117 @@ protected:
     void uninitLog() {
         if ( sLogger )
             sLogger->flush();
+    }
+
+    bool findXrtUtility() {
+        // Check XILINX_XRT environment variable existence
+        char * env_val = getenv( "XILINX_XRT" );
+        if (env_val == NULL) {
+            Debug( "XILINX_XRT variable is not defined" );
+            mXrtPath.clear();
+            return false;
+        }
+        mXrtPath = std::string( env_val );
+        Debug( "XILINX_XRT variable is defined: {}", mXrtPath );
+
+        // Check xbutil existence
+        std::string xrt_bin_dir = fmt::format( "{}{}bin", mXrtPath, PATH_SEP );
+        mXbutil = fmt::format( "{}{}xbutil", xrt_bin_dir, PATH_SEP );
+        if ( !isFile( mXbutil ) ) {
+            // If xbutil does not exist
+            Debug( "xbutil tool could not be found in {}", xrt_bin_dir );
+            mXbutil.clear();
+            return false;
+        }
+        Debug( "xbutil tool has been found in {}", mXbutil );
+        return true;
+    }
+
+    void getHostAndCardInfo() {
+
+        Debug( "Host and card data verbosity: {}", static_cast<uint32_t>( mHostDataVerbosity ) );
+
+        // Depending on the host data verbosity
+        if ( mHostDataVerbosity == eHostDataVerbosity::NONE ) {
+            return;
+        }
+
+        // Find xbutil if existing
+        if ( !findXrtUtility() )
+            return;
+
+        try {
+            // Call xbutil to collect host and card data
+            std::string cmd = fmt::format( "{} dump", mXbutil );
+            std::string cmd_out = exec_cmd( cmd );
+
+            // Parse collected data and save to header
+            Json::Value node = parseJsonString( cmd_out );
+
+            if ( mHostDataVerbosity == eHostDataVerbosity::FULL ) {
+                // Verbosity is FULL
+                mHostConfigData = node;
+
+            } else {
+                // Verbosity is PARTIAL
+                for(Json::Value::iterator itr=node.begin(); itr!=node.end(); ++itr) {
+                    std::string key = itr.key().asString();
+                    try {
+                        if (   ( key == "version" )
+                            || ( key == "system" )
+                            || ( key == "runtime" )
+                           )
+                            mHostConfigData[key] = *itr;
+                        else if ( key == "board" ) {
+                            //  Add general info node
+                            mHostConfigData[key]["info"] = itr->get("info", Json::nullValue);
+                            // Try to get the number of kernels
+                            Json::Value compute_unit_node = itr->get("compute_unit", Json::nullValue);
+                            if ( compute_unit_node != Json::nullValue )
+                                mHostConfigData[key]["compute_unit"] = compute_unit_node.size();
+                            else
+                                mHostConfigData[key]["compute_unit"] = -1;
+                            // Add XCLBIN UUID
+                            mHostConfigData[key]["xclbin"] = itr->get("xclbin", Json::nullValue);
+                            // Add CSP specific command
+                            CspBase* csp = CspBase::make_csp();
+                            if ( csp != nullptr ) {
+                                mHostConfigData[key]["csp"] = csp->get_metadata();
+                                delete csp;
+                            }
+                        }
+                    } catch( const std::exception &e ) {
+                        Debug( "Could not extract Host Information for key {}", key );
+                    }
+                }
+            }
+            Debug( "Host and card information:\n{}", mHostConfigData.toStyledString() );
+
+        } catch( const std::exception &e ) {
+            Warning( "Error when retrieving host and card information: {}", e.what() );
+        }
+    }
+
+    Json::Value buildSettingsNode() {
+        Json::Value settings;
+        settings["frequency_detection_method"] = mIsFreqDetectionMethod1? 1:2;
+        settings["bypass_frequency_detection"] = mBypassFrequencyDetection;
+        settings["frequency_detection_threshold"] = mFrequencyDetectionThreshold;
+        settings["frequency_detection_period"] = mFrequencyDetectionPeriod;
+        settings["log_file_type"] = static_cast<uint32_t>( sLogFileType );
+        settings["log_file_rotating_size"] = static_cast<uint32_t>( sLogFileRotatingSize );
+        settings["log_file_rotating_num"] = static_cast<uint32_t>( sLogFileRotatingNum );
+        settings["log_file_verbosity"] = static_cast<uint32_t>( sLogFileVerbosity );
+        settings["log_verbosity"] = static_cast<uint32_t>( sLogConsoleVerbosity );
+        settings["ws_retry_period_long"] = mWSRetryPeriodLong;
+        settings["ws_retry_period_short"] = mWSRetryPeriodShort;
+        settings["ws_request_timeout"] = mWSRequestTimeout;
+        settings["health_period"] = mHealthPeriod;
+        settings["health_retry"] = mHealthRetryTimeout;
+        settings["health_retry_sleep"] = mHealthRetrySleep;
+        settings["ws_api_retry_duration"] = mWSApiRetryDuration;
+        settings["host_data_verbosity"] = static_cast<uint32_t>( mHostDataVerbosity );
+        return settings;
     }
 
     uint32_t getMailboxSize() const {
@@ -1066,7 +1193,7 @@ protected:
         return !isLicenseEmpty;
     }
 
-    Json::Value getLicense( const Json::Value& request_json, const uint32_t& timeout,
+    Json::Value getLicense( Json::Value& request_json, const uint32_t& timeout,
             int32_t short_retry_period = -1, int32_t long_retry_period = -1 ) {
         TClock::time_point deadline;
         if ( timeout == 0 ) {
@@ -1079,8 +1206,8 @@ protected:
         return getLicense( request_json, deadline, short_retry_period, long_retry_period );
     }
 
-    Json::Value getLicense( const Json::Value& request_json, const TClock::time_point& deadline,
-            const int32_t& short_retry_period = -1, const int32_t& long_retry_period = -1 ) {
+    Json::Value getLicense( Json::Value& request_json, const TClock::time_point& deadline,
+            int32_t short_retry_period = -1, int32_t long_retry_period = -1 ) {
 
         TClock::duration long_duration = std::chrono::seconds( long_retry_period );
         TClock::duration short_duration = std::chrono::seconds( short_retry_period );
@@ -1128,6 +1255,12 @@ protected:
 
             // Get new license
             try {
+                // Add Host and Card information for the first 2 requests
+                if ( mLicenseCounter < 2 )
+                    request_json["host_configuration"] = mHostConfigData;
+                // Add settings parameters
+                request_json["settings"] = buildSettingsNode();
+                // Send license request and wait for the answer
                 return getDrmWSClient().requestLicense( request_json, deadline );
             } catch ( const Exception& e ) {
                 oauth_attempt = 0;
@@ -1682,6 +1815,7 @@ protected:
                 uint32_t retry_sleep = mWSRetryPeriodShort;
                 uint32_t retry_timeout = mWSRequestTimeout;
                 mHealthCounter = 0;
+
                 /// Starting async metering post loop
                 while( 1 ) {
 
@@ -1785,7 +1919,7 @@ protected:
             Json::Value license_json = getLicense( request_json, mWSApiRetryDuration, mWSRetryPeriodShort );
             setLicense( license_json );
 
-            /// Extract asynchronous health parameters from response
+            // Extract asynchronous health parameters from response
             Json::Value metering_node = JVgetOptional( license_json, "metering", Json::objectValue, Json::nullValue );
             mHealthPeriod = JVgetOptional( metering_node, "healthPeriod", Json::uintValue, mHealthPeriod ).asUInt();
             mHealthRetryTimeout = JVgetOptional( metering_node, "healthRetry", Json::uintValue, mHealthRetryTimeout ).asUInt();
@@ -1838,15 +1972,16 @@ protected:
             Debug( "Session ID {} stopped and last metering data uploaded", mSessionID );
         }
         Debug( "Released metering access mutex from stopSession" );
-
-        Info( "DRM session {} stopped.", mSessionID );
-
-        /// Clear Session ID
+        // Clear Session ID
+		std::string sessionID = mSessionID;
         Debug2( "Clearing session ID: {}", mSessionID );
         mSessionID = std::string("");
-        /// Clear security flag
-        Debug2( "Clearing stop security flag" );
+
+        // Clear security flag
+        Debug( "Clearing stop security flag" );
         mSecurityStop = false;
+
+        Info( "DRM session {} stopped.", sessionID );
     }
 
     void pauseSession() {
@@ -1997,7 +2132,7 @@ public:
                 Debug2( "Getting parameter '{}'", key_str );
                 switch( key_id ) {
                     case ParameterKey::log_verbosity: {
-                        int32_t logVerbosity = static_cast<int>( sLogConsoleVerbosity );
+                        uint32_t logVerbosity = static_cast<uint32_t>( sLogConsoleVerbosity );
                         json_value[key_str] = logVerbosity;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                 logVerbosity );
@@ -2010,7 +2145,7 @@ public:
                         break;
                     }
                     case ParameterKey::log_file_verbosity: {
-                        int32_t logVerbosity = static_cast<int>( sLogFileVerbosity );
+                        uint32_t logVerbosity = static_cast<uint32_t>( sLogFileVerbosity );
                         json_value[key_str] = logVerbosity;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                 logVerbosity );
@@ -2262,7 +2397,7 @@ public:
                         break;
                     }
                     case ParameterKey::log_message_level: {
-                        int32_t msgLevel = static_cast<int>( mDebugMessageLevel );
+                        uint32_t msgLevel = static_cast<uint32_t>( mDebugMessageLevel );
                         json_value[key_str] = msgLevel;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                msgLevel );
@@ -2311,8 +2446,21 @@ public:
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id, mHealthRetrySleep );
                         break;
                     }
+                    case ParameterKey::host_data_verbosity: {
+                        uint32_t dataLevel = static_cast<uint32_t>( mHostDataVerbosity );
+                        json_value[key_str] = dataLevel;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                               dataLevel );
+                        break;
+                    }
+                    case ParameterKey::host_data: {
+                        json_value[key_str] = mHostConfigData;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                               mHostConfigData.toStyledString() );
+                        break;
+                    }
                     case ParameterKey::ParameterKeyCount: {
-                        uint32_t count = static_cast<int>( ParameterKeyCount );
+                        uint32_t count = static_cast<uint32_t>( ParameterKeyCount );
                         json_value[key_str] = count;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                count );

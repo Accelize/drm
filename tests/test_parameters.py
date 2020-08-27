@@ -62,7 +62,9 @@ _PARAM_LIST = ('license_type',
                'health_period',
                'health_retry',
                'health_retry_sleep',
-               'ws_api_retry_duration'
+               'ws_api_retry_duration',
+               'host_data_verbosity',
+               'host_data'
 )
 
 
@@ -463,6 +465,36 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     async_cb.assert_NoError()
     print("Test parameter 'ws_request_timeout': PASS")
 
+    # Test parameter: host_data_verbosity
+    async_cb.reset()
+    conf_json.reset()
+    expectVal = 0
+    conf_json['settings'] = {'host_data_verbosity': expectVal}
+    conf_json.save()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    assert drm_manager.get('host_data_verbosity') == expectVal
+
+    conf_json.reset()
+    expectVal = 2
+    conf_json['settings'] = {'host_data_verbosity': expectVal}
+    conf_json.save()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    assert drm_manager.get('host_data_verbosity') == expectVal
+    async_cb.assert_NoError()
+    print("Test parameter 'host_data_verbosity': PASS")
+
     # Test unsupported parameter
     async_cb.reset()
     conf_json.reset()
@@ -531,7 +563,6 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     async_cb.assert_NoError()
     print("Test when parameter is a list: PASS")
 
-
     # Test parameter: log_verbosity
     orig_val = drm_manager.get('log_verbosity')
     exp_val = 1 if orig_val == 0 else 0
@@ -582,6 +613,10 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     assert drm_manager.get('drm_license_type') == 'Floating/Metering'
     assert drm_manager.get('license_duration') != 0
     drm_manager.deactivate()
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+        drm_manager.set(license_duration=10)
+    assert "Parameter 'license_duration' cannot be overwritten" in str(excinfo.value)
+    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
     async_cb.assert_NoError()
     print("Test parameter 'drm_license_type', 'license_duration': PASS")
 
@@ -832,6 +867,12 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         'Asynchronous callback has not received the correct error code'
     drm_manager.deactivate()
     async_cb.reset()
+    async_cb.assert_NoError()
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+        drm_manager.get('trigger_async_callback')
+    assert "Parameter 'trigger_async_callback' cannot be read" in str(excinfo.value)
+    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+    async_cb.assert_NoError()
     print("Test parameter 'trigger_async_callback': PASS")
 
     # Test parameter: ParameterKeyCount
@@ -926,14 +967,9 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     async_cb.assert_NoError()
     print("Test parameter 'health_retry_sleep': PASS")
 
-
-def test_readonly_and_writeonly_parameters(accelize_drm, conf_json, cred_json, async_handler):
-    """
-    Test readonly parameter cannot be written and writeonly parameter cannot be read
-    """
-    driver = accelize_drm.pytest_fpga_driver[0]
-    async_cb = async_handler.create()
-
+    # Test parameter: host_data_verbosity
+    async_cb.reset()
+    conf_json.reset()
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
@@ -941,19 +977,43 @@ def test_readonly_and_writeonly_parameters(accelize_drm, conf_json, cred_json, a
         driver.write_register_callback,
         async_cb.callback
     )
-    # Test write-only parameter cannot be read
+    assert drm_manager.get('host_data_verbosity') == 1
+    expectVal = 0
+    conf_json['settings']['host_data_verbosity'] = expectVal
+    conf_json.save()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    assert drm_manager.get('host_data_verbosity') == expectVal
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        drm_manager.get('trigger_async_callback')
-    assert "Parameter 'trigger_async_callback' cannot be read" in str(excinfo.value)
+        drm_manager.set(host_data_verbosity=2)  # Test it cannot be written from code
+    assert "Parameter 'host_data_verbosity' cannot be overwritten" in str(excinfo.value)
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
     async_cb.assert_NoError()
+    print("Test parameter 'host_data_verbosity': PASS")
 
-    # Test read-only parameter cannot be written
+    # Test parameter: host_data
+    async_cb.reset()
+    conf_json.reset()
+    conf_json['settings'] = {'host_data': 0}
+    conf_json.save()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    assert type(drm_manager.get('host_data')) == dict
+    assert len(drm_manager.get('host_data'))
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        drm_manager.set(license_duration=10)
-    assert "Parameter 'license_duration' cannot be overwritten" in str(excinfo.value)
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+        drm_manager.set(host_data={'test':'test'})
     async_cb.assert_NoError()
+    print("Test parameter 'host_data': PASS")
 
 
 def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cred_json,

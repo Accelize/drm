@@ -15,10 +15,10 @@ PARAMETERKEY_ITEM( token_validity )                 ///< Read-only, return the v
 PARAMETERKEY_ITEM( token_time_left )                ///< Read-only, return the number of seconds left until the current token expires
 PARAMETERKEY_ITEM( frequency_detection_method )     ///< Read-only, return the method index used to detect the DRM frequency
 PARAMETERKEY_ITEM( bypass_frequency_detection )     ///< Read-only, return true if the frequency detection system is disabled, false otherwise
-PARAMETERKEY_ITEM( log_file_path )                  ///< Read-(write), read (or write) the logging file path: default path is "./drm_lib.log". Can be set only from configuration file (no override from C/C++ code)
-PARAMETERKEY_ITEM( log_file_type )                  ///< Read-(write), read (or write) the logging file type 0=no logging file, 1=basic file, 2=rotation file. Set only from configuration file (no override from C code)
-PARAMETERKEY_ITEM( log_file_rotating_size )         ///< Read-(write), read (or write) the logging rotating file size in KB: default=1024KB (1MB). Set only from configuration file (no override from C code)
-PARAMETERKEY_ITEM( log_file_rotating_num )          ///< Read-(write), read (or write) the logging rotating number of backup files: default=3. Set only from configuration file (no override from C code)
+PARAMETERKEY_ITEM( log_file_path )                  ///< Read-(write), read (and write) the logging file path: default path is "./drm_lib.log". Can be set only from configuration file (no override from C/C++ code)
+PARAMETERKEY_ITEM( log_file_type )                  ///< Read-(write), read (and write) the logging file type 0=no logging file, 1=basic file, 2=rotation file. Set only from configuration file (no override from C code)
+PARAMETERKEY_ITEM( log_file_rotating_size )         ///< Read-(write), read (and write) the logging rotating file size in KB: default=1024KB (1MB). Set only from configuration file (no override from C code)
+PARAMETERKEY_ITEM( log_file_rotating_num )          ///< Read-(write), read (and write) the logging rotating number of backup files: default=3. Set only from configuration file (no override from C code)
 PARAMETERKEY_ITEM( log_file_verbosity )             ///< Read-write, read and write the logging verbosity on the file: 0=trace, 6=quiet
 PARAMETERKEY_ITEM( log_file_format )                ///< Read-write, read and write the logging file format. Refer to spdlog reference manual (https://github.com/gabime/spdlog/wiki/3.-Custom-formatting)
 PARAMETERKEY_ITEM( log_verbosity )                  ///< Read-write, read and write the logging verbosity on the stdout/stderr: 0=trace, 6=quiet
@@ -47,3 +47,5 @@ PARAMETERKEY_ITEM( health_period )                  ///< Read-only, return the c
 PARAMETERKEY_ITEM( health_retry )                   ///< Read-only, return the current value of the health retry timeout
 PARAMETERKEY_ITEM( health_retry_sleep )             ///< Read-only, return the current value of the health retry sleep
 PARAMETERKEY_ITEM( ws_api_retry_duration )          ///< Read-write, read and write the period of time in seconds during which retries occur on activate and deactivate functions
+PARAMETERKEY_ITEM( host_data_verbosity )            ///< Read-(write), read (and write) the level of verbosity for the amont of host and card data collected. Set only from configuration file (no override from C code)
+PARAMETERKEY_ITEM( host_data )                      ///< Read-only, read the host and card information

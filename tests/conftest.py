@@ -233,6 +233,11 @@ def pytest_runtest_setup(item):
         if 'security' == marker.name and 'security' not in item.config.option.markexpr:
             pytest.skip('"security" marker not selected')
 
+    # Skip 'long_run' test if not explicitly marked
+    for marker in item.iter_markers():
+        if 'long_run' == marker.name and 'long_run' not in item.config.option.markexpr:
+            pytest.skip('"long_run" marker not selected')
+
 
 class SingleActivator:
     """
@@ -267,7 +272,7 @@ class SingleActivator:
             # Test reading of the generate event register
             assert self.driver.read_register(self.base_address + INC_EVENT_REG_OFFSET) == 0x600DC0DE
             # Test address overflow
-            assert self.driver.read_register(self.base_address + INC_EVENT_REG_OFFSET + 0x8) == 0xDEADDEAD
+            assert self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET + 0x4) == 0xDEADDEAD
 
     def get_status(self):
         """
@@ -467,6 +472,12 @@ def accelize_drm(pytestconfig):
     build_source_dir = '@CMAKE_CURRENT_SOURCE_DIR@'
     if build_source_dir.startswith('@'):
         build_source_dir = realpath('.')
+
+    # Create pytest artifacts directory
+    pytest_artifacts_dir = join(pytestconfig.getoption("artifacts_dir"), 'pytest_artifacts')
+    if not isdir(pytest_artifacts_dir):
+        makedirs(pytest_artifacts_dir)
+    print('pytest artifacts directory: ', pytest_artifacts_dir)
 
     # Get Ref Designs available
     ref_designs = RefDesign(join(build_source_dir, 'tests', 'refdesigns', fpga_driver_name))
