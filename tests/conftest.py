@@ -248,7 +248,7 @@ class SingleActivator:
             # Test reading of the generate event register
             assert self.driver.read_register(self.base_address + INC_EVENT_REG_OFFSET) == 0x600DC0DE
             # Test address overflow
-            assert self.driver.read_register(self.base_address + INC_EVENT_REG_OFFSET + 0x4) == 0xDEADDEAD
+            assert self.driver.read_register(self.base_address + INC_EVENT_REG_OFFSET + 0x8) == 0xDEADDEAD
 
     def get_status(self):
         """
