@@ -3,17 +3,10 @@
 Test node-locked behavior of DRM Library.
 """
 import pytest
-import gc
-from glob import glob
-from os import remove, getpid
-from os.path import getsize, isfile, dirname, join, realpath
-from re import match, search, finditer, MULTILINE, IGNORECASE
-from time import sleep, time
-from json import loads, dumps
+from re import search, IGNORECASE
+from time import sleep
 from datetime import datetime, timedelta
 from flask import request
-
-from tests.conftest import wait_func_true
 
 
 @pytest.mark.minimum

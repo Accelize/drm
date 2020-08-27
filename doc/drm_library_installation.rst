@@ -447,23 +447,15 @@ To uninstall the Accelize DRM library when installed from sources:
 
     cd build
 
-* Finally, uninstall files and directories
+* Finally, uninstall files and directories using the CMake installation manifest
 
-  - For DRM library version >= 2.5.0, using the uninstall target:
+.. code-block:: bash
 
-    .. code-block:: bash
-
-        sudo make uninstall
-
-  - For older version, using the CMake installation manifest:
-
-    .. code-block:: bash
-
-        for name in $(cat install_manifest.txt)
-        do
-            sudo rm -f "$name"
-            sudo rmdir -p --ignore-fail-on-non-empty "$(dirname "$name")"
-        done
+    for name in $(cat install_manifest.txt)
+    do
+        sudo rm -f "$name"
+        sudo rmdir -p --ignore-fail-on-non-empty "$(dirname "$name")"
+    done
 
 You may also uninstall packages you have installed to build the Accelize DRM.
 
