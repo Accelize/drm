@@ -1247,7 +1247,7 @@ protected:
             Debug2( "License #{} not transmitted yet after {} ms", mLicenseCounter, mseconds );
         }
         if ( !activationCodesTransmitted ) {
-            Unreachable( "DRM Controller could not transmit Licence #{} to activators. ", mLicenseCounter ); //LCOV_EXCL_LINE
+            Unreachable( "DRM Controller could not transmit Licence #{} to activators after {} seconds. ", mLicenseCounter, mseconds ); //LCOV_EXCL_LINE
         }
         mExpirationTime += std::chrono::seconds( mLicenseDuration );
 

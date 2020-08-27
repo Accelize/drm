@@ -114,7 +114,7 @@ def test_topic1_corrupted_metering(accelize_drm, conf_json, cred_json, async_han
                     assert drm_manager.get('session_status')
                     assert drm_manager.get('license_status')
                     assert drm_manager.get('session_id') == session_id
-                    # Wait randomly at the limit of the expiration
+                    # Wait for the limit of the expiration
                     random_wait = lic_duration*2
                     wait_deadline(start, random_wait)
                     drm_manager.activate(True)
