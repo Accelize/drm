@@ -2,6 +2,7 @@
 """Configure Pytest"""
 import pytest
 import sys
+import hashlib
 
 from copy import deepcopy
 from json import dump, load, dumps
@@ -26,10 +27,17 @@ _LICENSING_SERVERS = dict(
 ACT_STATUS_REG_OFFSET = 0x38
 MAILBOX_REG_OFFSET = 0x3C
 INC_EVENT_REG_OFFSET = 0x40
+CNT_EVENT_REG_OFFSET = 0x44
+
+HASH_FUNTION_TABLE = {}
 
 
 def bit_not(n, numbits=32):
     return (1 << numbits) - 1 - n
+
+
+def cheap_hash(string_in, length=6):
+    return hashlib.md5(string_in).hexdigest()[:length]
 
 
 def get_default_conf_json(licensing_server_url):
@@ -268,7 +276,7 @@ class SingleActivator:
         Returns:
             int: Status.
         """
-        return self.driver.read_register(self.base_address+ACT_STATUS_REG_OFFSET) == 3
+        return self.driver.read_register(self.base_address + ACT_STATUS_REG_OFFSET) == 3
 
     def generate_coin(self, coins):
         """
@@ -278,7 +286,7 @@ class SingleActivator:
             coins (int): Number of coins to generate.
         """
         for _ in range(coins):
-            self.driver.write_register(self.base_address+INC_EVENT_REG_OFFSET, 0)
+            self.driver.write_register(self.base_address + INC_EVENT_REG_OFFSET, 0)
         if self.get_status():
             self.metering_data += coins
 
@@ -287,6 +295,7 @@ class SingleActivator:
         Reset the coins counter
         """
         self.metering_data = 0
+        self.driver.write_register(self.base_address + CNT_EVENT_REG_OFFSET, 0)
 
     def check_coin(self, coins):
         """
@@ -295,7 +304,11 @@ class SingleActivator:
         Args:
             coins (int): Number of coins to compare to.
         """
+        # Check local counter with dmr value passed in argument
         assert self.metering_data == coins
+        # Check with counter in Activator's registery
+        #assert self.metering_data == self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET)
+
 
 
 class ActivatorsInFPGA:
@@ -356,7 +369,6 @@ class ActivatorsInFPGA:
         """
         for activator in self.activators:
             activator.reset_coin()
-
 
 
 
@@ -740,10 +752,19 @@ class CredJson(_Json):
 
 
 @pytest.fixture
-def conf_json(pytestconfig, tmpdir):
+def conf_json(request, pytestconfig, tmpdir):
     """
     Manage "conf.json" in testing environment.
     """
+    # Compute hash of caller function
+    function_name = request.function.__name__
+    hash_value = cheap_hash(function_name.encode('utf-8'))
+    if hash_value not in HASH_FUNTION_TABLE.keys():
+        HASH_FUNTION_TABLE[hash_value] = function_name
+        with open(join(getcwd(),'hash_function_table.txt'), 'wt') as f:
+            f.write(dumps(HASH_FUNTION_TABLE, indent=4, sort_keys=True))
+    design_param = {'boardType': hash_value}
+    # Build config content
     log_param = {'log_verbosity': pytestconfig.getoption("library_verbosity")}
     if pytestconfig.getoption("library_format") == 1:
         log_param['log_format'] = '%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v'
@@ -753,7 +774,8 @@ def conf_json(pytestconfig, tmpdir):
         log_param['log_file_type'] = 1
         log_param['log_file_path'] = realpath("./tox_drmlib_t%f_pid%d.log" % (time(), getpid()))
         log_param['log_file_verbosity'] = pytestconfig.getoption("logfilelevel")
-    json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param)
+    # Save config to JSON file
+    json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param, design=design_param)
     json_conf.save()
     return json_conf
 
@@ -1058,38 +1080,3 @@ def app(pytestconfig):
     app = create_app(url)
     app.debug = pytestconfig.getoption("proxy_debug")
     return app
-
-
-
-#-------------------
-# Artifacts fixture
-#-------------------
-
-class ArtifactFactory:
-
-    def __init__(self, artifacts_dir=None):
-        self.artifact_dir = artifacts_dir
-        # Create artifacts directory if not existing
-        if not isdir(self.artifact_dir):
-            makedirs(self.artifact_dir)
-
-    def save_path(self, path, rename=None):
-        from shutil import copy
-        if rename:
-            dst = join(self.artifact_dir, rename)
-        else:
-            dst = self.artifact_dir
-        if isfile(path):
-            copy(path, dst)
-        elif isdir(path):
-            copytree(path, dst)
-
-    def save_content(self, content, filename, mode='wt'):
-        file_path = join(self.artifact_dir, filename)
-        with open(file_path, mode) as fw:
-            fw.write(content)
-
-@pytest.fixture
-def artifacts(accelize_drm):
-    return ArtifactFactory(accelize_drm.pytest_artifacts_dir)
-
