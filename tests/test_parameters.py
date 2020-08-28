@@ -3,7 +3,7 @@
 Test node-locked behavior of DRM Library.
 """
 import pytest
-from os import remove, getpid
+from os import remove, getpid, environ
 from os.path import isfile, realpath
 from re import match, search, finditer
 from time import sleep, time
@@ -1008,8 +1008,11 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         driver.write_register_callback,
         async_cb.callback
     )
-    assert type(drm_manager.get('host_data')) == dict
-    assert len(drm_manager.get('host_data'))
+    if 'XRT_PATH' in environ:
+        assert type(drm_manager.get('host_data')) == dict
+        assert len(drm_manager.get('host_data'))
+    else:
+        assert drm_manager.get('host_data') is None
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         drm_manager.set(host_data={'test':'test'})
     async_cb.assert_NoError()

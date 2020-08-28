@@ -3,12 +3,16 @@
 Test host and card information releated feature
 """
 import pytest
+from os import environ
 
 
 def test_host_data_verbosity(accelize_drm, conf_json, cred_json, async_handler):
     """
     Test all supported verbosity
     """
+    if 'XRT_PATH' not in environ:
+        pytest.skip("XRT_PATH is not defined: skip host and card tests")
+
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
@@ -65,6 +69,9 @@ def test_format(accelize_drm, conf_json, cred_json, async_handler):
     """
     Test the format in the request is as expected
     """
+    if 'XRT_PATH' not in environ:
+        pytest.skip("XRT_PATH is not defined: skip host and card tests")
+
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
