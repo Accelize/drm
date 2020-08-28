@@ -359,19 +359,19 @@ Create libraries
 
 Two libraries are required :
 
-  * Library **drm_library**:
+  * Library **drm_library** for common part:
 
     .. code-block:: tcl
 
        vlib drm_library
        vmap drm_library drm_library
 
-  * Library **drm_0xVVVVLLLLNNNNVVVV_library** when multiple different activators exist in the design:
+  * Library **drm_0xVVVVLLLLNNNNVVVV_library** for each different activator existing in the design:
 
     .. code-block:: tcl
 
-       vlib drm_testbench_library
-       vmap drm_testbench_library drm_testbench_library
+       vlib drm_0xVVVVLLLLNNNNVVVV_library
+       vmap drm_0xVVVVLLLLNNNNVVVV_library drm_0xVVVVLLLLNNNNVVVV_library
 
 
 Compile the files in the following order:
