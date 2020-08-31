@@ -29,8 +29,12 @@ Aws::Aws():CspBase("Aws", 100) {}
 
 Json::Value Aws::get_metadata() {
     Json::Value metadata = Json::nullValue;
-    std::string url = "curl -s -X PUT \"http://169.254.169.254/latest/api/token\" -H \"X-aws-ec2-metadata-token-ttl-seconds: 21600\"";
-    //mHTTPRequest.perform(
+    std::string resp;
+    std::string url = "http://169.254.169.254/latest/api/token";
+    mHTTPRequest.appendHeader( "X-aws-ec2-metadata-token-ttl-seconds: 21600" );
+    mHTTPRequest.perform( &resp, url, 100 );
+    std::cout << "resp=" << resp << std::endl;
+
     // Using IMDSv2 method
     /*// Get token
     std::string cmd = "curl -s -X PUT \"http://169.254.169.254/latest/api/token\" -H \"X-aws-ec2-metadata-token-ttl-seconds: 21600\"";

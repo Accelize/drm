@@ -106,17 +106,16 @@ long CurlEasyPost::perform( std::string* resp, std::chrono::steady_clock::time_p
     return perform( resp, timeout );
 }
 
-long CurlEasyPost::perform( std::string* resp, std::string url, const std::chrono::milliseconds& timeout_ms ) {
+long CurlEasyPost::perform( std::string* resp, std::string url, const uint32_t& timeout_ms ) {
     curl_easy_setopt( curl, CURLOPT_URL, url.c_str() );
     curl_easy_setopt( curl, CURLOPT_WRITEFUNCTION, &CurlEasyPost::write_callback );
     curl_easy_setopt( curl, CURLOPT_WRITEDATA, (void*)resp );
     curl_easy_setopt( curl, CURLOPT_ERRORBUFFER, errbuff.data() );
     curl_easy_setopt( curl, CURLOPT_FOLLOWLOCATION, 1L );
     curl_easy_setopt( curl, CURLOPT_CONNECTTIMEOUT_MS, mRequestTimeoutMS );
-    // Compute timeout
-    if ( timeout_ms <= std::chrono::milliseconds( 0 ) )
+    if ( timeout_ms <= 0 )
         Throw( DRM_WSTimedOut, "Did not perform HTTP request to Accelize webservice because deadline is reached." );
-    curl_easy_setopt( curl, CURLOPT_TIMEOUT_MS, timeout_ms.count() );
+    curl_easy_setopt( curl, CURLOPT_TIMEOUT_MS, timeout_ms );
 
     CURLcode res = curl_easy_perform( curl );
     if ( res != CURLE_OK ) {

@@ -23,6 +23,8 @@ limitations under the License.
 #include <json/json.h>
 #include <curl/curl.h>
 
+#include "log.h"
+
 
 namespace Accelize {
 namespace DRM {
@@ -85,7 +87,7 @@ public:
 
     long perform( std::string* resp, std::chrono::steady_clock::time_point& deadline );
     long perform( std::string* resp, std::chrono::milliseconds& timeout );
-    long perform( std::string* resp, std::string url, const std::chrono::milliseconds& timeout_ms );
+    long perform( std::string* resp, std::string url, const uint32_t& timeout_ms );
 
     double getTotalTime();
 

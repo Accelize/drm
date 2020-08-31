@@ -35,6 +35,8 @@ class CspBase {
 
 private:
     std::string mName;  // CSP name
+
+protected:
     CurlEasyPost mHTTPRequest;
 
 public:
