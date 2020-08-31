@@ -48,14 +48,14 @@ public:
 class CurlEasyPost {
 
 private:
-    const uint32_t cRequestTimeout = 30;  // In seconds
+    const uint32_t cRequestTimeoutMS = 30000;       // Timeout default value in milliseconds
 
     CURL *curl = NULL;
     struct curl_slist *headers = NULL;
     struct curl_slist *host_resolve_list = NULL;
-    std::list<std::string> data; // keep data until request performed
+    std::list<std::string> data;                    // keep data until request performed
     std::array<char, CURL_ERROR_SIZE> errbuff;
-    uint32_t mRequestTimeout;
+    uint32_t mRequestTimeoutMS;                     // Timeout in milliseconds
 
 public:
 
@@ -85,6 +85,8 @@ public:
 
     long perform( std::string* resp, std::chrono::steady_clock::time_point& deadline );
     long perform( std::string* resp, std::chrono::milliseconds& timeout );
+    long perform( std::string* resp, std::string url, const std::chrono::milliseconds& timeout_ms );
+
     double getTotalTime();
 
     void setHostResolves( const Json::Value& host_json );
@@ -109,7 +111,7 @@ public:
         curl_easy_setopt( curl, CURLOPT_POSTFIELDS, data.back().c_str() );
     }
 
-    void setRequestTimeout( const uint32_t requestTimeout ) { mRequestTimeout = requestTimeout; }
+    void setRequestTimeoutMS( const uint32_t requestTimeoutMS ) { mRequestTimeoutMS = requestTimeoutMS; }
 
 protected:
 

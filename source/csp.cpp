@@ -25,12 +25,14 @@ namespace DRM {
 
 /** AWS class
 */
-Aws::Aws():CspBase("Aws") {}
+Aws::Aws():CspBase("Aws", 100) {}
 
 Json::Value Aws::get_metadata() {
     Json::Value metadata = Json::nullValue;
+    std::string url = "curl -s -X PUT \"http://169.254.169.254/latest/api/token\" -H \"X-aws-ec2-metadata-token-ttl-seconds: 21600\"";
+    //mHTTPRequest.perform(
     // Using IMDSv2 method
-    // Get token
+    /*// Get token
     std::string cmd = "curl -s -X PUT \"http://169.254.169.254/latest/api/token\" -H \"X-aws-ec2-metadata-token-ttl-seconds: 21600\"";
     std::string token = exec_cmd( cmd );
     // Create base command
@@ -39,14 +41,16 @@ Json::Value Aws::get_metadata() {
     metadata["instance_id"] = exec_cmd( fmt::format( "{}/meta-data/instance-id", base_cmd ) );
     metadata["instance_type"] = exec_cmd( fmt::format( "{}/meta-data/instance-type", base_cmd ) );
     metadata["ami_id"] = exec_cmd( fmt::format( "{}/meta-data/ami-id", base_cmd ) );
-    metadata["region"] = exec_cmd( fmt::format( "{}/dynamic/instance-identity/document | grep -oP '\"region\"[[:space:]]*:[[:space:]]*\"\\K[^\"]+'", base_cmd ) );
+    metadata["region"] = exec_cmd( fmt::format( "{}/dynamic/instance-identity/document | grep -oP '\"region\"[[:space:]]*:[[:space:]]*\"\\K[^\"]+'", base_cmd ) );*/
     return metadata;
 }
 
 
 /** Alibaba class
 */
-Alibaba::Alibaba():CspBase("Alibaba") {}
+Alibaba::Alibaba():CspBase("Alibaba", 100) {
+
+}
 
 Json::Value Alibaba::get_metadata() {
     Json::Value metadata = Json::nullValue;
@@ -63,6 +67,12 @@ Json::Value Alibaba::get_metadata() {
 
 /** CspBase class
 */
+
+CspBase::CspBase( const std::string &name, const uint32_t timeout_ms ) {
+    mName = name;
+    mHTTPRequest.setRequestTimeoutMS( timeout_ms );
+}
+
 CspBase *CspBase::make_csp() {
     //  Test AWS command
     Aws* csp_aws = new Aws();

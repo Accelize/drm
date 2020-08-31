@@ -22,6 +22,8 @@ limitations under the License.
 
 #include <json/json.h>
 
+#include "ws_client.h"
+
 
 namespace Accelize {
 namespace DRM {
@@ -33,11 +35,12 @@ class CspBase {
 
 private:
     std::string mName;  // CSP name
+    CurlEasyPost mHTTPRequest;
 
 public:
 
     CspBase() = delete; //!< No default constructor
-    CspBase( const std::string &name ) { mName = name; }
+    CspBase( const std::string &name, const uint32_t timeout_ms );
     virtual ~CspBase() {};
 
     std::string getName() const { return mName; }
