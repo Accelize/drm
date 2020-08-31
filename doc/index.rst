@@ -1,6 +1,10 @@
 Accelize DRM
 ============
 
+.. image:: _static/accelize_DRM_logo.png
+   :target: _static/accelize_DRM_logo.png
+   :alt: Accelize DRM logo
+
 FPGA Licensing Principle
 ------------------------
 
@@ -202,7 +206,7 @@ Glossary
 
    contacts
    Accelize Website <https://www.accelize.com>
-   DRM Library on Github <https://github.com/Accelize/drmlib>
+   DRM Library on Github <https://github.com/Accelize/drm>
 
 Indexes and tables
 ------------------
