@@ -37,13 +37,12 @@ def test_metered_start_stop_in_raw(accelize_drm, conf_json, cred_json, async_han
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
         activators[0].generate_coin(1000)
-        activators[0].check_coin(drm_manager.get('metered_data'))
         drm_manager.activate()
         assert drm_manager.get('metered_data') == 0
+        activators[0].check_coin(drm_manager.get('metered_data'))
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
-        assert drm_manager.get('metered_data') == 0
         async_cb.assert_NoError()
     finally:
         drm_manager.deactivate()
