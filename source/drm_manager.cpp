@@ -455,60 +455,65 @@ protected:
         if ( mHostDataVerbosity == eHostDataVerbosity::NONE ) {
             return;
         }
-
-        // Find xbutil if existing
-        if ( !findXrtUtility() )
-            return;
-
+        // Gather CSP information if detected
         try {
-            // Call xbutil to collect host and card data
-            std::string cmd = fmt::format( "{} dump", mXbutil );
-            std::string cmd_out = exec_cmd( cmd );
+            // Add CSP specific command
+            CspBase* csp = CspBase::make_csp();
+            if ( csp != nullptr ) {
+                mHostConfigData["csp"] = csp->get_metadata();
+                delete csp;
+                Debug( "CSP information:\n{}", mHostConfigData["csp"].toStyledString() );
+            }
+        } catch( const std::exception &e ) {
+            Warning( "Error when retrieving CSP information: {}", e.what() );
+        }
+        // Gather host and card information if xbutil existing
+        if ( findXrtUtility() ) {
+            try {
+                Json::Value hostcard_node = Json::nullValue;
 
-            // Parse collected data and save to header
-            Json::Value node = parseJsonString( cmd_out );
+                // Call xbutil to collect host and card data
+                std::string cmd = fmt::format( "{} dump", mXbutil );
+                std::string cmd_out = exec_cmd( cmd );
 
-            if ( mHostDataVerbosity == eHostDataVerbosity::FULL ) {
-                // Verbosity is FULL
-                mHostConfigData = node;
+                // Parse collected data and save to header
+                Json::Value xbutil_node = parseJsonString( cmd_out );
 
-            } else {
-                // Verbosity is PARTIAL
-                for(Json::Value::iterator itr=node.begin(); itr!=node.end(); ++itr) {
-                    std::string key = itr.key().asString();
-                    try {
-                        if (   ( key == "version" )
-                            || ( key == "system" )
-                            || ( key == "runtime" )
-                           )
-                            mHostConfigData[key] = *itr;
-                        else if ( key == "board" ) {
-                            //  Add general info node
-                            mHostConfigData[key]["info"] = itr->get("info", Json::nullValue);
-                            // Try to get the number of kernels
-                            Json::Value compute_unit_node = itr->get("compute_unit", Json::nullValue);
-                            if ( compute_unit_node != Json::nullValue )
-                                mHostConfigData[key]["compute_unit"] = compute_unit_node.size();
-                            else
-                                mHostConfigData[key]["compute_unit"] = -1;
-                            // Add XCLBIN UUID
-                            mHostConfigData[key]["xclbin"] = itr->get("xclbin", Json::nullValue);
-                            // Add CSP specific command
-                            CspBase* csp = CspBase::make_csp();
-                            if ( csp != nullptr ) {
-                                mHostConfigData[key]["csp"] = csp->get_metadata();
-                                delete csp;
+                if ( mHostDataVerbosity == eHostDataVerbosity::FULL ) {
+                    // Verbosity is FULL
+                    hostcard_node = xbutil_node;
+                } else {
+                    // Verbosity is PARTIAL
+                    for(Json::Value::iterator itr=xbutil_node.begin(); itr!=xbutil_node.end(); ++itr) {
+                        std::string key = itr.key().asString();
+                        try {
+                            if (   ( key == "version" )
+                                || ( key == "system" )
+                                || ( key == "runtime" )
+                               )
+                                mHostConfigData[key] = *itr;
+                            else if ( key == "board" ) {
+                                //  Add general info node
+                                mHostConfigData[key]["info"] = itr->get("info", Json::nullValue);
+                                // Try to get the number of kernels
+                                Json::Value compute_unit_node = itr->get("compute_unit", Json::nullValue);
+                                if ( compute_unit_node != Json::nullValue )
+                                    mHostConfigData[key]["compute_unit"] = compute_unit_node.size();
+                                else
+                                    mHostConfigData[key]["compute_unit"] = -1;
+                                // Add XCLBIN UUID
+                                mHostConfigData[key]["xclbin"] = itr->get("xclbin", Json::nullValue);
                             }
+                        } catch( const std::exception &e ) {
+                            Debug( "Could not extract Host Information for key {}", key );
                         }
-                    } catch( const std::exception &e ) {
-                        Debug( "Could not extract Host Information for key {}", key );
                     }
                 }
+                mHostConfigData["host_card"] = hostcard_node;
+                Debug( "Host and card information:\n{}", hostcard_node.toStyledString() );
+            } catch( const std::exception &e ) {
+                Warning( "Error when retrieving host and card information: {}", e.what() );
             }
-            Debug( "Host and card information:\n{}", mHostConfigData.toStyledString() );
-
-        } catch( const std::exception &e ) {
-            Warning( "Error when retrieving host and card information: {}", e.what() );
         }
     }
 

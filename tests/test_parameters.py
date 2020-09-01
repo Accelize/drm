@@ -1061,7 +1061,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         driver.write_register_callback,
         async_cb.callback
     )
-    assert drm_manager.get('log_file_append')) == False
+    assert drm_manager.get('log_file_append') == False
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         drm_manager.set(log_file_append=True)
     async_cb.assert_NoError()
