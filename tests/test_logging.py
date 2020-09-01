@@ -231,6 +231,76 @@ def test_file_types(accelize_drm, conf_json, cred_json, async_handler):
             remove(f)
 
 
+def test_file_append(accelize_drm, conf_json, cred_json, async_handler):
+    """Test logging file append mode"""
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+
+    log_path = accelize_drm.create_log_path(whoami())
+    log_type= 1
+
+    async_cb.reset()
+    conf_json.reset()
+    conf_json['settings']['log_verbosity'] = 6
+    conf_json['settings']['log_file_path'] = log_path
+    conf_json['settings']['log_file_type'] = log_type
+    conf_json['settings']['log_file_append'] = True
+    conf_json.save()
+
+    nb_loop = 5
+    for i in range(nb_loop):
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+        del drm_manager
+    wait_func_true(lambda: isfile(log_path), 10)
+    async_cb.assert_NoError()
+    assert len(glob(log_path)) == 1
+    with open(log_path, 'rt') as f:
+        log_content = f.read()
+    assert len(findall(r'Installed versions', log_content)) == nb_loop
+    remove(log_path)
+
+
+def test_file_truncate(accelize_drm, conf_json, cred_json, async_handler):
+    """Test logging file truncate mode"""
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+
+    log_path = accelize_drm.create_log_path(whoami())
+    log_type= 1
+
+    async_cb.reset()
+    conf_json.reset()
+    conf_json['settings']['log_verbosity'] = 6
+    conf_json['settings']['log_file_path'] = log_path
+    conf_json['settings']['log_file_type'] = log_type
+    conf_json['settings']['log_file_append'] = False
+    conf_json.save()
+
+    nb_loop = 5
+    for i in range(nb_loop):
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+        del drm_manager
+    wait_func_true(lambda: isfile(log_path), 10)
+    async_cb.assert_NoError()
+    assert len(glob(log_path)) == 1
+    with open(log_path, 'rt') as f:
+        log_content = f.read()
+    assert len(findall(r'Installed versions', log_content)) == 1
+    remove(log_path)
+
+
 def test_file_rotating_parameters(accelize_drm, conf_json, cred_json, async_handler):
     """Test logging file rotating parameters"""
     driver = accelize_drm.pytest_fpga_driver[0]

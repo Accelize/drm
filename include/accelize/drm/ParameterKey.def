@@ -15,10 +15,10 @@ PARAMETERKEY_ITEM( token_validity )                 ///< Read-only, return the v
 PARAMETERKEY_ITEM( token_time_left )                ///< Read-only, return the number of seconds left until the current token expires
 PARAMETERKEY_ITEM( frequency_detection_method )     ///< Read-only, return the method index used to detect the DRM frequency
 PARAMETERKEY_ITEM( bypass_frequency_detection )     ///< Read-only, return true if the frequency detection system is disabled, false otherwise
-PARAMETERKEY_ITEM( log_file_path )                  ///< Read-(write), read (and write) the logging file path: default path is "./drm_lib.log". Can be set only from configuration file (no override from C/C++ code)
-PARAMETERKEY_ITEM( log_file_type )                  ///< Read-(write), read (and write) the logging file type 0=no logging file, 1=basic file, 2=rotation file. Set only from configuration file (no override from C code)
-PARAMETERKEY_ITEM( log_file_rotating_size )         ///< Read-(write), read (and write) the logging rotating file size in KB: default=1024KB (1MB). Set only from configuration file (no override from C code)
-PARAMETERKEY_ITEM( log_file_rotating_num )          ///< Read-(write), read (and write) the logging rotating number of backup files: default=3. Set only from configuration file (no override from C code)
+PARAMETERKEY_ITEM( log_file_path )                  ///< Read-(write), read (and write) the logging file path: default path is "./drm_lib.log". Can be set only from configuration file (no override from user code)
+PARAMETERKEY_ITEM( log_file_type )                  ///< Read-(write), read (and write) the logging file type 0=no logging file, 1=basic file, 2=rotation file. Set only from configuration file (no override from user code)
+PARAMETERKEY_ITEM( log_file_rotating_size )         ///< Read-(write), read (and write) the logging rotating file size in KB: default=1024KB (1MB). Set only from configuration file (no override from user code)
+PARAMETERKEY_ITEM( log_file_rotating_num )          ///< Read-(write), read (and write) the logging rotating number of backup files: default=3. Set only from configuration file (no override from user code)
 PARAMETERKEY_ITEM( log_file_verbosity )             ///< Read-write, read and write the logging verbosity on the file: 0=trace, 6=quiet
 PARAMETERKEY_ITEM( log_file_format )                ///< Read-write, read and write the logging file format. Refer to spdlog reference manual (https://github.com/gabime/spdlog/wiki/3.-Custom-formatting)
 PARAMETERKEY_ITEM( log_verbosity )                  ///< Read-write, read and write the logging verbosity on the stdout/stderr: 0=trace, 6=quiet
@@ -29,7 +29,7 @@ PARAMETERKEY_ITEM( custom_field )                   ///< Read-write, only for te
 PARAMETERKEY_ITEM( mailbox_data )                   ///< Read-write, only for testing, read or write values to Mailbox read-write memory in DRM Controller
 PARAMETERKEY_ITEM( ws_retry_period_long )           ///< Read-write, read and write the time in seconds before the next request attempt to the Web Server when the time left before timeout is long
 PARAMETERKEY_ITEM( ws_retry_period_short )          ///< Read-write, read and write the time in seconds before the next request attempt to the Web Server when the time left before timeout is short
-PARAMETERKEY_ITEM( ws_request_timeout )             ///< Read-(write), read (and write) the maximum period of time in seconds for the request to complete. Can be set only from configuration file (no override from C/C++ code)
+PARAMETERKEY_ITEM( ws_request_timeout )             ///< Read-(write), read (and write) the maximum period of time in seconds for the request to complete. Can be set only from configuration file (no override from user code)
 PARAMETERKEY_ITEM( log_message_level )              ///< Read-write, only for testing, read and write the log level used with log_message parameter to set the message level
 PARAMETERKEY_ITEM( list_all )                       ///< Read-only, list all parameter keys available
 PARAMETERKEY_ITEM( dump_all )                       ///< Read-only, read all parameter key values
@@ -47,5 +47,6 @@ PARAMETERKEY_ITEM( health_period )                  ///< Read-only, return the c
 PARAMETERKEY_ITEM( health_retry )                   ///< Read-only, return the current value of the health retry timeout
 PARAMETERKEY_ITEM( health_retry_sleep )             ///< Read-only, return the current value of the health retry sleep
 PARAMETERKEY_ITEM( ws_api_retry_duration )          ///< Read-write, read and write the period of time in seconds during which retries occur on activate and deactivate functions
-PARAMETERKEY_ITEM( host_data_verbosity )            ///< Read-(write), read (and write) the level of verbosity for the amont of host and card data collected. Set only from configuration file (no override from C code)
+PARAMETERKEY_ITEM( host_data_verbosity )            ///< Read-(write), read (and write) the level of verbosity for the amont of host and card data collected. Set only from configuration file (no override from user code)
 PARAMETERKEY_ITEM( host_data )                      ///< Read-only, read the host and card information
+PARAMETERKEY_ITEM( log_file_append )                ///< Read-(write), read (and write) the appending parameter for the basic logging file. Set only from configuration file (no override from user code)

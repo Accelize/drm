@@ -158,9 +158,11 @@ def pytest_addoption(parser):
     parser.addoption(
         "--no_clear_fpga", action="store_true", help='Bypass clearing of FPGA at start-up')
     parser.addoption(
-        "--logfile", action="store_true", help='Save log to file')
+        "--logfile", nargs='?', type=str, const='', default=None, help='Save log to file path.')
     parser.addoption(
         "--logfilelevel", action="store", type=int, default=1, choices=(0,1,2,3,4,5), help='Specify verbosity for --logfile')
+    parser.addoption(
+        "--logfileappend", action="store_true", default=False, help='Append log message to same file. File path is specified by --logfile')
     parser.addoption(
         "--proxy_debug", action="store_true", default=False,
         help='Activate debug for proxy')
@@ -781,10 +783,14 @@ def conf_json(request, pytestconfig, tmpdir):
         log_param['log_format'] = '%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v'
     else:
         log_param['log_format'] = '[%^%=8l%$] %-6t, %v'
-    if pytestconfig.getoption("logfile"):
+    if pytestconfig.getoption("logfile") is not None:
         log_param['log_file_type'] = 1
-        log_param['log_file_path'] = realpath("./tox_drmlib_t%f_pid%d.log" % (time(), getpid()))
+        if len(pytestconfig.getoption("logfile")) != 0:
+            log_param['log_file_path'] = pytestconfig.getoption("logfilepath")
+        else:
+            log_param['log_file_path'] = realpath("./tox_drmlib_t%f_pid%d.log" % (time(), getpid()))
         log_param['log_file_verbosity'] = pytestconfig.getoption("logfilelevel")
+        log_param['log_file_append'] = True if pytestconfig.getoption("logfileappend") else False
     # Save config to JSON file
     json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param, design=design_param)
     json_conf.save()
