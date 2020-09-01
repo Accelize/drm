@@ -128,9 +128,10 @@ protected:
     std::string sLogConsoleFormat = std::string("[%^%=8l%$] %-6t, %v");
 
     spdlog::level::level_enum sLogFileVerbosity = spdlog::level::info;
+    std::string  sLogFilePath         = fmt::format( "accelize_drmlib_{}.log", getpid() );
     std::string  sLogFileFormat       = std::string("%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v");
     eLogFileType sLogFileType         = eLogFileType::NONE;
-    std::string  sLogFilePath         = fmt::format( "accelize_drmlib_{}.log", getpid() );
+    bool         sLogFileAppend       = false;
     size_t       sLogFileRotatingSize = 100*1024; ///< Size max in KBytes of the log roating file
     size_t       sLogFileRotatingNum  = 3;
 
@@ -218,6 +219,7 @@ protected:
     #define checkDRMCtlrRet( func ) {                                                  \
         unsigned int errcode = DRM_OK;                                                 \
         try {                                                                          \
+            std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );         \
             errcode = func;                                                            \
             Debug( "{} returned {}", #func, errcode );                                 \
         } catch( const std::exception &e ) {                                           \
@@ -271,6 +273,8 @@ protected:
                         param_lib, "log_file_path", Json::stringValue, sLogFilePath ).asString();
                 sLogFileType = static_cast<eLogFileType>( JVgetOptional(
                         param_lib, "log_file_type", Json::uintValue, (uint32_t)sLogFileType ).asUInt() );
+                sLogFileAppend = JVgetOptional(
+                        param_lib, "log_file_append", Json::booleanValue, sLogFileAppend ).asBool();
                 sLogFileRotatingSize = JVgetOptional( param_lib, "log_file_rotating_size",
                         Json::uintValue, (uint32_t)sLogFileRotatingSize ).asUInt();
                 sLogFileRotatingNum = JVgetOptional( param_lib, "log_file_rotating_num",
@@ -365,7 +369,7 @@ protected:
 
     void createFileLog( const std::string file_path, const eLogFileType type,
             const spdlog::level::level_enum level, const std::string format,
-            const size_t rotating_size, const size_t rotating_num ) {
+            const size_t rotating_size, const size_t rotating_num, const bool file_append ) {
         spdlog::sink_ptr log_sink;
         std::string version_list = fmt::format( "Installed versions:\n\t-drmlib: {}\n\t-libcurl: {}\n\t-jsoncpp: {}\n\t-spdlog: {}.{}.{}",
                 DRMLIB_VERSION, curl_version(), JSONCPP_VERSION_STRING,
@@ -381,7 +385,7 @@ protected:
             }
             if ( type == eLogFileType::BASIC )
                 log_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(
-                        file_path, true);
+                        file_path, file_append);
             else // type == eLogFileType::ROTATING
                 log_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
                         file_path, rotating_size*1024, rotating_num);
@@ -407,7 +411,7 @@ protected:
 
             // File logging
             createFileLog( sLogFilePath, sLogFileType, sLogFileVerbosity, sLogFileFormat,
-                    sLogFileRotatingSize, sLogFileRotatingNum );
+                    sLogFileRotatingSize, sLogFileRotatingNum, sLogFileAppend );
         }
         catch( const spdlog::spdlog_ex& ex ) {
             std::cout << "Failed to update logging settings: " << ex.what() << std::endl;
@@ -451,60 +455,65 @@ protected:
         if ( mHostDataVerbosity == eHostDataVerbosity::NONE ) {
             return;
         }
-
-        // Find xbutil if existing
-        if ( !findXrtUtility() )
-            return;
-
+        // Gather CSP information if detected
         try {
-            // Call xbutil to collect host and card data
-            std::string cmd = fmt::format( "{} dump", mXbutil );
-            std::string cmd_out = exec_cmd( cmd );
+            // Add CSP specific command
+            CspBase* csp = CspBase::make_csp();
+            if ( csp != nullptr ) {
+                mHostConfigData["csp"] = csp->get_metadata();
+                delete csp;
+                Debug( "CSP information:\n{}", mHostConfigData["csp"].toStyledString() );
+            }
+        } catch( const std::exception &e ) {
+            Warning( "Error when retrieving CSP information: {}", e.what() );
+        }
+        // Gather host and card information if xbutil existing
+        if ( findXrtUtility() ) {
+            try {
+                Json::Value hostcard_node = Json::nullValue;
 
-            // Parse collected data and save to header
-            Json::Value node = parseJsonString( cmd_out );
+                // Call xbutil to collect host and card data
+                std::string cmd = fmt::format( "{} dump", mXbutil );
+                std::string cmd_out = exec_cmd( cmd );
 
-            if ( mHostDataVerbosity == eHostDataVerbosity::FULL ) {
-                // Verbosity is FULL
-                mHostConfigData = node;
+                // Parse collected data and save to header
+                Json::Value xbutil_node = parseJsonString( cmd_out );
 
-            } else {
-                // Verbosity is PARTIAL
-                for(Json::Value::iterator itr=node.begin(); itr!=node.end(); ++itr) {
-                    std::string key = itr.key().asString();
-                    try {
-                        if (   ( key == "version" )
-                            || ( key == "system" )
-                            || ( key == "runtime" )
-                           )
-                            mHostConfigData[key] = *itr;
-                        else if ( key == "board" ) {
-                            //  Add general info node
-                            mHostConfigData[key]["info"] = itr->get("info", Json::nullValue);
-                            // Try to get the number of kernels
-                            Json::Value compute_unit_node = itr->get("compute_unit", Json::nullValue);
-                            if ( compute_unit_node != Json::nullValue )
-                                mHostConfigData[key]["compute_unit"] = compute_unit_node.size();
-                            else
-                                mHostConfigData[key]["compute_unit"] = -1;
-                            // Add XCLBIN UUID
-                            mHostConfigData[key]["xclbin"] = itr->get("xclbin", Json::nullValue);
-                            // Add CSP specific command
-                            CspBase* csp = CspBase::make_csp();
-                            if ( csp != nullptr ) {
-                                mHostConfigData[key]["csp"] = csp->get_metadata();
-                                delete csp;
+                if ( mHostDataVerbosity == eHostDataVerbosity::FULL ) {
+                    // Verbosity is FULL
+                    hostcard_node = xbutil_node;
+                } else {
+                    // Verbosity is PARTIAL
+                    for(Json::Value::iterator itr=xbutil_node.begin(); itr!=xbutil_node.end(); ++itr) {
+                        std::string key = itr.key().asString();
+                        try {
+                            if (   ( key == "version" )
+                                || ( key == "system" )
+                                || ( key == "runtime" )
+                               )
+                                mHostConfigData[key] = *itr;
+                            else if ( key == "board" ) {
+                                //  Add general info node
+                                mHostConfigData[key]["info"] = itr->get("info", Json::nullValue);
+                                // Try to get the number of kernels
+                                Json::Value compute_unit_node = itr->get("compute_unit", Json::nullValue);
+                                if ( compute_unit_node != Json::nullValue )
+                                    mHostConfigData[key]["compute_unit"] = compute_unit_node.size();
+                                else
+                                    mHostConfigData[key]["compute_unit"] = -1;
+                                // Add XCLBIN UUID
+                                mHostConfigData[key]["xclbin"] = itr->get("xclbin", Json::nullValue);
                             }
+                        } catch( const std::exception &e ) {
+                            Debug( "Could not extract Host Information for key {}", key );
                         }
-                    } catch( const std::exception &e ) {
-                        Debug( "Could not extract Host Information for key {}", key );
                     }
                 }
+                mHostConfigData["host_card"] = hostcard_node;
+                Debug( "Host and card information:\n{}", hostcard_node.toStyledString() );
+            } catch( const std::exception &e ) {
+                Warning( "Error when retrieving host and card information: {}", e.what() );
             }
-            Debug( "Host and card information:\n{}", mHostConfigData.toStyledString() );
-
-        } catch( const std::exception &e ) {
-            Warning( "Error when retrieving host and card information: {}", e.what() );
         }
     }
 
@@ -515,6 +524,7 @@ protected:
         settings["frequency_detection_threshold"] = mFrequencyDetectionThreshold;
         settings["frequency_detection_period"] = mFrequencyDetectionPeriod;
         settings["log_file_type"] = static_cast<uint32_t>( sLogFileType );
+        settings["log_file_append"] = sLogFileAppend;
         settings["log_file_rotating_size"] = static_cast<uint32_t>( sLogFileRotatingSize );
         settings["log_file_rotating_num"] = static_cast<uint32_t>( sLogFileRotatingNum );
         settings["log_file_verbosity"] = static_cast<uint32_t>( sLogFileVerbosity );
@@ -532,8 +542,6 @@ protected:
 
     uint32_t getMailboxSize() const {
         uint32_t roSize, rwSize;
-        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        checkDRMCtlrRet( getDrmController().writeMailBoxFilePageRegister() );
         checkDRMCtlrRet( getDrmController().readMailboxFileSizeRegister( roSize, rwSize ) );
         Debug2( "Full mailbox size: {}", rwSize );
         return rwSize;
@@ -555,8 +563,6 @@ protected:
         uint32_t roSize, rwSize;
         std::vector<uint32_t> roData, rwData;
 
-        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        checkDRMCtlrRet( getDrmController().writeMailBoxFilePageRegister() );
         checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
 
         if ( index >= rwData.size() )
@@ -572,8 +578,6 @@ protected:
         uint32_t roSize, rwSize;
         std::vector<uint32_t> roData, rwData;
 
-        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        checkDRMCtlrRet( getDrmController().writeMailBoxFilePageRegister() );
         checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
 
         if ( (uint32_t)index >= rwData.size() )
@@ -595,7 +599,6 @@ protected:
         std::vector<uint32_t> roData, rwData;
 
         std::lock_guard<std::recursive_mutex> lockk( mDrmControllerMutex );
-        checkDRMCtlrRet( getDrmController().writeMailBoxFilePageRegister() );
         checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
 
         if ( index >= rwData.size() )
@@ -612,7 +615,6 @@ protected:
         std::vector<uint32_t> roData, rwData;
 
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        checkDRMCtlrRet( getDrmController().writeMailBoxFilePageRegister() );
         checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
         if ( index >= rwData.size() )
             Unreachable( "Index {} overflows the Mailbox memory: max index is {}. ",
@@ -644,31 +646,9 @@ protected:
         Unreachable( "Unsupported regName argument: {}. ", regName ); //LCOV_EXCL_LINE
     }
 
-    unsigned int readDrmRegister( const std::string& regName, uint32_t& value ) const {
-        int ret = 0;
-        ret = f_read_register( getDrmRegisterOffset( regName ), &value );
-        if ( ret != 0 ) {
-            Error( "Error in read register callback, errcode = {}: failed to read register {}", ret, regName );
-            return (uint32_t)(-1);
-        }
-        Debug2( "Read DRM register {} = 0x{:08x}", regName, value );
-        return 0;
-    }
-
-    unsigned int writeDrmRegister( const std::string& regName, uint32_t value ) const {
-        int ret = 0;
-        ret = f_write_register( getDrmRegisterOffset( regName ), value );
-        if ( ret ) {
-            Error( "Error in write register callback, errcode = {}: failed to write {} to register {}", ret, value, regName );
-            return (uint32_t)(-1);
-        }
-        Debug2( "Write DRM register {} = 0x{:08x}", regName, value );
-        return 0;
-    }
-
     unsigned int readDrmAddress( const uint32_t address, uint32_t& value ) const {
-        int ret = 0;
-        ret = f_read_register( address, &value );
+        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+        int ret = f_read_register( address, &value );
         if ( ret != 0 ) {
             Error( "Error in read register callback, errcode = {}: failed to read address {}", ret, address );
             return (uint32_t)(-1);
@@ -677,14 +657,34 @@ protected:
         return 0;
     }
 
+    unsigned int readDrmRegister( const std::string& regName, uint32_t& value ) const {
+        int ret = readDrmAddress( getDrmRegisterOffset( regName ), value );
+        if ( ret != 0 ) {
+            Error( "Error in read register callback, errcode = {}: failed to read register {}", ret, regName );
+            return (uint32_t)(-1);
+        }
+        Debug2( "Read DRM register {} = 0x{:08x}", regName, value );
+        return 0;
+    }
+
     unsigned int writeDrmAddress( const uint32_t address, uint32_t value ) const {
-        int ret = 0;
-        ret = f_write_register( address, value );
+        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+        int ret = f_write_register( address, value );
         if ( ret ) {
             Error( "Error in write register callback, errcode = {}: failed to write {} to address {}", ret, value, address );
             return (uint32_t)(-1);
         }
         Debug2( "Wrote DRM address 0x{:x} = 0x{:08x}", address, value );
+        return 0;
+    }
+
+    unsigned int writeDrmRegister( const std::string& regName, uint32_t value ) const {
+        int ret = writeDrmAddress( getDrmRegisterOffset( regName ), value );
+        if ( ret ) {
+            Error( "Error in write register callback, errcode = {}: failed to write {} to register {}", ret, value, regName );
+            return (uint32_t)(-1);
+        }
+        Debug2( "Wrote DRM register {} = 0x{:08x}", regName, value );
         return 0;
     }
 
@@ -905,7 +905,6 @@ protected:
     // Get DRM HDK version
     std::string getDrmCtrlVersion() const {
         std::string drmVersion;
-        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
         checkDRMCtlrRet( getDrmController().extractDrmVersion( drmVersion ) );
         return drmVersion;
     }
@@ -929,15 +928,12 @@ protected:
     }
 
     void getNumActivator( uint32_t& value ) const {
-        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        checkDRMCtlrRet( getDrmController().writeRegistersPageRegister() );
         checkDRMCtlrRet( getDrmController().readNumberOfDetectedIpsStatusRegister( value ) );
     }
 
     uint64_t getTimerCounterValue() const {
         uint32_t licenseTimerCounterMsb(0), licenseTimerCounterLsb(0);
         uint64_t licenseTimerCounter(0);
-        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
         checkDRMCtlrRet( getDrmController().sampleLicenseTimerCounter( licenseTimerCounterMsb,
                 licenseTimerCounterLsb ) );
         licenseTimerCounter = licenseTimerCounterMsb;
@@ -1028,7 +1024,6 @@ protected:
 
         Debug( "Build license request #{} to create new session", mLicenseCounter );
 
-        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
         // Request challenge and metering info for first request
         checkDRMCtlrRet( getDrmController().initialization( numberOfDetectedIps, saasChallenge, meteringFile ) );
         json_request["saasChallenge"] = saasChallenge;
@@ -1048,7 +1043,6 @@ protected:
         std::vector<std::string> meteringFile;
 
         Debug( "Build license request #{} to maintain current session", mLicenseCounter );
-        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
 
         // Check if an error occurred
         checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 5 ) );
@@ -1072,7 +1066,6 @@ protected:
         std::vector<std::string> meteringFile;
 
         Debug( "Build license request #{} to stop current session", mLicenseCounter );
-        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
 
         // Request challenge and metering info for first request
         checkDRMCtlrRet( getDrmController().endSessionAndExtractMeteringFile(
@@ -1150,8 +1143,6 @@ protected:
 
     bool isSessionRunning()const  {
         bool sessionRunning( false );
-        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        checkDRMCtlrRet( getDrmController().writeRegistersPageRegister() );
         checkDRMCtlrRet( getDrmController().readSessionRunningStatusRegister( sessionRunning ) );
         Debug( "DRM session running state: {}", sessionRunning );
         return sessionRunning;
@@ -1159,8 +1150,6 @@ protected:
 
     bool isDrmCtrlInNodelock()const  {
         bool isNodelocked( false );
-        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        checkDRMCtlrRet( getDrmController().writeRegistersPageRegister() );
         checkDRMCtlrRet( getDrmController().readLicenseNodeLockStatusRegister( isNodelocked ) );
         Debug( "DRM Controller node-locked status: {}", isNodelocked );
         return isNodelocked;
@@ -1168,8 +1157,6 @@ protected:
 
     bool isDrmCtrlInMetering()const  {
         bool isMetering( false );
-        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        checkDRMCtlrRet( getDrmController().writeRegistersPageRegister() );
         checkDRMCtlrRet( getDrmController().readLicenseMeteringStatusRegister( isMetering ) );
         Debug( "DRM Controller metering status: {}", isMetering );
         return isMetering;
@@ -1177,9 +1164,8 @@ protected:
 
     bool isReadyForNewLicense() const {
         uint32_t numberOfLicenseTimerLoaded;
-        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        checkDRMCtlrRet( getDrmController().writeRegistersPageRegister() );
-        checkDRMCtlrRet( getDrmController().readNumberOfLicenseTimerLoadedStatusRegister( numberOfLicenseTimerLoaded ) );
+        checkDRMCtlrRet( getDrmController().readNumberOfLicenseTimerLoadedStatusRegister(
+                    numberOfLicenseTimerLoaded ) );
         bool readiness = ( numberOfLicenseTimerLoaded < 2 );
         Debug( "DRM readiness to receive a new license: {} (# loaded licenses = {})", readiness, numberOfLicenseTimerLoaded );
         return readiness;
@@ -1187,8 +1173,6 @@ protected:
 
     bool isLicenseActive() const {
         bool isLicenseEmpty( false );
-        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        checkDRMCtlrRet( getDrmController().writeRegistersPageRegister() );
         checkDRMCtlrRet( getDrmController().readLicenseTimerCountEmptyStatusRegister( isLicenseEmpty ) );
         return !isLicenseEmpty;
     }
@@ -1296,8 +1280,6 @@ protected:
 
     void setLicense( const Json::Value& license_json ) {
 
-        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-
         Debug( "Provisioning license #{} on DRM controller", mLicenseCounter );
 
         std::string dna = mHeaderJsonRequest["dna"].asString();
@@ -1333,6 +1315,8 @@ protected:
             Throw( DRM_WSRespError, "Malformed response from License Web Service: {}", e.what() );
         }
 
+        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+
         if ( mLicenseCounter == 0 ) {
             // Load key
             bool activationDone( false );
@@ -1351,8 +1335,8 @@ protected:
         // Load license timer
         if ( !isNodeLockedMode() ) {
             bool licenseTimerEnabled( false );
-            checkDRMCtlrRet(
-                    getDrmController().loadLicenseTimerInit( licenseTimer, licenseTimerEnabled ) );
+            checkDRMCtlrRet( getDrmController().loadLicenseTimerInit( licenseTimer, 
+                    licenseTimerEnabled ) );
             if ( !licenseTimerEnabled ) {
                 Throw( DRM_CtlrError,
                       "Failed to load license timer on DRM controller, licenseTimerEnabled: 0x{:x}",
@@ -1369,8 +1353,8 @@ protected:
         TClock::time_point timeStart = TClock::now();
 
         while( mseconds < ACTIVATIONCODE_TRANSMISSION_TIMEOUT_MS ) {
-            checkDRMCtlrRet(
-                    getDrmController().readActivationCodesTransmittedStatusRegister( activationCodesTransmitted ) );
+            checkDRMCtlrRet( getDrmController().readActivationCodesTransmittedStatusRegister(
+                    activationCodesTransmitted ) );
             timeSpan = TClock::now() - timeStart;
             mseconds = 1000.0 * double( timeSpan.count() ) * TClock::period::num / TClock::period::den;
             if ( activationCodesTransmitted ) {
@@ -1568,8 +1552,6 @@ protected:
             Debug( "Frequency detection sequence is bypassed." );
             return;
         }
-
-        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
         int ret = readDrmAddress( REG_FREQ_DETECTION_VERSION, reg );
         if ( ret != 0 ) {
             Unreachable( "Failed to read DRM frequency detection version register, errcode = {}. ", ret ); //LCOV_EXCL_LINE
@@ -1645,9 +1627,9 @@ protected:
         TClock::duration wait_duration = std::chrono::milliseconds( mFrequencyDetectionPeriod );
         int max_attempts = 3;
 
-        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-
         Debug( "Detecting DRM frequency in {} ms", mFrequencyDetectionPeriod );
+
+        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
 
         while ( max_attempts > 0 ) {
 
@@ -1973,7 +1955,7 @@ protected:
         }
         Debug( "Released metering access mutex from stopSession" );
         // Clear Session ID
-		std::string sessionID = mSessionID;
+        std::string sessionID = mSessionID;
         Debug2( "Clearing session ID: {}", mSessionID );
         mSessionID = std::string("");
 
@@ -2167,6 +2149,12 @@ public:
                         json_value[key_str] = (uint32_t)sLogFileType;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                sLogFileType );
+                        break;
+                    }
+                    case ParameterKey::log_file_append: {
+                        json_value[key_str] = sLogFileAppend;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                               sLogFileAppend );
                         break;
                     }
                     case ParameterKey::log_file_rotating_num: {
