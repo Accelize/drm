@@ -30,7 +30,7 @@ namespace DRM {
 
 
 CurlEasyPost::CurlEasyPost() {
-    mRequestTimeoutMS = cRequestTimeoutMS;
+    mConnectionTimeoutMS = cConnectionTimeoutMS;
     curl = curl_easy_init();
     if ( !curl )
         Throw( DRM_ExternFail, "Curl : cannot init curl_easy" );
@@ -39,25 +39,29 @@ CurlEasyPost::CurlEasyPost() {
 CurlEasyPost::~CurlEasyPost() {
     data.clear();
     curl_easy_cleanup( curl );
-    curl_slist_free_all( headers );
-    curl_slist_free_all( host_resolve_list );
-    headers = NULL;
-    host_resolve_list = NULL;
+    curl_slist_free_all( mHeaders_p );
+    curl_slist_free_all( mHostResolveList );
+    mHeaders_p = NULL;
+    mHostResolveList = NULL;
+}
+
+void CurlEasyPost::setVerbosity( const uint32_t verbosity ) {
+    curl_easy_setopt(curl, CURLOPT_VERBOSE, verbosity);
 }
 
 void CurlEasyPost::setHostResolves( const Json::Value& host_json ) {
     if ( host_json != Json::nullValue ) {
-        if ( host_resolve_list != NULL ) {
-            curl_slist_free_all( host_resolve_list );
-            host_resolve_list = NULL;
+        if ( mHostResolveList != NULL ) {
+            curl_slist_free_all( mHostResolveList );
+            mHostResolveList = NULL;
         }
         for( Json::ValueConstIterator it = host_json.begin(); it != host_json.end(); it++ ) {
             std::string key = it.key().asString();
             std::string val = (*it).asString();
             std::string host_str = fmt::format( "{}:{}", key, val );
-            host_resolve_list = curl_slist_append( host_resolve_list, host_str.c_str() );
+            mHostResolveList = curl_slist_append( mHostResolveList, host_str.c_str() );
         }
-        if ( curl_easy_setopt(curl, CURLOPT_RESOLVE, host_resolve_list) == CURLE_UNKNOWN_OPTION )
+        if ( curl_easy_setopt(curl, CURLOPT_RESOLVE, mHostResolveList) == CURLE_UNKNOWN_OPTION )
             Warning( "Could not set the CURL Host resolve option: {}", host_json.toStyledString() );
         else
             Debug( "Set the following CURL Host resolve option: {}", host_json.toStyledString() );
@@ -68,14 +72,14 @@ long CurlEasyPost::perform( std::string* resp, std::chrono::milliseconds& timeou
     CURLcode res;
     long resp_code;
 
-    if ( headers ) {
-        curl_easy_setopt( curl, CURLOPT_HTTPHEADER, headers );
+    if ( mHeaders_p ) {
+        curl_easy_setopt( curl, CURLOPT_HTTPHEADER, mHeaders_p );
     }
     curl_easy_setopt( curl, CURLOPT_WRITEFUNCTION, &CurlEasyPost::write_callback );
     curl_easy_setopt( curl, CURLOPT_WRITEDATA, (void*)resp );
-    curl_easy_setopt( curl, CURLOPT_ERRORBUFFER, errbuff.data() );
+    curl_easy_setopt( curl, CURLOPT_ERRORBUFFER, mErrBuff.data() );
     curl_easy_setopt( curl, CURLOPT_FOLLOWLOCATION, 1L );
-    curl_easy_setopt( curl, CURLOPT_CONNECTTIMEOUT_MS, mRequestTimeoutMS );
+    curl_easy_setopt( curl, CURLOPT_CONNECTTIMEOUT_MS, mConnectionTimeoutMS );
     // Compute timeout
     if ( timeout <= std::chrono::milliseconds( 0 ) )
         Throw( DRM_WSTimedOut, "Did not perform HTTP request to Accelize webservice because deadline is reached." );
@@ -88,10 +92,10 @@ long CurlEasyPost::perform( std::string* resp, std::chrono::milliseconds& timeou
           || res == CURLE_COULDNT_CONNECT
           || res == CURLE_OPERATION_TIMEDOUT ) {
             Throw( DRM_WSMayRetry, "Failed performing HTTP request to Accelize webservice ({}) : {}",
-                    curl_easy_strerror( res ), errbuff.data() );
+                    curl_easy_strerror( res ), mErrBuff.data() );
         } else {
             Throw( DRM_ExternFail, "Failed performing HTTP request to Accelize webservice ({}) : {}",
-                    curl_easy_strerror( res ), errbuff.data() );
+                    curl_easy_strerror( res ), mErrBuff.data() );
         }
     }
     curl_easy_getinfo( curl, CURLINFO_RESPONSE_CODE, &resp_code );
@@ -100,19 +104,24 @@ long CurlEasyPost::perform( std::string* resp, std::chrono::milliseconds& timeou
 
 long CurlEasyPost::perform( std::string* resp, std::chrono::steady_clock::time_point& deadline ) {
     std::chrono::milliseconds timeout = std::chrono::duration_cast<std::chrono::milliseconds>( deadline - std::chrono::steady_clock::now() );
-    std::chrono::milliseconds limit( mRequestTimeoutMS );
+    std::chrono::milliseconds limit( mConnectionTimeoutMS );
     if ( timeout >= limit )
         timeout = limit;
     return perform( resp, timeout );
 }
 
-long CurlEasyPost::perform( std::string* resp, std::string url, const uint32_t& timeout_ms ) {
+long CurlEasyPost::perform_put( std::string* resp, std::string url, const uint32_t& timeout_ms ) {
     curl_easy_setopt( curl, CURLOPT_URL, url.c_str() );
+    if ( mHeaders_p ) {
+        curl_easy_setopt( curl, CURLOPT_HTTPHEADER, mHeaders_p );
+    }
+    curl_easy_setopt( curl, CURLOPT_NOPROGRESS, 1L);
+    curl_easy_setopt( curl, CURLOPT_CUSTOMREQUEST, "PUT");
+    curl_easy_setopt( curl, CURLOPT_TCP_KEEPALIVE, 1L);
     curl_easy_setopt( curl, CURLOPT_WRITEFUNCTION, &CurlEasyPost::write_callback );
-    curl_easy_setopt( curl, CURLOPT_WRITEDATA, (void*)resp );
-    curl_easy_setopt( curl, CURLOPT_ERRORBUFFER, errbuff.data() );
-    curl_easy_setopt( curl, CURLOPT_FOLLOWLOCATION, 1L );
-    curl_easy_setopt( curl, CURLOPT_CONNECTTIMEOUT_MS, mRequestTimeoutMS );
+    curl_easy_setopt( curl, CURLOPT_WRITEDATA, resp );
+    curl_easy_setopt( curl, CURLOPT_ERRORBUFFER, mErrBuff.data() );
+    curl_easy_setopt( curl, CURLOPT_CONNECTTIMEOUT_MS, mConnectionTimeoutMS );
     if ( timeout_ms <= 0 )
         Throw( DRM_WSTimedOut, "Did not perform HTTP request to Accelize webservice because deadline is reached." );
     curl_easy_setopt( curl, CURLOPT_TIMEOUT_MS, timeout_ms );
@@ -124,10 +133,10 @@ long CurlEasyPost::perform( std::string* resp, std::string url, const uint32_t& 
           || res == CURLE_COULDNT_CONNECT
           || res == CURLE_OPERATION_TIMEDOUT ) {
             Throw( DRM_WSMayRetry, "Failed performing HTTP request to Accelize webservice ({}) : {}",
-                    curl_easy_strerror( res ), errbuff.data() );
+                    curl_easy_strerror( res ), mErrBuff.data() );
         } else {
             Throw( DRM_ExternFail, "Failed performing HTTP request to Accelize webservice ({}) : {}",
-                    curl_easy_strerror( res ), errbuff.data() );
+                    curl_easy_strerror( res ), mErrBuff.data() );
         }
     }
     long resp_code;
@@ -168,6 +177,8 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
                         Json::uintValue, cRequestTimeout).asUInt() * 1000;
         if ( mRequestTimeout == 0 )
             Throw( DRM_BadArg, "ws_request_timeout must not be 0");
+        mVerbosity = JVgetOptional( settings, "ws_verbosity",
+                        Json::uintValue, 0).asUInt();
 
     } catch( Exception &e ) {
         Throw( e.getErrCode(), "Error with service configuration file '{}': {}",
@@ -210,11 +221,12 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
     std::string oauth_url = url + std::string("/o/token/");
     mOAUth2Request.setHostResolves( mHostResolvesJson );
     mOAUth2Request.setURL( oauth_url );
+    mOAUth2Request.setVerbosity( mVerbosity );
     std::stringstream ss;
     ss << "client_id=" << mClientId << "&client_secret=" << mClientSecret;
     ss << "&grant_type=client_credentials";
     mOAUth2Request.setPostFields( ss.str() );
-    mOAUth2Request.setRequestTimeoutMS( mRequestTimeout );
+    mOAUth2Request.setConnectionTimeoutMS( mRequestTimeout );
 
     // Set URL of license and metering requests
     mLicenseUrl = url + std::string("/auth/metering/genlicense/");
@@ -299,7 +311,8 @@ Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Val
 
     // Create new request
     CurlEasyPost req;
-    req.setRequestTimeoutMS( mRequestTimeout );
+    req.setVerbosity( mVerbosity );
+    req.setConnectionTimeoutMS( mRequestTimeout );
     req.setHostResolves( mHostResolvesJson );
     req.setURL( url );
     req.appendHeader( "Accept: application/vnd.accelize.v1+json" );

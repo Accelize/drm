@@ -65,7 +65,8 @@ _PARAM_LIST = ('license_type',
                'ws_api_retry_duration',
                'host_data_verbosity',
                'host_data',
-               'log_file_append'
+               'log_file_append',
+               'ws_verbosity'
 )
 
 
@@ -525,6 +526,36 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     assert drm_manager.get('log_file_append') == expectVal
     async_cb.assert_NoError()
     print("Test parameter 'log_file_append': PASS")
+
+    # Test parameter: ws_verbosity
+    async_cb.reset()
+    conf_json.reset()
+    expectVal = 1
+    conf_json['settings'] = {'ws_verbosity': expectVal}
+    conf_json.save()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    assert drm_manager.get('ws_verbosity') == expectVal
+
+    conf_json.reset()
+    expectVal = 0
+    conf_json['settings'] = {'ws_verbosity': expectVal}
+    conf_json.save()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    assert drm_manager.get('ws_verbosity') == expectVal
+    async_cb.assert_NoError()
+    print("Test parameter 'ws_verbosity': PASS")
 
     # Test unsupported parameter
     async_cb.reset()
@@ -1066,6 +1097,25 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         drm_manager.set(log_file_append=True)
     async_cb.assert_NoError()
     print("Test parameter 'log_file_append': PASS")
+
+    # Test parameter: ws_verbosity
+    async_cb.reset()
+    conf_json.reset()
+    expvalue = 0
+    conf_json['settings'] = {'ws_verbosity': expvalue}
+    conf_json.save()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    assert drm_manager.get('ws_verbosity') == expvalue
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+        drm_manager.set(ws_verbosity=1)
+    async_cb.assert_NoError()
+    print("Test parameter 'ws_verbosity': PASS")
 
 
 def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cred_json,

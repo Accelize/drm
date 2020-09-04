@@ -29,15 +29,19 @@ namespace Accelize {
 namespace DRM {
 
 
+Json::Value GetCspInfo( uint32_t verbosity );
+
+
 /** \brief Interface to collect CSP metadata
 */
 class CspBase {
 
 private:
-    std::string mName;  // CSP name
+    std::string mName;   // CSP name
 
 protected:
     CurlEasyPost mHTTPRequest;
+    uint32_t mVerbosity; // HTTP verbosity: 0: default, 1:verbose
 
 public:
 
@@ -47,6 +51,9 @@ public:
 
     std::string getName() const { return mName; }
 
+    uint32_t getVerbosity() const { return mVerbosity; }
+    void setVerbosity( const uint32_t& verbosity );
+
     /** \brief Get Metadata information
 
         \param[in] resume_session_request : If true, the pending session is
@@ -55,8 +62,6 @@ public:
         one. Default to False.
     */
     virtual Json::Value get_metadata() = 0;
-
-    static CspBase *make_csp();
 };
 
 

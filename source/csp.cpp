@@ -22,86 +22,109 @@ limitations under the License.
 namespace Accelize {
 namespace DRM {
 
+Json::Value GetCspInfo( uint32_t verbosity ) {
+    Json::Value info_node = Json::nullValue;
+
+    //  Test AWS command
+    Aws* csp_aws = new Aws();
+    try {
+        csp_aws->setVerbosity( verbosity );
+        info_node = csp_aws->get_metadata();
+        Debug( "Instance is running on Aws" );
+        delete csp_aws;
+        return info_node;
+    } catch( std::runtime_error &e ) {
+        Debug( "Instance is not running on Aws" );
+        delete csp_aws;
+    }
+
+    //  Test Alibaba command
+    Alibaba* csp_alibaba = new Alibaba();
+    try {
+        csp_alibaba->setVerbosity( verbosity );
+        info_node = csp_alibaba->get_metadata();
+        Debug( "Instance is running on Alibaba" );
+        delete csp_alibaba;
+        return info_node;
+    } catch( std::runtime_error &e ) {
+        Debug( "Instance is not running on Alibaba" );
+        delete csp_alibaba;
+    }
+
+    //  Not a supported CSP or this is On-Prem system
+    Debug( "Cloud environment could not be determined" );
+    return info_node;
+}
+
 
 /** AWS class
 */
-Aws::Aws():CspBase("Aws", 100) {}
+Aws::Aws():CspBase( "Aws", 100 ) {}
 
 Json::Value Aws::get_metadata() {
     Json::Value metadata = Json::nullValue;
-    std::string resp;
-    std::string url = "http://169.254.169.254/latest/api/token";
-    mHTTPRequest.appendHeader( "X-aws-ec2-metadata-token-ttl-seconds: 21600" );
-    mHTTPRequest.perform( &resp, url, 100 );
-    std::cout << "resp=" << resp << std::endl;
+    std::string token, resp;
+    uint32_t timeout_ms = mHTTPRequest.getConnectionTimeoutMS();
 
     // Using IMDSv2 method
-    /*// Get token
-    std::string cmd = "curl -s -X PUT \"http://169.254.169.254/latest/api/token\" -H \"X-aws-ec2-metadata-token-ttl-seconds: 21600\"";
-    std::string token = exec_cmd( cmd );
-    // Create base command
-    std::string base_cmd = fmt::format( "curl -s -H \"X-aws-ec2-metadata-token: {}\" http://169.254.169.254/latest", token);
-    // Get metatdata
-    metadata["instance_id"] = exec_cmd( fmt::format( "{}/meta-data/instance-id", base_cmd ) );
-    metadata["instance_type"] = exec_cmd( fmt::format( "{}/meta-data/instance-type", base_cmd ) );
-    metadata["ami_id"] = exec_cmd( fmt::format( "{}/meta-data/ami-id", base_cmd ) );
-    metadata["region"] = exec_cmd( fmt::format( "{}/dynamic/instance-identity/document | grep -oP '\"region\"[[:space:]]*:[[:space:]]*\"\\K[^\"]+'", base_cmd ) );*/
+
+    // Get token
+    CurlEasyPost tokenReq;
+    tokenReq.setURL( "http://169.254.169.254/latest/api/token" );
+    tokenReq.setConnectionTimeoutMS( timeout_ms );
+    tokenReq.setVerbosity( mVerbosity );
+    tokenReq.appendHeader( "X-aws-ec2-metadata-token-ttl-seconds: 21600" );
+    tokenReq.perform_put( &token, "http://169.254.169.254/latest/api/token", timeout_ms );
+    mHTTPRequest.appendHeader( fmt::format("X-aws-ec2-metadata-token: {}", token) );
+
+    // Collect Alibaba information
+    std::string base_url("http://169.254.169.254/latest");
+    metadata["instance_id"] = mHTTPRequest.perform<std::string>( fmt::format( "{}/meta-data/instance-id", base_url ), timeout_ms );
+    metadata["instance_type"] = mHTTPRequest.perform<std::string>( fmt::format( "{}/meta-data/instance-type", base_url ), timeout_ms );
+    metadata["ami_id"] = mHTTPRequest.perform<std::string>( fmt::format( "{}/meta-data/ami-id", base_url ), timeout_ms );
+    std::string inst_doc = mHTTPRequest.perform<std::string>( fmt::format( "{}/dynamic/instance-identity/document", base_url ), timeout_ms );
+    std::cout << "inst_doc=" << inst_doc << std::endl;
+    std::string region;
+    metadata["region"] = "region";
+
+    std::cout << "metadata=" << metadata.toStyledString() << std::endl;
+
     return metadata;
 }
 
 
 /** Alibaba class
 */
-Alibaba::Alibaba():CspBase("Alibaba", 100) {
+Alibaba::Alibaba():CspBase( "Alibaba", 100 ) {
 
 }
 
 Json::Value Alibaba::get_metadata() {
     Json::Value metadata = Json::nullValue;
-    // Create base command
-    std::string base_cmd( "curl -s http://100.100.100.200/latest/meta-data" );
-    // Append commands to list
-    metadata["instance_id"] = exec_cmd( fmt::format( "{}/instance-id", base_cmd ) );
-    metadata["instance_type"] = exec_cmd( fmt::format( "{}/instance/instance-type", base_cmd ) );
-    metadata["ami_id"] = exec_cmd( fmt::format( "{}/image-id", base_cmd ) );
-    metadata["region"] = exec_cmd( fmt::format( "{}/region-id", base_cmd ) );
+    uint32_t timeout_ms = mHTTPRequest.getConnectionTimeoutMS();
+    // Collect Alibaba information
+    std::string base_url("http://100.100.100.200/latest/meta-data");
+    metadata["instance_id"] = mHTTPRequest.perform<std::string>( fmt::format( "{}/instance-id", base_url ), timeout_ms );
+    metadata["instance_type"] = mHTTPRequest.perform<std::string>( fmt::format( "{}/instance/instance-type", base_url ), timeout_ms );
+    metadata["ami_id"] = mHTTPRequest.perform<std::string>( fmt::format( "{}/image-id", base_url ), timeout_ms );
+    metadata["region"] = mHTTPRequest.perform<std::string>( fmt::format( "{}/region-id", base_url ), timeout_ms );
+    std::cout << "metadata=" << metadata.toStyledString() << std::endl;
     return metadata;
 }
 
 
 /** CspBase class
 */
-
 CspBase::CspBase( const std::string &name, const uint32_t timeout_ms ) {
     mName = name;
-    mHTTPRequest.setRequestTimeoutMS( timeout_ms );
+    mHTTPRequest.setConnectionTimeoutMS( timeout_ms );
+    mVerbosity = 0;
 }
 
-CspBase *CspBase::make_csp() {
-    //  Test AWS command
-    Aws* csp_aws = new Aws();
-    try {
-        csp_aws->get_metadata();
-        Debug( "Instance is running on Aws" );
-        return csp_aws;
-    } catch( std::runtime_error &e ) {
-        Debug2( "Instance is not running on Aws" );
-        delete csp_aws;
-    }
-    //  Test Alibaba command
-    Alibaba* csp_alibaba = new Alibaba();
-    try {
-        csp_alibaba->get_metadata();
-        Debug( "Instance is running on Alibaba" );
-        return csp_alibaba;
-    } catch( std::runtime_error &e ) {
-        Debug2( "Instance is not running on Alibaba" );
-        delete csp_alibaba;
-    }
-    //  Not a supported CSP or this is On-Prem system
-    Debug( "Cloud environment could not be determined" );
-    return nullptr;
+void CspBase::setVerbosity( const uint32_t& verbosity ) {
+    mHTTPRequest.setVerbosity( verbosity );
 }
+
 
 }
 }
