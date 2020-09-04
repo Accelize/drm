@@ -54,11 +54,6 @@ void CurlEasyPost::setVerbosity( const uint32_t verbosity ) {
     curl_easy_setopt(curl, CURLOPT_VERBOSE, verbosity);
 }
 
-void CurlEasyPost::setURL( std::string url ) {
-    mUrl = url;
-    curl_easy_setopt( curl, CURLOPT_URL, mUrl.c_str() );
-}
-
 void CurlEasyPost::setHostResolves( const Json::Value& host_json ) {
     if ( host_json != Json::nullValue ) {
         if ( mHostResolveList != NULL ) {

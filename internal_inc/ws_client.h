@@ -101,7 +101,12 @@ public:
 
     void setHostResolves( const Json::Value& host_json );
 
-    void setURL( std::string url );
+    template<class T>
+    void setURL(T&& url) {
+        data.push_back( std::forward<T>(url) );
+        curl_easy_setopt( curl, CURLOPT_URL, data.back().c_str() );
+        mUrl = url;
+    }
 
     template<class T>
     void appendHeader( T&& header ) {
