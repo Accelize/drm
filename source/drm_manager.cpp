@@ -1356,7 +1356,7 @@ protected:
             checkDRMCtlrRet( getDrmController().readActivationCodesTransmittedStatusRegister(
                     activationCodesTransmitted ) );
             timeSpan = TClock::now() - timeStart;
-            mseconds = double( timeSpan.count() ) * TClock::period::num / TClock::period::den;
+            mseconds = 1000.0 * double( timeSpan.count() ) * TClock::period::num / TClock::period::den;
             if ( activationCodesTransmitted ) {
                 Debug( "License #{} transmitted after {} ms", mLicenseCounter, mseconds );
                 break;
