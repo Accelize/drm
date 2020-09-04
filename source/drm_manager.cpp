@@ -384,7 +384,7 @@ protected:
             }
             if ( type == eLogFileType::BASIC )
                 log_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(
-                        file_path, file_append);
+                        file_path, !file_append);
             else // type == eLogFileType::ROTATING
                 log_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
                         file_path, rotating_size*1024, rotating_num);
