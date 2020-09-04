@@ -900,10 +900,6 @@ protected:
         } else {
             mWsClient.reset( new DrmWSClient( mConfFilePath, mCredFilePath ) );
         }
-
-        // Collect host and card information when possible
-        getHostAndCardInfo();
-
     }
 
     // Get DRM HDK version
@@ -1725,6 +1721,9 @@ protected:
             Warning( "Licensing thread already started" );
             return;
         }
+
+        // Collect host and card information when possible
+        getHostAndCardInfo();
 
         mThreadKeepAlive = std::async( std::launch::async, [ this ]() {
             Debug( "Starting background thread which maintains licensing" );

@@ -59,7 +59,7 @@ Json::Value GetCspInfo( uint32_t verbosity ) {
 
 /** AWS class
 */
-Aws::Aws():CspBase( "Aws", 100 ) {}
+Aws::Aws():CspBase( "Aws", 50 ) {}
 
 Json::Value Aws::get_metadata() {
     Json::Value metadata = Json::nullValue;
@@ -90,7 +90,7 @@ Json::Value Aws::get_metadata() {
 
 /** Alibaba class
 */
-Alibaba::Alibaba():CspBase( "Alibaba", 100 ) {
+Alibaba::Alibaba():CspBase( "Alibaba", 50 ) {
 
 }
 
