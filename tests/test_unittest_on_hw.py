@@ -614,7 +614,7 @@ def test_curl_host_resolve(accelize_drm, conf_json, cred_json, async_handler):
     )
     with pytest.raises(accelize_drm.exceptions.DRMExternFail) as excinfo:
         drm_manager.activate()
-    assert 'Failed performing HTTP request to Accelize webservice' in str(excinfo.value)
+    assert 'libcurl failed to perform HTTP request to Accelize webservice' in str(excinfo.value)
     assert 'Peer certificate cannot be authenticated with given CA certificates' in str(excinfo.value)
     assert search(r'certificate .* expired', str(excinfo.value), IGNORECASE)
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMExternFail.error_code
