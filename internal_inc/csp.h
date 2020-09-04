@@ -22,9 +22,14 @@ limitations under the License.
 
 #include <json/json.h>
 
+#include "ws_client.h"
+
 
 namespace Accelize {
 namespace DRM {
+
+
+Json::Value GetCspInfo( uint32_t verbosity );
 
 
 /** \brief Interface to collect CSP metadata
@@ -34,13 +39,20 @@ class CspBase {
 private:
     std::string mName;  // CSP name
 
+protected:
+    CurlEasyPost mHTTPRequest;
+    uint32_t mVerbosity; // HTTP verbosity: 0: default, 1:verbose
+
 public:
 
     CspBase() = delete; //!< No default constructor
-    CspBase( const std::string &name ) { mName = name; }
+    CspBase( const std::string &name, const uint32_t timeout_ms );
     virtual ~CspBase() {};
 
     std::string getName() const { return mName; }
+
+    uint32_t getVerbosity() const { return mVerbosity; }
+    void setVerbosity( const uint32_t& verbosity ) { mHTTPRequest.setVerbosity( verbosity ); }
 
     /** \brief Get Metadata information
 
@@ -50,8 +62,6 @@ public:
         one. Default to False.
     */
     virtual Json::Value get_metadata() = 0;
-
-    static CspBase *make_csp();
 };
 
 

@@ -57,9 +57,6 @@ limitations under the License.
 
 #define FREQ_DETECTION_VERSION_EXPECTED	 0x60DC0DE0
 
-static const std::string DRM_SELF_TEST_ERROR_MESSAGE( "Could not access DRM Controller registers.\nPlease verify:\n"
-                        "\t-The read/write callbacks implementation in the SW application: verify it uses the correct offset address of DRM Controller IP in the design address space.\n"
-                        "\t-The DRM Controller IP instantiation in the FPGA design: verify the correctness of 16-bit address received by the AXI-Lite port of the DRM Controller." );
 
 #define TRY try {
 
@@ -68,6 +65,11 @@ static const std::string DRM_SELF_TEST_ERROR_MESSAGE( "Could not access DRM Cont
         Fatal( e.what() );                  \
         throw;                              \
     }
+
+
+static const std::string DRM_SELF_TEST_ERROR_MESSAGE( "Could not access DRM Controller registers.\nPlease verify:\n"
+                        "\t-The read/write callbacks implementation in the SW application: verify it uses the correct offset address of DRM Controller IP in the design address space.\n"
+                        "\t-The DRM Controller IP instantiation in the FPGA design: verify the correctness of 16-bit address received by the AXI-Lite port of the DRM Controller." );
 
 
 namespace Accelize {
@@ -339,9 +341,6 @@ protected:
                         mBypassFrequencyDetection ).asBool();
             }
 
-            // If possible extract host and card information
-            getHostAndCardInfo();
-
         } catch( const Exception &e ) {
             if ( e.getErrCode() != DRM_BadFormat )
                 throw;
@@ -385,7 +384,7 @@ protected:
             }
             if ( type == eLogFileType::BASIC )
                 log_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(
-                        file_path, file_append);
+                        file_path, !file_append);
             else // type == eLogFileType::ROTATING
                 log_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
                         file_path, rotating_size*1024, rotating_num);
@@ -449,29 +448,29 @@ protected:
 
     void getHostAndCardInfo() {
 
-        Debug( "Host and card data verbosity: {}", static_cast<uint32_t>( mHostDataVerbosity ) );
+        Debug( "Host and CSP information verbosity: {}", static_cast<uint32_t>( mHostDataVerbosity ) );
 
         // Depending on the host data verbosity
         if ( mHostDataVerbosity == eHostDataVerbosity::NONE ) {
             return;
         }
+
         // Gather CSP information if detected
+        Json::Value csp_node = Json::nullValue;
         try {
-            // Add CSP specific command
-            CspBase* csp = CspBase::make_csp();
-            if ( csp != nullptr ) {
-                mHostConfigData["csp"] = csp->get_metadata();
-                delete csp;
-                Debug( "CSP information:\n{}", mHostConfigData["csp"].toStyledString() );
-            }
+            uint32_t ws_verbosity = getDrmWSClient().getVerbosity();
+            mHostConfigData["csp"] = GetCspInfo( ws_verbosity );
+            Debug( "CSP information:\n{}", mHostConfigData["csp"].toStyledString() );
         } catch( const std::exception &e ) {
-            Warning( "Error when retrieving CSP information: {}", e.what() );
+            Debug( "No CSP information collected: {}", e.what() );
         }
+        Debug( "CSP information:\n{}", csp_node.toStyledString() );
+        mHostConfigData["csp"] = csp_node;
+
         // Gather host and card information if xbutil existing
         if ( findXrtUtility() ) {
+            Json::Value hostcard_node = Json::nullValue;
             try {
-                Json::Value hostcard_node = Json::nullValue;
-
                 // Call xbutil to collect host and card data
                 std::string cmd = fmt::format( "{} dump", mXbutil );
                 std::string cmd_out = exec_cmd( cmd );
@@ -491,29 +490,30 @@ protected:
                                 || ( key == "system" )
                                 || ( key == "runtime" )
                                )
-                                mHostConfigData[key] = *itr;
+                                hostcard_node[key] = *itr;
                             else if ( key == "board" ) {
                                 //  Add general info node
-                                mHostConfigData[key]["info"] = itr->get("info", Json::nullValue);
+                                hostcard_node[key]["info"] = itr->get("info", Json::nullValue);
                                 // Try to get the number of kernels
                                 Json::Value compute_unit_node = itr->get("compute_unit", Json::nullValue);
                                 if ( compute_unit_node != Json::nullValue )
-                                    mHostConfigData[key]["compute_unit"] = compute_unit_node.size();
+                                    hostcard_node[key]["compute_unit"] = compute_unit_node.size();
                                 else
-                                    mHostConfigData[key]["compute_unit"] = -1;
+                                    hostcard_node[key]["compute_unit"] = -1;
                                 // Add XCLBIN UUID
-                                mHostConfigData[key]["xclbin"] = itr->get("xclbin", Json::nullValue);
+                                hostcard_node[key]["xclbin"] = itr->get("xclbin", Json::nullValue);
                             }
                         } catch( const std::exception &e ) {
                             Debug( "Could not extract Host Information for key {}", key );
                         }
                     }
                 }
-                mHostConfigData["host_card"] = hostcard_node;
-                Debug( "Host and card information:\n{}", hostcard_node.toStyledString() );
             } catch( const std::exception &e ) {
-                Warning( "Error when retrieving host and card information: {}", e.what() );
+                Debug( "No host and card information collected: {}", e.what() );
+                hostcard_node = fmt::format( "No host and card information collected: {}", e.what() );
             }
+            Debug( "Host and card information:\n{}", hostcard_node.toStyledString() );
+            mHostConfigData["host_card"] = hostcard_node;
         }
     }
 
@@ -1335,7 +1335,8 @@ protected:
         // Load license timer
         if ( !isNodeLockedMode() ) {
             bool licenseTimerEnabled( false );
-            checkDRMCtlrRet( getDrmController().loadLicenseTimerInit( licenseTimer, licenseTimerEnabled ) );
+            checkDRMCtlrRet( getDrmController().loadLicenseTimerInit( licenseTimer,
+                    licenseTimerEnabled ) );
             if ( !licenseTimerEnabled ) {
                 Throw( DRM_CtlrError,
                       "Failed to load license timer on DRM controller, licenseTimerEnabled: 0x{:x}",
@@ -1352,7 +1353,8 @@ protected:
         TClock::time_point timeStart = TClock::now();
 
         while( mseconds < ACTIVATIONCODE_TRANSMISSION_TIMEOUT_MS ) {
-            checkDRMCtlrRet( getDrmController().readActivationCodesTransmittedStatusRegister( activationCodesTransmitted ) );
+            checkDRMCtlrRet( getDrmController().readActivationCodesTransmittedStatusRegister(
+                    activationCodesTransmitted ) );
             timeSpan = TClock::now() - timeStart;
             mseconds = 1000.0 * double( timeSpan.count() ) * TClock::period::num / TClock::period::den;
             if ( activationCodesTransmitted ) {
@@ -1723,6 +1725,8 @@ protected:
         mThreadKeepAlive = std::async( std::launch::async, [ this ]() {
             Debug( "Starting background thread which maintains licensing" );
             try {
+                // Collect host and card information when possible
+                getHostAndCardInfo();
 
                 /// Detecting DRM controller frequency if needed
                 if ( !mIsFreqDetectionMethod1 )
@@ -1967,7 +1971,8 @@ protected:
     void pauseSession() {
         stopThread();
         mSecurityStop = false;
-        performHealth(mWSApiRetryDuration, 0);
+        if (mHealthPeriod)
+            performHealth(mWSApiRetryDuration, 0);
         Info( "DRM session paused." );
     }
 
@@ -2147,12 +2152,6 @@ public:
                         json_value[key_str] = (uint32_t)sLogFileType;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                sLogFileType );
-                        break;
-                    }
-                    case ParameterKey::log_file_append: {
-                        json_value[key_str] = sLogFileAppend;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
-                               sLogFileAppend );
                         break;
                     }
                     case ParameterKey::log_file_rotating_num: {
@@ -2445,6 +2444,20 @@ public:
                                mHostConfigData.toStyledString() );
                         break;
                     }
+                    case ParameterKey::log_file_append: {
+                        json_value[key_str] = sLogFileAppend;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                               sLogFileAppend );
+                        break;
+                    }
+                    case ParameterKey::ws_verbosity: {
+                        uint32_t wsVerbosity = getDrmWSClient().getVerbosity();
+                        json_value[key_str] = wsVerbosity;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                               wsVerbosity );
+                        break;
+                    }
+
                     case ParameterKey::ParameterKeyCount: {
                         uint32_t count = static_cast<uint32_t>( ParameterKeyCount );
                         json_value[key_str] = count;

@@ -30,80 +30,126 @@ namespace DRM {
 
 
 CurlEasyPost::CurlEasyPost() {
-    mRequestTimeout = cRequestTimeout;
+    mConnectionTimeoutMS = cConnectionTimeoutMS;
     curl = curl_easy_init();
     if ( !curl )
         Throw( DRM_ExternFail, "Curl : cannot init curl_easy" );
+    curl_easy_setopt( curl, CURLOPT_WRITEFUNCTION, &CurlEasyPost::write_callback );
+    curl_easy_setopt( curl, CURLOPT_ERRORBUFFER, mErrBuff.data() );
+    curl_easy_setopt( curl, CURLOPT_FOLLOWLOCATION, 1L );
+    curl_easy_setopt( curl, CURLOPT_NOPROGRESS, 1L);
+    curl_easy_setopt( curl, CURLOPT_TCP_KEEPALIVE, 1L);
 }
 
 CurlEasyPost::~CurlEasyPost() {
     data.clear();
     curl_easy_cleanup( curl );
-    curl_slist_free_all( headers );
-    curl_slist_free_all( host_resolve_list );
-    headers = NULL;
-    host_resolve_list = NULL;
+    curl_slist_free_all( mHeaders_p );
+    curl_slist_free_all( mHostResolveList );
+    mHeaders_p = NULL;
+    mHostResolveList = NULL;
+}
+
+void CurlEasyPost::setVerbosity( const uint32_t verbosity ) {
+    curl_easy_setopt(curl, CURLOPT_VERBOSE, verbosity);
 }
 
 void CurlEasyPost::setHostResolves( const Json::Value& host_json ) {
     if ( host_json != Json::nullValue ) {
-        if ( host_resolve_list != NULL ) {
-            curl_slist_free_all( host_resolve_list );
-            host_resolve_list = NULL;
+        if ( mHostResolveList != NULL ) {
+            curl_slist_free_all( mHostResolveList );
+            mHostResolveList = NULL;
         }
         for( Json::ValueConstIterator it = host_json.begin(); it != host_json.end(); it++ ) {
             std::string key = it.key().asString();
             std::string val = (*it).asString();
             std::string host_str = fmt::format( "{}:{}", key, val );
-            host_resolve_list = curl_slist_append( host_resolve_list, host_str.c_str() );
+            mHostResolveList = curl_slist_append( mHostResolveList, host_str.c_str() );
         }
-        if ( curl_easy_setopt(curl, CURLOPT_RESOLVE, host_resolve_list) == CURLE_UNKNOWN_OPTION )
+        if ( curl_easy_setopt(curl, CURLOPT_RESOLVE, mHostResolveList) == CURLE_UNKNOWN_OPTION )
             Warning( "Could not set the CURL Host resolve option: {}", host_json.toStyledString() );
         else
             Debug( "Set the following CURL Host resolve option: {}", host_json.toStyledString() );
     }
 }
 
-long CurlEasyPost::perform( std::string* resp, std::chrono::milliseconds& timeout ) {
+uint32_t CurlEasyPost::perform( std::string* response, int32_t timeout_ms ) {
     CURLcode res;
-    long resp_code;
+    uint32_t resp_code;
 
-    if ( headers ) {
-        curl_easy_setopt( curl, CURLOPT_HTTPHEADER, headers );
-    }
-    curl_easy_setopt( curl, CURLOPT_WRITEFUNCTION, &CurlEasyPost::write_callback );
-    curl_easy_setopt( curl, CURLOPT_WRITEDATA, (void*)resp );
-    curl_easy_setopt( curl, CURLOPT_ERRORBUFFER, errbuff.data() );
-    curl_easy_setopt( curl, CURLOPT_FOLLOWLOCATION, 1L );
-    curl_easy_setopt( curl, CURLOPT_CONNECTTIMEOUT, mRequestTimeout );
-    // Compute timeout
-    if ( timeout <= std::chrono::milliseconds( 0 ) )
+    if ( timeout_ms <= 0 )
         Throw( DRM_WSTimedOut, "Did not perform HTTP request to Accelize webservice because deadline is reached." );
-    curl_easy_setopt( curl, CURLOPT_TIMEOUT_MS, timeout.count() );
 
+    // Configure and execute CURL command
+    if ( mHeaders_p ) {
+        curl_easy_setopt( curl, CURLOPT_HTTPHEADER, mHeaders_p );
+    }
+    curl_easy_setopt( curl, CURLOPT_WRITEDATA, response );
+    curl_easy_setopt( curl, CURLOPT_CONNECTTIMEOUT_MS, mConnectionTimeoutMS );
+    curl_easy_setopt( curl, CURLOPT_TIMEOUT_MS, timeout_ms );
     res = curl_easy_perform( curl );
+
+    // Analyze libcurl response
+    if ( res != CURLE_OK ) {
+        // A libcurl error occurred
+        if ( res == CURLE_COULDNT_RESOLVE_PROXY
+          || res == CURLE_COULDNT_RESOLVE_HOST
+          || res == CURLE_COULDNT_CONNECT
+          || res == CURLE_OPERATION_TIMEDOUT ) {
+            Throw( DRM_WSMayRetry, "libcurl failed to perform HTTP request to Accelize webservice ({}) : {}",
+                    curl_easy_strerror( res ), mErrBuff.data() );
+        } else {
+            Throw( DRM_ExternFail, "libcurl failed to perform HTTP request to Accelize webservice ({}) : {}",
+                    curl_easy_strerror( res ), mErrBuff.data() );
+        }
+    }
+    curl_easy_getinfo( curl, CURLINFO_RESPONSE_CODE, &resp_code );
+    Debug( "Received code {} from {} in {} ms", resp_code, mUrl, getTotalTime() * 1000 );
+    return resp_code;
+}
+
+uint32_t CurlEasyPost::perform( std::string* response, std::chrono::steady_clock::time_point& deadline ) {
+    std::chrono::milliseconds timeout_chrono = std::chrono::duration_cast<std::chrono::milliseconds>( deadline - std::chrono::steady_clock::now() );
+    int32_t timeout_ms = timeout_chrono.count();
+    if ( timeout_ms >= (int32_t)mConnectionTimeoutMS )
+        timeout_ms = mConnectionTimeoutMS;
+    return perform( response, timeout_ms );
+}
+
+std::string CurlEasyPost::perform_put( std::string url, const uint32_t& timeout_ms ) {
+    std::string response;
+    uint32_t resp_code;
+
+    if ( timeout_ms <= 0 )
+        Throw( DRM_WSTimedOut, "Did not perform HTTP request to Accelize webservice because deadline is reached." );
+
+    // Configure and execute CURL command
+    curl_easy_setopt( curl, CURLOPT_URL, url.c_str() );
+    if ( mHeaders_p ) {
+        curl_easy_setopt( curl, CURLOPT_HTTPHEADER, mHeaders_p );
+    }
+    curl_easy_setopt( curl, CURLOPT_CUSTOMREQUEST, "PUT");
+    curl_easy_setopt( curl, CURLOPT_WRITEDATA, &response );
+    curl_easy_setopt( curl, CURLOPT_CONNECTTIMEOUT_MS, mConnectionTimeoutMS );
+    curl_easy_setopt( curl, CURLOPT_TIMEOUT_MS, timeout_ms );
+    CURLcode res = curl_easy_perform( curl );
+
+    // Analyze HTTP answer
     if ( res != CURLE_OK ) {
         if ( res == CURLE_COULDNT_RESOLVE_PROXY
           || res == CURLE_COULDNT_RESOLVE_HOST
           || res == CURLE_COULDNT_CONNECT
           || res == CURLE_OPERATION_TIMEDOUT ) {
-            Throw( DRM_WSMayRetry, "Failed performing HTTP request to Accelize webservice ({}) : {}",
-                    curl_easy_strerror( res ), errbuff.data() );
+            Throw( DRM_WSMayRetry, "libcurl failed to perform HTTP request to Accelize webservice ({}) : {}",
+                    curl_easy_strerror( res ), mErrBuff.data() );
         } else {
-            Throw( DRM_ExternFail, "Failed performing HTTP request to Accelize webservice ({}) : {}",
-                    curl_easy_strerror( res ), errbuff.data() );
+            Throw( DRM_ExternFail, "libcurl failed to perform HTTP request to Accelize webservice ({}) : {}",
+                    curl_easy_strerror( res ), mErrBuff.data() );
         }
     }
     curl_easy_getinfo( curl, CURLINFO_RESPONSE_CODE, &resp_code );
-    return resp_code;
-}
-
-long CurlEasyPost::perform( std::string* resp, std::chrono::steady_clock::time_point& deadline ) {
-    std::chrono::milliseconds timeout = std::chrono::duration_cast<std::chrono::milliseconds>( deadline - std::chrono::steady_clock::now() );
-    std::chrono::milliseconds limit( mRequestTimeout * 1000 );
-    if ( timeout >= limit )
-        timeout = limit;
-    return perform( resp, timeout );
+    Debug( "Received code {} from {} in {} ms", resp_code, url, getTotalTime() * 1000 );
+    return response;
 }
 
 double CurlEasyPost::getTotalTime() {
@@ -136,9 +182,11 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
 
         Json::Value settings = JVgetOptional( conf_json, "settings", Json::objectValue );
         mRequestTimeout = JVgetOptional( settings, "ws_request_timeout",
-                        Json::uintValue, cRequestTimeout).asUInt();
+                        Json::uintValue, cRequestTimeout).asUInt() * 1000;
         if ( mRequestTimeout == 0 )
             Throw( DRM_BadArg, "ws_request_timeout must not be 0");
+        mVerbosity = JVgetOptional( settings, "ws_verbosity",
+                        Json::uintValue, 0).asUInt();
 
     } catch( Exception &e ) {
         Throw( e.getErrCode(), "Error with service configuration file '{}': {}",
@@ -159,7 +207,7 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
     } catch( Exception &e ) {
         Throw( e.getErrCode(), "Error with credential file '{}': {}", cred_file_path, e.what() );
     }
-    // Restore originla file log level
+    // Restore original file log level
     if ( logFileLevel <= spdlog::level::debug )
         logFileHandler->set_level( logFileLevel );
 
@@ -181,11 +229,12 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
     std::string oauth_url = url + std::string("/o/token/");
     mOAUth2Request.setHostResolves( mHostResolvesJson );
     mOAUth2Request.setURL( oauth_url );
+    mOAUth2Request.setVerbosity( mVerbosity );
     std::stringstream ss;
     ss << "client_id=" << mClientId << "&client_secret=" << mClientSecret;
     ss << "&grant_type=client_credentials";
     mOAUth2Request.setPostFields( ss.str() );
-    mOAUth2Request.setRequestTimeout( mRequestTimeout );
+    mOAUth2Request.setConnectionTimeoutMS( mRequestTimeout );
 
     // Set URL of license and metering requests
     mLicenseUrl = url + std::string("/auth/metering/genlicense/");
@@ -231,9 +280,6 @@ void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
     std::string response;
     long resp_code = mOAUth2Request.perform( &response, deadline );
 
-    Debug( "Received code {} from OAuth2 Web Service in {} ms",
-            resp_code, mOAUth2Request.getTotalTime() * 1000 );
-
     // Parse response
     std::string error_msg;
     Json::Value json_resp;
@@ -244,17 +290,9 @@ void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
         error_msg = e.what();
     }
     // Analyze response
-    if ( resp_code != 200 ) {
-        // An error occurred
-        DRM_ErrorCode drm_error;
-        if ( CurlEasyPost::is_error_retryable( resp_code ) )
-            drm_error = DRM_WSMayRetry;
-        else if ( ( resp_code >= 400 ) && ( resp_code < 500 ) )
-            drm_error = DRM_WSReqError;
-        else
-            drm_error = DRM_WSError;
+    DRM_ErrorCode drm_error = CurlEasyPost::httpCode2DrmCode( resp_code );
+    if ( drm_error != DRM_OK )
         Throw( drm_error, "OAuth2 Web Service error {}: {}", resp_code, response );
-    }
 
     // Verify response parsing
     if ( json_resp == Json::nullValue )
@@ -270,7 +308,8 @@ Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Val
 
     // Create new request
     CurlEasyPost req;
-    req.setRequestTimeout( mRequestTimeout );
+    req.setVerbosity( mVerbosity );
+    req.setConnectionTimeoutMS( mRequestTimeout );
     req.setHostResolves( mHostResolvesJson );
     req.setURL( url );
     req.appendHeader( "Accept: application/vnd.accelize.v1+json" );
@@ -281,9 +320,6 @@ Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Val
     // Send request and wait response
     std::string response;
     long resp_code = req.perform( &response, deadline );
-
-    Debug( "Received code {} from Metering Web Service in {} ms",
-            resp_code, req.getTotalTime() * 1000 );
 
     // Parse response
     std::string error_msg;
@@ -296,17 +332,13 @@ Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Val
     }
 
     // Analyze response
-    if ( resp_code != 200 ) {
-        // An error occurred
-        DRM_ErrorCode drm_error;
-        if ( CurlEasyPost::is_error_retryable( resp_code ) || ( resp_code == 401 ) )
-            drm_error = DRM_WSMayRetry;
-        else if ( ( resp_code >= 400 ) && ( resp_code < 500 ) )
-            drm_error = DRM_WSReqError;
-        else
-            drm_error = DRM_WSError;
+    DRM_ErrorCode drm_error = CurlEasyPost::httpCode2DrmCode( resp_code );
+    if ( resp_code == 401 )
+        drm_error = DRM_WSMayRetry;
+    // An error occurred
+    if ( drm_error != DRM_OK )
         Throw( drm_error, "Metering Web Service error {}: {}", resp_code, response );
-    }
+
     // Verify response parsing
     if ( json_resp == Json::nullValue )
         Throw( DRM_WSRespError, "Failed to parse response from Metering Web Service because {}: {}",
