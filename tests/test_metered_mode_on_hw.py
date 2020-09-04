@@ -464,6 +464,8 @@ def test_async_on_pause(accelize_drm, conf_json, cred_json, async_handler):
         activators.autotest(is_activated=False)
         drm_manager.activate()
         start = datetime.now()
+        if drm_manager.get('health_period') == 0:
+            pytest.skip('Health is not active: skip async test')
         lic_duration = drm_manager.get('license_duration')
         assert drm_manager.get('session_status')
         assert drm_manager.get('license_status')

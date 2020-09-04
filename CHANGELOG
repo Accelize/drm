@@ -1,9 +1,16 @@
-* Mon Aug 31 2020 Accelize v2.5.0
+* Mon Sep 4 2020 Accelize v2.5.0
 - NEW: Add support of the asynchronous metering mechanism
-- NEW: Use host and card information when XRT utilities are installed
 - NEW: Include DRM Library settings in requests
 - NEW: Support the new data format in the ROM of the DRM Controller
-- FIX: Retry on API call handles loss of requests
+- NEW: Show host and card information when XRT utilities are installed
+- NEW: Show CSP information when available
+- NEW: Add Ubuntu to the regression suite
+- NEW: Support environment variables: ONEPORTAL_URL, ONEPORTAL_CLIENT_ID, ONEPORTAL_CLIENT_SECRET
+- NEW: Log file support "append" mode
+- NEW: Validate the support of xclRegRead and xclRegWrite for CPP, OpenCL and Py APIs
+- FIX: Refactor retry mechanism from API functions
+- DOC: Update documentation: thanks to customers for their feedback
+- DOC: Add migration page
 
 * Thu Apr 30 2020 Accelize v2.4.1
 - FIX: Correct BIST to allow HDK v3.x
