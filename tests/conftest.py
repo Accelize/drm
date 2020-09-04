@@ -162,6 +162,8 @@ def pytest_addoption(parser):
     parser.addoption(
         "--logfilelevel", action="store", type=int, default=1, choices=(0,1,2,3,4,5), help='Specify verbosity for --logfile')
     parser.addoption(
+        "--logfileappend", action="store_true", default=False, help='Append log message to same file. File path is specified by --logfile')
+    parser.addoption(
         "--proxy_debug", action="store_true", default=False,
         help='Activate debug for proxy')
     parser.addoption(
@@ -788,7 +790,7 @@ def conf_json(request, pytestconfig, tmpdir):
         else:
             log_param['log_file_path'] = realpath("./tox_drmlib_t%f_pid%d.log" % (time(), getpid()))
         log_param['log_file_verbosity'] = pytestconfig.getoption("logfilelevel")
-        log_param['log_file_append'] = True
+        log_param['log_file_append'] = True if pytestconfig.getoption("logfileappend") else False
     # Save config to JSON file
     json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param, design=design_param)
     json_conf.save()
