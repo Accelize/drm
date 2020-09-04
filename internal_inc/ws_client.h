@@ -66,6 +66,7 @@ public:
         return        resp_code == 408 // Request Timeout
                    || resp_code == 429 // Too Many Requests
                    || resp_code == 470 // Floating License: no token available
+                   || resp_code == 495 // SSL Certificate Error
                    || resp_code == 500 // Internal Server Error
                    || resp_code == 502 // Bad Gateway
                    || resp_code == 503 // Service Unavailable
@@ -77,6 +78,7 @@ public:
                    || resp_code == 522 // Connection Timed Out
                    || resp_code == 524 // A Timeout Occurred
                    || resp_code == 525 // SSL Handshake Failed
+                   || resp_code == 526 // Invalid SSL Certificate
                    || resp_code == 527 // Railgun Error
                    || resp_code == 530 // Origin DNS Error
                    || resp_code == 560 // Accelize License generation temporary issue
