@@ -164,7 +164,7 @@ Json::Value parseJsonString( const std::string &json_string ) {
     if ( json_node.empty() || json_node.isNull() )
         Throw( DRM_BadArg, "JSON string is empty" );
 
-    Debug( "Extracted JSON Object: {}", json_node.toStyledString() );
+    Debug2( "Extracted JSON Object: {}", json_node.toStyledString() );
 
     return json_node;
 }

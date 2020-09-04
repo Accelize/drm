@@ -63,32 +63,27 @@ Aws::Aws():CspBase( "Aws", 100 ) {}
 
 Json::Value Aws::get_metadata() {
     Json::Value metadata = Json::nullValue;
-    std::string token, resp;
+    std::string token;
     uint32_t timeout_ms = mHTTPRequest.getConnectionTimeoutMS();
 
     // Using IMDSv2 method
 
     // Get token
     CurlEasyPost tokenReq;
-    tokenReq.setURL( "http://169.254.169.254/latest/api/token" );
     tokenReq.setConnectionTimeoutMS( timeout_ms );
     tokenReq.setVerbosity( mVerbosity );
     tokenReq.appendHeader( "X-aws-ec2-metadata-token-ttl-seconds: 21600" );
-    tokenReq.perform_put( &token, "http://169.254.169.254/latest/api/token", timeout_ms );
-    mHTTPRequest.appendHeader( fmt::format("X-aws-ec2-metadata-token: {}", token) );
+    token = tokenReq.perform_put( "http://169.254.169.254/latest/api/token", timeout_ms );
 
     // Collect Alibaba information
+    mHTTPRequest.appendHeader( fmt::format("X-aws-ec2-metadata-token: {}", token) );
     std::string base_url("http://169.254.169.254/latest");
     metadata["instance_id"] = mHTTPRequest.perform<std::string>( fmt::format( "{}/meta-data/instance-id", base_url ), timeout_ms );
     metadata["instance_type"] = mHTTPRequest.perform<std::string>( fmt::format( "{}/meta-data/instance-type", base_url ), timeout_ms );
     metadata["ami_id"] = mHTTPRequest.perform<std::string>( fmt::format( "{}/meta-data/ami-id", base_url ), timeout_ms );
-    std::string inst_doc = mHTTPRequest.perform<std::string>( fmt::format( "{}/dynamic/instance-identity/document", base_url ), timeout_ms );
-    std::cout << "inst_doc=" << inst_doc << std::endl;
-    std::string region;
-    metadata["region"] = "region";
-
-    std::cout << "metadata=" << metadata.toStyledString() << std::endl;
-
+    std::string doc_string = mHTTPRequest.perform<std::string>( fmt::format( "{}/dynamic/instance-identity/document", base_url ), timeout_ms );
+    Json::Value doc_json = parseJsonString( doc_string );
+    metadata["region"] = doc_json["region"];
     return metadata;
 }
 
@@ -108,7 +103,6 @@ Json::Value Alibaba::get_metadata() {
     metadata["instance_type"] = mHTTPRequest.perform<std::string>( fmt::format( "{}/instance/instance-type", base_url ), timeout_ms );
     metadata["ami_id"] = mHTTPRequest.perform<std::string>( fmt::format( "{}/image-id", base_url ), timeout_ms );
     metadata["region"] = mHTTPRequest.perform<std::string>( fmt::format( "{}/region-id", base_url ), timeout_ms );
-    std::cout << "metadata=" << metadata.toStyledString() << std::endl;
     return metadata;
 }
 

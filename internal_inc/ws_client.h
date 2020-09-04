@@ -53,6 +53,7 @@ private:
     const uint32_t cConnectionTimeoutMS = 30000;    // Timeout default value in milliseconds
 
     CURL *curl = NULL;
+    std::string mUrl;
     struct curl_slist *mHeaders_p = NULL;
     struct curl_slist *mHostResolveList = NULL;
     std::list<std::string> data;                    // keep data until request performed
@@ -81,52 +82,18 @@ public:
                    || resp_code == 560 // Accelize License generation temporary issue
                 ;
     }
+    static DRM_ErrorCode httpCode2DrmCode( const uint32_t http_resp_code ) {
+        if ( http_resp_code == 200 )
+            return DRM_OK;
+        if ( CurlEasyPost::is_error_retryable( http_resp_code ) )
+            return DRM_WSMayRetry;
+        if ( ( http_resp_code >= 400 ) && ( http_resp_code < 500 ) )
+            return DRM_WSReqError;
+        return DRM_WSError;
+    }
 
     CurlEasyPost();
     ~CurlEasyPost();
-
-    long perform( std::string* resp, std::chrono::steady_clock::time_point& deadline );
-    long perform( std::string* resp, std::chrono::milliseconds& timeout );
-    long perform_put( std::string* resp, std::string url, const uint32_t& timeout_ms );
-
-    template<class T>
-    T perform( std::string url, const uint32_t& timeout_ms ) {
-        T resp;
-
-        // Configure and execute CURL command
-        curl_easy_setopt( curl, CURLOPT_URL, url.c_str() );
-        if ( mHeaders_p ) {
-            curl_easy_setopt( curl, CURLOPT_HTTPHEADER, mHeaders_p );
-        }
-        curl_easy_setopt( curl, CURLOPT_WRITEFUNCTION, &CurlEasyPost::write_callback );
-        curl_easy_setopt( curl, CURLOPT_WRITEDATA, &resp );
-        curl_easy_setopt( curl, CURLOPT_ERRORBUFFER, mErrBuff.data() );
-        curl_easy_setopt( curl, CURLOPT_FOLLOWLOCATION, 1L );
-        curl_easy_setopt( curl, CURLOPT_CONNECTTIMEOUT_MS, mConnectionTimeoutMS );
-        if ( timeout_ms <= 0 )
-            Throw( DRM_WSTimedOut, "Did not perform HTTP request to Accelize webservice because deadline is reached." );
-        curl_easy_setopt( curl, CURLOPT_TIMEOUT_MS, timeout_ms );
-        CURLcode res = curl_easy_perform( curl );
-
-        // Analyze HTTP answer
-        long resp_code;
-        curl_easy_getinfo( curl, CURLINFO_RESPONSE_CODE, &resp_code );
-        Debug( "Received code {} from {} in {} ms", resp_code, url, getTotalTime() * 1000 );
-
-        if ( res != CURLE_OK ) {
-            if ( res == CURLE_COULDNT_RESOLVE_PROXY
-              || res == CURLE_COULDNT_RESOLVE_HOST
-              || res == CURLE_COULDNT_CONNECT
-              || res == CURLE_OPERATION_TIMEDOUT ) {
-                Throw( DRM_WSMayRetry, "Failed performing HTTP request to Accelize webservice ({}) : {}",
-                        curl_easy_strerror( res ), mErrBuff.data() );
-            } else {
-                Throw( DRM_ExternFail, "Failed performing HTTP request to Accelize webservice ({}) : {}",
-                        curl_easy_strerror( res ), mErrBuff.data() );
-            }
-        }
-        return resp;
-    }
 
     double getTotalTime();
 
@@ -134,11 +101,7 @@ public:
 
     void setHostResolves( const Json::Value& host_json );
 
-    template<class T>
-    void setURL(T&& url) {
-        data.push_back( std::forward<T>(url) );
-        curl_easy_setopt( curl, CURLOPT_URL, data.back().c_str() );
-    }
+    void setURL( std::string url );
 
     template<class T>
     void appendHeader( T&& header ) {
@@ -157,6 +120,58 @@ public:
     void setConnectionTimeoutMS( const uint32_t timeoutMS ) { mConnectionTimeoutMS = timeoutMS; }
     uint32_t getConnectionTimeoutMS() const { return mConnectionTimeoutMS; }
 
+    uint32_t perform( std::string* resp, std::chrono::steady_clock::time_point& deadline );
+    uint32_t perform( std::string* resp, int32_t timeout );
+    std::string perform_put( std::string url, const uint32_t& timeout_ms );
+
+    template<class T>
+    T perform( std::string url, const uint32_t& timeout_ms ) {
+        T response;
+        uint32_t resp_code;
+
+        // Configure and execute CURL command
+        curl_easy_setopt( curl, CURLOPT_URL, url.c_str() );
+        if ( mHeaders_p ) {
+            curl_easy_setopt( curl, CURLOPT_HTTPHEADER, mHeaders_p );
+        }
+        curl_easy_setopt( curl, CURLOPT_WRITEDATA, &response );
+        curl_easy_setopt( curl, CURLOPT_CONNECTTIMEOUT_MS, mConnectionTimeoutMS );
+        if ( timeout_ms <= 0 )
+            Throw( DRM_WSTimedOut, "Did not perform HTTP request to Accelize webservice because deadline is reached." );
+        curl_easy_setopt( curl, CURLOPT_TIMEOUT_MS, timeout_ms );
+        CURLcode res = curl_easy_perform( curl );
+
+        // Analyze libcurl response
+        if ( res != CURLE_OK ) {
+            if ( res == CURLE_COULDNT_RESOLVE_PROXY
+              || res == CURLE_COULDNT_RESOLVE_HOST
+              || res == CURLE_COULDNT_CONNECT
+              || res == CURLE_OPERATION_TIMEDOUT ) {
+                Throw( DRM_WSMayRetry, "Failed performing HTTP request to Accelize webservice ({}) : {}",
+                        curl_easy_strerror( res ), mErrBuff.data() );  //LCOV_EXCL_LINE
+            } else {
+                Throw( DRM_ExternFail, "Failed performing HTTP request to Accelize webservice ({}) : {}",
+                        curl_easy_strerror( res ), mErrBuff.data() );  //LCOV_EXCL_LINE
+            }
+        }
+        curl_easy_getinfo( curl, CURLINFO_RESPONSE_CODE, &resp_code );
+        Debug( "Received code {} from {} in {} ms", resp_code, url, getTotalTime() * 1000 );
+
+        // Analyze HTTP response
+        if ( resp_code != 200 ) {
+            // An error occurred
+            DRM_ErrorCode drm_error;
+            if ( CurlEasyPost::is_error_retryable( resp_code ) )
+                drm_error = DRM_WSMayRetry;
+            else if ( ( resp_code >= 400 ) && ( resp_code < 500 ) )
+                drm_error = DRM_WSReqError;
+            else
+                drm_error = DRM_WSError;
+            Throw( drm_error, "OAuth2 Web Service error {}: {}", resp_code, response );
+        }
+        return response;
+    }
+
 protected:
 
     static size_t write_callback( void *contents, size_t size, size_t nmemb, std::string *userp ) {
@@ -164,7 +179,7 @@ protected:
         try {
             userp->append( (const char*)contents, realsize );
         } catch( const std::bad_alloc& e ) {
-            Throw( DRM_ExternFail, "Curl write callback exception: {}", e.what() );
+            Throw( DRM_ExternFail, "Curl write callback exception: {}", e.what() );  //LCOV_EXCL_LINE
         }
         return realsize;
     }

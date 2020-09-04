@@ -341,9 +341,6 @@ protected:
                         mBypassFrequencyDetection ).asBool();
             }
 
-            // If possible extract host and card information
-            getHostAndCardInfo();
-
         } catch( const Exception &e ) {
             if ( e.getErrCode() != DRM_BadFormat )
                 throw;
@@ -903,6 +900,10 @@ protected:
         } else {
             mWsClient.reset( new DrmWSClient( mConfFilePath, mCredFilePath ) );
         }
+
+        // Collect host and card information when possible
+        getHostAndCardInfo();
+
     }
 
     // Get DRM HDK version
