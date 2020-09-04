@@ -1356,7 +1356,7 @@ protected:
             checkDRMCtlrRet( getDrmController().readActivationCodesTransmittedStatusRegister(
                     activationCodesTransmitted ) );
             timeSpan = TClock::now() - timeStart;
-            mseconds = 1000.0 * double( timeSpan.count() ) * TClock::period::num / TClock::period::den;
+            mseconds = double( timeSpan.count() ) * TClock::period::num / TClock::period::den;
             if ( activationCodesTransmitted ) {
                 Debug( "License #{} transmitted after {} ms", mLicenseCounter, mseconds );
                 break;
@@ -1364,7 +1364,7 @@ protected:
             Debug2( "License #{} not transmitted yet after {} ms", mLicenseCounter, mseconds );
         }
         if ( !activationCodesTransmitted ) {
-            Unreachable( "DRM Controller could not transmit Licence #{} to activators after {} seconds. ", mLicenseCounter, mseconds ); //LCOV_EXCL_LINE
+            Throw( DRM_CtlrError, "DRM Controller could not transmit Licence #{} to activators after {} seconds. ", mLicenseCounter, mseconds ); //LCOV_EXCL_LINE
         }
         mExpirationTime += std::chrono::seconds( mLicenseDuration );
 

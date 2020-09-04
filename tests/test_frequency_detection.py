@@ -188,6 +188,9 @@ def test_drm_manager_frequency_detection_method1_exception(accelize_drm, conf_js
     async_cb = async_handler.create()
 
     conf_json.reset()
+    conf_json.reset()
+    conf_json['settings']['frequency_detection_period'] = (int)(2**32 / 125000000 * 1000) + 2
+    conf_json.save()
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
@@ -195,10 +198,6 @@ def test_drm_manager_frequency_detection_method1_exception(accelize_drm, conf_js
         driver.write_register_callback,
         async_cb.callback
     )
-    conf_json.reset()
-    logpath = realpath("./drmlib.%d.%s.log" % (getpid(), time()))
-    conf_json['settings']['frequency_detection_period'] = (int)(2**32 / 125000000 * 1000) + 2
-    conf_json.save()
     with pytest.raises(accelize_drm.exceptions.DRMBadFrequency) as excinfo:
         drm_manager = accelize_drm.DrmManager(
             conf_json.path,
