@@ -249,6 +249,7 @@ class SingleActivator:
         self.driver = driver
         self.base_address = base_address
         self.metering_data = 0
+        self.event_cnt_flag = self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET) != 0xDEADDEAD
 
     def autotest(self, is_activated=None):
         """
@@ -303,6 +304,8 @@ class SingleActivator:
         """
         self.metering_data = 0
         self.driver.write_register(self.base_address + CNT_EVENT_REG_OFFSET, 0)
+        if self.event_cnt_flag:
+            assert self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET) == 0
 
     def check_coin(self, coins):
         """
@@ -314,7 +317,8 @@ class SingleActivator:
         # Check local counter with dmr value passed in argument
         assert self.metering_data == coins
         # Check with counter in Activator's registery
-        #assert self.metering_data == self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET)
+        if self.event_cnt_flag:
+            assert self.metering_data == self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET)
 
 
 
