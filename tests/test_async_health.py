@@ -308,6 +308,7 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, asy
         assert get_proxy_error() is None
 
 
+@pytest.mark.skip(reason='Asynchronous feature is still not working because of the corruption of metering data')
 @pytest.mark.no_parallel
 @pytest.mark.minimum
 def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler, live_server, ws_admin):

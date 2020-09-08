@@ -127,28 +127,30 @@ def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler, liv
     )
 
     # Set initial context on the live server
-    context = {'session_id':None, 'session_cnt':0, 'request_cnt':0}
+    context = {'session_id':'0', 'session_cnt':0, 'request_cnt':0}
     set_context(context)
     assert get_context() == context
 
     # Start session #1 to record
     drm_manager.activate()
+    start = datetime.now()
     try:
-        start = datetime.now()
         lic_duration = drm_manager.get('license_duration')
         assert drm_manager.get('license_status')
         activators.autotest(is_activated=True)
-        wait_period = start + timedelta(seconds=lic_duration/2) - datetime.now()
+        wait_period = start + timedelta(seconds=lic_duration+2) - datetime.now()
         sleep(wait_period.total_seconds())
+        assert drm_manager.get('license_status')
     finally:
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
         async_cb.assert_NoError()
+
     # Start session #2 to replay session #1
     drm_manager.activate()
+    start = datetime.now()
     try:
-        start = datetime.now()
         assert drm_manager.get('license_status')
         activators.autotest(is_activated=True)
         lic_duration = drm_manager.get('license_duration')
