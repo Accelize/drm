@@ -56,7 +56,6 @@ private:
     std::string mUrl;
     struct curl_slist *mHeaders_p = NULL;
     struct curl_slist *mHostResolveList = NULL;
-    std::list<std::string> data;                    // keep data until request performed
     std::array<char, CURL_ERROR_SIZE> mErrBuff;
     uint32_t mConnectionTimeoutMS;                  // Request timeout in milliseconds
 
@@ -98,34 +97,14 @@ public:
     ~CurlEasyPost();
 
     double getTotalTime();
+    uint32_t getConnectionTimeoutMS() const { return mConnectionTimeoutMS; }
 
     void setVerbosity( const uint32_t verbosity );
-
     void setHostResolves( const Json::Value& host_json );
-
-    template<class T>
-    void setURL(T&& url) {
-        data.push_back( std::forward<T>(url) );
-        curl_easy_setopt( curl, CURLOPT_URL, data.back().c_str() );
-        mUrl = url;
-    }
-
-    template<class T>
-    void appendHeader( T&& header ) {
-        data.push_back( std::forward<T>(header) );
-        Debug2( "Add {} to CURL header", std::forward<T>(header) );
-        mHeaders_p = curl_slist_append( mHeaders_p, data.back().c_str() );
-    }
-
-    template<class T>
-    void setPostFields( T&& postfields ) {
-        data.push_back( std::forward<T>(postfields) );
-        curl_easy_setopt( curl, CURLOPT_POSTFIELDSIZE, data.back().size() );
-        curl_easy_setopt( curl, CURLOPT_POSTFIELDS, data.back().c_str() );
-    }
-
+    void setURL( const std::string& url );
+    void appendHeader( const std::string& header );
+    void setPostFields( const std::string& postfields );
     void setConnectionTimeoutMS( const uint32_t timeoutMS ) { mConnectionTimeoutMS = timeoutMS; }
-    uint32_t getConnectionTimeoutMS() const { return mConnectionTimeoutMS; }
 
     uint32_t perform( std::string* resp, std::chrono::steady_clock::time_point& deadline );
     uint32_t perform( std::string* resp, int32_t timeout );

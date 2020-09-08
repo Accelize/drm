@@ -69,6 +69,10 @@ stages:
         meteringServer: prod
       ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/master') }}:
         meteringServer: dev
+      ${{ if startsWith(variables['Build.SourceBranch'], 'refs/tags') }}:
+        tox_minimum: '-m minimum'
+      ${{ if not(startsWith(variables['Build.SourceBranch'], 'refs/tags')) }}:
+        tox_minimum: ''
 
     jobs:
 
@@ -77,9 +81,9 @@ stages:
           instance_type: 'f1.4xlarge'
           config_list:
           - os_distrib: 'centos_7'
-            tox_extra_option: '-k "not test_abi_compliance"'
+            tox_extra_option: '-k "not test_abi_compliance" $(tox_minimum)'
           - os_distrib: 'ubuntu_18_04'
-            tox_extra_option: '-k "not test_abi_compliance"'
+            tox_extra_option: '-k "not test_abi_compliance" $(tox_minimum)'
             dependsOn: 'centos_7'
 
   - stage: release
