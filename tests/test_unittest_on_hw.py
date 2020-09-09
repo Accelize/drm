@@ -7,7 +7,7 @@ import gc
 from glob import glob
 from os import remove, getpid
 from os.path import getsize, isfile, dirname, join, realpath
-from re import match, search, finditer, MULTILINE
+from re import match, search, finditer, MULTILINE, IGNORECASE
 from time import sleep, time
 from json import loads
 from datetime import datetime, timedelta
@@ -2589,7 +2589,7 @@ def test_curl_host_resolve(accelize_drm, conf_json, cred_json, async_handler):
     )
     with pytest.raises(accelize_drm.exceptions.DRMExternFail) as excinfo:
         drm_manager.activate()
-    assert 'Peer certificate cannot be authenticated with given CA certificates' in str(excinfo.value)
+    assert search(r'peer certificate', str(excinfo.value), IGNORECASE)
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMExternFail.error_code
     async_cb.assert_NoError()
     del drm_manager
