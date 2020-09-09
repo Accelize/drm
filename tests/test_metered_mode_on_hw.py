@@ -483,9 +483,9 @@ def test_async_on_pause(accelize_drm, conf_json, cred_json, async_handler):
     wait_func_true(lambda: isfile(logpath), 10)
     with open(logpath, 'rt') as f:
         log_content = f.read()
+    remove(logpath)
     assert len(list(findall(r'"request"\s*:\s*"health"', log_content))) == 1
     async_cb.assert_NoError()
-    remove(logpath)
 
 
 @pytest.mark.minimum
