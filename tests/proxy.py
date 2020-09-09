@@ -130,17 +130,18 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_header_error_on_key', url)
         request_json = request.get_json()
+        with lock:
+            if context['cnt'] > 0:
+                return ({'error':'Test did not run as expected'}, 408)
+            context['cnt'] += 1
         response = post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
-        with lock:
-            if context['cnt'] == 0:
-                dna, lic_json = list(response_json['license'].items())[0]
-                key = lic_json['key']
-                key = '1' + key[1:] if key[0] == '0' else '0' + key[1:]
-                response_json['license'][dna]['key'] = key
-            context['cnt'] += 1
+        dna, lic_json = list(response_json['license'].items())[0]
+        key = lic_json['key']
+        key = '1' + key[1:] if key[0] == '0' else '0' + key[1:]
+        response_json['license'][dna]['key'] = key
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         return Response(dumps(response_json), response.status_code, headers)
@@ -159,17 +160,20 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_header_error_on_licenseTimer', url)
         request_json = request.get_json()
+        with lock:
+            cnt = context['cnt']
+            if cnt > 1:
+                return ({'error':'Test did not run as expected'}, 408)
+            context['cnt'] += 1
         response = post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
-        with lock:
-            if context['cnt'] == 1:
-                dna, lic_json = list(response_json['license'].items())[0]
-                timer = lic_json['licenseTimer']
-                timer = '1' + timer[1:] if timer[0] == '0' else '0' + timer[1:]
-                response_json['license'][dna]['licenseTimer'] = timer
-            context['cnt'] += 1
+        if cnt == 1:
+            dna, lic_json = list(response_json['license'].items())[0]
+            timer = lic_json['licenseTimer']
+            timer = '1' + timer[1:] if timer[0] == '0' else '0' + timer[1:]
+            response_json['license'][dna]['licenseTimer'] = timer
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         return Response(dumps(response_json), response.status_code, headers)
