@@ -12,6 +12,7 @@ from json import loads, dumps
 from flask import request
 from requests import get, post
 from tests.proxy import get_context, set_context
+from tests.conftest import whoami
 
 
 @pytest.mark.no_parallel

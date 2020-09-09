@@ -6,6 +6,7 @@ import pytest
 from os import remove
 from itertools import groupby
 from re import match, search, IGNORECASE
+from tests.conftest import whoami
 
 
 def test_hdk_stability_on_programming(accelize_drm, conf_json, cred_json, async_handler):
