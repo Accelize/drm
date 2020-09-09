@@ -203,7 +203,7 @@ Glossary
 
    contacts
    Accelize Website <https://www.accelize.com>
-   DRM Library on Github <https://github.com/Accelize/drmlib>
+   DRM Library on Github <https://github.com/Accelize/drm>
 
 Indexes and tables
 ------------------

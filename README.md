@@ -33,7 +33,7 @@ Specifically, the license server delivers a regular stream of time-limited singl
 
 Take a look at our [documentation](https://tech.accelize.com/documentation/stable/#licensing-modes) for more information !
 
-# :wrench: Accelize Architecture Overview
+# :wrench: Accelize architecture overview
 
 The Accelize DRM solution comprises 3 layers:
 
@@ -49,9 +49,9 @@ the DRM Web Service can deployed on-premise.
 
 More information in our [documentation](https://tech.accelize.com/documentation/stable/#licensing-modes) !
 
-## :computer: Accelize Distribution Platform
+## :computer: Accelize distribution platform
 
-For a quick tour about the Accelize Platform integration steps, please watch [this video](https://youtu.be/7cb_ksLTcRk)
+For a quick tour about the Accelize platform integration steps, please watch [this video](https://youtu.be/7cb_ksLTcRk)
 
 ## :heavy_exclamation_mark: Prerequisites
 
