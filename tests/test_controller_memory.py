@@ -142,7 +142,7 @@ def test_configuration_file_empty_and_corrupted_product_id(accelize_drm, conf_js
         driver.program_fpga(fpga_image_bkp)
 
 
-@pytest.mark.skip(reason='Not supported')
+@pytest.mark.skip(reason='Two concurrent objects on the same board is not supported')
 def test_2_drm_manager_concurrently(accelize_drm, conf_json, cred_json, async_handler):
     """Test errors when 2 DrmManager instances are used."""
 

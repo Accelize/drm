@@ -56,6 +56,7 @@ def test_api_retry_disabled(accelize_drm, conf_json, cred_json, async_handler, l
             log_content, IGNORECASE)
     assert not search(r'attempt', log_content, IGNORECASE)
     async_cb.assert_NoError()
+    remove(logpath)
 
 
 @pytest.mark.no_parallel
@@ -101,6 +102,7 @@ def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler, li
     nb_attempts_expected = retry_duration / retry_sleep
     assert nb_attempts_expected - 1 <= nb_attempts <= nb_attempts_expected + 1
     async_cb.assert_NoError()
+    remove(logpath)
 
 
 @pytest.mark.no_parallel
@@ -228,3 +230,6 @@ def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handle
     attempts_list = [int(e) for e in findall(r'Attempt #(\d+) to obtain a new License failed with message', log_content)]
     assert len(attempts_list) == nb_retry
     assert sorted(list(attempts_list)) == list(range(1,nb_retry+1))
+    async_cb.assert_NoError()
+    remove(logpath)
+
