@@ -1,23 +1,6 @@
-![Screenshot](doc/_static/AccelDRM_lock.png)
+![Accelize DRM logo](doc/_static/accelize_DRM_logo.png)
 
 [![Build Status](https://dev.azure.com/Accelize/DRM/_apis/build/status/DRM%20Library?branchName=master)](https://dev.azure.com/Accelize/DRM/_build/latest?definitionId=2&branchName=master)[![codecov](https://codecov.io/gh/Accelize/drmlib/branch/master/graph/badge.svg)](https://codecov.io/gh/Accelize/drmlib)
-
-# :closed_lock_with_key: Accelize DRM library : AccelDRM
-
-The Accelize DRM solution protects FPGA applications.
-
-The Accelize DRM library operates the DRM from the software side of the
-application.
-
-This library is responsible for activating the DRM, communicating with the
-Accelize web service and managing metering sessions.
-
-This library provides **API** for :
-* C
-* C++
-* Python
-
-Interested in Accelize DRM ? Checkout our [Documentation](https://tech.accelize.com/documentation/stable)!
 
 # :key: Accelize licensing solution
 
@@ -33,7 +16,7 @@ Specifically, the license server delivers a regular stream of time-limited singl
 
 Take a look at our [documentation](https://tech.accelize.com/documentation/stable/#licensing-modes) for more information !
 
-# :wrench: Accelize Architecture Overview
+# :wrench: Accelize architecture overview
 
 The Accelize DRM solution comprises 3 layers:
 
@@ -49,19 +32,14 @@ the DRM Web Service can deployed on-premise.
 
 More information in our [documentation](https://tech.accelize.com/documentation/stable/#licensing-modes) !
 
-## :computer: Accelize Distribution Platform
+## :computer: Accelize distribution platform
 
-For a quick tour about the Accelize Platform integration steps, please watch [this video](https://youtu.be/7cb_ksLTcRk)
+For a quick tour about the Accelize platform integration steps, please watch [this video](https://youtu.be/7cb_ksLTcRk)
 
-## :heavy_exclamation_mark: Prerequisites
+# :registered: License
 
-To access the Accelize Web Service you need an Internet connection which allows
-outbound HTTPS connection to Accelize [server](https://master.metering.accelize.com)
+Please consult the Accelize DRM library [license](LICENSE)
 
-## :registered: License
-
-Please consult [license](LICENSE)
-
-## :floppy_disk: Changelog
+# :floppy_disk: Changelog
 
 Please consult [CHANGELOG](CHANGELOG)

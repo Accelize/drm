@@ -326,9 +326,9 @@ Then run the following commands to build and install the library:
 
 .. code-block:: bash
 
-    git clone https://github.com/Accelize/drmlib.git --recursive --depth 1
-    mkdir -p drmlib/build
-    cd drmlib/build
+    git clone https://github.com/Accelize/drm.git --recursive --depth 1
+    mkdir -p drm/build
+    cd drm/build
 
     # The "-DPYTHON3=ON" option is required only to build the Python library
     cmake -DPYTHON3=ON ..
@@ -373,9 +373,9 @@ Once dependencies are installed, simply run the following section:
 
 .. code-block:: bash
 
-    git clone https://github.com/Accelize/drmlib.git --recursive --depth 1
-    mkdir -p drmlib/build
-    cd drmlib/build
+    git clone https://github.com/Accelize/drm.git --recursive --depth 1
+    mkdir -p drm/build
+    cd drm/build
 
     # The "-DPKG=ON" option is required to build the package
     cmake -DPYTHON3=ON -DPKG=ON ..
@@ -383,8 +383,7 @@ Once dependencies are installed, simply run the following section:
     make -j
     make package
 
-Packages will be generated in the `drmlib/build/packages` directory.
-
+Packages will be generated in the `drm/build/packages` directory.
 
 Installation with Ansible
 -------------------------
