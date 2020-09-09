@@ -1,6 +1,10 @@
 Accelize DRM
 ============
 
+.. image:: _static/accelize_DRM_logo.png
+   :target: _static/accelize_DRM_logo.png
+   :alt: Accelize DRM logo
+
 FPGA Licensing Principle
 ------------------------
 
