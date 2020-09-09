@@ -165,11 +165,11 @@ For more information about the API in your favorite language, refer to :doc:`drm
 DRM HDK upgrade
 ---------------
 
-
 From v2.x to 3.x
 ~~~~~~~~~~~~~~~~
 
-
+- All files and signals prepended with `lgdn_` have been replaced by `drm_`.
+- The DRM Controller and Activator IPs have been wrapped to expose an AXI4-Stream communication channel.
 
 From v3.x to 4.x
 ~~~~~~~~~~~~~~~~
