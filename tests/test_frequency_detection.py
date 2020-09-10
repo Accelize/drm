@@ -174,8 +174,7 @@ def test_drm_manager_frequency_detection_method1(accelize_drm, conf_json, cred_j
     with open(logpath, 'rt') as f:
         log_content = f.read()
     assert "Use dedicated counter to compute DRM frequency (method 1)" in log_content
-    if isfile(logpath):
-        remove(logpath)
+    remove(logpath)
 
 
 def test_drm_manager_frequency_detection_method1_exception(accelize_drm, conf_json, cred_json, async_handler):
@@ -243,8 +242,7 @@ def test_drm_manager_frequency_detection_method2(accelize_drm, conf_json, cred_j
         with open(logpath, 'rt') as f:
             log_content = f.read()
         assert "Use license timer counter to compute DRM frequency (method 2)" in log_content
-        if isfile(logpath):
-            remove(logpath)
+        remove(logpath)
     finally:
         # Reprogram FPGA with original image
         driver.program_fpga(fpga_image_bkp)

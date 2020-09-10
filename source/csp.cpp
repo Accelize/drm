@@ -75,8 +75,9 @@ Json::Value Aws::get_metadata() {
     tokenReq.appendHeader( "X-aws-ec2-metadata-token-ttl-seconds: 21600" );
     token = tokenReq.perform_put( "http://169.254.169.254/latest/api/token", timeout_ms );
 
-    // Collect Alibaba information
-    mHTTPRequest.appendHeader( fmt::format("X-aws-ec2-metadata-token: {}", token) );
+    // Collect AWS information
+    std::string header = fmt::format("X-aws-ec2-metadata-token: {}", token);
+    mHTTPRequest.appendHeader( header );
     std::string base_url("http://169.254.169.254/latest");
     metadata["instance_id"] = mHTTPRequest.perform<std::string>( fmt::format( "{}/meta-data/instance-id", base_url ), timeout_ms );
     metadata["instance_type"] = mHTTPRequest.perform<std::string>( fmt::format( "{}/meta-data/instance-type", base_url ), timeout_ms );

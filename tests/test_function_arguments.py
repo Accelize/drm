@@ -2,9 +2,8 @@
 """
 Test DRM Library with bad arguments. Make sure errors are detected and reported as expected.
 """
-from re import search
-
 import pytest
+from re import search
 
 
 def test_drm_manager_constructor_with_bad_arguments(accelize_drm, conf_json, cred_json,
@@ -422,9 +421,9 @@ def test_drm_manager_with_bad_credential_file(accelize_drm, conf_json, cred_json
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-
-    # Test with an empty crendential file
     async_cb.reset()
+    
+    # Test with an empty crendential file
     cred_json.reset()
     cred_json._content = {}
     cred_json.save()

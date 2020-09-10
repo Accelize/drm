@@ -113,7 +113,7 @@ public:
     template<class T>
     void appendHeader( T&& header ) {
         data.push_back( std::forward<T>(header) );
-        Debug2( "Add {} to CURL header", std::forward<T>(header) );
+        Debug2( "Add '{}' to CURL header", std::forward<T>(header) );
         mHeaders_p = curl_slist_append( mHeaders_p, data.back().c_str() );
     }
 

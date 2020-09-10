@@ -22,6 +22,7 @@ def test_hdk_stability_on_programming(accelize_drm, conf_json, cred_json, async_
     conf_json['settings']['log_file_verbosity'] = accelize_drm.create_log_level(0)
     conf_json['settings']['log_file_type'] = 1
     conf_json['settings']['log_file_path'] = logpath
+    conf_json['settings']['log_file_append'] = True
     conf_json.save()
 
     nb_reset = 10
@@ -37,8 +38,8 @@ def test_hdk_stability_on_programming(accelize_drm, conf_json, cred_json, async_
             driver.write_register_callback,
             async_cb.callback
         )
+        assert not drm_manager.get('license_status')
         try:
-            assert not drm_manager.get('license_status')
             drm_manager.activate()
             assert drm_manager.get('license_status')
         finally:

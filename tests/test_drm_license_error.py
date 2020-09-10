@@ -100,11 +100,11 @@ def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_
     finally:
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
-        activators.autotest(is_activated=False)
-        assert async_cb.was_called
-        assert async_cb.message is not None
-        assert async_cb.errcode == accelize_drm.exceptions.DRMCtlrError.error_code
-        assert "License header check error" in async_cb.message
+    activators.autotest(is_activated=False)
+    assert async_cb.was_called
+    assert async_cb.message is not None
+    assert async_cb.errcode == accelize_drm.exceptions.DRMCtlrError.error_code
+    assert "License header check error" in async_cb.message
 
 
 @pytest.mark.no_parallel
@@ -150,8 +150,8 @@ def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler, liv
     finally:
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
-        activators.autotest(is_activated=False)
-        async_cb.assert_NoError()
+    activators.autotest(is_activated=False)
+    async_cb.assert_NoError()
 
     # Start session #2 to replay session #1
     drm_manager.activate()
@@ -166,7 +166,7 @@ def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler, liv
         activators.autotest(is_activated=False)
     finally:
         drm_manager.deactivate()
-        assert async_cb.was_called
-        assert async_cb.message is not None
-        assert async_cb.errcode == accelize_drm.exceptions.DRMCtlrError.error_code
-        assert "License header check error" in async_cb.message
+    assert async_cb.was_called
+    assert async_cb.message is not None
+    assert async_cb.errcode == accelize_drm.exceptions.DRMCtlrError.error_code
+    assert "License header check error" in async_cb.message

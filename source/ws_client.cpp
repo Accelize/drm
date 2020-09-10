@@ -314,7 +314,9 @@ Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Val
     req.setURL( url );
     req.appendHeader( "Accept: application/vnd.accelize.v1+json" );
     req.appendHeader( "Content-Type: application/json" );
-    req.appendHeader( std::string("Authorization: Bearer ") + mOAuth2Token );
+    std::string token_header("Authorization: Bearer ");
+    token_header += mOAuth2Token;
+    req.appendHeader( token_header );
     req.setPostFields( saveJsonToString( json_req ) );
 
     // Send request and wait response
