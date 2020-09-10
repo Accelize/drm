@@ -29,6 +29,9 @@ MAILBOX_REG_OFFSET = 0x3C
 INC_EVENT_REG_OFFSET = 0x40
 CNT_EVENT_REG_OFFSET = 0x44
 
+LOG_FORMAT_SHORT = "[%^%=8l%$] %-6t, %v"
+LOG_FORMAT_LONG = "%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v"
+
 HASH_FUNTION_TABLE = {}
 
 
@@ -120,10 +123,6 @@ def param2dict(param_list):
             continue
         d[k] = str(v)
     return d
-
-
-def whoami():
-    return sys._getframe(1).f_code.co_name
 
 
 # Pytest configuration
@@ -479,12 +478,6 @@ def accelize_drm(pytestconfig):
     if build_source_dir.startswith('@'):
         build_source_dir = realpath('.')
 
-    # Create pytest artifacts directory
-    pytest_artifacts_dir = join(pytestconfig.getoption("artifacts_dir"), 'pytest_artifacts')
-    if not isdir(pytest_artifacts_dir):
-        makedirs(pytest_artifacts_dir)
-    print('pytest artifacts directory: ', pytest_artifacts_dir)
-
     # Get Ref Designs available
     ref_designs = RefDesign(join(build_source_dir, 'tests', 'refdesigns', fpga_driver_name))
 
@@ -794,7 +787,7 @@ def conf_json(request, pytestconfig, tmpdir):
         else:
             log_param['log_file_path'] = realpath("./tox_drmlib_t%f_pid%d.log" % (time(), getpid()))
         log_param['log_file_verbosity'] = pytestconfig.getoption("logfilelevel")
-        log_param['log_file_append'] = True if pytestconfig.getoption("logfileappend") else False
+        log_param['log_file_append'] = pytestconfig.getoption("logfileappend")
     # Save config to JSON file
     json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param, design=design_param)
     json_conf.save()
@@ -1101,3 +1094,81 @@ def app(pytestconfig):
     app = create_app(url)
     app.debug = pytestconfig.getoption("proxy_debug")
     return app
+
+
+#-----------------
+# Log file fixture
+#-----------------
+
+
+class BasicLogFile:
+
+    def __init__(self, basepath, verbosity, append):
+        self._basepath = path
+        self._path = None
+        self._verbosity = verbosity
+        self._append = append
+
+    def create(self, verbosity, format=LOG_FORMAT_SHORT):
+        log_param =  dict()
+        while True:
+            self._path = '%s__%d__%s.log' % (self._basepath, getpid(), time())
+            if not isfile(self._path):
+                break
+        log_param['log_file_path'] = self._path
+        log_param['log_file_type'] = 1
+        log_param['log_file_append'] = self._append
+        log_param['log_file_format'] = format
+        if self._verbosity is None:
+            log_param['log_file_verbosity'] = self._verbosity
+        elif verbosity >= self._verbosity:
+            log_param['log_file_verbosity'] = self._verbosity
+        else:
+            log_param['log_file_verbosity'] = verbosity
+        return log_param
+
+    def read(self):
+        wait_func_true(lambda: isfile(self._path), 10)
+        with open(self._path, 'rt') as f:
+            log_content = f.read()
+        return log_content
+
+    def remove(self):
+        if isfile(self._path):
+            remove(self._path)
+
+
+@pytest.fixture
+def basic_log_file(pytestconfig, request, accelize_drm):
+    """
+    Return an object to handle log file parameter and associated resources
+    """
+    # Determine log file path
+    if pytestconfig.getoption("logfile") is not None:
+        if len(pytestconfig.getoption("logfile")) != 0:
+            path_prefix = pytestconfig.getoption("logfile")
+        else:
+            path_prefix = "tox"
+    else:
+        path_prefix = "pytest"
+    log_file_basepath = realpath(join(accelize_drm.pytest_artifacts_dir, "%s__%s" % (
+                    path_prefix, request.function.__name__)))
+
+    # Determine log file verbosity
+    if pytestconfig.getoption("logfile") is not None:
+        log_file_verbosity = pytestconfig.getoption("logfilelevel")
+    else:
+        log_file_verbosity = None
+
+    # Determine log file append mode
+    log_file_append = pytestconfig.getoption("logfileappend")
+
+    return BasicLogFile(log_file_basepath, log_file_verbosity, log_file_append)
+
+
+@pytest.fixture
+def whoami(request):
+    """
+    Return the name of the test currently running
+    """
+    return request.function.__name__

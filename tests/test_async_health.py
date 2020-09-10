@@ -13,13 +13,13 @@ from requests import get, post
 from os import remove
 from os.path import realpath, isfile
 
-from tests.conftest import wait_func_true, whoami
+from tests.conftest import wait_func_true
 from tests.proxy import get_context, set_context, get_proxy_error
 
 
 @pytest.mark.no_parallel
 @pytest.mark.minimum
-def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handler, live_server):
+def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handler, live_server, basic_log_file):
     """
     Test the asynchronous health feature can be disabled.
     """
@@ -29,10 +29,7 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
 
     conf_json.reset()
     conf_json['licensing']['url'] = request.url + 'test_health_period_disabled'
-    logpath = accelize_drm.create_log_path(whoami())
-    conf_json['settings']['log_file_verbosity'] = accelize_drm.create_log_level(1)
-    conf_json['settings']['log_file_type'] = 1
-    conf_json['settings']['log_file_path'] = logpath
+    conf_json['settings'].update(basic_log_file.create(1))
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(
@@ -62,9 +59,7 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
     finally:
         drm_manager.deactivate()
     del drm_manager
-    wait_func_true(lambda: isfile(logpath), 10)
-    with open(logpath, 'rt') as f:
-        log_content = f.read()
+    log_content = basic_log_file.read()
     assert search(r'Exiting background thread which checks health', log_content, MULTILINE)
     assert search(r'Health thread is disabled', log_content, MULTILINE)
     assert search(r'Exiting background thread which checks health', log_content, MULTILINE)
@@ -72,7 +67,7 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
     assert len(list(health_req)) == nb_health
     assert get_proxy_error() is None
     async_cb.assert_NoError()
-    remove(logpath)
+    basic_log_file.remove()
 
 
 @pytest.mark.no_parallel
@@ -382,7 +377,7 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
 
 @pytest.mark.skip(reason='Segment index corruption issue to be fixed')
 @pytest.mark.no_parallel
-def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_server):
+def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_server, basic_log_file):
     """
     Test the DRM Controller capacity to handle stressfully health and license requests
     """
@@ -392,10 +387,7 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_s
 
     conf_json.reset()
     conf_json['licensing']['url'] = request.url + 'test_segment_index'
-    logpath = accelize_drm.create_log_path(whoami())
-    conf_json['settings']['log_file_verbosity'] = accelize_drm.create_log_level(1)
-    conf_json['settings']['log_file_type'] = 1
-    conf_json['settings']['log_file_path'] = logpath
+    conf_json['settings'].update(basic_log_file.create(1))
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(
@@ -441,9 +433,7 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_s
         drm_manager.deactivate()
         del drm_manager
     async_cb.assert_NoError()
-    wait_func_true(lambda: isfile(logpath), 10)
-    with open(logpath, 'rt') as f:
-        log_content = f.read()
+    log_content = basic_log_file.read()
     segment_idx_expected = 0
     for m in findall(r'"meteringFile"\s*:\s*"([^"]*)"', log_content):
         assert len(m) > 0
@@ -460,4 +450,4 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_s
         if close_flag == '1':
             segment_idx_expected = 0
     assert get_proxy_error() is None
-    remove(logpath)
+    basic_log_file.remove()

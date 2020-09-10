@@ -15,27 +15,21 @@ from multiprocessing import Process
 import requests
 from flask import request
 
-from tests.conftest import wait_func_true, wait_deadline, whoami
+from tests.conftest import wait_func_true, wait_deadline
 from tests.proxy import get_context, set_context
 
 
 @pytest.mark.no_parallel
-def test_authentication_bad_token(accelize_drm, conf_json, cred_json, async_handler, live_server):
+def test_authentication_bad_token(accelize_drm, conf_json, cred_json, async_handler, live_server, basic_log_file):
     """Test when a bad authentication token is used"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
 
-    file_log_level = accelize_drm.create_log_level(3)
-    file_log_type = 1
-    file_log_path = accelize_drm.create_log_path(whoami())
-
     conf_json.reset()
     conf_json['licensing']['url'] = request.url + 'test_authentication_bad_token'
-    conf_json['settings']['log_file_verbosity'] = file_log_level
-    conf_json['settings']['log_file_path'] = file_log_path
-    conf_json['settings']['log_file_type'] = file_log_type
+    conf_json['settings'].update(basic_log_file.create(3))
     conf_json.save()
 
     # Set initial context on the live server
@@ -60,12 +54,10 @@ def test_authentication_bad_token(accelize_drm, conf_json, cred_json, async_hand
     finally:
         drm_manager.deactivate()
     del drm_manager
-    wait_func_true(lambda: isfile(file_log_path), 10)
-    with open(file_log_path, 'rt') as f:
-        file_log_content = f.read()
+    file_log_content = basic_log_file.read()
     assert search(r'\bAuthentication credentials were not provided\b', file_log_content)
     async_cb.assert_NoError()
-    remove(file_log_path)
+    basic_log_file.remove()
 
 
 def test_authentication_validity_after_deactivation(accelize_drm, conf_json, cred_json, async_handler):
