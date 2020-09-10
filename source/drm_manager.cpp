@@ -459,15 +459,9 @@ protected:
 
         // Gather CSP information if detected
         Json::Value csp_node = Json::nullValue;
-        try {
-            uint32_t ws_verbosity = getDrmWSClient().getVerbosity();
-            mHostConfigData["csp"] = GetCspInfo( ws_verbosity );
-            Debug( "CSP information:\n{}", mHostConfigData["csp"].toStyledString() );
-        } catch( const std::exception &e ) {
-            Debug( "No CSP information collected: {}", e.what() );
-        }
-        Debug( "CSP information:\n{}", csp_node.toStyledString() );
-        mHostConfigData["csp"] = csp_node;
+        uint32_t ws_verbosity = getDrmWSClient().getVerbosity();
+        mHostConfigData["csp"] = GetCspInfo( ws_verbosity );
+        Debug( "CSP information:\n{}", mHostConfigData["csp"].toStyledString() );
 
         // Gather host and card information if xbutil existing
         if ( findXrtUtility() ) {
@@ -1725,9 +1719,6 @@ protected:
             Warning( "Licensing thread already started" );
             return;
         }
-
-        // Collect host and card information when possible
-        getHostAndCardInfo();
 
         mThreadKeepAlive = std::async( std::launch::async, [ this ]() {
             Debug( "Starting background thread which maintains licensing" );
