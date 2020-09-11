@@ -1103,11 +1103,12 @@ def app(pytestconfig):
 
 class BasicLogFile:
 
-    def __init__(self, basepath, verbosity, append):
+    def __init__(self, basepath, verbosity, append, keep=False):
         self._basepath = path
         self._path = None
         self._verbosity = verbosity
         self._append = append
+        self._keep = keep
 
     def create(self, verbosity, format=LOG_FORMAT_SHORT):
         log_param =  dict()
@@ -1134,7 +1135,7 @@ class BasicLogFile:
         return log_content
 
     def remove(self):
-        if isfile(self._path):
+        if not self._keep and isfile(self._path):
             remove(self._path)
 
 
@@ -1163,7 +1164,10 @@ def basic_log_file(pytestconfig, request, accelize_drm):
     # Determine log file append mode
     log_file_append = pytestconfig.getoption("logfileappend")
 
-    return BasicLogFile(log_file_basepath, log_file_verbosity, log_file_append)
+    # Determine keep argument
+    keep = pytestconfig.getoption("logfile") is not None
+
+    return BasicLogFile(log_file_basepath, log_file_verbosity, log_file_append, keep)
 
 
 @pytest.fixture
