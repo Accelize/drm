@@ -54,13 +54,6 @@ Packages are hosted on the Accelize repository.
 
 .. note:: Packages and repositories metadata are signed for security.
 
-Accelize provides *stable* and a *prerelease* channels.
-
-To install the prerelease channel simply replace ``stable`` by ``prerelease`` in the rest of this document.
-
-.. warning:: No support is provided for *prerelease* packages.
-
-
 Debian, Ubuntu: DEB repository
 ::::::::::::::::::::::::::::::
 
