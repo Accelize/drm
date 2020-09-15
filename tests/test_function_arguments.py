@@ -2,19 +2,19 @@
 """
 Test DRM Library with bad arguments. Make sure errors are detected and reported as expected.
 """
-from re import search
-
 import pytest
+from re import search
 
 
 def test_drm_manager_constructor_with_bad_arguments(accelize_drm, conf_json, cred_json,
-                                                    async_handler):
+                                                    async_handler, tmpdir):
     """Test errors when missing arguments are given to DRM Controller Constructor"""
+    from os.path import isdir
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
-    # Test when no configuration file is given
+    # Test when unexisting configuration file is given
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         accelize_drm.DrmManager(
             "wrong_path_to_conf.json",
@@ -23,11 +23,10 @@ def test_drm_manager_constructor_with_bad_arguments(accelize_drm, conf_json, cre
             driver.write_register_callback,
             async_cb.callback
         )
-    assert 'Cannot find JSON file' in str(excinfo.value)
-    print('Test when no configuration file is given: PASS')
+    assert 'Path is not a valid file:' in str(excinfo.value)
+    print('Test when unexisting configuration file is given: PASS')
 
-    # Test when no credentials file is given
-    conf_json.reset()
+    # Test when unexisting credentials file is given
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         accelize_drm.DrmManager(
             conf_json.path,
@@ -36,11 +35,38 @@ def test_drm_manager_constructor_with_bad_arguments(accelize_drm, conf_json, cre
             driver.write_register_callback,
             async_cb.callback
         )
-    assert 'Cannot find JSON file' in str(excinfo.value)
-    print('Test when no credentials file is given: PASS')
+    assert 'Path is not a valid file:' in str(excinfo.value)
+    print('Test when unexisting credentials file is given: PASS')
+
+    # Test when configuration path is a directory
+    tmp_dir = str(tmpdir)
+    assert isdir(tmp_dir)
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+        accelize_drm.DrmManager(
+            tmp_dir,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+    assert 'Path is not a valid file:' in str(excinfo.value)
+    print('Test when configuration path is a directory: PASS')
+
+    # Test when credentials path is a directory
+    tmp_dir = str(tmpdir)
+    assert isdir(tmp_dir)
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+        accelize_drm.DrmManager(
+            conf_json.path,
+            tmp_dir,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+    assert 'Path is not a valid file:' in str(excinfo.value)
+    print('Test when credentials path is a directory: PASS')
 
     # Test when no hardware read register function is given
-    conf_json.reset()
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         accelize_drm.DrmManager(
             conf_json.path,
@@ -53,7 +79,6 @@ def test_drm_manager_constructor_with_bad_arguments(accelize_drm, conf_json, cre
     print('Test when no hardware read register function is given: PASS')
 
     # Test when no hardware write register function is given
-    conf_json.reset()
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         accelize_drm.DrmManager(
             conf_json.path,
@@ -65,7 +90,6 @@ def test_drm_manager_constructor_with_bad_arguments(accelize_drm, conf_json, cre
     print('Test when no hardware write register function is given: PASS')
 
     # Test when read register function is not a callable
-    conf_json.reset()
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         accelize_drm.DrmManager(
             conf_json.path,
@@ -78,7 +102,6 @@ def test_drm_manager_constructor_with_bad_arguments(accelize_drm, conf_json, cre
     print('Test when read register function is not a callable: PASS')
 
     # Test when write register function is not a callable
-    conf_json.reset()
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         accelize_drm.DrmManager(
             conf_json.path,
@@ -91,7 +114,6 @@ def test_drm_manager_constructor_with_bad_arguments(accelize_drm, conf_json, cre
     print('Test when write register function is not a callable: PASS')
 
     # Test when asynchronous error function is not a callable
-    conf_json.reset()
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         accelize_drm.DrmManager(
             conf_json.path,
@@ -109,25 +131,6 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-
-    # Test with a null configuration file
-    async_cb.reset()
-    conf_json.reset()
-    conf_json._content = None
-    conf_json.save()
-    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-    assert search(r'JSON file .* is empty', str(excinfo.value)) is not None
-    errcode = async_handler.get_error_code(str(excinfo.value))
-    assert errcode == accelize_drm.exceptions.DRMBadArg.error_code
-    async_cb.assert_NoError()
-    print('Test null config file: PASS')
 
     # Test with an empty configuration file
     async_cb.reset()
@@ -418,28 +421,9 @@ def test_drm_manager_with_bad_credential_file(accelize_drm, conf_json, cred_json
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-
-    # Test with a null crendential file
     async_cb.reset()
-    cred_json.reset()
-    cred_json._content = None
-    cred_json.save()
-    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-    assert search(r'JSON file .* is empty', str(excinfo.value)) is not None
-    errcode = async_handler.get_error_code(str(excinfo.value))
-    assert errcode == accelize_drm.exceptions.DRMBadArg.error_code
-    async_cb.assert_NoError()
-    print('Test null crendential file: PASS')
-
+    
     # Test with an empty crendential file
-    async_cb.reset()
     cred_json.reset()
     cred_json._content = {}
     cred_json.save()
@@ -563,3 +547,54 @@ def test_drm_manager_get_and_set_bad_arguments(accelize_drm, conf_json, cred_jso
     err_code = async_handler.get_error_code(str(excinfo.value))
     assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
     print("Test when bad argument is given to set: PASS")
+
+
+@pytest.mark.aws
+def test_c_unittests(accelize_drm, exec_func):
+    """Test errors when missing arguments are given to DRM Controller Constructor"""
+    driver = accelize_drm.pytest_fpga_driver[0]
+    if 'aws' not in accelize_drm.pytest_fpga_driver_name:
+        pytest.skip("C unit-tests are only supported with AWS driver.")
+
+    exec_lib = exec_func.load('unittests', driver._fpga_slot_id)
+
+    # Test when read register callback is null
+    exec_lib.run('test_null_read_callback')
+    assert exec_lib.returncode == accelize_drm.exceptions.DRMBadArg.error_code
+    assert 'Read register callback function must not be NULL' in exec_lib.stdout
+    assert exec_lib.asyncmsg is None
+
+    # Test when write register callback is null
+    exec_lib.run('test_null_write_callback')
+    assert exec_lib.returncode == accelize_drm.exceptions.DRMBadArg.error_code
+    assert 'Write register callback function must not be NULL' in exec_lib.stdout
+    assert exec_lib.asyncmsg is None
+
+    # Test when asynchronous error callback is null
+    exec_lib.run('test_null_error_callback')
+    assert exec_lib.returncode == accelize_drm.exceptions.DRMBadArg.error_code
+    assert 'Asynchronous error callback function must not be NULL' in exec_lib.stdout
+    assert exec_lib.asyncmsg is None
+
+    # Test various types of get and set functions
+    exec_lib.run('test_types_of_get_and_set_functions')
+    assert exec_lib.returncode == 0
+    assert exec_lib.asyncmsg is None
+
+    # Test out of range of get function
+    exec_lib.run('test_get_function_out_of_range')
+    assert exec_lib.returncode == accelize_drm.exceptions.DRMBadArg.error_code
+    assert 'Cannot find parameter with ID: ' in exec_lib.stdout
+    assert exec_lib.asyncmsg is None
+
+    # Test get_json_string with bad format
+    exec_lib.run('test_get_json_string_with_bad_format')
+    assert exec_lib.returncode == accelize_drm.exceptions.DRMBadFormat.error_code
+    assert 'Cannot parse JSON string ' in exec_lib.stdout
+    assert exec_lib.asyncmsg is None
+
+    # Test get_json_string with empty string
+    exec_lib.run('test_get_json_string_with_empty_string')
+    assert exec_lib.returncode == accelize_drm.exceptions.DRMBadFormat.error_code
+    assert 'Cannot parse an empty JSON string' in exec_lib.stdout
+    assert exec_lib.asyncmsg is None

@@ -2,6 +2,23 @@
 
 [![Build Status](https://dev.azure.com/Accelize/DRM/_apis/build/status/DRM%20Library?branchName=master)](https://dev.azure.com/Accelize/DRM/_build/latest?definitionId=2&branchName=master)[![codecov](https://codecov.io/gh/Accelize/drmlib/branch/master/graph/badge.svg)](https://codecov.io/gh/Accelize/drmlib)
 
+# :closed_lock_with_key: Accelize DRM library : AccelDRM
+
+The Accelize DRM solution protects FPGA applications.
+
+The Accelize DRM library operates the DRM from the software side of the
+application.
+
+This library is responsible for activating the DRM, communicating with the
+Accelize web service and managing metering sessions.
+
+This library provides **API** for :
+* C
+* C++
+* Python
+
+Interested in Accelize DRM ? Checkout our [Documentation](https://tech.accelize.com/documentation/stable)!
+
 # :key: Accelize licensing solution
 
 The Accelize licensing technology is offered in two distinct modes:
@@ -36,10 +53,15 @@ More information in our [documentation](https://tech.accelize.com/documentation/
 
 For a quick tour about the Accelize platform integration steps, please watch [this video](https://youtu.be/7cb_ksLTcRk)
 
-# :registered: License
+## :heavy_exclamation_mark: Prerequisites
 
-Please consult the Accelize DRM library [license](LICENSE)
+To access the Accelize Web Service you need an Internet connection which allows
+outbound HTTPS connection to Accelize [server](https://master.metering.accelize.com)
 
-# :floppy_disk: Changelog
+## :registered: License
+
+Please consult [license](LICENSE)
+
+## :floppy_disk: Changelog
 
 Please consult [CHANGELOG](CHANGELOG)

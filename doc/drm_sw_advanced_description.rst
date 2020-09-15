@@ -104,7 +104,7 @@ custom_field                   uint32_t  Read-write    No                      o
 mailbox_data                   string    Read-write    32 * mailbox size       only for testing, read or write values to Mailbox read-write memory in DRM Controller
 ws_retry_period_long           uint32_t  Read-write    << license duration     read and write the time in seconds before the next request attempt to the Web Server when the time left before timeout is long
 ws_retry_period_short          uint32_t  Read-write    < ws_retry_period_long  read and write the time in seconds before the next request attempt to the Web Server when the time left before timeout is short
-ws_request_timeout             uint32_t  Read-write    No                      read and write the web service request timeout in seconds during which the response is waited
+ws_request_timeout             uint32_t  Read-write    >0                      read and write the web service request timeout in seconds during which the response is waited
 log_message_level              int32_t   Read-write    No                      only for testing, read and write the log level used with log_message parameter to set the message level
 list_all                       string    Read-only     NA                      list all parameter keys available
 dump_all                       string    Read-only     NA                      read all parameter key values
@@ -118,6 +118,10 @@ hw_report                      string    Read-only     NA                      r
 trigger_async_callback         string    Write-only    No                      only for testing, call the asynchronous error callback with the given message
 log_message                    string    Write-only    No                      only for testing, insert a message with the value as content
 hdk_compatibility              string    Read-only     NA                      only for testing, return the lower version of the HDK it is compatible with
+health_period                  uint32_t  Read-only     >=0                     return the current value of the health period. 0 means the asychronous feature is disabled
+health_retry                   uint32_t  Read-only     >=0                     return the current value of the health retry timeout. 0 means there will be no retry
+health_retry_sleep             uint32_t  Read-only     >=0                     return the current value of the health retry sleep
+ws_api_retry_duration          uint32_t  Read-write    >=0                     read and write the period of time in seconds during which retries occur on activate and deactivate functions
 =============================  ========  ============  ======================  =============================================
 
 

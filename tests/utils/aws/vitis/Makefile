@@ -34,6 +34,8 @@ TARGET := hw
 HOST_ARCH := x86
 SYSROOT :=
 
+USE_CPP = 0
+
 include ./utils.mk
 
 XSA := $(call device2xsa, $(DEVICE))
@@ -53,23 +55,37 @@ HOST_SRCS += $(xcl2_SRCS)
 CXXFLAGS += $(opencl_CXXFLAGS) -Wall -O0 -g -std=c++11
 LDFLAGS += $(opencl_LDFLAGS)
 
-HOST_SRCS += src/host.cpp
+ifeq ($(USE_CPP), 0)
+	HOST_SRCS += src/host_c.cpp
+else
+	HOST_SRCS += src/host.cpp
+endif
+
 
 # Host compiler global settings
 CXXFLAGS += -fmessage-length=0
 
-LDFLAGS += -lrt -lstdc++ -lxrt_aws -lxilinxopencl -laccelize_drmc -L/opt/xilinx/xrt/lib
+LDFLAGS += -lrt -lstdc++ -lxrt_aws -lxilinxopencl -L/opt/xilinx/xrt/lib
 
 ifneq ($(HOST_ARCH), x86)
 	LDFLAGS += --sysroot=$(SYSROOT)
 endif
 
-#Include Accelize DRM library
-CXXFLAGS += -I/dev/shm/drmlib_dev/.tox/debug/build/include
+ifeq ($(USE_CPP), 0)
+	LDFLAGS += -laccelize_drmc
+else
+	LDFLAGS += -laccelize_drm
+endif
 LDFLAGS += -L/dev/shm/drmlib_dev/.tox/debug/build
 
+#Include Accelize DRM library
+CXXFLAGS += -I/dev/shm/drmlib_dev/.tox/debug/build/include -I/usr/include/jsoncpp
 
-EXECUTABLE = host
+ifeq ($(USE_CPP), 0)
+	EXECUTABLE = host_c
+else
+	EXECUTABLE = host
+endif
 
 .PHONY: all clean
 all: exe

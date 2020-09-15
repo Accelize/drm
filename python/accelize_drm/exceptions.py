@@ -83,6 +83,14 @@ class DRMWSMayRetry(DRMException):
     error_code = 10004
 
 
+class DRMWSTimedOut(DRMException):
+    """
+    Error with request to Accelize Webservice, deadline has been reached
+    """
+    #: Error code
+    error_code = 10005
+
+
 class DRMCtlrError(DRMException):
     """
     An error happened on a command on the DRM controller

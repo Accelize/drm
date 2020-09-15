@@ -460,6 +460,18 @@ the error codes can help to debug (see error table below).
 .. image:: _static/behavior.png
    :target: _static/behavior.png
 
+The `drm_activator_0xVVVVLLLLNNNNVVVV_sim_pkg.(vhdl|sv)` contains parameters used
+to tune the simulation configuration and behavior. In particular, it allows you
+to use a DRM Controller BFM directly embedded in the DRM Activator to unlock the DRM Activator
+without the need for an Internet connection to the Accelize License Web Server.
+At the opposite, the BFM can be disabled, especially for co-simulation (using C application
+testbench).
+
+.. warning:: To run a cosimulation, you will need to:
+             - Disable the BFM
+             - Set the environment variable `DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS` to
+               1000000000 because of the slowness of the simulation execution.
+
 Signals for Debug
 -----------------
 

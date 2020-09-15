@@ -4,7 +4,6 @@ Test node-locked behavior of DRM Library.
 """
 import pytest
 import sys
-import gc
 import re
 from glob import glob
 from os import remove
@@ -14,6 +13,7 @@ from time import sleep, time
 from json import loads, dumps
 from datetime import datetime, timedelta
 from random import randrange
+from tests.conftest import wait_func_true
 
 
 SAMPLES_DUPLICATE_THRESHOLD = 2
@@ -194,7 +194,7 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
     async_cb.reset()
     cred_json.set_user(access_key)
     conf_json.reset()
-    logpath = realpath("./drmlib.%d.%d.log" % (time(), randrange(0xFFFFFFFF)))
+    logpath = accelize_drm.create_log_path(whoami())
     conf_json['settings']['log_file_verbosity'] = 1
     conf_json['settings']['log_file_type'] = 1
     conf_json['settings']['log_file_path'] = logpath
@@ -246,7 +246,7 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
                     sleep(1)
             activators.autotest(is_activated=False)
             del drm_manager
-            gc.collect()
+            wait_func_true(lambda: isfile(logpath), 10)
             if no_err:
                 session_cnt += 1
         async_cb.assert_NoError()

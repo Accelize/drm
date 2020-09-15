@@ -54,13 +54,6 @@ Packages are hosted on the Accelize repository.
 
 .. note:: Packages and repositories metadata are signed for security.
 
-Accelize provides *stable* and a *prerelease* channels.
-
-To install the prerelease channel simply replace ``stable`` by ``prerelease`` in the rest of this document.
-
-.. warning:: No support is provided for *prerelease* packages.
-
-
 Debian, Ubuntu: DEB repository
 ::::::::::::::::::::::::::::::
 
@@ -445,18 +438,26 @@ To uninstall the Accelize DRM library when installed from sources:
 
     cd build
 
-* Finally, uninstall files and directories using the CMake installation manifest
+* Finally, uninstall files and directories
 
-.. code-block:: bash
+  - For DRM library version >= 2.5.0, using the uninstall target:
 
-    for file in install_manifest*.txt
-    do
-        for name in $(cat $file)
-        do
-            sudo rm -f "$name"
-            sudo rmdir -p --ignore-fail-on-non-empty "$(dirname "$name")"
-        done
-    done
+    .. code-block:: bash
+
+        sudo make uninstall
+
+  - For older version, using the CMake installation manifest:
+
+    .. code-block:: bash
+
+       for file in install_manifest*.txt
+       do
+           for name in $(cat $file)
+           do
+               sudo rm -f "$name"
+               sudo rmdir -p --ignore-fail-on-non-empty "$(dirname "$name")"
+           done
+       done
 
 You may also uninstall packages you have installed to build the Accelize DRM.
 

@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegistersStrategy_v3_2_1.cpp
-*  \version   4.1.0.0
-*  \date      March 2020
+*  \version   4.2.1.0
+*  \date      July 2020
 *  \brief     Class DrmControllerRegistersStrategy_v3_2_1 defines strategy for register access of drm controller v3.2.1.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License") {
 
@@ -763,6 +763,34 @@ unsigned int DrmControllerRegistersStrategy_v3_2_1::waitLicenseMeteringStatusReg
   return errorCode;
 }
 
+/** readSecurityAlertStatusRegister
+*   \brief Read the status register and get the Security Alert status bit.
+*   This method will access to the system bus to read the status register.
+*   \param[out] securityAlert is the value of the status bit Security Alert.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegistersStrategy_v3_2_1::readSecurityAlertStatusRegister(bool &securityAlert) const {
+  throwUnsupportedFeatureException("Security Alert status", DRM_CONTROLLER_V3_2_1_SUPPORTED_VERSION);
+  return mDrmApi_UNSUPPORTED_FEATURE_ERROR;
+}
+
+/** waitSecurityAlertStatusRegister
+*   \brief Wait Security Alert status register to reach specified value.
+*   This method will access to the system bus to read the status register.
+*   \param[in]  timeout is the timeout value in micro seconds.
+*   \param[in]  expected is the value of the status to be expected.
+*   \param[out] actual is the value of the status bit read.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, mDrmApi_HARDWARE_TIMEOUT_ERROR if a timeout occured, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+*   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegistersStrategy_v3_2_1::waitSecurityAlertStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
+  throwUnsupportedFeatureException("Security Alert status", DRM_CONTROLLER_V3_2_1_SUPPORTED_VERSION);
+  return mDrmApi_UNSUPPORTED_FEATURE_ERROR;
+}
+
+
 /** readNumberOfLicenseTimerLoadedStatusRegister
 *   \brief Read the status register and get the number of license timer loaded.
 *   This method will access to the system bus to read the status register.
@@ -1200,6 +1228,30 @@ unsigned int DrmControllerRegistersStrategy_v3_2_1::readMailboxFileRegister(unsi
   readOnlyMailboxData  = DrmControllerDataConverter::binaryToHexStringList(tmpReadOnlyMailboxData,  mMailboxWordRegisterWordNumber);
   readWriteMailboxData = DrmControllerDataConverter::binaryToHexStringList(tmpReadWriteMailboxData, mMailboxWordRegisterWordNumber);
   return errorCode;
+}
+
+/** readAdaptiveProportionTestFailuresRegister
+*   \brief Read the Adaptive Proportion Test Failures register and get the value.
+*   This method will access to the system bus to read the Adaptive Proportion Test Failures register.
+*   \param[out] adaptiveProportionTestFailures is the Adaptive Proportion Test Failures value.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegistersStrategy_v3_2_1::readAdaptiveProportionTestFailuresRegister(std::vector<unsigned int> &adaptiveProportionTestFailures) const {
+ throwUnsupportedFeatureException("Adaptive Proportion Test Failures Registers", DRM_CONTROLLER_V3_2_1_SUPPORTED_VERSION);
+  return mDrmApi_UNSUPPORTED_FEATURE_ERROR;
+}
+
+/** readRepetitionCountTestFailuresRegister
+*   \brief Read the Repetition Count Test Failures register and get the value.
+*   This method will access to the system bus to read the Repetition Count Test Failures register.
+*   \param[out] repetitionCountTestFailures is the Repetition Count Test Failures value.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegistersStrategy_v3_2_1::readRepetitionCountTestFailuresRegister(std::vector<unsigned int> &repetitionCountTestFailures) const {
+  throwUnsupportedFeatureException("Repetition Count Test Failures Registers", DRM_CONTROLLER_V3_2_1_SUPPORTED_VERSION);
+  return mDrmApi_UNSUPPORTED_FEATURE_ERROR;
 }
 
 /** writeMailboxFileRegister
@@ -1736,3 +1788,16 @@ std::vector<unsigned int> DrmControllerRegistersStrategy_v3_2_1::getMeteringFile
   return std::vector<unsigned int>(prev(meteringFile.end(),(mMeteringFileMacWordFromEndPosition+1)*mMeteringWordRegisterWordNumber),
                                    prev(meteringFile.end(),mMeteringFileMacWordFromEndPosition*mMeteringWordRegisterWordNumber));
 }
+
+/** printAdaptiveProportionTestFailures
+*   \brief Display the value of the Adaptive Proportion Test Failures.
+*   \param[in] file is the stream to use for the data print.
+**/
+void DrmControllerRegistersStrategy_v3_2_1::printAdaptiveProportionTestFailuresHwReport(std::ostream &file) const { }
+  
+/** printRepetitionCountTestFailures
+*   \brief Display the value of the Repetition Count Test Failures.
+*   \param[in] file is the stream to use for the data print.
+**/
+void DrmControllerRegistersStrategy_v3_2_1::printRepetitionCountTestFailuresHwReport(std::ostream &file) const { }
+  

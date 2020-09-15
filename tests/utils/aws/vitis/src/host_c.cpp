@@ -58,16 +58,16 @@ xclDeviceHandle boardHandler;
 int32_t read_register(uint32_t addr, uint32_t* value)
 {
     if(xclLockDevice(boardHandler)) {
-        std::cout << "[ERROR] xclLock failed ..." << std::endl;
+        printf("[ERROR] xclLock failed\n");
         return 1;
     }
     int ret = (int)xclRead(boardHandler, XCL_ADDR_KERNEL_CTRL, addr, value, 4);
     if(ret <= 0) {
-        std::cout << "[ERROR] " << __FUNCTION__ << ": Failed to read @0x" << std::hex << addr << std::dec << std::endl;
+        printf("[ERROR] %s: Failed to read @0x%08X\n", __FUNCTION__, addr);
         return 1;
     }
     if(xclUnlockDevice(boardHandler)) {
-        std::cout << "[ERROR] xclUnlock failed ..." << std::endl;
+        printf("[ERROR] xclUnlock failed\n");
         return -1;
     }
     return 0;
@@ -79,16 +79,16 @@ int32_t read_register(uint32_t addr, uint32_t* value)
 int32_t write_register(uint32_t addr, uint32_t value)
 {
     if(xclLockDevice(boardHandler)) {
-        std::cout << "[ERROR] xclLock failed ..." << std::endl;
+        printf("[ERROR] xclLock failed\n");
         return 1;
     }
     int ret = (int)xclWrite(boardHandler, XCL_ADDR_KERNEL_CTRL, addr, &value, 4);
     if(ret <= 0) {
-        std::cout << "[ERROR] " << __FUNCTION__ << ": Failed to write @0x" << std::hex << addr << std::dec << std::endl;
+        printf("[ERROR] %s: Failed to write @0x%08X\n", __FUNCTION__, addr);
         return 1;
     }
     if(xclUnlockDevice(boardHandler)) {
-        std::cout << "[ERROR] xclUnlock failed ..." << std::endl;
+        printf("[ERROR] xclUnlock failed\n");
         return -1;
     }
     return 0;
@@ -123,7 +123,7 @@ void drm_error_callback( const char* errmsg, void* context ){
  */
 int main(int argc, char **argv) {
     if (argc != 2) {
-        std::cout << "Usage: " << argv[0] << " <XCLBIN File>" << std::endl;
+        printf("Usage: %s  <XCLBIN File>", argv[0]);
         return EXIT_FAILURE;
     }
 
@@ -132,9 +132,9 @@ int main(int argc, char **argv) {
     //Allocate Memory in Host Memory
     auto vector_size_bytes = sizeof(int) * DATA_SIZE;
 
-    std::vector<int, aligned_allocator<int>> source_input(DATA_SIZE);
-    std::vector<int, aligned_allocator<int>> source_hw_results(DATA_SIZE);
-    std::vector<int, aligned_allocator<int>> source_sw_results(DATA_SIZE);
+    vector<int, aligned_allocator<int>> source_input(DATA_SIZE);
+    vector<int, aligned_allocator<int>> source_hw_results(DATA_SIZE);
+    vector<int, aligned_allocator<int>> source_sw_results(DATA_SIZE);
 
     // Create the test data and Software Result
     for (int i = 0; i < DATA_SIZE; i++) {
@@ -167,31 +167,29 @@ int main(int argc, char **argv) {
                                            CL_QUEUE_PROFILING_ENABLE,
                                        &err));
 
-        std::cout << "Trying to program device[" << i
-                  << "]: " << device.getInfo<CL_DEVICE_NAME>() << std::endl;
+        printf("Trying to program device[%d]: %s\n", i, device.getInfo<CL_DEVICE_NAME>());
                   program = cl::Program(context, {device}, bins, NULL, &err);
         if (err != CL_SUCCESS) {
-            std::cout << "Failed to program device[" << i
-                      << "] with xclbin file!\n";
+            printf("Failed to program device[%d] with xclbin file!\n", i);
         } else {
-            std::cout << "Device[" << i << "]: program successful!\n";
+            printf("Device[%d]: program successful!\n", i);
             valid_device++;
             break; // we break because we found a valid device
         }
     }
     if (valid_device == 0) {
-        std::cout << "Failed to program any device found, exit!\n";
+        printf("Failed to program any device found, exit!\n");
         exit(EXIT_FAILURE);
     }
 
     // Init xclhal2 library
     if(xclProbe() < 1) {
-        std::cout << "[ERROR] xclProbe failed ..." << std::endl;
+        printf("[ERROR] xclProbe failed\n");
         return -1;
     }
     boardHandler = xclOpen(0, "xclhal2_logfile.log", XCL_INFO);
     if(boardHandler == NULL) {
-        std::cout << "[ERROR] xclOpen failed ..." << std::endl;
+        printf("[ERROR] xclOpen failed\n");
         return -1;
     }
 
@@ -199,20 +197,20 @@ int main(int argc, char **argv) {
     uint32_t reg;
     write_register(DRM_CTRL_ADDRESS + 0x0, 0);
     read_register(DRM_CTRL_ADDRESS + 0x70, &reg);
-    std::cout << "DRM Controller version: " << std::hex << reg << std::dec << std::endl;
+    printf("DRM Controller version: %X\n", reg);
 
     // Check DRM Activator existance
     read_register(DRM_ACTR_ADDRESS + 0x40, &reg);
-    std::cout << "DRM Activator existance: " << std::hex << reg << std::dec << std::endl;
+    printf("DRM Activator existance: %X\n", reg);
     if (reg != 0x600DC0DE) {
-        std::cout << "Error: DRM Activator existance should be 0x600DC0DE" << std::endl;
+        printf("Error: DRM Activator existance should be 0x600DC0DE\n");
         return -1;
     }
 
     // Check DRM Activator status
     read_register(DRM_ACTR_ADDRESS + 0x38, &reg);
     if (reg != 0) {
-        std::cout << "Error: DRM Activator status should be 0, not " << reg << std::endl;
+        printf("Error: DRM Activator status should be 0, not %d\n", reg);
         return -1;
     }
 
@@ -235,7 +233,7 @@ int main(int argc, char **argv) {
         printf("Error allocating DRM Manager object: %s", pDrmManager->error_message);
         return -1;
     }
-    std::cout << "[DRMLIB] Allocated" << std::endl;
+    printf("[DRMLIB] Allocated\n");
 
     if (DRM_OK != DrmManager_activate(pDrmManager, false)) {
         printf("Error activating DRM Manager object: %s", pDrmManager->error_message);
@@ -245,11 +243,11 @@ int main(int argc, char **argv) {
     // Check DRM Activator status
     read_register(DRM_ACTR_ADDRESS + 0x38, &reg);
     if (reg != 3) {
-        std::cout << "Error: DRM Activator status should be 3, not " << reg << std::endl;
+		printf("Error: DRM Activator status should be 3, not %d\n", reg);
         DrmManager_free(&pDrmManager);
         return -1;
     }
-    std::cout << "[DRMLIB] Design unlocked" << std::endl;
+	printf("[DRMLIB] Design unlocked\n");
     //ACCELIZE DRMLIB CODE AREA STOP
 
     OCL_CHECK(
@@ -294,7 +292,7 @@ int main(int argc, char **argv) {
             {buffer_input}, 0 /* 0 means from host*/, NULL, &write_event));
 
     //Launch the Kernel
-    std::vector<cl::Event> eventVec;
+    vector<cl::Event> eventVec;
     eventVec.push_back(write_event);
     OCL_CHECK(err, err = q.enqueueTask(krnl_input_stage, &eventVec));
     OCL_CHECK(err, err = q.enqueueTask(krnl_adder_stage, &eventVec));
@@ -315,7 +313,7 @@ int main(int argc, char **argv) {
     if (DRM_OK != DrmManager_deactivate(pDrmManager, false))
         printf("Error deactivating DRM Manager object: %s", pDrmManager->error_message);
     else
-        std::cout << "[DRMLIB] Design locked" << std::endl;
+        printf("[DRMLIB] Design locked\n");
 
     if (DRM_OK != DrmManager_free(&pDrmManager))
         printf("Error deallocating DRM Manager object: %s", pDrmManager->error_message);
@@ -324,8 +322,7 @@ int main(int argc, char **argv) {
     // Check DRM Activator status
     read_register(DRM_ACTR_ADDRESS + 0x38, &reg);
     if (reg != 0) {
-        std::cout << "Error: DRM Activator status should be 0, not " << reg << std::endl;
-        DrmManager_free(&pDrmManager);
+        printf("Error: DRM Activator status should be 0, not %s", reg);
         return -1;
     }
 
@@ -336,16 +333,14 @@ int main(int argc, char **argv) {
     int match = 0;
     for (int i = 0; i < DATA_SIZE; i++) {
         if (source_hw_results[i] != source_sw_results[i]) {
-            std::cout << "Error: Result mismatch" << std::endl;
-            std::cout << "i = " << i << " CPU result = " << source_sw_results[i]
-                      << " Device result = " << source_hw_results[i]
-                      << std::endl;
+            printf("Error: Result mismatch\n");
+            printf("i = %d: CPU result = %d vs Device result = %d", i, source_sw_results[i], source_hw_results[i]);
             match = 1;
             break;
         }
     }
 
 
-    std::cout << "TEST " << (match ? "FAILED" : "PASSED") << std::endl;
+    printf("TEST %s", match ? "FAILED" : "PASSED");
     return (match ? EXIT_FAILURE : EXIT_SUCCESS);
 }

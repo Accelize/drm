@@ -1,16 +1,23 @@
 # -*- coding: utf-8 -*-
 """Configure Pytest"""
+import pytest
+import sys
+import hashlib
+
 from copy import deepcopy
-from json import dump, load
-from os import environ, getpid, listdir, remove
+from json import dump, load, dumps
+from os import environ, getpid, listdir, remove, makedirs, getcwd, urandom
 from os.path import basename, dirname, expanduser, isdir, isfile, join, \
     realpath, splitext
 from random import randint
 from re import IGNORECASE, match, search
-
-import pytest
-
+from datetime import datetime
+from time import time, sleep
+from shutil import rmtree
+from datetime import datetime, timedelta
+from tests.proxy import create_app, get_context, set_context
 from tests.ws_admin_functions import WSListFunction
+
 
 _SESSION = dict()
 _LICENSING_SERVERS = dict(
@@ -20,10 +27,17 @@ _LICENSING_SERVERS = dict(
 ACT_STATUS_REG_OFFSET = 0x38
 MAILBOX_REG_OFFSET = 0x3C
 INC_EVENT_REG_OFFSET = 0x40
+CNT_EVENT_REG_OFFSET = 0x44
+
+HASH_FUNTION_TABLE = {}
 
 
 def bit_not(n, numbits=32):
     return (1 << numbits) - 1 - n
+
+
+def cheap_hash(string_in, length=6):
+    return hashlib.md5(string_in).hexdigest()[:length]
 
 
 def get_default_conf_json(licensing_server_url):
@@ -108,6 +122,10 @@ def param2dict(param_list):
     return d
 
 
+def whoami():
+    return sys._getframe(1).f_code.co_name
+
+
 # Pytest configuration
 def pytest_addoption(parser):
     """
@@ -140,7 +158,11 @@ def pytest_addoption(parser):
     parser.addoption(
         "--no_clear_fpga", action="store_true", help='Bypass clearing of FPGA at start-up')
     parser.addoption(
-        "--logfile", action="store_true", help='Save log to file')
+        "--logfile", nargs='?', type=str, const='', default=None, help='Save log to file path.')
+    parser.addoption(
+        "--logfilelevel", action="store", type=int, default=1, choices=(0,1,2,3,4,5), help='Specify verbosity for --logfile')
+    parser.addoption(
+        "--logfileappend", action="store_true", default=False, help='Append log message to same file. File path is specified by --logfile')
     parser.addoption(
         "--proxy_debug", action="store_true", default=False,
         help='Activate debug for proxy')
@@ -167,6 +189,9 @@ def pytest_addoption(parser):
         help='Specify a list of key=value pairs separated by a coma used '
              'for one or multiple tests: '
              '"--params key1=value1,key2=value2,..."')
+    parser.addoption(
+        "--artifacts_dir", action="store", default=getcwd(),
+        help='Specify pytest artifacts directory')
 
 
 def pytest_runtest_setup(item):
@@ -191,6 +216,16 @@ def pytest_runtest_setup(item):
     if markers and skip_endurance:
         pytest.skip("Don't run endurance tests.")
 
+    # Check lgdn tests
+    m_option = item.config.getoption('-m')
+    if search(r'\blgdn\b', m_option) and not search(r'\nnot\n\s+\blgdn\b', m_option):
+        skip_lgdn = False
+    else:
+        skip_lgdn = True
+    markers = tuple(item.iter_markers(name='lgdn'))
+    if markers and skip_lgdn:
+        pytest.skip("Don't run LGDN tests.")
+
     # Check AWS execution
     markers = tuple(item.iter_markers(name='aws'))
     if '${AWS}' == 'OFF' and markers:
@@ -199,6 +234,11 @@ def pytest_runtest_setup(item):
     for marker in item.iter_markers():
         if 'security' == marker.name and 'security' not in item.config.option.markexpr:
             pytest.skip('"security" marker not selected')
+
+    # Skip 'long_run' test if not explicitly marked
+    for marker in item.iter_markers():
+        if 'long_run' == marker.name and 'long_run' not in item.config.option.markexpr:
+            pytest.skip('"long_run" marker not selected')
 
 
 class SingleActivator:
@@ -209,6 +249,7 @@ class SingleActivator:
         self.driver = driver
         self.base_address = base_address
         self.metering_data = 0
+        self.event_cnt_flag = self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET) != 0xDEADDEAD
 
     def autotest(self, is_activated=None):
         """
@@ -234,7 +275,7 @@ class SingleActivator:
             # Test reading of the generate event register
             assert self.driver.read_register(self.base_address + INC_EVENT_REG_OFFSET) == 0x600DC0DE
             # Test address overflow
-            assert self.driver.read_register(self.base_address + INC_EVENT_REG_OFFSET + 0x4) == 0xDEADDEAD
+            assert self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET + 0x4) == 0xDEADDEAD
 
     def get_status(self):
         """
@@ -243,7 +284,7 @@ class SingleActivator:
         Returns:
             int: Status.
         """
-        return self.driver.read_register(self.base_address+ACT_STATUS_REG_OFFSET) == 3
+        return self.driver.read_register(self.base_address + ACT_STATUS_REG_OFFSET) == 3
 
     def generate_coin(self, coins):
         """
@@ -253,7 +294,7 @@ class SingleActivator:
             coins (int): Number of coins to generate.
         """
         for _ in range(coins):
-            self.driver.write_register(self.base_address+INC_EVENT_REG_OFFSET, 0)
+            self.driver.write_register(self.base_address + INC_EVENT_REG_OFFSET, 0)
         if self.get_status():
             self.metering_data += coins
 
@@ -262,6 +303,9 @@ class SingleActivator:
         Reset the coins counter
         """
         self.metering_data = 0
+        self.driver.write_register(self.base_address + CNT_EVENT_REG_OFFSET, 0)
+        if self.event_cnt_flag:
+            assert self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET) == 0
 
     def check_coin(self, coins):
         """
@@ -270,7 +314,12 @@ class SingleActivator:
         Args:
             coins (int): Number of coins to compare to.
         """
+        # Check local counter with dmr value passed in argument
         assert self.metering_data == coins
+        # Check with counter in Activator's registery
+        if self.event_cnt_flag:
+            assert self.metering_data == self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET)
+
 
 
 class ActivatorsInFPGA:
@@ -331,7 +380,6 @@ class ActivatorsInFPGA:
         """
         for activator in self.activators:
             activator.reset_coin()
-
 
 
 
@@ -431,6 +479,12 @@ def accelize_drm(pytestconfig):
     if build_source_dir.startswith('@'):
         build_source_dir = realpath('.')
 
+    # Create pytest artifacts directory
+    pytest_artifacts_dir = join(pytestconfig.getoption("artifacts_dir"), 'pytest_artifacts')
+    if not isdir(pytest_artifacts_dir):
+        makedirs(pytest_artifacts_dir)
+    print('pytest artifacts directory: ', pytest_artifacts_dir)
+
     # Get Ref Designs available
     ref_designs = RefDesign(join(build_source_dir, 'tests', 'refdesigns', fpga_driver_name))
 
@@ -499,6 +553,31 @@ def accelize_drm(pytestconfig):
             raise IOError('No activator found on slot #%d' % driver._fpga_slot_id)
         print('Found %d activator(s) on slot #%d' % (len(base_addr_list), driver._fpga_slot_id))
 
+    # Create pytest artifacts directory
+    pytest_artifacts_dir = join(pytestconfig.getoption("artifacts_dir"), 'pytest_artifacts')
+    if not isdir(pytest_artifacts_dir):
+        makedirs(pytest_artifacts_dir)
+    print('pytest artifacts directory: ', pytest_artifacts_dir)
+
+    # Define function to create log file path
+    def create_log_path(prefix=None):
+        if prefix is None:
+            prefix = "pytest_drmlib"
+        while True:
+            log_path = realpath(join(pytest_artifacts_dir, "%s.%s.%d.log" % (prefix, time(), getpid())))
+            if not isfile(log_path):
+                return log_path
+
+    # Define function to create log file verbosity with regard of --logfile
+    def create_log_level(verbosity):
+        if not pytestconfig.getoption("logfile"):
+            return verbosity
+        verb_option = int(pytestconfig.getoption("logfilelevel"))
+        if verbosity > verb_option:
+            return verb_option
+        else:
+           return verbosity
+
     # Store some values for access in tests
     import accelize_drm as _accelize_drm
     _accelize_drm.pytest_new_freq_method_supported = fpga_driver[0].read_register(drm_ctrl_base_addr + 0xFFF8) == 0x60DC0DE0
@@ -520,6 +599,9 @@ def accelize_drm(pytestconfig):
     _accelize_drm.clean_metering_env = lambda *kargs, **kwargs: clean_metering_env(
         *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
     _accelize_drm.pytest_params = param2dict(pytestconfig.getoption("params"))
+    _accelize_drm.pytest_artifacts_dir = pytest_artifacts_dir
+    _accelize_drm.create_log_path = create_log_path
+    _accelize_drm.create_log_level = create_log_level
 
     return _accelize_drm
 
@@ -636,8 +718,30 @@ class CredJson(_Json):
                     self[m.group(1)] = v
             self._user = user
         if ('client_id' not in self._content) or ('client_secret' not in self._content):
-            raise ValueError('User "%s" not found in "%s"' % (self._user, self._init_cred_path))
+            raise ValueError('User "%s" not found in "%s"' % (user, self._init_cred_path))
         self.save()
+
+    def get_user(self, user=None):
+        """
+        Return user details.
+
+        Args:
+            user (str): User to get. If not specified, use default user.
+        """
+        content = {}
+        if user is None:
+            for k, v in [e for e in self._initial_content.items() if not e.endswith('__')]:
+                content[k] = v
+            content['user'] = ''
+        else:
+            for k, v in self._initial_content.items():
+                m = match(r'(.+)__%s__' % user, k)
+                if m:
+                    content[m.group(1)] = v
+            content['user'] = user
+        if ('client_id' not in content) or ('client_secret' not in content):
+            raise ValueError('User "%s" not found in "%s"' % (user, self._init_cred_path))
+        return content
 
     @property
     def user(self):
@@ -665,20 +769,34 @@ class CredJson(_Json):
 
 
 @pytest.fixture
-def conf_json(pytestconfig, tmpdir):
+def conf_json(request, pytestconfig, tmpdir):
     """
     Manage "conf.json" in testing environment.
     """
+    # Compute hash of caller function
+    function_name = request.function.__name__
+    hash_value = cheap_hash(function_name.encode('utf-8'))
+    if hash_value not in HASH_FUNTION_TABLE.keys():
+        HASH_FUNTION_TABLE[hash_value] = function_name
+        with open(join(getcwd(),'hash_function_table.txt'), 'wt') as f:
+            f.write(dumps(HASH_FUNTION_TABLE, indent=4, sort_keys=True))
+    design_param = {'boardType': hash_value}
+    # Build config content
     log_param = {'log_verbosity': pytestconfig.getoption("library_verbosity")}
     if pytestconfig.getoption("library_format") == 1:
         log_param['log_format'] = '%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v'
     else:
         log_param['log_format'] = '[%^%=8l%$] %-6t, %v'
-    if pytestconfig.getoption("logfile"):
+    if pytestconfig.getoption("logfile") is not None:
         log_param['log_file_type'] = 1
-        log_param['log_file_path'] = realpath("./drmlib.%d.log" % getpid())
-        log_param['log_file_verbosity'] = pytestconfig.getoption("library_verbosity")
-    json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param)
+        if len(pytestconfig.getoption("logfile")) != 0:
+            log_param['log_file_path'] = pytestconfig.getoption("logfilepath")
+        else:
+            log_param['log_file_path'] = realpath("./tox_drmlib_t%f_pid%d.log" % (time(), getpid()))
+        log_param['log_file_verbosity'] = pytestconfig.getoption("logfilelevel")
+        log_param['log_file_append'] = True if pytestconfig.getoption("logfileappend") else False
+    # Save config to JSON file
+    json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param, design=design_param)
     json_conf.save()
     return json_conf
 
@@ -783,6 +901,41 @@ def perform_once(test_name):
             pass
 
 
+def wait_func_true(func, timeout=None, sleep_time=1):
+    """
+    Wait until the func retursn a none 0 value
+
+    Args:
+        func (__call__) : Function that is run and evaluated
+        timeout (int) : Specify a timeout in seconds for the loop
+        sleep_time (int) : Sleep in seconds befaore reexecuting the function
+
+    Returns:
+        boolean: True if the output of the function has been evaluated to True, False otherwise
+    """
+    start = datetime.now()
+    while not func():
+        if timeout:
+            if (datetime.now() - start) > timedelta(seconds=timeout):
+                raise RuntimeError('Timeout!')
+        sleep(sleep_time)
+
+
+def wait_deadline(start_time, duration):
+    """
+    Wait until endtime is hit
+
+    Args:
+        start_time (datetime): start time of the timer.
+        duration to wait for (int): duration in seconds to wait for.
+    """
+    wait_period = start_time + timedelta(seconds=duration) - datetime.now()
+    if wait_period.total_seconds() <= 0:
+        return
+    sleep(wait_period.total_seconds())
+
+
+
 class AsyncErrorHandler:
     """
     Asynchronous error callback
@@ -852,6 +1005,12 @@ class WSAdmin:
         text, status = self._functions.remove_product_information(data)
         assert status == 200, text
 
+    def get_last_metering_information(self, session_id):
+        self._functions._get_user_token()
+        text, status = self._functions.metering_lastinformation({'session': session_id})
+        assert status == 200, text
+        return text
+
     @property
     def functions(self):
         return self._functions
@@ -859,10 +1018,10 @@ class WSAdmin:
 
 @pytest.fixture
 def ws_admin(cred_json, conf_json):
-    cred_json.set_user('admin')
-    assert cred_json.user == 'admin'
-    return WSAdmin(conf_json['licensing']['url'], cred_json['client_id'],
-                   cred_json['client_secret'])
+    cred = cred_json.get_user('admin')
+    assert cred['user'] == 'admin'
+    return WSAdmin(conf_json['licensing']['url'], cred['client_id'],
+                   cred['client_secret'])
 
 
 class ExecFunction:
@@ -936,36 +1095,9 @@ def exec_func(accelize_drm, cred_json, conf_json):
 # Proxy fixture
 #--------------
 
-class EndpointAction:
-
-    def __init__(self, action):
-        self.action = action
-
-    def __call__(self, *kargs, **kwargs):
-        return self.action(*kargs, **kwargs)
-        if isinstance(resp,Response):
-            return resp
-        return Response(msg, status=status, headers={})
-
-
-class FlaskAppWrapper:
-    def __init__(self, name=__name__):
-        import flask
-        self.app = flask.Flask(name)
-        environ['WERKZEUG_RUN_MAIN'] = 'true'
-        environ['FLASK_ENV'] = 'development'
-
-    def run(self, host='127.0.0.1', port=5000, debug=False):
-        self.host = host
-        self.port = port
-        self.app.run(host=self.host, port=self.port, debug=debug)
-
-    def add_endpoint(self, rule=None, endpoint=None, handler=None, **kwargs):
-        self.app.add_url_rule(rule, endpoint, EndpointAction(handler), **kwargs)
-
-
-@pytest.fixture
-def fake_server():
-    name = "fake_server_%d" % randint(1,0xFFFFFFFF)
-    return FlaskAppWrapper(name)
-
+@pytest.fixture(scope='session')
+def app(pytestconfig):
+    url = _LICENSING_SERVERS[pytestconfig.getoption("server")]
+    app = create_app(url)
+    app.debug = pytestconfig.getoption("proxy_debug")
+    return app

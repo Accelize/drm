@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerTypes.hpp
-*  \version   4.1.0.0
-*  \date      March 2020
+*  \version   4.2.1.0
+*  \date      July 2020
 *  \brief     Types definitions.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.

@@ -78,7 +78,7 @@ def test_nodelock_license_is_not_given_to_inactive_user(accelize_drm, conf_json,
         assert not drm_manager.get('license_status')
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
-        assert 'License Web Service error 400' in str(excinfo.value)
+        assert 'Metering Web Service error 400' in str(excinfo.value)
         assert search(r'\\"No Entitlement\\" with .+ for \S+_test_01@accelize.com', str(excinfo.value))
         assert 'User account has no entitlement. Purchase additional licenses via your portal.' in str(excinfo.value)
         err_code = async_handler.get_error_code(str(excinfo.value))
@@ -276,7 +276,7 @@ def test_nodelock_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         assert drm_manager1.get('license_type') == 'Node-Locked'
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager1.activate()
-        assert 'License Web Service error 400' in str(excinfo.value)
+        assert 'Metering Web Service error 400' in str(excinfo.value)
         assert 'DRM WS request failed' in str(excinfo.value)
         assert search(r'\\"Entitlement Limit Reached\\" with .+ for \S+_test_03@accelize.com', str(excinfo.value))
         assert 'You have reached the maximum quantity of 1 nodes for Nodelocked entitlement' in str(excinfo.value)
@@ -456,7 +456,7 @@ def test_parsing_of_nodelock_files(accelize_drm, conf_json, cred_json, async_han
         move(req_file_path, req_file_path_bad)
         with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
             drm_manager.activate()
-        assert 'Cannot find JSON file' in str(excinfo.value)
+        assert 'Path is not a valid file' in str(excinfo.value)
         err_code = async_handler.get_error_code(str(excinfo.value))
         assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
         async_cb.assert_NoError()

@@ -30,12 +30,7 @@ namespace DRM {
 
 std::string getDirName( const std::string& full_path ) {
 
-    char sep = '/';
-#ifdef _WIN32
-    sep = '\\';
-#endif
-
-    size_t i = full_path.rfind( sep, full_path.length() );
+    size_t i = full_path.rfind( PATH_SEP, full_path.length() );
     if ( i != std::string::npos ) {
         return full_path.substr( 0, i );
     }
@@ -77,11 +72,6 @@ bool makeDirs( const std::string& dir_path, mode_t mode ) {
     std::string dir;
     size_t pos = 0;
     int ret;
-#if defined(_WIN32)
-    char sep = '\\';
-#else
-    char sep = '/';
-#endif
 
     if ( dir_path.size() == 0 ) {
         return true;
@@ -92,12 +82,12 @@ bool makeDirs( const std::string& dir_path, mode_t mode ) {
         return true;
     }
 
-    if ( path[ path.size() - 1 ] != sep ) {
+    if ( path[ path.size() - 1 ] != PATH_SEP ) {
         // Force trailing '/' so we can handle everything in loop
-        path += sep;
+        path += PATH_SEP;
     }
 
-    while( ( pos = path.find_first_of( sep, pos ) ) != std::string::npos ) {
+    while( ( pos = path.find_first_of( PATH_SEP, pos ) ) != std::string::npos ) {
         dir = path.substr( 0, pos++ );
         if ( ( dir.size() == 0 ) || ( isDir( dir ) ) )
             continue; // if leading / first time is 0 length
@@ -169,12 +159,12 @@ Json::Value parseJsonString( const std::string &json_string ) {
 
     if ( !reader->parse( json_string.c_str(), json_string.c_str() + json_string.size(),
             &json_node, &parseErr) )
-        Throw( DRM_BadFormat, "Cannot parse JSON string '{}' because {}", json_string, parseErr );
+        Throw( DRM_BadFormat, "Cannot parse JSON string because {}", parseErr );
 
     if ( json_node.empty() || json_node.isNull() )
         Throw( DRM_BadArg, "JSON string is empty" );
 
-    Debug( "Extracted JSON Object: {}", json_node.toStyledString() );
+    Debug2( "Extracted JSON Object: {}", json_node.toStyledString() );
 
     return json_node;
 }
@@ -183,6 +173,11 @@ Json::Value parseJsonString( const std::string &json_string ) {
 Json::Value parseJsonFile( const std::string& file_path ) {
     Json::Value json_node;
     std::string file_content;
+
+    // Check path is a file
+    if ( !isFile(file_path) ) {
+        Throw( DRM_BadArg, "Path is not a valid file: {}", file_path );
+    }
 
     // Open file
     std::ifstream fh( file_path );
@@ -246,11 +241,26 @@ const Json::Value& JVgetOptional( const Json::Value& jval,
     val = val.erase( val.find_last_not_of("\t\n\v\f\r") + 1 );
 
     if ( exists )
-        Debug( "Found parameter '{}' of type {} with value {}", key, typeToString( jvalmember.type() ), val );
+        Debug( "Found parameter '{}' of type {}: return its value {}", key, typeToString( jvalmember.type() ), val );
     else
-        Debug( "Set parameter '{}' of type {} to default value {}", key, typeToString( jvalmember.type() ), val );
+        Debug( "Could not find parameter '{}' of type {}: return default value {}", key, typeToString( jvalmember.type() ), val );
 
     return jvalmember;
+}
+
+
+std::string exec_cmd( const std::string cmd) {
+    std::array<char, 128> buffer;
+    std::string result;
+    Debug( "Running command: {}", cmd );
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"), pclose);
+    if (!pipe) {
+        throw std::runtime_error("popen() failed!");
+    }
+    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+        result += buffer.data();
+    }
+    return result;
 }
 
 

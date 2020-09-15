@@ -99,7 +99,7 @@ FPGA C library driver.
     // Instantiate DrmManager with previously defined functions and
     // configuration files
 
-    DrmManager *drm_manager = NULL;
+    DrmManager* drm_manager = NULL;
     int ctx = 0;
 
     if ( DrmManager_alloc(
@@ -139,7 +139,7 @@ FPGA C library driver.
         "./cred.json",
 
         // Read/write register functions callbacks
-        [&](uint32_t offset, uint32_t * value) {
+        [&](uint32_t offset, uint32_t* value) {
             return fpga_read_register( drm_controller_base_addr + offset, value );
         },
 

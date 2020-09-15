@@ -21,7 +21,7 @@ cmake_minimum_required(VERSION 3.12)
 # - Alpha             : 1.0.0-alpha.1
 # - Beta              : 1.0.0-beta.1
 # - Release candidate : 1.0.0-rc.1
-set(ACCELIZEDRM_VERSION 2.4.1)
+set(ACCELIZEDRM_VERSION 2.5.0-rc.2)
 
 ## Define package release number (Number of time this version was packaged)
 if (NOT CPACK_PACKAGE_RELEASE)
@@ -95,12 +95,15 @@ set(CMAKE_CXX_STANDARD 11)
 add_compile_options(-fvisibility=hidden)
 if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     # Enable warnings
-    add_compile_options(-O0 -Wall -Wextra -Wnon-virtual-dtor -Wpedantic -Werror=format-security)
+    add_compile_options(-Wall -Wextra -Wnon-virtual-dtor -Wpedantic -Werror=format-security)
 
     # Optimize for Debugging
     if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
 	add_compile_options(-fdebug-prefix-map=${CMAKE_SOURCE_DIR}=.)
     endif()
+
+    # ABI check
+    add_compile_options(-g -Og)
 
     # Code coverage
     option(COVERAGE "Activate code coverage" OFF)
@@ -150,6 +153,8 @@ set(DRM_CONTROLLER_SDK_SOURCES
 	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v4_0_0.cpp
 	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v4_0_1.cpp
 	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v4_1_0.cpp
+	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v4_2_0.cpp
+	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v4_2_1.cpp
 )
 include_directories(drm_controller_sdk/include)
 set_source_files_properties(${DRM_CONTROLLER_SDK_SOURCES} PROPERTIES COMPILE_FLAGS "-Wno-unused-parameter")
@@ -198,6 +203,7 @@ set(TARGET_SOURCES
     spdlog/src/color_sinks.cpp
     spdlog/src/file_sinks.cpp
     source/ws_client.cpp
+    source/csp.cpp
     source/drm_manager.cpp
     source/utils.cpp
     source/error.cpp
@@ -566,4 +572,15 @@ if(TESTS)
 	    target_link_libraries( unittests jsoncpp )
 	endif()
     endif()
+endif()
+
+# uninstall target
+if(NOT TARGET uninstall)
+  configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+    IMMEDIATE @ONLY)
+
+  add_custom_target(uninstall
+    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 endif()

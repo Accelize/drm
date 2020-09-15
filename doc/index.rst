@@ -198,6 +198,7 @@ Glossary
 
    drm_library_build
    drm_sw_advanced_description
+   drm_migration_description
 
 
 .. toctree::
