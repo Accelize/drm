@@ -1,4 +1,4 @@
-* Wed Sep 9 2020 Accelize v2.5.0
+* Wed Sep 09 2020 Accelize v2.5.0
 - NEW: Add support of the asynchronous metering mechanism
 - NEW: Include DRM Library settings in requests
 - NEW: Support the new data format in the ROM of the DRM Controller
