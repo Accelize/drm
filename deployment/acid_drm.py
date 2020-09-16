@@ -83,13 +83,8 @@ def publish_packages(pkg_source, versions_json, deb_repo, rpm_repo, deb_s3,
     component = 'prerelease' if prerelease else 'stable'
     repo_base_url = "https://tech.accelize.com"
 
-    branch = run(("git", "branch", "--show-current"), capture_output=True, check=True)
     if prerelease:
-        assert branch != "master"
         assert deb_s3.endswith("deb_prerelease/")
-    else:
-        assert branch == "master"
-        assert deb_s3.endswith("deb/")
 
     deb_conf = {
         'Origin': 'Accelize',
