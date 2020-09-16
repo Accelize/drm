@@ -459,9 +459,15 @@ protected:
 
         // Gather CSP information if detected
         Json::Value csp_node = Json::nullValue;
-        uint32_t ws_verbosity = getDrmWSClient().getVerbosity();
-        mHostConfigData["csp"] = GetCspInfo( ws_verbosity );
-        Debug( "CSP information:\n{}", mHostConfigData["csp"].toStyledString() );
+        try {
+            uint32_t ws_verbosity = getDrmWSClient().getVerbosity();
+            mHostConfigData["csp"] = GetCspInfo( ws_verbosity );
+            Debug( "CSP information:\n{}", mHostConfigData["csp"].toStyledString() );
+        } catch( const std::exception &e ) {
+            Debug( "No CSP information collected: {}", e.what() );
+        }
+        Debug( "CSP information:\n{}", csp_node.toStyledString() );
+        mHostConfigData["csp"] = csp_node;
 
         // Gather host and card information if xbutil existing
         if ( findXrtUtility() ) {
@@ -1595,7 +1601,6 @@ protected:
                    mFrequencyDetectionPeriod );
 
         // Compute estimated DRM frequency
-        //mFrequencyCurr = (int32_t)(std::ceil((double)counter / mFrequencyDetectionPeriod / 1000));
         int32_t measured_frequency = (int32_t)((double)counter / mFrequencyDetectionPeriod / 1000);
         Debug( "Frequency detection counter after {:f} ms is 0x{:08x}  => estimated frequency = {} MHz",
             (double)mFrequencyDetectionPeriod/1000, counter, measured_frequency );
@@ -1900,15 +1905,14 @@ protected:
             // Send request and receive new license
             Json::Value license_json = getLicense( request_json, mWSApiRetryDuration, mWSRetryPeriodShort );
             setLicense( license_json );
+            // Check if an error occurred
+            checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 5 ) );
 
             // Extract asynchronous health parameters from response
             Json::Value metering_node = JVgetOptional( license_json, "metering", Json::objectValue, Json::nullValue );
             mHealthPeriod = JVgetOptional( metering_node, "healthPeriod", Json::uintValue, mHealthPeriod ).asUInt();
             mHealthRetryTimeout = JVgetOptional( metering_node, "healthRetry", Json::uintValue, mHealthRetryTimeout ).asUInt();
             mHealthRetrySleep = JVgetOptional( metering_node, "healthRetrySleep", Json::uintValue, mHealthRetrySleep ).asUInt();
-
-            // Check if an error occurred
-            checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 5 ) );
         }
         Debug( "Released metering access mutex from startSession" );
         Info( "New DRM session {} started.", mSessionID );
@@ -2014,6 +2018,11 @@ protected:
 
 
 public:
+
+    // Non copyable non movable as we create closure with "this"
+    Impl( const Impl& ) = delete;
+    Impl( Impl&& ) = delete;
+
     Impl( const std::string& conf_file_path,
           const std::string& cred_file_path,
           ReadRegisterCallback f_user_read_register,
@@ -2021,36 +2030,36 @@ public:
           AsynchErrorCallback f_user_asynch_error )
         : Impl( conf_file_path, cred_file_path )
     {
-        Debug( "Entering Impl public constructor" );
-        if ( !f_user_read_register )
-            Throw( DRM_BadArg, "Read register callback function must not be NULL" );
-        if ( !f_user_write_register )
-            Throw( DRM_BadArg, "Write register callback function must not be NULL" );
-        if ( !f_user_asynch_error )
-            Throw( DRM_BadArg, "Asynchronous error callback function must not be NULL" );
-        f_read_register = f_user_read_register;
-        f_write_register = f_user_write_register;
-        f_asynch_error = f_user_asynch_error;
-        initDrmInterface();
-        Debug( "Exiting Impl public constructor" );
+        TRY
+            Debug( "Entering Impl public constructor" );
+            if ( !f_user_read_register )
+                Throw( DRM_BadArg, "Read register callback function must not be NULL" );
+            if ( !f_user_write_register )
+                Throw( DRM_BadArg, "Write register callback function must not be NULL" );
+            if ( !f_user_asynch_error )
+                Throw( DRM_BadArg, "Asynchronous error callback function must not be NULL" );
+            f_read_register = f_user_read_register;
+            f_write_register = f_user_write_register;
+            f_asynch_error = f_user_asynch_error;
+            initDrmInterface();
+            Debug( "Exiting Impl public constructor" );
+        CATCH_AND_THROW
     }
 
     ~Impl() {
-        Debug( "Entering Impl destructor" );
-        if ( mSecurityStop && isSessionRunning() ) {
-            Debug( "Security stop triggered: stopping current session" );
-            stopSession();
-        } else {
-            stopThread();
-        }
-        unlockDrmToInstance();
-        uninitLog();
-        Debug( "Exiting Impl destructor" );
+        TRY
+            Debug( "Entering Impl destructor" );
+            if ( mSecurityStop && isSessionRunning() ) {
+                Debug( "Security stop triggered: stopping current session" );
+                stopSession();
+            } else {
+                stopThread();
+            }
+            unlockDrmToInstance();
+            uninitLog();
+            Debug( "Exiting Impl destructor" );
+        CATCH_AND_THROW
     }
-
-    // Non copyable non movable as we create closure with "this"
-    Impl( const Impl& ) = delete;
-    Impl( Impl&& ) = delete;
 
     void activate( const bool& resume_session_request = false ) {
         TRY
