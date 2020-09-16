@@ -160,9 +160,10 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_header_error_on_licenseTimer', url)
         request_json = request.get_json()
+        request_type = request_json['request']
         with lock:
             cnt = context['cnt']
-            if cnt > 1:
+            if request_type != 'close' and cnt > 1:
                 return ({'error':'Test did not run as expected'}, 408)
             context['cnt'] += 1
         response = post(new_url, json=request_json, headers=request.headers)

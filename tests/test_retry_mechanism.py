@@ -160,7 +160,7 @@ def test_long_to_short_retry_switch(accelize_drm, conf_json, cred_json, async_ha
 @pytest.mark.no_parallel
 def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handler, live_server, basic_log_file):
     """
-    Test the number of expected retris and the gap between 2 retries are correct when the requests are lost
+    Test the number of expected retries and the gap between 2 retries are correct when the requests are lost
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
