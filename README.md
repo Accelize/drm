@@ -1,8 +1,8 @@
 ![Accelize DRM logo](doc/_static/accelize_DRM_logo.png)
 
-[![Build Status](https://dev.azure.com/Accelize/DRM/_apis/build/status/DRM%20Library?branchName=master)](https://dev.azure.com/Accelize/DRM/_build/latest?definitionId=2&branchName=master)[![codecov](https://codecov.io/gh/Accelize/drmlib/branch/master/graph/badge.svg)](https://codecov.io/gh/Accelize/drmlib)
+[![Build Status](https://dev.azure.com/Accelize/DRM/_apis/build/status/DRM%20Library?branchName=master)](https://dev.azure.com/Accelize/DRM/_build/latest?definitionId=2&branchName=master)[![codecov](https://codecov.io/gh/Accelize/drm/branch/master/graph/badge.svg)](https://codecov.io/gh/Accelize/drm)
 
-# :closed_lock_with_key: Accelize DRM library : AccelDRM
+# :closed_lock_with_key: Accelize DRM library
 
 The Accelize DRM solution protects FPGA applications.
 
