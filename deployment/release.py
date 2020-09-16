@@ -157,7 +157,10 @@ if __name__ == '__main__':
 
             print('Pushing tag...')
             if not args.dry:
-                run(['git', 'push', '--tags'], **run_args).check_returncode()
+                cmd = run(['git', 'push', 'origin', version], **run_args)
+                if cmd.returncode:
+                    print('stderr=', cmd.stderr.strip())
+                    return
 
             parser.exit(message='Release successful\n')
 
