@@ -76,7 +76,7 @@ jobs:
 
       - script: sudo -E tox -p all -e -rxs
                 aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug
-                -- --cred=$(Build.SourcesDirectory)/cred.json --server=$(meteringServer) --artifacts_dir=$(Build.SourcesDirectory)/artifacts ${{ config.tox_extra_option }}
+                -- --cred=$(Build.SourcesDirectory)/cred.json --server=$(meteringServer) --artifacts_dir=$(Build.SourcesDirectory)/artifacts ${{ config.tox_extra_option }} -rxs
         displayName: Run tests with Tox
         env:
           CODECOV_TOKEN: $(codecovToken)

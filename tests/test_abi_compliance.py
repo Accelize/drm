@@ -4,14 +4,14 @@ Test ABI/API compatibility
 """
 import os
 import re
+import pytest
 from shutil import copy
 from os.path import join, isdir, basename, splitext
 
-import pytest
 from tests.conftest import perform_once
 
 LIB_NAMES = ('libaccelize_drmc', 'libaccelize_drm')
-REPOSITORY_PATH = 'https://github.com/Accelize/drmlib'
+REPOSITORY_PATH = 'https://github.com/Accelize/drm'
 
 
 def _run(*command, **kwargs):

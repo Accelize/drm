@@ -54,13 +54,6 @@ Packages are hosted on the Accelize repository.
 
 .. note:: Packages and repositories metadata are signed for security.
 
-Accelize provides *stable* and a *prerelease* channels.
-
-To install the prerelease channel simply replace ``stable`` by ``prerelease`` in the rest of this document.
-
-.. warning:: No support is provided for *prerelease* packages.
-
-
 Debian, Ubuntu: DEB repository
 ::::::::::::::::::::::::::::::
 
@@ -265,7 +258,7 @@ Run following commands to install all requirements:
 
     # Minimal requirements
     sudo apt update
-    sudo apt install -y git make g++ libcurl4-openssl-dev libjsoncpp-dev cmake
+    sudo apt install -y git make g++ libcurl4-openssl-dev libjsoncpp-dev pkg-config cmake
 
     # Python library requirements
     sudo apt install -y python3-dev python3-wheel python3-setuptools cython3
@@ -275,7 +268,7 @@ Run following commands to install all requirements:
 
     # Minimal requirements
     sudo apt update
-    sudo apt install -y git make g++ libcurl4-openssl-dev libjsoncpp-dev python3-pip
+    sudo apt install -y git make g++ libcurl4-openssl-dev libjsoncpp-dev pkg-config python3-pip
     python3 -m pip install --user -U pip
     pip3 install --user -U cmake
 
@@ -326,9 +319,9 @@ Then run the following commands to build and install the library:
 
 .. code-block:: bash
 
-    git clone https://github.com/Accelize/drmlib.git --recursive --depth 1
-    mkdir -p drmlib/build
-    cd drmlib/build
+    git clone https://github.com/Accelize/drm.git --recursive --depth 1
+    mkdir -p drm/build
+    cd drm/build
 
     # The "-DPYTHON3=ON" option is required only to build the Python library
     cmake -DPYTHON3=ON ..
@@ -344,7 +337,6 @@ production environment, you need to install additional requirements:
 
 For DEB Packages:
 
-* pkg-config
 * dpkg-dev
 * file
 
@@ -357,7 +349,7 @@ Run following commands to install requirements:
 .. code-block:: bash
     :caption: On Debian, Ubuntu
 
-    sudo apt install -y pkg-config dpkg-dev file
+    sudo apt install -y dpkg-dev file
 
 .. code-block:: bash
     :caption: On Fedora, RHEL 8, CentOS 8
@@ -373,9 +365,9 @@ Once dependencies are installed, simply run the following section:
 
 .. code-block:: bash
 
-    git clone https://github.com/Accelize/drmlib.git --recursive --depth 1
-    mkdir -p drmlib/build
-    cd drmlib/build
+    git clone https://github.com/Accelize/drm.git --recursive --depth 1
+    mkdir -p drm/build
+    cd drm/build
 
     # The "-DPKG=ON" option is required to build the package
     cmake -DPYTHON3=ON -DPKG=ON ..
@@ -383,8 +375,7 @@ Once dependencies are installed, simply run the following section:
     make -j
     make package
 
-Packages will be generated in the `drmlib/build/packages` directory.
-
+Packages will be generated in the `drm/build/packages` directory.
 
 Installation with Ansible
 -------------------------
@@ -459,11 +450,14 @@ To uninstall the Accelize DRM library when installed from sources:
 
     .. code-block:: bash
 
-        for name in $(cat install_manifest.txt)
-        do
-            sudo rm -f "$name"
-            sudo rmdir -p --ignore-fail-on-non-empty "$(dirname "$name")"
-        done
+       for file in install_manifest*.txt
+       do
+           for name in $(cat $file)
+           do
+               sudo rm -f "$name"
+               sudo rmdir -p --ignore-fail-on-non-empty "$(dirname "$name")"
+           done
+       done
 
 You may also uninstall packages you have installed to build the Accelize DRM.
 

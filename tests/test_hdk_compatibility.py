@@ -28,13 +28,14 @@ def test_hdk_stability_on_programming(accelize_drm, conf_json, cred_json, async_
             driver.write_register_callback,
             async_cb.callback
         )
+        assert not drm_manager.get('license_status')
         try:
-            assert not drm_manager.get('license_status')
             drm_manager.activate()
             assert drm_manager.get('license_status')
         finally:
             drm_manager.deactivate()
             assert not drm_manager.get('license_status')
+        del drm_manager
         async_cb.assert_NoError()
 
 

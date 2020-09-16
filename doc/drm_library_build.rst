@@ -373,8 +373,8 @@ Build CMake configuration
 
 .. code-block:: bash
 
-    git clone https://github.com/Accelize/drmlib.git --recursive --depth 1
-    cd drmlib
+    git clone https://github.com/Accelize/drm.git --recursive --depth 1
+    cd drm
 
 2. Create a build directory and move to it:
 

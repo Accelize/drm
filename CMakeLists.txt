@@ -21,7 +21,7 @@ cmake_minimum_required(VERSION 3.12)
 # - Alpha             : 1.0.0-alpha.1
 # - Beta              : 1.0.0-beta.1
 # - Release candidate : 1.0.0-rc.1
-set(ACCELIZEDRM_VERSION 2.5.0-rc.1)
+set(ACCELIZEDRM_VERSION 2.5.1-rc.1)
 
 ## Define package release number (Number of time this version was packaged)
 if (NOT CPACK_PACKAGE_RELEASE)
@@ -39,7 +39,7 @@ set(CPACK_PACKAGE_MAINTAINER "accelize.com")
 set(CPACK_DESCRIPTION_SUMMARY "Accelize DRM C and C++ Library")
 set(CPACK_COMPONENT_DEV_DESCRIPTION "${CPACK_DESCRIPTION_SUMMARY}, headers files.")
 set(CPACK_COMPONENT_PYTHON3_DESCRIPTION "Accelize DRM Python Library")
-set(CMAKE_PROJECT_HOMEPAGE_URL https://github.com/Accelize/drmlib)
+set(CMAKE_PROJECT_HOMEPAGE_URL https://github.com/Accelize/drm)
 set(PROJECT_DOCUMENTATION_URL https://tech.accelize.com/documentation/stable)
 set(ACCELIZE_HOMEPAGE https://www.accelize.com)
 set(ACCELIZE_EMAIL info@accelize.com)

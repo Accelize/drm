@@ -418,8 +418,10 @@ protected:
     }
 
     void uninitLog() {
-        if ( sLogger )
+        if ( sLogger ) {
+            Debug( "Log messages are flushed now." );
             sLogger->flush();
+        }
     }
 
     bool findXrtUtility() {
@@ -663,7 +665,6 @@ protected:
             Error( "Error in read register callback, errcode = {}: failed to read register {}", ret, regName );
             return (uint32_t)(-1);
         }
-        Debug2( "Read DRM register {} = 0x{:08x}", regName, value );
         return 0;
     }
 
@@ -684,7 +685,6 @@ protected:
             Error( "Error in write register callback, errcode = {}: failed to write {} to register {}", ret, value, regName );
             return (uint32_t)(-1);
         }
-        Debug2( "Wrote DRM register {} = 0x{:08x}", regName, value );
         return 0;
     }
 
@@ -992,7 +992,7 @@ protected:
             json_output["vlnvFile"][i_str]["version"] = std::string("x") + vlnvFile[i].substr(12, 4);
         }
 
-        // Fulfill with Product information
+        // Fulfill with product information
         if ( !mailboxReadOnly.empty() ) {
             try {
                 Json::Value product_info = parseJsonString( mailboxReadOnly );
@@ -1000,10 +1000,14 @@ protected:
                     json_output["product"] = product_info["product_id"];
                 else
                     json_output["product"] = product_info;
-                if ( product_info.isMember( "pkg_version" ) )
+                if ( product_info.isMember( "pkg_version" ) ) {
                     json_output["pkg_version"] = product_info["pkg_version"];
-                if ( product_info.isMember( "dna_type" ) )
+                    Debug( "HDK Generator version: {}", json_output["pkg_version"].asString() );
+                }
+                if ( product_info.isMember( "dna_type" ) ) {
                     json_output["dna_type"] = product_info["dna_type"];
+                    Debug( "HDK DNA type: {}", json_output["dna_type"].asString() );
+                }
             } catch( const Exception &e ) {
                 if ( e.getErrCode() == DRM_BadFormat )
                     Throw( DRM_BadFormat, "Failed to parse Read-Only Mailbox in DRM Controller: {}", e.what() );
@@ -1358,13 +1362,13 @@ protected:
             timeSpan = TClock::now() - timeStart;
             mseconds = 1000.0 * double( timeSpan.count() ) * TClock::period::num / TClock::period::den;
             if ( activationCodesTransmitted ) {
-                Debug( "License #{} transmitted after {} ms", mLicenseCounter, mseconds );
+                Debug( "License #{} transmitted after {:f} ms", mLicenseCounter, mseconds );
                 break;
             }
-            Debug2( "License #{} not transmitted yet after {} ms", mLicenseCounter, mseconds );
+            Debug2( "License #{} not transmitted yet after {:f} ms", mLicenseCounter, mseconds );
         }
         if ( !activationCodesTransmitted ) {
-            Throw( DRM_CtlrError, "DRM Controller could not transmit Licence #{} to activators after {} ms. ", mLicenseCounter, mseconds ); //LCOV_EXCL_LINE
+            Throw( DRM_CtlrError, "DRM Controller could not transmit Licence #{} to activators after {:f} ms. ", mLicenseCounter, mseconds ); //LCOV_EXCL_LINE
         }
         mExpirationTime += std::chrono::seconds( mLicenseDuration );
 
@@ -1597,7 +1601,6 @@ protected:
                    mFrequencyDetectionPeriod );
 
         // Compute estimated DRM frequency
-        //mFrequencyCurr = (int32_t)(std::ceil((double)counter / mFrequencyDetectionPeriod / 1000));
         int32_t measured_frequency = (int32_t)((double)counter / mFrequencyDetectionPeriod / 1000);
         Debug( "Frequency detection counter after {:f} ms is 0x{:08x}  => estimated frequency = {} MHz",
             (double)mFrequencyDetectionPeriod/1000, counter, measured_frequency );
@@ -1721,9 +1724,6 @@ protected:
             Warning( "Licensing thread already started" );
             return;
         }
-
-        // Collect host and card information when possible
-        getHostAndCardInfo();
 
         mThreadKeepAlive = std::async( std::launch::async, [ this ]() {
             Debug( "Starting background thread which maintains licensing" );
@@ -1905,15 +1905,14 @@ protected:
             // Send request and receive new license
             Json::Value license_json = getLicense( request_json, mWSApiRetryDuration, mWSRetryPeriodShort );
             setLicense( license_json );
+            // Check if an error occurred
+            checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 5 ) );
 
             // Extract asynchronous health parameters from response
             Json::Value metering_node = JVgetOptional( license_json, "metering", Json::objectValue, Json::nullValue );
             mHealthPeriod = JVgetOptional( metering_node, "healthPeriod", Json::uintValue, mHealthPeriod ).asUInt();
             mHealthRetryTimeout = JVgetOptional( metering_node, "healthRetry", Json::uintValue, mHealthRetryTimeout ).asUInt();
             mHealthRetrySleep = JVgetOptional( metering_node, "healthRetrySleep", Json::uintValue, mHealthRetrySleep ).asUInt();
-
-            // Check if an error occurred
-            checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 5 ) );
         }
         Debug( "Released metering access mutex from startSession" );
         Info( "New DRM session {} started.", mSessionID );
@@ -2019,6 +2018,11 @@ protected:
 
 
 public:
+
+    // Non copyable non movable as we create closure with "this"
+    Impl( const Impl& ) = delete;
+    Impl( Impl&& ) = delete;
+
     Impl( const std::string& conf_file_path,
           const std::string& cred_file_path,
           ReadRegisterCallback f_user_read_register,
@@ -2026,36 +2030,36 @@ public:
           AsynchErrorCallback f_user_asynch_error )
         : Impl( conf_file_path, cred_file_path )
     {
-        Debug( "Entering Impl public constructor" );
-        if ( !f_user_read_register )
-            Throw( DRM_BadArg, "Read register callback function must not be NULL" );
-        if ( !f_user_write_register )
-            Throw( DRM_BadArg, "Write register callback function must not be NULL" );
-        if ( !f_user_asynch_error )
-            Throw( DRM_BadArg, "Asynchronous error callback function must not be NULL" );
-        f_read_register = f_user_read_register;
-        f_write_register = f_user_write_register;
-        f_asynch_error = f_user_asynch_error;
-        initDrmInterface();
-        Debug( "Exiting Impl public constructor" );
+        TRY
+            Debug( "Entering Impl public constructor" );
+            if ( !f_user_read_register )
+                Throw( DRM_BadArg, "Read register callback function must not be NULL" );
+            if ( !f_user_write_register )
+                Throw( DRM_BadArg, "Write register callback function must not be NULL" );
+            if ( !f_user_asynch_error )
+                Throw( DRM_BadArg, "Asynchronous error callback function must not be NULL" );
+            f_read_register = f_user_read_register;
+            f_write_register = f_user_write_register;
+            f_asynch_error = f_user_asynch_error;
+            initDrmInterface();
+            Debug( "Exiting Impl public constructor" );
+        CATCH_AND_THROW
     }
 
     ~Impl() {
-        Debug( "Entering Impl destructor" );
-        if ( mSecurityStop && isSessionRunning() ) {
-            Debug( "Security stop triggered: stopping current session" );
-            stopSession();
-        } else {
-            stopThread();
-        }
-        unlockDrmToInstance();
-        uninitLog();
-        Debug( "Exiting Impl destructor" );
+        TRY
+            Debug( "Entering Impl destructor" );
+            if ( mSecurityStop && isSessionRunning() ) {
+                Debug( "Security stop triggered: stopping current session" );
+                stopSession();
+            } else {
+                stopThread();
+            }
+            unlockDrmToInstance();
+            uninitLog();
+            Debug( "Exiting Impl destructor" );
+        CATCH_AND_THROW
     }
-
-    // Non copyable non movable as we create closure with "this"
-    Impl( const Impl& ) = delete;
-    Impl( Impl&& ) = delete;
 
     void activate( const bool& resume_session_request = false ) {
         TRY

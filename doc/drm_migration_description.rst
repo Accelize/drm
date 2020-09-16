@@ -165,16 +165,35 @@ For more information about the API in your favorite language, refer to :doc:`drm
 DRM HDK upgrade
 ---------------
 
-
 From v2.x to 3.x
 ~~~~~~~~~~~~~~~~
 
-
+- All files and signals prepended with `lgdn_` have been replaced by `drm_`.
+- The DRM Controller and Activator IPs have been wrapped to expose an AXI4-Stream communication channel.
 
 From v3.x to 4.x
 ~~~~~~~~~~~~~~~~
 
+- `common` folder:
 
+  - in the `common` folder there is now a specific source for xilinx simulator tool.
 
+- `activator` folder:
 
+  - DRM Activator top-level files (VHDL and Verilog) have been prefixed with 'top_' and have been moved
+    to the `sim` et `syn` folder for the simulation and synthesis respectively.
+  - `simu` folder name has been replaced by `sim` and `rtl` has been replace by `core`.
+  - A DRM Controller BFM has been embedded directly in the Activator simulation model to unlock the IP without
+    the need for an Internet connection to the Accelize License Web Server.
+  - `drm_activator_0x1003000b00010001_sim_pkg.(vhdl|sv)` file has been created to configure the simulation
+    configuration and behavior. Parameters are detailed directly in the file.
+  - A `constraints.sdc` file has been added in the `core` folder. It is required when `drm_aclk` and `ip_core_aclk`
+    are different.
 
+- `controller` folder:
+
+  - RTL source files have been moved to a `rtl` folder and split in 3 different sub-folders: `core` contains
+    the core of the IP, `sim` and `syn` contains the top level of the Controller IP in VHDL and SystemVerilog for
+    the simulation and synthesis respectively. Top level files are prefixed with 'top_'.
+  - `sdaccel` and `vitis` folders has been create: they contains the scirpt and makefile to generate the kernel
+    for those specific flows.

@@ -2,9 +2,8 @@
 """
 Test DRM Library with bad arguments. Make sure errors are detected and reported as expected.
 """
-from re import search
-
 import pytest
+from re import search
 
 
 def test_drm_manager_constructor_with_bad_arguments(accelize_drm, conf_json, cred_json,
@@ -422,9 +421,9 @@ def test_drm_manager_with_bad_credential_file(accelize_drm, conf_json, cred_json
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-
-    # Test with an empty crendential file
     async_cb.reset()
+    
+    # Test with an empty crendential file
     cred_json.reset()
     cred_json._content = {}
     cred_json.save()
@@ -554,7 +553,7 @@ def test_drm_manager_get_and_set_bad_arguments(accelize_drm, conf_json, cred_jso
 def test_c_unittests(accelize_drm, exec_func):
     """Test errors when missing arguments are given to DRM Controller Constructor"""
     driver = accelize_drm.pytest_fpga_driver[0]
-    if driver._name != 'aws':
+    if 'aws' not in accelize_drm.pytest_fpga_driver_name:
         pytest.skip("C unit-tests are only supported with AWS driver.")
 
     exec_lib = exec_func.load('unittests', driver._fpga_slot_id)

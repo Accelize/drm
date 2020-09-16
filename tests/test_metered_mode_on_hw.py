@@ -33,10 +33,10 @@ def test_metered_start_stop_in_raw(accelize_drm, conf_json, cred_json, async_han
         driver.write_register_callback,
         async_cb.callback
     )
+    assert not drm_manager.get('license_status')
+    activators.autotest(is_activated=False)
+    activators[0].generate_coin(1000)
     try:
-        assert not drm_manager.get('license_status')
-        activators.autotest(is_activated=False)
-        activators[0].generate_coin(1000)
         drm_manager.activate()
         assert drm_manager.get('metered_data') == 0
         activators[0].check_coin(drm_manager.get('metered_data'))
@@ -446,7 +446,7 @@ def test_async_on_pause(accelize_drm, conf_json, cred_json, async_handler):
     cred_json.set_user('accelize_accelerator_test_02')
     conf_json.reset()
     logpath = accelize_drm.create_log_path(whoami())
-    conf_json['settings']['log_file_verbosity'] = 1
+    conf_json['settings']['log_file_verbosity'] = 0
     conf_json['settings']['log_file_type'] = 1
     conf_json['settings']['log_file_path'] = logpath
     conf_json.save()
@@ -465,6 +465,7 @@ def test_async_on_pause(accelize_drm, conf_json, cred_json, async_handler):
         drm_manager.activate()
         start = datetime.now()
         if drm_manager.get('health_period') == 0:
+            remove(logpath)
             pytest.skip('Health is not active: skip async test')
         lic_duration = drm_manager.get('license_duration')
         assert drm_manager.get('session_status')

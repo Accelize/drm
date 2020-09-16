@@ -276,7 +276,10 @@ stages:
         variables:
           # DEB and RPM repositories paths
           debRepo: /tmp/deb_repo
-          debS3: s3://accelize/deb/
+          ${{ if not(contains(variables['Build.SourceBranch'], '-')) }}:
+            debS3: s3://accelize/deb/
+          ${{ if contains(variables['Build.SourceBranch'], '-') }}:
+            debS3: s3://accelize/deb_prerelease/
           rpmRepo: /tmp/rpm_repo
           rpmS3: s3://accelize/rpm/
 
@@ -345,6 +348,7 @@ stages:
                           pkg_source='$(Pipeline.Workspace)',
                           versions_json='$(versionsJson)',
                           deb_repo='$(debRepo)', rpm_repo='$(rpmRepo)',
+                          deb_s3='$(debS3)',
                           gpg_private_key='$(gpgPrivateKey.secureFilePath)',
                           gpg_key_id='$(gpgKeyId)')
 

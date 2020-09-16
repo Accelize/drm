@@ -1,8 +1,8 @@
-![Screenshot](doc/_static/AccelDRM_lock.png)
+![Accelize DRM logo](doc/_static/accelize_DRM_logo.png)
 
-[![Build Status](https://dev.azure.com/Accelize/DRM/_apis/build/status/DRM%20Library?branchName=master)](https://dev.azure.com/Accelize/DRM/_build/latest?definitionId=2&branchName=master)[![codecov](https://codecov.io/gh/Accelize/drmlib/branch/master/graph/badge.svg)](https://codecov.io/gh/Accelize/drmlib)
+[![Build Status](https://dev.azure.com/Accelize/DRM/_apis/build/status/DRM%20Library?branchName=master)](https://dev.azure.com/Accelize/DRM/_build/latest?definitionId=2&branchName=master)[![codecov](https://codecov.io/gh/Accelize/drm/branch/master/graph/badge.svg)](https://codecov.io/gh/Accelize/drm)
 
-# :closed_lock_with_key: Accelize DRM library : AccelDRM
+# :closed_lock_with_key: Accelize DRM library
 
 The Accelize DRM solution protects FPGA applications.
 
@@ -33,7 +33,7 @@ Specifically, the license server delivers a regular stream of time-limited singl
 
 Take a look at our [documentation](https://tech.accelize.com/documentation/stable/#licensing-modes) for more information !
 
-# :wrench: Accelize Architecture Overview
+# :wrench: Accelize architecture overview
 
 The Accelize DRM solution comprises 3 layers:
 
@@ -49,9 +49,9 @@ the DRM Web Service can deployed on-premise.
 
 More information in our [documentation](https://tech.accelize.com/documentation/stable/#licensing-modes) !
 
-## :computer: Accelize Distribution Platform
+## :computer: Accelize distribution platform
 
-For a quick tour about the Accelize Platform integration steps, please watch [this video](https://youtu.be/7cb_ksLTcRk)
+For a quick tour about the Accelize platform integration steps, please watch [this video](https://youtu.be/7cb_ksLTcRk)
 
 ## :heavy_exclamation_mark: Prerequisites
 

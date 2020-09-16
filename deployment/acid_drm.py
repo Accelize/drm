@@ -53,7 +53,7 @@ def get_next_package_release(versions_json):
     return next_release
 
 
-def publish_packages(pkg_source, versions_json, deb_repo, rpm_repo,
+def publish_packages(pkg_source, versions_json, deb_repo, rpm_repo, deb_s3,
                      gpg_private_key, gpg_key_id):
     """
     Publish Accelize DRM library packages.
@@ -64,6 +64,7 @@ def publish_packages(pkg_source, versions_json, deb_repo, rpm_repo,
             number for all versions.
         deb_repo (str): Path to local DEB repository.
         rpm_repo (str): Path to local RPM repository.
+        deb_s3 (str): S3 DEB repository.
         gpg_private_key (str): Path to GPG key to use to sign packages.
         gpg_key_id (str): ID of the GPG key to use to sign packages.
     """
@@ -82,12 +83,15 @@ def publish_packages(pkg_source, versions_json, deb_repo, rpm_repo,
     component = 'prerelease' if prerelease else 'stable'
     repo_base_url = "https://tech.accelize.com"
 
+    if prerelease:
+        assert deb_s3.endswith("deb_prerelease/")
+
     deb_conf = {
         'Origin': 'Accelize',
         'Label': 'Accelize',
         'Codename': None,
         'Architectures': 'amd64',
-        'Components': 'stable prerelease',
+        'Components': component,
         'Description': 'Accelize DEB repository',
         'SignWith': gpg_key_id
     }
