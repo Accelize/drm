@@ -19,12 +19,13 @@ def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler, 
     Test a MAC error is returned if the key value in the response has been modified
     """
     driver = accelize_drm.pytest_fpga_driver[0]
+
+    # Program FPGA with lastest HDK per major number
+    image_id = driver.fpga_image
+    driver.program_fpga(image_id)
+
     async_cb = async_handler.create()
     async_cb.reset()
-
-    activators = accelize_drm.pytest_fpga_activators[0]
-    activators.reset_coin()
-    activators.autotest()
 
     conf_json.reset()
     conf_json['licensing']['url'] = request.url + 'test_header_error_on_key'
@@ -56,6 +57,11 @@ def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_
     Test a MAC error is returned if the licenseTimer value in the response has been modified
     """
     driver = accelize_drm.pytest_fpga_driver[0]
+
+    # Program FPGA with lastest HDK per major number
+    image_id = driver.fpga_image
+    driver.program_fpga(image_id)
+
     async_cb = async_handler.create()
     async_cb.reset()
 

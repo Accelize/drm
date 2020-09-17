@@ -1104,7 +1104,7 @@ def app(pytestconfig):
 class BasicLogFile:
 
     def __init__(self, basepath, verbosity, append, keep=False):
-        self._basepath = path
+        self._basepath = basepath
         self._path = None
         self._verbosity = verbosity
         self._append = append
