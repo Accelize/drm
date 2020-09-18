@@ -538,7 +538,7 @@ def test_stop_after_pause(accelize_drm, conf_json, cred_json, async_handler):
 @pytest.mark.minimum
 @pytest.mark.no_parallel
 @pytest.mark.hwtst
-@pytest.mark.skip(reason='Might be the root cause of SegFault')
+#@pytest.mark.skip(reason='Might be the root cause of SegFault')
 def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
     """
     Test an error is returned and the design is locked when the limit is reached.
