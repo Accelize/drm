@@ -171,9 +171,7 @@ def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handle
     licDuration = 60
     requestTimeout = 5
     nb_long_retry = ceil((licDuration - retryLongPeriod)/(retryLongPeriod + requestTimeout))
-    print('nb_long_retry=', nb_long_retry, type(nb_long_retry))
     nb_short_retry = ceil((licDuration - nb_long_retry*(retryLongPeriod + requestTimeout)) / (retryShortPeriod + requestTimeout))
-    print('nb_short_retry=', nb_short_retry, type(nb_short_retry))
     nb_retry = nb_long_retry + nb_short_retry
 
     conf_json.reset()

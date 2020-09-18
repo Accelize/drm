@@ -21,12 +21,12 @@ REGEX_FORMAT_SHORT = r'\[\s*(\w+)\s*\] \s*\d+\s*, %s'
 REGEX_FORMAT_LONG  = r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.\d{3} - \s*\S+:\d+\s* \[\s*(\w+)\s*\] \s*\d+\s*, %s'
 
 
-def test_file_path(accelize_drm, conf_json, cred_json, async_handler, whoami):
+def test_file_path(accelize_drm, conf_json, cred_json, async_handler, request):
     """Test logging file path"""
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
-    log_path = accelize_drm.create_log_path(whoami)
+    log_path = accelize_drm.create_log_path(request.function.__name__)
     log_type= 1
 
     async_cb.reset()
@@ -49,7 +49,7 @@ def test_file_path(accelize_drm, conf_json, cred_json, async_handler, whoami):
     remove(log_path)
 
 
-def test_file_verbosity(accelize_drm, conf_json, cred_json, async_handler, whoami):
+def test_file_verbosity(accelize_drm, conf_json, cred_json, async_handler, request):
     """Test logging file verbosity"""
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -60,7 +60,7 @@ def test_file_verbosity(accelize_drm, conf_json, cred_json, async_handler, whoam
 
     for verbosity in range(len(level_dict)+1):
         async_cb.reset()
-        log_path = accelize_drm.create_log_path(whoami + '_verbosity%d' % verbosity)
+        log_path = accelize_drm.create_log_path(request.function.__name__ + '_verbosity%d' % verbosity)
         conf_json.reset()
         conf_json['settings']['log_verbosity'] = 6
         conf_json['settings']['log_file_format'] = LOG_FORMAT_LONG
@@ -95,12 +95,12 @@ def test_file_verbosity(accelize_drm, conf_json, cred_json, async_handler, whoam
         remove(log_path)
 
 
-def test_file_short_format(accelize_drm, conf_json, cred_json, async_handler, whoami):
+def test_file_short_format(accelize_drm, conf_json, cred_json, async_handler, request):
     """Test logging file short format"""
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
-    log_path = accelize_drm.create_log_path(whoami)
+    log_path = accelize_drm.create_log_path(request.function.__name__)
     log_type = 1
     msg = 'This is a message'
     regex_short = REGEX_FORMAT_SHORT % msg
@@ -134,12 +134,12 @@ def test_file_short_format(accelize_drm, conf_json, cred_json, async_handler, wh
     remove(log_path)
 
 
-def test_file_long_format(accelize_drm, conf_json, cred_json, async_handler, whoami):
+def test_file_long_format(accelize_drm, conf_json, cred_json, async_handler, request):
     """Test logging file long format"""
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
-    log_path = accelize_drm.create_log_path(whoami)
+    log_path = accelize_drm.create_log_path(request.function.__name__)
     log_type = 1
     msg = 'This is a message'
     regex_long = REGEX_FORMAT_LONG % msg
@@ -173,7 +173,7 @@ def test_file_long_format(accelize_drm, conf_json, cred_json, async_handler, who
     remove(log_path)
 
 
-def test_file_types(accelize_drm, conf_json, cred_json, async_handler, whoami):
+def test_file_types(accelize_drm, conf_json, cred_json, async_handler, request):
     """Test logging file types"""
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -185,7 +185,7 @@ def test_file_types(accelize_drm, conf_json, cred_json, async_handler, whoami):
     size = rotating_size * 1024 * rotating_num
 
     for log_type in range(3):
-        log_path = accelize_drm.create_log_path(whoami + '_log_type%d' % log_type)
+        log_path = accelize_drm.create_log_path(request.function.__name__ + '_log_type%d' % log_type)
         async_cb.reset()
         conf_json.reset()
         conf_json['settings']['log_verbosity'] = 6
@@ -231,12 +231,12 @@ def test_file_types(accelize_drm, conf_json, cred_json, async_handler, whoami):
             remove(f)
 
 
-def test_file_append(accelize_drm, conf_json, cred_json, async_handler, whoami):
+def test_file_append(accelize_drm, conf_json, cred_json, async_handler, request):
     """Test logging file append mode"""
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
-    log_path = accelize_drm.create_log_path(whoami)
+    log_path = accelize_drm.create_log_path(request.function.__name__)
     log_type= 1
 
     async_cb.reset()
@@ -266,12 +266,12 @@ def test_file_append(accelize_drm, conf_json, cred_json, async_handler, whoami):
     remove(log_path)
 
 
-def test_file_truncate(accelize_drm, conf_json, cred_json, async_handler, whoami):
+def test_file_truncate(accelize_drm, conf_json, cred_json, async_handler, request):
     """Test logging file truncate mode"""
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
-    log_path = accelize_drm.create_log_path(whoami)
+    log_path = accelize_drm.create_log_path(request.function.__name__)
     log_type= 1
 
     async_cb.reset()
@@ -301,12 +301,12 @@ def test_file_truncate(accelize_drm, conf_json, cred_json, async_handler, whoami
     remove(log_path)
 
 
-def test_file_rotating_parameters(accelize_drm, conf_json, cred_json, async_handler, whoami):
+def test_file_rotating_parameters(accelize_drm, conf_json, cred_json, async_handler, request):
     """Test logging file rotating parameters"""
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
-    log_path = accelize_drm.create_log_path(whoami)
+    log_path = accelize_drm.create_log_path(request.function.__name__)
     log_type = 2
     msg = 'This is a message'
     verbosity = accelize_drm.create_log_level(2)
@@ -359,12 +359,12 @@ def test_file_rotating_parameters(accelize_drm, conf_json, cred_json, async_hand
         remove(f)
 
 
-def test_versions_displayed_in_log_file(accelize_drm, conf_json, cred_json, async_handler, whoami):
+def test_versions_displayed_in_log_file(accelize_drm, conf_json, cred_json, async_handler, request):
     """Test versions of dependent libraries are displayed in log file"""
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
-    log_path = accelize_drm.create_log_path(whoami)
+    log_path = accelize_drm.create_log_path(request.function.__name__)
     log_type = 1
     verbosity = accelize_drm.create_log_level(5)
 
@@ -396,13 +396,13 @@ def test_versions_displayed_in_log_file(accelize_drm, conf_json, cred_json, asyn
     remove(log_path)
 
 
-def test_log_file_parameters_modifiability(accelize_drm, conf_json, cred_json, async_handler, whoami):
+def test_log_file_parameters_modifiability(accelize_drm, conf_json, cred_json, async_handler, request):
     """Once the log file has been created, test the parameters cannot be modified except verbosity and format """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
     log_verbosity = 3
-    log_path = accelize_drm.create_log_path(whoami)
+    log_path = accelize_drm.create_log_path(request.function.__name__)
     log_format = LOG_FORMAT_LONG
     log_type = 2
     log_rotating_size = 10  # =10KB
@@ -569,12 +569,12 @@ def test_log_file_directory_creation(accelize_drm, conf_json, cred_json, async_h
             rmtree(log_dir)
 
 
-def test_log_file_without_credential_data_in_debug(accelize_drm, conf_json, cred_json, async_handler, whoami):
+def test_log_file_without_credential_data_in_debug(accelize_drm, conf_json, cred_json, async_handler, request):
     """ Test no credential information is saved into log file """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     log_type = 1
-    log_path = accelize_drm.create_log_path(whoami)
+    log_path = accelize_drm.create_log_path(request.function.__name__)
     async_cb.reset()
     conf_json.reset()
     conf_json['settings']['log_file_path'] = log_path
@@ -601,12 +601,12 @@ def test_log_file_without_credential_data_in_debug(accelize_drm, conf_json, cred
     remove(log_path)
 
 
-def test_log_file_without_credential_data_in_debug2(accelize_drm, conf_json, cred_json, async_handler, whoami):
+def test_log_file_without_credential_data_in_debug2(accelize_drm, conf_json, cred_json, async_handler, request):
     """ Test no credential information is saved into log file """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     log_type = 1
-    log_path = accelize_drm.create_log_path(whoami)
+    log_path = accelize_drm.create_log_path(request.function.__name__)
     async_cb.reset()
     conf_json.reset()
     conf_json['settings']['log_file_path'] = log_path

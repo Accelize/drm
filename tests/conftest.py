@@ -1168,11 +1168,3 @@ def basic_log_file(pytestconfig, request, accelize_drm):
     keep = pytestconfig.getoption("logfile") is not None
 
     return BasicLogFile(log_file_basepath, log_file_verbosity, log_file_append, keep)
-
-
-@pytest.fixture
-def whoami(request):
-    """
-    Return the name of the test currently running
-    """
-    return request.function.__name__
