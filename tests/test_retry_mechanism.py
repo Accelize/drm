@@ -55,7 +55,7 @@ def test_api_retry_disabled(accelize_drm, conf_json, cred_json, async_handler, l
 
 
 @pytest.mark.no_parallel
-def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler, live_server):
+def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler, live_server, basic_log_file):
     """
     Test retry mechanism is working on API function (not including the retry in background thread)
     """
