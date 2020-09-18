@@ -72,7 +72,7 @@ _PARAM_LIST = ('license_type',
 
 @pytest.mark.minimum
 def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cred_json,
-                                                     async_handler, whoami):
+                                                     async_handler, request):
     """Test accesses to parameters"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -173,7 +173,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     # Test parameter: log_file_path
     async_cb.reset()
     conf_json.reset()
-    exp_value = accelize_drm.create_log_path(whoami)
+    exp_value = accelize_drm.create_log_path(request.function.__name__)
     conf_json['settings']['log_file_path'] = exp_value
     conf_json.save()
     drm_manager = accelize_drm.DrmManager(
@@ -589,7 +589,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
 
 
 def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_json, async_handler,
-                                                 ws_admin, whoami):
+                                                 ws_admin, request):
     """Test accesses to parameter"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -945,7 +945,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     # Test parameter: log_message
     async_cb.reset()
     conf_json.reset()
-    logpath = accelize_drm.create_log_path(whoami)
+    logpath = accelize_drm.create_log_path(request.function.__name__)
     verbosity = 5
     conf_json['settings']['log_file_verbosity'] = verbosity
     conf_json['settings']['log_file_type'] = 1
