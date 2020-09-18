@@ -518,6 +518,44 @@ def create_app(url):
             response_json['metering']['healthRetry'] = context['healthRetry']
         return Response(dumps(response_json), response.status_code, headers)
 
+    # test_async_call_on_pause_when_health_is_enabled and test_no_async_call_on_pause_when_health_is_disabled functions
+    @app.route('/test_async_call_on_pause_depending_on_health_status/o/token/', methods=['GET', 'POST'])
+    def otoken__test_async_call_on_pause_depending_on_health_status():
+        return redirect(request.url_root + '/o/token/', code=307)
+
+    @app.route('/test_async_call_on_pause_depending_on_health_status/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_async_call_on_pause_depending_on_health_status():
+        global context, lock
+        new_url = request.url.replace(request.url_root+'test_async_call_on_pause_depending_on_health_status', url)
+        request_json = request.get_json()
+        response = post(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        with lock:
+            response_json['metering']['healthPeriod'] = context['healthPeriod']
+            response_json['metering']['healthRetry'] = context['healthRetry']
+        return Response(dumps(response_json), response.status_code, headers)
+
+    @app.route('/test_async_call_on_pause_depending_on_health_status/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_async_call_on_pause_depending_on_health_status():
+        global context, lock
+        new_url = request.url.replace(request.url_root+'test_async_call_on_pause_depending_on_health_status', url)
+        request_json = request.get_json()
+        response = post(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        with lock:
+            context['health_cnt'] += 1
+            response_json['metering']['healthPeriod'] = context['healthPeriod']
+            response_json['metering']['healthRetry'] = context['healthRetry']
+        return Response(dumps(response_json), response.status_code, headers)
+
     ##############################################################################
     # test_retry_mechanism.py
 

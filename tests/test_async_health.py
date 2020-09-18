@@ -410,9 +410,11 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_s
     assert get_context() == context
 
     # First, get license duration to align health period on it
-    drm_manager.activate()
-    lic_dur = drm_manager.get('license_duration')
-    drm_manager.deactivate()
+    try:
+        drm_manager.activate()
+        lic_dur = drm_manager.get('license_duration')
+    finally:
+        drm_manager.deactivate()
 
     # Adjust health period to license duration
     healthPeriod = lic_dur
@@ -423,9 +425,9 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_s
     set_context(context)
     assert get_context() == context
 
-    drm_manager.activate()
-    assert drm_manager.get('health_period') == healthPeriod
     try:
+        drm_manager.activate()
+        assert drm_manager.get('health_period') == healthPeriod
         wait_func_true(lambda: get_context()['nb_genlic'] >= nb_genlic,
                 timeout=lic_dur * nb_genlic + 2)
         session_id_exp = drm_manager.get('session_id')
@@ -450,4 +452,107 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_s
         if close_flag == '1':
             segment_idx_expected = 0
     assert get_proxy_error() is None
+    basic_log_file.remove()
+
+
+@pytest.mark.no_parallel
+def test_async_call_on_pause_when_health_is_enabled(accelize_drm, conf_json, cred_json, async_handler, live_server):
+    """
+    Test the DRM pause function does perform a async request before pausing
+    """
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    async_cb.reset()
+
+    conf_json.reset()
+    conf_json['licensing']['url'] = request.url + 'test_async_call_on_pause_depending_on_health_status'
+    conf_json['settings'].update(basic_log_file.create(1))
+    conf_json.save()
+
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+
+    # Set initial context on the live server
+    context = {'healthPeriod':300,
+               'healthRetry':0,
+               'health_cnt':0
+    }
+    set_context(context)
+    assert get_context() == context
+
+    # First, get license duration to align health period on it
+    try:
+        drm_manager.activate()
+        lic_dur = drm_manager.get('license_duration')
+        drm_manager.deactivate(True) # Pause session
+    finally:
+        drm_manager.deactivate()
+    async_cb.assert_NoError()
+    # Check the proxy received only 1 health request (corresponding to the pause call)
+    context = get_context()
+    assert context['health_cnt'] == 1
+    # Check the health request occurred after the pause call
+    pause_line = 0
+    health_line = 0
+    for i, line in enumerate(basic_log_file.read()):
+        if '' in line:
+            pause_line = i
+        if '' in line:
+            health_line = i
+        if '' in line:
+            stop_line = i
+    assert pause_line < health_line < stop_line
+    assert get_proxy_error() is None
+    basic_log_file.remove()
+
+
+@pytest.mark.no_parallel
+def test_no_async_call_on_pause_when_health_is_disabled(accelize_drm, conf_json, cred_json, async_handler, live_server):
+    """
+    Test the DRM pause function does NOT perform a async request before pausing
+    """
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    async_cb.reset()
+
+    conf_json.reset()
+    conf_json['licensing']['url'] = request.url + 'test_async_call_on_pause_depending_on_health_status'
+    conf_json['settings'].update(basic_log_file.create(1))
+    conf_json.save()
+
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+
+    # Set initial context on the live server
+    context = {'healthPeriod':0,
+               'healthRetry':0,
+               'health_cnt':0
+    }
+    set_context(context)
+    assert get_context() == context
+
+    # First, get license duration to align health period on it
+    try:
+        drm_manager.activate()
+        lic_dur = drm_manager.get('license_duration')
+        drm_manager.deactivate(True) # Pause session
+    finally:
+        drm_manager.deactivate()
+    async_cb.assert_NoError()
+    # Check the proxy did not receive any health request
+    context = get_context()
+    assert context['health_cnt'] == 0
+    # Check no health request appeared in the log file
+    assert re.search(r'health', basic_log_file.read())
+        assert get_proxy_error() is None
     basic_log_file.remove()
