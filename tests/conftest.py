@@ -29,6 +29,9 @@ MAILBOX_REG_OFFSET = 0x3C
 INC_EVENT_REG_OFFSET = 0x40
 CNT_EVENT_REG_OFFSET = 0x44
 
+LOG_FORMAT_SHORT = "[%^%=8l%$] %-6t, %v"
+LOG_FORMAT_LONG = "%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v"
+
 HASH_FUNTION_TABLE = {}
 
 
@@ -120,10 +123,6 @@ def param2dict(param_list):
             continue
         d[k] = str(v)
     return d
-
-
-def whoami():
-    return sys._getframe(1).f_code.co_name
 
 
 # Pytest configuration
@@ -1095,3 +1094,77 @@ def app(pytestconfig):
     app = create_app(url)
     app.debug = pytestconfig.getoption("proxy_debug")
     return app
+
+
+#-----------------
+# Log file fixture
+#-----------------
+
+
+class BasicLogFile:
+
+    def __init__(self, basepath, verbosity, append, keep=False):
+        self._basepath = basepath
+        self._path = None
+        self._verbosity = verbosity
+        self._append = append
+        self._keep = keep
+
+    def create(self, verbosity, format=LOG_FORMAT_SHORT):
+        log_param =  dict()
+        while True:
+            self._path = '%s__%d__%s.log' % (self._basepath, getpid(), time())
+            if not isfile(self._path):
+                break
+        log_param['log_file_path'] = self._path
+        log_param['log_file_type'] = 1
+        log_param['log_file_append'] = self._append
+        log_param['log_file_format'] = format
+        if self._verbosity is None:
+            log_param['log_file_verbosity'] = self._verbosity
+        elif verbosity >= self._verbosity:
+            log_param['log_file_verbosity'] = self._verbosity
+        else:
+            log_param['log_file_verbosity'] = verbosity
+        return log_param
+
+    def read(self):
+        wait_func_true(lambda: isfile(self._path), 10)
+        with open(self._path, 'rt') as f:
+            log_content = f.read()
+        return log_content
+
+    def remove(self):
+        if not self._keep and isfile(self._path):
+            remove(self._path)
+
+
+@pytest.fixture
+def basic_log_file(pytestconfig, request, accelize_drm):
+    """
+    Return an object to handle log file parameter and associated resources
+    """
+    # Determine log file path
+    if pytestconfig.getoption("logfile") is not None:
+        if len(pytestconfig.getoption("logfile")) != 0:
+            path_prefix = pytestconfig.getoption("logfile")
+        else:
+            path_prefix = "tox"
+    else:
+        path_prefix = "pytest"
+    log_file_basepath = realpath(join(accelize_drm.pytest_artifacts_dir, "%s__%s" % (
+                    path_prefix, request.function.__name__)))
+
+    # Determine log file verbosity
+    if pytestconfig.getoption("logfile") is not None:
+        log_file_verbosity = pytestconfig.getoption("logfilelevel")
+    else:
+        log_file_verbosity = None
+
+    # Determine log file append mode
+    log_file_append = pytestconfig.getoption("logfileappend")
+
+    # Determine keep argument
+    keep = pytestconfig.getoption("logfile") is not None
+
+    return BasicLogFile(log_file_basepath, log_file_verbosity, log_file_append, keep)

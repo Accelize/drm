@@ -10,7 +10,7 @@ from re import search, findall
 from os.path import realpath, isfile
 from os import remove
 
-from tests.conftest import wait_deadline, wait_func_true, whoami
+from tests.conftest import wait_deadline, wait_func_true
 
 
 def test_metered_start_stop_in_raw(accelize_drm, conf_json, cred_json, async_handler):
@@ -435,7 +435,7 @@ def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, cred_json
 
 @pytest.mark.minimum
 @pytest.mark.hwtst
-def test_async_on_pause(accelize_drm, conf_json, cred_json, async_handler):
+def test_async_on_pause(accelize_drm, conf_json, cred_json, async_handler, request):
     """
     Test an async health commande is executed on pause.
     """
@@ -445,7 +445,7 @@ def test_async_on_pause(accelize_drm, conf_json, cred_json, async_handler):
     activators = accelize_drm.pytest_fpga_activators[0]
     cred_json.set_user('accelize_accelerator_test_02')
     conf_json.reset()
-    logpath = accelize_drm.create_log_path(whoami())
+    logpath = accelize_drm.create_log_path(request.function.__name__)
     conf_json['settings']['log_file_verbosity'] = 0
     conf_json['settings']['log_file_type'] = 1
     conf_json['settings']['log_file_path'] = logpath
@@ -538,6 +538,7 @@ def test_stop_after_pause(accelize_drm, conf_json, cred_json, async_handler):
 @pytest.mark.minimum
 @pytest.mark.no_parallel
 @pytest.mark.hwtst
+#@pytest.mark.skip(reason='Might be the root cause of SegFault')
 def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
     """
     Test an error is returned and the design is locked when the limit is reached.
@@ -698,7 +699,7 @@ def test_floating_limits(accelize_drm, conf_json, cred_json, async_handler):
         async_cb1.assert_NoError()
 
 
-def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handler):
+def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handler, request):
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
@@ -706,7 +707,7 @@ def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handl
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_02')
     conf_json.reset()
-    logpath = accelize_drm.create_log_path(whoami())
+    logpath = accelize_drm.create_log_path(request.function.__name__)
     conf_json['settings']['log_file_verbosity'] = accelize_drm.create_log_level(2)
     conf_json['settings']['log_file_type'] = 1
     conf_json['settings']['log_file_path'] = logpath

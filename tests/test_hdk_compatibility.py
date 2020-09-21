@@ -3,10 +3,8 @@
 Test node-locked behavior of DRM Library.
 """
 import pytest
-from os import remove
 from itertools import groupby
 from re import match, search, IGNORECASE
-from tests.conftest import whoami
 
 
 def test_hdk_stability_on_programming(accelize_drm, conf_json, cred_json, async_handler):
@@ -16,14 +14,6 @@ def test_hdk_stability_on_programming(accelize_drm, conf_json, cred_json, async_
     async_cb = async_handler.create()
     async_cb.reset()
     drm_manager = None
-
-    conf_json.reset()
-    logpath = accelize_drm.create_log_path(whoami())
-    conf_json['settings']['log_file_verbosity'] = accelize_drm.create_log_level(0)
-    conf_json['settings']['log_file_type'] = 1
-    conf_json['settings']['log_file_path'] = logpath
-    conf_json['settings']['log_file_append'] = True
-    conf_json.save()
 
     nb_reset = 10
     for i in range(nb_reset):
@@ -47,7 +37,6 @@ def test_hdk_stability_on_programming(accelize_drm, conf_json, cred_json, async_
             assert not drm_manager.get('license_status')
             del drm_manager
         async_cb.assert_NoError()
-    remove(logpath)
 
 
 @pytest.mark.minimum

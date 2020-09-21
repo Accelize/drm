@@ -3,7 +3,6 @@
 Test metering and floating behaviors of DRM Library.
 """
 import pytest
-from os import remove
 from time import sleep
 from random import randint
 from datetime import datetime, timedelta
@@ -12,7 +11,6 @@ from json import loads, dumps
 from flask import request
 from requests import get, post
 from tests.proxy import get_context, set_context
-from tests.conftest import whoami
 
 
 @pytest.mark.no_parallel
@@ -29,16 +27,8 @@ def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler, 
     async_cb = async_handler.create()
     async_cb.reset()
 
-    activators = accelize_drm.pytest_fpga_activators[0]
-    activators.reset_coin()
-    activators.autotest()
-
     conf_json.reset()
     conf_json['licensing']['url'] = request.url + 'test_header_error_on_key'
-    logpath = accelize_drm.create_log_path(whoami())
-    conf_json['settings']['log_file_verbosity'] = accelize_drm.create_log_level(0)
-    conf_json['settings']['log_file_type'] = 1
-    conf_json['settings']['log_file_path'] = logpath
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(
@@ -59,7 +49,6 @@ def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler, 
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
     assert "License header check error" in str(excinfo.value)
     async_cb.assert_NoError()
-    remove(logpath)
 
 
 @pytest.mark.no_parallel

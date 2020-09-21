@@ -159,7 +159,7 @@ def test_global_challenge_quality():
 
 
 @pytest.mark.security
-def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async_handler):
+def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async_handler, basic_log_file):
     """Preprogram N times the board and start a session with M licenses.
     """
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -194,11 +194,7 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
     async_cb.reset()
     cred_json.set_user(access_key)
     conf_json.reset()
-    logpath = accelize_drm.create_log_path(whoami())
-    conf_json['settings']['log_file_verbosity'] = 1
-    conf_json['settings']['log_file_type'] = 1
-    conf_json['settings']['log_file_path'] = logpath
-    conf_json['settings']['log_file_format'] = LOG_FORMAT_LONG
+    conf_json['settings'].update(basic_log_file.create(1, LOG_FORMAT_LONG))
     conf_json.save()
     test_file_path = 'test_dna_and_challenge_duplication.%d.%d.json' % (time(), randrange(0xFFFFFFFF))
     session_cnt = 0
@@ -246,12 +242,12 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
                     sleep(1)
             activators.autotest(is_activated=False)
             del drm_manager
-            wait_func_true(lambda: isfile(logpath), 10)
+            wait_func_true(lambda: isfile(basic_log_file._path), 10)
             if no_err:
                 session_cnt += 1
         async_cb.assert_NoError()
         # Parse log file
-        parse_and_save_challenge(logpath, REGEX_PATTERN, test_file_path)
+        parse_and_save_challenge(basic_log_file._path, REGEX_PATTERN, test_file_path)
 
     # Check validity
     assert session_cnt >= num_sessions
