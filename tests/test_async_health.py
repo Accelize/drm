@@ -502,11 +502,11 @@ def test_async_call_on_pause_when_health_is_enabled(accelize_drm, conf_json, cre
     health_line = 0
     stop_line = 0
     for i, line in enumerate(basic_log_file.read().split('\n')):
-        if search("'pause_session_request'\s*=\s*true", line, IGNORECASE):
+        if search(r"'pause_session_request'\s*=\s*true", line, IGNORECASE):
             pause_line = i
-        elif search('"request"\s*:\s*"health"', line, IGNORECASE):
+        elif search(r'"request"\s*:\s*"health"', line, IGNORECASE):
             health_line = i
-        elif search("'pause_session_request'\s*=\s*false", line, IGNORECASE):
+        elif search(r"'pause_session_request'\s*=\s*false", line, IGNORECASE):
             stop_line = i
     assert pause_line > 0 and health_line > 0 and stop_line > 0
     assert pause_line < health_line < stop_line
@@ -557,6 +557,6 @@ def test_no_async_call_on_pause_when_health_is_disabled(accelize_drm, conf_json,
     context = get_context()
     assert context['health_cnt'] == 0
     # Check no health request appeared in the log file
-    assert search('"request"\s*:\s*"health"', basic_log_file.read(), IGNORECASE) is None
+    assert search(r'"request"\s*:\s*"health"', basic_log_file.read(), IGNORECASE) is None
     assert get_proxy_error() is None
     basic_log_file.remove()

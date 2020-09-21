@@ -5,8 +5,9 @@ Run tests that help to improve coverage
 import pytest
 from time import sleep
 from flask import request
+from re import search, IGNORECASE
 
-from tests.proxy import get_context, set_context
+from tests.proxy import get_context, set_context, get_proxy_error
 
 
 @pytest.mark.no_parallel
@@ -34,9 +35,9 @@ def test_improve_coverage_httpCode2DrmCode(accelize_drm, conf_json, cred_json, a
     set_context(context)
     assert get_context() == context
 
-    with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+    with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
         drm_manager.activate()
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRM_WSError.error_code
+    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
     assert get_proxy_error() is None
     async_cb.assert_NoError()
 
@@ -65,7 +66,7 @@ def test_improve_coverage_getHostAndCardInfo(accelize_drm, conf_json, cred_json,
         sleep(5)
     finally:
         drm_manager.deactivate()
-    assert search('Host and CSP information verbosity:\s*0', basic_log_file.read(), IGNORECASE)
+    assert search(r'Host and CSP information verbosity:\s*0', basic_log_file.read(), IGNORECASE)
     basic_log_file.remove()
     async_cb.assert_NoError()
 
