@@ -51,7 +51,7 @@ def test_improve_coverage_getHostAndCardInfo(accelize_drm, conf_json, cred_json,
     async_cb = async_handler.create()
     async_cb.reset()
     conf_json['settings'].update(basic_log_file.create(1))
-    conf_json['settings']['host_data_verbosity'] = 0
+    conf_json['settings']['host_data_verbosity'] = 2
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(
@@ -66,7 +66,7 @@ def test_improve_coverage_getHostAndCardInfo(accelize_drm, conf_json, cred_json,
         sleep(5)
     finally:
         drm_manager.deactivate()
-    assert search(r'Host and CSP information verbosity:\s*0', basic_log_file.read(), IGNORECASE)
+    assert search(r'Host and CSP information verbosity:\s*2', basic_log_file.read(), IGNORECASE)
     basic_log_file.remove()
     async_cb.assert_NoError()
 

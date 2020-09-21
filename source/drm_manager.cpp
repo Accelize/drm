@@ -361,7 +361,7 @@ protected:
             sLogger->set_level( sLogConsoleVerbosity );
             spdlog::set_default_logger( sLogger );
         }
-        catch( const spdlog::spdlog_ex& ex ) {
+        catch( const spdlog::spdlog_ex& ex ) { //LCOV_EXCL_LINE
             std::cout << "Failed to initialize logging: " << ex.what() << std::endl; //LCOV_EXCL_LINE
         }
     }
@@ -412,7 +412,7 @@ protected:
             createFileLog( sLogFilePath, sLogFileType, sLogFileVerbosity, sLogFileFormat,
                     sLogFileRotatingSize, sLogFileRotatingNum, sLogFileAppend );
         }
-        catch( const spdlog::spdlog_ex& ex ) {
+        catch( const spdlog::spdlog_ex& ex ) {  //LCOV_EXCL_LINE
             std::cout << "Failed to update logging settings: " << ex.what() << std::endl; //LCOV_EXCL_LINE
         }
     }
@@ -568,8 +568,7 @@ protected:
         checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
 
         if ( index >= rwData.size() )
-            Unreachable( "Index {} overflows the Mailbox memory; max index is {}. ",
-                index, rwData.size()-1 ); //LCOV_EXCL_LINE
+            Unreachable( "Index {} overflows the Mailbox memory; max index is {}. ", index, rwData.size()-1 ); //LCOV_EXCL_LINE
 
         Debug( "Read '{}' in Mailbox at index {}", rwData[index], index );
         return rwData[index];
@@ -583,10 +582,9 @@ protected:
         checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
 
         if ( (uint32_t)index >= rwData.size() )
-            Unreachable( "Index {} overflows the Mailbox memory; max index is {}. ",
-                    index, rwData.size()-1 ); //LCOV_EXCL_LINE
+            Unreachable( "Index {} overflows the Mailbox memory; max index is {}. ", index, rwData.size()-1 ); //LCOV_EXCL_LINE
         if ( index + nb_elements > rwData.size() )
-            Throw( DRM_BadArg, "Trying to read out of Mailbox memory space; size is {}", rwData.size() );
+            Unreachable( "Trying to read out of Mailbox memory space; size is {}", rwData.size() ); //LCOV_EXCL_LINE
 
         auto first = rwData.cbegin() + index;
         auto last = rwData.cbegin() + index + nb_elements;
@@ -604,8 +602,7 @@ protected:
         checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
 
         if ( index >= rwData.size() )
-            Unreachable( "Index {} overflows the Mailbox memory: max index is {}. ",
-                index, rwData.size()-1 ); //LCOV_EXCL_LINE
+            Unreachable( "Index {} overflows the Mailbox memory: max index is {}. ", index, rwData.size()-1 ); //LCOV_EXCL_LINE
         rwData[index] = value;
         checkDRMCtlrRet( getDrmController().writeMailboxFileRegister( rwData, rwSize ) );
         Debug( "Wrote '{}' in Mailbox at index {}", value, index );
@@ -619,8 +616,7 @@ protected:
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
         checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
         if ( index >= rwData.size() )
-            Unreachable( "Index {} overflows the Mailbox memory: max index is {}. ",
-                    index, rwData.size()-1 ); //LCOV_EXCL_LINE
+            Unreachable( "Index {} overflows the Mailbox memory: max index is {}. ", index, rwData.size()-1 ); //LCOV_EXCL_LINE
         if ( index + value_vec.size() > rwData.size() )
             Throw( DRM_BadArg, "Trying to write out of Mailbox memory space: {}", rwData.size() );
         std::copy( std::begin( value_vec ), std::end( value_vec ), std::begin( rwData ) + index );
@@ -2176,8 +2172,7 @@ public:
                     case ParameterKey::license_type: {
                         auto it = LicenseTypeStringMap.find( mLicenseType );
                         if ( it == LicenseTypeStringMap.end() )
-                            Unreachable( "License_type '{}' is missing in LicenseTypeStringMap. ",
-                                (uint32_t)mLicenseType ); //LCOV_EXCL_LINE
+                            Unreachable( "License_type '{}' is missing in LicenseTypeStringMap. ", (uint32_t)mLicenseType ); //LCOV_EXCL_LINE
                         std::string license_type_str = it->second;
                         json_value[key_str] = license_type_str;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
