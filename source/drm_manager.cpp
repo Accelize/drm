@@ -647,41 +647,29 @@ protected:
     unsigned int readDrmAddress( const uint32_t address, uint32_t& value ) const {
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
         int ret = f_read_register( address, &value );
-        if ( ret != 0 ) {
+        if ( ret )
             Error( "Error in read register callback, errcode = {}: failed to read address {}", ret, address );
-            return (uint32_t)(-1);
-        }
-        Debug2( "Read DRM address 0x{:x} = 0x{:08x}", address, value );
-        return 0;
+        else
+            Debug2( "Read DRM address 0x{:x} = 0x{:08x}", address, value );
+        return ret;
     }
 
     unsigned int readDrmRegister( const std::string& regName, uint32_t& value ) const {
-        int ret = readDrmAddress( getDrmRegisterOffset( regName ), value );
-        if ( ret != 0 ) {
-            Error( "Error in read register callback, errcode = {}: failed to read register {}", ret, regName );
-            return (uint32_t)(-1);
-        }
-        return 0;
+        return readDrmAddress( getDrmRegisterOffset( regName ), value );
     }
 
     unsigned int writeDrmAddress( const uint32_t address, uint32_t value ) const {
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
         int ret = f_write_register( address, value );
-        if ( ret ) {
+        if ( ret )
             Error( "Error in write register callback, errcode = {}: failed to write {} to address {}", ret, value, address );
-            return (uint32_t)(-1);
-        }
-        Debug2( "Wrote DRM address 0x{:x} = 0x{:08x}", address, value );
-        return 0;
+        else
+            Debug2( "Wrote DRM address 0x{:x} = 0x{:08x}", address, value );
+        return ret;
     }
 
     unsigned int writeDrmRegister( const std::string& regName, uint32_t value ) const {
-        int ret = writeDrmAddress( getDrmRegisterOffset( regName ), value );
-        if ( ret ) {
-            Error( "Error in write register callback, errcode = {}: failed to write {} to register {}", ret, value, regName );
-            return (uint32_t)(-1);
-        }
-        return 0;
+        return writeDrmAddress( getDrmRegisterOffset( regName ), value );
     }
 
     void lockDrmToInstance() {
@@ -720,7 +708,7 @@ protected:
 
         if ( drmMajor < HDK_COMPATIBILITY_LIMIT_MAJOR ) {
             Throw( DRM_CtlrError,
-                    "This DRM Lib {} is not compatible with the DRM HDK version {}: To be compatible HDK version shall be > or equal to {}.{}.x",
+                    "This DRM Library version {} is not compatible with the DRM HDK version {}: To be compatible HDK version shall be > or equal to {}.{}.x",
                     DRMLIB_VERSION, drmVersionDot, HDK_COMPATIBILITY_LIMIT_MAJOR, HDK_COMPATIBILITY_LIMIT_MINOR );
         } else if ( ( drmMajor == HDK_COMPATIBILITY_LIMIT_MAJOR ) && ( drmMinor < HDK_COMPATIBILITY_LIMIT_MINOR ) ) {
             Throw( DRM_CtlrError,
@@ -755,7 +743,7 @@ protected:
         uint32_t mbSize = getUserMailboxSize();
 
         // Check mailbox size
-        if ( mbSize >= 0x10000 ) {
+        if ( mbSize >= 0x8000 ) {
             Debug( "DRM Communication Self-Test 2 failed: bad size {}", mbSize );
             Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Unexpected mailbox size ({} > 0x10000).\n{}", mbSize, DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
         }
@@ -2082,7 +2070,7 @@ public:
                     try {
                         stopSession();
                     } catch( const Exception &e ) {
-                        Debug( "Failed to stop pending session: {}", e.what() );
+                        Warning( "Failed to stop pending session: {}", e.what() );
                     }
                 }
                 startSession();
