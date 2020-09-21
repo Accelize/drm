@@ -5,10 +5,10 @@ Test metering and floating behaviors of DRM Library.
 import pytest
 from time import sleep
 from random import randint
-from datetime import datetime
 from itertools import groupby
 from re import match
 from flask import request
+from datetime import datetime, timedelta
 
 from tests.conftest import wait_deadline, wait_func_true
 from tests.proxy import get_context, set_context
@@ -130,3 +130,51 @@ def test_topic1_corrupted_metering(accelize_drm, conf_json, cred_json, async_han
         finally:
             drm_manager.deactivate()
 
+
+@pytest.mark.lgdn
+def test_endurance(accelize_drm, conf_json, cred_json, async_handler):
+    """Test the continuity of service for a long period"""
+    from random import randint
+    driver = accelize_drm.pytest_fpga_driver[0]
+    activators = accelize_drm.pytest_fpga_activators[0]
+    async_cb = async_handler.create()
+    cred_json.set_user('accelize_accelerator_test_02')
+
+    # Get test duration
+    try:
+        test_duration = accelize_drm.pytest_params['duration']
+    except:
+        test_duration = 24*3600  # 1 day
+        print('Warning: Missing argument "duration". Using default value %d' % test_duration)
+
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    assert not drm_manager.get('license_status')
+    activators[0].autotest(is_activated=False)
+    try:
+        drm_manager.activate()
+        start = datetime.now()
+        lic_duration = drm_manager.get('license_duration')
+        assert drm_manager.get('license_status')
+        activators[0].autotest(is_activated=True)
+        activators[0].check_coin(drm_manager.get('metered_ta'))
+        while True:
+            assert drm_manager.get('license_status')
+            activators[0].generate_coin(randint(1,10))
+            activators[0].check_coin(drm_manager.get('metered_data'))
+            seconds_left = test_duration - (datetime.now() - start).total_seconds()
+            print('Remaining time: %0.1fs  /  current coins=%d' % (seconds_left, activators[0].metering_data))
+            if seconds_left < 0:
+                break
+            sleep(randint(10, 3*lic_duration))
+    finally:
+        drm_manager.deactivate()
+        assert not drm_manager.get('license_status')
+        activators[0].autotest(is_activated=False)
+        elapsed = datetime.now() - start
+        print('Endurance test has completed:', str(timedelta(seconds=elapsed.total_seconds())))

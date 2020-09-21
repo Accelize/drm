@@ -228,8 +228,12 @@ protected:
             Debug( "{} threw an exception", #func );                                   \
             Throw( DRM_CtlrError, e.what() );                                          \
         }                                                                              \
-        if ( errcode )                                                                 \
+        if ( errcode ) {                                                               \
+            bool security_bit(false);                                                  \
+            getDrmController().readSecurityAlertStatusRegister( security_bit );        \
+            Debug( "Security bit status: {}", security_bit );                          \
             Unreachable( "DRM Controller API failed with error code: {}.", errcode );  \
+        }                                                                              \
     }
 
     Impl( const std::string& conf_file_path,

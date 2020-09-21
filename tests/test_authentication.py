@@ -10,7 +10,6 @@ from re import match, search, finditer, MULTILINE, IGNORECASE
 from time import sleep, time
 from json import loads, dumps
 from datetime import datetime, timedelta
-from random import randint
 from multiprocessing import Process
 import requests
 from flask import request
@@ -148,7 +147,6 @@ def test_authentication_token_renewal(accelize_drm, conf_json, cred_json, async_
 @pytest.mark.endurance
 def test_authentication_endurance(accelize_drm, conf_json, cred_json, async_handler):
     """Test the continuity of service for a long period"""
-    from random import sample
     driver = accelize_drm.pytest_fpga_driver[0]
     activators = accelize_drm.pytest_fpga_activators[0]
     async_cb = async_handler.create()
