@@ -37,16 +37,19 @@ def test_improve_coverage_httpCode2DrmCode(accelize_drm, conf_json, cred_json, a
     with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
         drm_manager.activate()
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRM_WSError.error_code
+    assert get_proxy_error() is None
     async_cb.assert_NoError()
 
 
-def test_improve_coverage_getHostAndCardInfo(accelize_drm, conf_json, cred_json, async_handler, live_server):
+def test_improve_coverage_getHostAndCardInfo(accelize_drm, conf_json, cred_json, async_handler,
+                                             basic_log_file):
     """
     Improve coverage of ws_client.cpp/h
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
+    conf_json['settings'].update(basic_log_file.create(1))
     conf_json['settings']['host_data_verbosity'] = 0
     conf_json.save()
 
@@ -62,5 +65,7 @@ def test_improve_coverage_getHostAndCardInfo(accelize_drm, conf_json, cred_json,
         sleep(5)
     finally:
         drm_manager.deactivate()
+    assert search('Host and CSP information verbosity:\s*0', basic_log_file.read(), IGNORECASE)
+    basic_log_file.remove()
     async_cb.assert_NoError()
 
