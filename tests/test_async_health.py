@@ -418,9 +418,11 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_s
     assert get_context() == context
 
     # First, get license duration to align health period on it
-    drm_manager.activate()
-    lic_dur = drm_manager.get('license_duration')
-    drm_manager.deactivate()
+    try:
+        drm_manager.activate()
+        lic_dur = drm_manager.get('license_duration')
+    finally:
+        drm_manager.deactivate()
 
     # Adjust health period to license duration
     healthPeriod = lic_dur
@@ -431,9 +433,9 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_s
     set_context(context)
     assert get_context() == context
 
-    drm_manager.activate()
-    assert drm_manager.get('health_period') == healthPeriod
     try:
+        drm_manager.activate()
+        assert drm_manager.get('health_period') == healthPeriod
         wait_func_true(lambda: get_context()['nb_genlic'] >= nb_genlic,
                 timeout=lic_dur * nb_genlic + 2)
         session_id_exp = drm_manager.get('session_id')

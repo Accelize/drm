@@ -98,10 +98,11 @@ public:
     ~CurlEasyPost();
 
     double getTotalTime();
+    uint32_t getConnectionTimeoutMS() const { return mConnectionTimeoutMS; }
 
     void setVerbosity( const uint32_t verbosity );
-
     void setHostResolves( const Json::Value& host_json );
+    void setConnectionTimeoutMS( const uint32_t timeoutMS ) { mConnectionTimeoutMS = timeoutMS; }
 
     template<class T>
     void setURL(T&& url) {
@@ -123,9 +124,6 @@ public:
         curl_easy_setopt( curl, CURLOPT_POSTFIELDSIZE, data.back().size() );
         curl_easy_setopt( curl, CURLOPT_POSTFIELDS, data.back().c_str() );
     }
-
-    void setConnectionTimeoutMS( const uint32_t timeoutMS ) { mConnectionTimeoutMS = timeoutMS; }
-    uint32_t getConnectionTimeoutMS() const { return mConnectionTimeoutMS; }
 
     uint32_t perform( std::string* resp, std::chrono::steady_clock::time_point& deadline );
     uint32_t perform( std::string* resp, int32_t timeout );

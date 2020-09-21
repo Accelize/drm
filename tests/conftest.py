@@ -479,12 +479,6 @@ def accelize_drm(pytestconfig):
     if build_source_dir.startswith('@'):
         build_source_dir = realpath('.')
 
-    # Create pytest artifacts directory
-    pytest_artifacts_dir = join(pytestconfig.getoption("artifacts_dir"), 'pytest_artifacts')
-    if not isdir(pytest_artifacts_dir):
-        makedirs(pytest_artifacts_dir)
-    print('pytest artifacts directory: ', pytest_artifacts_dir)
-
     # Get Ref Designs available
     ref_designs = RefDesign(join(build_source_dir, 'tests', 'refdesigns', fpga_driver_name))
 
@@ -794,7 +788,7 @@ def conf_json(request, pytestconfig, tmpdir):
         else:
             log_param['log_file_path'] = realpath("./tox_drmlib_t%f_pid%d.log" % (time(), getpid()))
         log_param['log_file_verbosity'] = pytestconfig.getoption("logfilelevel")
-        log_param['log_file_append'] = True if pytestconfig.getoption("logfileappend") else False
+        log_param['log_file_append'] = pytestconfig.getoption("logfileappend")
     # Save config to JSON file
     json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param, design=design_param)
     json_conf.save()
