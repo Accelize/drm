@@ -362,7 +362,7 @@ protected:
             spdlog::set_default_logger( sLogger );
         }
         catch( const spdlog::spdlog_ex& ex ) {
-            std::cout << "Failed to initialize logging: " << ex.what() << std::endl;
+            std::cout << "Failed to initialize logging: " << ex.what() << std::endl; //LCOV_EXCL_LINE
         }
     }
 
@@ -413,7 +413,7 @@ protected:
                     sLogFileRotatingSize, sLogFileRotatingNum, sLogFileAppend );
         }
         catch( const spdlog::spdlog_ex& ex ) {
-            std::cout << "Failed to update logging settings: " << ex.what() << std::endl;
+            std::cout << "Failed to update logging settings: " << ex.what() << std::endl; //LCOV_EXCL_LINE
         }
     }
 
@@ -2464,7 +2464,6 @@ public:
                                wsVerbosity );
                         break;
                     }
-
                     case ParameterKey::ParameterKeyCount: {
                         uint32_t count = static_cast<uint32_t>( ParameterKeyCount );
                         json_value[key_str] = count;

@@ -718,6 +718,23 @@ def create_app(url):
                 response_json['metering']['healthPeriod'] = context['healthPeriod']
         return Response(dumps(response_json), response.status_code, headers)
 
+    ##############################################################################
+    # test_improve_coverage.py
+
+    # test_improve_coverage_ws_client functions
+    @app.route('/test_improve_coverage_ws_client/o/token/', methods=['GET', 'POST'])
+    def otoken__test_improve_coverage_ws_client():
+        return redirect(request.url_root + '/o/token/', code=307)
+
+    @app.route('/test_improve_coverage_ws_client/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_improve_coverage_ws_client():
+        global context, lock
+        with lock:
+            return ({'error':'Generate error on purpose'}, context['error_code'])
+
+    @app.route('/test_improve_coverage_ws_client/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_improve_coverage_ws_client():
+        return redirect(request.url_root + '/auth/metering/health/', code=307)
     return app
 
 
