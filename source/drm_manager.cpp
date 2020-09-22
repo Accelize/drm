@@ -747,9 +747,10 @@ protected:
         uint32_t mbSize = getUserMailboxSize();
 
         // Check mailbox size
-        if ( mbSize >= 0x8000 ) {
+        uint32_t mbSizeMax = 0x8000;
+        if ( mbSize >= mbSizeMax ) {
             Debug( "DRM Communication Self-Test 2 failed: bad size {}", mbSize );
-            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Unexpected mailbox size ({} > 0x10000).\n{}", mbSize, DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
+            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Unexpected mailbox size ({} > {}).\n{}", mbSize, mbSizeMax, DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
         }
         Debug( "DRM Communication Self-Test 2: test size of mailbox passed" );
 

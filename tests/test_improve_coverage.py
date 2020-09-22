@@ -5,7 +5,8 @@ Run tests that help to improve coverage
 import pytest
 from time import sleep
 from flask import request
-from re import search, IGNORECASE
+from re import search, findall, IGNORECASE
+from ctypes import c_uint, byref
 
 from tests.proxy import get_context, set_context, get_proxy_error
 
@@ -76,7 +77,7 @@ def test_improve_coverage_readDrmAddress(accelize_drm, conf_json, cred_json, asy
     """
     Improve coverage of the readDrmAddress function
     """
-    def my_bad_read_register(register_offset, returned_data, context):
+    def my_bad_read_register(register_offset, returned_data):
         return 123
 
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -104,7 +105,7 @@ def test_improve_coverage_writeDrmAddress(accelize_drm, conf_json, cred_json, as
     """
     Improve coverage of the writeDrmAddress function
     """
-    def my_bad_write_register(register_offset, data_to_write, context):
+    def my_bad_write_register(register_offset, data_to_write):
         print('register_offset, data_to_write =', register_offset, data_to_write)
         return 123
 
@@ -128,10 +129,10 @@ def test_improve_coverage_writeDrmAddress(accelize_drm, conf_json, cred_json, as
     basic_log_file.remove()
 
 
-def test_improve_coverage_runBistLevel2(accelize_drm, conf_json, cred_json, async_handler,
+def test_improve_coverage_runBistLevel2_bad_size(accelize_drm, conf_json, cred_json, async_handler,
                                          basic_log_file):
     """
-    Improve coverage of the runBistLevel2 function
+    Improve coverage of the runBistLevel2 function: generate bad mailbox size
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -139,12 +140,10 @@ def test_improve_coverage_runBistLevel2(accelize_drm, conf_json, cred_json, asyn
     conf_json['settings'].update(basic_log_file.create(1))
     conf_json.save()
 
-    context = {'page':0}
-
     def my_bad_read_register(register_offset, returned_data, ctx):
         ret = driver.read_register_callback(register_offset, returned_data)
         if ctx['page'] == 5 and register_offset == 4:
-            returned_data = 0x10000 + 4
+            returned_data.contents.value += 0x8000
         return ret
 
     def my_bad_write_register(register_offset, data_to_write, ctx):
@@ -152,7 +151,9 @@ def test_improve_coverage_runBistLevel2(accelize_drm, conf_json, cred_json, asyn
             ctx['page'] = data_to_write
         return driver.write_register_callback(register_offset, data_to_write)
 
-    with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
+    context = {'page':0}
+
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         drm_manager = accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
@@ -160,10 +161,81 @@ def test_improve_coverage_runBistLevel2(accelize_drm, conf_json, cred_json, asyn
             lambda x,y: my_bad_write_register(x,y, context),
             async_cb.callback
         )
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
-    assert search(r'Error in write register callback, errcode = 123: failed to write', basic_log_file.read(), IGNORECASE)
+    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+    assert search(r'DRM Communication Self-Test 2 failed: bad size', basic_log_file.read(), IGNORECASE)
     async_cb.assert_NoError()
     basic_log_file.remove()
+
+
+def test_improve_coverage_runBistLevel2_bad_data(accelize_drm, conf_json, cred_json, async_handler,
+                                         basic_log_file):
+    """
+    Improve coverage of the runBistLevel2 function: generate bad data
+    """
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    async_cb.reset()
+    conf_json['settings'].update(basic_log_file.create(1))
+    conf_json.save()
+
+    def my_bad_read_register(register_offset, returned_data, ctx):
+        ret = driver.read_register_callback(register_offset, returned_data)
+        if ctx['page'] == 5 and register_offset == 4:
+            rw_size = returned_data.contents.value & 0xFFFF
+            ro_size = returned_data.contents.value >> 16
+            ctx['rwOffset'] = 4 * (ro_size + rw_size) + 4
+        return ret
+
+    def my_bad_write_register(register_offset, data_to_write, ctx):
+        if register_offset == 0:
+            ctx['page'] = data_to_write
+        if ctx['page'] == 5 and register_offset >= ctx['rwOffset'] and data_to_write != 0 and data_to_write != 0xFFFFFFFF:
+                data_to_write += 1
+        return driver.write_register_callback(register_offset, data_to_write)
+
+    context = {'page':0, 'rwOffset':0x10000}
+
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            lambda x,y: my_bad_read_register(x,y, context),
+            lambda x,y: my_bad_write_register(x,y, context),
+            async_cb.callback
+        )
+    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+    assert len(findall(r'Mailbox\[\d+\]=0x[0-9A-F]{8} != 0x[0-9A-F]{8}', basic_log_file.read(), IGNORECASE)) == 1
+    assert search(r'DRM Communication Self-Test 2 failed: random test failed.', basic_log_file.read(), IGNORECASE)
+    async_cb.assert_NoError()
+    basic_log_file.remove()
+
+
+def test_improve_coverage_getDesignInfo(accelize_drm, conf_json, cred_json, async_handler):
+    """
+    Improve coverage of the getDesignInfo function
+    """
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    async_cb.reset()
+
+    def my_read_register(register_offset, returned_data, ctx):
+        ret = driver.read_register_callback(register_offset, returned_data)
+        if ctx['page'] == 5 and register_offset == 4:
+            returned_data.contents.value = 0
+        return ret
+
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    try:
+        drm_manager.activate()
+    finally:
+        drm_manager.deactivate()
+    async_cb.assert_NoError()
 
 
 def test_improve_coverage_getMeteringHeader(accelize_drm, conf_json, cred_json, async_handler):
@@ -173,7 +245,7 @@ def test_improve_coverage_getMeteringHeader(accelize_drm, conf_json, cred_json, 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    json_output['design']['udid'] = 'udid';
+    conf_json['design']['udid'] = '2fb8d54f-920e-4d69-aa56-197c7c72d8a3';
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(
