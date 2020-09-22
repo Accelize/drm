@@ -577,21 +577,59 @@ def create_app(url):
         request_type = request_json['request']
         return ({'error':'Force retry for testing'}, 408)
 
-    # test_long_to_short_retry_switch functions
-    @app.route('/test_long_to_short_retry_switch/o/token/', methods=['GET', 'POST'])
-    def otoken__test_long_to_short_retry_switch():
+    # test_long_to_short_retry_switch_on_authentication functions
+    @app.route('/test_long_to_short_retry_switch_on_authentication/o/token/', methods=['GET', 'POST'])
+    def otoken__test_long_to_short_retry_switch_on_authentication():
         return redirect(request.url_root + '/o/token/', code=307)
 
-    @app.route('/test_long_to_short_retry_switch/auth/metering/health/', methods=['GET', 'POST'])
-    def health__test_long_to_short_retry_switch():
+    @app.route('/test_long_to_short_retry_switch_on_authentication/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_long_to_short_retry_switch_on_authentication():
         return redirect(request.url_root + '/auth/metering/health/', code=307)
 
-    @app.route('/test_long_to_short_retry_switch/auth/metering/genlicense/', methods=['GET', 'POST'])
-    def genlicense__test_long_to_short_retry_switch():
+    @app.route('/test_long_to_short_retry_switch_on_authentication/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_long_to_short_retry_switch_on_authentication():
         global context, lock
         with lock:
             start = str(datetime.now())
-            new_url = request.url.replace(request.url_root+'test_long_to_short_retry_switch', url)
+            new_url = request.url.replace(request.url_root+'test_long_to_short_retry_switch_on_authentication', url)
+            request_json = request.get_json()
+            request_type = request_json['request']
+            if context['cnt'] < 2 or request_type == 'close':
+                response = post(new_url, json=request_json, headers=request.headers)
+                assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                        indent=4, sort_keys=True), response.status_code, response.text)
+                excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+                headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+                response_json = response.json()
+                if context['cnt'] == 0:
+                    timeoutSecond = context['timeoutSecondFirst2']
+                else:
+                    timeoutSecond = context['timeoutSecond']
+                response_json['metering']['timeoutSecond'] = timeoutSecond
+                context['post'] = (response_json, headers)
+                response_status_code = response.status_code
+            else:
+                response_json, headers = context['post']
+                response_status_code = 408
+                context['data'].append( (request_type,start,str(datetime.now())) )
+            context['cnt'] += 1
+        return Response(dumps(response_json), response_status_code, headers)
+
+    # test_long_to_short_retry_switch_on_license functions
+    @app.route('/test_long_to_short_retry_switch_on_license/o/token/', methods=['GET', 'POST'])
+    def otoken__test_long_to_short_retry_switch_on_license():
+        return redirect(request.url_root + '/o/token/', code=307)
+
+    @app.route('/test_long_to_short_retry_switch_on_license/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_long_to_short_retry_switch_on_license():
+        return redirect(request.url_root + '/auth/metering/health/', code=307)
+
+    @app.route('/test_long_to_short_retry_switch_on_license/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_long_to_short_retry_switch_on_license():
+        global context, lock
+        with lock:
+            start = str(datetime.now())
+            new_url = request.url.replace(request.url_root+'test_long_to_short_retry_switch_on_license', url)
             request_json = request.get_json()
             request_type = request_json['request']
             if context['cnt'] < 2 or request_type == 'close':
@@ -735,6 +773,28 @@ def create_app(url):
     @app.route('/test_improve_coverage_ws_client/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_improve_coverage_ws_client():
         return redirect(request.url_root + '/auth/metering/health/', code=307)
+
+    # test_improve_coverage_setLicense functions
+    @app.route('/test_improve_coverage_setLicense/o/token/', methods=['GET', 'POST'])
+    def otoken__test_improve_coverage_setLicense():
+        return redirect(request.url_root + '/o/token/', code=307)
+
+    @app.route('/test_improve_coverage_setLicense/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_improve_coverage_setLicense():
+        global context, lock
+        new_url = request.url.replace(request.url_root+'test_improve_coverage_setLicense', url)
+        request_json = request.get_json()
+        response = post(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+            indent=4, sort_keys=True), response.status_code, response.text)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        response_json['metering']['healthPeriod'] = 0
+        if request_json['request'] == 'running':
+            response_json['metering'] = 'test'
+        return Response(dumps(response_json), response.status_code, headers)
+
     return app
 
 

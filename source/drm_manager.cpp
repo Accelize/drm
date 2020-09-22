@@ -218,22 +218,24 @@ protected:
     };
 
 
-    #define checkDRMCtlrRet( func ) {                                                  \
-        unsigned int errcode = DRM_OK;                                                 \
-        try {                                                                          \
-            std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );         \
-            errcode = func;                                                            \
-            Debug( "{} returned {}", #func, errcode );                                 \
-        } catch( const std::exception &e ) {                                           \
-            Debug( "{} threw an exception", #func );                                   \
-            Throw( DRM_CtlrError, e.what() );                                          \
-        }                                                                              \
-        if ( errcode ) {                                                               \
-            bool security_bit(false);                                                  \
-            getDrmController().readSecurityAlertStatusRegister( security_bit );        \
-            Debug( "Security bit status: {}", security_bit );                          \
-            Unreachable( "DRM Controller API failed with error code: {}.", errcode );  \
-        }                                                                              \
+    #define checkDRMCtlrRet( func ) {                                                                   \
+        unsigned int errcode = DRM_OK;                                                                  \
+        uint32_t status, error;                                                                         \
+        try {                                                                                           \
+            std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );                          \
+            errcode = func;                                                                             \
+            Debug( "{} returned {}", #func, errcode );                                                  \
+            if ( errcode ) {                                                                            \
+                getDrmController().readStatusRegister( status );                                        \
+                getDrmController().readErrorRegister( error );                                          \
+                Error( "{} failed: DRM status register = 0x{:08X} and error register = 0x{:08X}", #func, status, error ); \
+            }                                                                                           \
+        } catch( const std::exception &e ) {                                                            \
+            getDrmController().readStatusRegister( status );                                            \
+            getDrmController().readErrorRegister( error );                                              \
+            Error( "{} threw an exception: DRM status register = 0x{:08X} and error register = 0x{:08X}", #func, status, error ); \
+            Throw( DRM_CtlrError, e.what() );                                                           \
+        }                                                                                               \ 
     }
 
     Impl( const std::string& conf_file_path,
@@ -957,17 +959,19 @@ protected:
         std::vector<std::string> vlnvFile;
         std::string mailboxReadOnly;
 
+        // Get information from DRM Controller
+        getDesignInfo( drmVersion, dna, vlnvFile, mailboxReadOnly );
+
         // Fulfill application section
         if ( !mUDID.empty() )
             json_output["udid"] = mUDID;
+        else if ( mailboxReadOnly.empty() )
+            Throw( DRM_BadArg, "UDID and product ID cannot be both missing" );
         if ( !mBoardType.empty() )
             json_output["boardType"] = mBoardType;
         json_output["mode"] = (uint8_t)mLicenseType;
         if ( !isNodeLockedMode() )
             json_output["drm_frequency_init"] = mFrequencyInit;
-
-        // Get information from DRM Controller
-        getDesignInfo( drmVersion, dna, vlnvFile, mailboxReadOnly );
 
         // Fulfill with DRM section
         json_output["drmlibVersion"] = DRMLIB_VERSION;
@@ -1303,8 +1307,6 @@ protected:
                 Warning( "'timeoutSecond' field sent by License WS must not be 0" );
 
         } catch( const Exception &e ) {
-            if ( e.getErrCode() != DRM_BadFormat )
-                throw;
             Throw( DRM_WSRespError, "Malformed response from License Web Service: {}", e.what() );
         }
 
@@ -1312,29 +1314,13 @@ protected:
 
         if ( mLicenseCounter == 0 ) {
             // Load key
-            bool activationDone( false );
-            uint8_t activationErrorCode;
-            checkDRMCtlrRet( getDrmController().activate( licenseKey, activationDone, activationErrorCode ) );
-            if ( activationErrorCode ) {
-                Throw( DRM_CtlrError, "Failed to activate license on DRM controller, activationErr: 0x{:x}",
-                      activationErrorCode );
-            }
-            if ( !activationDone )
-                Throw( DRM_CtlrError, "Failed to activate license on DRM controller, activationDone: {}",
-                      activationDone );
+            checkDRMCtlrRet( getDrmController().activate( licenseKey ) );
             Debug( "Wrote license key of session ID: {}", mSessionID );
         }
 
         // Load license timer
         if ( !isNodeLockedMode() ) {
-            bool licenseTimerEnabled( false );
-            checkDRMCtlrRet( getDrmController().loadLicenseTimerInit( licenseTimer,
-                    licenseTimerEnabled ) );
-            if ( !licenseTimerEnabled ) {
-                Throw( DRM_CtlrError,
-                      "Failed to load license timer on DRM controller, licenseTimerEnabled: 0x{:x}",
-                      licenseTimerEnabled );
-            }
+            checkDRMCtlrRet( getDrmController().loadLicenseTimerInit( licenseTimer ) );
             Debug( "Wrote license timer #{} of session ID {} for a duration of {} seconds",
                     mLicenseCounter, mSessionID, mLicenseDuration );
         }
