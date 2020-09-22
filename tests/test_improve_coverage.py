@@ -308,14 +308,16 @@ def test_improve_coverage_setLicense(accelize_drm, conf_json, cred_json, async_h
     assert 'Malformed response from License Web Service:' in async_cb.message
 
 
-def test_improve_coverage_detectDrmFrequencyMethod1(accelize_drm, conf_json, cred_json, async_handler):
+def test_improve_coverage_detectDrmFrequencyMethod1(accelize_drm, conf_json, cred_json, async_handler,
+                                                    basic_log_file):
     """
     Improve coverage of the detectDrmFrequencyMethod1 function
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    json_output['settings']['bypass_frequency_detection'] = True;
+    conf_json['drm']['bypass_frequency_detection'] = True;
+    conf_json['settings'].update(basic_log_file.create(1))
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(
@@ -329,51 +331,8 @@ def test_improve_coverage_detectDrmFrequencyMethod1(accelize_drm, conf_json, cre
         drm_manager.activate()
     finally:
         drm_manager.deactivate()
+    log_content = basic_log_file.read()
+    assert search(r'Use dedicated counter to compute DRM frequency', log_content, IGNORECASE) is None
+    assert search(r'Frequency detection counter after', log_content, IGNORECASE) is None
     async_cb.assert_NoError()
-
-
-def test_improve_coverage_detectDrmFrequencyMethod2(accelize_drm, conf_json, cred_json, async_handler):
-    """
-    Improve coverage of the detectDrmFrequencyMethod2 function
-    """
-    driver = accelize_drm.pytest_fpga_driver[0]
-    fpga_image_bkp = driver.fpga_image
-    async_cb = async_handler.create()
-    async_cb.reset()
-    refdesign = accelize_drm.pytest_ref_designs
-    # First instanciate an object to get the HDK compatbility version
-    try:
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        HDK_Limit = float(drm_manager.get('hdk_compatibility'))
-        del drm_manager
-    except:
-        HDK_Limit = 3.1
-    # Then test all HDK versions that are compatible
-    refdesignByMajor = ((float(match(r'^(\d+.\d+)', x).group(1)), x) for x in refdesign.hdk_versions)
-    tested = False
-    for num, versions in groupby(refdesignByMajor, lambda x: x[0]):
-        if num >= HDK_Limit:
-            # Program FPGA with lastest HDK per major number
-            print('Testing HDK version %s is compatible ...' % num)
-            hdk = sorted((e[1] for e in versions))[-1]
-            image_id = refdesign.get_image_id(hdk)
-            driver.program_fpga(image_id)
-            drm_manager = accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            )
-            try:
-                drm_manager.activate()
-            finally:
-                drm_manager.deactivate()
-            async_cb.assert_NoError()
-            break
+    basic_log_file.remove()

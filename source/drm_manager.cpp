@@ -218,24 +218,22 @@ protected:
     };
 
 
-    #define checkDRMCtlrRet( func ) {                                                                   \
-        unsigned int errcode = DRM_OK;                                                                  \
-        uint32_t status, error;                                                                         \
-        try {                                                                                           \
-            std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );                          \
-            errcode = func;                                                                             \
-            Debug( "{} returned {}", #func, errcode );                                                  \
-            if ( errcode ) {                                                                            \
-                getDrmController().readStatusRegister( status );                                        \
-                getDrmController().readErrorRegister( error );                                          \
-                Error( "{} failed: DRM status register = 0x{:08X} and error register = 0x{:08X}", #func, status, error ); \
-            }                                                                                           \
-        } catch( const std::exception &e ) {                                                            \
-            getDrmController().readStatusRegister( status );                                            \
-            getDrmController().readErrorRegister( error );                                              \
-            Error( "{} threw an exception: DRM status register = 0x{:08X} and error register = 0x{:08X}", #func, status, error ); \
-            Throw( DRM_CtlrError, e.what() );                                                           \
-        }                                                                                               \ 
+    #define checkDRMCtlrRet( func ) {                                                           \
+        unsigned int errcode = DRM_OK;                                                          \
+        bool securityAlertBit;                                                                  \
+        try {                                                                                   \
+            std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );                  \
+            errcode = func;                                                                     \
+            Debug( "{} returned {}", #func, errcode );                                          \
+            if ( errcode ) {                                                                    \
+                getDrmController().readSecurityAlertStatusRegister( securityAlertBit );         \
+                Error( "{} failed (security alert bit: {})", #func, securityAlertBit );         \
+            }                                                                                   \
+        } catch( const std::exception &e ) {                                                    \
+            getDrmController().readSecurityAlertStatusRegister( securityAlertBit );             \
+            Error( "{} threw an exception (security alert bit: {})", #func, securityAlertBit ); \
+            Throw( DRM_CtlrError, e.what() );                                                   \
+        }                                                                                       \ 
     }
 
     Impl( const std::string& conf_file_path,
@@ -1354,14 +1352,12 @@ protected:
             Unreachable( "DRM Controller cannot be in both Node-Locked and Metering/Floating license modes. " ); //LCOV_EXCL_LINE
         if ( !isNodeLockedMode() ) {
             if ( !is_metered )
-                Throw( DRM_CtlrError, "DRM Controller failed to switch to Metering license mode" );
-            else
-                Debug( "DRM Controller is in Metering license mode" );
+                Unreachable( "DRM Controller failed to switch to Metering license mode" ); //LCOV_EXCL_LINE
+            Debug( "DRM Controller is in Metering license mode" );
         } else {
             if ( !is_nodelocked )
-                Throw( DRM_CtlrError, "DRM Controller failed to switch to Node-Locked license mode" );
-            else
-                Debug( "DRM Controller is in Node-Locked license mode" );
+                Unreachable( "DRM Controller failed to switch to Node-Locked license mode" ); //LCOV_EXCL_LINE
+            Debug( "DRM Controller is in Node-Locked license mode" );
         }
         Debug( "Provisioned license #{} on DRM controller", mLicenseCounter );
         mLicenseCounter ++;

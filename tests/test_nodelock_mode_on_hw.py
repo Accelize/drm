@@ -229,6 +229,38 @@ def test_nodelock_without_server_access(accelize_drm, conf_json, cred_json, asyn
     async_cb.assert_NoError()
 
 
+@pytest.mark.no_parallel
+@pytest.mark.hwtst
+def test_nodelock_without_malformed_license_file(accelize_drm, conf_json, cred_json, async_handler,
+                                        ws_admin):
+    """Test error is returned when no url is provided"""
+
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    cred_json.set_user('accelize_accelerator_test_03')  # User with a single nodelock license
+
+    # Switch to nodelock
+    conf_json.reset()
+    conf_json.addNodelock()
+    del conf_json['licensing']['url']
+    conf_json.save()
+    accelize_drm.clean_nodelock_env(conf_json=conf_json, cred_json=cred_json, ws_admin=ws_admin)
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
+        drm_manager.activate()
+    assert search(r"Error with service configuration file .* Missing parameter 'url' of type String",
+                  str(excinfo.value))
+    err_code = async_handler.get_error_code(str(excinfo.value))
+    assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
+    async_cb.assert_NoError()
+
+
 @pytest.mark.on_2_fpga
 @pytest.mark.minimum
 @pytest.mark.hwtst
