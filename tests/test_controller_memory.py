@@ -108,7 +108,7 @@ def test_empty_product_id(accelize_drm, conf_json, cred_json, async_handler, bas
                 async_cb.callback
             )
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
-        assert 'UDID and product ID cannot be both missing' in str(excinfo.value)
+        assert search(r'UDID and Product ID cannot be both missing', str(excinfo.value), IGNORECASE)
         assert search(r'Could not find Product ID information in DRM Controller Memory', basic_log_file.read(), IGNORECASE)
         async_cb.assert_NoError()
     finally:
