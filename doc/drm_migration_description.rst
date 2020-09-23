@@ -185,7 +185,7 @@ From v3.x to 4.x
   - `simu` folder name has been replaced by `sim` and `rtl` has been replace by `core`.
   - A DRM Controller BFM has been embedded directly in the Activator simulation model to unlock the IP without
     the need for an Internet connection to the Accelize License Web Server.
-  - `drm_activator_0x1003000b00010001_sim_pkg.(vhdl|sv)` file has been created to configure the simulation
+  - `drm_activator_0xVVVVLLLLNNNNVVVV_sim_pkg.(vhdl|sv)` file has been created to configure the simulation
     configuration and behavior. Parameters are detailed directly in the file.
   - A `constraints.sdc` file has been added in the `core` folder. It is required when `drm_aclk` and `ip_core_aclk`
     are different.

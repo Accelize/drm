@@ -6,7 +6,7 @@ import hashlib
 
 from copy import deepcopy
 from json import dump, load, dumps
-from os import environ, getpid, listdir, remove, makedirs, getcwd, urandom
+from os import environ, getpid, listdir, remove, makedirs, getcwd, urandom, rename
 from os.path import basename, dirname, expanduser, isdir, isfile, join, \
     realpath, splitext
 from random import randint
@@ -41,6 +41,16 @@ def bit_not(n, numbits=32):
 
 def cheap_hash(string_in, length=6):
     return hashlib.md5(string_in).hexdigest()[:length]
+
+
+def is_file_busy(path):
+    if not os.path.exists(path):
+        return False
+    try:
+        rename(path, path)
+        return False
+    except OSError as e:
+        return True
 
 
 def get_default_conf_json(licensing_server_url):
@@ -1127,7 +1137,7 @@ class BasicLogFile:
         return log_param
 
     def read(self):
-        wait_func_true(lambda: isfile(self._path), 10)
+        wait_func_true(lambda: not is_file_busy(self._path), 10)
         with open(self._path, 'rt') as f:
             log_content = f.read()
         return log_content

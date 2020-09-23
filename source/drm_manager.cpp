@@ -117,8 +117,6 @@ protected:
     // HDK version
     uint32_t mDrmVersion = 0;
 
-    bool mSecurityStop = false;
-
     // Composition
     std::unique_ptr<DrmWSClient> mWsClient;
     std::unique_ptr<DrmControllerLibrary::DrmControllerOperations> mDrmController;
@@ -161,10 +159,12 @@ protected:
     uint32_t mLicenseDuration = 0;        ///< Time duration in seconds of the license
     uint32_t mLicenseWaitPeriod = 5;      ///< Time in seconds to wait for the load of a new license
 
+    double mActivationTransmissionTimeoutMS = ACTIVATIONCODE_TRANSMISSION_TIMEOUT_MS;  ///< Timeout in milliseconds to complete the transmission of the activation code to the Activator's interface
+
     // To protect access to the metering data (to securize the segment ID check in HW)
     mutable std::mutex mMeteringAccessMutex;
 
-    // Design parameters
+    // DRM Frequency parameters
     int32_t mFrequencyInit = 0;
     int32_t mFrequencyCurr = 0;
     uint32_t mFrequencyDetectionPeriod = 100;       // in milliseconds
@@ -195,6 +195,7 @@ protected:
     std::future<void> mThreadHealth;
 
     // Threads exit elements
+    bool mSecurityStop{false};
     std::mutex mThreadExitMtx;
     std::condition_variable mThreadExitCondVar;
     bool mThreadExit{false};
@@ -206,8 +207,12 @@ protected:
     eHostDataVerbosity mHostDataVerbosity = eHostDataVerbosity::PARTIAL;
     Json::Value mSettings;
 
+    // Simulation flag
+    bool mSimulationFlag{false};
+
     // Debug parameters
     spdlog::level::level_enum mDebugMessageLevel;
+
 
     // User accessible parameters
     const std::map<ParameterKey, std::string> mParameterKeyMap = {
@@ -255,6 +260,8 @@ protected:
 
         mFrequencyInit = 0;
         mFrequencyCurr = 0;
+
+        mSimulationFlag = false;
 
         mDebugMessageLevel = spdlog::level::trace;
 
@@ -345,6 +352,16 @@ protected:
                         mBypassFrequencyDetection ).asBool();
             }
 
+            // Check ACCELIZE_DRM_SIMULATION variable existence
+            char* env_val = getenv( "ACCELIZE_DRM_SIMULATION" );
+            if (env_val == NULL) {
+                Debug( "ACCELIZE_DRM_SIMULATION variable is not defined" );
+            } else {
+                Warning( "Accelize DRM Library is configured for simulation" );
+                mSimulationFlag = true;
+                mActivationTransmissionTimeoutMS *= 1000;
+            }
+
         } catch( const Exception &e ) {
             if ( e.getErrCode() != DRM_BadFormat )
                 throw;
@@ -430,7 +447,7 @@ protected:
 
     bool findXrtUtility() {
         // Check XILINX_XRT environment variable existence
-        char * env_val = getenv( "XILINX_XRT" );
+        char* env_val = getenv( "XILINX_XRT" );
         if (env_val == NULL) {
             Debug( "XILINX_XRT variable is not defined" );
             mXrtPath.clear();
@@ -543,6 +560,7 @@ protected:
         settings["health_retry_sleep"] = mHealthRetrySleep;
         settings["ws_api_retry_duration"] = mWSApiRetryDuration;
         settings["host_data_verbosity"] = static_cast<uint32_t>( mHostDataVerbosity );
+        settings["simulation_flag"] = mSimulationFlag;
         return settings;
     }
 
@@ -1325,7 +1343,7 @@ protected:
         double mseconds( 0.0 );
         TClock::time_point timeStart = TClock::now();
 
-        while( mseconds < ACTIVATIONCODE_TRANSMISSION_TIMEOUT_MS ) {
+        while( mseconds < mActivationTransmissionTimeoutMS ) {
             checkDRMCtlrRet( getDrmController().readActivationCodesTransmittedStatusRegister(
                     activationCodesTransmitted ) );
             timeSpan = TClock::now() - timeStart;
