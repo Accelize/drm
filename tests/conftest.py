@@ -8,7 +8,7 @@ from copy import deepcopy
 from json import dump, load, dumps
 from os import environ, getpid, listdir, remove, makedirs, getcwd, urandom, rename
 from os.path import basename, dirname, expanduser, isdir, isfile, join, \
-    realpath, splitext
+    realpath, splitext, exists
 from random import randint
 from re import IGNORECASE, match, search
 from datetime import datetime
@@ -44,7 +44,7 @@ def cheap_hash(string_in, length=6):
 
 
 def is_file_busy(path):
-    if not os.path.exists(path):
+    if not exists(path):
         return False
     try:
         rename(path, path)

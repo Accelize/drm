@@ -274,7 +274,7 @@ def test_improve_coverage_getDesignInfo(accelize_drm, conf_json, cred_json, asyn
             async_cb.callback
         )
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
-    assert 'UDID and product ID cannot be both missing' in str(excinfo.value)
+    assert search(r'UDID and Product ID cannot be both missing', str(excinfo.value), IGNORECASE)
     assert search(r'Mailbox sizes: read-only=0', basic_log_file.read(), IGNORECASE)
     async_cb.assert_NoError()
     basic_log_file.remove()
