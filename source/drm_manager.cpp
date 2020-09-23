@@ -233,7 +233,7 @@ protected:
             getDrmController().readSecurityAlertStatusRegister( securityAlertBit );             \
             Error( "{} threw an exception (security alert bit: {})", #func, securityAlertBit ); \
             Throw( DRM_CtlrError, e.what() );                                                   \
-        }                                                                                       \ 
+        }                                                                                       \
     }
 
     Impl( const std::string& conf_file_path,
@@ -964,7 +964,7 @@ protected:
         if ( !mUDID.empty() )
             json_output["udid"] = mUDID;
         else if ( mailboxReadOnly.empty() )
-            Throw( DRM_BadArg, "UDID and product ID cannot be both missing" );
+            Throw( DRM_BadArg, "UDID and Product ID cannot be both missing" );
         if ( !mBoardType.empty() )
             json_output["boardType"] = mBoardType;
         json_output["mode"] = (uint8_t)mLicenseType;
@@ -1004,10 +1004,7 @@ protected:
                     Throw( DRM_BadFormat, "Failed to parse Read-Only Mailbox in DRM Controller: {}", e.what() );
                 throw;
             }
-        } else {
-            Debug( "Could not find product ID information in DRM Controller Mailbox" );
         }
-
         return json_output;
     }
 
@@ -1129,11 +1126,10 @@ protected:
                                                                      readOnlyMailboxData, readWriteMailboxData ) );
         Debug( "Mailbox sizes: read-only={}, read-write={}", readOnlyMailboxSize, readWriteMailboxSize );
         readOnlyMailboxData.push_back( 0 );
-        if ( readOnlyMailboxSize ) {
-            mailboxReadOnly = std::string( (char*)readOnlyMailboxData.data() );
+        mailboxReadOnly = std::string( (char*)readOnlyMailboxData.data() );
+        if ( mailboxReadOnly.empty() ) {
+            Debug( "Could not find Product ID information in DRM Controller Memory" );
         }
-        else
-            mailboxReadOnly = std::string("");
     }
 
     bool isSessionRunning()const  {
