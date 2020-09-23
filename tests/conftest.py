@@ -1103,7 +1103,7 @@ def app(pytestconfig):
 
 class BasicLogFile:
 
-    def __init__(self, basepath, verbosity, append, keep=False):
+    def __init__(self, basepath=getcwd(), verbosity=None, append=False, keep=False):
         self._basepath = basepath
         self._path = None
         self._verbosity = verbosity
@@ -1120,9 +1120,7 @@ class BasicLogFile:
         log_param['log_file_type'] = 1
         log_param['log_file_append'] = self._append
         log_param['log_file_format'] = format
-        if self._verbosity is None:
-            log_param['log_file_verbosity'] = self._verbosity
-        elif verbosity >= self._verbosity:
+        if self._verbosity is not None and self._verbosity < verbosity:
             log_param['log_file_verbosity'] = self._verbosity
         else:
             log_param['log_file_verbosity'] = verbosity
