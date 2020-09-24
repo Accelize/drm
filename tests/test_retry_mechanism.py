@@ -110,10 +110,11 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
     async_cb = async_handler.create()
     async_cb.reset()
 
+    expires_in = 1
     retryShortPeriod = 3
     retryLongPeriod = 10
-    timeoutSecondFirst2 = 3
     timeoutSecond = 20
+    cnt_max = 4
 
     conf_json.reset()
     conf_json['licensing']['url'] = request.url + 'test_long_to_short_retry_switch_on_authentication'
@@ -130,34 +131,33 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
     )
 
     context = {'data':list(),
-               'cnt':0,
-               'timeoutSecondFirst2':timeoutSecondFirst2,
+               'cnt':0, 'cnt_max':cnt_max,
+               'expires_in':expires_in,
                'timeoutSecond':timeoutSecond
     }
     set_context(context)
     assert get_context() == context
 
-    drm_manager.activate()
     try:
-        wait_func_true(lambda: async_cb.was_called,
-                timeout=timeoutSecondFirst2 + 2*timeoutSecond + 2)
+        drm_manager.activate()
+        wait_func_true(lambda: async_cb.was_called, timeout=timeoutSecond + 2)
     finally:
         drm_manager.deactivate()
     assert async_cb.was_called
-    assert 'Timeout on License' in async_cb.message
     assert async_cb.errcode == accelize_drm.exceptions.DRMWSError.error_code
+    assert search(r'Timeout on Authentication request after', async_cb.message, IGNORECASE)
     context = get_context()
     data_list = context['data']
-    nb_long_retry = int(timeoutSecond / retryLongPeriod)
-    nb_short_retry = int(retryLongPeriod / retryShortPeriod)
+    nb_long_retry = int(timeoutSecond / retryLongPeriod) - 1
+    nb_short_retry = int(retryLongPeriod / retryShortPeriod) - 1
     assert (nb_long_retry+nb_short_retry) <= len(data_list) <= (1+nb_long_retry+nb_short_retry)
     data = data_list.pop(0)
-    assert data[0] == 'running'
-    prev_lic = parser.parse(data[2])
-    for i, (type, start, end) in enumerate(data_list):
+    data = data_list.pop(0)
+    prev_lic = parser.parse(data[1])
+    for i, (start, end) in enumerate(data_list):
         lic_delta = int((parser.parse(start) - prev_lic).total_seconds())
         prev_lic = parser.parse(end)
-        if i < nb_long_retry-1:
+        if i < nb_long_retry:
             assert (retryLongPeriod-1) <= lic_delta <= (retryLongPeriod+1)
         else:
             assert (retryShortPeriod-1) <= lic_delta <= (retryShortPeriod+1)

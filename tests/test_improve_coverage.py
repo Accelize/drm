@@ -336,3 +336,34 @@ def test_improve_coverage_detectDrmFrequencyMethod1(accelize_drm, conf_json, cre
     assert search(r'Frequency detection counter after', log_content, IGNORECASE) is None
     async_cb.assert_NoError()
     basic_log_file.remove()
+
+
+@pytest.mark.no_parallel
+def test_improve_coverage_perform(accelize_drm, conf_json, cred_json, async_handler, live_server):
+    """
+    Improve coverage of the perform function
+    """
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    async_cb.reset()
+    conf_json['licensing']['url'] = 'http://100.100.100.100'
+    conf_json['settings']['ws_api_retry_duration'] = 0
+    conf_json['settings']['ws_request_timeout'] = 1
+    conf_json.save()
+
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    try:
+        with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
+            drm_manager.activate()
+    finally:
+        drm_manager.deactivate()
+    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
+    assert search(r'libcurl failed to perform HTTP request to Accelize webservice', str(excinfo.value), IGNORECASE)
+    async_cb.assert_NoError()
+

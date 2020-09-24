@@ -4,6 +4,8 @@ Test node-locked behavior of DRM Library.
 """
 from re import search
 from json import loads
+from glob import glob
+from os.path import join
 
 import pytest
 
@@ -233,7 +235,7 @@ def test_nodelock_without_server_access(accelize_drm, conf_json, cred_json, asyn
 @pytest.mark.hwtst
 def test_nodelock_without_malformed_license_file(accelize_drm, conf_json, cred_json, async_handler,
                                         ws_admin):
-    """Test error is returned when no url is provided"""
+    """Test error is returned when the license file is malformed"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -242,8 +244,7 @@ def test_nodelock_without_malformed_license_file(accelize_drm, conf_json, cred_j
     # Switch to nodelock
     conf_json.reset()
     conf_json.addNodelock()
-    del conf_json['licensing']['url']
-    conf_json.save()
+    license_dir = conf_json['licensing']['license_dir']
     accelize_drm.clean_nodelock_env(conf_json=conf_json, cred_json=cred_json, ws_admin=ws_admin)
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
@@ -252,12 +253,23 @@ def test_nodelock_without_malformed_license_file(accelize_drm, conf_json, cred_j
         driver.write_register_callback,
         async_cb.callback
     )
+    # Run a first time to create license file
+    drm_manager.activate()
+    license_file = glob(join(license_dir, '*.lic'))
+    assert len(license_file) == 1
+    license_file = license_file[0]
+    # Corrupt license file
+    with open(license_file, 'rt') as f:
+        license_json = f.read()
+    print('license_json=', license_json)
+    with open(license_file, 'wt') as f:
+        f.write(license_json[:-1])
+
+    # Run a second time after having corrupted the license file
     with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
         drm_manager.activate()
-    assert search(r"Error with service configuration file .* Missing parameter 'url' of type String",
-                  str(excinfo.value))
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
+    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadFormat.error_code
+    assert search(r'Invalid local license file', str(excinfo.value))
     async_cb.assert_NoError()
 
 

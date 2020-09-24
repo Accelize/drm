@@ -1229,6 +1229,7 @@ protected:
                 oauth_attempt ++;
                 if ( short_retry_period == -1 ) {
                     // No retry
+                    Debug( "OAuthentication retry mechanism is disabled" );
                     throw;
                 }
                 if ( long_retry_period == -1 ) {
@@ -1268,6 +1269,7 @@ protected:
                 lic_attempt ++;
                 if ( short_retry_period == -1 ) {
                     // No retry
+                    Debug( "Licensing retry mechanism is disabled" );
                     throw;
                 }
                 // Evaluate the next retry
@@ -1406,6 +1408,7 @@ protected:
                 oauth_attempt ++;
                 if ( retry_period == -1 ) {
                     // No retry
+                    Debug( "OAuthentication retry mechanism is disabled" );
                     return Json::nullValue;
                 }
                 Warning( "Attempt #{} to obtain a new OAuth2 token failed with message: {}. New attempt planned in {} seconds",
@@ -1433,6 +1436,7 @@ protected:
                 lic_attempt ++;
                 if ( retry_period == -1 ) {
                     // No retry
+                    Debug( "Health retry mechanism is disabled" );
                     return Json::nullValue;
                 }
                 // Perform retry

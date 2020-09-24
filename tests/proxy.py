@@ -6,6 +6,7 @@ from datetime import datetime
 from threading import Lock
 from re import search
 from time import sleep
+from copy import deepcopy
 
 context = None
 lock = Lock()
@@ -580,7 +581,31 @@ def create_app(url):
     # test_long_to_short_retry_switch_on_authentication functions
     @app.route('/test_long_to_short_retry_switch_on_authentication/o/token/', methods=['GET', 'POST'])
     def otoken__test_long_to_short_retry_switch_on_authentication():
-        return redirect(request.url_root + '/o/token/', code=307)
+        global context, lock
+        start = str(datetime.now())
+        new_url = url + '/o/token/'
+        with lock:
+            try:
+                if context['cnt'] == 0:
+                    response = post(new_url, data=request.form, headers=request.headers)
+                    assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request.form,
+                            indent=4, sort_keys=True), response.status_code, response.text)
+                    excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+                    headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+                    response_json = response.json()
+                    response_json['expires_in'] = context['expires_in']
+                    context['response_json'] = dumps(response_json)
+                    context['headers'] = headers
+                    return Response(dumps(response_json), response.status_code, headers)
+                elif context['cnt'] <= context['cnt_max']:
+                    return Response(context['response_json'], 408, context['headers'])
+                else:
+                    return Response(context['response_json'], 200, context['headers'])
+            finally:
+                if context['cnt'] <= context['cnt_max']:
+                    context['data'].append( (start,str(datetime.now())) )
+                context['cnt'] += 1
+            return resp
 
     @app.route('/test_long_to_short_retry_switch_on_authentication/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_long_to_short_retry_switch_on_authentication():
@@ -589,31 +614,17 @@ def create_app(url):
     @app.route('/test_long_to_short_retry_switch_on_authentication/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_long_to_short_retry_switch_on_authentication():
         global context, lock
+        new_url = request.url.replace(request.url_root+'test_long_to_short_retry_switch_on_authentication', url)
+        request_json = request.get_json()
+        response = post(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                    indent=4, sort_keys=True), response.status_code, response.text)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
         with lock:
-            start = str(datetime.now())
-            new_url = request.url.replace(request.url_root+'test_long_to_short_retry_switch_on_authentication', url)
-            request_json = request.get_json()
-            request_type = request_json['request']
-            if context['cnt'] < 2 or request_type == 'close':
-                response = post(new_url, json=request_json, headers=request.headers)
-                assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
-                        indent=4, sort_keys=True), response.status_code, response.text)
-                excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-                headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-                response_json = response.json()
-                if context['cnt'] == 0:
-                    timeoutSecond = context['timeoutSecondFirst2']
-                else:
-                    timeoutSecond = context['timeoutSecond']
-                response_json['metering']['timeoutSecond'] = timeoutSecond
-                context['post'] = (response_json, headers)
-                response_status_code = response.status_code
-            else:
-                response_json, headers = context['post']
-                response_status_code = 408
-                context['data'].append( (request_type,start,str(datetime.now())) )
-            context['cnt'] += 1
-        return Response(dumps(response_json), response_status_code, headers)
+            response_json['metering']['timeoutSecond'] = context['timeoutSecond']
+        return Response(dumps(response_json), response.status_code, headers)
 
     # test_long_to_short_retry_switch_on_license functions
     @app.route('/test_long_to_short_retry_switch_on_license/o/token/', methods=['GET', 'POST'])

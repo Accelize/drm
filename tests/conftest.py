@@ -1120,7 +1120,7 @@ class BasicLogFile:
         self._append = append
         self._keep = keep
 
-    def create(self, verbosity, format=LOG_FORMAT_SHORT):
+    def create(self, verbosity, format=LOG_FORMAT_LONG):
         log_param =  dict()
         while True:
             self._path = '%s__%d__%s.log' % (self._basepath, getpid(), time())
