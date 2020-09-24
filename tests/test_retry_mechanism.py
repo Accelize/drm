@@ -114,7 +114,9 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
     retryShortPeriod = 3
     retryLongPeriod = 10
     timeoutSecond = 20
-    cnt_max = 4
+    nb_long_retry = int(timeoutSecond / retryLongPeriod) - 1
+    nb_short_retry = int(retryLongPeriod / retryShortPeriod) - 1
+    cnt_max = 1 + nb_long_retry + nb_short_retry
 
     conf_json.reset()
     conf_json['licensing']['url'] = request.url + 'test_long_to_short_retry_switch_on_authentication'
@@ -148,10 +150,8 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
     assert search(r'Timeout on Authentication request after', async_cb.message, IGNORECASE)
     context = get_context()
     data_list = context['data']
-    nb_long_retry = int(timeoutSecond / retryLongPeriod) - 1
-    nb_short_retry = int(retryLongPeriod / retryShortPeriod) - 1
-    assert (nb_long_retry+nb_short_retry) <= len(data_list) <= (1+nb_long_retry+nb_short_retry)
     data = data_list.pop(0)
+    assert (nb_long_retry+nb_short_retry) <= len(data_list) <= (1+nb_long_retry+nb_short_retry)
     data = data_list.pop(0)
     prev_lic = parser.parse(data[1])
     for i, (start, end) in enumerate(data_list):

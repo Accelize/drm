@@ -73,7 +73,7 @@ def test_topic1_corrupted_metering(accelize_drm, conf_json, cred_json, async_han
         driver.write_register_callback,
         async_cb.callback
     )
-    nb_run = 100
+    nb_run = 5
     nb_pause_resume_max = 100
     for r in range(nb_run):
         print('Run #%d' % r)

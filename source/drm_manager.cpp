@@ -2084,6 +2084,8 @@ public:
             startLicenseContinuityThread();
             if ( mHealthPeriod )
                 startHealthContinuityThread();
+            else
+                Debug( "Health background thread is not started ")
             mSecurityStop = true;
         } CATCH_AND_THROW
     }

@@ -259,6 +259,7 @@ class SingleActivator:
         self.base_address = base_address
         self.metering_data = 0
         self.event_cnt_flag = self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET) != 0xDEADDEAD
+        print('Event counter in Activator @0x%08X is active' % self.base_address)
 
     def autotest(self, is_activated=None):
         """
@@ -312,8 +313,8 @@ class SingleActivator:
         Reset the coins counter
         """
         self.metering_data = 0
-        self.driver.write_register(self.base_address + CNT_EVENT_REG_OFFSET, 0)
         if self.event_cnt_flag:
+            self.driver.write_register(self.base_address + CNT_EVENT_REG_OFFSET, 0)
             assert self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET) == 0
 
     def check_coin(self, coins):
