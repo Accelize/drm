@@ -226,17 +226,22 @@ protected:
     #define checkDRMCtlrRet( func ) {                                                           \
         unsigned int errcode = DRM_OK;                                                          \
         bool securityAlertBit;                                                                  \
+        std::string adaptiveProportionTestFailures, repetitionCountTestFailures;                \
         try {                                                                                   \
             std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );                  \
             errcode = func;                                                                     \
             Debug( "{} returned {}", #func, errcode );                                          \
             if ( errcode ) {                                                                    \
                 getDrmController().readSecurityAlertStatusRegister( securityAlertBit );         \
-                Error( "{} failed (security alert bit: {})", #func, securityAlertBit );         \
+                getDrmController().extractAdaptiveProportionTestFailures( adaptiveProportionTestFailures ); \
+                getDrmController().extractRepetitionCountTestFailures( repetitionCountTestFailures ); \
+                Error( "{} failed: security alert bit = {}, adaptative proportion = {}, repetition count = {}", #func, securityAlertBit, adaptiveProportionTestFailures, repetitionCountTestFailures ); \
             }                                                                                   \
         } catch( const std::exception &e ) {                                                    \
             getDrmController().readSecurityAlertStatusRegister( securityAlertBit );             \
-            Error( "{} threw an exception (security alert bit: {})", #func, securityAlertBit ); \
+            getDrmController().extractAdaptiveProportionTestFailures( adaptiveProportionTestFailures ); \
+            getDrmController().extractRepetitionCountTestFailures( repetitionCountTestFailures ); \
+            Error( "{} threw an exception: security alert bit = {}, adaptative proportion = {}, repetition count = {}", #func, securityAlertBit, adaptiveProportionTestFailures, repetitionCountTestFailures ); \
             Throw( DRM_CtlrError, e.what() );                                                   \
         }                                                                                       \
     }
@@ -2085,7 +2090,7 @@ public:
             if ( mHealthPeriod )
                 startHealthContinuityThread();
             else
-                Debug( "Health background thread is not started ")
+                Debug( "Health background thread is not started ");
             mSecurityStop = true;
         } CATCH_AND_THROW
     }
