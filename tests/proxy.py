@@ -783,9 +783,8 @@ def create_app(url):
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
-        response_json['metering']['healthPeriod'] = 0 # Disabled Health thread
         with lock:
-            response_json['metering']['timeoutSecond'] = context['timeoutSecond']
+            response_json['metering']['healthPeriod'] = context['healthPeriod']
         return Response(dumps(response_json), response.status_code, headers)
 
     @app.route('/test_topic1_corrupted_metering/auth/metering/health/', methods=['GET', 'POST'])

@@ -106,7 +106,6 @@ def test_improve_coverage_writeDrmAddress(accelize_drm, conf_json, cred_json, as
     Improve coverage of the writeDrmAddress function
     """
     def my_bad_write_register(register_offset, data_to_write):
-        print('register_offset, data_to_write =', register_offset, data_to_write)
         return 123
 
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -282,7 +281,7 @@ def test_improve_coverage_getDesignInfo(accelize_drm, conf_json, cred_json, asyn
 
 def test_improve_coverage_setLicense(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
-    Improve coverage of the setLicense function: generate bad format
+    Improve coverage of the setLicense function
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -304,7 +303,6 @@ def test_improve_coverage_setLicense(accelize_drm, conf_json, cred_json, async_h
         drm_manager.deactivate()
     assert async_cb.was_called
     assert async_cb.errcode == accelize_drm.exceptions.DRMWSRespError.error_code
-    print('async_msg=', async_cb.message)
     assert 'Malformed response from License Web Service:' in async_cb.message
 
 
