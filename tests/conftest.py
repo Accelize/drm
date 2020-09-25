@@ -44,8 +44,8 @@ def cheap_hash(string_in, length=6):
 
 
 def is_file_busy(path):
-    if not exists(path):
-        return False
+    #if not exists(path):
+    #    return False
     try:
         rename(path, path)
         return False

@@ -152,7 +152,7 @@ protected:
     // License related properties
     uint32_t mWSRetryPeriodLong  = 60;    ///< Time in seconds before the next request attempt to the Web Server when the time left before timeout is large
     uint32_t mWSRetryPeriodShort = 2;     ///< Time in seconds before the next request attempt to the Web Server when the time left before timeout is short
-    uint32_t mWSApiRetryDuration = 10;    ///< Period of time in seconds during which retries occur on activate and deactivate functions
+    uint32_t mWSApiRetryDuration = 30;    ///< Period of time in seconds during which retries occur on activate and deactivate functions
     uint32_t mWSRequestTimeout   = 10;    ///< Time in seconds for a request to complete
 
     eLicenseType mLicenseType = eLicenseType::METERED;
