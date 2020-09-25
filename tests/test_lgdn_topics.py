@@ -53,7 +53,7 @@ def test_topic0_corrupted_segment_index(accelize_drm, conf_json, cred_json, asyn
 
 
 @pytest.mark.lgdn
-def test_topic1_corrupted_metering(accelize_drm, conf_json, cred_json, async_handler):
+def test_topic1_corrupted_metering(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Test to reproduce the metering corruption issue on pause/resume operating mode
     """
@@ -63,6 +63,14 @@ def test_topic1_corrupted_metering(accelize_drm, conf_json, cred_json, async_han
     activators.reset_coin()
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_02')
+    conf_json['licensing']['url'] = request.url + 'test_topic1_corrupted_metering'
+    conf_json.save()
+
+    # Set initial context on the live server
+    timeoutSecond = 5
+    context = {'timeoutSecond':timeoutSecond}
+    set_context(context)
+    assert get_context() == context
 
     async_cb.reset()
     conf_json.reset()
@@ -115,7 +123,7 @@ def test_topic1_corrupted_metering(accelize_drm, conf_json, cred_json, async_han
                     assert drm_manager.get('license_status')
                     assert drm_manager.get('session_id') == session_id
                     # Wait for the limit of the expiration
-                    random_wait = lic_duration*2
+                    random_wait = lic_duration
                     wait_deadline(start, random_wait)
                     drm_manager.activate(True)
                     start = datetime.now()
