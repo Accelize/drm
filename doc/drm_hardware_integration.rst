@@ -327,7 +327,7 @@ Requirements:
 * Vivado 2017.4
 
 
-The user can find a simulation model of the DRM Activator, drm_activator_0xVVVVLLLLNNNNVVVV_sim.(sv,vhdl),
+The user can find a simulation model of the DRM Activator, top_drm_activator_0xVVVVLLLLNNNNVVVV_sim.(sv,vhdl),
 in the DRM_HDK/vendor_library_name_version/sim folder.
 It instantiates a DRM Controller Bus Functional Model (BFM) in addition to the RTL model of the
 DRM Controller and internally implements a mechanism to load a license file, generate signals and
@@ -339,7 +339,7 @@ design instantiate multiple Protected IPs. By this mean you can simulate each Pr
 In addition to the simulation top-level, you'll find in the ``sim`` folder the following files:
 
 * xilinx_sim, modelsim (with drm_controller_bfm)     : Each folder contains the BFM core encrypted for the specific tool.
-                                                       The BFM core is instantiated by the drm_activator_0xVVVVLLLLNNNNVVVV_sim.
+                                                       The BFM core is instantiated by the top_drm_activator_0xVVVVLLLLNNNNVVVV_sim.
 * drm_activator_0xVVVVLLLLNNNNVVVV_sim_pkg.(sv,vhdl) : Package containing simulation parameters (see details below)
 * drm_license_package.vhdl                           : Generic license file
 * drm_activator_0xVVVVLLLLNNNNVVVV_license_file.xml  : Specific license file
@@ -382,6 +382,12 @@ Compile the files in the following order:
 
       vcom -93 -explicit -work drm_library drm_hdk/common/vhdl/modelsim/drm_all_components.vhdl
 
+#. Compile drm_ip_activator_package_0xVVVVLLLLNNNNVVVV.vhdl under *drm_library* library:
+
+   .. code-block:: tcl
+
+      vcom -93 -explicit -work drm_library drm_hdk/activator_VLNV/core/drm_ip_activator_package_0xVVVVLLLLNNNNVVVV.vhdl
+
 #. Compile drm_ip_activator_0xVVVVLLLLNNNNVVVV.vhdl under *drm_0xVVVVLLLLNNNNVVVV_library* library:
 
    .. code-block:: tcl
@@ -408,13 +414,13 @@ Compile the files in the following order:
       or
       vlog -sv -explicit -work work drm_hdk/activator_VLNV/sim/drm_activator_0xVVVVLLLLNNNNVVVV_sim_pkg.sv
 
-#. Compile drm_activator_0xVVVVLLLLNNNNVVVV top-level:
+#. Compile top_drm_activator_0xVVVVLLLLNNNNVVVV top-level:
 
    .. code-block:: tcl
 
-      vcom -93 -explicit -work work drm_hdk/activator_VLNV/sim/drm_activator_0xVVVVLLLLNNNNVVVV_sim.vhdl
+      vcom -93 -explicit -work work drm_hdk/activator_VLNV/sim/top_drm_activator_0xVVVVLLLLNNNNVVVV_sim.vhdl
       or:
-      vlog -sv -explicit -work work drm_hdk/activator_VLNV/sim/drm_activator_0xVVVVLLLLNNNNVVVV_sim.sv
+      vlog -sv -explicit -work work drm_hdk/activator_VLNV/sim/top_drm_activator_0xVVVVLLLLNNNNVVVV_sim.sv
 
 Run simulation
 ^^^^^^^^^^^^^^
@@ -533,10 +539,10 @@ The DRM IPs are in VHDL but the DRM HDK also contains a Verilog wrapper.
 VHDL
 ^^^^
 
-DRM Contoller
-"""""""""""""
+DRM Controller
+""""""""""""""
 
-The DRM Controller top-level name is **drm_controller**.
+The DRM Controller top-level name is **top_drm_controller**.
 
 To add the DRM Controller source to your project, you can use:
 
@@ -551,14 +557,14 @@ To add the DRM Controller source to your project, you can use:
 
    read_vhdl -library drm_library {
       drm_hdk/common/xilinx/drm_all_components.vhdl
-      drm_hdk/contoller/rtl/core/drm_ip_controller.vhdl
-      drm_hdk/contoller/rtl/syn/drm_controller.vhdl
+      drm_hdk/controller/rtl/core/drm_ip_controller.vhdl
+      drm_hdk/controller/rtl/syn/top_drm_controller.vhdl
    }
 
 DRM Activator
 """""""""""""
 
-The DRM Activator top-level name is **drm_activator_0xVVVVLLLLNNNNVVVV**.
+The DRM Activator top-level name is **top_drm_activator_0xVVVVLLLLNNNNVVVV**.
 0xVVVVLLLLNNNNVVVV is an hexadecimal string encoding the VLNV of this IP.
 
 To add the DRM Activator source to your project, you can use:
@@ -574,19 +580,20 @@ Or a TCL script:
 
    read_vhdl -library drm_library {
       drm_hdk/common/xilinx/drm_all_components.vhdl
+      drm_hdk/activator_VLNV/core/drm_ip_activator_package_0xVVVVLLLLNNNNVVVV.vhdl
    }
    read_vhdl -library drm_0xVVVVLLLLNNNNVVVV_library {
       drm_hdk/activator_VLNV/core/drm_ip_activator_0xVVVVLLLLNNNNVVVV.vhdl
-      drm_hdk/activator_VLNV/syn/drm_activator_0xVVVVLLLLNNNNVVVV.vhdl
+      drm_hdk/activator_VLNV/syn/top_drm_activator_0xVVVVLLLLNNNNVVVV.vhdl
    }
 
 Verilog
 ^^^^^^^
 
-DRM Contoller
-"""""""""""""
+DRM Controller
+""""""""""""""
 
-The DRM Controller top-level name is **drm_controller**.
+The DRM Controller top-level name is **top_drm_controller**.
 
 .. note:: ``drm_all_components`` and ``drm_ip_controller`` entities are available in VHDL only.
 
@@ -606,14 +613,14 @@ Or a TCL script:
       drm_hdk/controller/rtl/core/drm_ip_controller.vhdl
    }
    read_verilog -sv {
-      drm_hdk/controller/rtl/syn/drm_controller.sv
+      drm_hdk/controller/rtl/syn/top_drm_controller.sv
    }
 
 
 DRM Activator
 """""""""""""
 
-The DRM Activator top-level name is **drm_activator_0xVVVVLLLLNNNNVVVV**.
+The DRM Activator top-level name is **top_drm_activator_0xVVVVLLLLNNNNVVVV**.
 0xVVVVLLLLNNNNVVVV is an hexadecimal string encoding the VLNV of this IP.
 
 .. note:: ``drm_all_components`` and ``drm_ip_activator_0xVVVVLLLLNNNNVVVV`` entities are
@@ -632,12 +639,13 @@ Or via TCL script:
 
    read_vhdl -library drm_library {
       drm_hdk/common/xilinx/drm_all_components.vhdl
+      drm_hdk/activator_VLNV/core/drm_ip_activator_package_0xVVVVLLLLNNNNVVVV.vhdl
    }
    read_vhdl -library drm_0xVVVVLLLLNNNNVVVV_library {
       drm_hdk/activator_VLNV/core/drm_ip_activator_0xVVVVLLLLNNNNVVVV.vhdl
    }
    read_verilog -sv {
-      drm_hdk/activator_VLNV/syn/drm_activator_0xVVVVLLLLNNNNVVVV.sv
+      drm_hdk/activator_VLNV/syn/top_drm_activator_0xVVVVLLLLNNNNVVVV.sv
    }
 
 Generated warnings
@@ -676,8 +684,8 @@ DRM Controller and Activator into the same SDAccel kernel.
 However,to simply the integration, Accelize provides in the DRM HDK a makefile that generates
 automatically the .XO package for the DRM Controller kernel.
 
-DRM Contoller Kernel
-^^^^^^^^^^^^^^^^^^^^
+DRM Controller Kernel
+^^^^^^^^^^^^^^^^^^^^^
 
 To generate the DRM Controller kernel for SDAccel:
 
@@ -711,10 +719,10 @@ Refer to `Supported hardware`_ for more information on supported Quartus version
 VHDL
 ^^^^
 
-DRM Contoller
-"""""""""""""
+DRM Controller
+""""""""""""""
 
-The DRM Controller top-level name is **drm_controller**.
+The DRM Controller top-level name is **top_drm_controller**.
 
 To add the DRM Controller source to your project, you can use:
 
@@ -730,7 +738,7 @@ Or a TCL script:
    set_global_assignment -name SYSTEMVERILOG_FILE drm_hdk/common/alteraProprietary/altchip_id_arria10.sv
    set_global_assignment -name VHDL_FILE drm_hdk/common/alteraProprietary/drm_all_components.vhdl -library drm_library
    set_global_assignment -name VHDL_FILE drm_hdk/controller/rtl/core/drm_ip_controller.vhdl -library drm_library
-   set_global_assignment -name VHDL_FILE drm_hdk/controller/rtl/syn/drm_controller.vhdl
+   set_global_assignment -name VHDL_FILE drm_hdk/controller/rtl/syn/top_drm_controller.vhdl
 
 .. note:: The ``altchip_id_arria10.sv`` file is for the Arria10 FPGA family.
           Use the file located in the *common/sv/alteraProprietary* folder from your DRM HDK.
@@ -738,7 +746,7 @@ Or a TCL script:
 DRM Activator
 """""""""""""
 
-The DRM Activator top-level name is **drm_activator_0xVVVVLLLLNNNNVVVV**.
+The DRM Activator top-level name is **top_drm_activator_0xVVVVLLLLNNNNVVVV**.
 0xVVVVLLLLNNNNVVVV is an hexadecimal string encoding the VLNV of this IP.
 
 To add the DRM Activator sources to your project, you can use:
@@ -754,8 +762,9 @@ To add the DRM Activator sources to your project, you can use:
 
    set_global_assignment -name SYSTEMVERILOG_FILE drm_hdk/common/alteraProprietary/altchip_id_arria10.sv
    set_global_assignment -name VHDL_FILE drm_hdl/common/alteraProprietary/drm_all_components.vhdl -library drm_library
+   set_global_assignment -name VHDL_FILE drm_hdl/activator_VLNV/core/drm_ip_activator_package_0xVVVVLLLLNNNNVVVV.vhdl -library drm_library
    set_global_assignment -name VHDL_FILE drm_hdl/activator_VLNV/core/drm_ip_activator_0xVVVVLLLLNNNNVVVV.vhdl -library drm_0xVVVVLLLLNNNNVVVV_library
-   set_global_assignment -name VHDL_FILE drm_hdl/activator_VLNV/syn/drm_activator_0xVVVVLLLLNNNNVVVV.vhdl
+   set_global_assignment -name VHDL_FILE drm_hdl/activator_VLNV/syn/top_drm_activator_0xVVVVLLLLNNNNVVVV.vhdl
 
 .. note:: The ``altchip_id_arria10.sv`` file is for the Arria10 FPGA family.
           Use the file located in the *common/sv/alteraProprietary* folder from your DRM HDK.
@@ -763,10 +772,10 @@ To add the DRM Activator sources to your project, you can use:
 Verilog
 ^^^^^^^
 
-DRM Contoller
-"""""""""""""
+DRM Controller
+""""""""""""""
 
-The DRM Controller top-level name is **drm_controller**.
+The DRM Controller top-level name is **top_drm_controller**.
 
 .. note:: ``drm_all_components`` and ``drm_ip_controller`` entities are available in VHDL only.
 
@@ -784,7 +793,7 @@ To add the DRM Controller sources to your project, you can use:
    set_global_assignment -name SYSTEMVERILOG_FILE drm_hdk/common/alteraProprietary/altchip_id_arria10.sv
    set_global_assignment -name VHDL_FILE drm_hdk/common/alteraProprietary/drm_all_components.vhdl -library drm_library
    set_global_assignment -name VHDL_FILE drm_hdk/controller/rtl/core/drm_ip_controller.vhdl -library drm_library
-   set_global_assignment -name SYSTEMVERILOG_FILE drm_hdk/controller/rtl/syn/drm_controller.sv
+   set_global_assignment -name SYSTEMVERILOG_FILE drm_hdk/controller/rtl/syn/top_drm_controller.sv
 
 .. note:: The ``altchip_id_arria10.sv`` file is for the Arria10 FPGA family.
           Use the file located in the *common/sv/alteraProprietary* folder from your DRM HDK.
@@ -793,7 +802,7 @@ To add the DRM Controller sources to your project, you can use:
 DRM Activator
 """""""""""""
 
-The DRM Activator top-level name is **drm_activator_0xVVVVLLLLNNNNVVVV**.
+The DRM Activator top-level name is **top_drm_activator_0xVVVVLLLLNNNNVVVV**.
 0xVVVVLLLLNNNNVVVV is an hexadecimal string encoding the VLNV of this IP.
 
 .. note:: ``drm_all_components`` and ``drm_ip_activator_0xVVVVLLLLNNNNVVVV`` entities are
@@ -812,8 +821,9 @@ To add the DRM Activator sources to your project, you can use:
 
    set_global_assignment -name SYSTEMVERILOG_FILE drm_hdk/common/alteraProprietary/altchip_id_arria10.sv
    set_global_assignment -name VHDL_FILE drm_hdl/common/alteraProprietary/drm_all_components.vhdl -library drm_library
+   set_global_assignment -name VHDL_FILE drm_hdl/activator_VLNV/core/drm_ip_activator_package_0xVVVVLLLLNNNNVVVV.vhdl -library drm_library
    set_global_assignment -name VHDL_FILE drm_hdl/activator_VLNV/core/drm_ip_activator_0xVVVVLLLLNNNNVVVV.vhdl -library drm_0xVVVVLLLLNNNNVVVV_library
-   set_global_assignment -name SYSTEMVERILOG_FILE drm_hdl/activator_VLNV/syn/drm_activator_0xVVVVLLLLNNNNVVVV.sv
+   set_global_assignment -name SYSTEMVERILOG_FILE drm_hdl/activator_VLNV/syn/top_drm_activator_0xVVVVLLLLNNNNVVVV.sv
 
 .. note:: The ``altchip_id_arria10.sv`` file is for the Arria10 FPGA family.
           Use the file located in the *common/sv/alteraProprietary* folder from your DRM HDK.

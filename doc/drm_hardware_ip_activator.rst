@@ -169,11 +169,14 @@ IP Activator HDK directories and files:
 
    vendor_library_name_version/
    -- core/
+   ----- constraints
+   -------- constraints.sdc
    ----- drm_ip_activator_0xvvvvllllnnnnvvvv.vhdl
    ----- drm_ip_activator_0xvvvvllllnnnnvvvv.v
    ----- drm_ip_activator_0xvvvvllllnnnnvvvv.vho
    ----- drm_ip_activator_0xvvvvllllnnnnvvvv.veo
    ----- drm_ip_activator_0xvvvvllllnnnnvvvv.xml
+   ----- drm_ip_activator_package_0xvvvvllllnnnnvvvv.vhdl
    -- sim/
    ----- modelsim/
    -------- drm_controller_bfm.vhdl
@@ -181,15 +184,15 @@ IP Activator HDK directories and files:
    ----- xilinx_sim/
    -------- drm_controller_bfm.vhdl
    -------- drm_controller_bfm.v
-   ----- drm_activator_0x1003000b00010001_license_file.xml
-   ----- drm_activator_0x1003000b00010001_sim.sv
-   ----- drm_activator_0x1003000b00010001_sim.vhdl
-   ----- drm_activator_0x1003000b00010001_sim_pkg.sv
-   ----- drm_activator_0x1003000b00010001_sim_pkg.vhdl
    ----- drm_license_package.vhdl
+   ----- drm_activator_0xvvvvllllnnnnvvvv_license_file.xml
+   ----- drm_activator_0xvvvvllllnnnnvvvv_sim_pkg.sv
+   ----- drm_activator_0xvvvvllllnnnnvvvv_sim_pkg.vhdl
+   ----- top_drm_activator_0xvvvvllllnnnnvvvv_sim.sv
+   ----- top_drm_activator_0xvvvvllllnnnnvvvv_sim.vhdl
    -- syn/
-   ----- drm_activator_0xvvvvllllnnnnvvvv.v
-   ----- drm_activator_0xvvvvllllnnnnvvvv.vhdl
+   ----- top_drm_activator_0xvvvvllllnnnnvvvv.v
+   ----- top_drm_activator_0xvvvvllllnnnnvvvv.vhdl
    ---docs/
    common/
    -- sv/
