@@ -330,6 +330,7 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
     )
 
     # Set initial context on the live server
+    loop = 5
     healthPeriod = 3
     healthRetry = 0  # No retry
     context = {'health_id':0,
@@ -348,26 +349,20 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
         assert saas_data['metering'] == drm.get('metered_data')
 
     assert not drm_manager.get('license_status')
-    drm_manager.activate()
     try:
-        # First round without no unit
+        drm_manager.activate()
         assert drm_manager.get('license_status')
         assert drm_manager.get('metered_data') == 0
         activators[0].check_coin(drm_manager.get('metered_data'))
         wait_and_check_on_next_health(drm_manager)
-        # Second round with 10 units
-        activators[0].generate_coin(10)
-        activators[0].check_coin(drm_manager.get('metered_data'))
-        wait_and_check_on_next_health(drm_manager)
-        # Second round with 10 more units for a total of 20 units
-        activators[0].generate_coin(10)
-        activators[0].check_coin(drm_manager.get('metered_data'))
-        wait_and_check_on_next_health(drm_manager)
-        # Third round with 80 more units for a total of 100 units
-        activators[0].generate_coin(80)
-        activators[0].check_coin(drm_manager.get('metered_data'))
-        wait_and_check_on_next_health(drm_manager)
-        assert drm_manager.get('metered_data') == 100
+        total_coin = 0
+        for i in range(loop):
+            new_coin = randint(1,100)
+            total_coin += new_coin
+            activators[0].generate_coin(new_coin)
+            activators[0].check_coin(drm_manager.get('metered_data'))
+            wait_and_check_on_next_health(drm_manager)
+        assert drm_manager.get('metered_data') == total_coin
     finally:
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')

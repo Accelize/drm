@@ -324,11 +324,25 @@ class SingleActivator:
         Args:
             coins (int): Number of coins to compare to.
         """
+        # Read counter in Activation's registry
+        if self.event_cnt_flag:
+            metering_data_from_activator = self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET)
         # Check local counter with dmr value passed in argument
-        assert self.metering_data == coins
+        try:
+            assert self.metering_data == coins
+        except AssertionError:
+            if self.event_cnt_flag:
+                print('Metering data: from pytest=%d, from DRM Ctrl=%d, from IP=%d' % (self.metering_data, coins, metering_data_from_activator))
+            else:
+                print('Metering data: from pytest=%d, from DRM Ctrl=%d' % (self.metering_data, coins))
+            raise
         # Check with counter in Activator's registery
         if self.event_cnt_flag:
-            assert self.metering_data == self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET)
+            try:
+                assert self.metering_data == metering_data_from_activator
+            except AssertionError:
+                print('Metering data: from pytest=%d, from DRM Ctrl=%d, from IP=%d' % (self.metering_data, coins, metering_data_from_activator))
+                raise
 
 
 

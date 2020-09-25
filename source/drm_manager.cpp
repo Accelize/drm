@@ -677,7 +677,7 @@ protected:
         if ( ret )
             Error( "Error in read register callback, errcode = {}: failed to read address {}", ret, address );
         else
-            Debug2( "Read DRM address 0x{:x} = 0x{:08x}", address, value );
+            Debug2( "Read DRM Ctrl address 0x{:x} = 0x{:08x}", address, value );
         return ret;
     }
 
@@ -691,7 +691,7 @@ protected:
         if ( ret )
             Error( "Error in write register callback, errcode = {}: failed to write {} to address {}", ret, value, address );
         else
-            Debug2( "Wrote DRM address 0x{:x} = 0x{:08x}", address, value );
+            Debug2( "Wrote DRM Ctrl address 0x{:x} = 0x{:08x}", address, value );
         return ret;
     }
 
@@ -746,17 +746,17 @@ protected:
     }
 
     /* Run BIST to check Page register access
-     * This test write and read DRM Page register to verify the page switch is working
+     * This test write and read DRM Ctrl Page register to verify the page switch is working
      */
     void runBistLevel1() const {
         unsigned int reg;
         for(unsigned int i=0; i<=5; i++) {
             if ( writeDrmRegister( "DrmPageRegister", i ) != 0 )
-                Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not write DRM page register\n{}", DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
+                Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not write DRM Ctrl page register\n{}", DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
             if ( readDrmRegister( "DrmPageRegister", reg ) != 0 )
-                Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not read DRM page register\n{}", DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
+                Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not read DRM Ctrl page register\n{}", DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
             if ( reg != i ) {
-                Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not switch DRM register page.\n{}", DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
+                Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not switch DRM Ctrl register page.\n{}", DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
             }
         }
         Debug( "DRM Communication Self-Test 1 succeeded" );
@@ -1553,7 +1553,7 @@ protected:
         }
         int ret = readDrmAddress( REG_FREQ_DETECTION_VERSION, reg );
         if ( ret != 0 ) {
-            Unreachable( "Failed to read DRM frequency detection version register, errcode = {}. ", ret ); //LCOV_EXCL_LINE
+            Unreachable( "Failed to read DRM Ctrl frequency detection version register, errcode = {}. ", ret ); //LCOV_EXCL_LINE
         }
         if ( reg == FREQ_DETECTION_VERSION_EXPECTED ) {
             // Use Method 1
@@ -1588,7 +1588,7 @@ protected:
         // Sample counter
         ret = readDrmAddress( REG_FREQ_DETECTION_COUNTER, counter );
         if ( ret != 0 ) {
-            Unreachable( "Failed to read DRM frequency detection counter register, errcode = {}. ", ret ); //LCOV_EXCL_LINE
+            Unreachable( "Failed to read DRM Ctrl frequency detection counter register, errcode = {}. ", ret ); //LCOV_EXCL_LINE
         }
 
         if ( counter == 0xFFFFFFFF )
@@ -2026,7 +2026,7 @@ public:
         : Impl( conf_file_path, cred_file_path )
     {
         TRY {
-            Debug( "Entering Impl public constructor" );
+            Debug( "Calling Impl public constructor" );
             if ( !f_user_read_register )
                 Throw( DRM_BadArg, "Read register callback function must not be NULL" );
             if ( !f_user_write_register )
@@ -2043,7 +2043,7 @@ public:
 
     ~Impl() {
         TRY {
-            Debug( "Entering Impl destructor" );
+            Debug( "Calling Impl destructor" );
             if ( mSecurityStop && isSessionRunning() ) {
                 Debug( "Security stop triggered: stopping current session" );
                 stopSession();
