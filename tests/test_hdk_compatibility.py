@@ -45,6 +45,7 @@ def test_hdk_stability_on_programming(accelize_drm, conf_json, cred_json, async_
         finally:
             drm_manager.deactivate()
             assert not drm_manager.get('license_status')
+            del drm_manager
         async_cb.assert_NoError()
     remove(logpath)
 
