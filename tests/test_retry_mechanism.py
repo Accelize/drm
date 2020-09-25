@@ -20,9 +20,11 @@ from tests.proxy import get_context, set_context
 
 
 @pytest.mark.no_parallel
-def test_api_retry_disabled(accelize_drm, conf_json, cred_json, async_handler, live_server, basic_log_file):
+def test_api_retry_disabled(accelize_drm, conf_json, cred_json, async_handler,
+                            live_server, basic_log_file):
     """
-    Test retry mechanism is disabled on API function (not including the retry in background thread)
+    Test retry mechanism is disabled on API function (not including
+    the retry in background thread)
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -55,9 +57,11 @@ def test_api_retry_disabled(accelize_drm, conf_json, cred_json, async_handler, l
 
 
 @pytest.mark.no_parallel
-def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler, live_server, basic_log_file):
+def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler,
+                           live_server, basic_log_file):
     """
-    Test retry mechanism is working on API function (not including the retry in background thread)
+    Test retry mechanism is working on API function (not including the
+    retry in background thread)
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -96,9 +100,75 @@ def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler, li
 
 
 @pytest.mark.no_parallel
-def test_long_to_short_retry_switch(accelize_drm, conf_json, cred_json, async_handler, live_server):
+def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
+                                        cred_json, async_handler, live_server):
     """
-    Test the number of expected retris and the gap between 2 retries are correct when a retryable error is returned
+    Test the number of expected retries and the gap between 2 retries
+    on authentication requests are correct when a retryable error is returned
+    """
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    async_cb.reset()
+
+    expires_in = 1
+    retryShortPeriod = 3
+    retryLongPeriod = 10
+    timeoutSecond = 20
+    nb_long_retry = int(timeoutSecond / retryLongPeriod) - 1
+    nb_short_retry = int(retryLongPeriod / retryShortPeriod) - 1
+    cnt_max = 1 + nb_long_retry + nb_short_retry
+
+    conf_json.reset()
+    conf_json['licensing']['url'] = request.url + 'test_long_to_short_retry_switch_on_authentication'
+    conf_json['settings']['ws_retry_period_short'] = retryShortPeriod
+    conf_json['settings']['ws_retry_period_long'] = retryLongPeriod
+    conf_json.save()
+
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+
+    context = {'data':list(),
+               'cnt':0, 'cnt_max':cnt_max,
+               'expires_in':expires_in,
+               'timeoutSecond':timeoutSecond
+    }
+    set_context(context)
+    assert get_context() == context
+
+    try:
+        drm_manager.activate()
+        wait_func_true(lambda: async_cb.was_called, timeout=timeoutSecond + 2)
+    finally:
+        drm_manager.deactivate()
+    assert async_cb.was_called
+    assert async_cb.errcode == accelize_drm.exceptions.DRMWSError.error_code
+    assert search(r'Timeout on Authentication request after', async_cb.message, IGNORECASE)
+    context = get_context()
+    data_list = context['data']
+    data = data_list.pop(0)
+    assert (nb_long_retry+nb_short_retry) <= len(data_list) <= (1+nb_long_retry+nb_short_retry)
+    data = data_list.pop(0)
+    prev_lic = parser.parse(data[1])
+    for i, (start, end) in enumerate(data_list):
+        lic_delta = int((parser.parse(start) - prev_lic).total_seconds())
+        prev_lic = parser.parse(end)
+        if i < nb_long_retry:
+            assert (retryLongPeriod-1) <= lic_delta <= (retryLongPeriod+1)
+        else:
+            assert (retryShortPeriod-1) <= lic_delta <= (retryShortPeriod+1)
+
+
+@pytest.mark.no_parallel
+def test_long_to_short_retry_switch_on_license(accelize_drm, conf_json, cred_json,
+                                               async_handler, live_server):
+    """
+    Test the number of expected retries and the gap between 2 retries
+    on license requests are correct when a retryable error is returned
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -110,7 +180,7 @@ def test_long_to_short_retry_switch(accelize_drm, conf_json, cred_json, async_ha
     timeoutSecond = 20
 
     conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_long_to_short_retry_switch'
+    conf_json['licensing']['url'] = request.url + 'test_long_to_short_retry_switch_on_license'
     conf_json['settings']['ws_retry_period_short'] = retryShortPeriod
     conf_json['settings']['ws_retry_period_long'] = retryLongPeriod
     conf_json.save()
@@ -158,9 +228,11 @@ def test_long_to_short_retry_switch(accelize_drm, conf_json, cred_json, async_ha
 
 
 @pytest.mark.no_parallel
-def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handler, live_server, basic_log_file):
+def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handler,
+                                live_server, basic_log_file):
     """
-    Test the number of expected retries and the gap between 2 retries are correct when the requests are lost
+    Test the number of expected retries and the gap between 2 retries
+    are correct when the requests are lost
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()

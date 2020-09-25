@@ -96,9 +96,9 @@ def test_uncompatibilities(accelize_drm, conf_json, cred_json, async_handler):
                 )
             hit = False
             if 'Unable to find DRM Controller registers' in str(excinfo.value):
-                hit =True
+                hit = True
             if search(r'This DRM Library version \S+ is not compatible with the DRM HDK version', str(excinfo.value), IGNORECASE):
-                hit =True
+                hit = True
             assert hit
         assert tested
 

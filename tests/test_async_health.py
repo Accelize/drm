@@ -4,7 +4,7 @@ Test asynchronous metering behaviors of DRM Library.
 """
 import pytest
 from time import sleep
-from random import randrange
+from random import randrange, randint
 from re import search, findall, MULTILINE, IGNORECASE
 from dateutil import parser
 from itertools import groupby
@@ -330,6 +330,7 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
     )
 
     # Set initial context on the live server
+    loop = 5
     healthPeriod = 3
     healthRetry = 0  # No retry
     context = {'health_id':0,
@@ -348,26 +349,20 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
         assert saas_data['metering'] == drm.get('metered_data')
 
     assert not drm_manager.get('license_status')
-    drm_manager.activate()
     try:
-        # First round without no unit
+        drm_manager.activate()
         assert drm_manager.get('license_status')
         assert drm_manager.get('metered_data') == 0
         activators[0].check_coin(drm_manager.get('metered_data'))
         wait_and_check_on_next_health(drm_manager)
-        # Second round with 10 units
-        activators[0].generate_coin(10)
-        activators[0].check_coin(drm_manager.get('metered_data'))
-        wait_and_check_on_next_health(drm_manager)
-        # Second round with 10 more units for a total of 20 units
-        activators[0].generate_coin(10)
-        activators[0].check_coin(drm_manager.get('metered_data'))
-        wait_and_check_on_next_health(drm_manager)
-        # Third round with 80 more units for a total of 100 units
-        activators[0].generate_coin(80)
-        activators[0].check_coin(drm_manager.get('metered_data'))
-        wait_and_check_on_next_health(drm_manager)
-        assert drm_manager.get('metered_data') == 100
+        total_coin = 0
+        for i in range(loop):
+            new_coin = randint(1,100)
+            activators[0].generate_coin(new_coin)
+            activators[0].check_coin(drm_manager.get('metered_data'))
+            wait_and_check_on_next_health(drm_manager)
+            total_coin += new_coin
+        assert drm_manager.get('metered_data') == total_coin
     finally:
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
@@ -502,11 +497,11 @@ def test_async_call_on_pause_when_health_is_enabled(accelize_drm, conf_json, cre
     health_line = 0
     stop_line = 0
     for i, line in enumerate(basic_log_file.read().split('\n')):
-        if search("'pause_session_request'\s*=\s*true", line, IGNORECASE):
+        if search(r"'pause_session_request'\s*=\s*true", line, IGNORECASE):
             pause_line = i
-        elif search('"request"\s*:\s*"health"', line, IGNORECASE):
+        elif search(r'"request"\s*:\s*"health"', line, IGNORECASE):
             health_line = i
-        elif search("'pause_session_request'\s*=\s*false", line, IGNORECASE):
+        elif search(r"'pause_session_request'\s*=\s*false", line, IGNORECASE):
             stop_line = i
     assert pause_line > 0 and health_line > 0 and stop_line > 0
     assert pause_line < health_line < stop_line
@@ -557,6 +552,6 @@ def test_no_async_call_on_pause_when_health_is_disabled(accelize_drm, conf_json,
     context = get_context()
     assert context['health_cnt'] == 0
     # Check no health request appeared in the log file
-    assert search('"request"\s*:\s*"health"', basic_log_file.read(), IGNORECASE) is None
+    assert search(r'"request"\s*:\s*"health"', basic_log_file.read(), IGNORECASE) is None
     assert get_proxy_error() is None
     basic_log_file.remove()

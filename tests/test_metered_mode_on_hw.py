@@ -539,20 +539,20 @@ def test_stop_after_pause(accelize_drm, conf_json, cred_json, async_handler):
 @pytest.mark.no_parallel
 @pytest.mark.hwtst
 #@pytest.mark.skip(reason='Might be the root cause of SegFault')
-def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
+def test_metering_limits_on_activate(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
     """
-    Test an error is returned and the design is locked when the limit is reached.
+    Test an error is returned by the activate function and the design is locked when the limit is reached.
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
     activators.reset_coin()
     activators.autotest()
-    cred_json.set_user('accelize_accelerator_test_03')
 
     # Test activate function call fails when limit is reached
     async_cb.reset()
     conf_json.reset()
+    cred_json.set_user('accelize_accelerator_test_03')
     accelize_drm.clean_metering_env(cred_json, ws_admin)
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
@@ -570,7 +570,6 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         assert drm_manager.get('metered_data') == 0
         activators[0].generate_coin(999)
         activators[0].check_coin(drm_manager.get('metered_data'))
-        sleep(1)
         drm_manager.deactivate()
         activators[0].reset_coin()
         assert not drm_manager.get('license_status')
@@ -579,7 +578,6 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         activators[0].check_coin(drm_manager.get('metered_data'))
         activators[0].generate_coin(1)
         activators[0].check_coin(drm_manager.get('metered_data'))
-        sleep(1)
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
@@ -592,13 +590,26 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         async_cb.assert_NoError()
     finally:
         drm_manager.deactivate()
-    print('Test activate function fails when limit is reached: PASS')
 
-    # Test background thread stops when limit is reached
+
+@pytest.mark.minimum
+@pytest.mark.no_parallel
+@pytest.mark.hwtst
+#@pytest.mark.skip(reason='Might be the root cause of SegFault')
+def test_metering_limits_on_licensing_thread(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
+    """
+    Test an error is returned by the async error function and the design is locked when the limit is reached.
+    """
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    activators = accelize_drm.pytest_fpga_activators[0]
+    activators.reset_coin()
+    activators.autotest()
+
     async_cb.reset()
     conf_json.reset()
+    cred_json.set_user('accelize_accelerator_test_03')
     accelize_drm.clean_metering_env(cred_json, ws_admin)
-    activators.reset_coin()
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
@@ -615,14 +626,14 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         assert drm_manager.get('license_status')
         assert drm_manager.get('metered_data') == 0
         lic_duration = drm_manager.get('license_duration')
-        sleep(2)
+        sleep(int(lic_duration/2) + 1)
         activators[0].generate_coin(1000)
         activators[0].check_coin(drm_manager.get('metered_data'))
-        # Wait right before expiration
+        # Wait right before lock
         wait_deadline(start, 3*lic_duration-3)
         assert drm_manager.get('license_status')
         activators.autotest(is_activated=True)
-        sleep(5)
+        wait_deadline(start, 3*lic_duration+3)
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
         # Verify asynchronous callback has been called
@@ -637,7 +648,6 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         activators.autotest(is_activated=False)
     finally:
         drm_manager.deactivate()
-    print('Test background thread stops when limit is reached: PASS')
 
 
 @pytest.mark.on_2_fpga

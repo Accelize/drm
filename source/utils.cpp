@@ -200,9 +200,7 @@ Json::Value parseJsonFile( const std::string& file_path ) {
 }
 
 
-const Json::Value& JVgetRequired( const Json::Value& jval,
-        const char* key,
-        const Json::ValueType& type ) {
+const Json::Value& JVgetRequired( const Json::Value& jval, const char* key, const Json::ValueType& type ) {
     if ( !jval.isMember( key ) )
         Throw( DRM_BadFormat, "Missing parameter '{}' of type {}", key, typeToString( type ) );
 
@@ -226,10 +224,8 @@ const Json::Value& JVgetRequired( const Json::Value& jval,
 }
 
 
-const Json::Value& JVgetOptional( const Json::Value& jval,
-        const char* key,
-        const Json::ValueType& type,
-        const Json::Value& defaultValue ) {
+const Json::Value& JVgetOptional( const Json::Value& jval, const char* key, const Json::ValueType& type,
+                                  const Json::Value& defaultValue ) {
     bool exists = jval.isMember( key );
     const Json::Value& jvalmember = exists ? jval[key] : defaultValue;
 

@@ -6,9 +6,9 @@ import hashlib
 
 from copy import deepcopy
 from json import dump, load, dumps
-from os import environ, getpid, listdir, remove, makedirs, getcwd, urandom
+from os import environ, getpid, listdir, remove, makedirs, getcwd, urandom, rename
 from os.path import basename, dirname, expanduser, isdir, isfile, join, \
-    realpath, splitext
+    realpath, splitext, exists
 from random import randint
 from re import IGNORECASE, match, search
 from datetime import datetime
@@ -41,6 +41,16 @@ def bit_not(n, numbits=32):
 
 def cheap_hash(string_in, length=6):
     return hashlib.md5(string_in).hexdigest()[:length]
+
+
+def is_file_busy(path):
+    #if not exists(path):
+    #    return False
+    try:
+        rename(path, path)
+        return False
+    except OSError as e:
+        return True
 
 
 def get_default_conf_json(licensing_server_url):
@@ -249,6 +259,7 @@ class SingleActivator:
         self.base_address = base_address
         self.metering_data = 0
         self.event_cnt_flag = self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET) != 0xDEADDEAD
+        print('Event counter in Activator @0x%08X is active' % self.base_address)
 
     def autotest(self, is_activated=None):
         """
@@ -302,8 +313,8 @@ class SingleActivator:
         Reset the coins counter
         """
         self.metering_data = 0
-        self.driver.write_register(self.base_address + CNT_EVENT_REG_OFFSET, 0)
         if self.event_cnt_flag:
+            self.driver.write_register(self.base_address + CNT_EVENT_REG_OFFSET, 0)
             assert self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET) == 0
 
     def check_coin(self, coins):
@@ -313,11 +324,25 @@ class SingleActivator:
         Args:
             coins (int): Number of coins to compare to.
         """
+        # Read counter in Activation's registry
+        if self.event_cnt_flag:
+            metering_data_from_activator = self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET)
         # Check local counter with dmr value passed in argument
-        assert self.metering_data == coins
+        try:
+            assert self.metering_data == coins
+        except AssertionError:
+            if self.event_cnt_flag:
+                print('Metering data: from pytest=%d, from DRM Ctrl=%d, from IP=%d' % (self.metering_data, coins, metering_data_from_activator))
+            else:
+                print('Metering data: from pytest=%d, from DRM Ctrl=%d' % (self.metering_data, coins))
+            raise
         # Check with counter in Activator's registery
         if self.event_cnt_flag:
-            assert self.metering_data == self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET)
+            try:
+                assert self.metering_data == metering_data_from_activator
+            except AssertionError:
+                print('Metering data: from pytest=%d, from DRM Ctrl=%d, from IP=%d' % (self.metering_data, coins, metering_data_from_activator))
+                raise
 
 
 
@@ -1103,14 +1128,14 @@ def app(pytestconfig):
 
 class BasicLogFile:
 
-    def __init__(self, basepath, verbosity, append, keep=False):
+    def __init__(self, basepath=getcwd(), verbosity=None, append=False, keep=False):
         self._basepath = basepath
         self._path = None
         self._verbosity = verbosity
         self._append = append
         self._keep = keep
 
-    def create(self, verbosity, format=LOG_FORMAT_SHORT):
+    def create(self, verbosity, format=LOG_FORMAT_LONG):
         log_param =  dict()
         while True:
             self._path = '%s__%d__%s.log' % (self._basepath, getpid(), time())
@@ -1120,16 +1145,14 @@ class BasicLogFile:
         log_param['log_file_type'] = 1
         log_param['log_file_append'] = self._append
         log_param['log_file_format'] = format
-        if self._verbosity is None:
-            log_param['log_file_verbosity'] = self._verbosity
-        elif verbosity >= self._verbosity:
+        if self._verbosity is not None and self._verbosity < verbosity:
             log_param['log_file_verbosity'] = self._verbosity
         else:
             log_param['log_file_verbosity'] = verbosity
         return log_param
 
     def read(self):
-        wait_func_true(lambda: isfile(self._path), 10)
+        wait_func_true(lambda: not is_file_busy(self._path), 10)
         with open(self._path, 'rt') as f:
             log_content = f.read()
         return log_content
