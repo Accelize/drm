@@ -197,3 +197,9 @@ From v3.x to 4.x
     the simulation and synthesis respectively. Top level files are prefixed with 'top_'.
   - `sdaccel` and `vitis` folders has been create: they contains the scirpt and makefile to generate the kernel
     for those specific flows.
+
+From v4.1 to 4.2
+~~~~~~~~~~~~~~~~
+
+- The file `drm_ip_activator_package_0xVVVVLLLLNNNNVVVV.vhdl` has been added and must be compiled under `drm_library`.
+
