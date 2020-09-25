@@ -1360,6 +1360,7 @@ protected:
                 break;
             }
             Debug2( "License #{} not transmitted yet after {:f} ms", mLicenseCounter, mseconds );
+            usleep(50);
         }
         if ( !activationCodesTransmitted ) {
             Throw( DRM_CtlrError, "DRM Controller could not transmit Licence #{} to activators after {:f} ms. ", mLicenseCounter, mseconds ); //LCOV_EXCL_LINE
