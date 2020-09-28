@@ -86,6 +86,7 @@ def test_metered_start_stop_1_coin_in_raw(accelize_drm, conf_json, cred_json, as
 
 
 @pytest.mark.minimum
+@pytest.mark.packages
 @pytest.mark.hwtst
 def test_metered_start_stop_short_time(accelize_drm, conf_json, cred_json, async_handler):
     """
@@ -217,6 +218,7 @@ def test_metered_start_stop_long_time(accelize_drm, conf_json, cred_json, async_
 
 
 @pytest.mark.minimum
+@pytest.mark.packages
 @pytest.mark.hwtst
 def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, async_handler):
     """
