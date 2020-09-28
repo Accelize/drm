@@ -1768,7 +1768,6 @@ protected:
                         mExpirationTime = TClock::now() + std::chrono::seconds( mLicenseDuration );
                     }
                 }
-                Debug( "Released metering access mutex from licensing thread" );
 
             } catch( const Exception& e ) {
                 if ( e.getErrCode() != DRM_Exit ) {
