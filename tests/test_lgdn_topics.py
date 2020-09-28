@@ -263,3 +263,43 @@ def test_endurance(accelize_drm, conf_json, cred_json, async_handler):
         activators[0].autotest(is_activated=False)
         elapsed = datetime.now() - start
         print('Endurance test has completed:', str(timedelta(seconds=elapsed.total_seconds())))
+
+
+@pytest.mark.lgdn
+def test_drm_controller_activation_timeout(accelize_drm, conf_json, cred_json, async_handler):
+    """Reproduce DRM Controller Activation is in timeout issue"""
+    driver = accelize_drm.pytest_fpga_driver[0]
+    image_id = driver.fpga_image
+    async_cb = async_handler.create()
+    async_cb.reset()
+    drm_manager = None
+
+    try:
+        nb_loop = accelize_drm.pytest_params['loop']
+        print('Using parameter 'loop'=%d' % nb_loop)
+    except:
+        nb_loop = 20
+        print('Warning: Missing argument "loop". Using default value %d' % nb_loop)
+
+    for i in range(nb_loop):
+        print('\n*** Loop #%d ***' % i)
+        # Program FPGA with lastest HDK per major number
+        driver.program_fpga(image_id)
+
+        # Test no compatibility issue
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+        assert not drm_manager.get('license_status')
+        try:
+            drm_manager.activate()
+            assert drm_manager.get('license_status')
+        finally:
+            drm_manager.deactivate()
+            assert not drm_manager.get('license_status')
+            del drm_manager
+        async_cb.assert_NoError()

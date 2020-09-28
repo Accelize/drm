@@ -57,5 +57,5 @@ stages:
           instance_type: 'f1.4xlarge'
           config_list:
           - os_distrib: 'centos_7'
-            tox_extra_option: '-m minimum'
+            tox_extra_option: '-m packages'
 
