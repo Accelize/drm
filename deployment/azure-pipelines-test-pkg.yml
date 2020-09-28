@@ -1,5 +1,17 @@
 ---
-name: DRM Library tests and release
+name: Health tests of DRM Library packages
+
+trigger:
+  batch: true
+  branches:
+    include:
+      - master
+      - dev
+  paths:
+    include:
+      - deployment/azure-pipelines-test-pkg.yml
+      - deployment/runTestFromPkgOnEc2.yml
+      - deployment/playbook_test_pkg.yml
 
 schedules:
 # Run tests from package major branches weekly, including packages build on all OS
