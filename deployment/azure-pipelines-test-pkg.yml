@@ -44,5 +44,3 @@ jobs:
       config_list:
       - os_distrib: 'centos_7'
         tox_extra_option: '-m minimum'
-      - os_distrib: 'ubuntu_18_04'
-        tox_extra_option: '-m minimum'
