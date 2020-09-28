@@ -74,12 +74,12 @@ jobs:
           EOF
         displayName: Create Accelize credentials file
 
-      - script: sudo pip install tox
-        displayName: Install tox
+      - script: sudo pip install tox requests flask pytest-flask python-dateutil pytest-ordering
+        displayName: Install test dependencies
 
-      - script: sudo -E tox -p all -e cpp-debug,c-debug,integration-debug
+      - script: sudo -E tox -p all -e cpp-install,cpp-install
                 -- --cred=$(Build.SourcesDirectory)/cred.json --server=prod --artifacts_dir=$(Build.SourcesDirectory)/artifacts -rxs ${{ config.tox_extra_option }}
-        displayName: Run tests with Tox
+        displayName: Run tests on package with Tox
         env:
           TOX_PARALLEL_NO_SPINNER: 1
 
