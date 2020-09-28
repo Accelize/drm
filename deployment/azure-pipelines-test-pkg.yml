@@ -49,7 +49,7 @@ variables:
            sudo apt-get install -y --no-install-recommends
 
 stages:
-  - stage: test packages
+  - stage: test_packages
     displayName: Install and test packages
     jobs:
       - template: runTestFromPkgOnEc2.yml
