@@ -37,6 +37,17 @@ variables:
   # Import variable group
   - group: drmLibrary
 
+  # Allow import of python files in "deployment" dir
+  - name: pythonPath
+    value: $(Build.SourcesDirectory)/deployment
+
+  # Common commands shortcut
+  - name: pipInstall
+    value: pip install --disable-pip-version-check
+  - name: aptInstall
+    value: sudo apt-get update &&
+           sudo apt-get install -y --no-install-recommends
+
 jobs:
   - template: runTestFromPkgOnEc2.yml
     parameters:

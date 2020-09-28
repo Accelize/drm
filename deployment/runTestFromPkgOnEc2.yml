@@ -18,7 +18,7 @@ jobs:
       image: ${{ config.os_distrib }}
       instanceType: ${{ parameters.instance_type }}
       acidDir: $(Build.SourcesDirectory)/deployment/acid
-      ansiblePlaybook: $(Build.SourcesDirectory)/deployment/test_pkg_playbook.yml
+      ansiblePlaybook: $(Build.SourcesDirectory)/deployment/playbook_test_pkg.yml
 
   # Install Package on AWS agent
   - job: runTests_Aws_${{ config.os_distrib }}
