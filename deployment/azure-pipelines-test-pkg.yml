@@ -48,10 +48,14 @@ variables:
     value: sudo apt-get update &&
            sudo apt-get install -y --no-install-recommends
 
-jobs:
-  - template: runTestFromPkgOnEc2.yml
-    parameters:
-      instance_type: 'f1.4xlarge'
-      config_list:
-      - os_distrib: 'centos_7'
-        tox_extra_option: '-m minimum'
+stages:
+  - stage: test packages
+    displayName: Install and test packages
+    jobs:
+      - template: runTestFromPkgOnEc2.yml
+        parameters:
+          instance_type: 'f1.4xlarge'
+          config_list:
+          - os_distrib: 'centos_7'
+            tox_extra_option: '-m minimum'
+
