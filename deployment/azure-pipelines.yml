@@ -402,7 +402,7 @@ stages:
                     action: create
                     target: $(Build.SourceVersion)
                     tagSource: gitTag
-                    tagPattern: v.*
+                    tagPattern: v[0-9]+\.[0-9]+\.[0-9]+
                     isPreRelease: contains($(libraryVersion.version), '-')
                     releaseNotesSource: inline
                     releaseNotesInline: |

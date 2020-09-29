@@ -14,7 +14,7 @@ trigger:
       - deployment/playbook_test_pkg.yml
 
 schedules:
-# Run tests from package major branches weekly, including packages build on all OS
+# Run tests from Production package daily
 - cron: "0 0 * * *"
   displayName: Daily midnight test of packages
   branches:
