@@ -213,7 +213,6 @@ protected:
     // Debug parameters
     spdlog::level::level_enum mDebugMessageLevel;
 
-
     // User accessible parameters
     const std::map<ParameterKey, std::string> mParameterKeyMap = {
     #   define PARAMETERKEY_ITEM(id) {id, #id},
@@ -234,14 +233,17 @@ protected:
             if ( errcode ) {                                                                    \
                 getDrmController().readSecurityAlertStatusRegister( securityAlertBit );         \
                 getDrmController().extractAdaptiveProportionTestFailures( adaptiveProportionTestFailures ); \
-                getDrmController().extractRepetitionCountTestFailures( repetitionCountTestFailures ); \
-                Error( "{} failed: security alert bit = {}, adaptative proportion = {}, repetition count = {}", #func, securityAlertBit, adaptiveProportionTestFailures, repetitionCountTestFailures ); \
+                getDrmController().extractRepetitionCountTestFailures( repetitionCountTestFailures );       \
+                Debug( "security alert bit = {}, adaptative proportion = {}, repetition count = {}", securityAlertBit, adaptiveProportionTestFailures, repetitionCountTestFailures ); \
+                Error( "{} failed with error code {}", #func, errcode );                        \
+                Throw( DRM_CtlrError, "{} failed with error code {}", #func, errcode );         \
             }                                                                                   \
         } catch( const std::exception &e ) {                                                    \
             getDrmController().readSecurityAlertStatusRegister( securityAlertBit );             \
             getDrmController().extractAdaptiveProportionTestFailures( adaptiveProportionTestFailures ); \
             getDrmController().extractRepetitionCountTestFailures( repetitionCountTestFailures ); \
-            Error( "{} threw an exception: security alert bit = {}, adaptative proportion = {}, repetition count = {}", #func, securityAlertBit, adaptiveProportionTestFailures, repetitionCountTestFailures ); \
+            Debug( "security alert bit = {}, adaptative proportion = {}, repetition count = {}", securityAlertBit, adaptiveProportionTestFailures, repetitionCountTestFailures ); \
+            Error( "{} threw an exception: {}", #func, e.what() );                              \
             Throw( DRM_CtlrError, e.what() );                                                   \
         }                                                                                       \
     }
@@ -486,7 +488,7 @@ protected:
         // Gather CSP information if detected
         Json::Value csp_node = Json::nullValue;
         try {
-            uint32_t ws_verbosity = getDrmWSClient().getVerbosity();
+            uint32_t ws_verbosity = getDrmWSClient()->getVerbosity();
             mHostConfigData["csp"] = GetCspInfo( ws_verbosity );
             Debug( "CSP information:\n{}", mHostConfigData["csp"].toStyledString() );
         } catch( const std::exception &e ) {
@@ -657,9 +659,9 @@ protected:
         Unreachable( "No DRM Controller available. " ); //LCOV_EXCL_LINE
     }
 
-    DrmWSClient& getDrmWSClient() {
+    DrmWSClient* getDrmWSClient() const {
         if ( mWsClient )
-            return *mWsClient;
+            return mWsClient.get();
         Unreachable( "No Web Service has been defined. " ); //LCOV_EXCL_LINE
     }
 
@@ -1219,7 +1221,7 @@ protected:
             token_valid = false;
             // Get valid OAUth2 token
             try {
-                getDrmWSClient().requestOAuth2token( deadline );
+                getDrmWSClient()->requestOAuth2token( deadline );
                 token_valid = true;
             } catch ( const Exception& e ) {
                 lic_attempt = 0;
@@ -1260,7 +1262,7 @@ protected:
                 // Add settings parameters
                 request_json["settings"] = buildSettingsNode();
                 // Send license request and wait for the answer
-                return getDrmWSClient().requestLicense( request_json, deadline );
+                return getDrmWSClient()->requestLicense( request_json, deadline );
             } catch ( const Exception& e ) {
                 oauth_attempt = 0;
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
@@ -1397,7 +1399,7 @@ protected:
             token_valid = false;
             // Get valid OAUth2 token
             try {
-                getDrmWSClient().requestOAuth2token( deadline );
+                getDrmWSClient()->requestOAuth2token( deadline );
                 token_valid = true;
             } catch ( const Exception& e ) {
                 lic_attempt = 0;
@@ -1426,7 +1428,7 @@ protected:
 
             // Get new license
             try {
-                return getDrmWSClient().requestHealth( request_json, deadline );
+                return getDrmWSClient()->requestHealth( request_json, deadline );
             } catch ( const Exception& e ) {
                 oauth_attempt = 0;
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
@@ -2323,21 +2325,21 @@ public:
                         break;
                     }
                     case ParameterKey::token_string: {
-                        std::string token_str = getDrmWSClient().getTokenString();
+                        std::string token_str = getDrmWSClient()->getTokenString();
                         json_value[key_str] = token_str;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                token_str );
                         break;
                     }
                     case ParameterKey::token_validity: {
-                        uint32_t validity = getDrmWSClient().getTokenValidity();
+                        uint32_t validity = getDrmWSClient()->getTokenValidity();
                         json_value[key_str] = validity ;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                validity  );
                         break;
                     }
                     case ParameterKey::token_time_left: {
-                        uint32_t time_left = getDrmWSClient().getTokenTimeLeft();
+                        uint32_t time_left = getDrmWSClient()->getTokenTimeLeft();
                         json_value[key_str] = time_left;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                time_left );
@@ -2453,7 +2455,7 @@ public:
                         break;
                     }
                     case ParameterKey::ws_verbosity: {
-                        uint32_t wsVerbosity = getDrmWSClient().getVerbosity();
+                        uint32_t wsVerbosity = getDrmWSClient()->getVerbosity();
                         json_value[key_str] = wsVerbosity;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                wsVerbosity );
