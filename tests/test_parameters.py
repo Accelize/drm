@@ -66,7 +66,8 @@ _PARAM_LIST = ('license_type',
                'host_data_verbosity',
                'host_data',
                'log_file_append',
-               'ws_verbosity'
+               'ws_verbosity',
+               'trng_status'
 )
 
 
@@ -1116,6 +1117,24 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         drm_manager.set(ws_verbosity=1)
     async_cb.assert_NoError()
     print("Test parameter 'ws_verbosity': PASS")
+
+    # Test parameter: trng_status
+    async_cb.reset()
+    conf_json.reset()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    trng_status = drm_manager.get('trng_status')
+    print('trng_status=', trng_status)
+    assert 'security_alert_bit' in trng_status.keys()
+    assert 'adaptive_proportion' in trng_status.keys()
+    assert 'repetition_count' in trng_status.keys()
+    async_cb.assert_NoError()
+    print("Test parameter 'trng_status': PASS")
 
 
 def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cred_json,
