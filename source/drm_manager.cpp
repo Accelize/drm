@@ -2059,7 +2059,6 @@ public:
         TRY {
             Debug( "Calling 'activate' with 'resume_session_request'={}", resume_session_request );
 
-            bool isRunning = isSessionRunning();
             mExpirationTime = TClock::now();
 
             if ( isNodeLockedMode() ) {
@@ -2071,18 +2070,22 @@ public:
                 Throw( DRM_BadUsage, "DRM Controller is locked in Node-Locked licensing mode: "
                                     "To use other modes you must reprogram the FPGA device." );
             }
-            if ( isRunning && resume_session_request ) {
-                resumeSession();
-            } else {
-                if ( isRunning && !resume_session_request ) {
-                    Debug( "Session is already running but resume flag is {}: stopping this pending session",
-                            resume_session_request );
+            if ( isSessionRunning() ) {
+                if ( resume_session_request && isLicenseActive() ) {
+                    resumeSession();
+                } else {
+                    if ( resume_session_request )
+                        Debug( "Session resuming request: stopping the pending session because license has expired" );
+                    else
+                        Debug( "Session creationg request: Stopping the pending session" );
                     try {
                         stopSession();
                     } catch( const Exception &e ) {
                         Warning( "Failed to stop pending session: {}", e.what() );
                     }
+                    startSession();
                 }
+            } else {
                 startSession();
             }
             mThreadExit = false;
