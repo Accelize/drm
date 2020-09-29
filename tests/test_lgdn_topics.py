@@ -276,7 +276,7 @@ def test_drm_controller_activation_timeout(accelize_drm, conf_json, cred_json, a
 
     try:
         nb_loop = accelize_drm.pytest_params['loop']
-        print('Using parameter 'loop'=%d' % nb_loop)
+        print('Using parameter "loop"=%d' % nb_loop)
     except:
         nb_loop = 20
         print('Warning: Missing argument "loop". Using default value %d' % nb_loop)
