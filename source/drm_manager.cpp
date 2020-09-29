@@ -657,7 +657,7 @@ protected:
         Unreachable( "No DRM Controller available. " ); //LCOV_EXCL_LINE
     }
 
-    DrmWSClient& getDrmWSClient() {
+    DrmWSClient& getDrmWSClient() const {
         if ( mWsClient )
             return *mWsClient;
         Unreachable( "No Web Service has been defined. " ); //LCOV_EXCL_LINE
