@@ -657,7 +657,7 @@ protected:
         Unreachable( "No DRM Controller available. " ); //LCOV_EXCL_LINE
     }
 
-    DrmWSClient& getDrmWSClient() const {
+    DrmWSClient& getDrmWSClient() {
         if ( mWsClient )
             return *mWsClient;
         Unreachable( "No Web Service has been defined. " ); //LCOV_EXCL_LINE
@@ -1768,7 +1768,6 @@ protected:
                         mExpirationTime = TClock::now() + std::chrono::seconds( mLicenseDuration );
                     }
                 }
-                Debug( "Released metering access mutex from licensing thread" );
 
             } catch( const Exception& e ) {
                 if ( e.getErrCode() != DRM_Exit ) {
