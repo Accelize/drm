@@ -357,12 +357,12 @@ protected:
                         mBypassFrequencyDetection ).asBool();
             }
 
-            // Check ACCELIZE_DRM_SIMULATION variable existence
-            char* env_val = getenv( "ACCELIZE_DRM_SIMULATION" );
+            // Check DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS variable exists
+            char* env_val = getenv( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS" );
             if (env_val == NULL) {
-                Debug( "ACCELIZE_DRM_SIMULATION variable is not defined" );
+                Debug( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS variable is not defined" );
             } else {
-                Warning( "Accelize DRM Library is configured for simulation" );
+                Warning( "Accelize DRM Library is configured to run for simulation only" );
                 mSimulationFlag = true;
                 mActivationTransmissionTimeoutMS *= 1000;
             }
