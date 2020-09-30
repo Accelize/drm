@@ -62,7 +62,7 @@ limitations under the License.
 
 #define CATCH_AND_THROW                   \
         sLogger->flush();                 \
-    }
+    }                                     \
     catch( const std::exception &e ) {    \
         Fatal( e.what() );                \
         throw;                            \
