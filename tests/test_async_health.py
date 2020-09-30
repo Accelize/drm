@@ -492,6 +492,7 @@ def test_async_call_on_pause_when_health_is_enabled(accelize_drm, conf_json, cre
         drm_manager.deactivate(True) # Pause session
     finally:
         drm_manager.deactivate()
+    del drm_manager
     async_cb.assert_NoError()
     # Check the proxy received only 1 health request (corresponding to the pause call)
     context = get_context()

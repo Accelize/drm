@@ -49,7 +49,7 @@ def is_file_busy(path):
     try:
         rename(path, path)
         return False
-    except OSError as e:
+    except OSError:
         return True
 
 
