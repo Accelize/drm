@@ -270,21 +270,21 @@ def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, asy
         assert drm_manager.get('session_id') == session_id
         activators.autotest(is_activated=True)
         # Wait expiration
-        sleep(4)
+        wait_deadline(start, 2*lic_duration+2)
         assert drm_manager.get('session_status')
         assert drm_manager.get('session_id') == session_id
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
         drm_manager.activate(True)
         assert drm_manager.get('session_status')
-        assert drm_manager.get('session_id') == session_id
+        assert drm_manager.get('session_id') != session_id
         assert drm_manager.get('license_status')
         activators.autotest(is_activated=True)
         drm_manager.deactivate()
         assert not drm_manager.get('session_status')
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
-        assert drm_manager.get('session_id') != session_id
+        assert drm_manager.get('session_id') == ''
         async_cb.assert_NoError()
     finally:
         drm_manager.deactivate()
@@ -340,6 +340,11 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
             wait_deadline(start, random_wait)
             drm_manager.activate(True)
             start = datetime.now()
+            if random_wait > lic_duration*2:
+                assert drm_manager.get('session_id') != session_id
+                session_id = drm_manager.get('session_id')
+            else:
+                assert drm_manager.get('session_id') == session_id
         assert drm_manager.get('session_status')
         assert drm_manager.get('session_id') == session_id
         assert drm_manager.get('license_status')

@@ -247,13 +247,15 @@ def test_endurance(accelize_drm, conf_json, cred_json, async_handler):
         lic_duration = drm_manager.get('license_duration')
         assert drm_manager.get('license_status')
         activators[0].autotest(is_activated=True)
-        activators[0].check_coin(drm_manager.get('metered_ta'))
+        activators[0].check_coin(drm_manager.get('metered_data'))
         while True:
             assert drm_manager.get('license_status')
             activators[0].generate_coin(randint(1,10))
             activators[0].check_coin(drm_manager.get('metered_data'))
+            trng = drm_manager.get('trng_status')
             seconds_left = test_duration - (datetime.now() - start).total_seconds()
-            print('Remaining time: %0.1fs  /  current coins=%d' % (seconds_left, activators[0].metering_data))
+            print('Remaining time: %0.1fs  /  current coins=%d / security_alert_bit=%d adaptive_proportion=0x%08X repetition_count=0x%08X'
+                    % (seconds_left, activators[0].metering_data, trng['security_alert_bit'], trng['adaptive_proportion_test'], trng['repetition_count_test'] ))
             if seconds_left < 0:
                 break
             sleep(randint(10, 3*lic_duration))
@@ -281,25 +283,34 @@ def test_drm_controller_activation_timeout(accelize_drm, conf_json, cred_json, a
         nb_loop = 20
         print('Warning: Missing argument "loop". Using default value %d' % nb_loop)
 
+    err = 0
     for i in range(nb_loop):
         print('\n*** Loop #%d ***' % i)
         # Program FPGA with lastest HDK per major number
         driver.program_fpga(image_id)
-
-        # Test no compatibility issue
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        assert not drm_manager.get('license_status')
         try:
-            drm_manager.activate()
-            assert drm_manager.get('license_status')
-        finally:
-            drm_manager.deactivate()
+            # Test no compatibility issue
+            drm_manager = accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            )
             assert not drm_manager.get('license_status')
-            del drm_manager
-        async_cb.assert_NoError()
+            try:
+                drm_manager.activate()
+                assert drm_manager.get('license_status')
+            finally:
+                drm_manager.deactivate()
+                assert not drm_manager.get('license_status')
+                del drm_manager
+            async_cb.assert_NoError()
+            if err > 0:
+                print('Reattempt after error succeeded!')
+                break
+        except AssertionError:
+            err += 1
+        if err > 1:
+            print('Reattempt after error failed!')
+

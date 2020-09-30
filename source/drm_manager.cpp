@@ -213,7 +213,6 @@ protected:
     // Debug parameters
     spdlog::level::level_enum mDebugMessageLevel;
 
-
     // User accessible parameters
     const std::map<ParameterKey, std::string> mParameterKeyMap = {
     #   define PARAMETERKEY_ITEM(id) {id, #id},
@@ -234,14 +233,17 @@ protected:
             if ( errcode ) {                                                                    \
                 getDrmController().readSecurityAlertStatusRegister( securityAlertBit );         \
                 getDrmController().extractAdaptiveProportionTestFailures( adaptiveProportionTestFailures ); \
-                getDrmController().extractRepetitionCountTestFailures( repetitionCountTestFailures ); \
-                Error( "{} failed: security alert bit = {}, adaptative proportion = {}, repetition count = {}", #func, securityAlertBit, adaptiveProportionTestFailures, repetitionCountTestFailures ); \
+                getDrmController().extractRepetitionCountTestFailures( repetitionCountTestFailures );       \
+                Debug( "security alert bit = {}, adaptative proportion = {}, repetition count = {}", securityAlertBit, adaptiveProportionTestFailures, repetitionCountTestFailures ); \
+                Error( "{} failed with error code {}", #func, errcode );                        \
+                Throw( DRM_CtlrError, "{} failed with error code {}", #func, errcode );         \
             }                                                                                   \
         } catch( const std::exception &e ) {                                                    \
             getDrmController().readSecurityAlertStatusRegister( securityAlertBit );             \
             getDrmController().extractAdaptiveProportionTestFailures( adaptiveProportionTestFailures ); \
             getDrmController().extractRepetitionCountTestFailures( repetitionCountTestFailures ); \
-            Error( "{} threw an exception: security alert bit = {}, adaptative proportion = {}, repetition count = {}", #func, securityAlertBit, adaptiveProportionTestFailures, repetitionCountTestFailures ); \
+            Debug( "security alert bit = {}, adaptative proportion = {}, repetition count = {}", securityAlertBit, adaptiveProportionTestFailures, repetitionCountTestFailures ); \
+            Error( "{} threw an exception: {}", #func, e.what() );                              \
             Throw( DRM_CtlrError, e.what() );                                                   \
         }                                                                                       \
     }
@@ -2460,6 +2462,21 @@ public:
                         json_value[key_str] = wsVerbosity;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                wsVerbosity );
+                        break;
+                    }
+                    case ParameterKey::trng_status: {
+                        Json::Value trng_status_json;
+                        bool securityAlertBit;
+                        std::string adaptiveProportionTestFailures, repetitionCountTestFailures;
+                        getDrmController().readSecurityAlertStatusRegister( securityAlertBit );
+                        getDrmController().extractAdaptiveProportionTestFailures( adaptiveProportionTestFailures );
+                        getDrmController().extractRepetitionCountTestFailures( repetitionCountTestFailures );
+                        trng_status_json["security_alert_bit"] = securityAlertBit;
+                        trng_status_json["adaptive_proportion_test"] = adaptiveProportionTestFailures;
+                        trng_status_json["repetition_count_test"] = repetitionCountTestFailures;
+                        json_value[key_str] = trng_status_json;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                               trng_status_json.toStyledString() );
                         break;
                     }
                     case ParameterKey::ParameterKeyCount: {
