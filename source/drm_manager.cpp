@@ -58,12 +58,15 @@ limitations under the License.
 #define FREQ_DETECTION_VERSION_EXPECTED	 0x60DC0DE0
 
 
-#define TRY try
+#define TRY try{
 
 #define CATCH_AND_THROW                   \
+        sLogger->flush();                 \
+    }
     catch( const std::exception &e ) {    \
         Fatal( e.what() );                \
         throw;                            \
+        sLogger->flush();                 \
     }
 
 
@@ -2026,7 +2029,7 @@ public:
           AsynchErrorCallback f_user_asynch_error )
         : Impl( conf_file_path, cred_file_path )
     {
-        TRY {
+        TRY
             Debug( "Calling Impl public constructor" );
             if ( !f_user_read_register )
                 Throw( DRM_BadArg, "Read register callback function must not be NULL" );
@@ -2039,11 +2042,11 @@ public:
             f_asynch_error = f_user_asynch_error;
             initDrmInterface();
             Debug( "Exiting Impl public constructor" );
-        } CATCH_AND_THROW
+        CATCH_AND_THROW
     }
 
     ~Impl() {
-        TRY {
+        TRY
             Debug( "Calling Impl destructor" );
             if ( mSecurityStop && isSessionRunning() ) {
                 Debug( "Security stop triggered: stopping current session" );
@@ -2054,11 +2057,11 @@ public:
             unlockDrmToInstance();
             uninitLog();
             Debug( "Exiting Impl destructor" );
-        } CATCH_AND_THROW
+        CATCH_AND_THROW
     }
 
     void activate( const bool& resume_session_request = false ) {
-        TRY {
+        TRY
             Debug( "Calling 'activate' with 'resume_session_request'={}", resume_session_request );
 
             bool isRunning = isSessionRunning();
@@ -2094,11 +2097,11 @@ public:
             else
                 Debug( "Health background thread is not started ");
             mSecurityStop = true;
-        } CATCH_AND_THROW
+        CATCH_AND_THROW
     }
 
     void deactivate( const bool& pause_session_request = false ) {
-        TRY {
+        TRY
             Debug( "Calling 'deactivate' with 'pause_session_request'={}", pause_session_request );
 
             if ( isNodeLockedMode() ) {
@@ -2112,11 +2115,11 @@ public:
                 pauseSession();
             else
                 stopSession();
-        } CATCH_AND_THROW
+        CATCH_AND_THROW
     }
 
     void get( Json::Value& json_value ) const {
-        TRY {
+        TRY
             for( const std::string& key_str : json_value.getMemberNames() ) {
                 const ParameterKey key_id = findParameterKey( key_str );
                 Debug2( "Getting parameter '{}'", key_str );
@@ -2489,16 +2492,16 @@ public:
                     }
                 }
             }
-        } CATCH_AND_THROW
+        CATCH_AND_THROW
     }
 
     void get( std::string& json_string ) const {
-        TRY {
+        TRY
             Debug2( "Calling 'get' with in/out string: {}", json_string );
             Json::Value root = parseJsonString( json_string );
             get( root );
             json_string = root.toStyledString();
-        } CATCH_AND_THROW
+        CATCH_AND_THROW
     }
 
     template<typename T> T get( const ParameterKey /*key_id*/ ) const {
@@ -2506,7 +2509,7 @@ public:
     }
 
     void set( const Json::Value& json_value ) {
-        TRY {
+        TRY
             for( Json::ValueConstIterator it = json_value.begin() ; it != json_value.end() ; it++ ) {
                 std::string key_str = it.key().asString();
                 const ParameterKey key_id = findParameterKey( key_str );
@@ -2634,7 +2637,7 @@ public:
                         Throw( DRM_BadArg, "Parameter '{}' cannot be overwritten", key_str );
                 }
             }
-        } CATCH_AND_THROW
+        CATCH_AND_THROW
     }
 
     void set( const std::string& json_string ) {
