@@ -324,6 +324,7 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
         session_id = drm_manager.get('session_id')
         assert len(session_id) > 0
         lic_duration = drm_manager.get('license_duration')
+        wait_numbers = range(lic_duration*2-2,lic_duration*2-1) + range(lic_duration*2+1,lic_duration*2+2)
         activators.autotest(is_activated=True)
         for i in range(nb_pause_resume):
             new_coins = randint(1, 100)
@@ -335,7 +336,7 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
             assert drm_manager.get('license_status')
             assert drm_manager.get('session_id') == session_id
             # Wait randomly at the limit of the expiration
-            random_wait = randint(lic_duration*2-1, lic_duration*2+1)
+            random_wait = random.choice(wait_numbers)
             wait_deadline(start, random_wait)
             drm_manager.activate(True)
             start = datetime.now()

@@ -1150,7 +1150,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     assert 'security_alert_bit' in trng_status.keys()
     assert 'adaptive_proportion_test_error' in trng_status.keys()
     assert 'repetition_count_test_error' in trng_status.keys()
-    assert match(r'[01]', trng_status['security_alert_bit'])
+    assert assert isinstance(trng_status['security_alert_bit']), bool)
     assert match(r'[0-9A-F]{8}', trng_status['adaptive_proportion_test_error'], IGNORECASE)
     assert match(r'[0-9A-F]{8}', trng_status['repetition_count_test_error'], IGNORECASE)
     async_cb.assert_NoError()
