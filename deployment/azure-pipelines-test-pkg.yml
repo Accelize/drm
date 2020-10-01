@@ -1,18 +1,6 @@
 ---
 name: Health tests of DRM Library packages
 
-trigger:
-  batch: true
-  branches:
-    include:
-      - master
-      - dev
-  paths:
-    include:
-      - deployment/azure-pipelines-test-pkg.yml
-      - deployment/runTestFromPkgOnEc2.yml
-      - deployment/playbook_test_pkg.yml
-
 schedules:
 # Run tests from Production package daily
 - cron: "0 0 * * *"
