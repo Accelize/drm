@@ -226,7 +226,7 @@ protected:
 
     #define checkDRMCtlrRet( func ) {                                                           \
         unsigned int errcode = DRM_OK;                                                          \
-        bool securityAlertBit;                                                                  \
+        bool securityAlertBit( false );                                                         \
         std::string adaptiveProportionTestError, repetitionCountTestError;                      \
         try {                                                                                   \
             std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );                  \
@@ -2472,7 +2472,7 @@ public:
                     }
                     case ParameterKey::trng_status: {
                         Json::Value trng_status_json;
-                        bool securityAlertBit;
+                        bool securityAlertBit( false );
                         std::string adaptiveProportionTestError, repetitionCountTestError;
                         getTrngStatus( securityAlertBit, adaptiveProportionTestError, repetitionCountTestError );
                         trng_status_json["security_alert_bit"] = securityAlertBit;
