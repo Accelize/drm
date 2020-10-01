@@ -1149,8 +1149,8 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     trng_status = drm_manager.get('trng_status')
     print('trng_status=', trng_status)
     assert 'security_alert_bit' in trng_status.keys()
-    assert 'adaptive_proportion' in trng_status.keys()
-    assert 'repetition_count' in trng_status.keys()
+    assert 'adaptive_proportion_test_error' in trng_status.keys()
+    assert 'repetition_count_test_error' in trng_status.keys()
     async_cb.assert_NoError()
     print("Test parameter 'trng_status': PASS")
 

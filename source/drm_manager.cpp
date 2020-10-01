@@ -237,7 +237,7 @@ protected:
                 getDrmController().readSecurityAlertStatusRegister( securityAlertBit );         \
                 getDrmController().extractAdaptiveProportionTestFailures( adaptiveProportionTestFailures ); \
                 getDrmController().extractRepetitionCountTestFailures( repetitionCountTestFailures );       \
-                Debug( "security alert bit = {}, adaptative proportion = {}, repetition count = {}", securityAlertBit, adaptiveProportionTestFailures, repetitionCountTestFailures ); \
+                Debug( "security alert bit = {}, adaptative proportion test error = {}, repetition count test error = {}", securityAlertBit, adaptiveProportionTestFailures, repetitionCountTestFailures ); \
                 Error( "{} failed with error code {}", #func, errcode );                        \
                 Throw( DRM_CtlrError, "{} failed with error code {}", #func, errcode );         \
             }                                                                                   \
@@ -245,7 +245,7 @@ protected:
             getDrmController().readSecurityAlertStatusRegister( securityAlertBit );             \
             getDrmController().extractAdaptiveProportionTestFailures( adaptiveProportionTestFailures ); \
             getDrmController().extractRepetitionCountTestFailures( repetitionCountTestFailures ); \
-            Debug( "security alert bit = {}, adaptative proportion = {}, repetition count = {}", securityAlertBit, adaptiveProportionTestFailures, repetitionCountTestFailures ); \
+            Debug( "security alert bit = {}, adaptative proportion test error = {}, repetition count test error = {}", securityAlertBit, adaptiveProportionTestFailures, repetitionCountTestFailures ); \
             Error( "{} threw an exception: {}", #func, e.what() );                              \
             Throw( DRM_CtlrError, e.what() );                                                   \
         }                                                                                       \
@@ -2472,8 +2472,8 @@ public:
                         getDrmController().extractAdaptiveProportionTestFailures( adaptiveProportionTestFailures );
                         getDrmController().extractRepetitionCountTestFailures( repetitionCountTestFailures );
                         trng_status_json["security_alert_bit"] = securityAlertBit;
-                        trng_status_json["adaptive_proportion"] = adaptiveProportionTestFailures;
-                        trng_status_json["repetition_count"] = repetitionCountTestFailures;
+                        trng_status_json["adaptive_proportion_test_error"] = adaptiveProportionTestFailures;
+                        trng_status_json["repetition_count_test_error"] = repetitionCountTestFailures;
                         json_value[key_str] = trng_status_json;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                trng_status_json.toStyledString() );
