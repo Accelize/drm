@@ -686,6 +686,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     # Test parameter: num_activators
     nb_activator = drm_manager.get('num_activators')
     assert nb_activator == activators.length, 'Unexpected number of activators'
+    async_cb.assert_NoError()
     print("Test parameter 'num_activators': PASS")
 
     # Test parameter: session_id
@@ -724,43 +725,50 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     async_cb.assert_NoError()
     drm_manager.deactivate()
     activators[0].reset_coin()
-
+    async_cb.assert_NoError()
     print("Test parameter 'metered_data': PASS")
 
     # Test parameter: page_ctrlreg
     page = drm_manager.get('page_ctrlreg')
     assert search(r'Register\s+@0x00:\s+0x00000000', page), 'Unexpected content of page_ctrlreg'
+    async_cb.assert_NoError()
     print("Test parameter 'page_ctrlreg': PASS")
 
     # Test parameter: page_vlnvfile
     page = drm_manager.get('page_vlnvfile')
     assert search(r'Register\s+@0x00:\s+0x00000001', page), 'Unexpected content of page_vlnvfile'
+    async_cb.assert_NoError()
     print("Test parameter 'page_vlnvfile': PASS")
 
     # Test parameter: page_licfile
     page = drm_manager.get('page_licfile')
     assert search(r'Register\s+@0x00:\s+0x00000002', page), 'Unexpected content of page_licfile'
+    async_cb.assert_NoError()
     print("Test parameter 'page_licfile': PASS")
 
     # Test parameter: page_tracefile
     page = drm_manager.get('page_tracefile')
     assert search(r'Register\s+@0x00:\s+0x00000003', page), 'Unexpected content of page_tracefile'
+    async_cb.assert_NoError()
     print("Test parameter 'page_tracefile': PASS")
 
     # Test parameter: page_meteringfile
     page = drm_manager.get('page_meteringfile')
     assert search(r'Register\s+@0x00:\s+0x00000004', page), 'Unexpected content of page_meteringfile'
+    async_cb.assert_NoError()
     print("Test parameter 'page_meteringfile': PASS")
 
     # Test parameter: page_mailbox
     page = drm_manager.get('page_mailbox')
     assert search(r'Register\s+@0x00:\s+0x00000005', page), 'Unexpected content of page_mailbox'
+    async_cb.assert_NoError()
     print("Test parameter 'page_mailbox': PASS")
 
     # Test parameter: hw_report
     hw_report = drm_manager.get('hw_report')
     nb_lines = len(tuple(finditer(r'\n', hw_report)))
     assert nb_lines > 10, 'Unexpected HW report content'
+    async_cb.assert_NoError()
     print("Test parameter 'hw_report': PASS")
 
     # Test parameter: frequency_detection_threshold
@@ -770,6 +778,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     new_freq_threhsold = drm_manager.get('frequency_detection_threshold')
     assert new_freq_threhsold == exp_freq_threhsold, 'Unexpected frequency dectection threshold percentage'
     drm_manager.set(frequency_detection_threshold=orig_freq_threhsold)    # Restore original threshold
+    async_cb.assert_NoError()
     print("Test parameter 'frequency_detection_threshold': PASS")
 
     # Test parameter: frequency_detection_period
@@ -779,6 +788,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     new_freq_period = drm_manager.get('frequency_detection_period')
     assert new_freq_period == exp_freq_period, 'Unexpected frequency dectection period'
     drm_manager.set(frequency_detection_period=orig_freq_period)    # Restore original period
+    async_cb.assert_NoError()
     print("Test parameter 'frequency_detection_period': PASS")
 
     # Test parameter: drm_frequency
@@ -788,6 +798,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     freq_drm = drm_manager.get('drm_frequency')
     drm_manager.deactivate()
     assert 125 <= freq_drm <= 126, 'Unexpected frequency gap threshold'
+    async_cb.assert_NoError()
     print("Test parameter 'drm_frequency': PASS")
 
     # Test parameter: product_info
@@ -795,11 +806,13 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     product_id = pformat(drm_manager.get('product_info'))
     exp_product_id = pformat(activators.product_id)
     assert product_id == exp_product_id, 'Unexpected product ID'
+    async_cb.assert_NoError()
     print("Test parameter 'product_info': PASS")
 
     # Test parameter: mailbox_size
     mailbox_size = drm_manager.get('mailbox_size')
     assert mailbox_size == 14, 'Unexpected Mailbox size'
+    async_cb.assert_NoError()
     print("Test parameter 'mailbox_size': PASS")
 
     # Test parameter: token_string, token_validity and token_time_left
@@ -819,6 +832,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     assert drm_manager.get('token_validity') == token_validity
     assert token_string == drm_manager.get('token_string')
     drm_manager.deactivate()
+    async_cb.assert_NoError()
     print("Test parameter 'token_string', 'token_validity' and 'token_time_left': PASS")
 
     # Test parameter: list_all
@@ -826,6 +840,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     assert isinstance(list_param , list)
     assert len(list_param) == len(_PARAM_LIST)
     assert all(key in _PARAM_LIST for key in list_param)
+    async_cb.assert_NoError()
     print("Test parameter 'list_all': PASS")
 
     # Test parameter: dump_all
@@ -833,6 +848,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     assert isinstance(dump_param, dict)
     assert len(dump_param) == _PARAM_LIST.index('dump_all')
     assert all(key in _PARAM_LIST for key in dump_param.keys())
+    async_cb.assert_NoError()
     print("Test parameter 'dump_all': PASS")
 
     # Test parameter: custom_field
@@ -842,6 +858,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     assert val_exp != val_init
     drm_manager.set(custom_field=val_exp)
     assert drm_manager.get('custom_field') == val_exp
+    async_cb.assert_NoError()
     print("Test parameter 'custom_field': PASS")
 
     # Test parameter: mailbox_data
@@ -852,6 +869,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     rd_msg = drm_manager.get('mailbox_data')
     assert type(rd_msg) == type(wr_msg) == list
     assert rd_msg == wr_msg
+    async_cb.assert_NoError()
     print("Test parameter 'mailbox_data': PASS")
 
     # Test parameter: ws_retry_period_long
