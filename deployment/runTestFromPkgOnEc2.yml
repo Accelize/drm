@@ -74,6 +74,14 @@ jobs:
           EOF
         displayName: Create Accelize credentials file
 
+      # Initialize environment
+      - task: UsePythonVersion@0
+        inputs:
+          versionSpec: '3.x'
+          addToPath: true
+          architecture: 'x64'
+        displayName: Get Python
+
       - script: sudo python3 -m pip install -U tox requests flask pytest-flask python-dateutil pytest-ordering
         displayName: Install test dependencies
 

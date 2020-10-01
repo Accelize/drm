@@ -21,29 +21,11 @@ resources:
 pool:
   vmImage: ubuntu-latest
 
-variables:
-  # Import variable group
-  - group: drmLibrary
-
-  # Allow import of python files in "deployment" dir
-  - name: pythonPath
-    value: $(Build.SourcesDirectory)/deployment
-
-  # Common commands shortcut
-  - name: pipInstall
-    value: pip install --disable-pip-version-check
-  - name: aptInstall
-    value: sudo apt-get update &&
-           sudo apt-get install -y --no-install-recommends
-
-stages:
-  - stage: test_packages
-    displayName: Install and test packages
-    jobs:
-      - template: runTestFromPkgOnEc2.yml
-        parameters:
-          instance_type: 'f1.4xlarge'
-          config_list:
-          - os_distrib: 'centos_7'
-            tox_extra_option: '-m packages'
+jobs:
+  - template: runTestFromPkgOnEc2.yml
+    parameters:
+      instance_type: 'f1.4xlarge'
+      config_list:
+      - os_distrib: 'centos_7'
+        tox_extra_option: '-m packages'
 
