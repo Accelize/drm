@@ -1227,6 +1227,7 @@ protected:
                 getDrmWSClient().requestOAuth2token( deadline );
                 token_valid = true;
             } catch ( const Exception& e ) {
+                oauth_attempt ++;
                 lic_attempt = 0;
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
                     // Reached timeout
@@ -1236,7 +1237,6 @@ protected:
                     throw;
                 }
                 // It is retryable
-                oauth_attempt ++;
                 if ( short_retry_period == -1 ) {
                     // No retry
                     Debug( "OAuthentication retry mechanism is disabled" );
@@ -1268,6 +1268,7 @@ protected:
                 return getDrmWSClient().requestLicense( request_json, deadline );
             } catch ( const Exception& e ) {
                 oauth_attempt = 0;
+                lic_attempt ++;
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
                     // Reached timeout
                     Throw( DRM_WSError, "Timeout on License request after {} attempts", lic_attempt );
@@ -1276,7 +1277,6 @@ protected:
                     throw;
                 }
                 // It is retryable
-                lic_attempt ++;
                 if ( short_retry_period == -1 ) {
                     // No retry
                     Debug( "Licensing retry mechanism is disabled" );
@@ -1405,6 +1405,7 @@ protected:
                 getDrmWSClient().requestOAuth2token( deadline );
                 token_valid = true;
             } catch ( const Exception& e ) {
+                oauth_attempt ++;
                 lic_attempt = 0;
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
                     // Reached timeout
@@ -1416,7 +1417,6 @@ protected:
                     return Json::nullValue;
                 }
                 // It is retryable
-                oauth_attempt ++;
                 if ( retry_period == -1 ) {
                     // No retry
                     Debug( "OAuthentication retry mechanism is disabled" );
@@ -1434,6 +1434,7 @@ protected:
                 return getDrmWSClient().requestHealth( request_json, deadline );
             } catch ( const Exception& e ) {
                 oauth_attempt = 0;
+                lic_attempt ++;
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
                     // Reached timeout
                     Warning( "Timeout on Health request after {} attempts", lic_attempt );
@@ -1444,7 +1445,6 @@ protected:
                     return Json::nullValue;
                 }
                 // It is retryable
-                lic_attempt ++;
                 if ( retry_period == -1 ) {
                     // No retry
                     Debug( "Health retry mechanism is disabled" );
