@@ -75,7 +75,6 @@ stages:
         tox_minimum: ''
 
     jobs:
-
       - template: runTestOnEc2.yml
         parameters:
           instance_type: 'f1.4xlarge'
@@ -402,7 +401,7 @@ stages:
                     action: create
                     target: $(Build.SourceVersion)
                     tagSource: gitTag
-                    tagPattern: v.*
+                    tagPattern: v[0-9]+\.[0-9]+\.[0-9]+
                     isPreRelease: contains($(libraryVersion.version), '-')
                     releaseNotesSource: inline
                     releaseNotesInline: |

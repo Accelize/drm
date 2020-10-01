@@ -92,6 +92,8 @@ endif()
 ## Compiler and linker options
 set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 add_compile_options(-fvisibility=hidden)
 if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     # Enable warnings

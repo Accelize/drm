@@ -26,29 +26,25 @@ Json::Value GetCspInfo( uint32_t verbosity ) {
     Json::Value info_node = Json::nullValue;
 
     //  Test Alibaba command
-    Alibaba* csp_alibaba = new Alibaba();
+    std::unique_ptr<Alibaba> csp_alibaba ( new Alibaba() );
     try {
         csp_alibaba->setVerbosity( verbosity );
         info_node = csp_alibaba->get_metadata();
         Debug( "Instance is running on Alibaba" );
-        delete csp_alibaba;
         return info_node;
     } catch( std::runtime_error &e ) {
         Debug( "Instance is not running on Alibaba" );
-        delete csp_alibaba;
     }
 
     //  Test AWS command
-    Aws* csp_aws = new Aws();
+    std::unique_ptr<Aws> csp_aws( new Aws() );
     try {
         csp_aws->setVerbosity( verbosity );
         info_node = csp_aws->get_metadata();
         Debug( "Instance is running on Aws" );
-        delete csp_aws;
         return info_node;
     } catch( std::runtime_error &e ) {
         Debug( "Instance is not running on Aws" );
-        delete csp_aws;
     }
 
     //  Not a supported CSP or this is On-Prem system
