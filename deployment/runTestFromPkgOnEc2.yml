@@ -74,7 +74,7 @@ jobs:
           EOF
         displayName: Create Accelize credentials file
 
-      - script: sudo pip install tox requests flask pytest-flask python-dateutil pytest-ordering
+      - script: sudo python3 -m pip install -U tox requests flask pytest-flask python-dateutil pytest-ordering
         displayName: Install test dependencies
 
       - script: sudo -E tox -p all -e cpp-install,cpp-install
