@@ -243,31 +243,7 @@ protected:
             Throw( DRM_CtlrError, e.what() );                                                   \
         }                                                                                       \
     }
-/*    #define checkDRMCtlrRet( func ) {                                                           \
-        unsigned int errcode = DRM_OK;                                                          \
-        bool securityAlertBit;                                                                  \
-        std::string adaptiveProportionTestError, repetitionCountTestError;                \
-        try {                                                                                   \
-            std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );                  \
-            errcode = func;                                                                     \
-            Debug( "{} returned {}", #func, errcode );                                          \
-            if ( errcode ) {                                                                    \
-                getDrmController().readSecurityAlertStatusRegister( securityAlertBit );         \
-                getDrmController().extractAdaptiveProportionTestError( adaptiveProportionTestError ); \
-                getDrmController().extractRepetitionCountTestError( repetitionCountTestError );       \
-                Debug( "security alert bit = {}, adaptative proportion test error = {}, repetition count test error = {}", securityAlertBit, adaptiveProportionTestError, repetitionCountTestError ); \
-                Error( "{} failed with error code {}", #func, errcode );                        \
-                Throw( DRM_CtlrError, "{} failed with error code {}", #func, errcode );         \
-            }                                                                                   \
-        } catch( const std::exception &e ) {                                                    \
-            getDrmController().readSecurityAlertStatusRegister( securityAlertBit );             \
-            getDrmController().extractAdaptiveProportionTestError( adaptiveProportionTestError ); \
-            getDrmController().extractRepetitionCountTestError( repetitionCountTestError ); \
-            Debug( "security alert bit = {}, adaptative proportion test error = {}, repetition count test error = {}", securityAlertBit, adaptiveProportionTestError, repetitionCountTestError ); \
-            Error( "{} threw an exception: {}", #func, e.what() );                              \
-            Throw( DRM_CtlrError, e.what() );                                                   \
-        }                                                                                       \
-    }*/
+
 
     Impl( const std::string& conf_file_path,
           const std::string& cred_file_path )
