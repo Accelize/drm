@@ -224,32 +224,50 @@ protected:
         {ParameterKeyCount, "ParameterKeyCount"}
     };
 
-
     #define checkDRMCtlrRet( func ) {                                                           \
         unsigned int errcode = DRM_OK;                                                          \
         bool securityAlertBit;                                                                  \
-        std::string adaptiveProportionTestFailures, repetitionCountTestFailures;                \
+        std::string adaptiveProportionTestError, repetitionCountTestError;                      \
+        try {                                                                                   \
+            std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );                  \
+            errcode = func;                                                                     \
+            Debug( "{} returned {}", #func, errcode );                                          \
+            if ( errcode ) {                                                                    \
+                getTrngStatus( securityAlertBit, adaptiveProportionTestError, repetitionCountTestError ); \
+                Error( "{} failed with error code {}", #func, errcode );                        \
+                Throw( DRM_CtlrError, "{} failed with error code {}", #func, errcode );         \
+            }                                                                                   \
+        } catch( const std::exception &e ) {                                                    \
+            getTrngStatus( securityAlertBit, adaptiveProportionTestError, repetitionCountTestError ); \
+            Error( "{} threw an exception: {}", #func, e.what() );                              \
+            Throw( DRM_CtlrError, e.what() );                                                   \
+        }                                                                                       \
+    }
+/*    #define checkDRMCtlrRet( func ) {                                                           \
+        unsigned int errcode = DRM_OK;                                                          \
+        bool securityAlertBit;                                                                  \
+        std::string adaptiveProportionTestError, repetitionCountTestError;                \
         try {                                                                                   \
             std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );                  \
             errcode = func;                                                                     \
             Debug( "{} returned {}", #func, errcode );                                          \
             if ( errcode ) {                                                                    \
                 getDrmController().readSecurityAlertStatusRegister( securityAlertBit );         \
-                getDrmController().extractAdaptiveProportionTestFailures( adaptiveProportionTestFailures ); \
-                getDrmController().extractRepetitionCountTestFailures( repetitionCountTestFailures );       \
-                Debug( "security alert bit = {}, adaptative proportion test error = {}, repetition count test error = {}", securityAlertBit, adaptiveProportionTestFailures, repetitionCountTestFailures ); \
+                getDrmController().extractAdaptiveProportionTestError( adaptiveProportionTestError ); \
+                getDrmController().extractRepetitionCountTestError( repetitionCountTestError );       \
+                Debug( "security alert bit = {}, adaptative proportion test error = {}, repetition count test error = {}", securityAlertBit, adaptiveProportionTestError, repetitionCountTestError ); \
                 Error( "{} failed with error code {}", #func, errcode );                        \
                 Throw( DRM_CtlrError, "{} failed with error code {}", #func, errcode );         \
             }                                                                                   \
         } catch( const std::exception &e ) {                                                    \
             getDrmController().readSecurityAlertStatusRegister( securityAlertBit );             \
-            getDrmController().extractAdaptiveProportionTestFailures( adaptiveProportionTestFailures ); \
-            getDrmController().extractRepetitionCountTestFailures( repetitionCountTestFailures ); \
-            Debug( "security alert bit = {}, adaptative proportion test error = {}, repetition count test error = {}", securityAlertBit, adaptiveProportionTestFailures, repetitionCountTestFailures ); \
+            getDrmController().extractAdaptiveProportionTestError( adaptiveProportionTestError ); \
+            getDrmController().extractRepetitionCountTestError( repetitionCountTestError ); \
+            Debug( "security alert bit = {}, adaptative proportion test error = {}, repetition count test error = {}", securityAlertBit, adaptiveProportionTestError, repetitionCountTestError ); \
             Error( "{} threw an exception: {}", #func, e.what() );                              \
             Throw( DRM_CtlrError, e.what() );                                                   \
         }                                                                                       \
-    }
+    }*/
 
     Impl( const std::string& conf_file_path,
           const std::string& cred_file_path )
@@ -453,6 +471,15 @@ protected:
             Debug( "Log messages are flushed now." );
             sLogger->flush();
         }
+    }
+
+    void getTrngStatus( bool securityAlertBit, std::string& adaptiveProportionTestError,
+                        std::string& repetitionCountTestError ) const {
+        getDrmController().readSecurityAlertStatusRegister( securityAlertBit );
+        getDrmController().extractAdaptiveProportionTestFailures( adaptiveProportionTestError );
+        getDrmController().extractRepetitionCountTestFailures( repetitionCountTestError );
+        Debug( "security alert bit = {}, adaptative proportion test error = {}, repetition count test error = {}",
+                securityAlertBit, adaptiveProportionTestError, repetitionCountTestError );
     }
 
     bool findXrtUtility() {
@@ -2467,13 +2494,11 @@ public:
                     case ParameterKey::trng_status: {
                         Json::Value trng_status_json;
                         bool securityAlertBit;
-                        std::string adaptiveProportionTestFailures, repetitionCountTestFailures;
-                        getDrmController().readSecurityAlertStatusRegister( securityAlertBit );
-                        getDrmController().extractAdaptiveProportionTestFailures( adaptiveProportionTestFailures );
-                        getDrmController().extractRepetitionCountTestFailures( repetitionCountTestFailures );
+                        std::string adaptiveProportionTestError, repetitionCountTestError;
+                        getTrngStatus( securityAlertBit, adaptiveProportionTestError, repetitionCountTestError );
                         trng_status_json["security_alert_bit"] = securityAlertBit;
-                        trng_status_json["adaptive_proportion_test_error"] = adaptiveProportionTestFailures;
-                        trng_status_json["repetition_count_test_error"] = repetitionCountTestFailures;
+                        trng_status_json["adaptive_proportion_test_error"] = adaptiveProportionTestError;
+                        trng_status_json["repetition_count_test_error"] = repetitionCountTestError;
                         json_value[key_str] = trng_status_json;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                trng_status_json.toStyledString() );
