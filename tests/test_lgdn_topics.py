@@ -254,7 +254,7 @@ def test_endurance(accelize_drm, conf_json, cred_json, async_handler):
             activators[0].check_coin(drm_manager.get('metered_data'))
             trng = drm_manager.get('trng_status')
             seconds_left = test_duration - (datetime.now() - start).total_seconds()
-            print('Remaining time: %0.1fs  /  current coins=%d / security_alert_bit=%d adaptive_proportion_test_error=0x%08X repetition_count_test_error=0x%08X'
+            print('Remaining time: %0.1fs  /  current coins=%d / security_alert_bit=%d adaptive_proportion_test_error=0x%s repetition_count_test_error=0x%s'
                     % (seconds_left, activators[0].metering_data, trng['security_alert_bit'], trng['adaptive_proportion_test_error'], trng['repetition_count_test_error'] ))
             if seconds_left < 0:
                 break

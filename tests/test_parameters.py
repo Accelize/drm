@@ -5,7 +5,7 @@ Test node-locked behavior of DRM Library.
 import pytest
 from os import remove, getpid, environ
 from os.path import isfile, realpath
-from re import match, search, finditer
+from re import match, search, finditer, IGNORECASE
 from time import sleep, time
 
 from tests.conftest import wait_func_true
@@ -1151,6 +1151,9 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     assert 'security_alert_bit' in trng_status.keys()
     assert 'adaptive_proportion_test_error' in trng_status.keys()
     assert 'repetition_count_test_error' in trng_status.keys()
+    assert match(r'(True|False)', trng_status['security_alert_bit'])
+    assert match(r'[0-9A-F]{8}', trng_status['adaptive_proportion_test_error'], IGNORECASE)
+    assert match(r'[0-9A-F]{8}', trng_status['repetition_count_test_error'], IGNORECASE)
     async_cb.assert_NoError()
     print("Test parameter 'trng_status': PASS")
 
