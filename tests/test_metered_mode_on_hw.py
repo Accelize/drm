@@ -4,7 +4,7 @@ Test metering and floating behaviors of DRM Library.
 """
 import pytest
 from time import sleep
-from random import randint, randrange
+from random import randint
 from datetime import datetime, timedelta
 from re import search, findall
 from os.path import realpath, isfile
@@ -324,7 +324,7 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
         session_id = drm_manager.get('session_id')
         assert len(session_id) > 0
         lic_duration = drm_manager.get('license_duration')
-        wait_numbers = range(lic_duration*2-2,lic_duration*2-1) + range(lic_duration*2+1,lic_duration*2+2)
+        wait_numbers = list(range(lic_duration*2-2,lic_duration*2-1)) + list(range(lic_duration*2+1,lic_duration*2+2))
         activators.autotest(is_activated=True)
         for i in range(nb_pause_resume):
             new_coins = randint(1, 100)
