@@ -1046,28 +1046,30 @@ class ExecFunction:
     """
     Provide test functions using directly C or C++ object
     """
-    def __init__(self, slot_id, is_cpp, test_file_name, conf_path, cred_path):
-        self._conf_path = conf_path
-        self._cred_path = cred_path
-        self._is_cpp = is_cpp
-        self._slot_id = slot_id
-        self._test_func_path = join('@CMAKE_BINARY_DIR@', 'tests', test_file_name)
-        if not isfile(self._test_func_path):
-            raise IOError("No executable '%s' found" % self._test_func_path)
-        self._cmd_line = '%s -s %d -f %s -d %s' % (self._test_func_path, self._slot_id,
-                                                   self._conf_path, self._cred_path)
-        if not self._is_cpp:
+    def __init__(self, slot_id, is_cpp, test_file_name, conf_path, cred_path,
+                 valgrind_log_file=None):
+        test_func_path = join('@CMAKE_BINARY_DIR@', 'tests', test_file_name)
+        if not isfile(test_func_path):
+            raise IOError("No executable '%s' found" % test_func_path)
+        self._cmd_line = ''
+        if valgrind_log_file is not None:
+            self._cmd_line += (f'valgrind --leak-check=full --show-reachable=yes '
+                               f'--log-file={valgrind_log_file} ')
+        self._cmd_line += f'{test_func_path} -s {slot_id} -f {conf_path} -d {cred_path}'
+        if not is_cpp:
             self._cmd_line += ' -c'
         self.returncode = None
         self.stdout = None
         self.stderr = None
         self.asyncmsg = None
 
-    def run(self, test_name=None):
+    def run(self, test_name=None, param_path=None):
         from subprocess import run, PIPE
         cmdline = self._cmd_line
         if test_name is not None:
             cmdline += ' -t %s' % test_name
+        if param_path is not None:
+            cmdline += ' -p %s' % param_path
         print('cmdline=', cmdline)
         result = run(cmdline, shell=True, stdout=PIPE, stderr=PIPE)
         self.returncode = result.returncode
@@ -1093,10 +1095,10 @@ class ExecFunctionFactory:
         self._is_cpp = is_cpp
         self._is_release_build = is_release_build
 
-    def load(self, test_file_name, slot_id):
+    def load(self, test_file_name, slot_id, valgrind_log_file=None):
         try:
             return ExecFunction(slot_id, self._is_cpp, test_file_name, self._conf_path,
-                                self._cred_path)
+                                self._cred_path, valgrind_log_file)
         except IOError:
             if self._is_release_build:
                 pytest.skip("No executable '%s' found: test skipped" % self._test_func_path)

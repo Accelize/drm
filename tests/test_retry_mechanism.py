@@ -11,7 +11,7 @@ from re import match, search, finditer, findall, MULTILINE, IGNORECASE
 from time import sleep, time
 from json import loads
 from datetime import datetime, timedelta
-from flask import request
+from flask import request as _request
 from dateutil import parser
 from math import ceil
 
@@ -21,7 +21,7 @@ from tests.proxy import get_context, set_context
 
 @pytest.mark.no_parallel
 def test_api_retry_disabled(accelize_drm, conf_json, cred_json, async_handler,
-                            live_server, basic_log_file):
+                    live_server, basic_log_file, request):
     """
     Test retry mechanism is disabled on API function (not including
     the retry in background thread)
@@ -30,7 +30,7 @@ def test_api_retry_disabled(accelize_drm, conf_json, cred_json, async_handler,
     async_cb = async_handler.create()
     async_cb.reset()
     conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_api_retry'
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json['settings']['ws_api_retry_duration'] = 0  # Disable retry on function call
     conf_json['settings'].update(basic_log_file.create(2))
     conf_json.save()
@@ -58,7 +58,7 @@ def test_api_retry_disabled(accelize_drm, conf_json, cred_json, async_handler,
 
 @pytest.mark.no_parallel
 def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler,
-                           live_server, basic_log_file):
+                   live_server, basic_log_file, request):
     """
     Test retry mechanism is working on API function (not including the
     retry in background thread)
@@ -68,7 +68,7 @@ def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler,
     async_cb.reset()
     retry_duration = 10
     conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_api_retry'
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json['settings']['ws_api_retry_duration'] = retry_duration  # Set retry duration to 10s
     conf_json['settings'].update(basic_log_file.create(2))
     conf_json.save()
@@ -101,7 +101,7 @@ def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler,
 
 @pytest.mark.no_parallel
 def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
-                                        cred_json, async_handler, live_server):
+                        cred_json, async_handler, live_server, request):
     """
     Test the number of expected retries and the gap between 2 retries
     on authentication requests are correct when a retryable error is returned
@@ -119,7 +119,7 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
     cnt_max = 1 + nb_long_retry + nb_short_retry
 
     conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_long_to_short_retry_switch_on_authentication'
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json['settings']['ws_retry_period_short'] = retryShortPeriod
     conf_json['settings']['ws_retry_period_long'] = retryLongPeriod
     conf_json.save()
@@ -165,7 +165,7 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
 
 @pytest.mark.no_parallel
 def test_long_to_short_retry_switch_on_license(accelize_drm, conf_json, cred_json,
-                                               async_handler, live_server):
+                           async_handler, live_server, request):
     """
     Test the number of expected retries and the gap between 2 retries
     on license requests are correct when a retryable error is returned
@@ -180,7 +180,7 @@ def test_long_to_short_retry_switch_on_license(accelize_drm, conf_json, cred_jso
     timeoutSecond = 20
 
     conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_long_to_short_retry_switch_on_license'
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json['settings']['ws_retry_period_short'] = retryShortPeriod
     conf_json['settings']['ws_retry_period_long'] = retryLongPeriod
     conf_json.save()
@@ -229,7 +229,7 @@ def test_long_to_short_retry_switch_on_license(accelize_drm, conf_json, cred_jso
 
 @pytest.mark.no_parallel
 def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handler,
-                                live_server, basic_log_file):
+                    live_server, basic_log_file, request):
     """
     Test the number of expected retries and the gap between 2 retries
     are correct when the requests are lost
@@ -242,12 +242,12 @@ def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handle
     retryLongPeriod = 20
     licDuration = 60
     requestTimeout = 5
-    nb_long_retry = ceil((licDuration - retryLongPeriod)/(retryLongPeriod + requestTimeout))
+    nb_long_retry = ceil((licDuration - j )/(retryLongPeriod + requestTimeout))
     nb_short_retry = ceil((licDuration - nb_long_retry*(retryLongPeriod + requestTimeout)) / (retryShortPeriod + requestTimeout))
     nb_retry = nb_long_retry + nb_short_retry
 
     conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_retry_on_no_connection'
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json['settings']['ws_retry_period_short'] = retryShortPeriod
     conf_json['settings']['ws_retry_period_long'] = retryLongPeriod
     conf_json['settings']['ws_request_timeout'] = requestTimeout

@@ -8,13 +8,14 @@ from random import randint
 from datetime import datetime, timedelta
 from re import search
 from json import loads, dumps
-from flask import request
+from flask import request ,as _request
 from requests import get, post
 from tests.proxy import get_context, set_context
 
 
 @pytest.mark.no_parallel
-def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler, live_server):
+def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler,
+                    live_server, request):
     """
     Test a MAC error is returned if the key value in the response has been modified
     """
@@ -28,7 +29,7 @@ def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler, 
     async_cb.reset()
 
     conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_header_error_on_key'
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(
@@ -52,7 +53,8 @@ def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler, 
 
 
 @pytest.mark.no_parallel
-def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_handler, live_server):
+def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_handler,
+                        live_server, request):
     """
     Test a MAC error is returned if the licenseTimer value in the response has been modified
     """
@@ -70,7 +72,7 @@ def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_
     activators.autotest()
 
     conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_header_error_on_licenseTimer'
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(
@@ -107,7 +109,8 @@ def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_
 
 
 @pytest.mark.no_parallel
-def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler, live_server):
+def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler,
+                    live_server, request):
     """
     Test an error is returned if a wrong session id is provided
     """
@@ -120,7 +123,7 @@ def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler, liv
     activators.autotest()
 
     conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_session_id_error'
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(

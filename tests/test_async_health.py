@@ -8,7 +8,7 @@ from random import randrange, randint
 from re import search, findall, MULTILINE, IGNORECASE
 from dateutil import parser
 from itertools import groupby
-from flask import request
+from flask import request as _request
 from requests import get, post
 from os import remove
 from os.path import realpath, isfile
@@ -20,7 +20,8 @@ from tests.proxy import get_context, set_context, get_proxy_error
 @pytest.mark.no_parallel
 @pytest.mark.minimum
 @pytest.mark.packages
-def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handler, live_server, basic_log_file):
+def test_health_period_disabled(accelize_drm, conf_json, cred_json,
+                    async_handler, live_server, basic_log_file, request):
     """
     Test the asynchronous health feature can be disabled.
     """
@@ -29,7 +30,7 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
     async_cb.reset()
 
     conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_health_period_disabled'
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json['settings'].update(basic_log_file.create(1))
     conf_json.save()
 
@@ -73,7 +74,8 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json, async_handle
 
 @pytest.mark.no_parallel
 @pytest.mark.minimum
-def test_health_period_modification(accelize_drm, conf_json, cred_json, async_handler, live_server):
+def test_health_period_modification(accelize_drm, conf_json, cred_json, async_handler,
+                        live_server, request):
     """
     Test the asynchronous health feature can be modified dynamically.
     """
@@ -82,7 +84,7 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
     async_cb.reset()
 
     conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_health_period_modification'
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(
@@ -125,7 +127,8 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
 
 @pytest.mark.no_parallel
 @pytest.mark.minimum
-def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler, live_server):
+def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler,
+                            live_server, request):
     """
     Test the asynchronous health retry feature can be disabled.
     """
@@ -134,7 +137,7 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
     async_cb.reset()
 
     conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_health_retry_disabled'
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(
@@ -180,7 +183,8 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
 @pytest.mark.no_parallel
 @pytest.mark.minimum
 @pytest.mark.packages
-def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_handler, live_server):
+def test_health_retry_modification(accelize_drm, conf_json, cred_json,
+                            async_handler, live_server, request):
     """
     Test the asynchronous health retry can be modified dynamically.
     """
@@ -189,7 +193,7 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
     async_cb.reset()
 
     conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_health_retry_modification'
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
 
     healthPeriod = 3
@@ -243,7 +247,8 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json, async_han
 
 @pytest.mark.no_parallel
 @pytest.mark.minimum
-def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, async_handler, live_server):
+def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json,
+                    async_handler, live_server, request):
     """
     Test the asynchronous health retry sleep value when changed dynamically.
     """
@@ -252,7 +257,7 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, asy
     async_cb.reset()
 
     conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_health_retry_sleep_modification'
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
 
     healthPeriod = 3
@@ -309,7 +314,8 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json, asy
 @pytest.mark.no_parallel
 @pytest.mark.minimum
 @pytest.mark.packages
-def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler, live_server, ws_admin):
+def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
+                        live_server, ws_admin, request):
     """
     Test the metering data returned to the web service is correct.
     """
@@ -321,7 +327,7 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
     async_cb.reset()
 
     conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_health_metering_data'
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(
@@ -375,7 +381,8 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
 
 @pytest.mark.skip(reason='Segment index corruption issue to be fixed')
 @pytest.mark.no_parallel
-def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_server, basic_log_file):
+def test_segment_index(accelize_drm, conf_json, cred_json, async_handler,
+                        live_server, basic_log_file, request):
     """
     Test the DRM Controller capacity to handle stressfully health and license requests
     """
@@ -384,7 +391,7 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_s
     async_cb.reset()
 
     conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_segment_index'
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json['settings'].update(basic_log_file.create(1))
     conf_json.save()
 
@@ -456,7 +463,7 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_s
 @pytest.mark.no_parallel
 @pytest.mark.packages
 def test_async_call_on_pause_when_health_is_enabled(accelize_drm, conf_json, cred_json,
-                                            async_handler, live_server, basic_log_file):
+                            async_handler, live_server, basic_log_file, request):
     """
     Test the DRM pause function does perform a async request before pausing
     """
@@ -465,7 +472,7 @@ def test_async_call_on_pause_when_health_is_enabled(accelize_drm, conf_json, cre
     async_cb.reset()
 
     conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_async_call_on_pause_depending_on_health_status'
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json['settings'].update(basic_log_file.create(1))
     conf_json.save()
 
@@ -516,7 +523,7 @@ def test_async_call_on_pause_when_health_is_enabled(accelize_drm, conf_json, cre
 
 @pytest.mark.no_parallel
 def test_no_async_call_on_pause_when_health_is_disabled(accelize_drm, conf_json, cred_json,
-                                            async_handler, live_server, basic_log_file):
+                            async_handler, live_server, basic_log_file, request):
     """
     Test the DRM pause function does NOT perform a async request before pausing
     """
@@ -525,7 +532,7 @@ def test_no_async_call_on_pause_when_health_is_disabled(accelize_drm, conf_json,
     async_cb.reset()
 
     conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_async_call_on_pause_depending_on_health_status'
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json['settings'].update(basic_log_file.create(1))
     conf_json.save()
 
