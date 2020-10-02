@@ -834,13 +834,14 @@ def create_app(url):
     # test_valgrind.py
 
     # test_normal_usage functions
+    @app.route('/test_normal_usage/o/token/', methods=['GET', 'POST'])
     def otoken__test_normal_usage():
         return redirect(request.url_root + '/o/token/', code=307)
 
     @app.route('/test_normal_usage/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_normal_usage():
         global context, lock
-        new_url = request.url.replace(request.url_root+'test_improve_coverage_setLicense', url)
+        new_url = request.url.replace(request.url_root+'test_normal_usage', url)
         request_json = request.get_json()
         response = post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
@@ -854,7 +855,18 @@ def create_app(url):
 
     @app.route('/test_normal_usage/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_normal_usage():
-        return redirect(request.url_root + '/auth/metering/health/', code=307)
+        global context, lock
+        new_url = request.url.replace(request.url_root+'test_normal_usage', url)
+        request_json = request.get_json()
+        response = post(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        with lock:
+            response_json['metering']['healthPeriod'] = context['healthPeriod']
+        return Response(dumps(response_json), response.status_code, headers)
 
     ##############################################################################
 

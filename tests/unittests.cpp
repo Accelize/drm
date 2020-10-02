@@ -758,6 +758,7 @@ int test_normal_usage( string param_file) {
         uint32_t lic_duration = sDrm->get_uint(cpp::ParameterKey::license_duration);
         sleep(lic_duration * nb_running - 2);
         sDrm->deactivate();
+        ret = 0;
     } catch( const cpp::Exception& e ) {
         ret = e.getErrCode();
     }
@@ -797,7 +798,7 @@ int main(int argc, char **argv) {
 
     // Retrieve the options:
     int opt;
-    while ( (opt = getopt(argc, argv, "hs:t:f:d:c")) != -1 ) {  // for each option...
+    while ( (opt = getopt(argc, argv, "hs:t:f:d:cp:")) != -1 ) {  // for each option...
         switch (opt) {
             case 's': slot_idx = atoi(optarg); break;
             case 't': test_name = string(optarg); break;

@@ -1089,7 +1089,7 @@ class ExecFunctionFactory:
     """
     Provide an object to load executable with test functions in C/C++
     """
-    def __init__(self, conf_json, cred_path, is_cpp, is_release_build=False):
+    def __init__(self, conf_json, cred_json, is_cpp, is_release_build=False):
         self._conf_json = conf_json
         self._cred_json = cred_json
         self._is_cpp = is_cpp

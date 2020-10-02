@@ -3,9 +3,11 @@
 Test DRM Library with bad arguments. Make sure errors are detected and reported as expected.
 """
 import pytest
-from re import search
+from re import search, IGNORECASE
 from flask import request as _request
 from json import dumps
+from os.path import join, isfile
+
 from tests.proxy import get_context, set_context
 
 
@@ -27,13 +29,20 @@ def test_normal_usage(accelize_drm, request, exec_func, live_server, tmpdir):
     exec_func._conf_json['licensing']['url'] = _request.url + request.function.__name__
     exec_func._conf_json.save()
     driver = accelize_drm.pytest_fpga_driver[0]
+    valgrind_log_file = join(accelize_drm.pytest_artifacts_dir, 'valgrind.log')
     exec_lib = exec_func.load('unittests', driver._fpga_slot_id, valgrind_log_file)
 
     # Run executable
     p = tmpdir.join('params.json')
-    p.write("{'nb_running':%d}" % nb_running)     # Save exec parameters to file
+    p.write('{"nb_running":%d}' % nb_running)     # Save exec parameters to file
     exec_lib.run(request.function.__name__, p)
     print('exec_lib=', str(exec_lib))
     assert exec_lib.returncode == 0
-    assert 'Read register callback function must not be NULL' in exec_lib.stdout
+    assert search(r'DRM session \S{16} started', exec_lib.stdout, IGNORECASE)
+    assert search(r'DRM session \S{16} stopped', exec_lib.stdout, IGNORECASE)
+    assert search(r'\[\s*(error|critical)\s*\]', exec_lib.stdout, IGNORECASE) is None
     assert exec_lib.asyncmsg is None
+    assert isfile(valgrind_log_file)
+    with open(valgrind_log_file, 'rt') as f:
+        content = f.read()
+    print('valgrind_log_file=', valgrind_log_file)
