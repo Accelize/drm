@@ -1089,16 +1089,16 @@ class ExecFunctionFactory:
     """
     Provide an object to load executable with test functions in C/C++
     """
-    def __init__(self, conf_path, cred_path, is_cpp, is_release_build=False):
-        self._conf_path = conf_path
-        self._cred_path = cred_path
+    def __init__(self, conf_json, cred_path, is_cpp, is_release_build=False):
+        self._conf_json = conf_json
+        self._cred_json = cred_json
         self._is_cpp = is_cpp
         self._is_release_build = is_release_build
 
     def load(self, test_file_name, slot_id, valgrind_log_file=None):
         try:
-            return ExecFunction(slot_id, self._is_cpp, test_file_name, self._conf_path,
-                                self._cred_path, valgrind_log_file)
+            return ExecFunction(slot_id, self._is_cpp, test_file_name, self._conf_json.path,
+                                self._cred_json.path, valgrind_log_file)
         except IOError:
             if self._is_release_build:
                 pytest.skip("No executable '%s' found: test skipped" % self._test_func_path)
@@ -1108,7 +1108,7 @@ class ExecFunctionFactory:
 def exec_func(accelize_drm, cred_json, conf_json):
     is_cpp = accelize_drm.pytest_backend == 'c++'
     is_release_build = 'release' in accelize_drm.pytest_build_type
-    return ExecFunctionFactory(conf_json.path, cred_json.path, is_cpp, is_release_build)
+    return ExecFunctionFactory(conf_json, cred_json, is_cpp, is_release_build)
 
 
 #--------------

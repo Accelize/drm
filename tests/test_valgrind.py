@@ -6,6 +6,7 @@ import pytest
 from re import search
 from flask import request as _request
 from json import dumps
+from tests.proxy import get_context, set_context
 
 
 @pytest.mark.minimum
@@ -23,8 +24,8 @@ def test_normal_usage(accelize_drm, request, exec_func, live_server, tmpdir):
     assert get_context() == context
 
     # Create C/C++ executable
-    exec_func._conf_path['licensing']['url'] = _request.url + request.function.__name__
-    exec_func._conf_path.save()
+    exec_func._conf_json['licensing']['url'] = _request.url + request.function.__name__
+    exec_func._conf_json.save()
     driver = accelize_drm.pytest_fpga_driver[0]
     exec_lib = exec_func.load('unittests', driver._fpga_slot_id, valgrind_log_file)
 

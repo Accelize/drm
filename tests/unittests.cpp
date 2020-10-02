@@ -2,6 +2,10 @@
 
 #include <iostream>
 #include <getopt.h>
+#include <memory>
+#include <sstream>
+#include <fstream>
+#include <unistd.h>
 
 /* JsonCPP Library */
 #include <json/json.h>
@@ -69,7 +73,7 @@ Json::Value parseJsonString( const std::string &json_string ) {
             &json_node, &parseErr) ) {
         std::stringstream ss;
         ss << "Cannot parse JSON string because " << parseErr << std::endl;
-        throw std::runtime_error( ss.str(), parseErr );
+        throw std::runtime_error( ss.str() );
     }
     if ( json_node.empty() || json_node.isNull() )
         throw std::runtime_error( "JSON string is empty" );
@@ -82,11 +86,6 @@ Json::Value parseJsonFile( const std::string& file_path ) {
     Json::Value json_node;
     std::string file_content;
     std::stringstream ss;
-
-    // Check path is a file
-    if ( !isFile(file_path) ) {
-        throw std::runtime_error( "Path is not a valid file: {}", file_path );
-    }
 
     // Open file
     std::ifstream fh( file_path );
@@ -102,7 +101,7 @@ Json::Value parseJsonFile( const std::string& file_path ) {
     // Parse content as a JSON object
     try {
         json_node = parseJsonString( file_content );
-    } catch( const Exception& e ) {
+    } catch( const std::runtime_error& e ) {
         ss << "Cannot parse JSON file " <<  file_path << ": " << e.what() << std::endl;
         throw std::runtime_error( ss.str() );
     }
