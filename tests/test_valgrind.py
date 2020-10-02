@@ -11,7 +11,8 @@ from json import dumps
 @pytest.mark.minimum
 def test_normal_usage(accelize_drm, request, exec_func, live_server, tmpdir):
     """Check memory leak with valgrind"""
-    driver = accelize_drm.pytest_fpga_driver[0]
+    if 'aws' not in accelize_drm.pytest_fpga_driver_name:
+        pytest.skip("C unit-tests are only supported with AWS driver.")
 
     # Set initial context on the live server
     nb_running = 2
@@ -24,6 +25,7 @@ def test_normal_usage(accelize_drm, request, exec_func, live_server, tmpdir):
     # Create C/C++ executable
     exec_func._conf_path['licensing']['url'] = _request.url + request.function.__name__
     exec_func._conf_path.save()
+    driver = accelize_drm.pytest_fpga_driver[0]
     exec_lib = exec_func.load('unittests', driver._fpga_slot_id, valgrind_log_file)
 
     # Run executable

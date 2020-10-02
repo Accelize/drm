@@ -751,7 +751,7 @@ int test_normal_usage( string param_file) {
     int ret = -1;
 
     Json::Value param_json = parseJsonFile(param_file);
-    uint32_t nb_running = param_json['nb_running'].asUInt();
+    uint32_t nb_running = param_json["nb_running"].asUInt();
 
     sDrm->create();
     try {
