@@ -307,7 +307,7 @@ def test_thread_retry_on_lost_connection(accelize_drm, conf_json, cred_json, asy
     retryLongPeriod = 20
     licDuration = 60
     requestTimeout = 5
-    nb_long_retry = ceil((licDuration - j )/(retryLongPeriod + requestTimeout))
+    nb_long_retry = ceil((licDuration - retryLongPeriod)/(retryLongPeriod + requestTimeout))
     nb_short_retry = ceil((licDuration - nb_long_retry*(retryLongPeriod + requestTimeout)) / (retryShortPeriod + requestTimeout))
     nb_retry = nb_long_retry + nb_short_retry
 
