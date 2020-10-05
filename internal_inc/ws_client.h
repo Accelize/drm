@@ -50,8 +50,6 @@ public:
 class CurlEasyPost {
 
 private:
-    const uint32_t cConnectionTimeoutMS = 30000;    // Timeout default value in milliseconds
-
     CURL *curl = NULL;
     std::string mUrl;
     struct curl_slist *mHeaders_p = NULL;
@@ -61,6 +59,7 @@ private:
     uint32_t mConnectionTimeoutMS;                  // Request timeout in milliseconds
 
 public:
+    const uint32_t cConnectionTimeoutMS = 30000;    // Timeout default value in milliseconds
 
     static bool is_error_retryable(long resp_code) {
         return        resp_code == 408 // Request Timeout
@@ -195,7 +194,7 @@ protected:
 class DrmWSClient {
 
     const uint32_t cTokenExpirationMargin = 30;  // In seconds
-    const uint32_t cRequestTimeout = 30;         // In seconds
+    const uint32_t cRequestTimeout = 10;         // In seconds
 
 protected:
 
@@ -226,6 +225,7 @@ public:
     uint32_t getTokenValidity() const { return mTokenValidityPeriod; }
     int32_t getTokenTimeLeft() const;
     std::string getTokenString() const { return mOAuth2Token; }
+    uint32_t getRequestTimeout() const { return mRequestTimeout; }
 
     void requestOAuth2token(TClock::time_point deadline);
 

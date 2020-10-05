@@ -156,7 +156,6 @@ protected:
     uint32_t mWSRetryPeriodLong  = 60;    ///< Time in seconds before the next request attempt to the Web Server when the time left before timeout is large
     uint32_t mWSRetryPeriodShort = 2;     ///< Time in seconds before the next request attempt to the Web Server when the time left before timeout is short
     uint32_t mWSApiRetryDuration = 30;    ///< Period of time in seconds during which retries occur on activate and deactivate functions
-    uint32_t mWSRequestTimeout   = 10;    ///< Time in seconds for a request to complete
 
     eLicenseType mLicenseType = eLicenseType::METERED;
     uint32_t mLicenseDuration = 0;        ///< Time duration in seconds of the license
@@ -310,18 +309,14 @@ protected:
                         Json::uintValue, mWSRetryPeriodShort).asUInt();
                 mWSApiRetryDuration = JVgetOptional( param_lib, "ws_api_retry_duration",
                         Json::uintValue, mWSApiRetryDuration).asUInt();
-                mWSRequestTimeout = JVgetOptional( param_lib, "ws_request_timeout",
-                        Json::uintValue, mWSRequestTimeout).asUInt();
-                if ( mWSRequestTimeout == 0 )
-                    Throw( DRM_BadArg, "ws_request_timeout must not be 0");
 
                 // Host and Card information
                 mHostDataVerbosity = static_cast<eHostDataVerbosity>( JVgetOptional(
                         param_lib, "host_data_verbosity", Json::uintValue, (uint32_t)mHostDataVerbosity ).asUInt() );
             }
             mHealthPeriod = 0;
-            mHealthRetryTimeout = mWSRequestTimeout;
-            mHealthRetrySleep = mWSRetryPeriodShort;
+            mHealthRetryTimeout = 0;
+            mHealthRetrySleep = 0;
 
             // Customize logging configuration
             updateLog();
@@ -567,7 +562,7 @@ protected:
         settings["log_verbosity"] = static_cast<uint32_t>( sLogConsoleVerbosity );
         settings["ws_retry_period_long"] = mWSRetryPeriodLong;
         settings["ws_retry_period_short"] = mWSRetryPeriodShort;
-        settings["ws_request_timeout"] = mWSRequestTimeout;
+        settings["ws_request_timeout"] = getDrmWSClient().getRequestTimeout();
         settings["health_period"] = mHealthPeriod;
         settings["health_retry"] = mHealthRetryTimeout;
         settings["health_retry_sleep"] = mHealthRetrySleep;
@@ -1203,7 +1198,7 @@ protected:
             int32_t short_retry_period = -1, int32_t long_retry_period = -1 ) {
         TClock::time_point deadline;
         if ( timeout == 0 ) {
-            deadline = TClock::now() + std::chrono::seconds( mWSRequestTimeout );
+            deadline = TClock::now() + std::chrono::seconds( getDrmWSClient().getRequestTimeout() );
             short_retry_period = -1;
             long_retry_period = -1;
         } else {
@@ -1802,7 +1797,7 @@ protected:
             Debug( "Starting background thread which checks health" );
             try {
                 uint32_t retry_sleep = mWSRetryPeriodShort;
-                uint32_t retry_timeout = mWSRequestTimeout;
+                uint32_t retry_timeout = getDrmWSClient().getRequestTimeout();
                 mHealthCounter = 0;
 
                 /// Starting async metering post loop
@@ -1837,7 +1832,7 @@ protected:
                                 break;
                             }
                             if ( mHealthRetryTimeout == 0 ) {
-                                retry_timeout = mWSRequestTimeout;
+                                retry_timeout = getDrmWSClient().getRequestTimeout();
                                 retry_sleep = 0;
                                 Debug( "Health retry is disabled" );
                             } else {
@@ -2389,9 +2384,9 @@ public:
                         break;
                     }
                     case ParameterKey::ws_request_timeout: {
-                        json_value[key_str] = mWSRequestTimeout;
+                        json_value[key_str] = getDrmWSClient().getRequestTimeout();
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
-                               mWSRequestTimeout );
+                               getDrmWSClient().getRequestTimeout() );
                         break;
                     }
                     case ParameterKey::log_message_level: {
