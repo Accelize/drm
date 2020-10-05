@@ -45,20 +45,20 @@ def create_app(url):
         new_url = url + '/o/token/'
         return redirect(new_url, code=307)
 
-    @app.route('/auth/metering/health/', methods=['GET', 'POST'])
-    def health():
+    @app.route('/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense():
         request_json = request.get_json()
-        new_url = url + '/auth/metering/health/'
+        new_url = url + '/auth/metering/genlicense/'
         response = post(new_url, json=request_json, headers=request.headers)
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         return Response(dumps(response_json), response.status_code, headers)
 
-    @app.route('/auth/metering/genlicense/', methods=['GET', 'POST'])
-    def genlicense():
+    @app.route('/auth/metering/health/', methods=['GET', 'POST'])
+    def health():
         request_json = request.get_json()
-        new_url = url + '/auth/metering/genlicense/'
+        new_url = url + '/auth/metering/health/'
         response = post(new_url, json=request_json, headers=request.headers)
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
@@ -83,13 +83,13 @@ def create_app(url):
             response_json['access_token'] = context['access_token']
         return Response(dumps(response_json), response.status_code, headers)
 
-    @app.route('/test_authentication_bad_token/auth/metering/health/', methods=['GET', 'POST'])
-    def health__test_authentication_bad_token():
-        return redirect(request.url_root + '/auth/metering/health/', code=307)
-
     @app.route('/test_authentication_bad_token/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_authentication_bad_token_genlicense():
         return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
+
+    @app.route('/test_authentication_bad_token/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_authentication_bad_token():
+        return redirect(request.url_root + '/auth/metering/health/', code=307)
 
     # test_authentication_token_renewal
     @app.route('/test_authentication_token_renewal/o/token/', methods=['GET', 'POST'])
@@ -106,13 +106,13 @@ def create_app(url):
             response_json['expires_in'] = context['expires_in']
         return Response(dumps(response_json), response.status_code, headers)
 
-    @app.route('/test_authentication_token_renewal/auth/metering/health/', methods=['GET', 'POST'])
-    def health__test_authentication_token_renewal():
-        return redirect(request.url_root + '/auth/metering/health/', code=307)
-
     @app.route('/test_authentication_token_renewal/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_authentication_token_renewal_genlicense():
         return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
+
+    @app.route('/test_authentication_token_renewal/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_authentication_token_renewal():
+        return redirect(request.url_root + '/auth/metering/health/', code=307)
 
     ##############################################################################
     # test_drm_license_error.py
@@ -121,10 +121,6 @@ def create_app(url):
     @app.route('/test_header_error_on_key/o/token/', methods=['GET', 'POST'])
     def otoken__test_header_error_on_key():
         return redirect(request.url_root + '/o/token/', code=307)
-
-    @app.route('/test_header_error_on_key/auth/metering/health/', methods=['GET', 'POST'])
-    def health__test_header_error_on_key():
-        return redirect(request.url_root + '/auth/metering/health/', code=307)
 
     @app.route('/test_header_error_on_key/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_header_error_on_key_genlicense():
@@ -147,14 +143,14 @@ def create_app(url):
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         return Response(dumps(response_json), response.status_code, headers)
 
+    @app.route('/test_header_error_on_key/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_header_error_on_key():
+        return redirect(request.url_root + '/auth/metering/health/', code=307)
+
     # test_header_error_on_licenseTimer functions
     @app.route('/test_header_error_on_licenseTimer/o/token/', methods=['GET', 'POST'])
     def otoken__test_header_error_on_licenseTimer():
         return redirect(request.url_root + '/o/token/', code=307)
-
-    @app.route('/test_header_error_on_licenseTimer/auth/metering/health/', methods=['GET', 'POST'])
-    def health__test_header_error_on_licenseTimer():
-        return redirect(request.url_root + '/auth/metering/health/', code=307)
 
     @app.route('/test_header_error_on_licenseTimer/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_header_error_on_licenseTimer():
@@ -180,14 +176,14 @@ def create_app(url):
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         return Response(dumps(response_json), response.status_code, headers)
 
+    @app.route('/test_header_error_on_licenseTimer/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_header_error_on_licenseTimer():
+        return redirect(request.url_root + '/auth/metering/health/', code=307)
+
     # test_session_id_error functions
     @app.route('/test_session_id_error/o/token/', methods=['GET', 'POST'])
     def otoken__test_session_id_error():
         return redirect(request.url_root + '/o/token/', code=307)
-
-    @app.route('/test_session_id_error/auth/metering/health/', methods=['GET', 'POST'])
-    def health__test_session_id_error():
-        return redirect(request.url_root + '/auth/metering/health/', code=307)
 
     @app.route('/test_session_id_error/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_session_id_error():
@@ -216,6 +212,10 @@ def create_app(url):
                 if context['request_cnt'] == 2:
                    context['replay'] = response
                 return Response(response.content, response.status_code, headers)
+
+    @app.route('/test_session_id_error/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_session_id_error():
+        return redirect(request.url_root + '/auth/metering/health/', code=307)
 
     ##############################################################################
     # test_async_health.py
@@ -560,23 +560,18 @@ def create_app(url):
     ##############################################################################
     # test_retry_mechanism.py
 
-    # test_api_retry functions
+    # test_api_retry_disabled and test_api_retry_enabled functions
     @app.route('/test_api_retry/o/token/', methods=['GET', 'POST'])
     def otoken__test_api_retry():
         return redirect(request.url_root + '/o/token/', code=307)
 
+    @app.route('/test_api_retry/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_api_retry():
+        return ({'error':'Force retry for testing'}, 408)
+
     @app.route('/test_api_retry/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_api_retry():
         return redirect(request.url_root + '/auth/metering/health/', code=307)
-
-    @app.route('/test_api_retry/auth/metering/genlicense/', methods=['GET', 'POST'])
-    def genlicense__test_api_retry():
-        global context, lock
-        start = str(datetime.now())
-        new_url = request.url.replace(request.url_root+'test_api_retry', url)
-        request_json = request.get_json()
-        request_type = request_json['request']
-        return ({'error':'Force retry for testing'}, 408)
 
     # test_long_to_short_retry_switch_on_authentication functions
     @app.route('/test_long_to_short_retry_switch_on_authentication/o/token/', methods=['GET', 'POST'])
@@ -607,10 +602,6 @@ def create_app(url):
                 context['cnt'] += 1
             return resp
 
-    @app.route('/test_long_to_short_retry_switch_on_authentication/auth/metering/health/', methods=['GET', 'POST'])
-    def health__test_long_to_short_retry_switch_on_authentication():
-        return redirect(request.url_root + '/auth/metering/health/', code=307)
-
     @app.route('/test_long_to_short_retry_switch_on_authentication/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_long_to_short_retry_switch_on_authentication():
         global context, lock
@@ -626,14 +617,14 @@ def create_app(url):
             response_json['metering']['timeoutSecond'] = context['timeoutSecond']
         return Response(dumps(response_json), response.status_code, headers)
 
+    @app.route('/test_long_to_short_retry_switch_on_authentication/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_long_to_short_retry_switch_on_authentication():
+        return redirect(request.url_root + '/auth/metering/health/', code=307)
+
     # test_long_to_short_retry_switch_on_license functions
     @app.route('/test_long_to_short_retry_switch_on_license/o/token/', methods=['GET', 'POST'])
     def otoken__test_long_to_short_retry_switch_on_license():
         return redirect(request.url_root + '/o/token/', code=307)
-
-    @app.route('/test_long_to_short_retry_switch_on_license/auth/metering/health/', methods=['GET', 'POST'])
-    def health__test_long_to_short_retry_switch_on_license():
-        return redirect(request.url_root + '/auth/metering/health/', code=307)
 
     @app.route('/test_long_to_short_retry_switch_on_license/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_long_to_short_retry_switch_on_license():
@@ -664,14 +655,14 @@ def create_app(url):
             context['cnt'] += 1
         return Response(dumps(response_json), response_status_code, headers)
 
+    @app.route('/test_long_to_short_retry_switch_on_license/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_long_to_short_retry_switch_on_license():
+        return redirect(request.url_root + '/auth/metering/health/', code=307)
+
     # test_retry_on_no_connection functions
     @app.route('/test_retry_on_no_connection/o/token/', methods=['GET', 'POST'])
     def otoken__test_retry_on_no_connection():
         return redirect(request.url_root + '/o/token/', code=307)
-
-    @app.route('/test_retry_on_no_connection/auth/metering/health/', methods=['GET', 'POST'])
-    def health__test_retry_on_no_connection():
-        return redirect(request.url_root + '/auth/metering/health/', code=307)
 
     @app.route('/test_retry_on_no_connection/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_retry_on_no_connection():
@@ -693,6 +684,9 @@ def create_app(url):
             sleep(context['timeoutSecond'])
             return ('', 204)
 
+    @app.route('/test_retry_on_no_connection/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_retry_on_no_connection():
+        return redirect(request.url_root + '/auth/metering/health/', code=307)
 
     ##############################################################################
     # test_unittest_on_hw.py
@@ -701,10 +695,6 @@ def create_app(url):
     @app.route('/test_http_header_api_version/o/token/', methods=['GET', 'POST'])
     def otoken__test_http_header_api_version():
         return redirect(request.url_root + '/o/token/', code=307)
-
-    @app.route('/test_http_header_api_version/auth/metering/health/', methods=['GET', 'POST'])
-    def health__test_http_header_api_version():
-        return redirect(request.url_root + '/auth/metering/health/', code=307)
 
     @app.route('/test_http_header_api_version/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_http_header_api_version():
@@ -716,6 +706,10 @@ def create_app(url):
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         return Response(dumps(response_json), response.status_code, headers)
+
+    @app.route('/test_http_header_api_version/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_http_header_api_version():
+        return redirect(request.url_root + '/auth/metering/health/', code=307)
 
     ##############################################################################
     # test_lgdn_topics.py

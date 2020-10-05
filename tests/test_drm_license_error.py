@@ -8,7 +8,7 @@ from random import randint
 from datetime import datetime, timedelta
 from re import search
 from json import loads, dumps
-from flask import request ,as _request
+from flask import request as _request
 from requests import get, post
 from tests.proxy import get_context, set_context
 

@@ -66,10 +66,7 @@ def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler,
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    retry_duration = 10
-    conf_json.reset()
-    conf_json['licensing']['url'] = _request.url + request.function.__name__
-    conf_json['settings']['ws_api_retry_duration'] = retry_duration  # Set retry duration to 10s
+    conf_json['licensing']['url'] = _request.url + 'test_api_retry'
     conf_json['settings'].update(basic_log_file.create(2))
     conf_json.save()
     drm_manager = accelize_drm.DrmManager(
@@ -79,6 +76,7 @@ def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler,
         driver.write_register_callback,
         async_cb.callback
     )
+    retry_duration = drm_manager.get('ws_api_retry_duration')
     assert not drm_manager.get('license_status')
     retry_sleep = drm_manager.get('ws_retry_period_short')
     start = datetime.now()
@@ -87,14 +85,14 @@ def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler,
     end = datetime.now()
     del drm_manager
     total_seconds = int((end - start).total_seconds())
-    assert retry_duration <= total_seconds <= retry_duration + 1
+    assert retry_duration - 1 <= total_seconds <= retry_duration
     log_content = basic_log_file.read()
     m = search(r'\[\s*critical\s*\]\s*\d+\s*,\s*\[errCode=\d+\]\s*Timeout on License request after (\d+) attempts',
             log_content, IGNORECASE)
     assert m is not None
     nb_attempts = int(m.group(1))
     nb_attempts_expected = retry_duration / retry_sleep
-    assert nb_attempts_expected - 1 <= nb_attempts <= nb_attempts_expected + 1
+    assert nb_attempts_expected - 1 <= nb_attempts <= nb_attempts_expected
     async_cb.assert_NoError()
     basic_log_file.remove()
 
@@ -119,7 +117,7 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
     cnt_max = 1 + nb_long_retry + nb_short_retry
 
     conf_json.reset()
-    conf_json['licensing']['url'] = _request.url + request.function.__name__
+    conf_json['licensing']['url'] = _request.url + 'test_api_retry'
     conf_json['settings']['ws_retry_period_short'] = retryShortPeriod
     conf_json['settings']['ws_retry_period_long'] = retryLongPeriod
     conf_json.save()
