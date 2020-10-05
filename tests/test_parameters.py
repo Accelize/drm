@@ -1044,7 +1044,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         driver.write_register_callback,
         async_cb.callback
     )
-    assert drm_manager.get('health_retry_sleep') == drm_manager.get('ws_retry_period_short')
+    assert drm_manager.get('health_retry_sleep') == 0
     async_cb.assert_NoError()
     print("Test parameter 'health_retry_sleep': PASS")
 

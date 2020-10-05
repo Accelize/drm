@@ -46,4 +46,4 @@ def test_normal_usage(accelize_drm, request, exec_func, live_server, tmpdir):
     assert isfile(valgrind_log_file)
     with open(valgrind_log_file, 'rt') as f:
         content = f.read()
-    print('valgrind_log_file=', valgrind_log_file)
+    assert 'definitely lost: 0 bytes in 0 blocks' in content

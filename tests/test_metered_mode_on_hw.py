@@ -339,12 +339,13 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
             random_wait = choice(wait_numbers)
             wait_deadline(start, random_wait)
             drm_manager.activate(True)
-            start = datetime.now()
             if random_wait > lic_duration*2:
+                start = datetime.now()
                 assert drm_manager.get('session_id') != session_id
                 session_id = drm_manager.get('session_id')
             else:
-                assert drm_manager.get('session_id') == session_id
+                start += timedelta(seconds=lic_duration*2)
+                assert drm_manager.get('session_id') == session_id, 'after loop #%d' % i
         assert drm_manager.get('session_status')
         assert drm_manager.get('session_id') == session_id
         assert drm_manager.get('license_status')

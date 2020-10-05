@@ -1053,9 +1053,9 @@ class ExecFunction:
             raise IOError("No executable '%s' found" % test_func_path)
         self._cmd_line = ''
         if valgrind_log_file is not None:
-            self._cmd_line += (f'valgrind --leak-check=full --show-reachable=yes '
-                               f'--log-file={valgrind_log_file} ')
-        self._cmd_line += f'{test_func_path} -s {slot_id} -f {conf_path} -d {cred_path}'
+            self._cmd_line += ('valgrind --leak-check=full --show-reachable=yes '
+                               '--log-file=%s ' % valgrind_log_file)
+        self._cmd_line += '%s -s %d -f %s -d %s' % (test_func_path, slot_id, conf_path, cred_path)
         if not is_cpp:
             self._cmd_line += ' -c'
         self.returncode = None
