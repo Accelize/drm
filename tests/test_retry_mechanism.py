@@ -255,7 +255,8 @@ def test_api_retry_on_lost_connection(accelize_drm, conf_json, cred_json, async_
     nb_attempts_expected = retry_duration / retry_sleep
     assert nb_attempts_expected > 1
 
-    context = {'sleep':retry_duration + 1}
+    context = {'data': list(),
+               'sleep':retry_duration + 1}
     set_context(context)
     assert get_context() == context
 
@@ -273,6 +274,15 @@ def test_api_retry_on_lost_connection(accelize_drm, conf_json, cred_json, async_
     attempts_list = [int(e) for e in findall(r'Attempt #(\d+) to obtain a new License failed with message', log_content)]
     assert len(attempts_list) == nb_attempts_expected
     assert sorted(list(attempts_list)) == list(range(1,nb_retry+1))
+    # Check time between each call
+    data = get_context()['data']
+    print('data=', data)
+    assert len(data) == nb_attempts_expected
+    prev_time = parser.parse(data.pop(0))
+    for time in data:
+        delta = int((parser.parse(start) - prev_time).total_seconds())
+        assert retry_duration + retry_sleep - 1 <= delta <= retry_duration + retry_sleep
+        prev_lic = parser.parse(end)
     async_cb.assert_NoError()
     basic_log_file.remove()
 
