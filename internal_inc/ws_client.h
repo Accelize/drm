@@ -101,7 +101,7 @@ public:
 
     void setVerbosity( const uint32_t verbosity );
     void setHostResolves( const Json::Value& host_json );
-    void setConnectionTimeoutMS( const uint32_t timeoutMS ) { mConnectionTimeoutMS = timeoutMS; std::cout << "mConnectionTimeoutMS from set=" << mConnectionTimeoutMS << std::endl;}
+    void setConnectionTimeoutMS( const uint32_t timeoutMS ) { mConnectionTimeoutMS = timeoutMS; }
 
     template<class T>
     void setURL(T&& url) {
