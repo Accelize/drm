@@ -668,7 +668,7 @@ def create_app(url):
     def genlicense__test_api_retry_on_lost_connection():
         global context, lock
         with lock:
-            sleep(context['timeoutSecond'] + 1)
+            sleep(context['sleep'])
         return ('', 204)
 
     @app.route('/test_api_retry_on_lost_connection/auth/metering/health/', methods=['GET', 'POST'])
