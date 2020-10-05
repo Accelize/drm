@@ -30,7 +30,7 @@ def test_api_retry_disabled(accelize_drm, conf_json, cred_json, async_handler,
     async_cb = async_handler.create()
     async_cb.reset()
     conf_json.reset()
-    conf_json['licensing']['url'] = _request.url + request.function.__name__
+    conf_json['licensing']['url'] = _request.url + 'test_api_retry'
     conf_json['settings']['ws_api_retry_duration'] = 0  # Disable retry on function call
     conf_json['settings'].update(basic_log_file.create(2))
     conf_json.save()
