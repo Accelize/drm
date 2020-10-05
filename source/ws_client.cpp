@@ -183,7 +183,7 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
 
         Json::Value settings = JVgetOptional( conf_json, "settings", Json::objectValue );
         mRequestTimeout = JVgetOptional( settings, "ws_request_timeout",
-                        Json::uintValue, cRequestTimeout).asUInt() * 1000;
+                        Json::uintValue, cRequestTimeout).asUInt();
         if ( mRequestTimeout == 0 )
             Throw( DRM_BadArg, "ws_request_timeout must not be 0");
         mVerbosity = JVgetOptional( settings, "ws_verbosity",
@@ -235,7 +235,7 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
     ss << "client_id=" << mClientId << "&client_secret=" << mClientSecret;
     ss << "&grant_type=client_credentials";
     mOAUth2Request.setPostFields( ss.str() );
-    mOAUth2Request.setConnectionTimeoutMS( mRequestTimeout );
+    mOAUth2Request.setConnectionTimeoutMS( mRequestTimeout * 1000 );
 
     // Set URL of license and metering requests
     mLicenseUrl = url + std::string("/auth/metering/genlicense/");
@@ -310,7 +310,7 @@ Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Val
     // Create new request
     CurlEasyPost req;
     req.setVerbosity( mVerbosity );
-    req.setConnectionTimeoutMS( mRequestTimeout );
+    req.setConnectionTimeoutMS( mRequestTimeout * 1000 );
     req.setHostResolves( mHostResolvesJson );
     req.setURL( url );
     req.appendHeader( "Accept: application/vnd.accelize.v1+json" );

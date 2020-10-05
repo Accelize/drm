@@ -125,7 +125,7 @@ public:
     }
 
     uint32_t perform( std::string* resp, std::chrono::steady_clock::time_point& deadline );
-    uint32_t perform( std::string* resp, int32_t timeout );
+    uint32_t perform( std::string* resp, int32_t timeout_ms );
     std::string perform_put( std::string url, const uint32_t& timeout_ms );
 
     template<class T>
