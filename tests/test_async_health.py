@@ -472,7 +472,7 @@ def test_async_call_on_pause_when_health_is_enabled(accelize_drm, conf_json, cre
     async_cb.reset()
 
     conf_json.reset()
-    conf_json['licensing']['url'] = _request.url + request.function.__name__
+    conf_json['licensing']['url'] = _request.url + 'test_async_call_on_pause_depending_on_health_status'
     conf_json['settings'].update(basic_log_file.create(1))
     conf_json.save()
 
@@ -532,7 +532,7 @@ def test_no_async_call_on_pause_when_health_is_disabled(accelize_drm, conf_json,
     async_cb.reset()
 
     conf_json.reset()
-    conf_json['licensing']['url'] = _request.url + request.function.__name__
+    conf_json['licensing']['url'] = _request.url + 'test_async_call_on_pause_depending_on_health_status'
     conf_json['settings'].update(basic_log_file.create(1))
     conf_json.save()
 

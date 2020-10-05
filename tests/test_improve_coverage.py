@@ -12,7 +12,7 @@ from tests.proxy import get_context, set_context, get_proxy_error
 
 
 @pytest.mark.no_parallel
-def test_improve_coverage_httpCode2DrmCode(accelize_drm, conf_json, cred_json,
+def test_improve_coverage_ws_client(accelize_drm, conf_json, cred_json,
                         async_handler, live_server, request):
     """
     Improve coverage of the httpCode2DrmCode function
