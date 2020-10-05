@@ -119,7 +119,7 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
     cnt_max = 1 + nb_long_retry + nb_short_retry
 
     conf_json.reset()
-    conf_json['licensing']['url'] = _request.url + 'test_api_retry'
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json['settings']['ws_retry_period_short'] = retryShortPeriod
     conf_json['settings']['ws_retry_period_long'] = retryLongPeriod
     conf_json.save()
