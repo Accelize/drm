@@ -264,9 +264,8 @@ def test_api_retry_on_lost_connection(accelize_drm, conf_json, cred_json, async_
             drm_manager.activate()
     except:
         drm_manager.deactivate()
-    assert async_cb.was_called
-    assert async_cb.errcode == accelize_drm.exceptions.DRMWSError.error_code
-    m = search(r'Timeout on License request after (\d+) attempts', async_cb.message)
+    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
+    m = search(r'Timeout on License request after (\d+) attempts', str(excinfo.value))
     assert m is not None
     nb_attempts = int(m.group(1))
     assert nb_attempts_expected == nb_attempts
@@ -274,6 +273,7 @@ def test_api_retry_on_lost_connection(accelize_drm, conf_json, cred_json, async_
     attempts_list = [int(e) for e in findall(r'Attempt #(\d+) to obtain a new License failed with message', log_content)]
     assert len(attempts_list) == nb_attempts_expected
     assert sorted(list(attempts_list)) == list(range(1,nb_retry+1))
+    async_cb.assert_NoError()
     basic_log_file.remove()
 
 
