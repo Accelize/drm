@@ -253,7 +253,7 @@ def test_api_retry_on_lost_connection(accelize_drm, conf_json, cred_json, async_
     retry_duration = drm_manager.get('ws_api_retry_duration')
     retry_timeout = drm_manager.get('ws_request_timeout')
     retry_sleep = drm_manager.get('ws_retry_period_short')
-    nb_attempts_expected = int(retry_duration / (retry_timeout + retry_sleep))
+    nb_attempts_expected = int(retry_duration / (retry_timeout + retry_sleep)) + 1
     print('retry_duration=', retry_duration)
     print('retry_timeout=', retry_timeout)
     print('retry_sleep=', retry_sleep)
@@ -278,16 +278,16 @@ def test_api_retry_on_lost_connection(accelize_drm, conf_json, cred_json, async_
     log_content = basic_log_file.read()
     attempts_list = [int(e) for e in findall(r'Attempt #(\d+) to obtain a new License failed with message', log_content)]
     assert len(attempts_list) == nb_attempts_expected
-    assert sorted(list(attempts_list)) == list(range(1,nb_retry+1))
+    assert sorted(list(attempts_list)) == list(range(1,nb_attempts + 1))
     # Check time between each call
     data = get_context()['data']
     print('data=', data)
     assert len(data) == nb_attempts_expected
     prev_time = parser.parse(data.pop(0))
     for time in data:
-        delta = int((parser.parse(start) - prev_time).total_seconds())
+        delta = int((parser.parse(time) - prev_time).total_seconds())
         assert retry_timeout + retry_sleep - 1 <= delta <= retry_timeout + retry_sleep
-        prev_lic = parser.parse(end)
+        prev_time = parser.parse(time)
     async_cb.assert_NoError()
     basic_log_file.remove()
 

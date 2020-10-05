@@ -112,10 +112,8 @@ uint32_t CurlEasyPost::perform( std::string* response, int32_t timeout_ms ) {
 uint32_t CurlEasyPost::perform( std::string* response, std::chrono::steady_clock::time_point& deadline ) {
     std::chrono::milliseconds timeout_chrono = std::chrono::duration_cast<std::chrono::milliseconds>( deadline - std::chrono::steady_clock::now() );
     int32_t timeout_ms = timeout_chrono.count();
-    std::cout << "timeout_ms before=" << timeout_ms << "   /   mConnectionTimeoutMS=" << mConnectionTimeoutMS << std::endl;
     if ( timeout_ms >= (int32_t)mConnectionTimeoutMS )
         timeout_ms = mConnectionTimeoutMS;
-std::cout << "timeout_ms finally=" << timeout_ms << std::endl;
     return perform( response, timeout_ms );
 }
 
@@ -190,7 +188,7 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
             Throw( DRM_BadArg, "ws_request_timeout must not be 0");
         mVerbosity = JVgetOptional( settings, "ws_verbosity",
                         Json::uintValue, 0).asUInt();
-std::cout << "mRequestTimeout from DrmWSClient=" << mRequestTimeout << std::endl;
+
     } catch( Exception &e ) {
         Throw( e.getErrCode(), "Error with service configuration file '{}': {}",
                 conf_file_path, e.what() );
