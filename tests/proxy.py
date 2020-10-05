@@ -659,33 +659,50 @@ def create_app(url):
     def health__test_long_to_short_retry_switch_on_license():
         return redirect(request.url_root + '/auth/metering/health/', code=307)
 
-    # test_retry_on_no_connection functions
-    @app.route('/test_retry_on_no_connection/o/token/', methods=['GET', 'POST'])
-    def otoken__test_retry_on_no_connection():
+    # test_api_retry_on_lost_connection functions
+    @app.route('/test_api_retry_on_lost_connection/o/token/', methods=['GET', 'POST'])
+    def otoken__test_api_retry_on_lost_connection():
         return redirect(request.url_root + '/o/token/', code=307)
 
-    @app.route('/test_retry_on_no_connection/auth/metering/genlicense/', methods=['GET', 'POST'])
-    def genlicense__test_retry_on_no_connection():
+    @app.route('/test_api_retry_on_lost_connection/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_api_retry_on_lost_connection():
+        global context, lock
+        with lock:
+            sleep(context['timeoutSecond'] + 1)
+        return ('', 204)
+
+    @app.route('/test_api_retry_on_lost_connection/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_api_retry_on_lost_connection():
+        return redirect(request.url_root + '/auth/metering/health/', code=307)
+
+    # test_thread_retry_on_lost_connection functions
+    @app.route('/test_thread_retry_on_lost_connection/o/token/', methods=['GET', 'POST'])
+    def otoken__test_thread_retry_on_lost_connection():
+        return redirect(request.url_root + '/o/token/', code=307)
+
+    @app.route('/test_thread_retry_on_lost_connection/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_thread_retry_on_lost_connection():
         global context, lock
         request_json = request.get_json()
         request_type = request_json['request']
         with lock:
             cnt = context['cnt']
+            timeoutSecond = context['timeoutSecond'] + 1
             context['cnt'] += 1
         if cnt < 1 or request_type == 'close':
-            new_url = request.url.replace(request.url_root+'test_retry_on_no_connection', url)
+            new_url = request.url.replace(request.url_root+'test_thread_retry_on_lost_connection', url)
             response = post(new_url, json=request_json, headers=request.headers)
             excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
             headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
             response_json = response.json()
-            response_json['metering']['timeoutSecond'] = context['timeoutSecond']
+            response_json['metering']['timeoutSecond'] = timeoutSecond
             return Response(dumps(response_json), response.status_code, headers)
         else:
-            sleep(context['timeoutSecond'])
+            sleep(timeoutSecond)
             return ('', 204)
 
-    @app.route('/test_retry_on_no_connection/auth/metering/health/', methods=['GET', 'POST'])
-    def health__test_retry_on_no_connection():
+    @app.route('/test_thread_retry_on_lost_connection/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_thread_retry_on_lost_connection():
         return redirect(request.url_root + '/auth/metering/health/', code=307)
 
     ##############################################################################

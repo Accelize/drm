@@ -79,6 +79,8 @@ def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler,
     retry_duration = drm_manager.get('ws_api_retry_duration')
     assert not drm_manager.get('license_status')
     retry_sleep = drm_manager.get('ws_retry_period_short')
+    nb_attempts_expected = retry_duration / retry_sleep
+    assert nb_attempts_expected > 1
     start = datetime.now()
     with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
         drm_manager.activate()
@@ -91,7 +93,7 @@ def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler,
             log_content, IGNORECASE)
     assert m is not None
     nb_attempts = int(m.group(1))
-    nb_attempts_expected = retry_duration / retry_sleep
+    assert nb_attempts > 1
     assert nb_attempts_expected - 1 <= nb_attempts <= nb_attempts_expected
     async_cb.assert_NoError()
     basic_log_file.remove()
@@ -226,7 +228,7 @@ def test_long_to_short_retry_switch_on_license(accelize_drm, conf_json, cred_jso
 
 
 @pytest.mark.no_parallel
-def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handler,
+def test_api_retry_on_lost_connection(accelize_drm, conf_json, cred_json, async_handler,
                     live_server, basic_log_file, request):
     """
     Test the number of expected retries and the gap between 2 retries
@@ -266,8 +268,69 @@ def test_retry_on_no_connection(accelize_drm, conf_json, cred_json, async_handle
     set_context(context)
     assert get_context() == context
 
-    drm_manager.activate()
     try:
+        drm_manager.activate()
+        wait_func_true(lambda: async_cb.was_called,
+                timeout=licDuration*2)
+    finally:
+        drm_manager.deactivate()
+    del drm_manager
+    assert async_cb.was_called
+    assert async_cb.errcode == accelize_drm.exceptions.DRMWSError.error_code
+    m = search(r'Timeout on License request after (\d+) attempts', async_cb.message)
+    assert m is not None
+    nb_attempts = int(m.group(1))
+    assert nb_retry == nb_attempts
+    log_content = basic_log_file.read()
+    attempts_list = [int(e) for e in findall(r'Attempt #(\d+) to obtain a new License failed with message', log_content)]
+    assert len(attempts_list) == nb_retry
+    assert sorted(list(attempts_list)) == list(range(1,nb_retry+1))
+    basic_log_file.remove()
+
+
+@pytest.mark.no_parallel
+def test_thread_retry_on_lost_connection(accelize_drm, conf_json, cred_json, async_handler,
+                    live_server, basic_log_file, request):
+    """
+    Test the number of expected retries and the gap between 2 retries
+    are correct when the requests are lost
+    """
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    async_cb.reset()
+
+    retryShortPeriod = 2
+    retryLongPeriod = 20
+    licDuration = 60
+    requestTimeout = 5
+    nb_long_retry = ceil((licDuration - j )/(retryLongPeriod + requestTimeout))
+    nb_short_retry = ceil((licDuration - nb_long_retry*(retryLongPeriod + requestTimeout)) / (retryShortPeriod + requestTimeout))
+    nb_retry = nb_long_retry + nb_short_retry
+
+    conf_json.reset()
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
+    conf_json['settings']['ws_retry_period_short'] = retryShortPeriod
+    conf_json['settings']['ws_retry_period_long'] = retryLongPeriod
+    conf_json['settings']['ws_request_timeout'] = requestTimeout
+    conf_json['settings'].update(basic_log_file.create(1))
+    conf_json.save()
+
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+
+    context = {'cnt':0,
+               'timeoutSecond':licDuration
+    }
+    set_context(context)
+    assert get_context() == context
+
+    try:
+        drm_manager.activate()
         wait_func_true(lambda: async_cb.was_called,
                 timeout=licDuration*2)
     finally:
