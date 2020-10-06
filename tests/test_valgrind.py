@@ -3,7 +3,7 @@
 Test DRM Library with bad arguments. Make sure errors are detected and reported as expected.
 """
 import pytest
-from re import search, IGNORECASE
+from re import search, IGNORECASE, MULTILINE
 from flask import request as _request
 from json import dumps
 from os.path import join, isfile
@@ -11,7 +11,6 @@ from os.path import join, isfile
 from tests.proxy import get_context, set_context
 
 
-@pytest.mark.skip(reason='Not ready yet')
 @pytest.mark.minimum
 def test_normal_usage(accelize_drm, request, exec_func, live_server, tmpdir,
                       basic_log_file):
@@ -29,7 +28,7 @@ def test_normal_usage(accelize_drm, request, exec_func, live_server, tmpdir,
 
     # Create C/C++ executable
     exec_func._conf_json['licensing']['url'] = _request.url + request.function.__name__
-    exec_func._conf_json['settings'].update(basic_log_file.create(1))
+    exec_func._conf_json['settings'].update(basic_log_file.create(0))
     exec_func._conf_json.save()
     driver = accelize_drm.pytest_fpga_driver[0]
     valgrind_log_file = join(accelize_drm.pytest_artifacts_dir, 'valgrind.log')
@@ -43,12 +42,14 @@ def test_normal_usage(accelize_drm, request, exec_func, live_server, tmpdir,
     content = basic_log_file.read()
     assert search(r'DRM session \S{16} started', content, IGNORECASE)
     assert search(r'DRM session \S{16} stopped', content, IGNORECASE)
-    assert search(r'\[\s*(error|critical)\s*\]', content, IGNORECASE)
-    assert get_proxy_error() is None
+    assert search(r'\[\s*(error|critical)\s*\]', content, IGNORECASE) is None
+    assert search(r'\[\s*trace\s*\]', content, IGNORECASE)
     # Analyze valgrind output file
     assert isfile(valgrind_log_file)
     with open(valgrind_log_file, 'rt') as f:
         content = f.read()
     assert search(r'definitely lost: 0 bytes in 0 blocks', content, IGNORECASE)
+    assert search(r'^==\d+==\s+by .*drm.*', content, IGNORECASE | MULTILINE) is None
+    assert search(r'^==\d+==\s+by .*accelize.*', content, IGNORECASE | MULTILINE) is None
     basic_log_file.remove()
 
