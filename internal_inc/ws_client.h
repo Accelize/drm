@@ -34,8 +34,8 @@ namespace DRM {
 class CurlSingleton {
 
 private:
-    CurlSingleton() { curl_global_init(CURL_GLOBAL_ALL);std::cout << "!!!!!!!!!!!! curl_global_init !!!!!!!!!!!!!!!!!!!!" << std::endl; }
-    ~CurlSingleton() { curl_global_cleanup(); std::cout << "///////////////////////// curl_global_cleanup //////////////" << std::endl;}
+    CurlSingleton() { curl_global_init(CURL_GLOBAL_ALL); }
+    ~CurlSingleton() { curl_global_cleanup(); }
 
 public:
     CurlSingleton(const CurlSingleton&) = delete;
