@@ -327,23 +327,25 @@ class SingleActivator:
         # Read counter in Activation's registry
         if self.event_cnt_flag:
             metering_data_from_activator = self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET)
-        # Check local counter with dmr value passed in argument
+        # Check counters
         try:
+            # Check local counter with drm value passed in argument
             assert self.metering_data == coins
-        except AssertionError:
             if self.event_cnt_flag:
-                print('Metering data: from pytest=%d, from DRM Ctrl=%d, from IP=%d' % (self.metering_data, coins, metering_data_from_activator))
-            else:
-                print('Metering data: from pytest=%d, from DRM Ctrl=%d' % (self.metering_data, coins))
-            raise
-        # Check with counter in Activator's registery
-        if self.event_cnt_flag:
-            try:
+                # Check local counter with counter in Activator IP's registery
                 assert self.metering_data == metering_data_from_activator
-            except AssertionError:
-                print('Metering data: from pytest=%d, from DRM Ctrl=%d, from IP=%d' % (self.metering_data, coins, metering_data_from_activator))
-                raise
-
+        except AssertionError as e:
+            if self.event_cnt_flag:
+                e.Args += ('from pytest=%d, from DRM Ctrl=%d, from IP=%d' % (self.metering_data, coins, metering_data_from_activator),)
+                if self.metering_data == metering_data_from_activator:
+                    e.Args += ('=> Metering data corruption in DRM Ctrl confirmed',)
+                elif coin == metering_data_from_activator:
+                    e.Args += ('=> Metering data corruption in IP confirmed',)
+                else:
+                    e.Args += ('=> Metering data corruption in Pytest local counter confirmed',)
+            else:
+                e.Args += ('from pytest=%d, from DRM Ctrl=%d' % (self.metering_data, coins),)
+            raise
 
 
 class ActivatorsInFPGA:
@@ -1048,12 +1050,14 @@ class ExecFunction:
     """
     def __init__(self, slot_id, is_cpp, test_file_name, conf_path, cred_path,
                  valgrind_log_file=None):
-        test_func_path = join('@CMAKE_BINARY_DIR@', 'tests', test_file_name)
+        test_dir = join('@CMAKE_BINARY_DIR@', 'tests')
+        test_func_path = join(test_dir, test_file_name)
         if not isfile(test_func_path):
             raise IOError("No executable '%s' found" % test_func_path)
         self._cmd_line = ''
         if valgrind_log_file is not None:
             self._cmd_line += ('valgrind --leak-check=full --show-reachable=yes '
+                               '--suppressions=%s ' % (join(test_dir,"valgrind-libcurl.supp"))
                                '--log-file=%s ' % valgrind_log_file)
         self._cmd_line += '%s -s %d -f %s -d %s' % (test_func_path, slot_id, conf_path, cred_path)
         if not is_cpp:

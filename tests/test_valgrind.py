@@ -13,7 +13,8 @@ from tests.proxy import get_context, set_context
 
 @pytest.mark.skip(reason='Not ready yet')
 @pytest.mark.minimum
-def test_normal_usage(accelize_drm, request, exec_func, live_server, tmpdir):
+def test_normal_usage(accelize_drm, request, exec_func, live_server, tmpdir,
+                      basic_log_file):
     """Check memory leak with valgrind"""
     if 'aws' not in accelize_drm.pytest_fpga_driver_name:
         pytest.skip("C unit-tests are only supported with AWS driver.")
@@ -28,6 +29,7 @@ def test_normal_usage(accelize_drm, request, exec_func, live_server, tmpdir):
 
     # Create C/C++ executable
     exec_func._conf_json['licensing']['url'] = _request.url + request.function.__name__
+    exec_func._conf_json['settings'].update(basic_log_file.create(1))
     exec_func._conf_json.save()
     driver = accelize_drm.pytest_fpga_driver[0]
     valgrind_log_file = join(accelize_drm.pytest_artifacts_dir, 'valgrind.log')
@@ -37,13 +39,16 @@ def test_normal_usage(accelize_drm, request, exec_func, live_server, tmpdir):
     p = tmpdir.join('params.json')
     p.write('{"nb_running":%d}' % nb_running)     # Save exec parameters to file
     exec_lib.run(request.function.__name__, p)
-    print('exec_lib=', str(exec_lib))
     assert exec_lib.returncode == 0
-    assert search(r'DRM session \S{16} started', exec_lib.stdout, IGNORECASE)
-    assert search(r'DRM session \S{16} stopped', exec_lib.stdout, IGNORECASE)
-    assert search(r'\[\s*(error|critical)\s*\]', exec_lib.stdout, IGNORECASE) is None
-    assert exec_lib.asyncmsg is None
+    content = basic_log_file.read()
+    assert search(r'DRM session \S{16} started', content, IGNORECASE)
+    assert search(r'DRM session \S{16} stopped', content, IGNORECASE)
+    assert search(r'\[\s*(error|critical)\s*\]', content, IGNORECASE)
+    assert get_proxy_error() is None
+    # Analyze valgrind output file
     assert isfile(valgrind_log_file)
     with open(valgrind_log_file, 'rt') as f:
         content = f.read()
-    assert 'definitely lost: 0 bytes in 0 blocks' in content
+    assert search(r'definitely lost: 0 bytes in 0 blocks', content, IGNORECASE)
+    basic_log_file.remove()
+
