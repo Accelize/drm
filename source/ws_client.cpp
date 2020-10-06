@@ -42,9 +42,9 @@ CurlEasyPost::CurlEasyPost() {
 }
 
 CurlEasyPost::~CurlEasyPost() {
-    data.clear();
     curl_easy_reset( mCurl );
     curl_easy_cleanup( mCurl );
+    data.clear();
     curl_slist_free_all( mHeaders_p );
     curl_slist_free_all( mHostResolveList );
     mHeaders_p = NULL;
