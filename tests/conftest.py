@@ -336,15 +336,15 @@ class SingleActivator:
                 assert self.metering_data == metering_data_from_activator
         except AssertionError as e:
             if self.event_cnt_flag:
-                e.Args += ('from pytest=%d, from DRM Ctrl=%d, from IP=%d' % (self.metering_data, coins, metering_data_from_activator),)
+                e.args += ('from pytest=%d, from DRM Ctrl=%d, from IP=%d' % (self.metering_data, coins, metering_data_from_activator),)
                 if self.metering_data == metering_data_from_activator:
-                    e.Args += ('=> Metering data corruption in DRM Ctrl confirmed',)
+                    e.args += ('=> Metering data corruption in DRM Ctrl confirmed',)
                 elif coin == metering_data_from_activator:
-                    e.Args += ('=> Metering data corruption in IP confirmed',)
+                    e.args += ('=> Metering data corruption in IP confirmed',)
                 else:
-                    e.Args += ('=> Metering data corruption in Pytest local counter confirmed',)
+                    e.args += ('=> Metering data corruption in Pytest local counter confirmed',)
             else:
-                e.Args += ('from pytest=%d, from DRM Ctrl=%d' % (self.metering_data, coins),)
+                e.args += ('from pytest=%d, from DRM Ctrl=%d' % (self.metering_data, coins),)
             raise
 
 
