@@ -45,7 +45,7 @@ CurlEasyPost::CurlEasyPost() {
 CurlEasyPost::~CurlEasyPost() {
     curl_easy_reset( mCurl );
     curl_easy_cleanup( mCurl );
-    std::cout << ":::::::::::::::::::::::: curl_easy_init ::::::::::::::::::::::: " << mCurl << std::endl;
+    std::cout << ":::::::::::::::::::::::: curl_easy_cleanup ::::::::::::::::::::::: " << mCurl << std::endl;
     data.clear();
     curl_slist_free_all( mHeaders_p );
     curl_slist_free_all( mHostResolveList );

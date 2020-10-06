@@ -6,7 +6,6 @@
    fun:curl_global_init
    ...
 }
-
 {
    suppress-curl_easy_init-leak
    Memcheck:Leak

@@ -35,9 +35,9 @@ def test_normal_usage(accelize_drm, request, exec_func, live_server, tmpdir,
     exec_lib = exec_func.load('unittests', driver._fpga_slot_id, valgrind_log_file)
 
     # Run executable
-    p = tmpdir.join('params.json')
-    p.write('{"nb_running":%d}' % nb_running)     # Save exec parameters to file
-    exec_lib.run(request.function.__name__, p)
+    param_file = tmpdir.join('params.json')
+    param_file.write('{"nb_running":%d}' % nb_running)     # Save exec parameters to file
+    exec_lib.run(request.function.__name__, param_file)
     assert exec_lib.returncode == 0
     content = basic_log_file.read()
     assert search(r'DRM session \S{16} started', content, IGNORECASE)
