@@ -1972,7 +1972,7 @@ protected:
         mSecurityStop = false;
         if (mHealthPeriod)
             performHealth(mWSApiRetryDuration, 0);
-        Info( "DRM session paused." );
+        Info( "DRM session {} paused.", mSessionID );
     }
 
     ParameterKey findParameterKey( const std::string& key_string ) const {
