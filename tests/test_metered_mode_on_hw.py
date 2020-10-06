@@ -321,7 +321,7 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json,
         async_cb.assert_NoError()
         drm_manager.activate()
         start = datetime.now()
-        wait_func_true(lambda x: drm_manager.get('num_license_loaded') == 2, 10)
+        wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, 10)
         assert drm_manager.get('metered_data') == 0
         assert drm_manager.get('session_status')
         assert drm_manager.get('license_status')
