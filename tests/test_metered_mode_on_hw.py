@@ -291,7 +291,8 @@ def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, asy
 
 
 @pytest.mark.hwtst
-def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, async_handler):
+def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json,
+                    async_handler, basic_log_file):
     """
     Test no error occurs in normal start/stop metering mode during a long period of time
     """
@@ -302,6 +303,8 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
     activators.reset_coin()
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_02')
+    conf_json['settings'].update(basic_log_file.create(0))
+    conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
@@ -358,6 +361,7 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
         async_cb.assert_NoError()
     finally:
         drm_manager.deactivate()
+    basic_log_file.remove()
 
 
 @pytest.mark.hwtst
