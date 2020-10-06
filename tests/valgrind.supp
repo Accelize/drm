@@ -14,38 +14,3 @@
    fun:curl_easy_init
    ...
 }
-{
-   suppress-libcurl-malloc
-   Memcheck:Leak
-   match-leak-kinds: indirect,possible,reachable
-   fun:malloc
-   ...
-   obj:/usr/lib64/libcurl.so*
-}
-{
-   suppress-libcurl-calloc
-   Memcheck:Leak
-   match-leak-kinds: indirect,possible,reachable
-   fun:calloc
-   ...
-   obj:/usr/lib64/libcurl.so*
-}
-{
-   suppress-NSS_InitContext-calloc
-   Memcheck:Leak
-   match-leak-kinds: definite
-   fun:calloc
-   ...
-   fun:NSS_InitContext
-   obj:/usr/lib64/libcurl.so*
-}
-{
-   suppress-SECMOD_LoadModule-calloc
-   Memcheck:Leak
-   match-leak-kinds: definite
-   fun:calloc
-   ...
-   fun:SECMOD_LoadModule
-   fun:SECMOD_LoadUserModule
-   obj:/usr/lib64/libcurl.so*
-}
