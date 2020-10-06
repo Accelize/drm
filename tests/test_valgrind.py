@@ -49,6 +49,9 @@ def test_normal_usage(accelize_drm, request, exec_func, live_server, tmpdir,
     with open(valgrind_log_file, 'rt') as f:
         content = f.read()
     assert search(r'definitely lost: 0 bytes in 0 blocks', content, IGNORECASE)
+    assert search(r'ERROR SUMMARY: 0 errors from 0 contexts', content, IGNORECASE)
+
+
     assert search(r'^==\d+==\s+by .*drm.*', content, IGNORECASE | MULTILINE) is None
     assert search(r'^==\d+==\s+by .*accelize.*', content, IGNORECASE | MULTILINE) is None
     basic_log_file.remove()

@@ -38,6 +38,9 @@ private:
     ~CurlSingleton() { curl_global_cleanup(); }
 
 public:
+    CurlSingleton(const CurlSingleton&) = delete;
+    CurlSingleton& operator=(const CurlSingleton&) = delete;
+
     static void Init() {
         static CurlSingleton g_curl;
         (void) g_curl;
@@ -50,7 +53,7 @@ public:
 class CurlEasyPost {
 
 private:
-    CURL *curl = NULL;
+    CURL *mCurl = NULL;
     std::string mUrl;
     struct curl_slist *mHeaders_p = NULL;
     struct curl_slist *mHostResolveList = NULL;
@@ -106,7 +109,7 @@ public:
     template<class T>
     void setURL(T&& url) {
         data.push_back( std::forward<T>(url) );
-        curl_easy_setopt( curl, CURLOPT_URL, data.back().c_str() );
+        curl_easy_setopt( mCurl, CURLOPT_URL, data.back().c_str() );
         mUrl = url;
     }
 
@@ -120,8 +123,8 @@ public:
     template<class T>
     void setPostFields( T&& postfields ) {
         data.push_back( std::forward<T>(postfields) );
-        curl_easy_setopt( curl, CURLOPT_POSTFIELDSIZE, data.back().size() );
-        curl_easy_setopt( curl, CURLOPT_POSTFIELDS, data.back().c_str() );
+        curl_easy_setopt( mCurl, CURLOPT_POSTFIELDSIZE, data.back().size() );
+        curl_easy_setopt( mCurl, CURLOPT_POSTFIELDS, data.back().c_str() );
     }
 
     uint32_t perform( std::string* resp, std::chrono::steady_clock::time_point& deadline );
@@ -134,16 +137,16 @@ public:
         uint32_t resp_code;
 
         // Configure and execute CURL command
-        curl_easy_setopt( curl, CURLOPT_URL, url.c_str() );
+        curl_easy_setopt( mCurl, CURLOPT_URL, url.c_str() );
         if ( mHeaders_p ) {
-            curl_easy_setopt( curl, CURLOPT_HTTPHEADER, mHeaders_p );
+            curl_easy_setopt( mCurl, CURLOPT_HTTPHEADER, mHeaders_p );
         }
-        curl_easy_setopt( curl, CURLOPT_WRITEDATA, &response );
-        curl_easy_setopt( curl, CURLOPT_CONNECTTIMEOUT_MS, mConnectionTimeoutMS );
+        curl_easy_setopt( mCurl, CURLOPT_WRITEDATA, &response );
+        curl_easy_setopt( mCurl, CURLOPT_CONNECTTIMEOUT_MS, mConnectionTimeoutMS );
         if ( timeout_ms <= 0 )
             Throw( DRM_WSTimedOut, "Did not perform HTTP request to Accelize webservice because deadline is reached." );
-        curl_easy_setopt( curl, CURLOPT_TIMEOUT_MS, timeout_ms );
-        CURLcode res = curl_easy_perform( curl );
+        curl_easy_setopt( mCurl, CURLOPT_TIMEOUT_MS, timeout_ms );
+        CURLcode res = curl_easy_perform( mCurl );
 
         // Analyze libcurl response
         if ( res != CURLE_OK ) {
@@ -156,7 +159,7 @@ public:
                 Throw( DRM_ExternFail, "libcurl failed to perform HTTP request to Accelize webservice ({}) : {}", curl_easy_strerror( res ), mErrBuff.data() );  //LCOV_EXCL_LINE
             }
         }
-        curl_easy_getinfo( curl, CURLINFO_RESPONSE_CODE, &resp_code );
+        curl_easy_getinfo( mCurl, CURLINFO_RESPONSE_CODE, &resp_code );
         Debug( "Received code {} from {} in {} ms", resp_code, url, getTotalTime() * 1000 );
 
         // Analyze HTTP response
@@ -189,7 +192,7 @@ protected:
 };
 
 
-/*DRM Web Service client : communcates with Accelize DRM web server to
+/*DRM Web Service client : communicate with Accelize DRM web server to
  get license and send metering data*/
 class DrmWSClient {
 
@@ -210,7 +213,7 @@ protected:
     uint32_t mTokenValidityPeriod;              /// Validation period of the OAuth2 token in seconds
     uint32_t mTokenExpirationMargin;            /// OAuth2 token expiration margin in seconds
     TClock::time_point mTokenExpirationTime;    /// OAuth2 expiration time
-    CurlEasyPost mOAUth2Request;
+    std::unique_ptr<CurlEasyPost> mOAUth2Request;
     uint32_t mRequestTimeout;
 
     bool isTokenValid() const;
