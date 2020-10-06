@@ -2478,6 +2478,15 @@ public:
                                trng_status_json.toStyledString() );
                         break;
                     }
+                    case ParameterKey::num_license_loaded: {
+                        uint32_t numberOfLicenseProvisioned;
+                        checkDRMCtlrRet( getDrmController().readNumberOfLicenseTimerLoadedStatusRegister(
+                                    numberOfLicenseProvisioned ) );
+                        json_value[key_str] = numberOfLicenseProvisioned;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                               numberOfLicenseProvisioned );
+                        break;
+                    }
                     case ParameterKey::ParameterKeyCount: {
                         uint32_t count = static_cast<uint32_t>( ParameterKeyCount );
                         json_value[key_str] = count;

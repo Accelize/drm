@@ -321,13 +321,14 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json,
         async_cb.assert_NoError()
         drm_manager.activate()
         start = datetime.now()
+        wait_func_true(lambda x: drm_manager.get('num_license_loaded') == 2, 10)
         assert drm_manager.get('metered_data') == 0
         assert drm_manager.get('session_status')
         assert drm_manager.get('license_status')
         session_id = drm_manager.get('session_id')
         assert len(session_id) > 0
         lic_duration = drm_manager.get('license_duration')
-        wait_numbers = list(range(lic_duration*2-2,lic_duration*2-1)) + list(range(lic_duration*2+1,lic_duration*2+2))
+        wait_numbers = [lic_duration*2-2,lic_duration*2+2]
         activators.autotest(is_activated=True)
         for i in range(nb_pause_resume):
             new_coins = randint(1, 100)
