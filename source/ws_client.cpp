@@ -32,6 +32,7 @@ namespace DRM {
 CurlEasyPost::CurlEasyPost() {
     mConnectionTimeoutMS = cConnectionTimeoutMS;
     mCurl = curl_easy_init();
+    std::cout << ",,,,,,,,,,,,,,,,,,,,,,,,, curl_easy_init ,,,,,,,,,,,,,,,,,, " << mCurl << std::endl;
     if ( !mCurl )
         Throw( DRM_ExternFail, "Curl : cannot init curl_easy" );
     curl_easy_setopt( mCurl, CURLOPT_WRITEFUNCTION, &CurlEasyPost::write_callback );
@@ -44,6 +45,7 @@ CurlEasyPost::CurlEasyPost() {
 CurlEasyPost::~CurlEasyPost() {
     curl_easy_reset( mCurl );
     curl_easy_cleanup( mCurl );
+    std::cout << ":::::::::::::::::::::::: curl_easy_init ::::::::::::::::::::::: " << mCurl << std::endl;
     data.clear();
     curl_slist_free_all( mHeaders_p );
     curl_slist_free_all( mHostResolveList );
