@@ -125,42 +125,6 @@ uint32_t CurlEasyPost::perform( const std::string url, std::string* response,
     return perform( url, response, timeout_ms );
 }
 
-std::string CurlEasyPost::perform_put( const std::string url, const uint32_t& timeout_ms ) {
-    std::string response;
-    uint32_t resp_code;
-
-    if ( timeout_ms <= 0 )
-        Throw( DRM_WSTimedOut, "Did not perform HTTP request to Accelize webservice because deadline is reached." );
-
-    // Configure and execute CURL command
-    curl_easy_setopt( mCurl, CURLOPT_URL, url.c_str() );
-    if ( mHeaders_p ) {
-        curl_easy_setopt( mCurl, CURLOPT_HTTPHEADER, mHeaders_p );
-    }
-    curl_easy_setopt( mCurl, CURLOPT_CUSTOMREQUEST, "PUT");
-    curl_easy_setopt( mCurl, CURLOPT_WRITEDATA, &response );
-    curl_easy_setopt( mCurl, CURLOPT_CONNECTTIMEOUT_MS, mConnectionTimeoutMS );
-    curl_easy_setopt( mCurl, CURLOPT_TIMEOUT_MS, timeout_ms );
-    CURLcode res = curl_easy_perform( mCurl );
-
-    // Analyze HTTP answer
-    if ( res != CURLE_OK ) {
-        if ( res == CURLE_COULDNT_RESOLVE_PROXY
-          || res == CURLE_COULDNT_RESOLVE_HOST
-          || res == CURLE_COULDNT_CONNECT
-          || res == CURLE_OPERATION_TIMEDOUT ) {
-            Throw( DRM_WSMayRetry, "libcurl failed to perform HTTP request to Accelize webservice ({}) : {}",
-                    curl_easy_strerror( res ), mErrBuff.data() );
-        } else {
-            Throw( DRM_ExternFail, "libcurl failed to perform HTTP request to Accelize webservice ({}) : {}",
-                    curl_easy_strerror( res ), mErrBuff.data() );
-        }
-    }
-    curl_easy_getinfo( mCurl, CURLINFO_RESPONSE_CODE, &resp_code );
-    Debug( "Received code {} from {} in {} ms", resp_code, url, getTotalTime() * 1000 );
-    return response;
-}
-
 double CurlEasyPost::getTotalTime() {
     double ret;
     if ( !curl_easy_getinfo( mCurl, CURLINFO_TOTAL_TIME, &ret ) )

@@ -68,7 +68,7 @@ Json::Value Aws::get_metadata() {
     tokenReq.setConnectionTimeoutMS( mTimeOutMS );
     tokenReq.setVerbosity( mVerbosity );
     tokenReq.appendHeader( "X-aws-ec2-metadata-token-ttl-seconds: 21600" );
-    token = tokenReq.perform_put( "http://169.254.169.254/latest/api/token", mTimeOutMS );
+    token = tokenReq.perform_put<std::string>( "http://169.254.169.254/latest/api/token", mTimeOutMS );
 
     // Collect AWS information
     CurlEasyPost req;
@@ -77,10 +77,10 @@ Json::Value Aws::get_metadata() {
     std::string header = fmt::format("X-aws-ec2-metadata-token: {}", token);
     req.appendHeader( header );
     std::string base_url("http://169.254.169.254/latest");
-    metadata["instance_id"] = req.perform<std::string>( fmt::format( "{}/meta-data/instance-id", base_url ), mTimeOutMS );
-    metadata["instance_type"] = req.perform<std::string>( fmt::format( "{}/meta-data/instance-type", base_url ), mTimeOutMS );
-    metadata["ami_id"] = req.perform<std::string>( fmt::format( "{}/meta-data/ami-id", base_url ), mTimeOutMS );
-    std::string doc_string = req.perform<std::string>( fmt::format( "{}/dynamic/instance-identity/document", base_url ), mTimeOutMS );
+    metadata["instance_id"] = req.perform_get<std::string>( fmt::format( "{}/meta-data/instance-id", base_url ), mTimeOutMS );
+    metadata["instance_type"] = req.perform_get<std::string>( fmt::format( "{}/meta-data/instance-type", base_url ), mTimeOutMS );
+    metadata["ami_id"] = req.perform_get<std::string>( fmt::format( "{}/meta-data/ami-id", base_url ), mTimeOutMS );
+    std::string doc_string = req.perform_get<std::string>( fmt::format( "{}/dynamic/instance-identity/document", base_url ), mTimeOutMS );
     Json::Value doc_json = parseJsonString( doc_string );
     metadata["region"] = doc_json["region"];
     return metadata;
@@ -98,10 +98,10 @@ Json::Value Alibaba::get_metadata() {
     req.setConnectionTimeoutMS( mTimeOutMS );
     // Collect Alibaba information
     std::string base_url("http://100.100.100.200/latest/meta-data");
-    metadata["instance_id"] = req.perform<std::string>( fmt::format( "{}/instance-id", base_url ), mTimeOutMS );
-    metadata["instance_type"] = req.perform<std::string>( fmt::format( "{}/instance/instance-type", base_url ), mTimeOutMS );
-    metadata["ami_id"] = req.perform<std::string>( fmt::format( "{}/image-id", base_url ), mTimeOutMS );
-    metadata["region"] = req.perform<std::string>( fmt::format( "{}/region-id", base_url ), mTimeOutMS );
+    metadata["instance_id"] = req.perform_get<std::string>( fmt::format( "{}/instance-id", base_url ), mTimeOutMS );
+    metadata["instance_type"] = req.perform_get<std::string>( fmt::format( "{}/instance/instance-type", base_url ), mTimeOutMS );
+    metadata["ami_id"] = req.perform_get<std::string>( fmt::format( "{}/image-id", base_url ), mTimeOutMS );
+    metadata["region"] = req.perform_get<std::string>( fmt::format( "{}/region-id", base_url ), mTimeOutMS );
     return metadata;
 }
 

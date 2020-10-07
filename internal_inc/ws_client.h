@@ -107,12 +107,6 @@ public:
     void setConnectionTimeoutMS( const uint32_t timeoutMS ) { mConnectionTimeoutMS = timeoutMS; }
 
     void appendHeader( const std::string header );
-    /*template<class T>
-    void appendHeader( T&& header ) {
-        data.push_back( std::forward<T>(header) );
-        Debug2( "Add '{}' to CURL header", std::forward<T>(header) );
-        mHeaders_p = curl_slist_append( mHeaders_p, data.back().c_str() );
-    }*/
 
     template<class T>
     void setPostFields( T&& postfields ) {
@@ -123,10 +117,9 @@ public:
 
     uint32_t perform( const std::string url, std::string* resp, std::chrono::steady_clock::time_point& deadline );
     uint32_t perform( const std::string url, std::string* resp, int32_t timeout_ms );
-    std::string perform_put( const std::string url, const uint32_t& timeout_ms );
 
     template<class T>
-    T perform( const std::string url, const uint32_t& timeout_ms ) {
+    T perform_get( const std::string url, const uint32_t& timeout_ms ) {
         T response;
         uint32_t resp_code;
 
@@ -135,7 +128,7 @@ public:
         if ( mHeaders_p ) {
             curl_easy_setopt( mCurl, CURLOPT_HTTPHEADER, mHeaders_p );
         }
-        curl_easy_setopt( mCurl, CURLOPT_WRITEDATA, &response );
+        curl_easy_setopt( mCurl, CURLOPT_WRITEDATA, (void*)&response );
         curl_easy_setopt( mCurl, CURLOPT_CONNECTTIMEOUT_MS, mConnectionTimeoutMS );
         if ( timeout_ms <= 0 )
             Throw( DRM_WSTimedOut, "Did not perform HTTP request to Accelize webservice because deadline is reached." );
@@ -168,6 +161,43 @@ public:
                 drm_error = DRM_WSError;
             Throw( drm_error, "OAuth2 Web Service error {}: {}", resp_code, response );
         }
+        return response;
+    }
+
+    template<class T>
+    T perform_put( const std::string url, const uint32_t& timeout_ms ) {
+        T response;
+        uint32_t resp_code;
+
+        if ( timeout_ms <= 0 )
+            Throw( DRM_WSTimedOut, "Did not perform HTTP request to Accelize webservice because deadline is reached." );
+
+        // Configure and execute CURL command
+        curl_easy_setopt( mCurl, CURLOPT_URL, url.c_str() );
+        if ( mHeaders_p ) {
+            curl_easy_setopt( mCurl, CURLOPT_HTTPHEADER, mHeaders_p );
+        }
+        curl_easy_setopt( mCurl, CURLOPT_CUSTOMREQUEST, "PUT");
+        curl_easy_setopt( mCurl, CURLOPT_WRITEDATA, (void*)&response );
+        curl_easy_setopt( mCurl, CURLOPT_CONNECTTIMEOUT_MS, mConnectionTimeoutMS );
+        curl_easy_setopt( mCurl, CURLOPT_TIMEOUT_MS, timeout_ms );
+        CURLcode res = curl_easy_perform( mCurl );
+
+        // Analyze HTTP answer
+        if ( res != CURLE_OK ) {
+            if ( res == CURLE_COULDNT_RESOLVE_PROXY
+              || res == CURLE_COULDNT_RESOLVE_HOST
+              || res == CURLE_COULDNT_CONNECT
+              || res == CURLE_OPERATION_TIMEDOUT ) {
+                Throw( DRM_WSMayRetry, "libcurl failed to perform HTTP request to Accelize webservice ({}) : {}",
+                        curl_easy_strerror( res ), mErrBuff.data() );
+            } else {
+                Throw( DRM_ExternFail, "libcurl failed to perform HTTP request to Accelize webservice ({}) : {}",
+                        curl_easy_strerror( res ), mErrBuff.data() );
+            }
+        }
+        curl_easy_getinfo( mCurl, CURLINFO_RESPONSE_CODE, &resp_code );
+        Debug( "Received code {} from {} in {} ms", resp_code, url, getTotalTime() * 1000 );
         return response;
     }
 
