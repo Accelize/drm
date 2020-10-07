@@ -106,19 +106,13 @@ public:
     void setHostResolves( const Json::Value& host_json );
     void setConnectionTimeoutMS( const uint32_t timeoutMS ) { mConnectionTimeoutMS = timeoutMS; }
 
-    template<class T>
-    void setURL(T&& url) {
-        data.push_back( std::forward<T>(url) );
-        curl_easy_setopt( mCurl, CURLOPT_URL, data.back().c_str() );
-        //mUrl = url;
-    }
-
-    template<class T>
+    void appendHeader( const std::string header );
+    /*template<class T>
     void appendHeader( T&& header ) {
         data.push_back( std::forward<T>(header) );
         Debug2( "Add '{}' to CURL header", std::forward<T>(header) );
         mHeaders_p = curl_slist_append( mHeaders_p, data.back().c_str() );
-    }
+    }*/
 
     template<class T>
     void setPostFields( T&& postfields ) {

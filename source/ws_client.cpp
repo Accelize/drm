@@ -74,6 +74,11 @@ void CurlEasyPost::setHostResolves( const Json::Value& host_json ) {
     }
 }
 
+void CurlEasyPost::appendHeader( const std::string header ) {
+    Debug2( "Add '{}' to CURL header", header );
+    mHeaders_p = curl_slist_append( mHeaders_p, header.c_str() );
+}
+
 uint32_t CurlEasyPost::perform( const std::string url, std::string* response, int32_t timeout_ms ) {
     CURLcode res;
     uint32_t resp_code;
