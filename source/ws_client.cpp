@@ -74,7 +74,7 @@ void CurlEasyPost::setHostResolves( const Json::Value& host_json ) {
     }
 }
 
-uint32_t CurlEasyPost::perform( std::string* response, int32_t timeout_ms ) {
+uint32_t CurlEasyPost::perform( const std::string url, std::string* response, int32_t timeout_ms ) {
     CURLcode res;
     uint32_t resp_code;
 
@@ -82,6 +82,7 @@ uint32_t CurlEasyPost::perform( std::string* response, int32_t timeout_ms ) {
         Throw( DRM_WSTimedOut, "Did not perform HTTP request to Accelize webservice because deadline is reached." );
 
     // Configure and execute CURL command
+    curl_easy_setopt( mCurl, CURLOPT_URL, url.c_str() );
     if ( mHeaders_p ) {
         curl_easy_setopt( mCurl, CURLOPT_HTTPHEADER, mHeaders_p );
     }
@@ -105,19 +106,21 @@ uint32_t CurlEasyPost::perform( std::string* response, int32_t timeout_ms ) {
         }
     }
     curl_easy_getinfo( mCurl, CURLINFO_RESPONSE_CODE, &resp_code );
-    Debug( "Received code {} from {} in {} ms", resp_code, mUrl, getTotalTime() * 1000 );
+    Debug( "Received code {} from {} in {} ms", resp_code, url, getTotalTime() * 1000 );
     return resp_code;
 }
 
-uint32_t CurlEasyPost::perform( std::string* response, std::chrono::steady_clock::time_point& deadline ) {
-    std::chrono::milliseconds timeout_chrono = std::chrono::duration_cast<std::chrono::milliseconds>( deadline - std::chrono::steady_clock::now() );
+uint32_t CurlEasyPost::perform( const std::string url, std::string* response,
+                                std::chrono::steady_clock::time_point& deadline ) {
+    std::chrono::milliseconds timeout_chrono = std::chrono::duration_cast<std::chrono::milliseconds>(
+                        deadline - std::chrono::steady_clock::now() );
     int32_t timeout_ms = timeout_chrono.count();
     if ( timeout_ms >= (int32_t)mConnectionTimeoutMS )
         timeout_ms = mConnectionTimeoutMS;
-    return perform( response, timeout_ms );
+    return perform( url, response, timeout_ms );
 }
 
-std::string CurlEasyPost::perform_put( std::string url, const uint32_t& timeout_ms ) {
+std::string CurlEasyPost::perform_put( const std::string url, const uint32_t& timeout_ms ) {
     std::string response;
     uint32_t resp_code;
 
@@ -271,7 +274,6 @@ void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
     req.setVerbosity( mVerbosity );
     req.setConnectionTimeoutMS( mRequestTimeout * 1000 );
     req.setHostResolves( mHostResolvesJson );
-    req.setURL( mOAuth2Url );
     std::stringstream ss;
     ss << "client_id=" << mClientId << "&client_secret=" << mClientSecret;
     ss << "&grant_type=client_credentials";
@@ -279,7 +281,7 @@ void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
 
     Debug( "Starting OAuthentication request to {}", mOAuth2Url );
     std::string response;
-    long resp_code = req.perform( &response, deadline );
+    long resp_code = req.perform( mOAuth2Url, &response, deadline );
 
     // Parse response
     std::string error_msg;
@@ -312,7 +314,6 @@ Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Val
     req.setVerbosity( mVerbosity );
     req.setConnectionTimeoutMS( mRequestTimeout * 1000 );
     req.setHostResolves( mHostResolvesJson );
-    req.setURL( url );
     req.appendHeader( "Accept: application/vnd.accelize.v1+json" );
     req.appendHeader( "Content-Type: application/json" );
     std::string token_header("Authorization: Bearer ");
@@ -322,7 +323,7 @@ Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Val
 
     // Send request and wait response
     std::string response;
-    long resp_code = req.perform( &response, deadline );
+    long resp_code = req.perform( url, &response, deadline );
 
     // Parse response
     std::string error_msg;

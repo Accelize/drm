@@ -54,7 +54,7 @@ class CurlEasyPost {
 
 private:
     CURL *mCurl = NULL;
-    std::string mUrl;
+    //std::string mUrl;
     struct curl_slist *mHeaders_p = NULL;
     struct curl_slist *mHostResolveList = NULL;
     std::list<std::string> data;                    // keep data until request performed
@@ -110,7 +110,7 @@ public:
     void setURL(T&& url) {
         data.push_back( std::forward<T>(url) );
         curl_easy_setopt( mCurl, CURLOPT_URL, data.back().c_str() );
-        mUrl = url;
+        //mUrl = url;
     }
 
     template<class T>
@@ -127,12 +127,12 @@ public:
         curl_easy_setopt( mCurl, CURLOPT_POSTFIELDS, data.back().c_str() );
     }
 
-    uint32_t perform( std::string* resp, std::chrono::steady_clock::time_point& deadline );
-    uint32_t perform( std::string* resp, int32_t timeout_ms );
-    std::string perform_put( std::string url, const uint32_t& timeout_ms );
+    uint32_t perform( const std::string url, std::string* resp, std::chrono::steady_clock::time_point& deadline );
+    uint32_t perform( const std::string url, std::string* resp, int32_t timeout_ms );
+    std::string perform_put( const std::string url, const uint32_t& timeout_ms );
 
     template<class T>
-    T perform( std::string url, const uint32_t& timeout_ms ) {
+    T perform( const std::string url, const uint32_t& timeout_ms ) {
         T response;
         uint32_t resp_code;
 
