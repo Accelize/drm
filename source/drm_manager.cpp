@@ -256,7 +256,7 @@ protected:
         mIsLockedToDrm = false;
 
         mLicenseCounter = 0;
-        mLicenseDuration = LICENSE_DURATION_DEFAULT;
+        mLicenseDuration = 0;
 
         mConfFilePath = conf_file_path;
         mCredFilePath = cred_file_path;
@@ -1347,6 +1347,11 @@ protected:
                     mLicenseCounter, mSessionID, mLicenseDuration );
         }
 
+        // Update expiration time
+        if ( mExpirationTime.time_since_epoch().count() == 0 )
+            mExpirationTime = TClock::now();
+        mExpirationTime += std::chrono::seconds( mLicenseDuration );
+
         // Wait until license has been pushed to Activator's port
         bool activationCodesTransmitted( false );
         TClock::duration timeSpan;
@@ -1368,7 +1373,6 @@ protected:
         if ( !activationCodesTransmitted ) {
             Throw( DRM_CtlrError, "DRM Controller could not transmit Licence #{} to activators after {:f} ms. ", mLicenseCounter, mseconds ); //LCOV_EXCL_LINE
         }
-        mExpirationTime += std::chrono::seconds( mLicenseDuration );
 
         // Check DRM Controller has switched to the right license mode
         bool is_nodelocked = isDrmCtrlInNodelock();
@@ -1762,13 +1766,14 @@ protected:
                     }
                     Debug( "Released metering access mutex from licensing thread" );
                     if ( go_sleeping ) {
-                        // DRM licensing queue is full, wait until current license expires
+                        // DRM license queue is full, wait until current license expires
                         uint32_t licenseTimeLeft = getCurrentLicenseTimeLeft();
                         TClock::duration wait_duration = std::chrono::seconds( licenseTimeLeft + 1 );
                         Debug( "License thread sleeping {} seconds before checking DRM Controller readiness", licenseTimeLeft );
                         sleepOrExit( wait_duration );
-                        //  resync expiration time
-                        mExpirationTime = TClock::now() + std::chrono::seconds( mLicenseDuration );
+                        // Resync expiration time
+                        licenseTimeLeft = getCurrentLicenseTimeLeft();
+                        mExpirationTime = TClock::now() + std::chrono::seconds( licenseTimeLeft );
                     }
                 }
 
@@ -1930,6 +1935,10 @@ protected:
 
                 // Provision license on DRM controller
                 setLicense( license_json );
+            } else {
+                // Set expiration time to a temporary big enough value
+                // in case the current license is expiring
+                mExpirationTime = TClock::now() + std::chrono::seconds( LICENSE_DURATION_DEFAULT );
             }
         }
         Debug( "Released metering access mutex from resumeSession" );
@@ -2062,8 +2071,6 @@ public:
         TRY
             Debug( "Calling 'activate' with 'resume_session_request'={}", resume_session_request );
 
-            mExpirationTime = TClock::now();
-
             if ( isNodeLockedMode() ) {
                 // Install the node-locked license
                 installNodelockedLicense();
@@ -2073,22 +2080,14 @@ public:
                 Throw( DRM_BadUsage, "DRM Controller is locked in Node-Locked licensing mode: "
                                     "To use other modes you must reprogram the FPGA device." );
             }
-            if ( isSessionRunning() ) {
-                if ( resume_session_request && isLicenseActive() ) {
-                    resumeSession();
-                } else {
-                    if ( resume_session_request )
-                        Debug( "Session resuming request: stopping the pending session because license has expired" );
-                    else
-                        Debug( "Session creationg request: Stopping the pending session" );
-                    try {
-                        stopSession();
-                    } catch( const Exception &e ) {
-                        Warning( "Failed to stop pending session: {}", e.what() );
-                    }
-                    startSession();
-                }
+            if ( !isSessionRunning() ) {
+                startSession();
+            } else if ( resume_session_request && isLicenseActive() ) {
+                resumeSession();
             } else {
+                Debug( "A session is still pending but latest license has expired: "
+                       "pending session will be stopped and a new one will be created" );
+                stopSession();
                 startSession();
             }
             mThreadExit = false;

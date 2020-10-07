@@ -313,7 +313,7 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json,
         driver.write_register_callback,
         async_cb.callback
     )
-    nb_pause_resume = 5
+    nb_pause_resume = 4
     try:
         assert not drm_manager.get('session_status')
         assert not drm_manager.get('license_status')

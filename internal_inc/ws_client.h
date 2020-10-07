@@ -207,13 +207,13 @@ protected:
     std::string mClientId;
     std::string mClientSecret;
     std::string mOAuth2Token;
+    std::string mOAuth2Url;
     std::string mLicenseUrl;
     std::string mHealthUrl;
     Json::Value mHostResolvesJson;
     uint32_t mTokenValidityPeriod;              /// Validation period of the OAuth2 token in seconds
     uint32_t mTokenExpirationMargin;            /// OAuth2 token expiration margin in seconds
     TClock::time_point mTokenExpirationTime;    /// OAuth2 expiration time
-    std::unique_ptr<CurlEasyPost> mOAUth2Request;
     uint32_t mRequestTimeout;
 
     bool isTokenValid() const;

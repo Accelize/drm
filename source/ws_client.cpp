@@ -226,25 +226,12 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
     // Init Curl lib
     CurlSingleton::Init();
 
-    // Create curl hanlde for OAuthentication
-    mOAUth2Request.reset( new CurlEasyPost() );
-
-    // Set header of OAuth2 request
-    std::string oauth_url = url + std::string("/o/token/");
-    mOAUth2Request->setHostResolves( mHostResolvesJson );
-    mOAUth2Request->setURL( oauth_url );
-    mOAUth2Request->setVerbosity( mVerbosity );
-    std::stringstream ss;
-    ss << "client_id=" << mClientId << "&client_secret=" << mClientSecret;
-    ss << "&grant_type=client_credentials";
-    mOAUth2Request->setPostFields( ss.str() );
-    mOAUth2Request->setConnectionTimeoutMS( mRequestTimeout * 1000 );
-
     // Set URL of license and metering requests
+    mOAuth2Url = url + std::string("/o/token/");
     mLicenseUrl = url + std::string("/auth/metering/genlicense/");
     mHealthUrl = url + std::string("/auth/metering/health/");
 
-    Debug( "OAuth URL: {}", oauth_url );
+    Debug( "OAuth URL: {}", mOAuth2Url );
     Debug( "Licensing URL: {}", mLicenseUrl );
     Debug( "Health URL: {}", mHealthUrl );
 }
@@ -280,9 +267,19 @@ void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
     }
 
     // Request a new token and wait response
-    Debug( "Requesting a new authentication token" );
+    CurlEasyPost req;
+    req.setVerbosity( mVerbosity );
+    req.setConnectionTimeoutMS( mRequestTimeout * 1000 );
+    req.setHostResolves( mHostResolvesJson );
+    req.setURL( mOAuth2Url );
+    std::stringstream ss;
+    ss << "client_id=" << mClientId << "&client_secret=" << mClientSecret;
+    ss << "&grant_type=client_credentials";
+    req.setPostFields( ss.str() );
+
+    Debug( "Starting OAuthentication request to {}", mOAuth2Url );
     std::string response;
-    long resp_code = mOAUth2Request->perform( &response, deadline );
+    long resp_code = req.perform( &response, deadline );
 
     // Parse response
     std::string error_msg;
@@ -355,12 +352,12 @@ Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Val
 }
 
 Json::Value DrmWSClient::requestLicense( const Json::Value& json_req, TClock::time_point deadline ) {
-    Debug( "Starting License request to {} with request:\n{}", mLicenseUrl, json_req.toStyledString() );
+    Debug( "Starting License request to {} with data:\n{}", mLicenseUrl, json_req.toStyledString() );
     return requestMetering( mLicenseUrl, json_req, deadline );
 }
 
 Json::Value DrmWSClient::requestHealth( const Json::Value& json_req, TClock::time_point deadline ) {
-    Debug( "Starting Health request to {} with request:\n{}", mHealthUrl, json_req.toStyledString() );
+    Debug( "Starting Health request to {} with data:\n{}", mHealthUrl, json_req.toStyledString() );
     return requestMetering( mHealthUrl, json_req, deadline );
 }
 
