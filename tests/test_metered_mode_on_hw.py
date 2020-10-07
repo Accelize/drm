@@ -321,7 +321,6 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json,
         async_cb.assert_NoError()
         drm_manager.activate()
         start = datetime.now()
-        wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, 10)
         assert drm_manager.get('metered_data') == 0
         assert drm_manager.get('session_status')
         assert drm_manager.get('license_status')
@@ -334,6 +333,7 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json,
             new_coins = randint(1, 100)
             activators[0].generate_coin(new_coins)
             activators[0].check_coin(drm_manager.get('metered_data'))
+            wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, 10)
             drm_manager.deactivate(True)
             async_cb.assert_NoError()
             assert drm_manager.get('session_status')
