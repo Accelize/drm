@@ -18,6 +18,7 @@ limitations under the License.
 #define _H_ACCELIZE_METERING_UTILS
 
 #include <iostream>
+#include <chrono>
 #include <json/json.h>
 
 namespace Accelize {
@@ -30,11 +31,13 @@ const char PATH_SEP =
                      '/';
 #endif
 
+// Path related functions
 std::string getDirName( const std::string& full_path );
 bool isDir( const std::string& dir_path );
 bool isFile( const std::string& file_path );
 bool makeDirs( const std::string& dir_path, mode_t mode = 744 );
 
+// JSON related functions
 std::string saveJsonToString( const Json::Value& json_value, const std::string& indent = "" );
 void saveJsonToFile( const std::string& file_path, const Json::Value& json_value, const std::string& indent = "\t" );
 Json::Value parseJsonString(const std::string &json_string);
@@ -42,7 +45,11 @@ Json::Value parseJsonFile(const std::string &file_path);
 const Json::Value& JVgetRequired( const Json::Value& json_value, const char* key, const Json::ValueType& type );
 const Json::Value& JVgetOptional( const Json::Value& json_value, const char* key, const Json::ValueType& type, const Json::Value& defaultValue = Json::nullValue );
 
+// Miscellaneous functions
 std::string exec_cmd( const std::string cmd);
+
+std::string timePoint2String( const std::chrono::steady_clock::time_point& tp );
+
 }
 }
 

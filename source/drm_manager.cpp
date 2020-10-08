@@ -1351,6 +1351,7 @@ protected:
         if ( mExpirationTime.time_since_epoch().count() == 0 )
             mExpirationTime = TClock::now();
         mExpirationTime += std::chrono::seconds( mLicenseDuration );
+        Debug( "Ajust expiration time to {}", timePoint2String( mExpirationTime ) );
 
         // Wait until license has been pushed to Activator's port
         bool activationCodesTransmitted( false );
@@ -1774,6 +1775,7 @@ protected:
                         // Resync expiration time
                         licenseTimeLeft = getCurrentLicenseTimeLeft();
                         mExpirationTime = TClock::now() + std::chrono::seconds( licenseTimeLeft );
+                        Debug( "Ajust expiration time to {}", timePoint2String( mExpirationTime ) );
                     }
                 }
 
@@ -1939,6 +1941,7 @@ protected:
                 // Set expiration time to a temporary big enough value
                 // in case the current license is expiring
                 mExpirationTime = TClock::now() + std::chrono::seconds( LICENSE_DURATION_DEFAULT );
+                Debug( "Ajust expiration time to a temporary value {}", timePoint2String( mExpirationTime ) );
             }
         }
         Debug( "Released metering access mutex from resumeSession" );
