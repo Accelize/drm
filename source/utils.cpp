@@ -262,24 +262,11 @@ std::string exec_cmd( const std::string cmd) {
 
 
 std::string timePoint2String( const std::chrono::steady_clock::time_point& ste_tp ) {
-
-    /*time_point<system_clock, microseconds> time_point;
-    time_point = time_point_cast<microseconds>( tp );*/
-
     std::chrono::steady_clock::duration timeSpan = ste_tp - std::chrono::steady_clock::now();
     double seconds = double( timeSpan.count() ) * std::chrono::steady_clock::period::num / std::chrono::steady_clock::period::den;
     std::chrono::system_clock::time_point sys_tp = std::chrono::system_clock::now() + std::chrono::milliseconds( int(seconds * 1000) );
     std::time_t t = std::chrono::system_clock::to_time_t( sys_tp );
     return std::string(  asctime( std::localtime( &t ) ) );
-    /*
-    if (std::strftime(string_t, sizeof(string_t), "%A %c", std::localtime(&t))) {
-        std::cout << mbstr << '\n';
-    }
-    std::tm * ptm = std::localtime(&now);
-    char buffer[32];
-// Format: Mo, 15.06.2009 20:20:00
-std::strftime(buffer, 32, "%a, %d.%m.%Y %H:%M:%S", ptm);
-*/
 }
 
 

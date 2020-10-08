@@ -47,7 +47,6 @@ const Json::Value& JVgetOptional( const Json::Value& json_value, const char* key
 
 // Miscellaneous functions
 std::string exec_cmd( const std::string cmd);
-
 std::string timePoint2String( const std::chrono::steady_clock::time_point& tp );
 
 }
