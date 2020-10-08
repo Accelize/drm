@@ -343,14 +343,14 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json,
             random_wait = choice(wait_numbers)
             wait_deadline(start, random_wait)
             drm_manager.activate(True)
-            if random_wait > lic_duration*2:
+            if  drm_manager.get('license_status'):
+                start += timedelta(seconds=lic_duration*2)
+                assert drm_manager.get('session_id') == session_id, 'after loop #%d' % i
+            else:
                 start = datetime.now()
                 assert drm_manager.get('session_id') != session_id
                 activators[0].reset_coin()
                 session_id = drm_manager.get('session_id')
-            else:
-                start += timedelta(seconds=lic_duration*2)
-                assert drm_manager.get('session_id') == session_id, 'after loop #%d' % i
         assert drm_manager.get('session_status')
         assert drm_manager.get('session_id') == session_id
         assert drm_manager.get('license_status')

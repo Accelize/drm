@@ -1388,7 +1388,7 @@ protected:
                 Unreachable( "DRM Controller failed to switch to Node-Locked license mode" ); //LCOV_EXCL_LINE
             Debug( "DRM Controller is in Node-Locked license mode" );
         }
-        Debug( "Provisioned license #{} on DRM controller", mLicenseCounter );
+        Debug( "Provisioned license #{} for session {} on DRM controller", mLicenseCounter, mSessionID );
         mLicenseCounter ++;
     }
 
@@ -2083,6 +2083,8 @@ public:
             if ( !isSessionRunning() ) {
                 startSession();
             } else if ( resume_session_request && isLicenseActive() ) {
+                Debug( "A session is still pending and latest license is still valid: "
+                       "pending session is kept" );
                 resumeSession();
             } else {
                 Debug( "A session is still pending but latest license has expired: "
