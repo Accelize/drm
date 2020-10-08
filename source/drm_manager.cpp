@@ -2000,7 +2000,7 @@ protected:
             }
         }
         Debug( "Released metering access mutex from resumeSession" );
-        Info( "DRM session resumed." );
+        Info( "DRM session {} resumed.", mSessionID );
     }
 
     void stopSession() {
