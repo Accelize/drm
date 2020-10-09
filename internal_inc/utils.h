@@ -45,9 +45,14 @@ Json::Value parseJsonFile(const std::string &file_path);
 const Json::Value& JVgetRequired( const Json::Value& json_value, const char* key, const Json::ValueType& type );
 const Json::Value& JVgetOptional( const Json::Value& json_value, const char* key, const Json::ValueType& type, const Json::Value& defaultValue = Json::nullValue );
 
+// Time related functions
+std::string time_t_to_string( const time_t &t );
+time_t steady_clock_to_time_t( const std::chrono::steady_clock::time_point& t );
+std::chrono::steady_clock::time_point time_t_to_steady_clock( const time_t& t );
+
 // Miscellaneous functions
-std::string exec_cmd( const std::string cmd);
-std::string timePoint2String( const std::chrono::steady_clock::time_point& tp );
+std::string execCmd( const std::string& cmd);
+std::string toUpHex( const uint64_t& i );
 
 }
 }

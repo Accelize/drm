@@ -502,7 +502,7 @@ protected:
             try {
                 // Call xbutil to collect host and card data
                 std::string cmd = fmt::format( "{} dump", mXbutil );
-                std::string cmd_out = exec_cmd( cmd );
+                std::string cmd_out = execCmd( cmd );
 
                 // Parse collected data and save to header
                 Json::Value xbutil_node = parseJsonString( cmd_out );
@@ -587,21 +587,7 @@ protected:
         Debug( "User Mailbox size: {}", mbSize );
         return mbSize;
     }
-/*
-    uint32_t readMailbox( const eMailboxOffset offset ) const {
-        auto index = (uint32_t)offset;
-        uint32_t roSize, rwSize;
-        std::vector<uint32_t> roData, rwData;
 
-        checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
-
-        if ( index >= rwData.size() )
-            Unreachable( "Index {} overflows the Mailbox memory; max index is {}. ", index, rwData.size()-1 ); //LCOV_EXCL_LINE
-
-        Debug( "Read '{}' in Mailbox at index {}", rwData[index], index );
-        return rwData[index];
-    }
-*/
     std::vector<uint32_t> readMailbox( const eMailboxOffset& offset, const uint32_t& nb_elements ) const {
         auto index = (uint32_t)offset;
         uint32_t roSize, rwSize;
@@ -648,23 +634,7 @@ protected:
         Debug( "Read {} elements in Mailbox from index {}", value_vec.size(), index);
         return result;
     }
-/*
-    void writeMailbox( const eMailboxOffset& offset, const uint32_t& value ) const {
-        auto index = (uint32_t)offset;
-        uint32_t roSize, rwSize;
-        std::vector<uint32_t> roData, rwData;
 
-        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-
-        checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
-        if ( index >= rwData.size() )
-            Unreachable( "Index {} overflows the Mailbox memory: max index is {}. ", index, rwData.size()-1 ); //LCOV_EXCL_LINE
-
-        rwData[index] = value;
-        checkDRMCtlrRet( getDrmController().writeMailboxFileRegister( rwData, rwSize ) );
-        Debug( "Wrote '{}' in Mailbox at index {}", value, index );
-    }
-*/
     void writeMailbox( const eMailboxOffset& offset, const std::vector<uint32_t>& value_vec ) const {
         auto index = (uint32_t)offset;
         uint32_t roSize, rwSize;
@@ -693,7 +663,8 @@ protected:
             nb_elements = 1;
         else
             nb_elements = (sizeof(T) - 1) / sizeof(uint32_t) + 1;
-        std::vector<uint32_t> value_vec(&data, &data + nb_elements);
+        const uint32_t* p_data = (uint32_t*)&data;
+        std::vector<uint32_t> value_vec(p_data, p_data + nb_elements);
 
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
 
@@ -1402,10 +1373,12 @@ protected:
         }
 
         // Update expiration time
-        if ( mExpirationTime.time_since_epoch().count() == 0 )
+        if ( mExpirationTime.time_since_epoch().count() == 0 ) {
+            Debug( "Setting expiration time for the first time");
             mExpirationTime = TClock::now();
+        }
         mExpirationTime += std::chrono::seconds( mLicenseDuration );
-        Debug( "Update expiration time to {}", timePoint2String( mExpirationTime ) );
+        Debug( "Update expiration time to {}", time_t_to_string( steady_clock_to_time_t( mExpirationTime ) ) );
 
         // Wait until license has been pushed to Activator's port
         bool activationCodesTransmitted( false );
@@ -1829,7 +1802,7 @@ protected:
                         // Resync expiration time
                         licenseTimeLeft = getCurrentLicenseTimeLeft();
                         mExpirationTime = TClock::now() + std::chrono::seconds( licenseTimeLeft );
-                        Debug( "Update expiration time to {}", timePoint2String( mExpirationTime ) );
+                        Debug( "Update expiration time to {}", time_t_to_string( steady_clock_to_time_t( mExpirationTime ) ) );
                     }
                 }
 
@@ -1976,6 +1949,16 @@ protected:
         Info( "New DRM session {} started.", mSessionID );
     }
 
+    void pauseSession() {
+        writeMailbox<time_t>( eMailboxOffset::MB_LIC_EXP_0, steady_clock_to_time_t(mExpirationTime) );
+        writeMailbox<uint64_t>( eMailboxOffset::MB_SESSION_0, std::stoull(mSessionID,0,16) );
+        stopThread();
+        mSecurityStop = false;
+        if (mHealthPeriod)
+            performHealth(mWSApiRetryDuration, 0);
+        Info( "DRM session {} paused.", mSessionID );
+    }
+
     void resumeSession() {
         {
             Debug( "Waiting metering access mutex from resumeSession" );
@@ -1983,10 +1966,9 @@ protected:
             Debug( "Acquired metering access mutex from resumeSession" );
 
             // Recover expiration time from DRM ROM
-            std::time_t epoch_time = readMailbox<uint64_t>( eMailboxOffset::MB_LIC_EXP_0 );
-            TClock::time_point tp_epoch;
-            mExpirationTime = tp_epoch + std::chrono::seconds( epoch_time );
-            Debug( "Update expiration time from registry: {}", timePoint2String( mExpirationTime ) );
+            time_t t = readMailbox<time_t>( eMailboxOffset::MB_LIC_EXP_0 );
+            mExpirationTime = time_t_to_steady_clock( t );
+            Debug( "Update expiration time from registry: {}", time_t_to_string( t ) );
 
             if ( isReadyForNewLicense() ) {
                 // Create JSON license request
@@ -2032,17 +2014,6 @@ protected:
         mSecurityStop = false;
 
         Info( "DRM session {} stopped.", sessionID );
-    }
-
-    void pauseSession() {
-        auto exp_time_epoch = mExpirationTime.time_since_epoch().count();
-        writeMailbox<uint64_t>( eMailboxOffset::MB_LIC_EXP_0, exp_time_epoch );
-        writeMailbox<uint64_t>( eMailboxOffset::MB_SESSION_0, std::stoull(mSessionID,0,16) );
-        stopThread();
-        mSecurityStop = false;
-        if (mHealthPeriod)
-            performHealth(mWSApiRetryDuration, 0);
-        Info( "DRM session {} paused.", mSessionID );
     }
 
     ParameterKey findParameterKey( const std::string& key_string ) const {
@@ -2143,9 +2114,11 @@ public:
             }
             if ( !isSessionRunning() ) {
                 startSession();
+
             } else {
                 // Recover pending session
-                mSessionID = std::to_string( readMailbox<uint64_t>( eMailboxOffset::MB_SESSION_0 ) );
+                mSessionID = toUpHex( readMailbox<uint64_t>( eMailboxOffset::MB_SESSION_0 ) );
+
                 if ( resume_session_request && isLicenseActive() ) {
                     Debug( "A session is still pending and latest license is still valid: "
                            "pending session is kept" );
