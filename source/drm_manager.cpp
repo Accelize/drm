@@ -1374,7 +1374,7 @@ protected:
 
         // Update expiration time
         if ( mExpirationTime.time_since_epoch().count() == 0 ) {
-            Debug( "Setting expiration time for the first time");
+            Debug( "Initialize expiration time");
             mExpirationTime = TClock::now();
         }
         mExpirationTime += std::chrono::seconds( mLicenseDuration );
@@ -1946,12 +1946,12 @@ protected:
             mHealthRetrySleep = JVgetOptional( metering_node, "healthRetrySleep", Json::uintValue, mHealthRetrySleep ).asUInt();
         }
         Debug( "Released metering access mutex from startSession" );
-        Info( "New DRM session {} started.", mSessionID );
+        Info( "DRM session {} created.", mSessionID );
     }
 
     void pauseSession() {
-        writeMailbox<time_t>( eMailboxOffset::MB_LIC_EXP_0, steady_clock_to_time_t(mExpirationTime) );
-        writeMailbox<uint64_t>( eMailboxOffset::MB_SESSION_0, std::stoull(mSessionID,0,16) );
+        writeMailbox<time_t>( eMailboxOffset::MB_LIC_EXP_0, steady_clock_to_time_t( mExpirationTime ) );
+        writeMailbox<uint64_t>( eMailboxOffset::MB_SESSION_0, std::stoull( mSessionID, 0, 16 ) );
         stopThread();
         mSecurityStop = false;
         if (mHealthPeriod)
@@ -2008,6 +2008,8 @@ protected:
         std::string sessionID = mSessionID;
         Debug2( "Clearing session ID: {}", mSessionID );
         mSessionID = std::string("");
+        Debug( "Reseting expiration time" );
+        mExpirationTime = TClock::time_point();
 
         // Clear security flag
         Debug( "Clearing stop security flag" );

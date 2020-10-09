@@ -47,7 +47,7 @@ const Json::Value& JVgetOptional( const Json::Value& json_value, const char* key
 
 // Time related functions
 std::string time_t_to_string( const time_t &t );
-time_t steady_clock_to_time_t( const std::chrono::steady_clock::time_point& t );
+time_t steady_clock_to_time_t( const std::chrono::steady_clock::time_point& tp );
 std::chrono::steady_clock::time_point time_t_to_steady_clock( const time_t& t );
 
 // Miscellaneous functions
