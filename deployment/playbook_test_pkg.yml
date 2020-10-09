@@ -17,3 +17,13 @@
         xilinx_xrt_install: false
         xilinx_xrt_ensure_compatible_kernel: false
 
+    # Install Accelize DRM build & test requirements
+    - name: accelize.accelize_drm
+      vars:
+        accelize_drm_build: false
+        accelize_drm_test: true
+        accelize_drm_coverage: false
+        accelize_drm_abi_check: false
+        accelize_drm_no_install: true
+        accelize_drm_service_started: false
+
