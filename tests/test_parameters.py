@@ -812,7 +812,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
 
     # Test parameter: mailbox_size
     mailbox_size = drm_manager.get('mailbox_size')
-    assert mailbox_size == 14, 'Unexpected Mailbox size'
+    assert mailbox_size == 10, 'Unexpected Mailbox size'
     async_cb.assert_NoError()
     print("Test parameter 'mailbox_size': PASS")
 

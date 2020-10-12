@@ -1559,6 +1559,7 @@ protected:
             /// - Clear Session IS
             Debug( "Clearing session ID: {}", mSessionID );
             mSessionID = std::string("");
+            writeMailbox<uint64_t>( eMailboxOffset::MB_SESSION_0, 0 );
             /// - Create WS access
             mWsClient.reset( new DrmWSClient( mConfFilePath, mCredFilePath ) );
             /// - Read request file
@@ -1966,9 +1967,11 @@ protected:
             Debug( "Acquired metering access mutex from resumeSession" );
 
             // Recover expiration time from DRM ROM
-            time_t t = readMailbox<time_t>( eMailboxOffset::MB_LIC_EXP_0 );
-            mExpirationTime = time_t_to_steady_clock( t );
-            Debug( "Update expiration time from registry: {}", time_t_to_string( t ) );
+            if ( mExpirationTime.time_since_epoch().count() == 0 ) {
+                time_t t = readMailbox<time_t>( eMailboxOffset::MB_LIC_EXP_0 );
+                mExpirationTime = time_t_to_steady_clock( t );
+                Debug( "Initialize expiration time from DRM registry: {}", time_t_to_string( t ) );
+            }
 
             if ( isReadyForNewLicense() ) {
                 // Create JSON license request
@@ -2005,11 +2008,13 @@ protected:
         }
         Debug( "Released metering access mutex from stopSession" );
         // Clear Session ID
-        std::string sessionID = mSessionID;
         Debug2( "Clearing session ID: {}", mSessionID );
+        std::string sessionID = mSessionID;
         mSessionID = std::string("");
+        writeMailbox<uint64_t>( eMailboxOffset::MB_SESSION_0, 0 );
         Debug( "Reseting expiration time" );
         mExpirationTime = TClock::time_point();
+        writeMailbox<time_t>( eMailboxOffset::MB_LIC_EXP_0, steady_clock_to_time_t( mExpirationTime ) );
 
         // Clear security flag
         Debug( "Clearing stop security flag" );
@@ -2119,7 +2124,8 @@ public:
 
             } else {
                 // Recover pending session
-                mSessionID = toUpHex( readMailbox<uint64_t>( eMailboxOffset::MB_SESSION_0 ) );
+                if ( mSessionID.empty() )
+                    mSessionID = toUpHex( readMailbox<uint64_t>( eMailboxOffset::MB_SESSION_0 ) );
 
                 if ( resume_session_request && isLicenseActive() ) {
                     Debug( "A session is still pending and latest license is still valid: "
