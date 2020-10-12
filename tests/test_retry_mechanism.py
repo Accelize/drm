@@ -113,10 +113,13 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
     expires_in = 1
     retryShortPeriod = 3
     retryLongPeriod = 10
-    timeoutSecond = 20
+    timeoutSecond = 25
     nb_long_retry = int(timeoutSecond / retryLongPeriod) - 1
-    nb_short_retry = int(retryLongPeriod / retryShortPeriod) - 1
-    cnt_max = 1 + nb_long_retry + nb_short_retry
+    if timeoutSecond % retryLongPeriod == 0:
+        nb_long_retry = int(timeoutSecond / retryLongPeriod) - 1
+    else:
+        nb_long_retry = int(timeoutSecond / retryLongPeriod)
+    nb_short_retry = int((timeoutSecond-nb_long_retry*retryLongPeriod) / retryShortPeriod) + 1
 
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + request.function.__name__
@@ -133,17 +136,22 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
     )
 
     context = {'data':list(),
-               'cnt':0, 'cnt_max':cnt_max,
+               'cnt':0,
                'expires_in':expires_in,
-               'timeoutSecond':timeoutSecond
+               'timeoutSecond':timeoutSecond,
+               'exit': False
     }
     set_context(context)
     assert get_context() == context
 
     try:
         drm_manager.activate()
-        wait_func_true(lambda: async_cb.was_called, timeout=timeoutSecond + 2)
+        wait_func_true(lambda: async_cb.was_called, timeout=timeoutSecond*2)
     finally:
+        context = get_context()
+        context['exit'] = True
+        set_context(context)
+        assert get_context() == context
         drm_manager.deactivate()
     assert async_cb.was_called
     assert async_cb.errcode == accelize_drm.exceptions.DRMWSError.error_code
@@ -151,7 +159,8 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
     context = get_context()
     data_list = context['data']
     data = data_list.pop(0)
-    assert (nb_long_retry+nb_short_retry) <= len(data_list) <= (1+nb_long_retry+nb_short_retry)
+    data = data_list.pop(-1)
+    assert len(data_list) == nb_long_retry + nb_short_retry
     data = data_list.pop(0)
     prev_lic = parser.parse(data[1])
     for i, (start, end) in enumerate(data_list):

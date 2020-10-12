@@ -115,8 +115,8 @@ public:
         curl_easy_setopt( mCurl, CURLOPT_POSTFIELDS, data.back().c_str() );
     }
 
-    uint32_t perform( const std::string url, std::string* resp, std::chrono::steady_clock::time_point& deadline );
-    uint32_t perform( const std::string url, std::string* resp, int32_t timeout_ms );
+    uint32_t perform( const std::string url, std::string* resp, const std::chrono::steady_clock::time_point& deadline );
+    uint32_t perform( const std::string url, std::string* resp, const int32_t timeout_ms );
 
     template<class T>
     T perform_get( const std::string url, const uint32_t& timeout_ms ) {
@@ -241,7 +241,7 @@ protected:
     uint32_t mRequestTimeout;
 
     bool isTokenValid() const;
-    Json::Value requestMetering( const std::string url, const Json::Value& json_req, TClock::time_point deadline );
+    Json::Value requestMetering( const std::string url, const Json::Value& json_req, const TClock::time_point deadline );
 
 public:
     DrmWSClient(const std::string &conf_file_path, const std::string &cred_file_path);
@@ -254,10 +254,10 @@ public:
     std::string getTokenString() const { return mOAuth2Token; }
     uint32_t getRequestTimeout() const { return mRequestTimeout; }
 
-    void requestOAuth2token(TClock::time_point deadline);
+    void requestOAuth2token( const TClock::time_point deadline );
 
-    Json::Value requestLicense( const Json::Value& json_req, TClock::time_point deadline );
-    Json::Value requestHealth( const Json::Value& json_req, TClock::time_point deadline );
+    Json::Value requestLicense( const Json::Value& json_req, const TClock::time_point deadline );
+    Json::Value requestHealth( const Json::Value& json_req, const TClock::time_point deadline );
 
 };
 

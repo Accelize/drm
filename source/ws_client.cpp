@@ -79,7 +79,7 @@ void CurlEasyPost::appendHeader( const std::string header ) {
     mHeaders_p = curl_slist_append( mHeaders_p, header.c_str() );
 }
 
-uint32_t CurlEasyPost::perform( const std::string url, std::string* response, int32_t timeout_ms ) {
+uint32_t CurlEasyPost::perform( const std::string url, std::string* response, const int32_t timeout_ms ) {
     CURLcode res;
     uint32_t resp_code;
 
@@ -116,7 +116,7 @@ uint32_t CurlEasyPost::perform( const std::string url, std::string* response, in
 }
 
 uint32_t CurlEasyPost::perform( const std::string url, std::string* response,
-                                std::chrono::steady_clock::time_point& deadline ) {
+                                const std::chrono::steady_clock::time_point& deadline ) {
     std::chrono::milliseconds timeout_chrono = std::chrono::duration_cast<std::chrono::milliseconds>(
                         deadline - std::chrono::steady_clock::now() );
     int32_t timeout_ms = timeout_chrono.count();
@@ -228,7 +228,7 @@ bool DrmWSClient::isTokenValid() const {
     }
 }
 
-void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
+void DrmWSClient::requestOAuth2token( const TClock::time_point deadline ) {
 
     // Check if a token exists
     if ( !mOAuth2Token.empty() ) {
@@ -276,7 +276,8 @@ void DrmWSClient::requestOAuth2token( TClock::time_point deadline ) {
     mTokenExpirationTime = TClock::now() + std::chrono::seconds( mTokenValidityPeriod );
 }
 
-Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Value& json_req, TClock::time_point deadline ) {
+Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Value& json_req,
+                                        const TClock::time_point deadline ) {
 
     // Create new request
     CurlEasyPost req;
@@ -321,12 +322,12 @@ Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Val
     return json_resp;
 }
 
-Json::Value DrmWSClient::requestLicense( const Json::Value& json_req, TClock::time_point deadline ) {
+Json::Value DrmWSClient::requestLicense( const Json::Value& json_req, const TClock::time_point deadline ) {
     Debug( "Starting License request to {} with data:\n{}", mLicenseUrl, json_req.toStyledString() );
     return requestMetering( mLicenseUrl, json_req, deadline );
 }
 
-Json::Value DrmWSClient::requestHealth( const Json::Value& json_req, TClock::time_point deadline ) {
+Json::Value DrmWSClient::requestHealth( const Json::Value& json_req, const TClock::time_point deadline ) {
     Debug( "Starting Health request to {} with data:\n{}", mHealthUrl, json_req.toStyledString() );
     return requestMetering( mHealthUrl, json_req, deadline );
 }

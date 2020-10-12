@@ -581,7 +581,7 @@ def create_app(url):
         new_url = url + '/o/token/'
         with lock:
             try:
-                if context['cnt'] == 0:
+                if context['cnt'] == 0 or context['exit']:
                     response = post(new_url, data=request.form, headers=request.headers)
                     assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request.form,
                             indent=4, sort_keys=True), response.status_code, response.text)
@@ -592,13 +592,10 @@ def create_app(url):
                     context['response_json'] = dumps(response_json)
                     context['headers'] = headers
                     return Response(dumps(response_json), response.status_code, headers)
-                elif context['cnt'] <= context['cnt_max']:
-                    return Response(context['response_json'], 408, context['headers'])
                 else:
-                    return Response(context['response_json'], 200, context['headers'])
+                    return Response(context['response_json'], 408, context['headers'])
             finally:
-                if context['cnt'] <= context['cnt_max']:
-                    context['data'].append( (start,str(datetime.now())) )
+                context['data'].append( (start,str(datetime.now())) )
                 context['cnt'] += 1
             return resp
 
@@ -830,7 +827,6 @@ def create_app(url):
 
     @app.route('/test_improve_coverage_setLicense/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_improve_coverage_setLicense():
-        global context, lock
         new_url = request.url.replace(request.url_root+'test_improve_coverage_setLicense', url)
         request_json = request.get_json()
         response = post(new_url, json=request_json, headers=request.headers)
