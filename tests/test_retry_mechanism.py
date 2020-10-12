@@ -104,7 +104,7 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
                         cred_json, async_handler, live_server, request):
     """
     Test the number of expected retries and the gap between 2 retries
-    on authentication requests are correct when a retryable error is returned
+    on authentication requests occurring in the background thread
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -177,7 +177,7 @@ def test_long_to_short_retry_switch_on_license(accelize_drm, conf_json, cred_jso
                            async_handler, live_server, request):
     """
     Test the number of expected retries and the gap between 2 retries
-    on license requests are correct when a retryable error is returned
+    on license requests occurring in the background thread
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -185,8 +185,15 @@ def test_long_to_short_retry_switch_on_license(accelize_drm, conf_json, cred_jso
 
     retryShortPeriod = 3
     retryLongPeriod = 10
-    timeoutSecondFirst2 = 3
-    timeoutSecond = 20
+    timeoutSecondFirst = 3
+    timeoutSecond = 25
+
+    nb_long_retry = int(timeoutSecond / retryLongPeriod) - 1
+    if timeoutSecond % retryLongPeriod == 0:
+        nb_long_retry = int(timeoutSecond / retryLongPeriod) - 1
+    else:
+        nb_long_retry = int(timeoutSecond / retryLongPeriod)
+    nb_short_retry = int((timeoutSecond-nb_long_retry*retryLongPeriod) / retryShortPeriod) + 1
 
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + request.function.__name__
@@ -204,7 +211,7 @@ def test_long_to_short_retry_switch_on_license(accelize_drm, conf_json, cred_jso
 
     context = {'data':list(),
                'cnt':0,
-               'timeoutSecondFirst2':timeoutSecondFirst2,
+               'timeoutSecondFirst':timeoutSecondFirst,
                'timeoutSecond':timeoutSecond
     }
     set_context(context)
@@ -213,7 +220,7 @@ def test_long_to_short_retry_switch_on_license(accelize_drm, conf_json, cred_jso
     drm_manager.activate()
     try:
         wait_func_true(lambda: async_cb.was_called,
-                timeout=timeoutSecondFirst2 + 2*timeoutSecond + 2)
+                timeout=timeoutSecondFirst + 2*timeoutSecond)
     finally:
         drm_manager.deactivate()
     assert async_cb.was_called
@@ -221,12 +228,13 @@ def test_long_to_short_retry_switch_on_license(accelize_drm, conf_json, cred_jso
     assert async_cb.errcode == accelize_drm.exceptions.DRMWSError.error_code
     context = get_context()
     data_list = context['data']
-    nb_long_retry = int(timeoutSecond / retryLongPeriod)
-    nb_short_retry = int(retryLongPeriod / retryShortPeriod)
-    assert (nb_long_retry+nb_short_retry) <= len(data_list) <= (1+nb_long_retry+nb_short_retry)
+    data = data_list.pop(0)
+    data = data_list.pop(0)
+    data = data_list.pop(-1)
+    assert len(data_list) == nb_long_retry + nb_short_retry
     data = data_list.pop(0)
     assert data[0] == 'running'
-    prev_lic = parser.parse(data[2])
+    prev_lic = parser.parse(data[0])
     for i, (type, start, end) in enumerate(data_list):
         lic_delta = int((parser.parse(start) - prev_lic).total_seconds())
         prev_lic = parser.parse(end)
