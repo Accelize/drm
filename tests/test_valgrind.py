@@ -40,7 +40,7 @@ def test_normal_usage(accelize_drm, request, exec_func, live_server, tmpdir,
     exec_lib.run(request.function.__name__, param_file)
     assert exec_lib.returncode == 0
     content = basic_log_file.read()
-    assert search(r'DRM session \S{16} started', content, IGNORECASE)
+    assert search(r'DRM session \S{16} created', content, IGNORECASE)
     assert search(r'DRM session \S{16} stopped', content, IGNORECASE)
     assert search(r'\[\s*(error|critical)\s*\]', content, IGNORECASE) is None
     assert search(r'\[\s*trace\s*\]', content, IGNORECASE)
