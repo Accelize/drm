@@ -185,10 +185,8 @@ def test_long_to_short_retry_switch_on_license(accelize_drm, conf_json, cred_jso
 
     retryShortPeriod = 3
     retryLongPeriod = 10
-    timeoutSecondFirst = 3
     timeoutSecond = 25
 
-    nb_long_retry = int(timeoutSecond / retryLongPeriod) - 1
     if timeoutSecond % retryLongPeriod == 0:
         nb_long_retry = int(timeoutSecond / retryLongPeriod) - 1
     else:
@@ -211,16 +209,16 @@ def test_long_to_short_retry_switch_on_license(accelize_drm, conf_json, cred_jso
 
     context = {'data':list(),
                'cnt':0,
-               'timeoutSecondFirst':timeoutSecondFirst,
                'timeoutSecond':timeoutSecond
     }
     set_context(context)
     assert get_context() == context
 
     drm_manager.activate()
+    lic_duration = drm_manager.get('license_duration')
     try:
         wait_func_true(lambda: async_cb.was_called,
-                timeout=timeoutSecondFirst + 2*timeoutSecond)
+                timeout= lic_duration + 2*timeoutSecond)
     finally:
         drm_manager.deactivate()
     assert async_cb.was_called
@@ -229,16 +227,16 @@ def test_long_to_short_retry_switch_on_license(accelize_drm, conf_json, cred_jso
     context = get_context()
     data_list = context['data']
     data = data_list.pop(0)
-    data = data_list.pop(0)
     data = data_list.pop(-1)
     assert len(data_list) == nb_long_retry + nb_short_retry
     data = data_list.pop(0)
     assert data[0] == 'running'
-    prev_lic = parser.parse(data[0])
+    prev_lic = parser.parse(data[2])
     for i, (type, start, end) in enumerate(data_list):
+        assert type == 'running'
         lic_delta = int((parser.parse(start) - prev_lic).total_seconds())
         prev_lic = parser.parse(end)
-        if i < nb_long_retry-1:
+        if i < nb_long_retry:
             assert (retryLongPeriod-1) <= lic_delta <= (retryLongPeriod+1)
         else:
             assert (retryShortPeriod-1) <= lic_delta <= (retryShortPeriod+1)

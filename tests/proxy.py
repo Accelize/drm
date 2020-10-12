@@ -632,27 +632,20 @@ def create_app(url):
         request_type = request_json['request']
         with lock:
             try:
-                if context['cnt'] < 2 or request_type == 'close':
+                if context['cnt'] < 1 or request_type == 'close':
                     response = post(new_url, json=request_json, headers=request.headers)
                     assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                             indent=4, sort_keys=True), response.status_code, response.text)
                     excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
                     headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
                     response_json = response.json()
-                    if context['cnt'] == 0:
-                        timeoutSecond = context['timeoutSecondFirst']
-                    else:
-                        timeoutSecond = context['timeoutSecond']
-                    response_json['metering']['timeoutSecond'] = timeoutSecond
-                    context['post'] = (response_json, headers)
-                    response_status_code = response.status_code
+                    response_json['metering']['timeoutSecond'] = context['timeoutSecond']
+                    return Response(dumps(response_json), response.status_code, headers)
                 else:
-                    response_json, headers = context['post']
-                    response_status_code = 408
+                    return ({'error':'Test retry mechanism'}, 408)
             finally:
                 context['cnt'] += 1
                 context['data'].append( (request_type, start, str(datetime.now())) )
-        return Response(dumps(response_json), response_status_code, headers)
 
     @app.route('/test_long_to_short_retry_switch_on_license/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_long_to_short_retry_switch_on_license():
