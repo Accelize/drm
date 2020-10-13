@@ -43,8 +43,7 @@ currently supported by the DRM HDK:
        * Kintex 7
        * Artix 7
    * - Intel(R)
-     - * Quartus Prime 17.1
-       * Quartus Prime Pro Edition 17.1
+     - * From Quartus Prime Pro Edition 17.1
      - * Cyclone V
        * Arria 10 [#f1]_
        * Arria V GZ
@@ -52,8 +51,11 @@ currently supported by the DRM HDK:
        * Stratix V
        * Stratix 10
 
-.. warning:: As long as Intel(R) OPAE is not exposing the Chip ID, node-locked mode can not be implemented.
+.. warning:: As long as Intel(R) OPAE is not exposing the Chip ID, 
+             node-locked mode can not be implemented.
 
+.. warning:: As long as IEEE-1735 encryption is supported only on Pro Editions of Quartus, 
+             only Pro Editions are supported.
 
 
 Request DRM HDK
@@ -556,7 +558,7 @@ To add the DRM Controller source to your project, you can use:
 .. code-block:: tcl
 
    read_vhdl -library drm_library {
-      drm_hdk/common/xilinx/drm_all_components.vhdl
+      drm_hdk/common/vhdl/xilinx/drm_all_components.vhdl
       drm_hdk/controller/rtl/core/drm_ip_controller.vhdl
       drm_hdk/controller/rtl/syn/top_drm_controller.vhdl
    }
@@ -579,7 +581,7 @@ Or a TCL script:
 .. code-block:: tcl
 
    read_vhdl -library drm_library {
-      drm_hdk/common/xilinx/drm_all_components.vhdl
+      drm_hdk/common/vhdl/xilinx/drm_all_components.vhdl
       drm_hdk/activator_VLNV/core/drm_ip_activator_package_0xVVVVLLLLNNNNVVVV.vhdl
    }
    read_vhdl -library drm_0xVVVVLLLLNNNNVVVV_library {
@@ -609,7 +611,7 @@ Or a TCL script:
 .. code-block:: tcl
 
    read_vhdl -library drm_library {
-      drm_hdk/common/xilinx/drm_all_components.vhdl
+      drm_hdk/common/vhdl/xilinx/drm_all_components.vhdl
       drm_hdk/controller/rtl/core/drm_ip_controller.vhdl
    }
    read_verilog -sv {
@@ -638,7 +640,7 @@ Or via TCL script:
 .. code-block:: tcl
 
    read_vhdl -library drm_library {
-      drm_hdk/common/xilinx/drm_all_components.vhdl
+      drm_hdk/common/vhdl/xilinx/drm_all_components.vhdl
       drm_hdk/activator_VLNV/core/drm_ip_activator_package_0xVVVVLLLLNNNNVVVV.vhdl
    }
    read_vhdl -library drm_0xVVVVLLLLNNNNVVVV_library {
@@ -705,16 +707,16 @@ the DRM Activator IP.
 For more detals refer to `Modify your design`_.
 
 
-Intel(R) Quartus Prime
-----------------------
+Intel(R) Quartus Prime Pro
+--------------------------
 
 Refer to `Supported hardware`_ for more information on supported Quartus versions.
 
 .. note:: In the ``common`` folder of the DRM HDK, you will find an *altera* and an
           *alteraProprietary* subfolders. Both subfolders contain the same code but
-          encrypted in IEEE-1735 and Ampcrypt respectively. Depending on the Quartus
-          version, one or the other might not be supported.
-          Make sure to replace the path with the correct subfolder in the rest of the page.
+          encrypted in IEEE-1735 and Ampcrypt respectively. Quartus Prime Standard
+          does not support IEEE-1735 encryption. Make sure to replace the path with
+          the correct subfolder in the rest of the page.
 
 VHDL
 ^^^^
@@ -735,13 +737,10 @@ Or a TCL script:
 
 .. code-block:: tcl
 
-   set_global_assignment -name SYSTEMVERILOG_FILE drm_hdk/common/alteraProprietary/altchip_id_arria10.sv
-   set_global_assignment -name VHDL_FILE drm_hdk/common/alteraProprietary/drm_all_components.vhdl -library drm_library
+   set_global_assignment -name VHDL_FILE drm_hdk/common/vhdl/altera/drm_all_components.vhdl -library drm_library
    set_global_assignment -name VHDL_FILE drm_hdk/controller/rtl/core/drm_ip_controller.vhdl -library drm_library
    set_global_assignment -name VHDL_FILE drm_hdk/controller/rtl/syn/top_drm_controller.vhdl
 
-.. note:: The ``altchip_id_arria10.sv`` file is for the Arria10 FPGA family.
-          Use the file located in the *common/sv/alteraProprietary* folder from your DRM HDK.
 
 DRM Activator
 """""""""""""
@@ -760,14 +759,11 @@ To add the DRM Activator sources to your project, you can use:
 
 .. code-block:: tcl
 
-   set_global_assignment -name SYSTEMVERILOG_FILE drm_hdk/common/alteraProprietary/altchip_id_arria10.sv
-   set_global_assignment -name VHDL_FILE drm_hdl/common/alteraProprietary/drm_all_components.vhdl -library drm_library
+   set_global_assignment -name VHDL_FILE drm_hdl/common/vhdl/altera/drm_all_components.vhdl -library drm_library
    set_global_assignment -name VHDL_FILE drm_hdl/activator_VLNV/core/drm_ip_activator_package_0xVVVVLLLLNNNNVVVV.vhdl -library drm_library
    set_global_assignment -name VHDL_FILE drm_hdl/activator_VLNV/core/drm_ip_activator_0xVVVVLLLLNNNNVVVV.vhdl -library drm_0xVVVVLLLLNNNNVVVV_library
    set_global_assignment -name VHDL_FILE drm_hdl/activator_VLNV/syn/top_drm_activator_0xVVVVLLLLNNNNVVVV.vhdl
 
-.. note:: The ``altchip_id_arria10.sv`` file is for the Arria10 FPGA family.
-          Use the file located in the *common/sv/alteraProprietary* folder from your DRM HDK.
 
 Verilog
 ^^^^^^^
@@ -790,13 +786,9 @@ To add the DRM Controller sources to your project, you can use:
 
 .. code-block:: tcl
 
-   set_global_assignment -name SYSTEMVERILOG_FILE drm_hdk/common/alteraProprietary/altchip_id_arria10.sv
-   set_global_assignment -name VHDL_FILE drm_hdk/common/alteraProprietary/drm_all_components.vhdl -library drm_library
+   set_global_assignment -name VHDL_FILE drm_hdk/common/vhdl/altera/drm_all_components.vhdl -library drm_library
    set_global_assignment -name VHDL_FILE drm_hdk/controller/rtl/core/drm_ip_controller.vhdl -library drm_library
    set_global_assignment -name SYSTEMVERILOG_FILE drm_hdk/controller/rtl/syn/top_drm_controller.sv
-
-.. note:: The ``altchip_id_arria10.sv`` file is for the Arria10 FPGA family.
-          Use the file located in the *common/sv/alteraProprietary* folder from your DRM HDK.
 
 
 DRM Activator
@@ -819,14 +811,10 @@ To add the DRM Activator sources to your project, you can use:
 
 .. code-block:: tcl
 
-   set_global_assignment -name SYSTEMVERILOG_FILE drm_hdk/common/alteraProprietary/altchip_id_arria10.sv
-   set_global_assignment -name VHDL_FILE drm_hdl/common/alteraProprietary/drm_all_components.vhdl -library drm_library
+   set_global_assignment -name VHDL_FILE drm_hdl/common/vhdl/altera/drm_all_components.vhdl -library drm_library
    set_global_assignment -name VHDL_FILE drm_hdl/activator_VLNV/core/drm_ip_activator_package_0xVVVVLLLLNNNNVVVV.vhdl -library drm_library
    set_global_assignment -name VHDL_FILE drm_hdl/activator_VLNV/core/drm_ip_activator_0xVVVVLLLLNNNNVVVV.vhdl -library drm_0xVVVVLLLLNNNNVVVV_library
    set_global_assignment -name SYSTEMVERILOG_FILE drm_hdl/activator_VLNV/syn/top_drm_activator_0xVVVVLLLLNNNNVVVV.sv
-
-.. note:: The ``altchip_id_arria10.sv`` file is for the Arria10 FPGA family.
-          Use the file located in the *common/sv/alteraProprietary* folder from your DRM HDK.
 
 
 Constrain your design
