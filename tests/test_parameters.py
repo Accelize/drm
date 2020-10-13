@@ -67,7 +67,8 @@ _PARAM_LIST = ('license_type',
                'host_data',
                'log_file_append',
                'ws_verbosity',
-               'trng_status'
+               'trng_status',
+               'num_license_loaded'
 )
 
 
@@ -811,7 +812,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
 
     # Test parameter: mailbox_size
     mailbox_size = drm_manager.get('mailbox_size')
-    assert mailbox_size == 14, 'Unexpected Mailbox size'
+    assert mailbox_size == 10, 'Unexpected Mailbox size'
     async_cb.assert_NoError()
     print("Test parameter 'mailbox_size': PASS")
 
@@ -1030,7 +1031,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         driver.write_register_callback,
         async_cb.callback
     )
-    assert drm_manager.get('health_retry') == 10
+    assert drm_manager.get('health_retry') == 0
     async_cb.assert_NoError()
     print("Test parameter 'health_retry': PASS")
 
@@ -1044,7 +1045,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         driver.write_register_callback,
         async_cb.callback
     )
-    assert drm_manager.get('health_retry_sleep') == drm_manager.get('ws_retry_period_short')
+    assert drm_manager.get('health_retry_sleep') == 0
     async_cb.assert_NoError()
     print("Test parameter 'health_retry_sleep': PASS")
 
@@ -1153,8 +1154,28 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     assert isinstance(trng_status['security_alert_bit'], bool)
     assert match(r'[0-9A-F]{8}', trng_status['adaptive_proportion_test_error'], IGNORECASE)
     assert match(r'[0-9A-F]{8}', trng_status['repetition_count_test_error'], IGNORECASE)
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+        drm_manager.set(trng_status={'security_alert_bit':1})
     async_cb.assert_NoError()
     print("Test parameter 'trng_status': PASS")
+
+    # Test parameter: num_license_loaded
+    async_cb.reset()
+    conf_json.reset()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    num_license_loaded = drm_manager.get('num_license_loaded')
+    assert num_license_loaded == 0
+    assert isinstance(num_license_loaded, int)
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+        drm_manager.set(num_license_loaded=1)
+    async_cb.assert_NoError()
+    print("Test parameter 'num_license_loaded': PASS")
 
 
 def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cred_json,

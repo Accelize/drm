@@ -327,23 +327,25 @@ class SingleActivator:
         # Read counter in Activation's registry
         if self.event_cnt_flag:
             metering_data_from_activator = self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET)
-        # Check local counter with dmr value passed in argument
+        # Check counters
         try:
+            # Check local counter with drm value passed in argument
             assert self.metering_data == coins
-        except AssertionError:
             if self.event_cnt_flag:
-                print('Metering data: from pytest=%d, from DRM Ctrl=%d, from IP=%d' % (self.metering_data, coins, metering_data_from_activator))
-            else:
-                print('Metering data: from pytest=%d, from DRM Ctrl=%d' % (self.metering_data, coins))
-            raise
-        # Check with counter in Activator's registery
-        if self.event_cnt_flag:
-            try:
+                # Check local counter with counter in Activator IP's registery
                 assert self.metering_data == metering_data_from_activator
-            except AssertionError:
-                print('Metering data: from pytest=%d, from DRM Ctrl=%d, from IP=%d' % (self.metering_data, coins, metering_data_from_activator))
-                raise
-
+        except AssertionError as e:
+            if self.event_cnt_flag:
+                e.args += ('from pytest=%d, from DRM Ctrl=%d, from IP=%d' % (self.metering_data, coins, metering_data_from_activator),)
+                if self.metering_data == metering_data_from_activator:
+                    e.args += ('=> Metering data corruption in DRM Ctrl confirmed',)
+                elif coin == metering_data_from_activator:
+                    e.args += ('=> Metering data corruption in IP confirmed',)
+                else:
+                    e.args += ('=> Metering data corruption in Pytest local counter confirmed',)
+            else:
+                e.args += ('from pytest=%d, from DRM Ctrl=%d' % (self.metering_data, coins),)
+            raise
 
 
 class ActivatorsInFPGA:
@@ -1046,28 +1048,32 @@ class ExecFunction:
     """
     Provide test functions using directly C or C++ object
     """
-    def __init__(self, slot_id, is_cpp, test_file_name, conf_path, cred_path):
-        self._conf_path = conf_path
-        self._cred_path = cred_path
-        self._is_cpp = is_cpp
-        self._slot_id = slot_id
-        self._test_func_path = join('@CMAKE_BINARY_DIR@', 'tests', test_file_name)
-        if not isfile(self._test_func_path):
-            raise IOError("No executable '%s' found" % self._test_func_path)
-        self._cmd_line = '%s -s %d -f %s -d %s' % (self._test_func_path, self._slot_id,
-                                                   self._conf_path, self._cred_path)
-        if not self._is_cpp:
+    def __init__(self, slot_id, is_cpp, test_file_name, conf_path, cred_path,
+                 valgrind_log_file=None):
+        test_dir = join('@CMAKE_BINARY_DIR@', 'tests')
+        test_func_path = join(test_dir, test_file_name)
+        if not isfile(test_func_path):
+            raise IOError("No executable '%s' found" % test_func_path)
+        self._cmd_line = ''
+        if valgrind_log_file is not None:
+            self._cmd_line += ('valgrind --leak-check=full --show-reachable=yes --num-callers=25 '
+                               '--suppressions=%s --log-file=%s ' % (
+                                 join(test_dir,'valgrind.supp'), valgrind_log_file))
+        self._cmd_line += '%s -s %d -f %s -d %s' % (test_func_path, slot_id, conf_path, cred_path)
+        if not is_cpp:
             self._cmd_line += ' -c'
         self.returncode = None
         self.stdout = None
         self.stderr = None
         self.asyncmsg = None
 
-    def run(self, test_name=None):
+    def run(self, test_name=None, param_path=None):
         from subprocess import run, PIPE
         cmdline = self._cmd_line
         if test_name is not None:
             cmdline += ' -t %s' % test_name
+        if param_path is not None:
+            cmdline += ' -p %s' % param_path
         print('cmdline=', cmdline)
         result = run(cmdline, shell=True, stdout=PIPE, stderr=PIPE)
         self.returncode = result.returncode
@@ -1087,16 +1093,16 @@ class ExecFunctionFactory:
     """
     Provide an object to load executable with test functions in C/C++
     """
-    def __init__(self, conf_path, cred_path, is_cpp, is_release_build=False):
-        self._conf_path = conf_path
-        self._cred_path = cred_path
+    def __init__(self, conf_json, cred_json, is_cpp, is_release_build=False):
+        self._conf_json = conf_json
+        self._cred_json = cred_json
         self._is_cpp = is_cpp
         self._is_release_build = is_release_build
 
-    def load(self, test_file_name, slot_id):
+    def load(self, test_file_name, slot_id, valgrind_log_file=None):
         try:
-            return ExecFunction(slot_id, self._is_cpp, test_file_name, self._conf_path,
-                                self._cred_path)
+            return ExecFunction(slot_id, self._is_cpp, test_file_name, self._conf_json.path,
+                                self._cred_json.path, valgrind_log_file)
         except IOError:
             if self._is_release_build:
                 pytest.skip("No executable '%s' found: test skipped" % self._test_func_path)
@@ -1106,7 +1112,7 @@ class ExecFunctionFactory:
 def exec_func(accelize_drm, cred_json, conf_json):
     is_cpp = accelize_drm.pytest_backend == 'c++'
     is_release_build = 'release' in accelize_drm.pytest_build_type
-    return ExecFunctionFactory(conf_json.path, cred_json.path, is_cpp, is_release_build)
+    return ExecFunctionFactory(conf_json, cred_json, is_cpp, is_release_build)
 
 
 #--------------

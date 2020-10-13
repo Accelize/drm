@@ -94,7 +94,7 @@ protected:
     // Enum
     enum class eLogFileType: uint8_t {NONE=0, BASIC, ROTATING};
     enum class eLicenseType: uint8_t {METERED, NODE_LOCKED, NONE};
-    enum class eMailboxOffset: uint8_t {MB_LOCK_DRM=0, MB_CUSTOM_FIELD, MB_USER};
+    enum class eMailboxOffset: uint8_t {MB_LOCK_DRM=0, MB_CUSTOM_FIELD, MB_SESSION_0, MB_SESSION_1, MB_LIC_EXP_0, MB_LIC_EXP_1, MB_USER};
     enum class eHostDataVerbosity: uint8_t {FULL=0, PARTIAL, NONE};
 
     // Design constants
@@ -106,8 +106,6 @@ protected:
             {eLicenseType::METERED    , "Floating/Metering"},
             {eLicenseType::NODE_LOCKED, "Node-Locked"}
     };
-
-    const uint32_t LICENSE_DURATION_DEFAULT = 30;
 
     const double ACTIVATIONCODE_TRANSMISSION_TIMEOUT_MS = 2000.0;
 
@@ -156,7 +154,6 @@ protected:
     uint32_t mWSRetryPeriodLong  = 60;    ///< Time in seconds before the next request attempt to the Web Server when the time left before timeout is large
     uint32_t mWSRetryPeriodShort = 2;     ///< Time in seconds before the next request attempt to the Web Server when the time left before timeout is short
     uint32_t mWSApiRetryDuration = 30;    ///< Period of time in seconds during which retries occur on activate and deactivate functions
-    uint32_t mWSRequestTimeout   = 10;    ///< Time in seconds for a request to complete
 
     eLicenseType mLicenseType = eLicenseType::METERED;
     uint32_t mLicenseDuration = 0;        ///< Time duration in seconds of the license
@@ -257,7 +254,7 @@ protected:
         mIsLockedToDrm = false;
 
         mLicenseCounter = 0;
-        mLicenseDuration = LICENSE_DURATION_DEFAULT;
+        mLicenseDuration = 0;
 
         mConfFilePath = conf_file_path;
         mCredFilePath = cred_file_path;
@@ -310,18 +307,14 @@ protected:
                         Json::uintValue, mWSRetryPeriodShort).asUInt();
                 mWSApiRetryDuration = JVgetOptional( param_lib, "ws_api_retry_duration",
                         Json::uintValue, mWSApiRetryDuration).asUInt();
-                mWSRequestTimeout = JVgetOptional( param_lib, "ws_request_timeout",
-                        Json::uintValue, mWSRequestTimeout).asUInt();
-                if ( mWSRequestTimeout == 0 )
-                    Throw( DRM_BadArg, "ws_request_timeout must not be 0");
 
                 // Host and Card information
                 mHostDataVerbosity = static_cast<eHostDataVerbosity>( JVgetOptional(
                         param_lib, "host_data_verbosity", Json::uintValue, (uint32_t)mHostDataVerbosity ).asUInt() );
             }
             mHealthPeriod = 0;
-            mHealthRetryTimeout = mWSRequestTimeout;
-            mHealthRetrySleep = mWSRetryPeriodShort;
+            mHealthRetryTimeout = 0;
+            mHealthRetrySleep = 0;
 
             // Customize logging configuration
             updateLog();
@@ -509,7 +502,7 @@ protected:
             try {
                 // Call xbutil to collect host and card data
                 std::string cmd = fmt::format( "{} dump", mXbutil );
-                std::string cmd_out = exec_cmd( cmd );
+                std::string cmd_out = execCmd( cmd );
 
                 // Parse collected data and save to header
                 Json::Value xbutil_node = parseJsonString( cmd_out );
@@ -567,7 +560,7 @@ protected:
         settings["log_verbosity"] = static_cast<uint32_t>( sLogConsoleVerbosity );
         settings["ws_retry_period_long"] = mWSRetryPeriodLong;
         settings["ws_retry_period_short"] = mWSRetryPeriodShort;
-        settings["ws_request_timeout"] = mWSRequestTimeout;
+        settings["ws_request_timeout"] = getDrmWSClient().getRequestTimeout();
         settings["health_period"] = mHealthPeriod;
         settings["health_retry"] = mHealthRetryTimeout;
         settings["health_retry_sleep"] = mHealthRetrySleep;
@@ -595,21 +588,7 @@ protected:
         return mbSize;
     }
 
-    uint32_t readMailbox( const eMailboxOffset offset ) const {
-        auto index = (uint32_t)offset;
-        uint32_t roSize, rwSize;
-        std::vector<uint32_t> roData, rwData;
-
-        checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
-
-        if ( index >= rwData.size() )
-            Unreachable( "Index {} overflows the Mailbox memory; max index is {}. ", index, rwData.size()-1 ); //LCOV_EXCL_LINE
-
-        Debug( "Read '{}' in Mailbox at index {}", rwData[index], index );
-        return rwData[index];
-    }
-
-    std::vector<uint32_t> readMailbox( const eMailboxOffset offset, const uint32_t& nb_elements ) const {
+    std::vector<uint32_t> readMailbox( const eMailboxOffset& offset, const uint32_t& nb_elements ) const {
         auto index = (uint32_t)offset;
         uint32_t roSize, rwSize;
         std::vector<uint32_t> roData, rwData;
@@ -628,32 +607,73 @@ protected:
         return value_vec;
     }
 
-    void writeMailbox( const eMailboxOffset offset, const uint32_t& value ) const {
+    template< class T >
+    T readMailbox( const eMailboxOffset& offset ) const {
         auto index = (uint32_t)offset;
-        uint32_t roSize, rwSize;
+        uint32_t roSize, rwSize, nb_elements;
         std::vector<uint32_t> roData, rwData;
 
-        std::lock_guard<std::recursive_mutex> lockk( mDrmControllerMutex );
-        checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
+        if ( sizeof(T) % sizeof(uint32_t) )
+            Unreachable( "Data type to read shall be multiple of {}. ", sizeof(uint32_t) ); //LCOV_EXCL_LINE
 
-        if ( index >= rwData.size() )
-            Unreachable( "Index {} overflows the Mailbox memory: max index is {}. ", index, rwData.size()-1 ); //LCOV_EXCL_LINE
-        rwData[index] = value;
-        checkDRMCtlrRet( getDrmController().writeMailboxFileRegister( rwData, rwSize ) );
-        Debug( "Wrote '{}' in Mailbox at index {}", value, index );
+        if ( sizeof(T) < sizeof(uint32_t) )
+            nb_elements = 1;
+        else
+            nb_elements = (sizeof(T) - 1) / sizeof(uint32_t) + 1;
+
+        checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
+        if ( (uint32_t)index >= rwData.size() )
+            Unreachable( "Index {} overflows the Mailbox memory; max index is {}. ", index, rwData.size()-1 ); //LCOV_EXCL_LINE
+        if ( index + nb_elements > rwData.size() )
+            Unreachable( "Trying to read out of Mailbox memory space; size is {}", rwData.size() ); //LCOV_EXCL_LINE
+
+        auto first = rwData.cbegin() + index;
+        auto last = rwData.cbegin() + index + nb_elements;
+        std::vector<uint32_t> value_vec( first, last );
+        T result = *((T*)value_vec.data());
+        Debug( "Read {} elements in Mailbox from index {}", value_vec.size(), index);
+        return result;
     }
 
-    void writeMailbox( const eMailboxOffset offset, const std::vector<uint32_t> &value_vec ) const {
+    void writeMailbox( const eMailboxOffset& offset, const std::vector<uint32_t>& value_vec ) const {
         auto index = (uint32_t)offset;
         uint32_t roSize, rwSize;
         std::vector<uint32_t> roData, rwData;
 
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+
         checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
         if ( index >= rwData.size() )
             Unreachable( "Index {} overflows the Mailbox memory: max index is {}. ", index, rwData.size()-1 ); //LCOV_EXCL_LINE
         if ( index + value_vec.size() > rwData.size() )
             Throw( DRM_BadArg, "Trying to write out of Mailbox memory space: {}", rwData.size() );
+
+        std::copy( std::begin( value_vec ), std::end( value_vec ), std::begin( rwData ) + index );
+        checkDRMCtlrRet( getDrmController().writeMailboxFileRegister( rwData, rwSize ) );
+        Debug( "Wrote {} elements in Mailbox from index {}", value_vec.size(), index );
+    }
+
+    template< class T >
+    void writeMailbox( const eMailboxOffset& offset, const T& data ) const {
+        auto index = (uint32_t)offset;
+        uint32_t roSize, rwSize, nb_elements;
+        std::vector<uint32_t> roData, rwData;
+
+        if ( sizeof(T) < sizeof(uint32_t) )
+            nb_elements = 1;
+        else
+            nb_elements = (sizeof(T) - 1) / sizeof(uint32_t) + 1;
+        const uint32_t* p_data = (uint32_t*)&data;
+        std::vector<uint32_t> value_vec(p_data, p_data + nb_elements);
+
+        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+
+        checkDRMCtlrRet( getDrmController().readMailboxFileRegister( roSize, rwSize, roData, rwData) );
+        if ( index >= rwData.size() )
+            Unreachable( "Index {} overflows the Mailbox memory: max index is {}. ", index, rwData.size()-1 ); //LCOV_EXCL_LINE
+        if ( index + value_vec.size() > rwData.size() )
+            Throw( DRM_BadArg, "Trying to write out of Mailbox memory space: {}", rwData.size() );
+
         std::copy( std::begin( value_vec ), std::end( value_vec ), std::begin( rwData ) + index );
         checkDRMCtlrRet( getDrmController().writeMailboxFileRegister( rwData, rwSize ) );
         Debug( "Wrote {} elements in Mailbox from index {}", value_vec.size(), index );
@@ -710,10 +730,10 @@ protected:
     void lockDrmToInstance() {
         return;
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        uint32_t isLocked = readMailbox( eMailboxOffset::MB_LOCK_DRM );
+        uint32_t isLocked = readMailbox<uint32_t>( eMailboxOffset::MB_LOCK_DRM );
         if ( isLocked )
             Throw( DRM_BadUsage, "Another instance of the DRM Manager is currently owning the HW" );
-        writeMailbox( eMailboxOffset::MB_LOCK_DRM, 1 );
+        writeMailbox<uint32_t>( eMailboxOffset::MB_LOCK_DRM, 1 );
         mIsLockedToDrm = true;
         Debug( "DRM Controller is now locked to this object instance" );
     }
@@ -723,9 +743,9 @@ protected:
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
         if ( !mIsLockedToDrm )
             return;
-        uint32_t isLocked = readMailbox( eMailboxOffset::MB_LOCK_DRM );
+        uint32_t isLocked = readMailbox<uint32_t>( eMailboxOffset::MB_LOCK_DRM );
         if ( isLocked ) {
-            writeMailbox( eMailboxOffset::MB_LOCK_DRM, 0 );
+            writeMailbox<uint32_t>( eMailboxOffset::MB_LOCK_DRM, 0 );
             Debug( "DRM Controller is now unlocked to this object instance" );
         }
     }
@@ -1203,7 +1223,7 @@ protected:
             int32_t short_retry_period = -1, int32_t long_retry_period = -1 ) {
         TClock::time_point deadline;
         if ( timeout == 0 ) {
-            deadline = TClock::now() + std::chrono::seconds( mWSRequestTimeout );
+            deadline = TClock::now() + std::chrono::seconds( getDrmWSClient().getRequestTimeout() );
             short_retry_period = -1;
             long_retry_period = -1;
         } else {
@@ -1352,6 +1372,14 @@ protected:
                     mLicenseCounter, mSessionID, mLicenseDuration );
         }
 
+        // Update expiration time
+        if ( mExpirationTime.time_since_epoch().count() == 0 ) {
+            Debug( "Initialize expiration time");
+            mExpirationTime = TClock::now();
+        }
+        mExpirationTime += std::chrono::seconds( mLicenseDuration );
+        Debug( "Update expiration time to {}", time_t_to_string( steady_clock_to_time_t( mExpirationTime ) ) );
+
         // Wait until license has been pushed to Activator's port
         bool activationCodesTransmitted( false );
         TClock::duration timeSpan;
@@ -1373,7 +1401,6 @@ protected:
         if ( !activationCodesTransmitted ) {
             Throw( DRM_CtlrError, "DRM Controller could not transmit Licence #{} to activators after {:f} ms. ", mLicenseCounter, mseconds ); //LCOV_EXCL_LINE
         }
-        mExpirationTime += std::chrono::seconds( mLicenseDuration );
 
         // Check DRM Controller has switched to the right license mode
         bool is_nodelocked = isDrmCtrlInNodelock();
@@ -1389,7 +1416,7 @@ protected:
                 Unreachable( "DRM Controller failed to switch to Node-Locked license mode" ); //LCOV_EXCL_LINE
             Debug( "DRM Controller is in Node-Locked license mode" );
         }
-        Debug( "Provisioned license #{} on DRM controller", mLicenseCounter );
+        Debug( "Provisioned license #{} for session {} on DRM controller", mLicenseCounter, mSessionID );
         mLicenseCounter ++;
     }
 
@@ -1532,6 +1559,7 @@ protected:
             /// - Clear Session IS
             Debug( "Clearing session ID: {}", mSessionID );
             mSessionID = std::string("");
+            writeMailbox<uint64_t>( eMailboxOffset::MB_SESSION_0, 0 );
             /// - Create WS access
             mWsClient.reset( new DrmWSClient( mConfFilePath, mCredFilePath ) );
             /// - Read request file
@@ -1767,13 +1795,15 @@ protected:
                     }
                     Debug( "Released metering access mutex from licensing thread" );
                     if ( go_sleeping ) {
-                        // DRM licensing queue is full, wait until current license expires
+                        // DRM license queue is full, wait until current license expires
                         uint32_t licenseTimeLeft = getCurrentLicenseTimeLeft();
                         TClock::duration wait_duration = std::chrono::seconds( licenseTimeLeft + 1 );
                         Debug( "License thread sleeping {} seconds before checking DRM Controller readiness", licenseTimeLeft );
                         sleepOrExit( wait_duration );
-                        //  resync expiration time
-                        mExpirationTime = TClock::now() + std::chrono::seconds( mLicenseDuration );
+                        // Resync expiration time
+                        licenseTimeLeft = getCurrentLicenseTimeLeft();
+                        mExpirationTime = TClock::now() + std::chrono::seconds( licenseTimeLeft );
+                        Debug( "Update expiration time to {}", time_t_to_string( steady_clock_to_time_t( mExpirationTime ) ) );
                     }
                 }
 
@@ -1802,7 +1832,7 @@ protected:
             Debug( "Starting background thread which checks health" );
             try {
                 uint32_t retry_sleep = mWSRetryPeriodShort;
-                uint32_t retry_timeout = mWSRequestTimeout;
+                uint32_t retry_timeout = getDrmWSClient().getRequestTimeout();
                 mHealthCounter = 0;
 
                 /// Starting async metering post loop
@@ -1837,7 +1867,7 @@ protected:
                                 break;
                             }
                             if ( mHealthRetryTimeout == 0 ) {
-                                retry_timeout = mWSRequestTimeout;
+                                retry_timeout = getDrmWSClient().getRequestTimeout();
                                 retry_sleep = 0;
                                 Debug( "Health retry is disabled" );
                             } else {
@@ -1917,7 +1947,17 @@ protected:
             mHealthRetrySleep = JVgetOptional( metering_node, "healthRetrySleep", Json::uintValue, mHealthRetrySleep ).asUInt();
         }
         Debug( "Released metering access mutex from startSession" );
-        Info( "New DRM session {} started.", mSessionID );
+        Info( "DRM session {} created.", mSessionID );
+    }
+
+    void pauseSession() {
+        writeMailbox<time_t>( eMailboxOffset::MB_LIC_EXP_0, steady_clock_to_time_t( mExpirationTime ) );
+        writeMailbox<uint64_t>( eMailboxOffset::MB_SESSION_0, std::stoull( mSessionID, 0, 16 ) );
+        stopThread();
+        mSecurityStop = false;
+        if (mHealthPeriod)
+            performHealth(mWSApiRetryDuration, 0);
+        Info( "DRM session {} paused.", mSessionID );
     }
 
     void resumeSession() {
@@ -1925,6 +1965,13 @@ protected:
             Debug( "Waiting metering access mutex from resumeSession" );
             std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
             Debug( "Acquired metering access mutex from resumeSession" );
+
+            // Recover expiration time from DRM ROM
+            if ( mExpirationTime.time_since_epoch().count() == 0 ) {
+                time_t t = readMailbox<time_t>( eMailboxOffset::MB_LIC_EXP_0 );
+                mExpirationTime = time_t_to_steady_clock( t );
+                Debug( "Initialize expiration time from DRM registry: {}", time_t_to_string( t ) );
+            }
 
             if ( isReadyForNewLicense() ) {
                 // Create JSON license request
@@ -1938,7 +1985,7 @@ protected:
             }
         }
         Debug( "Released metering access mutex from resumeSession" );
-        Info( "DRM session resumed." );
+        Info( "DRM session {} resumed.", mSessionID );
     }
 
     void stopSession() {
@@ -1961,23 +2008,19 @@ protected:
         }
         Debug( "Released metering access mutex from stopSession" );
         // Clear Session ID
-        std::string sessionID = mSessionID;
         Debug2( "Clearing session ID: {}", mSessionID );
+        std::string sessionID = mSessionID;
         mSessionID = std::string("");
+        writeMailbox<uint64_t>( eMailboxOffset::MB_SESSION_0, 0 );
+        Debug( "Reseting expiration time" );
+        mExpirationTime = TClock::time_point();
+        writeMailbox<time_t>( eMailboxOffset::MB_LIC_EXP_0, steady_clock_to_time_t( mExpirationTime ) );
 
         // Clear security flag
         Debug( "Clearing stop security flag" );
         mSecurityStop = false;
 
         Info( "DRM session {} stopped.", sessionID );
-    }
-
-    void pauseSession() {
-        stopThread();
-        mSecurityStop = false;
-        if (mHealthPeriod)
-            performHealth(mWSApiRetryDuration, 0);
-        Info( "DRM session paused." );
     }
 
     ParameterKey findParameterKey( const std::string& key_string ) const {
@@ -2067,8 +2110,6 @@ public:
         TRY
             Debug( "Calling 'activate' with 'resume_session_request'={}", resume_session_request );
 
-            mExpirationTime = TClock::now();
-
             if ( isNodeLockedMode() ) {
                 // Install the node-locked license
                 installNodelockedLicense();
@@ -2078,23 +2119,24 @@ public:
                 Throw( DRM_BadUsage, "DRM Controller is locked in Node-Locked licensing mode: "
                                     "To use other modes you must reprogram the FPGA device." );
             }
-            if ( isSessionRunning() ) {
+            if ( !isSessionRunning() ) {
+                startSession();
+
+            } else {
+                // Recover pending session
+                if ( mSessionID.empty() )
+                    mSessionID = toUpHex( readMailbox<uint64_t>( eMailboxOffset::MB_SESSION_0 ) );
+
                 if ( resume_session_request && isLicenseActive() ) {
+                    Debug( "A session is still pending and latest license is still valid: "
+                           "pending session is kept" );
                     resumeSession();
                 } else {
-                    if ( resume_session_request )
-                        Debug( "Session resuming request: stopping the pending session because license has expired" );
-                    else
-                        Debug( "Session creationg request: Stopping the pending session" );
-                    try {
-                        stopSession();
-                    } catch( const Exception &e ) {
-                        Warning( "Failed to stop pending session: {}", e.what() );
-                    }
+                    Debug( "A session is still pending but latest license has expired: "
+                           "pending session will be stopped and a new one will be created" );
+                    stopSession();
                     startSession();
                 }
-            } else {
-                startSession();
             }
             mThreadExit = false;
             startLicenseContinuityThread();
@@ -2389,9 +2431,9 @@ public:
                         break;
                     }
                     case ParameterKey::ws_request_timeout: {
-                        json_value[key_str] = mWSRequestTimeout;
+                        json_value[key_str] = getDrmWSClient().getRequestTimeout();
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
-                               mWSRequestTimeout );
+                               getDrmWSClient().getRequestTimeout() );
                         break;
                     }
                     case ParameterKey::log_message_level: {
@@ -2402,7 +2444,7 @@ public:
                         break;
                     }
                     case ParameterKey::custom_field: {
-                        uint32_t customField = readMailbox( eMailboxOffset::MB_CUSTOM_FIELD );
+                        uint32_t customField = readMailbox<uint32_t>( eMailboxOffset::MB_CUSTOM_FIELD );
                         json_value[key_str] = customField;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                customField );
@@ -2481,6 +2523,15 @@ public:
                         json_value[key_str] = trng_status_json;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                trng_status_json.toStyledString() );
+                        break;
+                    }
+                    case ParameterKey::num_license_loaded: {
+                        uint32_t numberOfLicenseProvisioned;
+                        checkDRMCtlrRet( getDrmController().readNumberOfLicenseTimerLoadedStatusRegister(
+                                    numberOfLicenseProvisioned ) );
+                        json_value[key_str] = numberOfLicenseProvisioned;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                               numberOfLicenseProvisioned );
                         break;
                     }
                     case ParameterKey::ParameterKeyCount: {
@@ -2569,7 +2620,7 @@ public:
                     }
                     case ParameterKey::custom_field: {
                         uint32_t customField = (*it).asUInt();
-                        writeMailbox( eMailboxOffset::MB_CUSTOM_FIELD, customField );
+                        writeMailbox<uint32_t>( eMailboxOffset::MB_CUSTOM_FIELD, customField );
                         Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
                                customField );
                         break;
