@@ -19,6 +19,9 @@ jobs:
       instanceType: ${{ parameters.instance_type }}
       acidDir: $(Build.SourcesDirectory)/deployment/acid
       ansiblePlaybook: $(Build.SourcesDirectory)/deployment/playbook.yml
+      dependsOn:
+        - ${{ if config.dependsOn }}:
+          - runTests_Aws_${{ config.dependsOn }}
 
   # Run tests on AWS agent
   - job: runTests_Aws_${{ config.os_distrib }}
