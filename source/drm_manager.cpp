@@ -65,8 +65,8 @@ limitations under the License.
     }                                     \
     catch( const std::exception &e ) {    \
         Fatal( e.what() );                \
-        throw;                            \
         sLogger->flush();                 \
+        throw;                            \
     }
 
 
