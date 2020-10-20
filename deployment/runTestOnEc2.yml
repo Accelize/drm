@@ -42,8 +42,8 @@ jobs:
       ${{ if not(config.tox_coverage) }}:
         tox_operation: aws-build-${{ config.tox_mode }},cpp-${{ config.tox_mode }},c-${{ config.tox_mode }},integration-${{ config.tox_mode }}
     steps:
-      - script: echo "config.tox_coverage = ${{ config.tox_coverage }}"
-      - script: echo "tox_operation = $(tox_operation)"
+      - script: echo "config.tox_coverage: ${{ config.tox_coverage }}"
+      - script: echo "tox_operation: $(tox_operation)"
       - script:
           cat << EOF > $(Build.SourcesDirectory)/cred.json
           {
