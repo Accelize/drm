@@ -38,11 +38,13 @@ jobs:
         - agent.Name -equals $(Build.BuildId) $(Build.DefinitionName) AWS with ${{ config.os_distrib }}
     variables:
       ${{ if config.tox_coverage }}:
-        tox_option: aws-build-${{ config.tox_mode }},cpp-${{ config.tox_mode }},c-${{ config.tox_mode }},integration-${{ config.tox_mode }},coverage-${{ config.tox_mode }}
+        tox_operation: aws-build-${{ config.tox_mode }},cpp-${{ config.tox_mode }},c-${{ config.tox_mode }},integration-${{ config.tox_mode }},coverage-${{ config.tox_mode }}
       ${{ if not(config.tox_coverage) }}:
-        tox_option: aws-build-${{ config.tox_mode }},cpp-${{ config.tox_mode }},c-${{ config.tox_mode }},integration-${{ config.tox_mode }}
+        tox_operation: aws-build-${{ config.tox_mode }},cpp-${{ config.tox_mode }},c-${{ config.tox_mode }},integration-${{ config.tox_mode }}
     steps:
-      - script: |
+      - script:
+          echo config.tox_coverage = ${{ config.tox_coverage }}
+          echo tox_operation = $(tox_operation)
           cat << EOF > $(Build.SourcesDirectory)/cred.json
           {
             "client_id": "$(clientIdAccelizeAcceleratorTest2)",
@@ -83,7 +85,7 @@ jobs:
           EOF
         displayName: Create Accelize credentials file
 
-      - script: sudo -E tox -p all -e $(tox_option)
+      - script: sudo -E tox -p all -e $(tox_operation)
                 -- --cred=$(Build.SourcesDirectory)/cred.json --server=$(meteringServer) --artifacts_dir=$(Build.SourcesDirectory)/artifacts ${{ config.tox_extra_option }} -rxs
         displayName: Run tests with Tox
         env:
