@@ -39,7 +39,7 @@ jobs:
     variables:
       ${{ if config.tox_coverage }}:
         tox_option: aws-build-${{ config.tox_mode }},cpp-${{ config.tox_mode }},c-${{ config.tox_mode }},integration-${{ config.tox_mode }},coverage-${{ config.tox_mode }}
-      ${{ if not( config.tox_coverage) }}:
+      ${{ if not(config.tox_coverage) }}:
         tox_option: aws-build-${{ config.tox_mode }},cpp-${{ config.tox_mode }},c-${{ config.tox_mode }},integration-${{ config.tox_mode }}
     steps:
       - script: |
