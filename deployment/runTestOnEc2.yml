@@ -83,7 +83,7 @@ jobs:
           EOF
         displayName: Create Accelize credentials file
 
-      - script: sudo -E tox -p all -e ${{ variables.tox_option }}
+      - script: sudo -E tox -p all -e $(tox_option)
                 -- --cred=$(Build.SourcesDirectory)/cred.json --server=$(meteringServer) --artifacts_dir=$(Build.SourcesDirectory)/artifacts ${{ config.tox_extra_option }} -rxs
         displayName: Run tests with Tox
         env:
