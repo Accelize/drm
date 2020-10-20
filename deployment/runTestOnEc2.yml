@@ -43,7 +43,9 @@ jobs:
         tox_operation: aws-build-${{ config.tox_mode }},cpp-${{ config.tox_mode }},c-${{ config.tox_mode }},integration-${{ config.tox_mode }}
     steps:
       - script: echo coverage: ${{ config.tox_coverage }}
+
       - script: echo operation: $(tox_operation)
+
       - script:
           cat << EOF > $(Build.SourcesDirectory)/cred.json
           {
