@@ -1074,8 +1074,10 @@ protected:
 
         // Load the derivated product
         if ( mDerivatedProduct.empty() ) {
-            mDerivatedProduct = fmt::format( "{}/{}/{}", json_output["product"]['vendor'],
-                json_output["product"]['library'], json_output["product"]['name'] );
+            std::string vendor = json_output["product"]["vendor"].asString();
+            std::string library = json_output["product"]["library"].asString();
+            std::string name = json_output["product"]["name"].asString();
+            mDerivatedProduct = fmt::format( "{}/{}/{}", vendor, library, name );
         }
         return json_output;
     }
