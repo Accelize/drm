@@ -1083,7 +1083,7 @@ protected:
     }
 
     void loadDerivatedProduct( const std::string& derivatedProductString ) {
-        if ( derivatedProductString != mDerivatedProduct ) {
+        if ( derivatedProductString == mDerivatedProduct ) {
             Debug( "No new derivated product to load" );
             return;
         }

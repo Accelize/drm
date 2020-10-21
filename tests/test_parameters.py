@@ -569,8 +569,9 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
         driver.write_register_callback,
         async_cb.callback
     )
-    derivated_product = drm_manager.get('derivated_product')
-    conf_json['derivated_product'] = derivated_product + '_subproduct'
+    deriv_prod = drm_manager.get('derivated_product')
+    deriv_prod += '_subproduct'
+    conf_json['derivated_product'] = deriv_prod
     conf_json.save()
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
@@ -579,7 +580,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
         driver.write_register_callback,
         async_cb.callback
     )
-    assert drm_manager.get('derivated_product') == derivated_product
+    assert drm_manager.get('derivated_product') == deriv_prod
     async_cb.assert_NoError()
     print("Test parameter 'derivated_product': PASS")
 
