@@ -355,9 +355,6 @@ protected:
 
             // Optionally, check derivated product
             mDerivatedProductFromConf = JVgetOptional( conf_json, "derivated_product", Json::stringValue, "" ).asString();
-            if ( !mDerivatedProductFromConf.empty() ) {
-                Debug( "Found derivated product information: {}", mDerivatedProductFromConf );
-            }
 
             // Check DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS variable exists
             char* env_val = getenv( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS" );
@@ -927,6 +924,9 @@ protected:
 
         // Save header information
         mHeaderJsonRequest = getMeteringHeader();
+        // Update with Derviated Product if sepcified in the config file
+        if ( !mDerivatedProductFromConf.empty() )
+            loadDerivatedProduct( mDerivatedProductFromConf );
 
         // If node-locked license is requested, create license request file
         if ( isNodeLockedMode() ) {
@@ -1072,15 +1072,12 @@ protected:
             }
         }
 
-        // Set the derivated product from Controller content ...
+        // Set the derivated product from Controller content
         std::string vendor = json_output["product"]["vendor"].asString();
         std::string library = json_output["product"]["library"].asString();
         std::string name = json_output["product"]["name"].asString();
         mDerivatedProduct = fmt::format( "{}/{}/{}", vendor, library, name );
-
-        // ... then from the configuration JSON file if any
-        if ( !mDerivatedProductFromConf.empty() )
-            loadDerivatedProduct( mDerivatedProductFromConf );
+        Debug( "Reference Product information: {}", mDerivatedProduct );
 
         return json_output;
     }

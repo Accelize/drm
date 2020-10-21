@@ -222,10 +222,6 @@ def test_derivated_product_during_running_session(accelize_drm, conf_json, cred_
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
-    conf_json['licensing']['url'] = _request.url + request.function.__name__
-    conf_json['settings'].update(basic_log_file.create(1))
-    conf_json.save()
-
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
