@@ -926,7 +926,6 @@ protected:
 
         // Save header information
         mHeaderJsonRequest = getMeteringHeader();
-        loadDerivatedProduct( mDerivatedProduct );
 
         // If node-locked license is requested, create license request file
         if ( isNodeLockedMode() ) {
@@ -2170,7 +2169,12 @@ public:
                 Throw( DRM_BadUsage, "DRM Controller is locked in Node-Locked licensing mode: "
                                     "To use other modes you must reprogram the FPGA device." );
             }
+
+            // Load derivated product if any
+            loadDerivatedProduct( mDerivatedProduct );
+
             if ( !isSessionRunning() ) {
+                // Start new session if no session is currently pending
                 startSession();
 
             } else {
@@ -2747,6 +2751,8 @@ public:
                     }
                     case ParameterKey::derivated_product: {
                         std::string vln_str = (*it).asString();
+                        if ( isSessionRunning() )
+                            Throw( DRM_BadUsage, "Derivated product cannot be loaded if a session is still running" );
                         loadDerivatedProduct( vln_str );
                         Debug( "Set parameter '{}' (ID={}) to value {}", key_str, key_id, vln_str );
                         break;

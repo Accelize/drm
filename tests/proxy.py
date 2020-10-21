@@ -886,10 +886,10 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_valid_derivated_product', url)
         request_json = request.get_json()
-        deriv_prod = '{vendor}/{library}/{name}'.format(request_json['product'])
+        deriv_prod = '{vendor}/{library}/{name}'.format(**request_json['product'])
         with lock:
             context['derivated_product'] = deriv_prod
-            request_json['product']['name'].replace(context['product_suffix'], '')
+            request_json['product']['name'] = request_json['product']['name'].replace(context['product_suffix'], '')
         response = post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
             indent=4, sort_keys=True), response.status_code, response.text)
