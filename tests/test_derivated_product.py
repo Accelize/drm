@@ -42,16 +42,14 @@ def test_invalid_derivated_product_vendor(accelize_drm, conf_json, cred_json, as
     new_deriv_prod = 'b' + deriv_prod
     conf_json['derivated_product'] = new_deriv_prod
     conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    assert drm_manager.get('derivated_product') == new_deriv_prod
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        drm_manager.activate()
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
     assert "Invalid derivated product information: vendor mismatch" in str(excinfo.value)
 
@@ -85,16 +83,14 @@ def test_invalid_derivated_product_library(accelize_drm, conf_json, cred_json, a
     new_deriv_prod = '/'.join(deriv_prod_list)
     conf_json['derivated_product'] = new_deriv_prod
     conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    assert drm_manager.get('derivated_product') == new_deriv_prod
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        drm_manager.activate()
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
     assert "Invalid derivated product information: library mismatch" in str(excinfo.value)
 
@@ -129,16 +125,14 @@ def test_invalid_derivated_product_name(accelize_drm, conf_json, cred_json,
     new_deriv_prod = '/'.join(deriv_prod_list)
     conf_json['derivated_product'] = new_deriv_prod
     conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    assert drm_manager.get('derivated_product') == new_deriv_prod
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        drm_manager.activate()
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
     assert "Invalid derivated product information: name mismatch" in str(excinfo.value)
 
