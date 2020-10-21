@@ -1071,12 +1071,18 @@ protected:
                 throw;
             }
         }
+
+        // Load the derivated product
+        if ( mDerivatedProduct.empty() ) {
+            mDerivatedProduct = fmt::format( "{}/{}/{}", json_output["product"]['vendor'],
+                json_output["product"]['library'], json_output["product"]['name'] );
+        }
         return json_output;
     }
 
     void loadDerivatedProduct( const std::string& derivatedProductString ) {
-        if ( derivatedProductString.empty() ) {
-            Debug( "No derivated product to load" );
+        if ( derivatedProductString != mDerivatedProduct ) {
+            Debug( "No new derivated product to load" );
             return;
         }
         std::vector<std::string> derivated_product_component = split( derivatedProductString, '/' );
@@ -1099,7 +1105,7 @@ protected:
         }
         mHeaderJsonRequest["product"]["name"] = derivated_product_component[2];
         mDerivatedProduct = derivatedProductString;
-        Info( "Loaded derivated product: {}", mDerivatedProduct );
+        Info( "Loaded new derivated product: {}", mDerivatedProduct );
     }
 
     Json::Value getMeteringStart() const {
@@ -2740,6 +2746,7 @@ public:
                     case ParameterKey::derivated_product: {
                         std::string vln_str = (*it).asString();
                         loadDerivatedProduct( vln_str );
+                        Debug( "Set parameter '{}' (ID={}) to value {}", key_str, key_id, vln_str );
                         break;
                     }
                     default:
