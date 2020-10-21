@@ -143,6 +143,7 @@ protected:
 
     // Derivated product
     std::string mDerivatedProduct;
+    std::string mDerivatedProductFromConf;
 
     // Settings files
     std::string mConfFilePath;
@@ -353,9 +354,9 @@ protected:
             }
 
             // Optionally, check derivated product
-            mDerivatedProduct = JVgetOptional( conf_json, "derivated_product", Json::stringValue, "" ).asString();
-            if ( !mDerivatedProduct.empty() ) {
-                Debug( "Found derivated product information: {}", mDerivatedProduct );
+            mDerivatedProductFromConf = JVgetOptional( conf_json, "derivated_product", Json::stringValue, "" ).asString();
+            if ( !mDerivatedProductFromConf.empty() ) {
+                Debug( "Found derivated product information: {}", mDerivatedProductFromConf );
             }
 
             // Check DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS variable exists
@@ -1071,13 +1072,16 @@ protected:
             }
         }
 
-        // Load the derivated product
-        if ( mDerivatedProduct.empty() ) {
-            std::string vendor = json_output["product"]["vendor"].asString();
-            std::string library = json_output["product"]["library"].asString();
-            std::string name = json_output["product"]["name"].asString();
-            mDerivatedProduct = fmt::format( "{}/{}/{}", vendor, library, name );
-        }
+        // Set the derivated product from Controller content ...
+        std::string vendor = json_output["product"]["vendor"].asString();
+        std::string library = json_output["product"]["library"].asString();
+        std::string name = json_output["product"]["name"].asString();
+        mDerivatedProduct = fmt::format( "{}/{}/{}", vendor, library, name );
+
+        // ... then from the configuration JSON file if any
+        if ( !mDerivatedProductFromConf.empty() )
+            loadDerivatedProduct( mDerivatedProductFromConf );
+
         return json_output;
     }
 

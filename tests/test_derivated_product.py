@@ -186,7 +186,6 @@ def test_valid_derivated_product(accelize_drm, conf_json, cred_json,
     assert search(f'Loaded new derivated product: {new_deriv_prod}', log_content, MULTILINE)
     assert get_proxy_error() is None
     async_cb.assert_NoError()
-    basic_log_file.remove()
 
     # Same test but from config file
     suffix = '_subproduct2'
