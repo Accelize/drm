@@ -275,10 +275,10 @@ in number of usage units for this particular account.
 Instantiate the adapted IP core and DRM Activator in the wrapper and connect them
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* Instantiate the DRM Activator IP located in the DRM_HDK/v_l_n_v/rtk/syn.
+* Instantiate the DRM Activator IP located in the DRM_HDK/v_l_n_v/syn.
 * Connect the signals of the DRM Activator listed by the table in section `Adapt the IP core`_
   to the adapted IP core.
-* Connect the DRM bus of the DRM Activator listed by the table in seciton `Create a wrapper`_
+* Connect the DRM bus of the DRM Activator listed by the table in section `Create a wrapper`_
   to the wrapper interface.
 * Connect the clock and reset of the adapted IP core to the wrapper interface.
 
