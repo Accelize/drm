@@ -19,9 +19,9 @@ jobs:
         tox_operation: aws-build-${{ config.tox_mode }},c-debug,coverage-${{ config.tox_mode }}
       ${{ if not(config.tox_coverage) }}:
         tox_operation: aws-build-${{ config.tox_mode }},c-debug
-      ${{ if config.tox_coverage }}:
+      ${{ if eq(config.tox_coverage, 'true') }}:
         tox_operation2: "aws-build-test,coverage"
-      ${{ if not(config.tox_coverage) }}:
+      ${{ if ne(config.tox_coverage, 'true') }}:
         tox_operation2: "aws-build-test"
     steps:
       - script: echo coverage ${{ config.tox_coverage }}
