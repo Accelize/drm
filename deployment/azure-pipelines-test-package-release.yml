@@ -1,5 +1,5 @@
 ---
-name: DRM Library - Compile, test, package and release
+name: Compile, Test, Package, Release
 
 trigger:
   batch: true

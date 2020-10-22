@@ -1,5 +1,5 @@
 ---
-name: DRM Library - Health tests of compilation, execution and packaging
+name: Health Check Compile And Package
 
 trigger: none
 schedules:
