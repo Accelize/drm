@@ -18,15 +18,17 @@ jobs:
       image: ${{ config.os_distrib }}
       instanceType: ${{ parameters.instance_type }}
       acidDir: $(Build.SourcesDirectory)/deployment/acid
-      ansiblePlaybook: $(Build.SourcesDirectory)/deployment/playbook_test_pkg.yml
+      ansiblePlaybook: $(Build.SourcesDirectory)/deployment/playbook.yml
+      dependsOn:
+        - ${{ if config.dependsOn }}:
+          - runTests_Aws_${{ config.dependsOn }}
+      condition: succeededOrFailed()
 
   # Install Package on AWS agent
   - job: runTests_Aws_${{ config.os_distrib }}
     displayName: Install and run tests on AWS with ${{ config.os_distrib }}
     dependsOn:
-    - startAgent_Aws_${{ config.os_distrib }}
-    - ${{ if config.dependsOn }}:
-      - runTests_Aws_${{ config.dependsOn }}
+      - startAgent_Aws_${{ config.os_distrib }}
     condition: succeededOrFailed()
     pool:
       name: Default
