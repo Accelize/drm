@@ -35,6 +35,8 @@ jobs:
       demands:  # Use previously instantiated agent
         - agent.Name -equals $(Build.BuildId) $(Build.DefinitionName) AWS with ${{ config.os_distrib }}
     steps:
+      - checkout: self
+        submodules: true
       - script: |
           cat << EOF > $(Build.SourcesDirectory)/cred.json
           {

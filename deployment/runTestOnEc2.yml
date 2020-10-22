@@ -42,6 +42,8 @@ jobs:
       ${{ if ne(config.tox_coverage, true) }}:
         tox_operation: aws-build-${{ config.tox_mode }},cpp-${{ config.tox_mode }},c-${{ config.tox_mode }},integration-${{ config.tox_mode }}
     steps:
+      - checkout: self
+        submodules: true
       - script: |
           cat << EOF > $(Build.SourcesDirectory)/cred.json
           {

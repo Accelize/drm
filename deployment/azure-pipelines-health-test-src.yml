@@ -55,9 +55,6 @@ stages:
         meteringServer: dev
 
     jobs:
-      - checkout: self
-        submodules: true
-
       - template: runTestOnEc2.yml
         parameters:
           instance_type: 'f1.4xlarge'
