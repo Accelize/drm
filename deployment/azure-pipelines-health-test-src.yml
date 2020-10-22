@@ -1,5 +1,5 @@
 ---
-name: Health Check Compile And Package
+name: Health Check - Compile And Package
 
 trigger: none
 schedules:
@@ -45,8 +45,8 @@ variables:
            sudo apt-get install -y --no-install-recommends
 
 stages:
-  - stage: tests
-    displayName: Tests
+  - stage: compile_and_test
+    displayName: Compile sources and test on hardware
     variables:
       # Set Git branch conditional variables
       ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/master') }}:
@@ -62,16 +62,18 @@ stages:
           - os_distrib: 'centos_7'
             tox_mode: 'debug'
             tox_coverage: false
+            tox_extra_option: tests/test_court.py
           - os_distrib: 'ubuntu_18_04'
             tox_mode: 'debug'
             tox_coverage: false
             dependsOn: 'centos_7'
+            tox_extra_option: tests/test_court.py
 
   - stage: release
     displayName: Release
     # Build packages only if tagged or scheduled
-    condition: and(succeeded(), eq(variables['Build.Reason'], 'Schedule'))
-    dependsOn: tests
+    condition: succeeded()
+    dependsOn: compile_and_test
     variables:
       # File that store release number for each version
       versionsJson: versions.json
