@@ -1,5 +1,5 @@
 ---
-name: Health tests of DRM Library packages
+name: DRM Library - Health execution test from packages
 
 schedules:
 # Run tests from Production package daily

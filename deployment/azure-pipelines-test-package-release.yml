@@ -1,5 +1,5 @@
 ---
-name: DRM Library full tests and release
+name: DRM Library - Compile, test, package and release
 
 trigger:
   batch: true
@@ -19,20 +19,7 @@ trigger:
       - LICENSE
       - deployment/README.md
       - deployment/release.py
-schedules:
-# Run tests on major branches weekly, including packages build on all OS
-- cron: "0 0 * * 0"
-  displayName: Weekly master build
-  branches:
-    include:
-    - master
-  always: true
-- cron: "0 0 * * 6"
-  displayName: Weekly dev build
-  branches:
-    include:
-    - dev
-  always: true
+
 pr: none
 
 resources:

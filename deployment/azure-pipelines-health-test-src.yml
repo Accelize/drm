@@ -1,14 +1,15 @@
 ---
-name: DRM Library health test of compilation, package
+name: DRM Library - Health tests of compilation, execution and packaging
 
 schedules:
-# Run tests on major and dev branches weekly, including packages build on all OS
+# Run tests on master branche weekly on Sundays, including packages build on all OS
 - cron: "0 0 * * 0"
   displayName: Weekly master build
   branches:
     include:
     - master
   always: true
+# Run tests on dev branche weekly on Saturdays, including packages build on all OS
 - cron: "0 0 * * 6"
   displayName: Weekly dev build
   branches:
