@@ -11,8 +11,25 @@ parameters:
 
 jobs:
 - ${{ each config in parameters.config_list }}: # For each config
+
   - job: test_variable
     displayName: Test variables
+    variables:
+      ${{ if config.tox_coverage }}:
+        tox_operation: aws-build-${{ config.tox_mode }},c-debug,coverage-${{ config.tox_mode }}
+      ${{ if not(config.tox_coverage) }}:
+        tox_operation: aws-build-${{ config.tox_mode }},c-debug
+      ${{ if config.tox_coverage }}:
+        tox_operation2: "aws-build-test,coverage"
+      ${{ if not(config.tox_coverage) }}:
+        tox_operation2: "aws-build-test"
+    steps:
+      - script: echo coverage ${{ config.tox_coverage }}
+      - script: echo operation $(tox_operation)
+      - script: echo operation2 $(tox_operation2)
+
+  - job: test_variable2
+    displayName: Test variables 2
     variables:
       ${{ if config.tox_coverage }}:
         tox_operation: aws-build-${{ config.tox_mode }},c-debug,coverage-${{ config.tox_mode }}
