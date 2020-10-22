@@ -1,5 +1,5 @@
 ---
-name: Health Check - Compile And Package
+name: Health Check Compile And Package
 
 trigger: none
 schedules:
