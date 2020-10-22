@@ -1,6 +1,7 @@
 ---
 name: DRM Library - Health execution test from packages
 
+trigger: none
 schedules:
 # Run tests from Production package daily
 - cron: "0 0 * * *"

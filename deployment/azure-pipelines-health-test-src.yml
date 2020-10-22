@@ -1,6 +1,7 @@
 ---
 name: DRM Library - Health tests of compilation, execution and packaging
 
+trigger: none
 schedules:
 # Run tests on master branche weekly on Sundays, including packages build on all OS
 - cron: "0 0 * * 0"
