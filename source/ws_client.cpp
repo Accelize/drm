@@ -44,7 +44,6 @@ CurlEasyPost::CurlEasyPost() {
 CurlEasyPost::~CurlEasyPost() {
     curl_easy_reset( mCurl );
     curl_easy_cleanup( mCurl );
-    data.clear();
     curl_slist_free_all( mHeaders_p );
     curl_slist_free_all( mHostResolveList );
     mHeaders_p = NULL;
@@ -77,6 +76,11 @@ void CurlEasyPost::setHostResolves( const Json::Value& host_json ) {
 void CurlEasyPost::appendHeader( const std::string header ) {
     Debug2( "Add '{}' to CURL header", header );
     mHeaders_p = curl_slist_append( mHeaders_p, header.c_str() );
+}
+
+void CurlEasyPost::setPostFields( const std::string& postfields ) {
+    curl_easy_setopt( mCurl, CURLOPT_POSTFIELDSIZE, postfields.size() );
+    curl_easy_setopt( mCurl, CURLOPT_POSTFIELDS, postfields.c_str() );
 }
 
 uint32_t CurlEasyPost::perform( const std::string url, std::string* response, const int32_t timeout_ms ) {
