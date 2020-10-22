@@ -22,8 +22,8 @@ jobs:
       acidDir: $(Build.SourcesDirectory)/deployment/acid
       ansiblePlaybook: $(Build.SourcesDirectory)/deployment/playbook.yml
       dependsOn:
-        - ${{ if config.dependsOn }}:
-          - runTests_Aws_${{ config.dependsOn }}
+      - ${{ if config.dependsOn }}:
+        - runTests_Aws_${{ config.dependsOn }}
       condition: succeededOrFailed()
 
   # Run tests on AWS agent
