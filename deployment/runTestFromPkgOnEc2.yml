@@ -89,6 +89,18 @@ jobs:
         displayName: Install drmlib from package on ${{ config.os_distrib }}
         condition: ${{ constains(config.os_distrib, 'centos') }}
 
+      - script: |
+          sudo apt update
+          sudo apt install -y apt-transport-https software-properties-common lsb-release gnupg curl
+          curl -fsSL https://tech.accelize.com/gpg | sudo apt-key add -
+          sudo add-apt-repository "deb https://tech.accelize.com/deb $(lsb_release -cs) stable"
+          sudo apt update
+          sudo apt install -y python3-accelize-drm
+          sudo apt install -y libaccelize-drm
+          sudo apt install -y libaccelize-drm-dev
+        displayName: Install drmlib from package on ${{ config.os_distrib }}
+        condition: ${{ constains(config.os_distrib, 'ubuntu') }}
+
       - script: sudo -E tox -p all -e cpp-install,cpp-install,integration-install
                 -- --cred=$(Build.SourcesDirectory)/cred.json --server=prod --artifacts_dir=$(Build.SourcesDirectory)/artifacts -rxs ${{ config.tox_extra_option }}
         displayName: Run tests from package with Tox on ${{ config.os_distrib }}
