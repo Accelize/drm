@@ -55,8 +55,8 @@ stages:
         meteringServer: dev
 
     jobs:
-      - job: runTests_Aws_${{ config.os_distrib }}
-        displayName: Run tests on AWS with ${{ config.os_distrib }}
+      - job: run_job1
+        displayName: Run job1
         steps:
           - script: echo Step 1 passed
 #      - template: runTestOnEc2.yml
