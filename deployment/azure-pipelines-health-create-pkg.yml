@@ -45,16 +45,17 @@ variables:
            sudo apt-get install -y --no-install-recommends
 
 stages:
-#  - stage: compile_and_test
-#    displayName: Compile sources and test on hardware
-#    variables:
-#      # Set Git branch conditional variables
-#      ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/master') }}:
-#        meteringServer: prod
-#      ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/master') }}:
-#        meteringServer: dev
-#
-#    jobs:
+  - stage: compile_and_test
+    displayName: Compile sources and test on hardware
+    variables:
+      # Set Git branch conditional variables
+      ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/master') }}:
+        meteringServer: prod
+      ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/master') }}:
+        meteringServer: dev
+
+    jobs:
+       - script: echo Step 1 passed
 #      - template: runTestOnEc2.yml
 #        parameters:
 #          instance_type: 'f1.4xlarge'
