@@ -44,6 +44,7 @@ jobs:
     steps:
       - checkout: self
         submodules: true
+
       - script: |
           cat << EOF > $(Build.SourcesDirectory)/cred.json
           {

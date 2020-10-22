@@ -20,8 +20,8 @@ jobs:
       acidDir: $(Build.SourcesDirectory)/deployment/acid
       ansiblePlaybook: $(Build.SourcesDirectory)/deployment/playbook.yml
       dependsOn:
-        - ${{ if config.dependsOn }}:
-          - runTests_Aws_${{ config.dependsOn }}
+      - ${{ if config.dependsOn }}:
+        - runTests_Aws_${{ config.dependsOn }}
       condition: succeededOrFailed()
 
   # Install Package on AWS agent
@@ -37,6 +37,7 @@ jobs:
     steps:
       - checkout: self
         submodules: true
+
       - script: |
           cat << EOF > $(Build.SourcesDirectory)/cred.json
           {
@@ -80,9 +81,9 @@ jobs:
 
       - script: sudo
         displayName: Install drmlib from package on ${{ config.os_distrib }}
-        condition: ${{ if eq(config.os_distrib, 'centos_7') }}
+        condition: ${{ constains(config.os_distrib, 'centos') }}
 
-      - script: sudo -E tox -p all -e cpp-install,cpp-install
+      - script: sudo -E tox -p all -e cpp-install,cpp-install,integration-install
                 -- --cred=$(Build.SourcesDirectory)/cred.json --server=prod --artifacts_dir=$(Build.SourcesDirectory)/artifacts -rxs ${{ config.tox_extra_option }}
         displayName: Run tests on package with Tox
         env:
