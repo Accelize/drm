@@ -15,7 +15,6 @@ from tests.conftest import wait_deadline, wait_func_true
 
 @pytest.mark.minimum
 @pytest.mark.hwtst
-@pytest.mark.packages
 def test_court_1(accelize_drm, conf_json, cred_json, async_handler):
     """
     Test court 1
@@ -45,7 +44,6 @@ def test_court_1(accelize_drm, conf_json, cred_json, async_handler):
 @pytest.mark.no_parallel
 @pytest.mark.minimum
 @pytest.mark.hwtst
-@pytest.mark.packages
 def test_court_2(accelize_drm, conf_json, cred_json, async_handler):
     """
     Test court 2
