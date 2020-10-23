@@ -139,6 +139,9 @@ stages:
         steps:
 
           # Initialize environment
+          - checkout: self
+            submodules: true
+
           - task: UsePythonVersion@0
             inputs:
               versionSpec: '3.x'
@@ -223,7 +226,7 @@ stages:
           - script: $(dockerRun) "tox --workdir /tmp
                     -e package-install,c-install,cpp-install -p all
                     -- -m packages"
-            displayName: Run tests on packages
+            displayName: Run tests on package
 
           # Run extra RHEL integrity tests for CentOS packages
           - task: PythonScript@0
