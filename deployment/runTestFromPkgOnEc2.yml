@@ -99,7 +99,7 @@ jobs:
           sudo apt install -y libaccelize-drm
           sudo apt install -y libaccelize-drm-dev
         displayName: Install drmlib from package on ${{ config.os_distrib }}
-        condition: ${{ constains(config.os_distrib, 'ubuntu') }}
+        condition: ${{ contains(config.os_distrib, 'ubuntu') }}
 
       - script: sudo -E tox -p all -e cpp-install,cpp-install,integration-install
                 -- --cred=$(Build.SourcesDirectory)/cred.json --server=prod --artifacts_dir=$(Build.SourcesDirectory)/artifacts -rxs ${{ config.tox_extra_option }}
