@@ -62,12 +62,10 @@ stages:
           - os_distrib: 'centos_7'
             tox_mode: 'debug'
             tox_coverage: false
-            tox_extra_option: tests/test_court.py
           - os_distrib: 'ubuntu_18_04'
             tox_mode: 'debug'
             tox_coverage: false
             dependsOn: 'centos_7'
-            tox_extra_option: tests/test_court.py
 
   - stage: release
     displayName: Release
