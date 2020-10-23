@@ -87,7 +87,7 @@ jobs:
           sudo yum install -y libaccelize-drm
           sudo yum install -y libaccelize-drm-devel
         displayName: Install drmlib from package on ${{ config.os_distrib }}
-        condition: ${{ constains(config.os_distrib, 'centos') }}
+        condition: ${{ contains(config.os_distrib, 'centos') }}
 
       - script: |
           sudo apt update
