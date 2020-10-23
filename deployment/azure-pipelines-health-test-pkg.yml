@@ -22,6 +22,10 @@ resources:
 pool:
   vmImage: ubuntu-latest
 
+variables:
+  # Import variable group
+  - group: drmLibrary
+
 jobs:
   - template: runTestFromPkgOnEc2.yml
     parameters:
