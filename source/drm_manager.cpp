@@ -66,6 +66,11 @@ limitations under the License.
         throw;                            \
     }
 
+#define CATCH                             \
+    catch( const std::exception &e ) {    \
+        Fatal( e.what() );                \
+    }
+
 
 static const std::string DRM_SELF_TEST_ERROR_MESSAGE( "Could not access DRM Controller registers.\nPlease verify:\n"
                         "\t-The read/write callbacks implementation in the SW application: verify it uses the correct offset address of DRM Controller IP in the design address space.\n"
@@ -2054,7 +2059,7 @@ public:
             unlockDrmToInstance();
             uninitLog();
             Debug( "Exiting Impl destructor" );
-        } CATCH_AND_THROW
+        } CATCH
     }
 
     void activate( const bool& resume_session_request = false ) {

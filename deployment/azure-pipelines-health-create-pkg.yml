@@ -221,7 +221,7 @@ stages:
           - script: $(dockerRun) "tox --workdir /tmp
                     -e package-install,c-install,cpp-install -p all
                     -- -m packages"
-            displayName: Run tests on packages
+            displayName: Run tests on package
 
           # Run extra RHEL integrity tests for CentOS packages
           - task: PythonScript@0
