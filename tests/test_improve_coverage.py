@@ -4,7 +4,7 @@ Run tests that help to improve coverage
 """
 import pytest
 from time import sleep
-from flask import request
+from flask import request as _request
 from re import search, findall, IGNORECASE
 from ctypes import c_uint, byref
 
@@ -12,14 +12,15 @@ from tests.proxy import get_context, set_context, get_proxy_error
 
 
 @pytest.mark.no_parallel
-def test_improve_coverage_httpCode2DrmCode(accelize_drm, conf_json, cred_json, async_handler, live_server):
+def test_improve_coverage_ws_client(accelize_drm, conf_json, cred_json,
+                        async_handler, live_server, request):
     """
     Improve coverage of the httpCode2DrmCode function
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    conf_json['licensing']['url'] = request.url + 'test_improve_coverage_ws_client'
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(
@@ -279,14 +280,15 @@ def test_improve_coverage_getDesignInfo(accelize_drm, conf_json, cred_json, asyn
     basic_log_file.remove()
 
 
-def test_improve_coverage_setLicense(accelize_drm, conf_json, cred_json, async_handler, live_server):
+def test_improve_coverage_setLicense(accelize_drm, conf_json, cred_json, async_handler,
+                        live_server, request):
     """
     Improve coverage of the setLicense function
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    conf_json['licensing']['url'] = request.url + 'test_improve_coverage_setLicense'
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(

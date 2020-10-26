@@ -7,7 +7,7 @@ from time import sleep
 from random import randint
 from itertools import groupby
 from re import match
-from flask import request
+from flask import request as _request
 from datetime import datetime, timedelta
 
 from tests.conftest import wait_deadline, wait_func_true
@@ -16,16 +16,18 @@ from tests.proxy import get_context, set_context
 
 @pytest.mark.no_parallel
 @pytest.mark.lgdn
-def test_topic0_corrupted_segment_index(accelize_drm, conf_json, cred_json, async_handler, live_server):
+def test_topic0_corrupted_segment_index(accelize_drm, conf_json, cred_json,
+                    async_handler, live_server, request):
     """
-    Test to reproduce the issue that corrupts the segment ID with both async and syn requests.
+    Test to reproduce the issue that corrupts the segment ID with
+    both async and syn requests.
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
 
     conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_topic0_corrupted_segment_index'
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(
@@ -132,7 +134,8 @@ def test_topic1_corrupted_metering(accelize_drm, conf_json, cred_json, async_han
 
 
 @pytest.mark.lgdn
-def test_topic1_corrupted_metering2(accelize_drm, conf_json, cred_json, async_handler, live_server):
+def test_topic1_corrupted_metering2(accelize_drm, conf_json, cred_json,
+                async_handler, live_server, request):
     """
     Test to reproduce the metering corruption issue on pause/resume operating mode
     """
@@ -149,7 +152,7 @@ def test_topic1_corrupted_metering2(accelize_drm, conf_json, cred_json, async_ha
     assert get_context() == context
 
     async_cb.reset()
-    conf_json['licensing']['url'] = request.url + 'test_topic1_corrupted_metering'
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
@@ -223,7 +226,7 @@ def test_endurance(accelize_drm, conf_json, cred_json, async_handler):
     driver = accelize_drm.pytest_fpga_driver[0]
     activators = accelize_drm.pytest_fpga_activators[0]
     async_cb = async_handler.create()
-    cred_json.set_user('accelize_accelerator_test_02')
+    cred_json.set_user('accelize_accelerator_test_05')
 
     # Get test duration
     try:
@@ -254,8 +257,8 @@ def test_endurance(accelize_drm, conf_json, cred_json, async_handler):
             activators[0].check_coin(drm_manager.get('metered_data'))
             trng = drm_manager.get('trng_status')
             seconds_left = test_duration - (datetime.now() - start).total_seconds()
-            print('Remaining time: %0.1fs  /  current coins=%d / security_alert_bit=%d adaptive_proportion=0x%08X repetition_count=0x%08X'
-                    % (seconds_left, activators[0].metering_data, trng['security_alert_bit'], trng['adaptive_proportion_test'], trng['repetition_count_test'] ))
+            print('Remaining time: %0.1fs  /  current coins=%d / security_alert_bit=%d adaptive_proportion_test_error=0x%s repetition_count_test_error=0x%s'
+                    % (seconds_left, activators[0].metering_data, trng['security_alert_bit'], trng['adaptive_proportion_test_error'], trng['repetition_count_test_error'] ))
             if seconds_left < 0:
                 break
             sleep(randint(10, 3*lic_duration))

@@ -40,7 +40,7 @@ private:
     std::string mName;  // CSP name
 
 protected:
-    CurlEasyPost mHTTPRequest;
+    uint32_t mTimeOutMS; // Connection timeout in millseconds
     uint32_t mVerbosity; // HTTP verbosity: 0: default, 1:verbose
 
 public:
@@ -52,7 +52,7 @@ public:
     std::string getName() const { return mName; }
 
     uint32_t getVerbosity() const { return mVerbosity; }
-    void setVerbosity( const uint32_t& verbosity ) { mHTTPRequest.setVerbosity( verbosity ); }
+    void setVerbosity( const uint32_t& verbosity ) { mVerbosity = verbosity; }
 
     /** \brief Get Metadata information
 

@@ -12,14 +12,15 @@ from json import loads, dumps
 from datetime import datetime, timedelta
 from multiprocessing import Process
 import requests
-from flask import request
+from flask import request as _request
 
 from tests.conftest import wait_func_true, wait_deadline
 from tests.proxy import get_context, set_context
 
 
 @pytest.mark.no_parallel
-def test_authentication_bad_token(accelize_drm, conf_json, cred_json, async_handler, live_server, basic_log_file):
+def test_authentication_bad_token(accelize_drm, conf_json, cred_json,
+                    async_handler, live_server, basic_log_file, request):
     """Test when a bad authentication token is used"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -27,7 +28,7 @@ def test_authentication_bad_token(accelize_drm, conf_json, cred_json, async_hand
     async_cb.reset()
 
     conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_authentication_bad_token'
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json['settings'].update(basic_log_file.create(3))
     conf_json.save()
 
@@ -103,7 +104,8 @@ def test_authentication_validity_after_deactivation(accelize_drm, conf_json, cre
 
 @pytest.mark.no_parallel
 @pytest.mark.hwtst
-def test_authentication_token_renewal(accelize_drm, conf_json, cred_json, async_handler, live_server):
+def test_authentication_token_renewal(accelize_drm, conf_json, cred_json,
+                async_handler, live_server, request):
     """Test a different authentication token is given after expiration"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -112,7 +114,7 @@ def test_authentication_token_renewal(accelize_drm, conf_json, cred_json, async_
     cred_json.set_user('accelize_accelerator_test_02')
 
     conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_authentication_token_renewal'
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
 
     # Set initial context on the live server

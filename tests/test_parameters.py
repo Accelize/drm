@@ -5,7 +5,7 @@ Test node-locked behavior of DRM Library.
 import pytest
 from os import remove, getpid, environ
 from os.path import isfile, realpath
-from re import match, search, finditer
+from re import match, search, finditer, IGNORECASE
 from time import sleep, time
 
 from tests.conftest import wait_func_true
@@ -67,7 +67,8 @@ _PARAM_LIST = ('license_type',
                'host_data',
                'log_file_append',
                'ws_verbosity',
-               'trng_status'
+               'trng_status',
+               'num_license_loaded'
 )
 
 
@@ -686,6 +687,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     # Test parameter: num_activators
     nb_activator = drm_manager.get('num_activators')
     assert nb_activator == activators.length, 'Unexpected number of activators'
+    async_cb.assert_NoError()
     print("Test parameter 'num_activators': PASS")
 
     # Test parameter: session_id
@@ -724,43 +726,50 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     async_cb.assert_NoError()
     drm_manager.deactivate()
     activators[0].reset_coin()
-
+    async_cb.assert_NoError()
     print("Test parameter 'metered_data': PASS")
 
     # Test parameter: page_ctrlreg
     page = drm_manager.get('page_ctrlreg')
     assert search(r'Register\s+@0x00:\s+0x00000000', page), 'Unexpected content of page_ctrlreg'
+    async_cb.assert_NoError()
     print("Test parameter 'page_ctrlreg': PASS")
 
     # Test parameter: page_vlnvfile
     page = drm_manager.get('page_vlnvfile')
     assert search(r'Register\s+@0x00:\s+0x00000001', page), 'Unexpected content of page_vlnvfile'
+    async_cb.assert_NoError()
     print("Test parameter 'page_vlnvfile': PASS")
 
     # Test parameter: page_licfile
     page = drm_manager.get('page_licfile')
     assert search(r'Register\s+@0x00:\s+0x00000002', page), 'Unexpected content of page_licfile'
+    async_cb.assert_NoError()
     print("Test parameter 'page_licfile': PASS")
 
     # Test parameter: page_tracefile
     page = drm_manager.get('page_tracefile')
     assert search(r'Register\s+@0x00:\s+0x00000003', page), 'Unexpected content of page_tracefile'
+    async_cb.assert_NoError()
     print("Test parameter 'page_tracefile': PASS")
 
     # Test parameter: page_meteringfile
     page = drm_manager.get('page_meteringfile')
     assert search(r'Register\s+@0x00:\s+0x00000004', page), 'Unexpected content of page_meteringfile'
+    async_cb.assert_NoError()
     print("Test parameter 'page_meteringfile': PASS")
 
     # Test parameter: page_mailbox
     page = drm_manager.get('page_mailbox')
     assert search(r'Register\s+@0x00:\s+0x00000005', page), 'Unexpected content of page_mailbox'
+    async_cb.assert_NoError()
     print("Test parameter 'page_mailbox': PASS")
 
     # Test parameter: hw_report
     hw_report = drm_manager.get('hw_report')
     nb_lines = len(tuple(finditer(r'\n', hw_report)))
     assert nb_lines > 10, 'Unexpected HW report content'
+    async_cb.assert_NoError()
     print("Test parameter 'hw_report': PASS")
 
     # Test parameter: frequency_detection_threshold
@@ -770,6 +779,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     new_freq_threhsold = drm_manager.get('frequency_detection_threshold')
     assert new_freq_threhsold == exp_freq_threhsold, 'Unexpected frequency dectection threshold percentage'
     drm_manager.set(frequency_detection_threshold=orig_freq_threhsold)    # Restore original threshold
+    async_cb.assert_NoError()
     print("Test parameter 'frequency_detection_threshold': PASS")
 
     # Test parameter: frequency_detection_period
@@ -779,6 +789,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     new_freq_period = drm_manager.get('frequency_detection_period')
     assert new_freq_period == exp_freq_period, 'Unexpected frequency dectection period'
     drm_manager.set(frequency_detection_period=orig_freq_period)    # Restore original period
+    async_cb.assert_NoError()
     print("Test parameter 'frequency_detection_period': PASS")
 
     # Test parameter: drm_frequency
@@ -788,6 +799,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     freq_drm = drm_manager.get('drm_frequency')
     drm_manager.deactivate()
     assert 125 <= freq_drm <= 126, 'Unexpected frequency gap threshold'
+    async_cb.assert_NoError()
     print("Test parameter 'drm_frequency': PASS")
 
     # Test parameter: product_info
@@ -795,11 +807,13 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     product_id = pformat(drm_manager.get('product_info'))
     exp_product_id = pformat(activators.product_id)
     assert product_id == exp_product_id, 'Unexpected product ID'
+    async_cb.assert_NoError()
     print("Test parameter 'product_info': PASS")
 
     # Test parameter: mailbox_size
     mailbox_size = drm_manager.get('mailbox_size')
-    assert mailbox_size == 14, 'Unexpected Mailbox size'
+    assert mailbox_size == 10, 'Unexpected Mailbox size'
+    async_cb.assert_NoError()
     print("Test parameter 'mailbox_size': PASS")
 
     # Test parameter: token_string, token_validity and token_time_left
@@ -819,6 +833,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     assert drm_manager.get('token_validity') == token_validity
     assert token_string == drm_manager.get('token_string')
     drm_manager.deactivate()
+    async_cb.assert_NoError()
     print("Test parameter 'token_string', 'token_validity' and 'token_time_left': PASS")
 
     # Test parameter: list_all
@@ -826,6 +841,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     assert isinstance(list_param , list)
     assert len(list_param) == len(_PARAM_LIST)
     assert all(key in _PARAM_LIST for key in list_param)
+    async_cb.assert_NoError()
     print("Test parameter 'list_all': PASS")
 
     # Test parameter: dump_all
@@ -833,6 +849,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     assert isinstance(dump_param, dict)
     assert len(dump_param) == _PARAM_LIST.index('dump_all')
     assert all(key in _PARAM_LIST for key in dump_param.keys())
+    async_cb.assert_NoError()
     print("Test parameter 'dump_all': PASS")
 
     # Test parameter: custom_field
@@ -842,6 +859,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     assert val_exp != val_init
     drm_manager.set(custom_field=val_exp)
     assert drm_manager.get('custom_field') == val_exp
+    async_cb.assert_NoError()
     print("Test parameter 'custom_field': PASS")
 
     # Test parameter: mailbox_data
@@ -852,6 +870,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     rd_msg = drm_manager.get('mailbox_data')
     assert type(rd_msg) == type(wr_msg) == list
     assert rd_msg == wr_msg
+    async_cb.assert_NoError()
     print("Test parameter 'mailbox_data': PASS")
 
     # Test parameter: ws_retry_period_long
@@ -1012,7 +1031,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         driver.write_register_callback,
         async_cb.callback
     )
-    assert drm_manager.get('health_retry') == 10
+    assert drm_manager.get('health_retry') == 0
     async_cb.assert_NoError()
     print("Test parameter 'health_retry': PASS")
 
@@ -1026,7 +1045,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         driver.write_register_callback,
         async_cb.callback
     )
-    assert drm_manager.get('health_retry_sleep') == drm_manager.get('ws_retry_period_short')
+    assert drm_manager.get('health_retry_sleep') == 0
     async_cb.assert_NoError()
     print("Test parameter 'health_retry_sleep': PASS")
 
@@ -1130,10 +1149,33 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     )
     trng_status = drm_manager.get('trng_status')
     assert 'security_alert_bit' in trng_status.keys()
-    assert 'adaptive_proportion_test' in trng_status.keys()
-    assert 'repetition_count_test' in trng_status.keys()
+    assert 'adaptive_proportion_test_error' in trng_status.keys()
+    assert 'repetition_count_test_error' in trng_status.keys()
+    assert isinstance(trng_status['security_alert_bit'], bool)
+    assert match(r'[0-9A-F]{8}', trng_status['adaptive_proportion_test_error'], IGNORECASE)
+    assert match(r'[0-9A-F]{8}', trng_status['repetition_count_test_error'], IGNORECASE)
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+        drm_manager.set(trng_status={'security_alert_bit':1})
     async_cb.assert_NoError()
     print("Test parameter 'trng_status': PASS")
+
+    # Test parameter: num_license_loaded
+    async_cb.reset()
+    conf_json.reset()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    num_license_loaded = drm_manager.get('num_license_loaded')
+    assert num_license_loaded == 0
+    assert isinstance(num_license_loaded, int)
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+        drm_manager.set(num_license_loaded=1)
+    async_cb.assert_NoError()
+    print("Test parameter 'num_license_loaded': PASS")
 
 
 def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cred_json,
