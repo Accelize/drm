@@ -26,4 +26,3 @@
         accelize_drm_abi_check: false
         accelize_drm_no_install: true
         accelize_drm_service_started: false
-

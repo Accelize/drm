@@ -79,9 +79,7 @@ stages:
   - stage: release
     displayName: Release
     # Build packages only if tagged or scheduled
-    condition: and(succeeded(), or(
-                   startsWith(variables['Build.SourceBranch'], 'refs/tags'),
-                   eq(variables['Build.Reason'], 'Schedule')))
+    condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags'))
     dependsOn: tests
     variables:
       # File that store release number for each version
