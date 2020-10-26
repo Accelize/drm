@@ -4,15 +4,6 @@
 
 - hosts: all
   become: true
-  pre_tasks:
-    - name: Install pip3
-      package:
-        name:
-          - python3-pip
-        state: present
-      retries: 10
-      delay: 1
-
   roles:
     # Install Azure agent
     - name: azure_pipeline_agent
