@@ -226,7 +226,7 @@ def test_endurance(accelize_drm, conf_json, cred_json, async_handler):
     driver = accelize_drm.pytest_fpga_driver[0]
     activators = accelize_drm.pytest_fpga_activators[0]
     async_cb = async_handler.create()
-    cred_json.set_user('accelize_accelerator_test_02')
+    cred_json.set_user('accelize_accelerator_test_05')
 
     # Get test duration
     try:

@@ -172,10 +172,8 @@ IP Activator HDK directories and files:
    ----- constraints
    -------- constraints.sdc
    ----- drm_ip_activator_0xvvvvllllnnnnvvvv.vhdl
-   ----- drm_ip_activator_0xvvvvllllnnnnvvvv.v
    ----- drm_ip_activator_0xvvvvllllnnnnvvvv.vho
    ----- drm_ip_activator_0xvvvvllllnnnnvvvv.veo
-   ----- drm_ip_activator_0xvvvvllllnnnnvvvv.xml
    ----- drm_ip_activator_package_0xvvvvllllnnnnvvvv.vhdl
    -- sim/
    ----- modelsim/
@@ -211,11 +209,11 @@ IP Activator HDK directories and files:
    -------- drm_all_components.vhdl
 
 
-The IP Activator top-level file is drm_ip_activator_0xvvvvllllnnnnvvvv_axi4st.
-It declares an entity named **drm_ip_activator_0xVVVVLLLLNNNNVVVV_axi4st** where
+The IP Activator top-level file is ``top_drm_activator_0xvvvvllllnnnnvvvv.(v|vhdl)``.
+It declares an entity named **top_drm_activator_0xVVVVLLLLNNNNVVVV** where
 is a 64 bits hexadecimal encoding of the IP VLNV.
 
-For example **drm_ip_activator_0x0C001020A56E0001_axi4st**
+For example **top_drm_activator_0x0C001020A56E0001**
 
 In the above example, the *altchip_id_arria10* files correspond to the Arria 10
 FPGA family. Your `common` folder content might differ depending on the FPGA family you have

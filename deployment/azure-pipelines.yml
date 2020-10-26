@@ -113,18 +113,15 @@ stages:
             CentOS 8:
               osName: centos
               osVersion: "8"
-            Debian 9:
-              osName: debian
-              osVersion: "9"
             Debian 10:
               osName: debian
               osVersion: "10"
-            Fedora 31:
-              osName: fedora
-              osVersion: "31"
             Fedora 32:
               osName: fedora
               osVersion: "32"
+            Fedora 33:
+              osName: fedora
+              osVersion: "33"
             Ubuntu LTS 16.04:
               osName: ubuntu
               osVersion: "16.04"
@@ -134,9 +131,9 @@ stages:
             Ubuntu LTS 20.04:
               osName: ubuntu
               osVersion:  "20.04"
-            Ubuntu 19.10:
+            Ubuntu 20.10:
               osName: ubuntu
-              osVersion:  "19.10"
+              osVersion:  "20.10"
 
         variables:
           # Docker commands shortcuts

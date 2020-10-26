@@ -24,7 +24,6 @@ Following OS are minimally tested only (without hardware):
 * Fedora (2 latest stable versions)
 * Ubuntu (2 latest stable versions)
 * Debian 10 Buster
-* Debian 9 Stretch
 
 .. note:: We limit hardware tested OS to those which are supported by FPGA
           vendors. But, we do minimal tests on more OS to ensure to our
