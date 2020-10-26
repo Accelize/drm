@@ -32,5 +32,6 @@ jobs:
       instance_type: 'f1.4xlarge'
       config_list:
       - os_distrib: 'centos_7'
-        tox_extra_option: '-m minimum tests/test_court.py'
-
+        tox_extra_option: '-m minimum'
+      - os_distrib: 'ubuntu_18_04'
+        tox_extra_option: '-m minimum'
