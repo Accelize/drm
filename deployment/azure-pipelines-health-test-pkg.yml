@@ -35,3 +35,4 @@ jobs:
         tox_extra_option: '-m minimum'
       - os_distrib: 'ubuntu_18_04'
         tox_extra_option: '-m minimum'
+        dependsOn: 'centos_7'
