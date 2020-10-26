@@ -69,7 +69,7 @@ stages:
           - os_distrib: 'centos_7'
             tox_mode: 'debug'
             tox_coverage: true
-            tox_extra_option: '$(tox_minimum) tests/toto'
+            tox_extra_option: '$(tox_minimum)'
           - os_distrib: 'ubuntu_18_04'
             tox_mode: 'debug'
             tox_coverage: false
