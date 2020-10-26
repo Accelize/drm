@@ -197,7 +197,7 @@ include_directories(internal_inc)
 include_directories(include)
 include_directories(spdlog/include)
 
-## libaccelize_drm
+## spdlog
 set(TARGET_SOURCES
     spdlog/src/fmt.cpp
     spdlog/src/spdlog.cpp
@@ -211,9 +211,10 @@ set(TARGET_SOURCES
     source/error.cpp
     source/log.cpp
 )
-
 add_library(accelize_drm SHARED ${TARGET_SOURCES})
 target_compile_options(accelize_drm PRIVATE -DSPDLOG_COMPILED_LIB)
+
+## libaccelize_drm
 set_target_properties(accelize_drm PROPERTIES VERSION ${ACCELIZEDRM_VERSION} SOVERSION ${ABI_VERSION})
 target_link_libraries(accelize_drm ${CURL_LIBRARIES})
 target_link_libraries(accelize_drm jsoncpp)
