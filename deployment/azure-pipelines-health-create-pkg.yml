@@ -67,8 +67,8 @@ stages:
             tox_coverage: false
             dependsOn: 'centos_7'
 
-  - stage: package_and_release
-    displayName: Create packages and release
+  - stage: create_packages
+    displayName: Create packages
     # Build packages only if tagged or scheduled
     condition: succeeded()
     dependsOn: compile_and_test
