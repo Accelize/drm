@@ -29,6 +29,7 @@ jobs:
     displayName: Install and run tests on AWS with ${{ config.os_distrib }}
     dependsOn:
       - startAgent_Aws_${{ config.os_distrib }}
+    condition: succeededOrFailed()
     pool:
       name: Default
       demands:  # Use previously instantiated agent
