@@ -163,7 +163,6 @@ protected:
 
     eLicenseType mLicenseType = eLicenseType::METERED;
     uint32_t mLicenseDuration = 0;        ///< Time duration in seconds of the license
-    uint32_t mLicenseWaitPeriod = 5;      ///< Time in seconds to wait for the load of a new license
 
     double mActivationTransmissionTimeoutMS = ACTIVATIONCODE_TRANSMISSION_TIMEOUT_MS;  ///< Timeout in milliseconds to complete the transmission of the activation code to the Activator's interface
 

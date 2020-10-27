@@ -54,7 +54,6 @@ class CurlEasyPost {
 
 private:
     CURL *mCurl = NULL;
-    //std::string mUrl;
     struct curl_slist *mHeaders_p = NULL;
     struct curl_slist *mHostResolveList = NULL;
     std::list<std::string> data;                    // keep data until request performed
@@ -221,7 +220,7 @@ protected:
 class DrmWSClient {
 
     const uint32_t cTokenExpirationMargin = 30;  // In seconds
-    const uint32_t cRequestTimeout = 10;         // In seconds
+    const uint32_t cRequestTimeout = 60;         // In seconds
 
 protected:
 
