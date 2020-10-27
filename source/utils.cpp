@@ -264,15 +264,15 @@ std::chrono::steady_clock::time_point time_t_to_steady_clock( const time_t& t ) 
 }
 
 
-std::string execCmd( const std::string& cmd) {
+std::string execCmd( const std::string& cmd ) {
     std::array<char, 128> buffer;
     std::string result;
     Debug( "Running command: {}", cmd );
-    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"), pclose);
-    if (!pipe) {
-        throw std::runtime_error("popen() failed!");
+    std::unique_ptr<FILE, decltype(&pclose)> pipe( popen( cmd.c_str(), "r" ), pclose );
+    if ( !pipe ) {
+        throw std::runtime_error( "popen() failed!" );
     }
-    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+    while( fgets( buffer.data(), buffer.size(), pipe.get() ) != nullptr ) {
         result += buffer.data();
     }
     return result;
@@ -283,6 +283,19 @@ std::string toUpHex( const uint64_t& i ) {
     std::stringstream stream;
     stream << std::uppercase << std::hex << std::setw(16) << std::setfill('0') << i;
     return stream.str();
+}
+
+
+std::vector<std::string> split(const std::string& str, char delimiter)
+{
+   std::vector<std::string> tokens;
+   std::string token;
+   std::istringstream tokenStream(str);
+   while (std::getline(tokenStream, token, delimiter))
+   {
+      tokens.push_back(token);
+   }
+   return tokens;
 }
 
 

@@ -53,3 +53,4 @@ PARAMETERKEY_ITEM( log_file_append )                ///< Read-(write), read (and
 PARAMETERKEY_ITEM( ws_verbosity )                   ///< Read-(write), read (and write) the curl verbosity. Set only from configuration file (no override from user's code)
 PARAMETERKEY_ITEM( trng_status )                    ///< Read-only, read the TRNG related status registers
 PARAMETERKEY_ITEM( num_license_loaded )             ///< Read-only, read the number of licenses provisioned in the DRM Controller
+PARAMETERKEY_ITEM( derivated_product )              ///< Read-write, read and write the derivated product information with the format: "vendor/library/name"

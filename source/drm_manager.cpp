@@ -141,6 +141,10 @@ protected:
     DrmManager::WriteRegisterCallback f_write_register;
     DrmManager::AsynchErrorCallback   f_asynch_error;
 
+    // Derivated product
+    std::string mDerivatedProduct;
+    std::string mDerivatedProductFromConf;
+
     // Settings files
     std::string mConfFilePath;
     std::string mCredFilePath;
@@ -349,6 +353,9 @@ protected:
                         mBypassFrequencyDetection ).asBool();
             }
 
+            // Optionally, check derivated product
+            mDerivatedProductFromConf = JVgetOptional( conf_json, "derivated_product", Json::stringValue, "" ).asString();
+
             // Check DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS variable exists
             char* env_val = getenv( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS" );
             if (env_val == NULL) {
@@ -499,13 +506,18 @@ protected:
         // Gather host and card information if xbutil existing
         if ( findXrtUtility() ) {
             Json::Value hostcard_node = Json::nullValue;
+            Json::Value xbutil_node;
             try {
                 // Call xbutil to collect host and card data
                 std::string cmd = fmt::format( "{} dump", mXbutil );
                 std::string cmd_out = execCmd( cmd );
 
                 // Parse collected data and save to header
-                Json::Value xbutil_node = parseJsonString( cmd_out );
+                try {
+                    xbutil_node = parseJsonString( cmd_out );
+                } catch( const std::exception & ) {
+                    Throw( DRM_ExternFail, "Unexpected result from xbutil: {}", cmd_out );
+                }
 
                 if ( mHostDataVerbosity == eHostDataVerbosity::FULL ) {
                     // Verbosity is FULL
@@ -912,6 +924,9 @@ protected:
 
         // Save header information
         mHeaderJsonRequest = getMeteringHeader();
+        // Update with Derviated Product if sepcified in the config file
+        if ( !mDerivatedProductFromConf.empty() )
+            loadDerivatedProduct( mDerivatedProductFromConf );
 
         // If node-locked license is requested, create license request file
         if ( isNodeLockedMode() ) {
@@ -1056,7 +1071,43 @@ protected:
                 throw;
             }
         }
+
+        // Set the derivated product from Controller content
+        std::string vendor = json_output["product"]["vendor"].asString();
+        std::string library = json_output["product"]["library"].asString();
+        std::string name = json_output["product"]["name"].asString();
+        mDerivatedProduct = fmt::format( "{}/{}/{}", vendor, library, name );
+        Debug( "Reference Product information: {}", mDerivatedProduct );
+
         return json_output;
+    }
+
+    void loadDerivatedProduct( const std::string& derivatedProductString ) {
+        if ( derivatedProductString == mDerivatedProduct ) {
+            Debug( "No new derivated product to load" );
+            return;
+        }
+        std::vector<std::string> derivated_product_component = split( derivatedProductString, '/' );
+        Json::Value product_id = mHeaderJsonRequest["product"];
+        std::string vendor = mHeaderJsonRequest["product"]["vendor"].asString();
+        std::string library = mHeaderJsonRequest["product"]["library"].asString();
+        std::string name = mHeaderJsonRequest["product"]["name"].asString();
+
+        // Check vendor are identical
+        if ( vendor != derivated_product_component[0] ) {
+            Throw( DRM_BadArg, "Invalid derivated product information: vendor mismatch" );
+        }
+        // Check library are identical
+        if ( library != derivated_product_component[1] ) {
+            Throw( DRM_BadArg, "Invalid derivated product information: library mismatch" );
+        }
+        // Check name starts with the same
+        if ( derivated_product_component[2].rfind( name, 0 ) != 0 ) {
+            Throw( DRM_BadArg, "Invalid derivated product information: name mismatch" );
+        }
+        mHeaderJsonRequest["product"]["name"] = derivated_product_component[2];
+        mDerivatedProduct = derivatedProductString;
+        Info( "Loaded new derivated product: {}", mDerivatedProduct );
     }
 
     Json::Value getMeteringStart() const {
@@ -2119,7 +2170,12 @@ public:
                 Throw( DRM_BadUsage, "DRM Controller is locked in Node-Locked licensing mode: "
                                     "To use other modes you must reprogram the FPGA device." );
             }
+
+            // Load derivated product if any
+            loadDerivatedProduct( mDerivatedProduct );
+
             if ( !isSessionRunning() ) {
+                // Start new session if no session is currently pending
                 startSession();
 
             } else {
@@ -2534,6 +2590,12 @@ public:
                                numberOfLicenseProvisioned );
                         break;
                     }
+                    case ParameterKey::derivated_product: {
+                        json_value[key_str] = mDerivatedProduct;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                               mDerivatedProduct );
+                        break;
+                    }
                     case ParameterKey::ParameterKeyCount: {
                         uint32_t count = static_cast<uint32_t>( ParameterKeyCount );
                         json_value[key_str] = count;
@@ -2686,6 +2748,14 @@ public:
                     case ParameterKey::log_message: {
                         std::string custom_msg = (*it).asString();
                         SPDLOG_LOGGER_CALL( sLogger, (spdlog::level::level_enum)mDebugMessageLevel, custom_msg);
+                        break;
+                    }
+                    case ParameterKey::derivated_product: {
+                        std::string vln_str = (*it).asString();
+                        if ( isSessionRunning() )
+                            Throw( DRM_BadUsage, "Derivated product cannot be loaded if a session is still running" );
+                        loadDerivatedProduct( vln_str );
+                        Debug( "Set parameter '{}' (ID={}) to value {}", key_str, key_id, vln_str );
                         break;
                     }
                     default:

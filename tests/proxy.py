@@ -874,6 +874,35 @@ def create_app(url):
         return Response(dumps(response_json), response.status_code, headers)
 
     ##############################################################################
+    # test_derivated_product.py
+
+    # test_valid_derivated_product function
+    @app.route('/test_valid_derivated_product/o/token/', methods=['GET', 'POST'])
+    def otoken__test_valid_derivated_product():
+        return redirect(request.url_root + '/o/token/', code=307)
+
+    @app.route('/test_valid_derivated_product/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_valid_derivated_product():
+        global context, lock
+        new_url = request.url.replace(request.url_root+'test_valid_derivated_product', url)
+        request_json = request.get_json()
+        deriv_prod = '{vendor}/{library}/{name}'.format(**request_json['product'])
+        with lock:
+            context['derivated_product'] = deriv_prod
+            request_json['product']['name'] = request_json['product']['name'].replace(context['product_suffix'], '')
+        response = post(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+            indent=4, sort_keys=True), response.status_code, response.text)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        return Response(dumps(response_json), response.status_code, headers)
+
+    @app.route('/test_valid_derivated_product/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_valid_derivated_product():
+        return redirect(request.url_root + '/auth/metering/health/', code=307)
+
+    ##############################################################################
 
     return app
 
