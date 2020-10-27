@@ -3,9 +3,7 @@
 Test frequency detetion mechanism.
 """
 import pytest
-from os import remove, getpid
-from os.path import isfile, realpath
-from time import sleep, time
+from time import sleep
 from re import search
 
 from tests.conftest import wait_func_true
