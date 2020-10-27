@@ -144,9 +144,9 @@ def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler,
     drm_manager.activate()
     start = datetime.now()
     try:
-        lic_duration = drm_manager.get('license_duration')
         assert drm_manager.get('license_status')
         activators.autotest(is_activated=True)
+        lic_duration = drm_manager.get('license_duration')
         wait_period = start + timedelta(seconds=lic_duration+2) - datetime.now()
         sleep(wait_period.total_seconds())
         assert drm_manager.get('license_status')

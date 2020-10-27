@@ -70,8 +70,8 @@ stages:
   - stage: create_packages
     displayName: Create packages
     # Build packages only if tagged or scheduled
-    condition: succeeded()
     dependsOn: compile_and_test
+    condition: succeededOrFailed()
     variables:
       # File that store release number for each version
       versionsJson: versions.json
