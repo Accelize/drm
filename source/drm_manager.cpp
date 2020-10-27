@@ -141,9 +141,9 @@ protected:
     DrmManager::WriteRegisterCallback f_write_register;
     DrmManager::AsynchErrorCallback   f_asynch_error;
 
-    // Derivated product
-    std::string mDerivatedProduct;
-    std::string mDerivatedProductFromConf;
+    // Derived product
+    std::string mDerivedProduct;
+    std::string mDerivedProductFromConf;
 
     // Settings files
     std::string mConfFilePath;
@@ -353,8 +353,8 @@ protected:
                         mBypassFrequencyDetection ).asBool();
             }
 
-            // Optionally, check derivated product
-            mDerivatedProductFromConf = JVgetOptional( conf_json, "derivated_product", Json::stringValue, "" ).asString();
+            // Optionally, check derived product
+            mDerivedProductFromConf = JVgetOptional( conf_json, "derived_product", Json::stringValue, "" ).asString();
 
             // Check DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS variable exists
             char* env_val = getenv( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS" );
@@ -925,8 +925,8 @@ protected:
         // Save header information
         mHeaderJsonRequest = getMeteringHeader();
         // Update with Derviated Product if sepcified in the config file
-        if ( !mDerivatedProductFromConf.empty() )
-            loadDerivatedProduct( mDerivatedProductFromConf );
+        if ( !mDerivedProductFromConf.empty() )
+            loadDerivedProduct( mDerivedProductFromConf );
 
         // If node-locked license is requested, create license request file
         if ( isNodeLockedMode() ) {
@@ -1072,42 +1072,42 @@ protected:
             }
         }
 
-        // Set the derivated product from Controller content
+        // Set the derived product from Controller content
         std::string vendor = json_output["product"]["vendor"].asString();
         std::string library = json_output["product"]["library"].asString();
         std::string name = json_output["product"]["name"].asString();
-        mDerivatedProduct = fmt::format( "{}/{}/{}", vendor, library, name );
-        Debug( "Reference Product information: {}", mDerivatedProduct );
+        mDerivedProduct = fmt::format( "{}/{}/{}", vendor, library, name );
+        Debug( "Reference Product information: {}", mDerivedProduct );
 
         return json_output;
     }
 
-    void loadDerivatedProduct( const std::string& derivatedProductString ) {
-        if ( derivatedProductString == mDerivatedProduct ) {
-            Debug( "No new derivated product to load" );
+    void loadDerivedProduct( const std::string& derivedProductString ) {
+        if ( derivedProductString == mDerivedProduct ) {
+            Debug( "No new derived product to load" );
             return;
         }
-        std::vector<std::string> derivated_product_component = split( derivatedProductString, '/' );
+        std::vector<std::string> derived_product_component = split( derivedProductString, '/' );
         Json::Value product_id = mHeaderJsonRequest["product"];
         std::string vendor = mHeaderJsonRequest["product"]["vendor"].asString();
         std::string library = mHeaderJsonRequest["product"]["library"].asString();
         std::string name = mHeaderJsonRequest["product"]["name"].asString();
 
         // Check vendor are identical
-        if ( vendor != derivated_product_component[0] ) {
-            Throw( DRM_BadArg, "Invalid derivated product information: vendor mismatch" );
+        if ( vendor != derived_product_component[0] ) {
+            Throw( DRM_BadArg, "Invalid derived product information: vendor mismatch" );
         }
         // Check library are identical
-        if ( library != derivated_product_component[1] ) {
-            Throw( DRM_BadArg, "Invalid derivated product information: library mismatch" );
+        if ( library != derived_product_component[1] ) {
+            Throw( DRM_BadArg, "Invalid derived product information: library mismatch" );
         }
         // Check name starts with the same
-        if ( derivated_product_component[2].rfind( name, 0 ) != 0 ) {
-            Throw( DRM_BadArg, "Invalid derivated product information: name mismatch" );
+        if ( derived_product_component[2].rfind( name, 0 ) != 0 ) {
+            Throw( DRM_BadArg, "Invalid derived product information: name mismatch" );
         }
-        mHeaderJsonRequest["product"]["name"] = derivated_product_component[2];
-        mDerivatedProduct = derivatedProductString;
-        Info( "Loaded new derivated product: {}", mDerivatedProduct );
+        mHeaderJsonRequest["product"]["name"] = derived_product_component[2];
+        mDerivedProduct = derivedProductString;
+        Info( "Loaded new derived product: {}", mDerivedProduct );
     }
 
     Json::Value getMeteringStart() const {
@@ -2171,8 +2171,8 @@ public:
                                     "To use other modes you must reprogram the FPGA device." );
             }
 
-            // Load derivated product if any
-            loadDerivatedProduct( mDerivatedProduct );
+            // Load derived product if any
+            loadDerivedProduct( mDerivedProduct );
 
             if ( !isSessionRunning() ) {
                 // Start new session if no session is currently pending
@@ -2590,10 +2590,10 @@ public:
                                numberOfLicenseProvisioned );
                         break;
                     }
-                    case ParameterKey::derivated_product: {
-                        json_value[key_str] = mDerivatedProduct;
+                    case ParameterKey::derived_product: {
+                        json_value[key_str] = mDerivedProduct;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
-                               mDerivatedProduct );
+                               mDerivedProduct );
                         break;
                     }
                     case ParameterKey::ParameterKeyCount: {
@@ -2750,11 +2750,11 @@ public:
                         SPDLOG_LOGGER_CALL( sLogger, (spdlog::level::level_enum)mDebugMessageLevel, custom_msg);
                         break;
                     }
-                    case ParameterKey::derivated_product: {
+                    case ParameterKey::derived_product: {
                         std::string vln_str = (*it).asString();
                         if ( isSessionRunning() )
-                            Throw( DRM_BadUsage, "Derivated product cannot be loaded if a session is still running" );
-                        loadDerivatedProduct( vln_str );
+                            Throw( DRM_BadUsage, "Derived product cannot be loaded if a session is still running" );
+                        loadDerivedProduct( vln_str );
                         Debug( "Set parameter '{}' (ID={}) to value {}", key_str, key_id, vln_str );
                         break;
                     }

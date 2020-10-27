@@ -84,7 +84,7 @@ jobs:
         displayName: Create Accelize credentials file
 
       - script: sudo -E tox -p all -e $(tox_operation)
-                -- --cred=$(Build.SourcesDirectory)/cred.json --server=$(meteringServer) --artifacts_dir=$(Build.SourcesDirectory)/artifacts ${{ config.tox_extra_option }} -rxs tests/test_derivated_product.py::test_invalid_derivated_product_vendor
+                -- --cred=$(Build.SourcesDirectory)/cred.json --server=$(meteringServer) --artifacts_dir=$(Build.SourcesDirectory)/artifacts ${{ config.tox_extra_option }} -rxs
         displayName: Run tests with Tox
         env:
           CODECOV_TOKEN: $(codecovToken)

@@ -69,7 +69,7 @@ _PARAM_LIST = ('license_type',
                'ws_verbosity',
                'trng_status',
                'num_license_loaded',
-               'derivated_product'
+               'derived_product'
 )
 
 
@@ -559,7 +559,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     async_cb.assert_NoError()
     print("Test parameter 'ws_verbosity': PASS")
 
-    # Test parameter: derivated_product
+    # Test parameter: derived_product
     async_cb.reset()
     conf_json.reset()
     drm_manager = accelize_drm.DrmManager(
@@ -569,9 +569,9 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
         driver.write_register_callback,
         async_cb.callback
     )
-    deriv_prod = drm_manager.get('derivated_product')
+    deriv_prod = drm_manager.get('derived_product')
     deriv_prod += '_subproduct'
-    conf_json['derivated_product'] = deriv_prod
+    conf_json['derived_product'] = deriv_prod
     conf_json.save()
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
@@ -580,9 +580,9 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
         driver.write_register_callback,
         async_cb.callback
     )
-    assert drm_manager.get('derivated_product') == deriv_prod
+    assert drm_manager.get('derived_product') == deriv_prod
     async_cb.assert_NoError()
-    print("Test parameter 'derivated_product': PASS")
+    print("Test parameter 'derived_product': PASS")
 
     # Test unsupported parameter
     async_cb.reset()
@@ -1202,7 +1202,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     async_cb.assert_NoError()
     print("Test parameter 'num_license_loaded': PASS")
 
-    # Test parameter: derivated_product
+    # Test parameter: derived_product
     async_cb.reset()
     conf_json.reset()
     drm_manager = accelize_drm.DrmManager(
@@ -1212,12 +1212,12 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         driver.write_register_callback,
         async_cb.callback
     )
-    deriv_prod = drm_manager.get('derivated_product')
+    deriv_prod = drm_manager.get('derived_product')
     deriv_prod += '_subproduct'
-    drm_manager.set(derivated_product=deriv_prod)
-    assert drm_manager.get('derivated_product') == deriv_prod
+    drm_manager.set(derived_product=deriv_prod)
+    assert drm_manager.get('derived_product') == deriv_prod
     async_cb.assert_NoError()
-    print("Test parameter 'derivated_product': PASS")
+    print("Test parameter 'derived_product': PASS")
 
 
 def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cred_json,
