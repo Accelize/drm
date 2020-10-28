@@ -48,8 +48,8 @@ variables:
            sudo apt-get install -y --no-install-recommends
 
 stages:
-  - stage: tests
-    displayName: Tests
+  - stage: compile_and_test
+    displayName: Compile sources and test on hardware
     variables:
       # Set Git branch conditional variables
       ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/master') }}:
@@ -57,9 +57,9 @@ stages:
       ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/master') }}:
         meteringServer: dev
       ${{ if startsWith(variables['Build.SourceBranch'], 'refs/tags') }}:
-        tox_minimum: '-m minimum'
+        tox_mark: '-m minimum'
       ${{ if not(startsWith(variables['Build.SourceBranch'], 'refs/tags')) }}:
-        tox_minimum: ''
+        tox_mark: ''
 
     jobs:
       - template: runTestOnEc2.yml
@@ -69,18 +69,18 @@ stages:
           - os_distrib: 'centos_7'
             tox_mode: 'debug'
             tox_coverage: true
-            tox_extra_option: '$(tox_minimum)'
+            tox_extra_option: '$(tox_mark)'
           - os_distrib: 'ubuntu_18_04'
             tox_mode: 'debug'
             tox_coverage: false
-            tox_extra_option: '$(tox_minimum)'
+            tox_extra_option: '$(tox_mark)'
             dependsOn: 'centos_7'
 
-  - stage: release
-    displayName: Release
+  - stage: package_release
+    displayName: Create and release packages
     # Build packages only if tagged or scheduled
+    dependsOn: compile_and_test
     condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags'))
-    dependsOn: tests
     variables:
       # File that store release number for each version
       versionsJson: versions.json
