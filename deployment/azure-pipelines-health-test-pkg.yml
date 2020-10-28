@@ -9,7 +9,6 @@ schedules:
   branches:
     include:
     - master
-    - test_pkg
   always: true
 pr: none
 
