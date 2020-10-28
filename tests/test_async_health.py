@@ -19,7 +19,6 @@ from tests.proxy import get_context, set_context, get_proxy_error
 
 @pytest.mark.no_parallel
 @pytest.mark.minimum
-@pytest.mark.packages
 def test_health_period_disabled(accelize_drm, conf_json, cred_json,
                     async_handler, live_server, basic_log_file, request):
     """
@@ -182,7 +181,6 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
 
 @pytest.mark.no_parallel
 @pytest.mark.minimum
-@pytest.mark.packages
 def test_health_retry_modification(accelize_drm, conf_json, cred_json,
                             async_handler, live_server, request):
     """
@@ -313,7 +311,6 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json,
 @pytest.mark.skip(reason='Asynchronous feature is still not working because of the corruption of metering data')
 @pytest.mark.no_parallel
 @pytest.mark.minimum
-@pytest.mark.packages
 def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
                         live_server, ws_admin, request):
     """
@@ -461,7 +458,6 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler,
 
 
 @pytest.mark.no_parallel
-@pytest.mark.packages
 def test_async_call_on_pause_when_health_is_enabled(accelize_drm, conf_json, cred_json,
                             async_handler, live_server, basic_log_file, request):
     """

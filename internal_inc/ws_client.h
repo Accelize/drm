@@ -212,8 +212,8 @@ protected:
  get license and send metering data*/
 class DrmWSClient {
 
-    const uint32_t cTokenExpirationMargin = 30;  // In seconds
-    const uint32_t cRequestTimeout = 10;         // In seconds
+    const uint32_t cTokenExpirationMargin = 60;  // In seconds
+    const uint32_t cRequestTimeout = 20;         // In seconds
 
 protected:
 

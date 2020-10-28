@@ -86,7 +86,6 @@ def test_metered_start_stop_1_coin_in_raw(accelize_drm, conf_json, cred_json, as
 
 
 @pytest.mark.minimum
-@pytest.mark.packages
 @pytest.mark.hwtst
 def test_metered_start_stop_short_time(accelize_drm, conf_json, cred_json, async_handler):
     """
@@ -218,7 +217,6 @@ def test_metered_start_stop_long_time(accelize_drm, conf_json, cred_json, async_
 
 
 @pytest.mark.minimum
-@pytest.mark.packages
 @pytest.mark.hwtst
 def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, async_handler):
     """
@@ -256,8 +254,8 @@ def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, asy
         assert drm_manager.get('metered_data') == 0
         activators[0].generate_coin(10)
         activators[0].check_coin(drm_manager.get('metered_data'))
-        # Wait enough time to be sure the 2nd license has been provisioned
-        wait_deadline(start, lic_duration/2)
+        # Wait until 2 licenses are provisioned
+        wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, lic_duration)
         drm_manager.deactivate(True)
         assert drm_manager.get('session_status')
         assert drm_manager.get('license_status')

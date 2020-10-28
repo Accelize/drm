@@ -69,6 +69,12 @@ limitations under the License.
         throw;                            \
     }
 
+#define CATCH                             \
+    catch( const std::exception &e ) {    \
+        Fatal( e.what() );                \
+        sLogger->flush();                 \
+    }
+
 
 static const std::string DRM_SELF_TEST_ERROR_MESSAGE( "Could not access DRM Controller registers.\nPlease verify:\n"
                         "\t-The read/write callbacks implementation in the SW application: verify it uses the correct offset address of DRM Controller IP in the design address space.\n"
@@ -157,11 +163,10 @@ protected:
     // License related properties
     uint32_t mWSRetryPeriodLong  = 60;    ///< Time in seconds before the next request attempt to the Web Server when the time left before timeout is large
     uint32_t mWSRetryPeriodShort = 2;     ///< Time in seconds before the next request attempt to the Web Server when the time left before timeout is short
-    uint32_t mWSApiRetryDuration = 30;    ///< Period of time in seconds during which retries occur on activate and deactivate functions
+    uint32_t mWSApiRetryDuration = 60;    ///< Period of time in seconds during which retries occur on activate and deactivate functions
 
     eLicenseType mLicenseType = eLicenseType::METERED;
     uint32_t mLicenseDuration = 0;        ///< Time duration in seconds of the license
-    uint32_t mLicenseWaitPeriod = 5;      ///< Time in seconds to wait for the load of a new license
 
     double mActivationTransmissionTimeoutMS = ACTIVATIONCODE_TRANSMISSION_TIMEOUT_MS;  ///< Timeout in milliseconds to complete the transmission of the activation code to the Activator's interface
 
@@ -224,6 +229,7 @@ protected:
     #   undef PARAMETERKEY_ITEM
         {ParameterKeyCount, "ParameterKeyCount"}
     };
+
 
     #define checkDRMCtlrRet( func ) {                                                           \
         unsigned int errcode = DRM_OK;                                                          \

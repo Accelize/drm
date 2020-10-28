@@ -57,7 +57,6 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
 
 
 @pytest.mark.minimum
-@pytest.mark.packages
 def test_nodelock_license_is_not_given_to_inactive_user(accelize_drm, conf_json, cred_json,
                                                         async_handler, ws_admin):
     """Test a user who has not bought a valid nodelocked license cannot get a license"""

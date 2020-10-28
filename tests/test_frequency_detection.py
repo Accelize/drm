@@ -3,9 +3,7 @@
 Test frequency detetion mechanism.
 """
 import pytest
-from os import remove, getpid
-from os.path import isfile, realpath
-from time import sleep, time
+from time import sleep
 from re import search
 
 from tests.conftest import wait_func_true
@@ -256,8 +254,8 @@ def test_drm_manager_frequency_detection_bypass(accelize_drm, conf_json, cred_js
         async_cb.callback
     )
     assert drm_manager.get('drm_frequency') == 80
-    drm_manager.activate()
     try:
+        drm_manager.activate()
         sleep(1)
         assert drm_manager.get('drm_frequency') == 80
     finally:

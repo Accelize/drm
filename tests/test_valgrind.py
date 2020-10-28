@@ -11,7 +11,6 @@ from os.path import join, isfile
 from tests.proxy import get_context, set_context
 
 
-@pytest.mark.minimum
 def test_normal_usage(accelize_drm, request, exec_func, live_server, tmpdir,
                       basic_log_file):
     """Check memory leak with valgrind"""
