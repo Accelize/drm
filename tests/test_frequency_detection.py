@@ -254,8 +254,8 @@ def test_drm_manager_frequency_detection_bypass(accelize_drm, conf_json, cred_js
         async_cb.callback
     )
     assert drm_manager.get('drm_frequency') == 80
-    drm_manager.activate()
     try:
+        drm_manager.activate()
         sleep(1)
         assert drm_manager.get('drm_frequency') == 80
     except:

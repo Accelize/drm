@@ -147,6 +147,10 @@ protected:
     DrmManager::WriteRegisterCallback f_write_register;
     DrmManager::AsynchErrorCallback   f_asynch_error;
 
+    // Derived product
+    std::string mDerivedProduct;
+    std::string mDerivedProductFromConf;
+
     // Settings files
     std::string mConfFilePath;
     std::string mCredFilePath;
@@ -355,6 +359,9 @@ protected:
                         mBypassFrequencyDetection ).asBool();
             }
 
+            // Optionally, check derived product
+            mDerivedProductFromConf = JVgetOptional( conf_json, "derived_product", Json::stringValue, "" ).asString();
+
             // Check DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS variable exists
             char* env_val = getenv( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS" );
             if (env_val == NULL) {
@@ -505,13 +512,18 @@ protected:
         // Gather host and card information if xbutil existing
         if ( findXrtUtility() ) {
             Json::Value hostcard_node = Json::nullValue;
+            Json::Value xbutil_node;
             try {
                 // Call xbutil to collect host and card data
                 std::string cmd = fmt::format( "{} dump", mXbutil );
                 std::string cmd_out = execCmd( cmd );
 
                 // Parse collected data and save to header
-                Json::Value xbutil_node = parseJsonString( cmd_out );
+                try {
+                    xbutil_node = parseJsonString( cmd_out );
+                } catch( const std::exception & ) {
+                    Throw( DRM_ExternFail, "Unexpected result from xbutil: {}", cmd_out );
+                }
 
                 if ( mHostDataVerbosity == eHostDataVerbosity::FULL ) {
                     // Verbosity is FULL
@@ -918,6 +930,9 @@ protected:
 
         // Save header information
         mHeaderJsonRequest = getMeteringHeader();
+        // Update with Derviated Product if sepcified in the config file
+        if ( !mDerivedProductFromConf.empty() )
+            loadDerivedProduct( mDerivedProductFromConf );
 
         // If node-locked license is requested, create license request file
         if ( isNodeLockedMode() ) {
@@ -1062,7 +1077,43 @@ protected:
                 throw;
             }
         }
+
+        // Set the derived product from Controller content
+        std::string vendor = json_output["product"]["vendor"].asString();
+        std::string library = json_output["product"]["library"].asString();
+        std::string name = json_output["product"]["name"].asString();
+        mDerivedProduct = fmt::format( "{}/{}/{}", vendor, library, name );
+        Debug( "Reference Product information: {}", mDerivedProduct );
+
         return json_output;
+    }
+
+    void loadDerivedProduct( const std::string& derivedProductString ) {
+        if ( derivedProductString == mDerivedProduct ) {
+            Debug( "No new derived product to load" );
+            return;
+        }
+        std::vector<std::string> derived_product_component = split( derivedProductString, '/' );
+        Json::Value product_id = mHeaderJsonRequest["product"];
+        std::string vendor = mHeaderJsonRequest["product"]["vendor"].asString();
+        std::string library = mHeaderJsonRequest["product"]["library"].asString();
+        std::string name = mHeaderJsonRequest["product"]["name"].asString();
+
+        // Check vendor are identical
+        if ( vendor != derived_product_component[0] ) {
+            Throw( DRM_BadArg, "Invalid derived product information: vendor mismatch" );
+        }
+        // Check library are identical
+        if ( library != derived_product_component[1] ) {
+            Throw( DRM_BadArg, "Invalid derived product information: library mismatch" );
+        }
+        // Check name starts with the same
+        if ( derived_product_component[2].rfind( name, 0 ) != 0 ) {
+            Throw( DRM_BadArg, "Invalid derived product information: name mismatch" );
+        }
+        mHeaderJsonRequest["product"]["name"] = derived_product_component[2];
+        mDerivedProduct = derivedProductString;
+        Info( "Loaded new derived product: {}", mDerivedProduct );
     }
 
     Json::Value getMeteringStart() const {
@@ -2125,7 +2176,12 @@ public:
                 Throw( DRM_BadUsage, "DRM Controller is locked in Node-Locked licensing mode: "
                                     "To use other modes you must reprogram the FPGA device." );
             }
+
+            // Load derived product if any
+            loadDerivedProduct( mDerivedProduct );
+
             if ( !isSessionRunning() ) {
+                // Start new session if no session is currently pending
                 startSession();
 
             } else {
@@ -2540,6 +2596,12 @@ public:
                                numberOfLicenseProvisioned );
                         break;
                     }
+                    case ParameterKey::derived_product: {
+                        json_value[key_str] = mDerivedProduct;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                               mDerivedProduct );
+                        break;
+                    }
                     case ParameterKey::ParameterKeyCount: {
                         uint32_t count = static_cast<uint32_t>( ParameterKeyCount );
                         json_value[key_str] = count;
@@ -2692,6 +2754,14 @@ public:
                     case ParameterKey::log_message: {
                         std::string custom_msg = (*it).asString();
                         SPDLOG_LOGGER_CALL( sLogger, (spdlog::level::level_enum)mDebugMessageLevel, custom_msg);
+                        break;
+                    }
+                    case ParameterKey::derived_product: {
+                        std::string vln_str = (*it).asString();
+                        if ( isSessionRunning() )
+                            Throw( DRM_BadUsage, "Derived product cannot be loaded if a session is still running" );
+                        loadDerivedProduct( vln_str );
+                        Debug( "Set parameter '{}' (ID={}) to value {}", key_str, key_id, vln_str );
                         break;
                     }
                     default:

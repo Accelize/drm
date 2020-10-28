@@ -27,8 +27,7 @@ jobs:
   # Install Package on AWS agent
   - job: runTests_Aws_${{ config.os_distrib }}
     displayName: Install and run tests on AWS with ${{ config.os_distrib }}
-    dependsOn:
-      - startAgent_Aws_${{ config.os_distrib }}
+    dependsOn: startAgent_Aws_${{ config.os_distrib }}
     condition: succeededOrFailed()
     pool:
       name: Default

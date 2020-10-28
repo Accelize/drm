@@ -53,6 +53,7 @@ std::chrono::steady_clock::time_point time_t_to_steady_clock( const time_t& t );
 // Miscellaneous functions
 std::string execCmd( const std::string& cmd);
 std::string toUpHex( const uint64_t& i );
+std::vector<std::string> split(const std::string& str, char delimiter);
 
 }
 }

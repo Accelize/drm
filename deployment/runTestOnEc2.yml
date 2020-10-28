@@ -5,7 +5,7 @@ parameters:
   instance_type: 'f1.4xlarge'
   config_list:
   - os_distrib: 'centos_7'
-    tox_mode: 'install'
+    tox_mode: 'release'
     tox_coverage: false
     tox_extra_option: ''
 
@@ -29,8 +29,7 @@ jobs:
   # Run tests on AWS agent
   - job: runTests_Aws_${{ config.os_distrib }}
     displayName: Run tests on AWS with ${{ config.os_distrib }}
-    dependsOn:
-      - startAgent_Aws_${{ config.os_distrib }}
+    dependsOn: startAgent_Aws_${{ config.os_distrib }}
     condition: succeededOrFailed()
     pool:
       name: Default

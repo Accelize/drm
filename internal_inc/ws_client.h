@@ -56,7 +56,6 @@ private:
     CURL *mCurl = NULL;
     struct curl_slist *mHeaders_p = NULL;
     struct curl_slist *mHostResolveList = NULL;
-    std::list<std::string> data;                    // keep data until request performed
     std::array<char, CURL_ERROR_SIZE> mErrBuff;
     uint32_t mConnectionTimeoutMS;                  // Request timeout in milliseconds
 
@@ -106,13 +105,7 @@ public:
     void setConnectionTimeoutMS( const uint32_t timeoutMS ) { mConnectionTimeoutMS = timeoutMS; }
 
     void appendHeader( const std::string header );
-
-    template<class T>
-    void setPostFields( T&& postfields ) {
-        data.push_back( std::forward<T>(postfields) );
-        curl_easy_setopt( mCurl, CURLOPT_POSTFIELDSIZE, data.back().size() );
-        curl_easy_setopt( mCurl, CURLOPT_POSTFIELDS, data.back().c_str() );
-    }
+    void setPostFields( const std::string& postfields );
 
     uint32_t perform( const std::string url, std::string* resp, const std::chrono::steady_clock::time_point& deadline );
     uint32_t perform( const std::string url, std::string* resp, const int32_t timeout_ms );
