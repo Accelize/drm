@@ -30,7 +30,6 @@ namespace DRM {
 
 
 CurlEasyPost::CurlEasyPost() {
-    mConnectionTimeoutMS = cConnectionTimeoutMS;
     mCurl = curl_easy_init();
     if ( !mCurl )
         Throw( DRM_ExternFail, "Curl : cannot init curl_easy" );
@@ -83,11 +82,11 @@ void CurlEasyPost::setPostFields( const std::string& postfields ) {
     curl_easy_setopt( mCurl, CURLOPT_POSTFIELDS, postfields.c_str() );
 }
 
-uint32_t CurlEasyPost::perform( const std::string url, std::string* response, const int32_t timeout_ms ) {
+uint32_t CurlEasyPost::perform( const std::string url, std::string* response, const int32_t timeout_sec ) {
     CURLcode res;
     uint32_t resp_code;
 
-    if ( timeout_ms <= 0 )
+    if ( timeout_sec <= 0 )
         Throw( DRM_WSTimedOut, "Did not perform HTTP request to Accelize webservice because deadline is reached." );
 
     // Configure and execute CURL command
@@ -96,8 +95,8 @@ uint32_t CurlEasyPost::perform( const std::string url, std::string* response, co
         curl_easy_setopt( mCurl, CURLOPT_HTTPHEADER, mHeaders_p );
     }
     curl_easy_setopt( mCurl, CURLOPT_WRITEDATA, response );
-    curl_easy_setopt( mCurl, CURLOPT_CONNECTTIMEOUT_MS, mConnectionTimeoutMS );
-    curl_easy_setopt( mCurl, CURLOPT_TIMEOUT_MS, timeout_ms );
+    curl_easy_setopt( mCurl, CURLOPT_CONNECTTIMEOUT, mConnectionTimeout );
+    curl_easy_setopt( mCurl, CURLOPT_TIMEOUT, timeout_sec );
     res = curl_easy_perform( mCurl );
 
     // Analyze libcurl response
@@ -117,16 +116,6 @@ uint32_t CurlEasyPost::perform( const std::string url, std::string* response, co
     curl_easy_getinfo( mCurl, CURLINFO_RESPONSE_CODE, &resp_code );
     Debug( "Received code {} from {} in {} ms", resp_code, url, getTotalTime() * 1000 );
     return resp_code;
-}
-
-uint32_t CurlEasyPost::perform( const std::string url, std::string* response,
-                                const std::chrono::steady_clock::time_point& deadline ) {
-    std::chrono::milliseconds timeout_chrono = std::chrono::duration_cast<std::chrono::milliseconds>(
-                        deadline - std::chrono::steady_clock::now() );
-    int32_t timeout_ms = timeout_chrono.count();
-    if ( timeout_ms >= (int32_t)mConnectionTimeoutMS )
-        timeout_ms = mConnectionTimeoutMS;
-    return perform( url, response, timeout_ms );
 }
 
 double CurlEasyPost::getTotalTime() {
@@ -245,16 +234,22 @@ void DrmWSClient::requestOAuth2token( const TClock::time_point deadline ) {
     // Request a new token and wait response
     CurlEasyPost req;
     req.setVerbosity( mVerbosity );
-    req.setConnectionTimeoutMS( mRequestTimeout * 1000 );
     req.setHostResolves( mHostResolvesJson );
     std::stringstream ss;
     ss << "client_id=" << mClientId << "&client_secret=" << mClientSecret;
     ss << "&grant_type=client_credentials";
     req.setPostFields( ss.str() );
 
-    Debug( "Starting OAuthentication request to {}", mOAuth2Url );
+    // Evaluate timeout with regard to the security limit
+    std::chrono::seconds timeout_chrono = std::chrono::duration_cast<std::chrono::seconds>(
+                        deadline - TClock::now() );
+    uint32_t timeout_sec = timeout_chrono.count();
+    if ( timeout_sec >= mRequestTimeout )
+        timeout_sec = mRequestTimeout;
+    // Send request and wait response
     std::string response;
-    long resp_code = req.perform( mOAuth2Url, &response, deadline );
+    Debug( "Starting OAuthentication request to {}", mOAuth2Url );
+    long resp_code = req.perform( mOAuth2Url, &response, timeout_sec );
 
     // Parse response
     std::string error_msg;
@@ -286,7 +281,6 @@ Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Val
     // Create new request
     CurlEasyPost req;
     req.setVerbosity( mVerbosity );
-    req.setConnectionTimeoutMS( mRequestTimeout * 1000 );
     req.setHostResolves( mHostResolvesJson );
     req.appendHeader( "Accept: application/vnd.accelize.v1+json" );
     req.appendHeader( "Content-Type: application/json" );
@@ -295,9 +289,15 @@ Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Val
     req.appendHeader( token_header );
     req.setPostFields( saveJsonToString( json_req ) );
 
+    // Evaluate timeout with regard to the security limit
+    std::chrono::seconds timeout_chrono = std::chrono::duration_cast<std::chrono::seconds>(
+                        deadline - TClock::now() );
+    uint32_t timeout_sec = timeout_chrono.count();
+    if ( timeout_sec >= mRequestTimeout )
+        timeout_sec = mRequestTimeout;
     // Send request and wait response
     std::string response;
-    long resp_code = req.perform( url, &response, deadline );
+    long resp_code = req.perform( url, &response, timeout_sec );
 
     // Parse response
     std::string error_msg;
