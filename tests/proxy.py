@@ -597,7 +597,6 @@ def create_app(url):
             finally:
                 context['data'].append( (start,str(datetime.now())) )
                 context['cnt'] += 1
-            return resp
 
     @app.route('/test_long_to_short_retry_switch_on_authentication/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_long_to_short_retry_switch_on_authentication():

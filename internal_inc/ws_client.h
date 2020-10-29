@@ -58,7 +58,6 @@ private:
     struct curl_slist *mHostResolveList = NULL;
     std::array<char, CURL_ERROR_SIZE> mErrBuff;
     uint32_t mConnectionTimeout = 20;   // Default timeout (in seconds) to establish connection
-    uint32_t mRequestTimeout = 30;      // Default timeout (in seconds) to perform the request
 
 public:
     static bool is_error_retryable(long resp_code) {
@@ -210,7 +209,7 @@ protected:
 class DrmWSClient {
 
     const uint32_t cTokenExpirationMargin = 60;  // In seconds
-    const uint32_t cRequestTimeout = 20;         // In seconds
+    const uint32_t cRequestTimeout = 30;         // In seconds
 
 protected:
 
@@ -227,7 +226,7 @@ protected:
     uint32_t mTokenValidityPeriod;              /// Validation period of the OAuth2 token in seconds
     uint32_t mTokenExpirationMargin;            /// OAuth2 token expiration margin in seconds
     TClock::time_point mTokenExpirationTime;    /// OAuth2 expiration time
-    uint32_t mRequestTimeout;
+    int32_t mRequestTimeout;
 
     bool isTokenValid() const;
     Json::Value requestMetering( const std::string url, const Json::Value& json_req, const TClock::time_point deadline );

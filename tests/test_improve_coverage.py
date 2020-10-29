@@ -339,6 +339,7 @@ def test_improve_coverage_detectDrmFrequencyMethod1(accelize_drm, conf_json, cre
 
 
 @pytest.mark.no_parallel
+@pytest.mark.skip
 def test_improve_coverage_perform(accelize_drm, conf_json, cred_json, async_handler, live_server):
     """
     Improve coverage of the perform function

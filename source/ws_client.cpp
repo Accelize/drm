@@ -148,7 +148,7 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
 
         Json::Value settings = JVgetOptional( conf_json, "settings", Json::objectValue );
         mRequestTimeout = JVgetOptional( settings, "ws_request_timeout",
-                        Json::uintValue, cRequestTimeout).asUInt();
+                        Json::uintValue, cRequestTimeout).asInt();
         if ( mRequestTimeout == 0 )
             Throw( DRM_BadArg, "ws_request_timeout must not be 0");
         mVerbosity = JVgetOptional( settings, "ws_verbosity",
@@ -244,7 +244,7 @@ void DrmWSClient::requestOAuth2token( const TClock::time_point deadline ) {
     // Evaluate timeout with regard to the security limit
     std::chrono::seconds timeout_chrono = std::chrono::duration_cast<std::chrono::seconds>(
                         deadline - TClock::now() );
-    uint32_t timeout_sec = timeout_chrono.count();
+    int32_t timeout_sec = timeout_chrono.count();
     if ( timeout_sec >= mRequestTimeout )
         timeout_sec = mRequestTimeout;
     // Send request and wait response
@@ -293,7 +293,7 @@ Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Val
     // Evaluate timeout with regard to the security limit
     std::chrono::seconds timeout_chrono = std::chrono::duration_cast<std::chrono::seconds>(
                         deadline - TClock::now() );
-    uint32_t timeout_sec = timeout_chrono.count();
+    int32_t timeout_sec = timeout_chrono.count();
     if ( timeout_sec >= mRequestTimeout )
         timeout_sec = mRequestTimeout;
     // Send request and wait response
