@@ -58,7 +58,7 @@ private:
     struct curl_slist *mHostResolveList = NULL;
     std::array<char, CURL_ERROR_SIZE> mErrBuff;
     uint32_t mConnectionTimeout = 20;   // Default timeout (in seconds) to establish connection
-    uint32_t mRequestTimeout = 60;      // Default timeout (in seconds) to perform the request
+    uint32_t mRequestTimeout = 30;      // Default timeout (in seconds) to perform the request
 
 public:
     static bool is_error_retryable(long resp_code) {
