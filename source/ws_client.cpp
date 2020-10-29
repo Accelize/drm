@@ -79,7 +79,7 @@ void CurlEasyPost::appendHeader( const std::string header ) {
 
 void CurlEasyPost::setPostFields( const std::string& postfields ) {
     curl_easy_setopt( mCurl, CURLOPT_POSTFIELDSIZE, postfields.size() );
-    curl_easy_setopt( mCurl, CURLOPT_POSTFIELDS, postfields.c_str() );
+    curl_easy_setopt( mCurl, CURLOPT_COPYPOSTFIELDS, postfields.c_str() );
 }
 
 uint32_t CurlEasyPost::perform( const std::string url, std::string* response, const int32_t timeout_sec ) {
@@ -236,8 +236,9 @@ void DrmWSClient::requestOAuth2token( const TClock::time_point deadline ) {
     req.setVerbosity( mVerbosity );
     req.setHostResolves( mHostResolvesJson );
     std::stringstream ss;
-    ss << "client_id=" << mClientId << "&client_secret=" << mClientSecret;
-    ss << "&grant_type=client_credentials";
+    ss << "grant_type=client_credentials";
+    ss << "&client_id=" << mClientId;
+    ss << "&client_secret=" << mClientSecret;
     req.setPostFields( ss.str() );
 
     // Evaluate timeout with regard to the security limit
