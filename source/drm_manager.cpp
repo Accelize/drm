@@ -1646,7 +1646,7 @@ protected:
         }
         int ret = readDrmAddress( REG_FREQ_DETECTION_VERSION, reg );
         if ( ret != 0 ) {
-            Unreachable( "Failed to read DRM Ctrl frequency detection version register, errcode = {}. ", ret ); //LCOV_EXCL_LINE
+            Debug( "Failed to read DRM Ctrl frequency detection version register, errcode = {}. ", ret ); //LCOV_EXCL_LINE
         }
         if ( reg == FREQ_DETECTION_VERSION_EXPECTED ) {
             // Use Method 1

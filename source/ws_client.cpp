@@ -231,7 +231,7 @@ void DrmWSClient::requestOAuth2token( const TClock::time_point deadline ) {
         }
     }
 
-    // Request a new token and wait response
+    // Setup a request to get a new token
     CurlEasyPost req;
     req.setVerbosity( mVerbosity );
     req.setHostResolves( mHostResolvesJson );
