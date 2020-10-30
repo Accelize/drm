@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 from flask import request as _request
 from dateutil import parser
 from math import ceil
+from itertools import groupby
 
 from tests.conftest import wait_func_true
 from tests.proxy import get_context, set_context
@@ -111,15 +112,9 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
     async_cb.reset()
 
     expires_in = 1
-    retryShortPeriod = 3
+    retryShortPeriod = 2
     retryLongPeriod = 10
     timeoutSecond = 25
-    nb_long_retry = int(timeoutSecond / retryLongPeriod) - 1
-    if timeoutSecond % retryLongPeriod == 0:
-        nb_long_retry = int(timeoutSecond / retryLongPeriod) - 1
-    else:
-        nb_long_retry = int(timeoutSecond / retryLongPeriod)
-    nb_short_retry = int((timeoutSecond-nb_long_retry*retryLongPeriod) / retryShortPeriod) + 1
 
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + request.function.__name__
@@ -160,16 +155,18 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
     data_list = context['data']
     data = data_list.pop(0)
     data = data_list.pop(-1)
-    assert len(data_list) == nb_long_retry + nb_short_retry
+    assert len(data_list) >= 2
     data = data_list.pop(0)
     prev_lic = parser.parse(data[1])
+    delta_list = list()
     for i, (start, end) in enumerate(data_list):
         lic_delta = int((parser.parse(start) - prev_lic).total_seconds())
         prev_lic = parser.parse(end)
-        if i < nb_long_retry:
-            assert (retryLongPeriod-1) <= lic_delta <= (retryLongPeriod+1)
+        delta_list.append(lic_delta)
+        if lic_delta > retryShortPeriod:
+            assert (retryLongPeriod-1) <= lic_delta <= retryLongPeriod)
         else:
-            assert (retryShortPeriod-1) <= lic_delta <= (retryShortPeriod+1)
+            assert (retryShortPeriod-1) <= lic_delta <= retryShortPeriod)
 
 
 @pytest.mark.no_parallel
