@@ -1090,7 +1090,7 @@ protected:
 
     void loadDerivedProduct( const std::string& derivedProductString ) {
         if ( derivedProductString == mDerivedProduct ) {
-            Debug( "No new derived product to load" );
+            Debug( "No derived product to load" );
             return;
         }
         std::vector<std::string> derived_product_component = split( derivedProductString, '/' );
