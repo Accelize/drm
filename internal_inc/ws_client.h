@@ -128,9 +128,9 @@ public:
               || res == CURLE_COULDNT_RESOLVE_HOST
               || res == CURLE_COULDNT_CONNECT
               || res == CURLE_OPERATION_TIMEDOUT ) {
-                Throw( DRM_WSMayRetry, "libcurl failed to perform HTTP request to Accelize webservice ({}) : {}", curl_easy_strerror( res ), mErrBuff.data() );  //LCOV_EXCL_LINE
+                Throw( DRM_WSMayRetry, "Failed to perform HTTP request to Accelize webservice ({}) : {}", curl_easy_strerror( res ), mErrBuff.data() );  //LCOV_EXCL_LINE
             } else {
-                Throw( DRM_ExternFail, "libcurl failed to perform HTTP request to Accelize webservice ({}) : {}", curl_easy_strerror( res ), mErrBuff.data() );  //LCOV_EXCL_LINE
+                Throw( DRM_ExternFail, "Failed to perform HTTP request to Accelize webservice ({}) : {}", curl_easy_strerror( res ), mErrBuff.data() );  //LCOV_EXCL_LINE
             }
         }
         curl_easy_getinfo( mCurl, CURLINFO_RESPONSE_CODE, &resp_code );
@@ -175,10 +175,10 @@ public:
               || res == CURLE_COULDNT_RESOLVE_HOST
               || res == CURLE_COULDNT_CONNECT
               || res == CURLE_OPERATION_TIMEDOUT ) {
-                Throw( DRM_WSMayRetry, "libcurl failed to perform HTTP request to Accelize webservice ({}) : {}",
+                Throw( DRM_WSMayRetry, "Failed to perform HTTP request to Accelize webservice ({}) : {}",
                         curl_easy_strerror( res ), mErrBuff.data() );
             } else {
-                Throw( DRM_ExternFail, "libcurl failed to perform HTTP request to Accelize webservice ({}) : {}",
+                Throw( DRM_ExternFail, "Failed to perform HTTP request to Accelize webservice ({}) : {}",
                         curl_easy_strerror( res ), mErrBuff.data() );
             }
         }

@@ -916,7 +916,7 @@ def create_app(url):
         with lock:
             sleep_s = context['sleep']
         sleep( sleep_s)
-        return ('', 204)
+        return ('This is the expected behavior', 408)
 
     @app.route('/test_timeout/auth/metering/health/', methods=['GET', 'POST'])
     def health__test_timeout():

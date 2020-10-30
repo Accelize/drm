@@ -19,8 +19,8 @@ def test_connection_timeout(accelize_drm, conf_json, cred_json, async_handler,
     async_cb = async_handler.create()
     async_cb.reset()
     conf_json.reset()
-    connection_timeout = 7
-    request_timeout = 11
+    connection_timeout = 6
+    request_timeout = 15
     conf_json['settings']['ws_api_retry_duration'] = 0 # Disable retry
     conf_json['settings']['ws_connection_timeout'] = connection_timeout
     conf_json['settings']['ws_request_timeout'] = request_timeout
@@ -33,8 +33,8 @@ def test_connection_timeout(accelize_drm, conf_json, cred_json, async_handler,
         driver.write_register_callback,
         async_cb.callback
     )
-    assert not drm_manager.get('ws_connection_timeout') == connection_timeout
-    assert not drm_manager.get('ws_request_timeout') == request_timeout
+    assert drm_manager.get('ws_connection_timeout') == connection_timeout
+    assert drm_manager.get('ws_request_timeout') == request_timeout
 
     context = {'sleep': connection_timeout + 1}
     set_context(context)
@@ -45,9 +45,9 @@ def test_connection_timeout(accelize_drm, conf_json, cred_json, async_handler,
         drm_manager.activate()
     end = datetime.now()
     del drm_manager
-    assert connection_timeout - 1 <= (end - start).total_seconds() <= connection_timeout
-    assert search(r'\[\s*critical\s*\]\s*\d+\s*,\s*\[errCode=\d+\]\s*Metering Web Service error 408',
-            str(excinfo), IGNORECASE)
+    assert connection_timeout - 1 <= (end - start).total_seconds() <= connection_timeout + 1
+    assert search(r'\[errCode=\d+\]\s*Metering Web Service error 408:\s* This is the expected behavior',
+            str(excinfo.value), IGNORECASE)
     async_cb.assert_NoError()
 
 
@@ -60,8 +60,8 @@ def test_request_timeout(accelize_drm, conf_json, cred_json, async_handler,
     async_cb = async_handler.create()
     async_cb.reset()
     conf_json.reset()
-    connection_timeout = 11
-    request_timeout = 7
+    connection_timeout = 15
+    request_timeout = 6
     conf_json['settings']['ws_api_retry_duration'] = 0 # Disable retry
     conf_json['settings']['ws_connection_timeout'] = connection_timeout
     conf_json['settings']['ws_request_timeout'] = request_timeout
@@ -74,8 +74,8 @@ def test_request_timeout(accelize_drm, conf_json, cred_json, async_handler,
         driver.write_register_callback,
         async_cb.callback
     )
-    assert not drm_manager.get('ws_connection_timeout') == connection_timeout
-    assert not drm_manager.get('ws_request_timeout') == request_timeout
+    assert drm_manager.get('ws_connection_timeout') == connection_timeout
+    assert drm_manager.get('ws_request_timeout') == request_timeout
 
     context = {'sleep': request_timeout + 1}
     set_context(context)
@@ -86,8 +86,8 @@ def test_request_timeout(accelize_drm, conf_json, cred_json, async_handler,
         drm_manager.activate()
     end = datetime.now()
     del drm_manager
-    assert request_timeout - 1 <= (end - start).total_seconds() <= request_timeout
-    assert search(r'\[\s*critical\s*\]\s*\d+\s*,\s*\[errCode=\d+\]\s*Metering Web Service error 408',
-            str(excinfo), IGNORECASE)
+    assert request_timeout - 1 <= (end - start).total_seconds() <= request_timeout + 1
+    assert search(r'\[errCode=\d+\]\s*Failed to perform HTTP request to Accelize webservice \(Timeout was reached\) : Operation timed out after 6\d+ milliseconds',
+            str(excinfo.value), IGNORECASE)
     async_cb.assert_NoError()
 
