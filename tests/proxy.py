@@ -902,6 +902,27 @@ def create_app(url):
         return redirect(request.url_root + '/auth/metering/health/', code=307)
 
     ##############################################################################
+    # test_ws_timeout.py
+
+    # test_connection_timeout and test_request_timeout functions
+    @app.route('/test_timeout/o/token/', methods=['GET', 'POST'])
+    def otoken__test_timeout():
+        return redirect(request.url_root + '/o/token/', code=307)
+
+    @app.route('/test_timeout/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_timeout():
+        global context, lock
+        start = str(datetime.now())
+        with lock:
+            sleep_s = context['sleep']
+        sleep( sleep_s)
+        return ('', 204)
+
+    @app.route('/test_timeout/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_timeout():
+        return redirect(request.url_root + '/auth/metering/health/', code=307)
+
+    ##############################################################################
 
     return app
 

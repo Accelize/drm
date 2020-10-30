@@ -57,7 +57,7 @@ private:
     struct curl_slist *mHeaders_p = NULL;
     struct curl_slist *mHostResolveList = NULL;
     std::array<char, CURL_ERROR_SIZE> mErrBuff;
-    uint32_t mConnectionTimeout = 15;   // Default timeout (in seconds) to establish connection
+    int32_t mConnectionTimeout;   // Default timeout (in seconds) to establish connection
 
 public:
     static bool is_error_retryable(long resp_code) {
@@ -92,7 +92,7 @@ public:
         return DRM_WSError;
     }
 
-    CurlEasyPost();
+    CurlEasyPost( const uint32_t& connection_timeout );
     ~CurlEasyPost();
 
     double getTotalTime();
@@ -119,7 +119,6 @@ public:
             curl_easy_setopt( mCurl, CURLOPT_HTTPHEADER, mHeaders_p );
         }
         curl_easy_setopt( mCurl, CURLOPT_WRITEDATA, (void*)&response );
-        curl_easy_setopt( mCurl, CURLOPT_CONNECTTIMEOUT, mConnectionTimeout );
         curl_easy_setopt( mCurl, CURLOPT_TIMEOUT_MS, timeout_ms );
         CURLcode res = curl_easy_perform( mCurl );
 
@@ -167,7 +166,6 @@ public:
         }
         curl_easy_setopt( mCurl, CURLOPT_CUSTOMREQUEST, "PUT");
         curl_easy_setopt( mCurl, CURLOPT_WRITEDATA, (void*)&response );
-        curl_easy_setopt( mCurl, CURLOPT_CONNECTTIMEOUT, mConnectionTimeout );
         curl_easy_setopt( mCurl, CURLOPT_TIMEOUT_MS, timeout_ms );
         CURLcode res = curl_easy_perform( mCurl );
 
@@ -209,7 +207,8 @@ protected:
 class DrmWSClient {
 
     const uint32_t cTokenExpirationMargin = 60;  // In seconds
-    const uint32_t cRequestTimeout = 30;         // In seconds
+    const int32_t cRequestTimeout = 30;          // In seconds
+    const int32_t cConnectionTimeout = 15;       // In seconds
 
 protected:
 
@@ -227,6 +226,7 @@ protected:
     uint32_t mTokenExpirationMargin;            /// OAuth2 token expiration margin in seconds
     TClock::time_point mTokenExpirationTime;    /// OAuth2 expiration time
     int32_t mRequestTimeout;                    /// Maximum period in seconds for a request to complete
+    int32_t mConnectionTimeout;                 /// Maximum period in seconds for the client to connect the server
 
     bool isTokenValid() const;
     Json::Value requestMetering( const std::string url, const Json::Value& json_req, int32_t timeout_sec );
@@ -240,7 +240,8 @@ public:
     uint32_t getTokenValidity() const { return mTokenValidityPeriod; }
     int32_t getTokenTimeLeft() const;
     std::string getTokenString() const { return mOAuth2Token; }
-    uint32_t getRequestTimeout() const { return mRequestTimeout; }
+    int32_t getRequestTimeout() const { return mRequestTimeout; }
+    int32_t getConnectionTimeout() const { return mConnectionTimeout; }
 
     void requestOAuth2token( int32_t timeout_sec );
 

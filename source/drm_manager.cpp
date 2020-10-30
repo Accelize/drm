@@ -1898,7 +1898,7 @@ protected:
             Debug( "Starting background thread which checks health" );
             try {
                 uint32_t retry_sleep = mWSRetryPeriodShort;
-                uint32_t retry_timeout = getDrmWSClient().getRequestTimeout();
+                int32_t retry_timeout = getDrmWSClient().getRequestTimeout();
                 mHealthCounter = 0;
 
                 /// Starting async metering post loop
@@ -2609,6 +2609,12 @@ public:
                         json_value[key_str] = mDerivedProduct;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                mDerivedProduct );
+                        break;
+                    }
+                    case ParameterKey::ws_connection_timeout: {
+                        json_value[key_str] = getDrmWSClient().getConnectionTimeout();
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                               getDrmWSClient().getConnectionTimeout() );
                         break;
                     }
                     case ParameterKey::ParameterKeyCount: {

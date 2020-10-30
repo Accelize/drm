@@ -29,7 +29,7 @@ namespace Accelize {
 namespace DRM {
 
 
-CurlEasyPost::CurlEasyPost() {
+CurlEasyPost::CurlEasyPost( const uint32_t& connection_timeout ) {
     mCurl = curl_easy_init();
     if ( !mCurl )
         Throw( DRM_ExternFail, "Curl : cannot init curl_easy" );
@@ -38,6 +38,7 @@ CurlEasyPost::CurlEasyPost() {
     curl_easy_setopt( mCurl, CURLOPT_FOLLOWLOCATION, 1L );
     curl_easy_setopt( mCurl, CURLOPT_NOPROGRESS, 1L);
     curl_easy_setopt( mCurl, CURLOPT_TCP_KEEPALIVE, 1L);
+    curl_easy_setopt( mCurl, CURLOPT_CONNECTTIMEOUT, connection_timeout );
 }
 
 CurlEasyPost::~CurlEasyPost() {
@@ -95,7 +96,6 @@ uint32_t CurlEasyPost::perform( const std::string url, std::string* response, co
         curl_easy_setopt( mCurl, CURLOPT_HTTPHEADER, mHeaders_p );
     }
     curl_easy_setopt( mCurl, CURLOPT_WRITEDATA, response );
-    curl_easy_setopt( mCurl, CURLOPT_CONNECTTIMEOUT, mConnectionTimeout );
     curl_easy_setopt( mCurl, CURLOPT_TIMEOUT, timeout_sec );
     res = curl_easy_perform( mCurl );
 
@@ -151,6 +151,12 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
                         Json::uintValue, cRequestTimeout).asInt();
         if ( mRequestTimeout == 0 )
             Throw( DRM_BadArg, "ws_request_timeout must not be 0");
+
+        mConnectionTimeout = JVgetOptional( settings, "ws_connection_timeout",
+                        Json::uintValue, cConnectionTimeout).asInt();
+        if ( mConnectionTimeout == 0 )
+            Throw( DRM_BadArg, "ws_connection_timeout must not be 0");
+
         mVerbosity = JVgetOptional( settings, "ws_verbosity",
                         Json::uintValue, 0).asUInt();
 
@@ -232,7 +238,7 @@ void DrmWSClient::requestOAuth2token( int32_t timeout_sec ) {
     }
 
     // Setup a request to get a new token
-    CurlEasyPost req;
+    CurlEasyPost req( mConnectionTimeout );
     req.setVerbosity( mVerbosity );
     req.setHostResolves( mHostResolvesJson );
     std::stringstream ss;
@@ -276,7 +282,7 @@ Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Val
                                           int32_t timeout_sec ) {
 
     // Create new request
-    CurlEasyPost req;
+    CurlEasyPost req( mConnectionTimeout );
     req.setVerbosity( mVerbosity );
     req.setHostResolves( mHostResolvesJson );
     req.appendHeader( "Accept: application/vnd.accelize.v1+json" );
