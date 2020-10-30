@@ -280,7 +280,6 @@ def test_improve_coverage_getDesignInfo(accelize_drm, conf_json, cred_json, asyn
     basic_log_file.remove()
 
 
-@pytest.mark.skip
 def test_improve_coverage_setLicense(accelize_drm, conf_json, cred_json, async_handler,
                         live_server, request):
     """
