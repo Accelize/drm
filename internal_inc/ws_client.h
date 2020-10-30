@@ -57,11 +57,9 @@ private:
     struct curl_slist *mHeaders_p = NULL;
     struct curl_slist *mHostResolveList = NULL;
     std::array<char, CURL_ERROR_SIZE> mErrBuff;
-    uint32_t mConnectionTimeoutMS;                  // Request timeout in milliseconds
+    uint32_t mConnectionTimeout = 15;   // Default timeout (in seconds) to establish connection
 
 public:
-    const uint32_t cConnectionTimeoutMS = 30000;    // Timeout default value in milliseconds
-
     static bool is_error_retryable(long resp_code) {
         return        resp_code == 408 // Request Timeout
                    || resp_code == 429 // Too Many Requests
@@ -98,16 +96,13 @@ public:
     ~CurlEasyPost();
 
     double getTotalTime();
-    uint32_t getConnectionTimeoutMS() const { return mConnectionTimeoutMS; }
 
     void setVerbosity( const uint32_t verbosity );
     void setHostResolves( const Json::Value& host_json );
-    void setConnectionTimeoutMS( const uint32_t timeoutMS ) { mConnectionTimeoutMS = timeoutMS; }
 
     void appendHeader( const std::string header );
     void setPostFields( const std::string& postfields );
 
-    uint32_t perform( const std::string url, std::string* resp, const std::chrono::steady_clock::time_point& deadline );
     uint32_t perform( const std::string url, std::string* resp, const int32_t timeout_ms );
 
     template<class T>
@@ -115,15 +110,16 @@ public:
         T response;
         uint32_t resp_code;
 
+        if ( timeout_ms <= 0 )
+            Throw( DRM_WSTimedOut, "Did not perform HTTP request to Accelize webservice because deadline is reached." );
+
         // Configure and execute CURL command
         curl_easy_setopt( mCurl, CURLOPT_URL, url.c_str() );
         if ( mHeaders_p ) {
             curl_easy_setopt( mCurl, CURLOPT_HTTPHEADER, mHeaders_p );
         }
         curl_easy_setopt( mCurl, CURLOPT_WRITEDATA, (void*)&response );
-        curl_easy_setopt( mCurl, CURLOPT_CONNECTTIMEOUT_MS, mConnectionTimeoutMS );
-        if ( timeout_ms <= 0 )
-            Throw( DRM_WSTimedOut, "Did not perform HTTP request to Accelize webservice because deadline is reached." );
+        curl_easy_setopt( mCurl, CURLOPT_CONNECTTIMEOUT, mConnectionTimeout );
         curl_easy_setopt( mCurl, CURLOPT_TIMEOUT_MS, timeout_ms );
         CURLcode res = curl_easy_perform( mCurl );
 
@@ -171,7 +167,7 @@ public:
         }
         curl_easy_setopt( mCurl, CURLOPT_CUSTOMREQUEST, "PUT");
         curl_easy_setopt( mCurl, CURLOPT_WRITEDATA, (void*)&response );
-        curl_easy_setopt( mCurl, CURLOPT_CONNECTTIMEOUT_MS, mConnectionTimeoutMS );
+        curl_easy_setopt( mCurl, CURLOPT_CONNECTTIMEOUT, mConnectionTimeout );
         curl_easy_setopt( mCurl, CURLOPT_TIMEOUT_MS, timeout_ms );
         CURLcode res = curl_easy_perform( mCurl );
 
@@ -213,7 +209,7 @@ protected:
 class DrmWSClient {
 
     const uint32_t cTokenExpirationMargin = 60;  // In seconds
-    const uint32_t cRequestTimeout = 20;         // In seconds
+    const uint32_t cRequestTimeout = 30;         // In seconds
 
 protected:
 
@@ -230,10 +226,10 @@ protected:
     uint32_t mTokenValidityPeriod;              /// Validation period of the OAuth2 token in seconds
     uint32_t mTokenExpirationMargin;            /// OAuth2 token expiration margin in seconds
     TClock::time_point mTokenExpirationTime;    /// OAuth2 expiration time
-    uint32_t mRequestTimeout;
+    int32_t mRequestTimeout;                    /// Maximum period in seconds for a request to complete
 
     bool isTokenValid() const;
-    Json::Value requestMetering( const std::string url, const Json::Value& json_req, const TClock::time_point deadline );
+    Json::Value requestMetering( const std::string url, const Json::Value& json_req, int32_t timeout_sec );
 
 public:
     DrmWSClient(const std::string &conf_file_path, const std::string &cred_file_path);
@@ -246,10 +242,10 @@ public:
     std::string getTokenString() const { return mOAuth2Token; }
     uint32_t getRequestTimeout() const { return mRequestTimeout; }
 
-    void requestOAuth2token( const TClock::time_point deadline );
+    void requestOAuth2token( int32_t timeout_sec );
 
-    Json::Value requestLicense( const Json::Value& json_req, const TClock::time_point deadline );
-    Json::Value requestHealth( const Json::Value& json_req, const TClock::time_point deadline );
+    Json::Value requestLicense( const Json::Value& json_req, int32_t timeout_sec );
+    Json::Value requestHealth( const Json::Value& json_req, int32_t timeout_sec );
 
 };
 

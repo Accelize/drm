@@ -348,7 +348,7 @@ def test_improve_coverage_perform(accelize_drm, conf_json, cred_json, async_hand
     async_cb.reset()
     conf_json['licensing']['url'] = 'http://100.100.100.100'
     conf_json['settings']['ws_api_retry_duration'] = 0
-    conf_json['settings']['ws_request_timeout'] = 1
+    conf_json['settings']['ws_request_timeout'] = 5
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(

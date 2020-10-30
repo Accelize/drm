@@ -65,7 +65,6 @@ Json::Value Aws::get_metadata() {
 
     // Get token
     CurlEasyPost tokenReq;
-    tokenReq.setConnectionTimeoutMS( mTimeOutMS );
     tokenReq.setVerbosity( mVerbosity );
     tokenReq.appendHeader( "X-aws-ec2-metadata-token-ttl-seconds: 21600" );
     token = tokenReq.perform_put<std::string>( "http://169.254.169.254/latest/api/token", mTimeOutMS );
@@ -73,7 +72,6 @@ Json::Value Aws::get_metadata() {
     // Collect AWS information
     CurlEasyPost req;
     req.setVerbosity( mVerbosity );
-    req.setConnectionTimeoutMS( mTimeOutMS );
     std::string header = fmt::format("X-aws-ec2-metadata-token: {}", token);
     req.appendHeader( header );
     std::string base_url("http://169.254.169.254/latest");
@@ -95,7 +93,6 @@ Json::Value Alibaba::get_metadata() {
     Json::Value metadata = Json::nullValue;
     CurlEasyPost req;
     req.setVerbosity( mVerbosity );
-    req.setConnectionTimeoutMS( mTimeOutMS );
     // Collect Alibaba information
     std::string base_url("http://100.100.100.200/latest/meta-data");
     metadata["instance_id"] = req.perform_get<std::string>( fmt::format( "{}/instance-id", base_url ), mTimeOutMS );
