@@ -182,12 +182,6 @@ def test_long_to_short_retry_switch_on_license(accelize_drm, conf_json, cred_jso
     retryLongPeriod = 10
     timeoutSecond = 25
 
-    if timeoutSecond % retryLongPeriod == 0:
-        nb_long_retry = int(timeoutSecond / retryLongPeriod) - 1
-    else:
-        nb_long_retry = int(timeoutSecond / retryLongPeriod)
-    nb_short_retry = int((timeoutSecond-nb_long_retry*retryLongPeriod) / retryShortPeriod) + 1
-
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json['settings']['ws_retry_period_short'] = retryShortPeriod
@@ -231,7 +225,7 @@ def test_long_to_short_retry_switch_on_license(accelize_drm, conf_json, cred_jso
         assert type == 'running'
         lic_delta = int((parser.parse(start) - prev_lic).total_seconds())
         prev_lic = parser.parse(end)
-        if lic_delta > retryLongPeriod:
+        if lic_delta > retryShortPeriod:
             assert (retryLongPeriod-1) <= lic_delta <= retryLongPeriod
         else:
             assert (retryShortPeriod-1) <= lic_delta <= retryShortPeriod
@@ -287,7 +281,6 @@ def test_api_retry_on_lost_connection(accelize_drm, conf_json, cred_json, async_
     assert sorted(list(attempts_list)) == list(range(1,nb_attempts + 1))
     # Check time between each call
     data = get_context()['data']
-    print('data=', data)
     assert len(data) == nb_attempts_expected
     prev_time = parser.parse(data.pop(0))
     for time in data:
@@ -313,7 +306,8 @@ def test_thread_retry_on_lost_connection(accelize_drm, conf_json, cred_json, asy
     retryLongPeriod = 20
     licDuration = 60
     requestTimeout = 5
-    nb_long_retry = ceil((licDuration - retryLongPeriod)/(retryLongPeriod + requestTimeout))
+
+    nb_long_retry = ceil((licDuration - retryLongPeriod - 2*retryShortPeriod) / (retryLongPeriod + requestTimeout))
     nb_short_retry = ceil((licDuration - nb_long_retry*(retryLongPeriod + requestTimeout)) / (retryShortPeriod + requestTimeout))
     nb_retry = nb_long_retry + nb_short_retry
 
