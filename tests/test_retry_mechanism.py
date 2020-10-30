@@ -112,7 +112,7 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
     async_cb.reset()
 
     expires_in = 1
-    retryShortPeriod = 2
+    retryShortPeriod = 3
     retryLongPeriod = 10
     timeoutSecond = 25
 
@@ -155,18 +155,16 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
     data_list = context['data']
     data = data_list.pop(0)
     data = data_list.pop(-1)
-    assert len(data_list) >= 2
+    assert len(data_list) >= 3
     data = data_list.pop(0)
     prev_lic = parser.parse(data[1])
-    delta_list = list()
-    for i, (start, end) in enumerate(data_list):
+    for start, end in data_list:
         lic_delta = int((parser.parse(start) - prev_lic).total_seconds())
         prev_lic = parser.parse(end)
-        delta_list.append(lic_delta)
         if lic_delta > retryShortPeriod:
-            assert (retryLongPeriod-1) <= lic_delta <= retryLongPeriod)
+            assert (retryLongPeriod-1) <= lic_delta <= retryLongPeriod
         else:
-            assert (retryShortPeriod-1) <= lic_delta <= retryShortPeriod)
+            assert (retryShortPeriod-1) <= lic_delta <= retryShortPeriod
 
 
 @pytest.mark.no_parallel
@@ -225,18 +223,18 @@ def test_long_to_short_retry_switch_on_license(accelize_drm, conf_json, cred_jso
     data_list = context['data']
     data = data_list.pop(0)
     data = data_list.pop(-1)
-    assert len(data_list) == nb_long_retry + nb_short_retry
+    assert len(data_list) >= 3
     data = data_list.pop(0)
     assert data[0] == 'running'
     prev_lic = parser.parse(data[2])
-    for i, (type, start, end) in enumerate(data_list):
+    for type, start, end in data_list:
         assert type == 'running'
         lic_delta = int((parser.parse(start) - prev_lic).total_seconds())
         prev_lic = parser.parse(end)
-        if i < nb_long_retry:
-            assert (retryLongPeriod-1) <= lic_delta <= (retryLongPeriod+1)
+        if lic_delta > retryLongPeriod:
+            assert (retryLongPeriod-1) <= lic_delta <= retryLongPeriod
         else:
-            assert (retryShortPeriod-1) <= lic_delta <= (retryShortPeriod+1)
+            assert (retryShortPeriod-1) <= lic_delta <= retryShortPeriod
 
 
 @pytest.mark.no_parallel
