@@ -87,7 +87,7 @@ uint32_t CurlEasyPost::perform( const std::string url, std::string* response, co
     uint32_t resp_code;
 
     if ( timeout_sec <= 0 )
-        Throw( DRM_WSTimedOut, "Did not perform HTTP request to Accelize webservice because deadline is reached." );
+        Throw( DRM_WSTimedOut, "Did not perform HTTP request to Accelize webservice because timeout is reached." );
 
     // Configure and execute CURL command
     curl_easy_setopt( mCurl, CURLOPT_URL, url.c_str() );
@@ -221,7 +221,7 @@ bool DrmWSClient::isTokenValid() const {
     }
 }
 
-void DrmWSClient::requestOAuth2token( const TClock::time_point deadline ) {
+void DrmWSClient::requestOAuth2token( int32_t timeout_sec ) {
 
     // Check if a token exists
     if ( !mOAuth2Token.empty() ) {
@@ -241,14 +241,10 @@ void DrmWSClient::requestOAuth2token( const TClock::time_point deadline ) {
     ss << "&client_secret=" << mClientSecret;
     req.setPostFields( ss.str() );
 
-    // Evaluate timeout with regard to the security limit
-    std::chrono::seconds timeout_chrono = std::chrono::duration_cast<std::chrono::seconds>(
-                        deadline - TClock::now() );
-    int32_t timeout_sec = timeout_chrono.count();
-    if ( timeout_sec >= mRequestTimeout )
-        timeout_sec = mRequestTimeout;
     // Send request and wait response
     std::string response;
+    if ( timeout_sec >= mRequestTimeout )
+        timeout_sec = mRequestTimeout;
     Debug( "Starting OAuthentication request to {}", mOAuth2Url );
     long resp_code = req.perform( mOAuth2Url, &response, timeout_sec );
 
@@ -277,7 +273,7 @@ void DrmWSClient::requestOAuth2token( const TClock::time_point deadline ) {
 }
 
 Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Value& json_req,
-                                        const TClock::time_point deadline ) {
+                                          int32_t timeout_sec ) {
 
     // Create new request
     CurlEasyPost req;
@@ -291,9 +287,6 @@ Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Val
     req.setPostFields( saveJsonToString( json_req ) );
 
     // Evaluate timeout with regard to the security limit
-    std::chrono::seconds timeout_chrono = std::chrono::duration_cast<std::chrono::seconds>(
-                        deadline - TClock::now() );
-    int32_t timeout_sec = timeout_chrono.count();
     if ( timeout_sec >= mRequestTimeout )
         timeout_sec = mRequestTimeout;
     // Send request and wait response
@@ -327,14 +320,14 @@ Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Val
     return json_resp;
 }
 
-Json::Value DrmWSClient::requestLicense( const Json::Value& json_req, const TClock::time_point deadline ) {
+Json::Value DrmWSClient::requestLicense( const Json::Value& json_req, int32_t timeout_sec ) {
     Debug( "Starting License request to {} with data:\n{}", mLicenseUrl, json_req.toStyledString() );
-    return requestMetering( mLicenseUrl, json_req, deadline );
+    return requestMetering( mLicenseUrl, json_req, timeout_sec );
 }
 
-Json::Value DrmWSClient::requestHealth( const Json::Value& json_req, const TClock::time_point deadline ) {
+Json::Value DrmWSClient::requestHealth( const Json::Value& json_req, int32_t timeout_sec ) {
     Debug( "Starting Health request to {} with data:\n{}", mHealthUrl, json_req.toStyledString() );
-    return requestMetering( mHealthUrl, json_req, deadline );
+    return requestMetering( mHealthUrl, json_req, timeout_sec );
 }
 
 }

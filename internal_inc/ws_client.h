@@ -57,7 +57,7 @@ private:
     struct curl_slist *mHeaders_p = NULL;
     struct curl_slist *mHostResolveList = NULL;
     std::array<char, CURL_ERROR_SIZE> mErrBuff;
-    uint32_t mConnectionTimeout = 20;   // Default timeout (in seconds) to establish connection
+    uint32_t mConnectionTimeout = 15;   // Default timeout (in seconds) to establish connection
 
 public:
     static bool is_error_retryable(long resp_code) {
@@ -226,10 +226,10 @@ protected:
     uint32_t mTokenValidityPeriod;              /// Validation period of the OAuth2 token in seconds
     uint32_t mTokenExpirationMargin;            /// OAuth2 token expiration margin in seconds
     TClock::time_point mTokenExpirationTime;    /// OAuth2 expiration time
-    int32_t mRequestTimeout;
+    int32_t mRequestTimeout;                    /// Maximum period in seconds for a request to complete
 
     bool isTokenValid() const;
-    Json::Value requestMetering( const std::string url, const Json::Value& json_req, const TClock::time_point deadline );
+    Json::Value requestMetering( const std::string url, const Json::Value& json_req, int32_t timeout_sec );
 
 public:
     DrmWSClient(const std::string &conf_file_path, const std::string &cred_file_path);
@@ -242,10 +242,10 @@ public:
     std::string getTokenString() const { return mOAuth2Token; }
     uint32_t getRequestTimeout() const { return mRequestTimeout; }
 
-    void requestOAuth2token( const TClock::time_point deadline );
+    void requestOAuth2token( int32_t timeout_sec );
 
-    Json::Value requestLicense( const Json::Value& json_req, const TClock::time_point deadline );
-    Json::Value requestHealth( const Json::Value& json_req, const TClock::time_point deadline );
+    Json::Value requestLicense( const Json::Value& json_req, int32_t timeout_sec );
+    Json::Value requestHealth( const Json::Value& json_req, int32_t timeout_sec );
 
 };
 

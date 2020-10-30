@@ -1277,7 +1277,7 @@ protected:
     }
 
     Json::Value getLicense( Json::Value& request_json, const uint32_t& timeout,
-            int32_t short_retry_period = -1, int32_t long_retry_period = -1 ) {
+                            int32_t short_retry_period = -1, int32_t long_retry_period = -1 ) {
         TClock::time_point deadline;
         if ( timeout == 0 ) {
             deadline = TClock::now() + std::chrono::seconds( getDrmWSClient().getRequestTimeout() );
@@ -1290,21 +1290,24 @@ protected:
     }
 
     Json::Value getLicense( Json::Value& request_json, const TClock::time_point& deadline,
-            int32_t short_retry_period = -1, int32_t long_retry_period = -1 ) {
-
+                        int32_t short_retry_period = -1, int32_t long_retry_period = -1 ) {
+        TClock::duration wait_duration;
         TClock::duration long_duration = std::chrono::seconds( long_retry_period );
         TClock::duration short_duration = std::chrono::seconds( short_retry_period );
-
-        TClock::duration wait_duration;
         bool token_valid(false);
         uint32_t oauth_attempt = 0;
         uint32_t lic_attempt = 0;
+        int32_t timeout_sec;
+        std::chrono::seconds timeout_chrono;
 
         while ( 1 ) {
             token_valid = false;
             // Get valid OAUth2 token
             try {
-                getDrmWSClient().requestOAuth2token( deadline );
+                timeout_chrono = std::chrono::duration_cast<std::chrono::seconds>(
+                                 deadline - TClock::now() );
+                timeout_sec = timeout_chrono.count();
+                getDrmWSClient().requestOAuth2token( timeout_sec );
                 token_valid = true;
             } catch ( const Exception& e ) {
                 lic_attempt = 0;
@@ -1322,14 +1325,12 @@ protected:
                     Debug( "OAuthentication retry mechanism is disabled" );
                     throw;
                 }
-                if ( long_retry_period == -1 ) {
+                if ( long_retry_period == -1 )
                      wait_duration = short_duration;
-                } else {
-                    if ( ( deadline - TClock::now() ) <= long_duration )
-                        wait_duration = short_duration;
-                    else
-                        wait_duration = long_duration;
-                }
+                else if ( ( deadline - TClock::now() ) <= ( long_duration + 2*short_duration )  )
+                    wait_duration = short_duration;
+                else
+                    wait_duration = long_duration;
                 Warning( "Attempt #{} to obtain a new OAuth2 token failed with message: {}. New attempt planned in {} seconds",
                         oauth_attempt, e.what(), wait_duration.count()/1000000000 );
                 // Wait a bit before retrying
@@ -1345,7 +1346,10 @@ protected:
                 // Add settings parameters
                 request_json["settings"] = buildSettingsNode();
                 // Send license request and wait for the answer
-                return getDrmWSClient().requestLicense( request_json, deadline );
+                timeout_chrono = std::chrono::duration_cast<std::chrono::seconds>(
+                                 deadline - TClock::now() );
+                timeout_sec = timeout_chrono.count();
+                return getDrmWSClient().requestLicense( request_json, timeout_sec );
             } catch ( const Exception& e ) {
                 oauth_attempt = 0;
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
@@ -1363,14 +1367,12 @@ protected:
                     throw;
                 }
                 // Evaluate the next retry
-                if ( long_retry_period == -1 ) {
+                if ( long_retry_period == -1 )
                      wait_duration = short_duration;
-                } else {
-                    if ( ( deadline - TClock::now() ) <= long_duration )
-                        wait_duration = short_duration;
-                    else
-                        wait_duration = long_duration;
-                }
+                else if ( ( deadline - TClock::now() ) <= ( long_duration + 2*short_duration ) )
+                    wait_duration = short_duration;
+                else
+                    wait_duration = long_duration;
                 Warning( "Attempt #{} to obtain a new License failed with message: {}. New attempt planned in {} seconds",
                         lic_attempt, e.what(), wait_duration.count()/1000000000 );
                 // Wait a bit before retrying
@@ -1478,18 +1480,22 @@ protected:
     }
 
     Json::Value postHealth( const Json::Value& request_json, const TClock::time_point& deadline,
-            const int32_t& retry_period = -1 ) {
-
+                            const int32_t& retry_period = -1 ) {
         bool token_valid(false);
         uint32_t oauth_attempt = 0;
         uint32_t lic_attempt = 0;
         TClock::duration retry_duration = std::chrono::seconds( retry_period );
+        int32_t timeout_sec;
+        std::chrono::seconds timeout_chrono;
 
         while ( 1 ) {
             token_valid = false;
             // Get valid OAUth2 token
             try {
-                getDrmWSClient().requestOAuth2token( deadline );
+                timeout_chrono = std::chrono::duration_cast<std::chrono::seconds>(
+                                 deadline - TClock::now() );
+                timeout_sec = timeout_chrono.count();
+                getDrmWSClient().requestOAuth2token( timeout_sec );
                 token_valid = true;
             } catch ( const Exception& e ) {
                 lic_attempt = 0;
@@ -1518,7 +1524,10 @@ protected:
 
             // Get new license
             try {
-                return getDrmWSClient().requestHealth( request_json, deadline );
+                timeout_chrono = std::chrono::duration_cast<std::chrono::seconds>(
+                                 deadline - TClock::now() );
+                timeout_sec = timeout_chrono.count();
+                return getDrmWSClient().requestHealth( request_json, timeout_sec );
             } catch ( const Exception& e ) {
                 oauth_attempt = 0;
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
