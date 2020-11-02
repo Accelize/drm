@@ -77,7 +77,7 @@ def test_request_timeout(accelize_drm, conf_json, cred_json, async_handler,
     assert drm_manager.get('ws_connection_timeout') == connection_timeout
     assert drm_manager.get('ws_request_timeout') == request_timeout
 
-    context = {'sleep': request_timeout + 1}
+    context = {'sleep': request_timeout + 10}
     set_context(context)
     assert get_context() == context
 
