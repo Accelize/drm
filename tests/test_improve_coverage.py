@@ -364,6 +364,6 @@ def test_improve_coverage_perform(accelize_drm, conf_json, cred_json, async_hand
     finally:
         drm_manager.deactivate()
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
-    assert search(r'libcurl failed to perform HTTP request to Accelize webservice', str(excinfo.value), IGNORECASE)
+    assert search(r'Failed to perform HTTP request to Accelize webservice', str(excinfo.value), IGNORECASE)
     async_cb.assert_NoError()
 
