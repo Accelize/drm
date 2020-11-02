@@ -19,8 +19,8 @@ def test_connection_timeout(accelize_drm, conf_json, cred_json, async_handler,
     async_cb = async_handler.create()
     async_cb.reset()
     conf_json.reset()
-    connection_timeout = 6
-    request_timeout = 15
+    connection_timeout = 3
+    request_timeout = 10
     conf_json['settings']['ws_api_retry_duration'] = 0 # Disable retry
     conf_json['settings']['ws_connection_timeout'] = connection_timeout
     conf_json['settings']['ws_request_timeout'] = request_timeout
@@ -60,8 +60,8 @@ def test_request_timeout(accelize_drm, conf_json, cred_json, async_handler,
     async_cb = async_handler.create()
     async_cb.reset()
     conf_json.reset()
-    connection_timeout = 15
-    request_timeout = 6
+    connection_timeout = 10
+    request_timeout = 3
     conf_json['settings']['ws_api_retry_duration'] = 0 # Disable retry
     conf_json['settings']['ws_connection_timeout'] = connection_timeout
     conf_json['settings']['ws_request_timeout'] = request_timeout
