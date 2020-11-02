@@ -87,7 +87,7 @@ def test_request_timeout(accelize_drm, conf_json, cred_json, async_handler,
     end = datetime.now()
     del drm_manager
     assert request_timeout - 1 <= int((end - start).total_seconds()) <= request_timeout
-    assert search(r'\[errCode=\d+\]\s*Failed to perform HTTP request to Accelize webservice \(Timeout was reached\) : Operation timed out after [%d%d]\d+ milliseconds' % (connection_timeout-1,connection_timeout),
+    assert search(r'\[errCode=\d+\]\s*Failed to perform HTTP request to Accelize webservice \(Timeout was reached\) : Operation timed out after [%d%d]\d+ milliseconds' % (request_timeout-1,request_timeout),
             str(excinfo.value), IGNORECASE)
     async_cb.assert_NoError()
 
