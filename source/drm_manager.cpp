@@ -1307,7 +1307,7 @@ protected:
                 timeout_chrono = std::chrono::duration_cast<std::chrono::milliseconds>(
                                  deadline - TClock::now() );
                 timeout_msec = timeout_chrono.count();
-                getDrmWSClient().requestOAuth2token( timeout_sec );
+                getDrmWSClient().requestOAuth2token( timeout_msec );
                 token_valid = true;
             } catch ( const Exception& e ) {
                 lic_attempt = 0;
@@ -1346,10 +1346,10 @@ protected:
                 // Add settings parameters
                 request_json["settings"] = buildSettingsNode();
                 // Send license request and wait for the answer
-                timeout_chrono = std::chrono::duration_cast<std::chrono::seconds>(
+                timeout_chrono = std::chrono::duration_cast<std::chrono::milliseconds>(
                                  deadline - TClock::now() );
-                timeout_sec = timeout_chrono.count();
-                return getDrmWSClient().requestLicense( request_json, timeout_sec );
+                timeout_msec = timeout_chrono.count();
+                return getDrmWSClient().requestLicense( request_json, timeout_msec );
             } catch ( const Exception& e ) {
                 oauth_attempt = 0;
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
@@ -1485,17 +1485,17 @@ protected:
         uint32_t oauth_attempt = 0;
         uint32_t lic_attempt = 0;
         TClock::duration retry_duration = std::chrono::seconds( retry_period );
-        int32_t timeout_sec;
-        std::chrono::seconds timeout_chrono;
+        int32_t timeout_msec;
+        std::chrono::milliseconds timeout_chrono;
 
         while ( 1 ) {
             token_valid = false;
             // Get valid OAUth2 token
             try {
-                timeout_chrono = std::chrono::duration_cast<std::chrono::seconds>(
+                timeout_chrono = std::chrono::duration_cast<std::chrono::milliseconds>(
                                  deadline - TClock::now() );
-                timeout_sec = timeout_chrono.count();
-                getDrmWSClient().requestOAuth2token( timeout_sec );
+                timeout_msec = timeout_chrono.count();
+                getDrmWSClient().requestOAuth2token( timeout_msec );
                 token_valid = true;
             } catch ( const Exception& e ) {
                 lic_attempt = 0;
@@ -1524,10 +1524,10 @@ protected:
 
             // Get new license
             try {
-                timeout_chrono = std::chrono::duration_cast<std::chrono::seconds>(
+                timeout_chrono = std::chrono::duration_cast<std::chrono::milliseconds>(
                                  deadline - TClock::now() );
-                timeout_sec = timeout_chrono.count();
-                return getDrmWSClient().requestHealth( request_json, timeout_sec );
+                timeout_msec = timeout_chrono.count();
+                return getDrmWSClient().requestHealth( request_json, timeout_msec );
             } catch ( const Exception& e ) {
                 oauth_attempt = 0;
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
