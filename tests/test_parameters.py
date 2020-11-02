@@ -589,7 +589,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     async_cb.reset()
     conf_json.reset()
     expect_value = 50000
-    conf_json['ws_connection_timeout'] = expect_value
+    conf_json['settings']['ws_connection_timeout'] = expect_value
     conf_json.save()
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,

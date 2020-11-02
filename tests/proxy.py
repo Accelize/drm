@@ -904,23 +904,16 @@ def create_app(url):
     ##############################################################################
     # test_ws_timeout.py
 
-    # test_connection_timeout and test_request_timeout functions
-    @app.route('/test_timeout/o/token/', methods=['GET', 'POST'])
-    def otoken__test_timeout():
-        return redirect(request.url_root + '/o/token/', code=307)
-
-    @app.route('/test_timeout/auth/metering/genlicense/', methods=['GET', 'POST'])
-    def genlicense__test_timeout():
+    # test_request_timeout functions
+    @app.route('/test_request_timeout/o/token/', methods=['GET', 'POST'])
+    def otoken__test_request_timeout():
         global context, lock
         start = str(datetime.now())
         with lock:
             sleep_s = context['sleep']
         sleep( sleep_s)
         return ('This is the expected behavior', 408)
-
-    @app.route('/test_timeout/auth/metering/health/', methods=['GET', 'POST'])
-    def health__test_timeout():
-        return redirect(request.url_root + '/auth/metering/health/', code=307)
+        return redirect(request.url_root + '/o/token/', code=307)
 
     ##############################################################################
 

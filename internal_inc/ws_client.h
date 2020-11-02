@@ -229,7 +229,7 @@ protected:
     int32_t mConnectionTimeout;                 /// Maximum period in seconds for the client to connect the server
 
     bool isTokenValid() const;
-    Json::Value requestMetering( const std::string url, const Json::Value& json_req, int32_t timeout_sec );
+    Json::Value requestMetering( const std::string url, const Json::Value& json_req, int32_t timeout_msec );
 
 public:
     DrmWSClient(const std::string &conf_file_path, const std::string &cred_file_path);
@@ -243,10 +243,10 @@ public:
     int32_t getRequestTimeout() const { return mRequestTimeout; }
     int32_t getConnectionTimeout() const { return mConnectionTimeout; }
 
-    void requestOAuth2token( int32_t timeout_sec );
+    void requestOAuth2token( int32_t timeout_msec );
 
-    Json::Value requestLicense( const Json::Value& json_req, int32_t timeout_sec );
-    Json::Value requestHealth( const Json::Value& json_req, int32_t timeout_sec );
+    Json::Value requestLicense( const Json::Value& json_req, int32_t timeout_msec );
+    Json::Value requestHealth( const Json::Value& json_req, int32_t timeout_msec );
 
 };
 

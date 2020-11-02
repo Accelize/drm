@@ -1297,16 +1297,16 @@ protected:
         bool token_valid(false);
         uint32_t oauth_attempt = 0;
         uint32_t lic_attempt = 0;
-        int32_t timeout_sec;
-        std::chrono::seconds timeout_chrono;
+        int32_t timeout_msec;
+        std::chrono::milliseconds timeout_chrono;
 
         while ( 1 ) {
             token_valid = false;
             // Get valid OAUth2 token
             try {
-                timeout_chrono = std::chrono::duration_cast<std::chrono::seconds>(
+                timeout_chrono = std::chrono::duration_cast<std::chrono::milliseconds>(
                                  deadline - TClock::now() );
-                timeout_sec = timeout_chrono.count();
+                timeout_msec = timeout_chrono.count();
                 getDrmWSClient().requestOAuth2token( timeout_sec );
                 token_valid = true;
             } catch ( const Exception& e ) {

@@ -83,11 +83,11 @@ void CurlEasyPost::setPostFields( const std::string& postfields ) {
     curl_easy_setopt( mCurl, CURLOPT_COPYPOSTFIELDS, postfields.c_str() );
 }
 
-uint32_t CurlEasyPost::perform( const std::string url, std::string* response, const int32_t timeout_sec ) {
+uint32_t CurlEasyPost::perform( const std::string url, std::string* response, const int32_t timeout_msec ) {
     CURLcode res;
     uint32_t resp_code;
 
-    if ( timeout_sec <= 0 )
+    if ( timeout_msec <= 0 )
         Throw( DRM_WSTimedOut, "Did not perform HTTP request to Accelize webservice because timeout is reached." );
 
     // Configure and execute CURL command
@@ -96,7 +96,7 @@ uint32_t CurlEasyPost::perform( const std::string url, std::string* response, co
         curl_easy_setopt( mCurl, CURLOPT_HTTPHEADER, mHeaders_p );
     }
     curl_easy_setopt( mCurl, CURLOPT_WRITEDATA, response );
-    curl_easy_setopt( mCurl, CURLOPT_TIMEOUT, timeout_sec );
+    curl_easy_setopt( mCurl, CURLOPT_TIMEOUT_MS, timeout_msec );
     res = curl_easy_perform( mCurl );
 
     // Analyze libcurl response
@@ -148,12 +148,12 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
 
         Json::Value settings = JVgetOptional( conf_json, "settings", Json::objectValue );
         mRequestTimeout = JVgetOptional( settings, "ws_request_timeout",
-                        Json::uintValue, cRequestTimeout).asInt();
+                        Json::intValue, cRequestTimeout).asInt();
         if ( mRequestTimeout == 0 )
             Throw( DRM_BadArg, "ws_request_timeout must not be 0");
 
         mConnectionTimeout = JVgetOptional( settings, "ws_connection_timeout",
-                        Json::uintValue, cConnectionTimeout).asInt();
+                        Json::intValue, cConnectionTimeout).asInt();
         if ( mConnectionTimeout == 0 )
             Throw( DRM_BadArg, "ws_connection_timeout must not be 0");
 
@@ -227,7 +227,7 @@ bool DrmWSClient::isTokenValid() const {
     }
 }
 
-void DrmWSClient::requestOAuth2token( int32_t timeout_sec ) {
+void DrmWSClient::requestOAuth2token( int32_t timeout_msec ) {
 
     // Check if a token exists
     if ( !mOAuth2Token.empty() ) {
@@ -249,10 +249,10 @@ void DrmWSClient::requestOAuth2token( int32_t timeout_sec ) {
 
     // Send request and wait response
     std::string response;
-    if ( timeout_sec >= mRequestTimeout )
-        timeout_sec = mRequestTimeout;
+    if ( timeout_msec >= mRequestTimeout * 1000 )
+        timeout_msec = mRequestTimeout * 1000;
     Debug( "Starting OAuthentication request to {}", mOAuth2Url );
-    long resp_code = req.perform( mOAuth2Url, &response, timeout_sec );
+    long resp_code = req.perform( mOAuth2Url, &response, timeout_msec );
 
     // Parse response
     std::string error_msg;
@@ -279,7 +279,7 @@ void DrmWSClient::requestOAuth2token( int32_t timeout_sec ) {
 }
 
 Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Value& json_req,
-                                          int32_t timeout_sec ) {
+                                          int32_t timeout_msec ) {
 
     // Create new request
     CurlEasyPost req( mConnectionTimeout );
@@ -293,11 +293,11 @@ Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Val
     req.setPostFields( saveJsonToString( json_req ) );
 
     // Evaluate timeout with regard to the security limit
-    if ( timeout_sec >= mRequestTimeout )
-        timeout_sec = mRequestTimeout;
+    if ( timeout_msec >= mRequestTimeout * 1000 )
+        timeout_msec = mRequestTimeout * 1000;
     // Send request and wait response
     std::string response;
-    long resp_code = req.perform( url, &response, timeout_sec );
+    long resp_code = req.perform( url, &response, timeout_msec );
 
     // Parse response
     std::string error_msg;
@@ -326,14 +326,14 @@ Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Val
     return json_resp;
 }
 
-Json::Value DrmWSClient::requestLicense( const Json::Value& json_req, int32_t timeout_sec ) {
+Json::Value DrmWSClient::requestLicense( const Json::Value& json_req, int32_t timeout_msec ) {
     Debug( "Starting License request to {} with data:\n{}", mLicenseUrl, json_req.toStyledString() );
-    return requestMetering( mLicenseUrl, json_req, timeout_sec );
+    return requestMetering( mLicenseUrl, json_req, timeout_msec );
 }
 
-Json::Value DrmWSClient::requestHealth( const Json::Value& json_req, int32_t timeout_sec ) {
+Json::Value DrmWSClient::requestHealth( const Json::Value& json_req, int32_t timeout_msec ) {
     Debug( "Starting Health request to {} with data:\n{}", mHealthUrl, json_req.toStyledString() );
-    return requestMetering( mHealthUrl, json_req, timeout_sec );
+    return requestMetering( mHealthUrl, json_req, timeout_msec );
 }
 
 }
