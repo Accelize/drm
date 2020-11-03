@@ -69,7 +69,8 @@ _PARAM_LIST = ('license_type',
                'ws_verbosity',
                'trng_status',
                'num_license_loaded',
-               'derived_product'
+               'derived_product',
+               'ws_connection_timeout'
 )
 
 
@@ -583,6 +584,23 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     assert drm_manager.get('derived_product') == deriv_prod
     async_cb.assert_NoError()
     print("Test parameter 'derived_product': PASS")
+
+    # Test parameter: ws_connection_timeout
+    async_cb.reset()
+    conf_json.reset()
+    expect_value = 50000
+    conf_json['settings']['ws_connection_timeout'] = expect_value
+    conf_json.save()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    assert drm_manager.get('ws_connection_timeout') == expect_value
+    async_cb.assert_NoError()
+    print("Test parameter 'ws_connection_timeout': PASS")
 
     # Test unsupported parameter
     async_cb.reset()
@@ -1218,6 +1236,24 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     assert drm_manager.get('derived_product') == deriv_prod
     async_cb.assert_NoError()
     print("Test parameter 'derived_product': PASS")
+
+    # Test parameter: ws_connection_timeout
+    async_cb.reset()
+    conf_json.reset()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    ref_timeout = drm_manager.get('ws_connection_timeout')
+    new_timeout = ref_timeout + 1000
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+        drm_manager.set(ws_connection_timeout=new_timeout)
+    assert drm_manager.get('ws_connection_timeout') == ref_timeout
+    async_cb.assert_NoError()
+    print("Test parameter 'ws_connection_timeout': PASS")
 
 
 def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cred_json,

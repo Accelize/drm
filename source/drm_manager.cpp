@@ -330,7 +330,7 @@ protected:
             updateLog();
 
             if ( mWSRetryPeriodLong <= mWSRetryPeriodShort )
-                Throw( DRM_BadArg, "ws_retry_period_long ({}) must be greater than ws_retry_period_short ({})",
+                Throw( DRM_BadArg, "ws_retry_period_long ({} sec) must be greater than ws_retry_period_short ({} sec)",
                         mWSRetryPeriodLong, mWSRetryPeriodShort );
 
             // Design configuration
@@ -578,7 +578,7 @@ protected:
         settings["log_verbosity"] = static_cast<uint32_t>( sLogConsoleVerbosity );
         settings["ws_retry_period_long"] = mWSRetryPeriodLong;
         settings["ws_retry_period_short"] = mWSRetryPeriodShort;
-        settings["ws_request_timeout"] = getDrmWSClient().getRequestTimeout();
+        settings["ws_request_timeout"] = (int32_t)(getDrmWSClient().getRequestTimeoutMS() / 1000);
         settings["health_period"] = mHealthPeriod;
         settings["health_retry"] = mHealthRetryTimeout;
         settings["health_retry_sleep"] = mHealthRetrySleep;
@@ -1276,38 +1276,38 @@ protected:
         return !isLicenseEmpty;
     }
 
-    Json::Value getLicense( Json::Value& request_json, const uint32_t& timeout,
-                            int32_t short_retry_period = -1, int32_t long_retry_period = -1 ) {
+    Json::Value getLicense( Json::Value& request_json, const uint32_t& timeout_ms,
+                            int32_t short_retry_period_ms = -1, int32_t long_retry_period_ms = -1 ) {
         TClock::time_point deadline;
-        if ( timeout == 0 ) {
-            deadline = TClock::now() + std::chrono::seconds( getDrmWSClient().getRequestTimeout() );
-            short_retry_period = -1;
-            long_retry_period = -1;
+        if ( timeout_ms == 0 ) {
+            deadline = TClock::now() + std::chrono::milliseconds( getDrmWSClient().getRequestTimeoutMS() );
+            short_retry_period_ms = -1;
+            long_retry_period_ms = -1;
         } else {
-            deadline = TClock::now() + std::chrono::seconds( timeout );
+            deadline = TClock::now() + std::chrono::milliseconds( timeout_ms );
         }
-        return getLicense( request_json, deadline, short_retry_period, long_retry_period );
+        return getLicense( request_json, deadline, short_retry_period_ms, long_retry_period_ms );
     }
 
     Json::Value getLicense( Json::Value& request_json, const TClock::time_point& deadline,
-                        int32_t short_retry_period = -1, int32_t long_retry_period = -1 ) {
+                        int32_t short_retry_period_ms = -1, int32_t long_retry_period_ms = -1 ) {
         TClock::duration wait_duration;
-        TClock::duration long_duration = std::chrono::seconds( long_retry_period );
-        TClock::duration short_duration = std::chrono::seconds( short_retry_period );
+        TClock::duration long_duration = std::chrono::milliseconds( long_retry_period_ms );
+        TClock::duration short_duration = std::chrono::milliseconds( short_retry_period_ms );
         bool token_valid(false);
         uint32_t oauth_attempt = 0;
         uint32_t lic_attempt = 0;
-        int32_t timeout_sec;
-        std::chrono::seconds timeout_chrono;
+        int32_t timeout_msec;
+        std::chrono::milliseconds timeout_chrono;
 
         while ( 1 ) {
             token_valid = false;
             // Get valid OAUth2 token
             try {
-                timeout_chrono = std::chrono::duration_cast<std::chrono::seconds>(
+                timeout_chrono = std::chrono::duration_cast<std::chrono::milliseconds>(
                                  deadline - TClock::now() );
-                timeout_sec = timeout_chrono.count();
-                getDrmWSClient().requestOAuth2token( timeout_sec );
+                timeout_msec = timeout_chrono.count();
+                getDrmWSClient().requestOAuth2token( timeout_msec );
                 token_valid = true;
             } catch ( const Exception& e ) {
                 lic_attempt = 0;
@@ -1320,12 +1320,12 @@ protected:
                 }
                 // It is retryable
                 oauth_attempt ++;
-                if ( short_retry_period == -1 ) {
+                if ( short_retry_period_ms == -1 ) {
                     // No retry
                     Debug( "OAuthentication retry mechanism is disabled" );
                     throw;
                 }
-                if ( long_retry_period == -1 )
+                if ( long_retry_period_ms == -1 )
                      wait_duration = short_duration;
                 else if ( ( deadline - TClock::now() ) <= ( long_duration + 2*short_duration )  )
                     wait_duration = short_duration;
@@ -1346,10 +1346,10 @@ protected:
                 // Add settings parameters
                 request_json["settings"] = buildSettingsNode();
                 // Send license request and wait for the answer
-                timeout_chrono = std::chrono::duration_cast<std::chrono::seconds>(
+                timeout_chrono = std::chrono::duration_cast<std::chrono::milliseconds>(
                                  deadline - TClock::now() );
-                timeout_sec = timeout_chrono.count();
-                return getDrmWSClient().requestLicense( request_json, timeout_sec );
+                timeout_msec = timeout_chrono.count();
+                return getDrmWSClient().requestLicense( request_json, timeout_msec );
             } catch ( const Exception& e ) {
                 oauth_attempt = 0;
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
@@ -1361,13 +1361,13 @@ protected:
                 }
                 // It is retryable
                 lic_attempt ++;
-                if ( short_retry_period == -1 ) {
+                if ( short_retry_period_ms == -1 ) {
                     // No retry
                     Debug( "Licensing retry mechanism is disabled" );
                     throw;
                 }
                 // Evaluate the next retry
-                if ( long_retry_period == -1 )
+                if ( long_retry_period_ms == -1 )
                      wait_duration = short_duration;
                 else if ( ( deadline - TClock::now() ) <= ( long_duration + 2*short_duration ) )
                     wait_duration = short_duration;
@@ -1480,22 +1480,22 @@ protected:
     }
 
     Json::Value postHealth( const Json::Value& request_json, const TClock::time_point& deadline,
-                            const int32_t& retry_period = -1 ) {
+                            const int32_t& retry_period_ms = -1 ) {
         bool token_valid(false);
         uint32_t oauth_attempt = 0;
         uint32_t lic_attempt = 0;
-        TClock::duration retry_duration = std::chrono::seconds( retry_period );
-        int32_t timeout_sec;
-        std::chrono::seconds timeout_chrono;
+        TClock::duration retry_duration = std::chrono::milliseconds( retry_period_ms );
+        int32_t timeout_msec;
+        std::chrono::milliseconds timeout_chrono;
 
         while ( 1 ) {
             token_valid = false;
             // Get valid OAUth2 token
             try {
-                timeout_chrono = std::chrono::duration_cast<std::chrono::seconds>(
+                timeout_chrono = std::chrono::duration_cast<std::chrono::milliseconds>(
                                  deadline - TClock::now() );
-                timeout_sec = timeout_chrono.count();
-                getDrmWSClient().requestOAuth2token( timeout_sec );
+                timeout_msec = timeout_chrono.count();
+                getDrmWSClient().requestOAuth2token( timeout_msec );
                 token_valid = true;
             } catch ( const Exception& e ) {
                 lic_attempt = 0;
@@ -1510,7 +1510,7 @@ protected:
                 }
                 // It is retryable
                 oauth_attempt ++;
-                if ( retry_period == -1 ) {
+                if ( retry_period_ms == -1 ) {
                     // No retry
                     Debug( "OAuthentication retry mechanism is disabled" );
                     return Json::nullValue;
@@ -1524,10 +1524,10 @@ protected:
 
             // Get new license
             try {
-                timeout_chrono = std::chrono::duration_cast<std::chrono::seconds>(
+                timeout_chrono = std::chrono::duration_cast<std::chrono::milliseconds>(
                                  deadline - TClock::now() );
-                timeout_sec = timeout_chrono.count();
-                return getDrmWSClient().requestHealth( request_json, timeout_sec );
+                timeout_msec = timeout_chrono.count();
+                return getDrmWSClient().requestHealth( request_json, timeout_msec );
             } catch ( const Exception& e ) {
                 oauth_attempt = 0;
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
@@ -1541,7 +1541,7 @@ protected:
                 }
                 // It is retryable
                 lic_attempt ++;
-                if ( retry_period == -1 ) {
+                if ( retry_period_ms == -1 ) {
                     // No retry
                     Debug( "Health retry mechanism is disabled" );
                     return Json::nullValue;
@@ -1555,7 +1555,7 @@ protected:
         }
     }
 
-    Json::Value performHealth( const uint32_t retry_timeout, const uint32_t retry_sleep) {
+    Json::Value performHealth( const uint32_t retry_timeout_ms, const uint32_t retry_sleep_ms) {
         // Get next data from DRM Controller
         Json::Value request_json = getMeteringHealth();
         // Check session ID
@@ -1563,9 +1563,9 @@ protected:
         if ( request_json["meteringFile"].empty() )
             Unreachable( "Received an empty metering file from DRM Controller" );  //LCOV_EXCL_LINE
         // Compute retry period
-        TClock::time_point retry_deadline = TClock::now() + std::chrono::seconds( retry_timeout );
+        TClock::time_point retry_deadline = TClock::now() + std::chrono::milliseconds( retry_timeout_ms );
         // Post next data to server
-        return postHealth( request_json, retry_deadline, retry_sleep );
+        return postHealth( request_json, retry_deadline, retry_sleep_ms );
     }
 
     std::string getDesignHash() {
@@ -1633,7 +1633,7 @@ protected:
                 Json::Value request_json = parseJsonFile( mNodeLockRequestFilePath );
                 Debug( "Parsed Node-locked License Request file: {}", request_json .toStyledString() );
                 /// - Send request to web service and receive the new license
-                license_json = getLicense( request_json, mWSApiRetryDuration, mWSRetryPeriodShort );
+                license_json = getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
                 /// - Save the license to file
                 saveJsonToFile( mNodeLockLicenseFilePath, license_json );
                 Debug( "Requested and saved new node-locked license file: {}", mNodeLockLicenseFilePath );
@@ -1853,7 +1853,7 @@ protected:
                             Json::Value request_json = getMeteringRunning();
 
                             /// Attempt to get the next license
-                            Json::Value license_json = getLicense( request_json, mExpirationTime, mWSRetryPeriodShort, mWSRetryPeriodLong );
+                            Json::Value license_json = getLicense( request_json, mExpirationTime, mWSRetryPeriodShort*1000, mWSRetryPeriodLong*1000 );
 
                             /// New license has been received: now send it to the DRM Controller
                             setLicense( license_json );
@@ -1897,8 +1897,8 @@ protected:
         mThreadHealth = std::async( std::launch::async, [ this ]() {
             Debug( "Starting background thread which checks health" );
             try {
-                uint32_t retry_sleep = mWSRetryPeriodShort;
-                uint32_t retry_timeout = getDrmWSClient().getRequestTimeout();
+                uint32_t retry_sleep_ms = mWSRetryPeriodShort * 1000;
+                int32_t retry_timeout_ms = getDrmWSClient().getRequestTimeoutMS();
                 mHealthCounter = 0;
 
                 /// Starting async metering post loop
@@ -1911,7 +1911,7 @@ protected:
 
                     /// Collect the next metering data and send them to the Health Web Service
                     Debug( "Health thread collecting new metering data" );
-                    Json::Value response_json = performHealth( retry_timeout, retry_sleep );
+                    Json::Value response_json = performHealth( retry_timeout_ms, retry_sleep_ms );
 
                     if ( response_json != Json::nullValue ) {
                         /// Extract asynchronous metering parameters from response
@@ -1933,12 +1933,12 @@ protected:
                                 break;
                             }
                             if ( mHealthRetryTimeout == 0 ) {
-                                retry_timeout = getDrmWSClient().getRequestTimeout();
-                                retry_sleep = 0;
+                                retry_timeout_ms = getDrmWSClient().getRequestTimeoutMS();
+                                retry_sleep_ms = 0;
                                 Debug( "Health retry is disabled" );
                             } else {
-                                retry_timeout = mHealthRetryTimeout;
-                                retry_sleep = mHealthRetrySleep;
+                                retry_timeout_ms = mHealthRetryTimeout * 1000;
+                                retry_sleep_ms = mHealthRetrySleep * 1000;
                                 Debug( "Health retry is enabled" );
                             }
                         } else {
@@ -2001,7 +2001,7 @@ protected:
             Json::Value request_json = getMeteringStart();
 
             // Send request and receive new license
-            Json::Value license_json = getLicense( request_json, mWSApiRetryDuration, mWSRetryPeriodShort );
+            Json::Value license_json = getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
             setLicense( license_json );
             // Check if an error occurred
             checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 5 ) );
@@ -2022,7 +2022,7 @@ protected:
         stopThread();
         mSecurityStop = false;
         if (mHealthPeriod)
-            performHealth(mWSApiRetryDuration, 0);
+            performHealth(mWSApiRetryDuration * 1000, 0);
         Info( "DRM session {} paused.", mSessionID );
     }
 
@@ -2044,7 +2044,7 @@ protected:
                 Json::Value request_json = getMeteringRunning();
 
                 // Send license request to web service
-                Json::Value license_json = getLicense( request_json, mWSApiRetryDuration, mWSRetryPeriodShort );
+                Json::Value license_json = getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
 
                 // Provision license on DRM controller
                 setLicense( license_json );
@@ -2068,7 +2068,7 @@ protected:
             request_json = getMeteringStop();
 
             // Send last metering information
-            Json::Value license_json = getLicense( request_json, mWSApiRetryDuration, mWSRetryPeriodShort );
+            Json::Value license_json = getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
             checkSessionIDFromWS( license_json );
             Debug( "Session ID {} stopped and last metering data uploaded", mSessionID );
         }
@@ -2502,9 +2502,9 @@ public:
                         break;
                     }
                     case ParameterKey::ws_request_timeout: {
-                        json_value[key_str] = getDrmWSClient().getRequestTimeout();
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
-                               getDrmWSClient().getRequestTimeout() );
+                        int32_t req_timeout_sec = (int32_t)(getDrmWSClient().getRequestTimeoutMS() / 1000);
+                        json_value[key_str] = req_timeout_sec;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id, req_timeout_sec );
                         break;
                     }
                     case ParameterKey::log_message_level: {
@@ -2609,6 +2609,12 @@ public:
                         json_value[key_str] = mDerivedProduct;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                mDerivedProduct );
+                        break;
+                    }
+                    case ParameterKey::ws_connection_timeout: {
+                        int32_t con_timeout_sec = (int32_t)(getDrmWSClient().getConnectionTimeoutMS() / 1000);
+                        json_value[key_str] = con_timeout_sec;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id, con_timeout_sec );
                         break;
                     }
                     case ParameterKey::ParameterKeyCount: {

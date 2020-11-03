@@ -55,7 +55,7 @@ Json::Value GetCspInfo( uint32_t verbosity ) {
 
 /** AWS class
 */
-Aws::Aws():CspBase( "Aws", 50 ) {}
+Aws::Aws():CspBase( "Aws", 50, 50 ) {}
 
 Json::Value Aws::get_metadata() {
     Json::Value metadata = Json::nullValue;
@@ -64,21 +64,21 @@ Json::Value Aws::get_metadata() {
     // Using IMDSv2 method
 
     // Get token
-    CurlEasyPost tokenReq;
+    CurlEasyPost tokenReq( mConnectionTimeoutMS );
     tokenReq.setVerbosity( mVerbosity );
     tokenReq.appendHeader( "X-aws-ec2-metadata-token-ttl-seconds: 21600" );
-    token = tokenReq.perform_put<std::string>( "http://169.254.169.254/latest/api/token", mTimeOutMS );
+    token = tokenReq.perform_put<std::string>( "http://169.254.169.254/latest/api/token", mRequestTimeoutMS );
 
     // Collect AWS information
-    CurlEasyPost req;
+    CurlEasyPost req( mConnectionTimeoutMS );
     req.setVerbosity( mVerbosity );
     std::string header = fmt::format("X-aws-ec2-metadata-token: {}", token);
     req.appendHeader( header );
     std::string base_url("http://169.254.169.254/latest");
-    metadata["instance_id"] = req.perform_get<std::string>( fmt::format( "{}/meta-data/instance-id", base_url ), mTimeOutMS );
-    metadata["instance_type"] = req.perform_get<std::string>( fmt::format( "{}/meta-data/instance-type", base_url ), mTimeOutMS );
-    metadata["ami_id"] = req.perform_get<std::string>( fmt::format( "{}/meta-data/ami-id", base_url ), mTimeOutMS );
-    std::string doc_string = req.perform_get<std::string>( fmt::format( "{}/dynamic/instance-identity/document", base_url ), mTimeOutMS );
+    metadata["instance_id"] = req.perform_get<std::string>( fmt::format( "{}/meta-data/instance-id", base_url ), mRequestTimeoutMS );
+    metadata["instance_type"] = req.perform_get<std::string>( fmt::format( "{}/meta-data/instance-type", base_url ), mRequestTimeoutMS );
+    metadata["ami_id"] = req.perform_get<std::string>( fmt::format( "{}/meta-data/ami-id", base_url ), mRequestTimeoutMS );
+    std::string doc_string = req.perform_get<std::string>( fmt::format( "{}/dynamic/instance-identity/document", base_url ), mRequestTimeoutMS );
     Json::Value doc_json = parseJsonString( doc_string );
     metadata["region"] = doc_json["region"];
     return metadata;
@@ -87,27 +87,28 @@ Json::Value Aws::get_metadata() {
 
 /** Alibaba class
 */
-Alibaba::Alibaba():CspBase( "Alibaba", 50 ) {}
+Alibaba::Alibaba():CspBase( "Alibaba", 50, 50 ) {}
 
 Json::Value Alibaba::get_metadata() {
     Json::Value metadata = Json::nullValue;
-    CurlEasyPost req;
+    CurlEasyPost req( mConnectionTimeoutMS );
     req.setVerbosity( mVerbosity );
     // Collect Alibaba information
     std::string base_url("http://100.100.100.200/latest/meta-data");
-    metadata["instance_id"] = req.perform_get<std::string>( fmt::format( "{}/instance-id", base_url ), mTimeOutMS );
-    metadata["instance_type"] = req.perform_get<std::string>( fmt::format( "{}/instance/instance-type", base_url ), mTimeOutMS );
-    metadata["ami_id"] = req.perform_get<std::string>( fmt::format( "{}/image-id", base_url ), mTimeOutMS );
-    metadata["region"] = req.perform_get<std::string>( fmt::format( "{}/region-id", base_url ), mTimeOutMS );
+    metadata["instance_id"] = req.perform_get<std::string>( fmt::format( "{}/instance-id", base_url ), mRequestTimeoutMS );
+    metadata["instance_type"] = req.perform_get<std::string>( fmt::format( "{}/instance/instance-type", base_url ), mRequestTimeoutMS );
+    metadata["ami_id"] = req.perform_get<std::string>( fmt::format( "{}/image-id", base_url ), mRequestTimeoutMS );
+    metadata["region"] = req.perform_get<std::string>( fmt::format( "{}/region-id", base_url ), mRequestTimeoutMS );
     return metadata;
 }
 
 
 /** CspBase class
 */
-CspBase::CspBase( const std::string &name, const uint32_t timeout_ms ) {
+CspBase::CspBase( const std::string &name, const int32_t connection_timeout_ms, const int32_t request_timeout_ms ) {
     mName = name;
-    mTimeOutMS = timeout_ms;
+    mConnectionTimeoutMS = connection_timeout_ms;
+    mRequestTimeoutMS = request_timeout_ms;
     mVerbosity = 0;
 }
 

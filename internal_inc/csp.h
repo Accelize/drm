@@ -40,13 +40,14 @@ private:
     std::string mName;  // CSP name
 
 protected:
-    uint32_t mTimeOutMS; // Connection timeout in millseconds
+    int32_t mConnectionTimeoutMS; // Connection timeout in milliseconds
+    int32_t mRequestTimeoutMS; // Request timeout in milliseconds
     uint32_t mVerbosity; // HTTP verbosity: 0: default, 1:verbose
 
 public:
 
     CspBase() = delete; //!< No default constructor
-    CspBase( const std::string &name, const uint32_t timeout_ms );
+    CspBase( const std::string &name, const int32_t connection_timeout_ms, const int32_t request_timeout_ms );
     virtual ~CspBase() {};
 
     std::string getName() const { return mName; }

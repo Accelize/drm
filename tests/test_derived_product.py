@@ -177,7 +177,7 @@ def test_valid_derived_product(accelize_drm, conf_json, cred_json,
     finally:
         drm_manager.deactivate()
     log_content = basic_log_file.read()
-    assert search(f'Loaded new derived product: {new_deriv_prod}', log_content, MULTILINE)
+    assert search('Loaded new derived product: %s' % new_deriv_prod, log_content, MULTILINE)
     assert get_proxy_error() is None
     async_cb.assert_NoError()
 
@@ -208,7 +208,7 @@ def test_valid_derived_product(accelize_drm, conf_json, cred_json,
     finally:
         drm_manager.deactivate()
     log_content = basic_log_file.read()
-    assert search(f'Loaded new derived product: {new_deriv_prod}', log_content, MULTILINE)
+    assert search('Loaded new derived product: %s' % new_deriv_prod, log_content, MULTILINE)
     assert get_proxy_error() is None
     async_cb.assert_NoError()
     basic_log_file.remove()

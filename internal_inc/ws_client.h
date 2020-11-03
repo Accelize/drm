@@ -34,12 +34,12 @@ namespace DRM {
 class CurlSingleton {
 
 private:
-    CurlSingleton() { curl_global_init(CURL_GLOBAL_ALL); }
+    CurlSingleton() { curl_global_init( CURL_GLOBAL_ALL ); }
     ~CurlSingleton() { curl_global_cleanup(); }
 
 public:
-    CurlSingleton(const CurlSingleton&) = delete;
-    CurlSingleton& operator=(const CurlSingleton&) = delete;
+    CurlSingleton( const CurlSingleton& ) = delete;
+    CurlSingleton& operator=( const CurlSingleton& ) = delete;
 
     static void Init() {
         static CurlSingleton g_curl;
@@ -57,10 +57,9 @@ private:
     struct curl_slist *mHeaders_p = NULL;
     struct curl_slist *mHostResolveList = NULL;
     std::array<char, CURL_ERROR_SIZE> mErrBuff;
-    uint32_t mConnectionTimeout = 15;   // Default timeout (in seconds) to establish connection
 
 public:
-    static bool is_error_retryable(long resp_code) {
+    static bool is_error_retryable( long resp_code ) {
         return        resp_code == 408 // Request Timeout
                    || resp_code == 429 // Too Many Requests
                    || resp_code == 470 // Floating License: no token available
@@ -92,10 +91,10 @@ public:
         return DRM_WSError;
     }
 
-    CurlEasyPost();
+    CurlEasyPost( const uint32_t& connection_timeout_ms );
     ~CurlEasyPost();
 
-    double getTotalTime();
+    double getTotalTime();  // Get total time in seconds of the previous transfer
 
     void setVerbosity( const uint32_t verbosity );
     void setHostResolves( const Json::Value& host_json );
@@ -119,7 +118,6 @@ public:
             curl_easy_setopt( mCurl, CURLOPT_HTTPHEADER, mHeaders_p );
         }
         curl_easy_setopt( mCurl, CURLOPT_WRITEDATA, (void*)&response );
-        curl_easy_setopt( mCurl, CURLOPT_CONNECTTIMEOUT, mConnectionTimeout );
         curl_easy_setopt( mCurl, CURLOPT_TIMEOUT_MS, timeout_ms );
         CURLcode res = curl_easy_perform( mCurl );
 
@@ -129,9 +127,9 @@ public:
               || res == CURLE_COULDNT_RESOLVE_HOST
               || res == CURLE_COULDNT_CONNECT
               || res == CURLE_OPERATION_TIMEDOUT ) {
-                Throw( DRM_WSMayRetry, "libcurl failed to perform HTTP request to Accelize webservice ({}) : {}", curl_easy_strerror( res ), mErrBuff.data() );  //LCOV_EXCL_LINE
+                Throw( DRM_WSMayRetry, "Failed to perform HTTP request to Accelize webservice ({}) : {}", curl_easy_strerror( res ), mErrBuff.data() );  //LCOV_EXCL_LINE
             } else {
-                Throw( DRM_ExternFail, "libcurl failed to perform HTTP request to Accelize webservice ({}) : {}", curl_easy_strerror( res ), mErrBuff.data() );  //LCOV_EXCL_LINE
+                Throw( DRM_ExternFail, "Failed to perform HTTP request to Accelize webservice ({}) : {}", curl_easy_strerror( res ), mErrBuff.data() );  //LCOV_EXCL_LINE
             }
         }
         curl_easy_getinfo( mCurl, CURLINFO_RESPONSE_CODE, &resp_code );
@@ -167,7 +165,6 @@ public:
         }
         curl_easy_setopt( mCurl, CURLOPT_CUSTOMREQUEST, "PUT");
         curl_easy_setopt( mCurl, CURLOPT_WRITEDATA, (void*)&response );
-        curl_easy_setopt( mCurl, CURLOPT_CONNECTTIMEOUT, mConnectionTimeout );
         curl_easy_setopt( mCurl, CURLOPT_TIMEOUT_MS, timeout_ms );
         CURLcode res = curl_easy_perform( mCurl );
 
@@ -177,10 +174,10 @@ public:
               || res == CURLE_COULDNT_RESOLVE_HOST
               || res == CURLE_COULDNT_CONNECT
               || res == CURLE_OPERATION_TIMEDOUT ) {
-                Throw( DRM_WSMayRetry, "libcurl failed to perform HTTP request to Accelize webservice ({}) : {}",
+                Throw( DRM_WSMayRetry, "Failed to perform HTTP request to Accelize webservice ({}) : {}",
                         curl_easy_strerror( res ), mErrBuff.data() );
             } else {
-                Throw( DRM_ExternFail, "libcurl failed to perform HTTP request to Accelize webservice ({}) : {}",
+                Throw( DRM_ExternFail, "Failed to perform HTTP request to Accelize webservice ({}) : {}",
                         curl_easy_strerror( res ), mErrBuff.data() );
             }
         }
@@ -209,7 +206,8 @@ protected:
 class DrmWSClient {
 
     const uint32_t cTokenExpirationMargin = 60;  // In seconds
-    const uint32_t cRequestTimeout = 30;         // In seconds
+    const int32_t cRequestTimeout = 30;          // In seconds
+    const int32_t cConnectionTimeout = 15;       // In seconds
 
 protected:
 
@@ -226,10 +224,11 @@ protected:
     uint32_t mTokenValidityPeriod;              /// Validation period of the OAuth2 token in seconds
     uint32_t mTokenExpirationMargin;            /// OAuth2 token expiration margin in seconds
     TClock::time_point mTokenExpirationTime;    /// OAuth2 expiration time
-    int32_t mRequestTimeout;                    /// Maximum period in seconds for a request to complete
+    int32_t mRequestTimeoutMS;                  /// Maximum period in milliseconds for a request to complete
+    int32_t mConnectionTimeoutMS;               /// Maximum period in milliseconds for the client to connect the server
 
     bool isTokenValid() const;
-    Json::Value requestMetering( const std::string url, const Json::Value& json_req, int32_t timeout_sec );
+    Json::Value requestMetering( const std::string url, const Json::Value& json_req, int32_t timeout_msec );
 
 public:
     DrmWSClient(const std::string &conf_file_path, const std::string &cred_file_path);
@@ -240,12 +239,13 @@ public:
     uint32_t getTokenValidity() const { return mTokenValidityPeriod; }
     int32_t getTokenTimeLeft() const;
     std::string getTokenString() const { return mOAuth2Token; }
-    uint32_t getRequestTimeout() const { return mRequestTimeout; }
+    int32_t getRequestTimeoutMS() const { return mRequestTimeoutMS; }
+    int32_t getConnectionTimeoutMS() const { return mConnectionTimeoutMS; }
 
-    void requestOAuth2token( int32_t timeout_sec );
+    void requestOAuth2token( int32_t timeout_msec );
 
-    Json::Value requestLicense( const Json::Value& json_req, int32_t timeout_sec );
-    Json::Value requestHealth( const Json::Value& json_req, int32_t timeout_sec );
+    Json::Value requestLicense( const Json::Value& json_req, int32_t timeout_msec );
+    Json::Value requestHealth( const Json::Value& json_req, int32_t timeout_msec );
 
 };
 
