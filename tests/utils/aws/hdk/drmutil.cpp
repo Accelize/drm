@@ -55,7 +55,7 @@ using namespace Accelize::DRM;
 #define PCI_VENDOR_ID   0x1D0F /* Amazon PCI Vendor ID */
 #define PCI_DEVICE_ID   0xF000 /* PCI Device ID preassigned by Amazon for F1 applications */
 
-/* Here we add the DRM controller base address */
+/* Here we add the DRM IPs base addresses */
 #define DRM_CTRL_ADDR           0x0000000
 #define DRM_ACTR_ADDR           0x0010000
 #define DRM_ACTR_ADDR_RANGE     0x10000
@@ -63,6 +63,7 @@ using namespace Accelize::DRM;
 #define ACT_STATUS_REG_OFFSET 0x38
 #define MAILBOX_REG_OFFSET    0x3C
 #define INC_EVENT_REG_OFFSET  0x40
+#define CNT_EVENT_REG_OFFSET  0x44
 
 
 #define TRY try {
