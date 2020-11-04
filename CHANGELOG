@@ -1,3 +1,9 @@
+* Wed Nov 09 2020 Accelize v2.5.1
+- NEW: Add support of derived product
+- FIX: Refactor request timeout: separate connection and request timeouts
+- FIX: Display XRT utility error message
+- DOC: Add new parameters
+
 * Wed Sep 09 2020 Accelize v2.5.0
 - NEW: Add support of the asynchronous metering mechanism
 - NEW: Include DRM Library settings in requests

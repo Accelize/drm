@@ -76,6 +76,10 @@ def get_default_conf_json(licensing_server_url):
         "design": {
             "boardType": "Running on AWS"
         },
+        "settings": {
+            "ws_connection_timeout": 3,
+            "ws_request_timeout": 5
+        }
     }
 
 
