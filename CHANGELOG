@@ -1,8 +1,19 @@
-* Wed Nov 09 2020 Accelize v2.5.1
-- NEW: Add support of derived product
-- FIX: Refactor request timeout: separate connection and request timeouts
+* Mon Nov 09 2020 Accelize v2.5.1
+- NEW: Support derived product feature (not yet activated at server side)
+- NEW: Improve retry mechanism: make connection and request timeouts independent, increase timeout period, optimize resource, HTTP codes 495 and 526 are retryable
+- NEW: Enhance API function behavior: "resume" function now start automatically a new session if the pending session has expired
+- NEW: Enhance logging: Flush logger before API function returns, support of append/truncate mode, update spdlog library to v1.8.1
+- NEW: Refactor automated CI jobs: run periodically health tests on the creation and the testing of packages
+- NEW: Change prerelease directory for DEB and remove from documentation
+- NEW: Enhance CI regression: more use cases, better code coverage, better reporting
+- FIX: DRM Controller Activation timeout issue occurring on the resume function has been solved
 - FIX: Display XRT utility error message
-- DOC: Add new parameters
+- FIX: Better reporting of messages returned by xbutil
+- FIX: Solve memory leak
+- DOC: Update list of parameters, logo
+- DOC: Correct file paths and names
+- DOC: Add SDK and HDK migration sections
+- DOC: Add uninstall section
 
 * Wed Sep 09 2020 Accelize v2.5.0
 - NEW: Add support of the asynchronous metering mechanism
