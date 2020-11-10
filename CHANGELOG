@@ -6,8 +6,7 @@
 - NEW: Refactor automated CI jobs: run periodically health tests on the creation and the testing of packages
 - NEW: Change prerelease directory for DEB and remove from documentation
 - NEW: Enhance CI regression: more use cases, better code coverage, better reporting
-- FIX: DRM Controller Activation timeout issue occurring on the resume function has been solved
-- FIX: Display XRT utility error message
+- FIX: Metering corruption issue occurring with the pause/resume mechanism has been solved
 - FIX: Better reporting of messages returned by xbutil
 - FIX: Solve memory leak
 - DOC: Update list of parameters, logo
