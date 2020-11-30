@@ -21,7 +21,7 @@ cmake_minimum_required(VERSION 3.12)
 # - Alpha             : 1.0.0-alpha.1
 # - Beta              : 1.0.0-beta.1
 # - Release candidate : 1.0.0-rc.1
-set(ACCELIZEDRM_VERSION 2.5.0)
+set(ACCELIZEDRM_VERSION 2.5.2-rc.1)
 
 ## Define package release number (Number of time this version was packaged)
 if (NOT CPACK_PACKAGE_RELEASE)
