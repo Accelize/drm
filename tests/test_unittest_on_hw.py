@@ -6,7 +6,7 @@ import pytest
 from re import search, IGNORECASE
 from time import sleep
 from datetime import datetime, timedelta
-from flask import request
+from flask import request as _request
 
 
 @pytest.mark.minimum
@@ -613,7 +613,7 @@ def test_curl_host_resolve(accelize_drm, conf_json, cred_json, async_handler):
     )
     with pytest.raises(accelize_drm.exceptions.DRMExternFail) as excinfo:
         drm_manager.activate()
-    assert 'libcurl failed to perform HTTP request to Accelize webservice' in str(excinfo.value)
+    assert 'Failed to perform HTTP request to Accelize webservice' in str(excinfo.value)
     assert search(r'peer certificate', str(excinfo.value), IGNORECASE)
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMExternFail.error_code
     async_cb.assert_NoError()
@@ -621,14 +621,15 @@ def test_curl_host_resolve(accelize_drm, conf_json, cred_json, async_handler):
 
 @pytest.mark.no_parallel
 @pytest.mark.minimum
-def test_http_header_api_version(accelize_drm, conf_json, cred_json, async_handler, live_server):
+def test_http_header_api_version(accelize_drm, conf_json, cred_json,
+                async_handler, live_server, request):
     """Test the http header contains the expected API version"""
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
 
     conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_http_header_api_version'
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(

@@ -3,37 +3,34 @@
 Test metering and floating behaviors of DRM Library.
 """
 import pytest
-from os import remove
 from time import sleep
 from random import randint
 from datetime import datetime, timedelta
 from re import search
 from json import loads, dumps
-from flask import request
+from flask import request as _request
 from requests import get, post
 from tests.proxy import get_context, set_context
-from tests.conftest import whoami
 
 
+@pytest.mark.skip(reason='Waiting a fix from LGDN')
 @pytest.mark.no_parallel
-def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler, live_server):
+def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler,
+                    live_server, request):
     """
     Test a MAC error is returned if the key value in the response has been modified
     """
     driver = accelize_drm.pytest_fpga_driver[0]
+
+    # Program FPGA with lastest HDK per major number
+    image_id = driver.fpga_image
+    driver.program_fpga(image_id)
+
     async_cb = async_handler.create()
     async_cb.reset()
 
-    activators = accelize_drm.pytest_fpga_activators[0]
-    activators.reset_coin()
-    activators.autotest()
-
     conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_header_error_on_key'
-    logpath = accelize_drm.create_log_path(whoami())
-    conf_json['settings']['log_file_verbosity'] = accelize_drm.create_log_level(0)
-    conf_json['settings']['log_file_type'] = 1
-    conf_json['settings']['log_file_path'] = logpath
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(
@@ -54,15 +51,20 @@ def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler, 
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
     assert "License header check error" in str(excinfo.value)
     async_cb.assert_NoError()
-    remove(logpath)
 
 
 @pytest.mark.no_parallel
-def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_handler, live_server):
+def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_handler,
+                        live_server, request):
     """
     Test a MAC error is returned if the licenseTimer value in the response has been modified
     """
     driver = accelize_drm.pytest_fpga_driver[0]
+
+    # Program FPGA with lastest HDK per major number
+    image_id = driver.fpga_image
+    driver.program_fpga(image_id)
+
     async_cb = async_handler.create()
     async_cb.reset()
 
@@ -71,7 +73,7 @@ def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_
     activators.autotest()
 
     conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_header_error_on_licenseTimer'
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(
@@ -108,7 +110,8 @@ def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_
 
 
 @pytest.mark.no_parallel
-def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler, live_server):
+def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler,
+                    live_server, request):
     """
     Test an error is returned if a wrong session id is provided
     """
@@ -121,7 +124,7 @@ def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler, liv
     activators.autotest()
 
     conf_json.reset()
-    conf_json['licensing']['url'] = request.url + 'test_session_id_error'
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(
@@ -141,9 +144,9 @@ def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler, liv
     drm_manager.activate()
     start = datetime.now()
     try:
-        lic_duration = drm_manager.get('license_duration')
         assert drm_manager.get('license_status')
         activators.autotest(is_activated=True)
+        lic_duration = drm_manager.get('license_duration')
         wait_period = start + timedelta(seconds=lic_duration+2) - datetime.now()
         sleep(wait_period.total_seconds())
         assert drm_manager.get('license_status')

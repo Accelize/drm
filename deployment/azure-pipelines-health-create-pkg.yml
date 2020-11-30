@@ -1,25 +1,22 @@
 ---
-name: Compile, Test, Package, Release
+name: Health Test - Compile, test and package
 
-trigger:
-  batch: true
+trigger: none
+schedules:
+# Run tests on master branche weekly on Sundays, including packages build on all OS
+- cron: "0 0 * * 0"
+  displayName: Weekly master build
   branches:
     include:
-      - master
-      - dev
-  tags:
+    - master
+  always: true
+# Run tests on dev branche weekly on Saturdays, including packages build on all OS
+- cron: "0 0 * * 6"
+  displayName: Weekly dev build
+  branches:
     include:
-      # Only tags that are a version release
-      - v*
-  paths:
-    exclude:
-      - doc/*
-      - README.md
-      - .gitignore
-      - LICENSE
-      - deployment/README.md
-      - deployment/release.py
-
+    - dev
+  always: true
 pr: none
 
 resources:
@@ -56,10 +53,6 @@ stages:
         meteringServer: prod
       ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/master') }}:
         meteringServer: dev
-      ${{ if startsWith(variables['Build.SourceBranch'], 'refs/tags') }}:
-        tox_mark: '-m minimum'
-      ${{ if not(startsWith(variables['Build.SourceBranch'], 'refs/tags')) }}:
-        tox_mark: ''
 
     jobs:
       - template: runTestOnEc2.yml
@@ -68,19 +61,17 @@ stages:
           config_list:
           - os_distrib: 'centos_7'
             tox_mode: 'debug'
-            tox_coverage: true
-            tox_extra_option: '$(tox_mark)'
+            tox_coverage: false
           - os_distrib: 'ubuntu_18_04'
             tox_mode: 'debug'
             tox_coverage: false
-            tox_extra_option: '$(tox_mark)'
             dependsOn: 'centos_7'
 
-  - stage: package_release
-    displayName: Create and release packages
+  - stage: create_packages
+    displayName: Create packages
     # Build packages only if tagged or scheduled
     dependsOn: compile_and_test
-    condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags'))
+    condition: succeededOrFailed()
     variables:
       # File that store release number for each version
       versionsJson: versions.json
@@ -254,150 +245,3 @@ stages:
           - publish: $(Build.SourcesDirectory)/packages
             artifact: Packages $(osName) $(osVersion)
             displayName: Publish packages as artifacts
-
-      - deployment: publishPackages
-        displayName: Publish release
-        # Performs release only if not scheduled
-        condition: and(succeeded(), ne(variables['Build.Reason'], 'Schedule'))
-        dependsOn: buildPackages
-        environment: drmLibrary
-        variables:
-          # DEB and RPM repositories paths
-          debRepo: /tmp/deb_repo
-          ${{ if not(contains(variables['Build.SourceBranch'], '-')) }}:
-            debS3: s3://accelize/deb/
-          ${{ if contains(variables['Build.SourceBranch'], '-') }}:
-            debS3: s3://accelize/deb_prerelease/
-          rpmRepo: /tmp/rpm_repo
-          rpmS3: s3://accelize/rpm/
-
-        strategy:
-          runOnce:
-            deploy:
-              steps:
-
-                # Initialize environment
-                - checkout: self
-                  fetchDepth: 1
-
-                - task: UsePythonVersion@0
-                  inputs:
-                    versionSpec: '3.x'
-                    addToPath: true
-                    architecture: 'x64'
-                  displayName: Get Python
-
-                - script: $(aptInstall) createrepo reprepro
-                  displayName: Install dependencies
-
-                # Get current repositories
-                - task: AWSCLI@1
-                  displayName: Get published releases manifest
-                  inputs:
-                    awsCredentials: AWS-Repository
-                    regionName: eu-west-1
-                    awsCommand: s3
-                    awsSubCommand: cp
-                    awsArguments: $(versionsJsonS3) $(versionsJson)
-                                  --no-progress
-
-                - task: AWSCLI@1
-                  displayName: Get current RPM repository
-                  inputs:
-                    awsCredentials: AWS-Repository
-                    regionName: eu-west-1
-                    awsCommand: s3
-                    awsSubCommand: sync
-                    awsArguments: $(rpmS3) $(rpmRepo) --no-progress
-
-                - task: AWSCLI@1
-                  displayName: Get current DEB repository
-                  inputs:
-                    awsCredentials: AWS-Repository
-                    regionName: eu-west-1
-                    awsCommand: s3
-                    awsSubCommand: sync
-                    awsArguments: $(debS3) $(debRepo) --no-progress
-
-                - task: DownloadSecureFile@1
-                  displayName: Get GPG private key
-                  name: gpgPrivateKey
-                  inputs:
-                    secureFile: gpgPrivateKey
-
-                # Update repositories
-                - task: PythonScript@0
-                  displayName: Add packages to repositories
-                  inputs:
-                    scriptSource: inline
-                    script: |
-                      from acid_drm import publish_packages
-                      publish_packages(
-                          pkg_source='$(Pipeline.Workspace)',
-                          versions_json='$(versionsJson)',
-                          deb_repo='$(debRepo)', rpm_repo='$(rpmRepo)',
-                          deb_s3='$(debS3)',
-                          gpg_private_key='$(gpgPrivateKey.secureFilePath)',
-                          gpg_key_id='$(gpgKeyId)')
-
-                # Publish updated repositories
-                - task: AWSCLI@1
-                  displayName: Update published releases manifest
-                  inputs:
-                    awsCredentials: AWS-Repository
-                    regionName: eu-west-1
-                    awsCommand: s3
-                    awsSubCommand: cp
-                    awsArguments: $(versionsJson) $(versionsJsonS3)
-                                  --no-progress
-
-                - task: AWSCLI@1
-                  displayName: Publish RPM repository
-                  inputs:
-                    awsCredentials: AWS-Repository
-                    regionName: eu-west-1
-                    awsCommand: s3
-                    awsSubCommand: sync
-                    awsArguments: $(rpmRepo) $(rpmS3)
-                                  --no-progress --delete --acl public-read
-
-                - task: AWSCLI@1
-                  displayName: Publish DEB repository
-                  inputs:
-                    awsCredentials: AWS-Repository
-                    regionName: eu-west-1
-                    awsCommand: s3
-                    awsSubCommand: sync
-                    awsArguments: $(debRepo) $(debS3)
-                                  --no-progress --delete --acl public-read
-
-                # Publish the release on GitHub
-                - task: PythonScript@0
-                  displayName: Get DRM library version
-                  inputs:
-                    scriptSource: inline
-                    script: |
-                      from acid import export
-                      from acid_drm import get_drm_version
-                      export("version", get_drm_version())
-                  name: libraryVersion
-
-                - task: GitHubRelease@1
-                  displayName: Publish GitHub release
-                  inputs:
-                    gitHubConnection: Accelize-application
-                    repositoryName: $(Build.Repository.Name)
-                    action: create
-                    target: $(Build.SourceVersion)
-                    tagSource: gitTag
-                    tagPattern: v[0-9]+\.[0-9]+\.[0-9]+
-                    isPreRelease: contains($(libraryVersion.version), '-')
-                    releaseNotesSource: inline
-                    releaseNotesInline: |
-                      Release of version $(libraryVersion.version).
-
-                      Packages available on Accelize repository.
-
-                      See the [documentation](https://tech.accelize.com/documentation/stable/) for more information.
-                    changeLogCompareToRelease: lastFullRelease
-                    changeLogType: commitBased

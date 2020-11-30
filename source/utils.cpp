@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include <fstream>
+#include <ctime>
 #include <sys/stat.h>
 #if defined(_WIN32)
 #include <direct.h>   // _mkdir
@@ -200,9 +201,7 @@ Json::Value parseJsonFile( const std::string& file_path ) {
 }
 
 
-const Json::Value& JVgetRequired( const Json::Value& jval,
-        const char* key,
-        const Json::ValueType& type ) {
+const Json::Value& JVgetRequired( const Json::Value& jval, const char* key, const Json::ValueType& type ) {
     if ( !jval.isMember( key ) )
         Throw( DRM_BadFormat, "Missing parameter '{}' of type {}", key, typeToString( type ) );
 
@@ -226,10 +225,8 @@ const Json::Value& JVgetRequired( const Json::Value& jval,
 }
 
 
-const Json::Value& JVgetOptional( const Json::Value& jval,
-        const char* key,
-        const Json::ValueType& type,
-        const Json::Value& defaultValue ) {
+const Json::Value& JVgetOptional( const Json::Value& jval, const char* key, const Json::ValueType& type,
+                                  const Json::Value& defaultValue ) {
     bool exists = jval.isMember( key );
     const Json::Value& jvalmember = exists ? jval[key] : defaultValue;
 
@@ -249,18 +246,56 @@ const Json::Value& JVgetOptional( const Json::Value& jval,
 }
 
 
-std::string exec_cmd( const std::string cmd) {
+std::string time_t_to_string( const time_t &t ) {
+    std::string str = std::string( asctime( std::localtime( &t ) ) );
+    str.pop_back();
+    return str;
+}
+
+
+time_t steady_clock_to_time_t( const std::chrono::steady_clock::time_point& tp ) {
+    return std::chrono::system_clock::to_time_t( std::chrono::system_clock::now() +
+                std::chrono::duration_cast<std::chrono::system_clock::duration>( tp - std::chrono::steady_clock::now() ) );
+}
+
+
+std::chrono::steady_clock::time_point time_t_to_steady_clock( const time_t& t ) {
+    return std::chrono::steady_clock::now() + (std::chrono::system_clock::from_time_t( t ) - std::chrono::system_clock::now());
+}
+
+
+std::string execCmd( const std::string& cmd ) {
     std::array<char, 128> buffer;
     std::string result;
     Debug( "Running command: {}", cmd );
-    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"), pclose);
-    if (!pipe) {
-        throw std::runtime_error("popen() failed!");
+    std::unique_ptr<FILE, decltype(&pclose)> pipe( popen( cmd.c_str(), "r" ), pclose );
+    if ( !pipe ) {
+        throw std::runtime_error( "popen() failed!" );
     }
-    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+    while( fgets( buffer.data(), buffer.size(), pipe.get() ) != nullptr ) {
         result += buffer.data();
     }
     return result;
+}
+
+
+std::string toUpHex( const uint64_t& i ) {
+    std::stringstream stream;
+    stream << std::uppercase << std::hex << std::setw(16) << std::setfill('0') << i;
+    return stream.str();
+}
+
+
+std::vector<std::string> split(const std::string& str, char delimiter)
+{
+   std::vector<std::string> tokens;
+   std::string token;
+   std::istringstream tokenStream(str);
+   while (std::getline(tokenStream, token, delimiter))
+   {
+      tokens.push_back(token);
+   }
+   return tokens;
 }
 
 

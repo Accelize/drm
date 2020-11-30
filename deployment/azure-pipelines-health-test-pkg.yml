@@ -1,0 +1,38 @@
+---
+name: DRM Library - Health Test - Install and test packages
+
+trigger: none
+schedules:
+# Run tests from Production package daily
+- cron: "0 0 * * *"
+  displayName: Daily midnight test of Production packages
+  branches:
+    include:
+    - master
+  always: true
+pr: none
+
+resources:
+  repositories:
+    - repository: acid
+      type: github
+      name: Accelize/acid
+      endpoint: Accelize
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  # Import variable group
+  - group: drmLibrary
+
+jobs:
+  - template: runTestFromPkgOnEc2.yml
+    parameters:
+      instance_type: 'f1.4xlarge'
+      config_list:
+      - os_distrib: 'centos_7'
+        tox_extra_option: '-m minimum'
+      - os_distrib: 'ubuntu_18_04'
+        tox_extra_option: '-m minimum'
+        dependsOn: 'centos_7'

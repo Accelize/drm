@@ -6,9 +6,9 @@ import hashlib
 
 from copy import deepcopy
 from json import dump, load, dumps
-from os import environ, getpid, listdir, remove, makedirs, getcwd, urandom
+from os import environ, getpid, listdir, remove, makedirs, getcwd, urandom, rename
 from os.path import basename, dirname, expanduser, isdir, isfile, join, \
-    realpath, splitext
+    realpath, splitext, exists
 from random import randint
 from re import IGNORECASE, match, search
 from datetime import datetime
@@ -29,6 +29,9 @@ MAILBOX_REG_OFFSET = 0x3C
 INC_EVENT_REG_OFFSET = 0x40
 CNT_EVENT_REG_OFFSET = 0x44
 
+LOG_FORMAT_SHORT = "[%^%=8l%$] %-6t, %v"
+LOG_FORMAT_LONG = "%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v"
+
 HASH_FUNTION_TABLE = {}
 
 
@@ -38,6 +41,16 @@ def bit_not(n, numbits=32):
 
 def cheap_hash(string_in, length=6):
     return hashlib.md5(string_in).hexdigest()[:length]
+
+
+def is_file_busy(path):
+    #if not exists(path):
+    #    return False
+    try:
+        rename(path, path)
+        return False
+    except OSError:
+        return True
 
 
 def get_default_conf_json(licensing_server_url):
@@ -63,6 +76,10 @@ def get_default_conf_json(licensing_server_url):
         "design": {
             "boardType": "Running on AWS"
         },
+        "settings": {
+            "ws_connection_timeout": 3,
+            "ws_request_timeout": 5
+        }
     }
 
 
@@ -120,10 +137,6 @@ def param2dict(param_list):
             continue
         d[k] = str(v)
     return d
-
-
-def whoami():
-    return sys._getframe(1).f_code.co_name
 
 
 # Pytest configuration
@@ -250,6 +263,7 @@ class SingleActivator:
         self.base_address = base_address
         self.metering_data = 0
         self.event_cnt_flag = self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET) != 0xDEADDEAD
+        print('Event counter in Activator @0x%08X is active' % self.base_address)
 
     def autotest(self, is_activated=None):
         """
@@ -303,8 +317,8 @@ class SingleActivator:
         Reset the coins counter
         """
         self.metering_data = 0
-        self.driver.write_register(self.base_address + CNT_EVENT_REG_OFFSET, 0)
         if self.event_cnt_flag:
+            self.driver.write_register(self.base_address + CNT_EVENT_REG_OFFSET, 0)
             assert self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET) == 0
 
     def check_coin(self, coins):
@@ -314,12 +328,28 @@ class SingleActivator:
         Args:
             coins (int): Number of coins to compare to.
         """
-        # Check local counter with dmr value passed in argument
-        assert self.metering_data == coins
-        # Check with counter in Activator's registery
+        # Read counter in Activation's registry
         if self.event_cnt_flag:
-            assert self.metering_data == self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET)
-
+            metering_data_from_activator = self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET)
+        # Check counters
+        try:
+            # Check local counter with drm value passed in argument
+            assert self.metering_data == coins
+            if self.event_cnt_flag:
+                # Check local counter with counter in Activator IP's registery
+                assert self.metering_data == metering_data_from_activator
+        except AssertionError as e:
+            if self.event_cnt_flag:
+                e.args += ('from pytest=%d, from DRM Ctrl=%d, from IP=%d' % (self.metering_data, coins, metering_data_from_activator),)
+                if self.metering_data == metering_data_from_activator:
+                    e.args += ('=> Metering data corruption in DRM Ctrl confirmed',)
+                elif coin == metering_data_from_activator:
+                    e.args += ('=> Metering data corruption in IP confirmed',)
+                else:
+                    e.args += ('=> Metering data corruption in Pytest local counter confirmed',)
+            else:
+                e.args += ('from pytest=%d, from DRM Ctrl=%d' % (self.metering_data, coins),)
+            raise
 
 
 class ActivatorsInFPGA:
@@ -478,12 +508,6 @@ def accelize_drm(pytestconfig):
     build_source_dir = '@CMAKE_CURRENT_SOURCE_DIR@'
     if build_source_dir.startswith('@'):
         build_source_dir = realpath('.')
-
-    # Create pytest artifacts directory
-    pytest_artifacts_dir = join(pytestconfig.getoption("artifacts_dir"), 'pytest_artifacts')
-    if not isdir(pytest_artifacts_dir):
-        makedirs(pytest_artifacts_dir)
-    print('pytest artifacts directory: ', pytest_artifacts_dir)
 
     # Get Ref Designs available
     ref_designs = RefDesign(join(build_source_dir, 'tests', 'refdesigns', fpga_driver_name))
@@ -794,7 +818,7 @@ def conf_json(request, pytestconfig, tmpdir):
         else:
             log_param['log_file_path'] = realpath("./tox_drmlib_t%f_pid%d.log" % (time(), getpid()))
         log_param['log_file_verbosity'] = pytestconfig.getoption("logfilelevel")
-        log_param['log_file_append'] = True if pytestconfig.getoption("logfileappend") else False
+        log_param['log_file_append'] = pytestconfig.getoption("logfileappend")
     # Save config to JSON file
     json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param, design=design_param)
     json_conf.save()
@@ -1028,28 +1052,32 @@ class ExecFunction:
     """
     Provide test functions using directly C or C++ object
     """
-    def __init__(self, slot_id, is_cpp, test_file_name, conf_path, cred_path):
-        self._conf_path = conf_path
-        self._cred_path = cred_path
-        self._is_cpp = is_cpp
-        self._slot_id = slot_id
-        self._test_func_path = join('@CMAKE_BINARY_DIR@', 'tests', test_file_name)
-        if not isfile(self._test_func_path):
-            raise IOError("No executable '%s' found" % self._test_func_path)
-        self._cmd_line = '%s -s %d -f %s -d %s' % (self._test_func_path, self._slot_id,
-                                                   self._conf_path, self._cred_path)
-        if not self._is_cpp:
+    def __init__(self, slot_id, is_cpp, test_file_name, conf_path, cred_path,
+                 valgrind_log_file=None):
+        test_dir = join('@CMAKE_BINARY_DIR@', 'tests')
+        test_func_path = join(test_dir, test_file_name)
+        if not isfile(test_func_path):
+            raise IOError("No executable '%s' found" % test_func_path)
+        self._cmd_line = ''
+        if valgrind_log_file is not None:
+            self._cmd_line += ('valgrind --leak-check=full --show-reachable=yes --num-callers=25 '
+                               '--suppressions=%s --log-file=%s ' % (
+                                 join(test_dir,'valgrind.supp'), valgrind_log_file))
+        self._cmd_line += '%s -s %d -f %s -d %s' % (test_func_path, slot_id, conf_path, cred_path)
+        if not is_cpp:
             self._cmd_line += ' -c'
         self.returncode = None
         self.stdout = None
         self.stderr = None
         self.asyncmsg = None
 
-    def run(self, test_name=None):
+    def run(self, test_name=None, param_path=None):
         from subprocess import run, PIPE
         cmdline = self._cmd_line
         if test_name is not None:
             cmdline += ' -t %s' % test_name
+        if param_path is not None:
+            cmdline += ' -p %s' % param_path
         print('cmdline=', cmdline)
         result = run(cmdline, shell=True, stdout=PIPE, stderr=PIPE)
         self.returncode = result.returncode
@@ -1069,16 +1097,16 @@ class ExecFunctionFactory:
     """
     Provide an object to load executable with test functions in C/C++
     """
-    def __init__(self, conf_path, cred_path, is_cpp, is_release_build=False):
-        self._conf_path = conf_path
-        self._cred_path = cred_path
+    def __init__(self, conf_json, cred_json, is_cpp, is_release_build=False):
+        self._conf_json = conf_json
+        self._cred_json = cred_json
         self._is_cpp = is_cpp
         self._is_release_build = is_release_build
 
-    def load(self, test_file_name, slot_id):
+    def load(self, test_file_name, slot_id, valgrind_log_file=None):
         try:
-            return ExecFunction(slot_id, self._is_cpp, test_file_name, self._conf_path,
-                                self._cred_path)
+            return ExecFunction(slot_id, self._is_cpp, test_file_name, self._conf_json.path,
+                                self._cred_json.path, valgrind_log_file)
         except IOError:
             if self._is_release_build:
                 pytest.skip("No executable '%s' found: test skipped" % self._test_func_path)
@@ -1088,7 +1116,7 @@ class ExecFunctionFactory:
 def exec_func(accelize_drm, cred_json, conf_json):
     is_cpp = accelize_drm.pytest_backend == 'c++'
     is_release_build = 'release' in accelize_drm.pytest_build_type
-    return ExecFunctionFactory(conf_json.path, cred_json.path, is_cpp, is_release_build)
+    return ExecFunctionFactory(conf_json, cred_json, is_cpp, is_release_build)
 
 
 #--------------
@@ -1101,3 +1129,75 @@ def app(pytestconfig):
     app = create_app(url)
     app.debug = pytestconfig.getoption("proxy_debug")
     return app
+
+
+#-----------------
+# Log file fixture
+#-----------------
+
+
+class BasicLogFile:
+
+    def __init__(self, basepath=getcwd(), verbosity=None, append=False, keep=False):
+        self._basepath = basepath
+        self._path = None
+        self._verbosity = verbosity
+        self._append = append
+        self._keep = keep
+
+    def create(self, verbosity, format=LOG_FORMAT_LONG):
+        log_param =  dict()
+        while True:
+            self._path = '%s__%d__%s.log' % (self._basepath, getpid(), time())
+            if not isfile(self._path):
+                break
+        log_param['log_file_path'] = self._path
+        log_param['log_file_type'] = 1
+        log_param['log_file_append'] = self._append
+        log_param['log_file_format'] = format
+        if self._verbosity is not None and self._verbosity < verbosity:
+            log_param['log_file_verbosity'] = self._verbosity
+        else:
+            log_param['log_file_verbosity'] = verbosity
+        return log_param
+
+    def read(self):
+        wait_func_true(lambda: not is_file_busy(self._path), 10)
+        with open(self._path, 'rt') as f:
+            log_content = f.read()
+        return log_content
+
+    def remove(self):
+        if not self._keep and isfile(self._path):
+            remove(self._path)
+
+
+@pytest.fixture
+def basic_log_file(pytestconfig, request, accelize_drm):
+    """
+    Return an object to handle log file parameter and associated resources
+    """
+    # Determine log file path
+    if pytestconfig.getoption("logfile") is not None:
+        if len(pytestconfig.getoption("logfile")) != 0:
+            path_prefix = pytestconfig.getoption("logfile")
+        else:
+            path_prefix = "tox"
+    else:
+        path_prefix = "pytest"
+    log_file_basepath = realpath(join(accelize_drm.pytest_artifacts_dir, "%s__%s" % (
+                    path_prefix, request.function.__name__)))
+
+    # Determine log file verbosity
+    if pytestconfig.getoption("logfile") is not None:
+        log_file_verbosity = pytestconfig.getoption("logfilelevel")
+    else:
+        log_file_verbosity = None
+
+    # Determine log file append mode
+    log_file_append = pytestconfig.getoption("logfileappend")
+
+    # Determine keep argument
+    keep = pytestconfig.getoption("logfile") is not None
+
+    return BasicLogFile(log_file_basepath, log_file_verbosity, log_file_append, keep)

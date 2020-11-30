@@ -4,13 +4,13 @@ Test metering and floating behaviors of DRM Library.
 """
 import pytest
 from time import sleep
-from random import randint, randrange
+from random import randint, choice
 from datetime import datetime, timedelta
 from re import search, findall
 from os.path import realpath, isfile
 from os import remove
 
-from tests.conftest import wait_deadline, wait_func_true, whoami
+from tests.conftest import wait_deadline, wait_func_true
 
 
 def test_metered_start_stop_in_raw(accelize_drm, conf_json, cred_json, async_handler):
@@ -254,8 +254,8 @@ def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, asy
         assert drm_manager.get('metered_data') == 0
         activators[0].generate_coin(10)
         activators[0].check_coin(drm_manager.get('metered_data'))
-        # Wait enough time to be sure the 2nd license has been provisioned
-        wait_deadline(start, lic_duration/2)
+        # Wait until 2 licenses are provisioned
+        wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, lic_duration)
         drm_manager.deactivate(True)
         assert drm_manager.get('session_status')
         assert drm_manager.get('license_status')
@@ -268,21 +268,21 @@ def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, asy
         assert drm_manager.get('session_id') == session_id
         activators.autotest(is_activated=True)
         # Wait expiration
-        sleep(4)
+        wait_deadline(start, 2*lic_duration+2)
         assert drm_manager.get('session_status')
         assert drm_manager.get('session_id') == session_id
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
         drm_manager.activate(True)
         assert drm_manager.get('session_status')
-        assert drm_manager.get('session_id') == session_id
+        assert drm_manager.get('session_id') != session_id
         assert drm_manager.get('license_status')
         activators.autotest(is_activated=True)
         drm_manager.deactivate()
         assert not drm_manager.get('session_status')
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
-        assert drm_manager.get('session_id') != session_id
+        assert drm_manager.get('session_id') == ''
         async_cb.assert_NoError()
     finally:
         drm_manager.deactivate()
@@ -295,13 +295,12 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
+    async_cb.reset()
     activators = accelize_drm.pytest_fpga_activators[0]
     activators.reset_coin()
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_02')
 
-    async_cb.reset()
-    conf_json.reset()
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
@@ -323,21 +322,30 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
         session_id = drm_manager.get('session_id')
         assert len(session_id) > 0
         lic_duration = drm_manager.get('license_duration')
+        wait_numbers = [lic_duration*2-2,lic_duration*2+2]
         activators.autotest(is_activated=True)
         for i in range(nb_pause_resume):
             new_coins = randint(1, 100)
             activators[0].generate_coin(new_coins)
             activators[0].check_coin(drm_manager.get('metered_data'))
+            wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, 10)
             drm_manager.deactivate(True)
             async_cb.assert_NoError()
             assert drm_manager.get('session_status')
             assert drm_manager.get('license_status')
             assert drm_manager.get('session_id') == session_id
             # Wait randomly at the limit of the expiration
-            random_wait = randint(lic_duration*2-1, lic_duration*2+1)
+            random_wait = choice(wait_numbers)
             wait_deadline(start, random_wait)
             drm_manager.activate(True)
-            start = datetime.now()
+            if random_wait > lic_duration*2:
+                start = datetime.now()
+                assert drm_manager.get('session_id') != session_id
+                activators[0].reset_coin()
+                session_id = drm_manager.get('session_id')
+            else:
+                start += timedelta(seconds=lic_duration)
+                assert drm_manager.get('session_id') == session_id, 'after loop #%d' % i
         assert drm_manager.get('session_status')
         assert drm_manager.get('session_id') == session_id
         assert drm_manager.get('license_status')
@@ -435,7 +443,7 @@ def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, cred_json
 
 @pytest.mark.minimum
 @pytest.mark.hwtst
-def test_async_on_pause(accelize_drm, conf_json, cred_json, async_handler):
+def test_async_on_pause(accelize_drm, conf_json, cred_json, async_handler, request):
     """
     Test an async health commande is executed on pause.
     """
@@ -445,7 +453,7 @@ def test_async_on_pause(accelize_drm, conf_json, cred_json, async_handler):
     activators = accelize_drm.pytest_fpga_activators[0]
     cred_json.set_user('accelize_accelerator_test_02')
     conf_json.reset()
-    logpath = accelize_drm.create_log_path(whoami())
+    logpath = accelize_drm.create_log_path(request.function.__name__)
     conf_json['settings']['log_file_verbosity'] = 0
     conf_json['settings']['log_file_type'] = 1
     conf_json['settings']['log_file_path'] = logpath
@@ -538,20 +546,21 @@ def test_stop_after_pause(accelize_drm, conf_json, cred_json, async_handler):
 @pytest.mark.minimum
 @pytest.mark.no_parallel
 @pytest.mark.hwtst
-def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
+#@pytest.mark.skip(reason='Might be the root cause of SegFault')
+def test_metering_limits_on_activate(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
     """
-    Test an error is returned and the design is locked when the limit is reached.
+    Test an error is returned by the activate function and the design is locked when the limit is reached.
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
     activators.reset_coin()
     activators.autotest()
-    cred_json.set_user('accelize_accelerator_test_03')
 
     # Test activate function call fails when limit is reached
     async_cb.reset()
     conf_json.reset()
+    cred_json.set_user('accelize_accelerator_test_03')
     accelize_drm.clean_metering_env(cred_json, ws_admin)
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
@@ -569,7 +578,6 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         assert drm_manager.get('metered_data') == 0
         activators[0].generate_coin(999)
         activators[0].check_coin(drm_manager.get('metered_data'))
-        sleep(1)
         drm_manager.deactivate()
         activators[0].reset_coin()
         assert not drm_manager.get('license_status')
@@ -578,7 +586,6 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         activators[0].check_coin(drm_manager.get('metered_data'))
         activators[0].generate_coin(1)
         activators[0].check_coin(drm_manager.get('metered_data'))
-        sleep(1)
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
@@ -591,13 +598,26 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         async_cb.assert_NoError()
     finally:
         drm_manager.deactivate()
-    print('Test activate function fails when limit is reached: PASS')
 
-    # Test background thread stops when limit is reached
+
+@pytest.mark.minimum
+@pytest.mark.no_parallel
+@pytest.mark.hwtst
+#@pytest.mark.skip(reason='Might be the root cause of SegFault')
+def test_metering_limits_on_licensing_thread(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
+    """
+    Test an error is returned by the async error function and the design is locked when the limit is reached.
+    """
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    activators = accelize_drm.pytest_fpga_activators[0]
+    activators.reset_coin()
+    activators.autotest()
+
     async_cb.reset()
     conf_json.reset()
+    cred_json.set_user('accelize_accelerator_test_03')
     accelize_drm.clean_metering_env(cred_json, ws_admin)
-    activators.reset_coin()
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
@@ -614,14 +634,14 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         assert drm_manager.get('license_status')
         assert drm_manager.get('metered_data') == 0
         lic_duration = drm_manager.get('license_duration')
-        sleep(2)
+        sleep(int(lic_duration/2) + 1)
         activators[0].generate_coin(1000)
         activators[0].check_coin(drm_manager.get('metered_data'))
-        # Wait right before expiration
+        # Wait right before lock
         wait_deadline(start, 3*lic_duration-3)
         assert drm_manager.get('license_status')
         activators.autotest(is_activated=True)
-        sleep(5)
+        wait_deadline(start, 3*lic_duration+3)
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
         # Verify asynchronous callback has been called
@@ -636,7 +656,6 @@ def test_metering_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
         activators.autotest(is_activated=False)
     finally:
         drm_manager.deactivate()
-    print('Test background thread stops when limit is reached: PASS')
 
 
 @pytest.mark.on_2_fpga
@@ -698,7 +717,7 @@ def test_floating_limits(accelize_drm, conf_json, cred_json, async_handler):
         async_cb1.assert_NoError()
 
 
-def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handler):
+def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handler, request):
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
@@ -706,7 +725,7 @@ def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handl
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_02')
     conf_json.reset()
-    logpath = accelize_drm.create_log_path(whoami())
+    logpath = accelize_drm.create_log_path(request.function.__name__)
     conf_json['settings']['log_file_verbosity'] = accelize_drm.create_log_level(2)
     conf_json['settings']['log_file_type'] = 1
     conf_json['settings']['log_file_path'] = logpath

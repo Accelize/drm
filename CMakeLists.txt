@@ -21,7 +21,7 @@ cmake_minimum_required(VERSION 3.12)
 # - Alpha             : 1.0.0-alpha.1
 # - Beta              : 1.0.0-beta.1
 # - Release candidate : 1.0.0-rc.1
-set(ACCELIZEDRM_VERSION 2.5.0)
+set(ACCELIZEDRM_VERSION 2.5.1)
 
 ## Define package release number (Number of time this version was packaged)
 if (NOT CPACK_PACKAGE_RELEASE)
@@ -92,6 +92,8 @@ endif()
 ## Compiler and linker options
 set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 add_compile_options(-fvisibility=hidden)
 if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
     # Enable warnings
@@ -195,7 +197,7 @@ include_directories(internal_inc)
 include_directories(include)
 include_directories(spdlog/include)
 
-## libaccelize_drm
+## spdlog
 set(TARGET_SOURCES
     spdlog/src/fmt.cpp
     spdlog/src/spdlog.cpp
@@ -209,9 +211,10 @@ set(TARGET_SOURCES
     source/error.cpp
     source/log.cpp
 )
-
 add_library(accelize_drm SHARED ${TARGET_SOURCES})
 target_compile_options(accelize_drm PRIVATE -DSPDLOG_COMPILED_LIB)
+
+## libaccelize_drm
 set_target_properties(accelize_drm PROPERTIES VERSION ${ACCELIZEDRM_VERSION} SOVERSION ${ABI_VERSION})
 target_link_libraries(accelize_drm ${CURL_LIBRARIES})
 target_link_libraries(accelize_drm jsoncpp)

@@ -2,6 +2,10 @@
 
 #include <iostream>
 #include <getopt.h>
+#include <memory>
+#include <sstream>
+#include <fstream>
+#include <unistd.h>
 
 /* JsonCPP Library */
 #include <json/json.h>
@@ -53,6 +57,55 @@ static int write_drm_register( uint32_t offset, uint32_t value, void* user_p ) {
 static void print_async_error( const char* errmsg, void* /*user_p*/ ) {
     cerr << "From async callback: " << errmsg << endl;
     sAsyncErrorMessage = errmsg + string("\n");
+}
+
+
+Json::Value parseJsonString( const std::string &json_string ) {
+    Json::Value json_node;
+    std::string parseErr;
+    Json::CharReaderBuilder builder;
+    std::unique_ptr<Json::CharReader> const reader( builder.newCharReader() );
+
+    if ( json_string.size() == 0 )
+        throw std::runtime_error( "Cannot parse an empty JSON string" );
+
+    if ( !reader->parse( json_string.c_str(), json_string.c_str() + json_string.size(),
+            &json_node, &parseErr) ) {
+        std::stringstream ss;
+        ss << "Cannot parse JSON string because " << parseErr << std::endl;
+        throw std::runtime_error( ss.str() );
+    }
+    if ( json_node.empty() || json_node.isNull() )
+        throw std::runtime_error( "JSON string is empty" );
+
+    return json_node;
+}
+
+
+Json::Value parseJsonFile( const std::string& file_path ) {
+    Json::Value json_node;
+    std::string file_content;
+    std::stringstream ss;
+
+    // Open file
+    std::ifstream fh( file_path );
+    if ( !fh.good() ) {
+        ss << "Cannot find JSON file: " << file_path << std::endl;
+        throw std::runtime_error( ss.str() );
+    }
+    // Read file content
+    fh.seekg( 0, std::ios::end );
+    file_content.reserve( fh.tellg() );
+    fh.seekg( 0, std::ios::beg );
+    file_content.assign( (std::istreambuf_iterator<char>(fh)), std::istreambuf_iterator<char>() );
+    // Parse content as a JSON object
+    try {
+        json_node = parseJsonString( file_content );
+    } catch( const std::runtime_error& e ) {
+        ss << "Cannot parse JSON file " <<  file_path << ": " << e.what() << std::endl;
+        throw std::runtime_error( ss.str() );
+    }
+    return json_node;
 }
 
 
@@ -315,16 +368,17 @@ public:
             ret = DrmManager_get_json_string( pDrmManager_c, json_value.toStyledString().c_str(),
                     &val_char );
             if ( ret == DRM_ErrorCode::DRM_OK ) {
-                Json::CharReaderBuilder builder;
-                Json::CharReader* reader = builder.newCharReader();
-                std::string errors;
-                bool parsingSuccessful = reader->parse( val_char, val_char + strlen( val_char ),
-                        &json_value, &errors );
-                delete reader;
-                delete val_char;
-                if ( !parsingSuccessful ) {
+                try {
+                    json_value = parseJsonString( string(val_char) );
+                    /*for (auto it = json_out.begin(); it != json_out.end(); ++it) {
+                        json_value[it.key()] = *it;
+                        std::cout <<  << "\n";
+                        std::cout << (*it)["Name"].get<std::string>() << "\n";
+                        std::cout << (*it)["Last modified"].get<std::string>() << "\n";
+                    }*/
+                } catch(const std::runtime_error& e) {
                     snprintf(pDrmManager_c->error_message, sizeof(pDrmManager_c->error_message),
-                            "%s", errors.c_str());
+                            "%s", e.what());
                     ret = -1;
                 }
             }
@@ -691,7 +745,26 @@ int test_set_json_string_with_empty_string() {
     return ret;
 }
 
+// Test normal usage, especially to run valgrind for memory leak check
+int test_normal_usage( string param_file) {
+    int ret = -1;
 
+    Json::Value param_json = parseJsonFile(param_file);
+    uint32_t nb_running = param_json["nb_running"].asUInt();
+
+    sDrm->create();
+    try {
+        sDrm->activate();
+        uint32_t lic_duration = sDrm->get_uint(cpp::ParameterKey::license_duration);
+        sleep(lic_duration * nb_running - 2);
+        sDrm->deactivate();
+        ret = 0;
+    } catch( const cpp::Exception& e ) {
+        ret = e.getErrCode();
+    }
+    sDrm->destroy();
+    return ret;
+}
 
 
 
@@ -709,6 +782,7 @@ void print_usage()
     cout << "   -s <idx>   : If server has multiple board, specify the slot index of the targeted board" << endl;
     cout << "   -t <name>  : Specify the name of test function to execute" << endl << endl;
     cout << "   -c         : When specified, the tests use the C API. Otherwise the C++ API is used" << endl;
+    cout << "   -p <path>  : When specified, path to a parameter file used by the test function. File content shall be JSON-formated." << endl;
 }
 
 
@@ -717,20 +791,21 @@ int main(int argc, char **argv) {
     string test_name;
     int slot_idx = 0;
     bool use_cpp = true;
-    string conf_file_path, cred_file_path;
+    string conf_file_path, cred_file_path, param_file;
 
     // Shut GetOpt error messages down (return '?'):
     opterr = 0;
 
     // Retrieve the options:
     int opt;
-    while ( (opt = getopt(argc, argv, "hs:t:f:d:c")) != -1 ) {  // for each option...
+    while ( (opt = getopt(argc, argv, "hs:t:f:d:cp:")) != -1 ) {  // for each option...
         switch (opt) {
             case 's': slot_idx = atoi(optarg); break;
             case 't': test_name = string(optarg); break;
             case 'f': conf_file_path = string(optarg); break;
             case 'd': cred_file_path = string(optarg); break;
             case 'c': use_cpp = false; break;
+            case 'p': param_file = string(optarg); break;
             case 'h': print_usage(); return 0;
             case '?':  // unknown option...
                 cerr << "Unknown option: '" << char(optopt) << "'!" << endl;
@@ -794,12 +869,18 @@ int main(int argc, char **argv) {
         if (test_name == "test_set_json_string_with_empty_string")
             ret = test_set_json_string_with_empty_string();
 
+        if (test_name == "test_normal_usage")
+            ret = test_normal_usage(param_file);
+
     } catch( const cpp::Exception& e) {
         cerr << "Unexpected error: " << e.what() << endl;
         ret = -1;
     }
     if (sAsyncErrorMessage.size())
         cerr << "AsyncErrorMessage=" << sAsyncErrorMessage << endl;
+
+    delete sDrm;
+    sDrm = nullptr;
 
     return ret;
 }

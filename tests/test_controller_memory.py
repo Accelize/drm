@@ -3,7 +3,7 @@
 Test node-locked behavior of DRM Library.
 """
 import pytest
-from re import search
+from re import search, IGNORECASE
 
 
 @pytest.mark.minimum
@@ -83,44 +83,52 @@ def test_mailbox_type_error(accelize_drm, conf_json, cred_json, async_handler):
     async_cb.assert_NoError()
 
 
-def test_configuration_file_empty_and_corrupted_product_id(accelize_drm, conf_json, cred_json, async_handler):
-    """Test errors when an incorrect product ID is requested to Web Server"""
-
+def test_empty_product_id(accelize_drm, conf_json, cred_json, async_handler, basic_log_file):
+    """Test error with a design having an empty Product ID"""
     refdesign = accelize_drm.pytest_ref_designs
     driver = accelize_drm.pytest_fpga_driver[0]
     fpga_image_bkp = driver.fpga_image
     async_cb = async_handler.create()
     cred_json.set_user('accelize_accelerator_test_02')
+    conf_json['settings'].update(basic_log_file.create(1))
+    conf_json.save()
+    empty_fpga_image = refdesign.get_image_id('empty_product_id')
+    if empty_fpga_image is None:
+        pytest.skip("No FPGA image found for 'empty_product_id'")
 
     try:
-        # Test Web Service when an empty product ID is provided
-        empty_fpga_image = refdesign.get_image_id('empty_product_id')
-        if empty_fpga_image is None:
-            pytest.skip("No FPGA image found for 'empty_product_id'")
         driver.program_fpga(empty_fpga_image)
         async_cb.reset()
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        assert drm_manager.get('product_info') is None
-        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
-            drm_manager.activate()
-        assert 'Metering Web Service error 400' in str(excinfo.value)
-        assert 'DRM WS request failed' in str(excinfo.value)
-        assert search(r'\\"Unknown Product ID\\" for ', str(excinfo.value)) is not None
-        assert 'Product ID from license request is not set' in str(excinfo.value)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+        with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+            drm_manager = accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            )
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+        assert search(r'UDID and Product ID cannot be both missing', str(excinfo.value), IGNORECASE)
+        assert search(r'Could not find Product ID information in DRM Controller Memory', basic_log_file.read(), IGNORECASE)
         async_cb.assert_NoError()
-        print('Test Web Service when an empty product ID is provided: PASS')
+    finally:
+        # Reprogram FPGA with original image
+        driver.program_fpga(fpga_image_bkp)
+    basic_log_file.remove()
 
-        # Test when a misformatted product ID is provided
-        bad_fpga_image = refdesign.get_image_id('bad_product_id')
-        if bad_fpga_image is None:
-            pytest.skip("No FPGA image found for 'bad_product_id'")
+
+def test_malformed_product_id(accelize_drm, conf_json, cred_json, async_handler):
+    """Test error with a design having a malformed Product ID"""
+    refdesign = accelize_drm.pytest_ref_designs
+    driver = accelize_drm.pytest_fpga_driver[0]
+    fpga_image_bkp = driver.fpga_image
+    async_cb = async_handler.create()
+    cred_json.set_user('accelize_accelerator_test_02')
+    bad_fpga_image = refdesign.get_image_id('bad_product_id')
+    if bad_fpga_image is None:
+        pytest.skip("No FPGA image found for 'bad_product_id'")
+
+    try:
         driver.program_fpga(bad_fpga_image)
         async_cb.reset()
         with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
@@ -136,7 +144,6 @@ def test_configuration_file_empty_and_corrupted_product_id(accelize_drm, conf_js
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadFormat.error_code
         async_cb.assert_NoError()
         print('Test Web Service when a misformatted product ID is provided: PASS')
-
     finally:
         # Reprogram FPGA with original image
         driver.program_fpga(fpga_image_bkp)

@@ -1,12 +1,10 @@
 ---
-# runTestOnEc2.yml
+# runTestFromPkgOnEc2.yml
 
 parameters:
   instance_type: 'f1.4xlarge'
   config_list:
   - os_distrib: 'centos_7'
-    tox_mode: 'release'
-    tox_coverage: false
     tox_extra_option: ''
 
 jobs:
@@ -20,26 +18,21 @@ jobs:
       image: ${{ config.os_distrib }}
       instanceType: ${{ parameters.instance_type }}
       acidDir: $(Build.SourcesDirectory)/deployment/acid
-      ansiblePlaybook: $(Build.SourcesDirectory)/deployment/playbook.yml
+      ansiblePlaybook: $(Build.SourcesDirectory)/deployment/playbook_test_pkg.yml
       dependsOn:
       - ${{ if config.dependsOn }}:
         - runTests_Aws_${{ config.dependsOn }}
       condition: succeededOrFailed()
 
-  # Run tests on AWS agent
+  # Install Package on AWS agent
   - job: runTests_Aws_${{ config.os_distrib }}
-    displayName: Run tests on AWS ${{ config.os_distrib }}
+    displayName: Install and run tests on AWS ${{ config.os_distrib }}
     dependsOn: startAgent_Aws_${{ config.os_distrib }}
     condition: succeededOrFailed()
     pool:
       name: Default
       demands:  # Use previously instantiated agent
         - agent.Name -equals $(Build.BuildId) $(Build.DefinitionName) AWS ${{ config.os_distrib }}
-    variables:
-      ${{ if eq(config.tox_coverage, true) }}:
-        tox_operation: aws-build-${{ config.tox_mode }},cpp-${{ config.tox_mode }},c-${{ config.tox_mode }},integration-${{ config.tox_mode }},coverage-${{ config.tox_mode }}
-      ${{ if ne(config.tox_coverage, true) }}:
-        tox_operation: aws-build-${{ config.tox_mode }},cpp-${{ config.tox_mode }},c-${{ config.tox_mode }},integration-${{ config.tox_mode }}
     steps:
       - checkout: self
         submodules: true
@@ -85,17 +78,37 @@ jobs:
           EOF
         displayName: Create Accelize credentials file
 
-      - script: sudo -E tox -p all -e $(tox_operation)
-                -- --cred=$(Build.SourcesDirectory)/cred.json --server=$(meteringServer) --artifacts_dir=$(Build.SourcesDirectory)/artifacts -rxs ${{ config.tox_extra_option }}
-        displayName: Run tests with Tox
+      - script: |
+          sudo yum install -y yum-utils
+          sudo yum-config-manager --add-repo https://tech.accelize.com/rpm/accelize_stable.repo
+          sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+          sudo yum install -y python3-accelize-drm
+          sudo yum install -y libaccelize-drm
+          sudo yum install -y libaccelize-drm-devel
+        displayName: Install drmlib from package on ${{ config.os_distrib }}
+        condition: ${{ contains(config.os_distrib, 'centos') }}
+
+      - script: |
+          sudo apt update
+          sudo apt install -y apt-transport-https software-properties-common lsb-release gnupg curl
+          curl -fsSL https://tech.accelize.com/gpg | sudo apt-key add -
+          sudo add-apt-repository "deb https://tech.accelize.com/deb $(lsb_release -cs) stable"
+          sudo apt update
+          sudo apt install -y python3-accelize-drm
+          sudo apt install -y libaccelize-drm
+          sudo apt install -y libaccelize-drm-dev
+        displayName: Install drmlib from package on ${{ config.os_distrib }}
+        condition: ${{ contains(config.os_distrib, 'ubuntu') }}
+
+      - script: sudo -E tox -p all -e cpp-install,c-install,integration-install
+                -- --cred=$(Build.SourcesDirectory)/cred.json --server=prod --artifacts_dir=$(Build.SourcesDirectory)/artifacts -rxs ${{ config.tox_extra_option }}
+        displayName: Run tests from package with Tox on ${{ config.os_distrib }}
         env:
-          CODECOV_TOKEN: $(codecovToken)
           TOX_PARALLEL_NO_SPINNER: 1
-          SDK_DIR: /opt/aws_fpga/sdk
 
       - publish: $(Build.SourcesDirectory)/artifacts
         artifact: AWS_Artifacts_${{ config.os_distrib }}
-        displayName: Publish AWS Artifacts for ${{ config.os_distrib }} tests
+        displayName: Publish AWS Artifacts for ${{ config.os_distrib }} package tests
         condition: always()
 
   # Stop AWS agent

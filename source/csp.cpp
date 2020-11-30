@@ -25,30 +25,26 @@ namespace DRM {
 Json::Value GetCspInfo( uint32_t verbosity ) {
     Json::Value info_node = Json::nullValue;
 
-    //  Test AWS command
-    Aws* csp_aws = new Aws();
-    try {
-        csp_aws->setVerbosity( verbosity );
-        info_node = csp_aws->get_metadata();
-        Debug( "Instance is running on Aws" );
-        delete csp_aws;
-        return info_node;
-    } catch( std::runtime_error &e ) {
-        Debug( "Instance is not running on Aws" );
-        delete csp_aws;
-    }
-
     //  Test Alibaba command
-    Alibaba* csp_alibaba = new Alibaba();
+    std::unique_ptr<Alibaba> csp_alibaba ( new Alibaba() );
     try {
         csp_alibaba->setVerbosity( verbosity );
         info_node = csp_alibaba->get_metadata();
         Debug( "Instance is running on Alibaba" );
-        delete csp_alibaba;
         return info_node;
     } catch( std::runtime_error &e ) {
         Debug( "Instance is not running on Alibaba" );
-        delete csp_alibaba;
+    }
+
+    //  Test AWS command
+    std::unique_ptr<Aws> csp_aws( new Aws() );
+    try {
+        csp_aws->setVerbosity( verbosity );
+        info_node = csp_aws->get_metadata();
+        Debug( "Instance is running on Aws" );
+        return info_node;
+    } catch( std::runtime_error &e ) {
+        Debug( "Instance is not running on Aws" );
     }
 
     //  Not a supported CSP or this is On-Prem system
@@ -59,30 +55,30 @@ Json::Value GetCspInfo( uint32_t verbosity ) {
 
 /** AWS class
 */
-Aws::Aws():CspBase( "Aws", 50 ) {}
+Aws::Aws():CspBase( "Aws", 50, 50 ) {}
 
 Json::Value Aws::get_metadata() {
     Json::Value metadata = Json::nullValue;
     std::string token;
-    uint32_t timeout_ms = mHTTPRequest.getConnectionTimeoutMS();
 
     // Using IMDSv2 method
 
     // Get token
-    CurlEasyPost tokenReq;
-    tokenReq.setConnectionTimeoutMS( timeout_ms );
+    CurlEasyPost tokenReq( mConnectionTimeoutMS );
     tokenReq.setVerbosity( mVerbosity );
     tokenReq.appendHeader( "X-aws-ec2-metadata-token-ttl-seconds: 21600" );
-    token = tokenReq.perform_put( "http://169.254.169.254/latest/api/token", timeout_ms );
+    token = tokenReq.perform_put<std::string>( "http://169.254.169.254/latest/api/token", mRequestTimeoutMS );
 
     // Collect AWS information
+    CurlEasyPost req( mConnectionTimeoutMS );
+    req.setVerbosity( mVerbosity );
     std::string header = fmt::format("X-aws-ec2-metadata-token: {}", token);
-    mHTTPRequest.appendHeader( header );
+    req.appendHeader( header );
     std::string base_url("http://169.254.169.254/latest");
-    metadata["instance_id"] = mHTTPRequest.perform<std::string>( fmt::format( "{}/meta-data/instance-id", base_url ), timeout_ms );
-    metadata["instance_type"] = mHTTPRequest.perform<std::string>( fmt::format( "{}/meta-data/instance-type", base_url ), timeout_ms );
-    metadata["ami_id"] = mHTTPRequest.perform<std::string>( fmt::format( "{}/meta-data/ami-id", base_url ), timeout_ms );
-    std::string doc_string = mHTTPRequest.perform<std::string>( fmt::format( "{}/dynamic/instance-identity/document", base_url ), timeout_ms );
+    metadata["instance_id"] = req.perform_get<std::string>( fmt::format( "{}/meta-data/instance-id", base_url ), mRequestTimeoutMS );
+    metadata["instance_type"] = req.perform_get<std::string>( fmt::format( "{}/meta-data/instance-type", base_url ), mRequestTimeoutMS );
+    metadata["ami_id"] = req.perform_get<std::string>( fmt::format( "{}/meta-data/ami-id", base_url ), mRequestTimeoutMS );
+    std::string doc_string = req.perform_get<std::string>( fmt::format( "{}/dynamic/instance-identity/document", base_url ), mRequestTimeoutMS );
     Json::Value doc_json = parseJsonString( doc_string );
     metadata["region"] = doc_json["region"];
     return metadata;
@@ -91,26 +87,28 @@ Json::Value Aws::get_metadata() {
 
 /** Alibaba class
 */
-Alibaba::Alibaba():CspBase( "Alibaba", 50 ) {}
+Alibaba::Alibaba():CspBase( "Alibaba", 50, 50 ) {}
 
 Json::Value Alibaba::get_metadata() {
     Json::Value metadata = Json::nullValue;
-    uint32_t timeout_ms = mHTTPRequest.getConnectionTimeoutMS();
+    CurlEasyPost req( mConnectionTimeoutMS );
+    req.setVerbosity( mVerbosity );
     // Collect Alibaba information
     std::string base_url("http://100.100.100.200/latest/meta-data");
-    metadata["instance_id"] = mHTTPRequest.perform<std::string>( fmt::format( "{}/instance-id", base_url ), timeout_ms );
-    metadata["instance_type"] = mHTTPRequest.perform<std::string>( fmt::format( "{}/instance/instance-type", base_url ), timeout_ms );
-    metadata["ami_id"] = mHTTPRequest.perform<std::string>( fmt::format( "{}/image-id", base_url ), timeout_ms );
-    metadata["region"] = mHTTPRequest.perform<std::string>( fmt::format( "{}/region-id", base_url ), timeout_ms );
+    metadata["instance_id"] = req.perform_get<std::string>( fmt::format( "{}/instance-id", base_url ), mRequestTimeoutMS );
+    metadata["instance_type"] = req.perform_get<std::string>( fmt::format( "{}/instance/instance-type", base_url ), mRequestTimeoutMS );
+    metadata["ami_id"] = req.perform_get<std::string>( fmt::format( "{}/image-id", base_url ), mRequestTimeoutMS );
+    metadata["region"] = req.perform_get<std::string>( fmt::format( "{}/region-id", base_url ), mRequestTimeoutMS );
     return metadata;
 }
 
 
 /** CspBase class
 */
-CspBase::CspBase( const std::string &name, const uint32_t timeout_ms ) {
+CspBase::CspBase( const std::string &name, const int32_t connection_timeout_ms, const int32_t request_timeout_ms ) {
     mName = name;
-    mHTTPRequest.setConnectionTimeoutMS( timeout_ms );
+    mConnectionTimeoutMS = connection_timeout_ms;
+    mRequestTimeoutMS = request_timeout_ms;
     mVerbosity = 0;
 }
 

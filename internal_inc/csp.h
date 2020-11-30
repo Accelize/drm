@@ -40,19 +40,20 @@ private:
     std::string mName;  // CSP name
 
 protected:
-    CurlEasyPost mHTTPRequest;
+    int32_t mConnectionTimeoutMS; // Connection timeout in milliseconds
+    int32_t mRequestTimeoutMS; // Request timeout in milliseconds
     uint32_t mVerbosity; // HTTP verbosity: 0: default, 1:verbose
 
 public:
 
     CspBase() = delete; //!< No default constructor
-    CspBase( const std::string &name, const uint32_t timeout_ms );
+    CspBase( const std::string &name, const int32_t connection_timeout_ms, const int32_t request_timeout_ms );
     virtual ~CspBase() {};
 
     std::string getName() const { return mName; }
 
     uint32_t getVerbosity() const { return mVerbosity; }
-    void setVerbosity( const uint32_t& verbosity ) { mHTTPRequest.setVerbosity( verbosity ); }
+    void setVerbosity( const uint32_t& verbosity ) { mVerbosity = verbosity; }
 
     /** \brief Get Metadata information
 

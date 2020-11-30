@@ -51,8 +51,11 @@ currently supported by the DRM HDK:
        * Stratix V
        * Stratix 10
 
-.. warning:: As long as Intel(R) OPAE is not exposing the Chip ID, node-locked mode can not be implemented.
+.. warning:: As long as Intel(R) OPAE is not exposing the Chip ID, 
+             node-locked mode can not be implemented.
 
+.. warning:: As long as IEEE-1735 encryption is supported only on Pro Editions of Quartus, 
+             only Pro Editions are supported.
 
 
 Request DRM HDK
