@@ -431,24 +431,26 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler,
         assert drm_manager.get('health_period') == healthPeriod
         wait_func_true(lambda: get_context()['nb_genlic'] >= nb_genlic,
                 timeout=lic_dur * nb_genlic + 2)
-        session_id_exp = drm_manager.get('session_id')
     finally:
         drm_manager.deactivate()
-        del drm_manager
     async_cb.assert_NoError()
     log_content = basic_log_file.read()
     segment_idx_expected = 0
     for m in findall(r'"meteringFile"\s*:\s*"([^"]*)"', log_content):
         assert len(m) > 0
         session_id = m[0:16]
-        close_flag = m[20]
+        close_flag = m[19]
         segment_idx = int(m[24:32],16)
         if session_id == "0000000000000000":
             assert close_flag == '0'
             assert segment_idx == 0
+            session_id_exp = "0000000000000000"
         else:
-            assert session_id == session_id_exp
-        assert segment_idx_expected <= segment_idx <= segment_idx_expected + 1
+            if session_id_exp == "0000000000000000":
+                session_id_exp == session_id
+            else:
+                assert session_id == session_id_exp
+        assert segment_idx_expected - 1 <= segment_idx <= segment_idx_expected + 1
         segment_idx_expected += 1
         if close_flag == '1':
             segment_idx_expected = 0
