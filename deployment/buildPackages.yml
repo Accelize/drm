@@ -1,0 +1,166 @@
+---
+# Build Packages
+
+jobs:
+  - job: buildPackages
+    displayName: Build Packages for
+    strategy:
+      matrix:
+        # Supported OS matrix
+        CentOS 7:
+          osName: centos
+          osVersion: "7"
+        CentOS 8:
+          osName: centos
+          osVersion: "8"
+        Debian 10:
+          osName: debian
+          osVersion: "10"
+        Fedora 32:
+          osName: fedora
+          osVersion: "32"
+        Fedora 33:
+          osName: fedora
+          osVersion: "33"
+        Ubuntu LTS 16.04:
+          osName: ubuntu
+          osVersion: "16.04"
+        Ubuntu LTS 18.04:
+          osName: ubuntu
+          osVersion: "18.04"
+        Ubuntu LTS 20.04:
+          osName: ubuntu
+          osVersion:  "20.04"
+        Ubuntu 20.10:
+          osName: ubuntu
+          osVersion:  "20.10"
+
+    variables:
+      # File that store release number for each version
+      versionsJson: versions.json
+      versionsJsonS3: s3://accelize/versions.json
+      # Docker commands shortcuts
+      dockerBuild: sudo docker build -t run_image .
+      dockerRun: sudo -E docker run --rm
+                 --env GPG_PASS_PHRASE
+                 --env GPG_PRIVATE_KEY
+                 --env GPG_PUBLIC_KEY
+                 --env PACKAGES_RELEASE
+                 -v $(Build.SourcesDirectory):/opt
+                 -v $(Agent.TempDirectory):$(Agent.TempDirectory)
+                 -w /opt run_image bash -c
+    steps:
+
+      # Initialize environment
+      - checkout: self
+        submodules: true
+
+      # Get package release, and increment it if an already published
+      # version is re-build
+      - task: AWSCLI@1
+        displayName: Get published releases manifest
+        inputs:
+          awsCredentials: AWS-Repository
+          regionName: eu-west-1
+          awsCommand: s3
+          awsSubCommand: cp
+          awsArguments: $(versionsJsonS3) $(versionsJson) --no-progress
+
+      - task: PythonScript@0
+        displayName: Get package release
+        inputs:
+          scriptSource: inline
+          script: |
+            from azure_pipeline_utils import get_next_package_release, setvariable
+            setvariable("release", get_next_package_release("versions.json"))
+        name: packagesRelease
+
+      # Build & sign packages
+      - task: PythonScript@0
+        displayName: Create "building" container Dockerfile
+        inputs:
+          scriptSource: inline
+          script: |
+            from azure_pipeline_utils import render_template
+            render_template(
+                src='deployment/Dockerfile.j2',
+                dst='Dockerfile',
+                osName='$(osName)', osVersion='$(osVersion)',
+                image='$(osName):$(osVersion)', buildLayer=True)
+
+      - script: $(dockerBuild)
+        displayName: Build "building" container image
+
+      - task: DownloadSecureFile@1
+        displayName: Get GPG public key
+        name: gpgPublicKey
+        inputs:
+          secureFile: gpgPublicKey
+
+      - task: DownloadSecureFile@1
+        displayName: Get GPG private key
+        name: gpgPrivateKey
+        inputs:
+          secureFile: gpgPrivateKey
+
+      - script: $(dockerRun) "tox --workdir /tmp -o
+                -e build-release,sign-release,export-release"
+        displayName: Build and sign packages
+        env:
+          PACKAGES_RELEASE: $(packagesRelease.release)
+          GPG_PRIVATE_KEY: $(gpgPrivateKey.secureFilePath)
+          GPG_PUBLIC_KEY: $(gpgPublicKey.secureFilePath)
+          GPG_PASS_PHRASE: $(gpgPassPhrase)
+
+      # Run packages integrity tests
+      - task: PythonScript@0
+        displayName: Create "testing" container Dockerfile
+        inputs:
+          scriptSource: inline
+          script: |
+            from azure_pipeline_utils import render_template
+            render_template(
+                src='deployment/Dockerfile.j2',
+                dst='Dockerfile',
+                osName='$(osName)', osVersion='$(osVersion)',
+                image='$(osName):$(osVersion)', buildLayer=False)
+
+      - script: $(dockerBuild)
+        displayName: Build "testing" container image
+
+      - script: $(dockerRun) "tox --workdir /tmp
+                -e package-install,c-install,cpp-install -p all
+                -- -m packages"
+        displayName: Run tests on package
+
+      # Run extra RHEL integrity tests for CentOS packages
+      - task: PythonScript@0
+        displayName: Create "RHEL testing" container Dockerfile
+        inputs:
+          scriptSource: inline
+          script: |
+            from azure_pipeline_utils import render_template
+            render_template(
+                src='deployment/Dockerfile.j2',
+                dst='Dockerfile',
+                osName='rhel', osVersion='$(osVersion)',
+                image='registry.access.redhat.com/ubi$(osVersion)',
+                rhelUsername='$(rhelUsername)',
+                rhelPassword='$(rhelPassword)',
+                buildLayer=False)
+        condition: eq(variables['osName'], 'centos')
+
+      - script: $(dockerBuild)
+        displayName: Build "RHEL testing" container image
+        condition: eq(variables['osName'], 'centos')
+
+      - script: $(dockerRun) "tox --workdir /tmp
+                -e package-install,c-install,cpp-install -p all
+                -- -m packages"
+        displayName: Run RHEL tests on packages
+        condition: eq(variables['osName'], 'centos')
+
+      # Export packages as artifacts
+      - publish: packages
+        artifact: Packages $(osName) $(osVersion)
+        displayName: Publish packages as artifacts

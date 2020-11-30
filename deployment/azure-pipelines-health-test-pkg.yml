@@ -18,9 +18,10 @@ resources:
       type: github
       name: Accelize/acid
       endpoint: Accelize
+      ref: refs/heads/v1
 
 pool:
-  vmImage: ubuntu-latest
+  vmImage: ubuntu-20.04
 
 variables:
   # Import variable group
