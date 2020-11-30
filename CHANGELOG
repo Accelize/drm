@@ -1,4 +1,4 @@
-* Mon Nov 09 2020 Accelize v2.5.1
+* Mon Nov 30 2020 Accelize v2.5.1
 - NEW: Support derived product feature (not yet activated at server side)
 - NEW: Improve retry mechanism: make connection and request timeouts independent, increase timeout period, optimize resource, HTTP codes 495 and 526 are retryable
 - NEW: Enhance API function behavior: "resume" function now start automatically a new session if the pending session has expired
