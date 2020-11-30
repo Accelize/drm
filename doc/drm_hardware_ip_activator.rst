@@ -85,10 +85,6 @@ is supported (1 to N connections).
        - AXI4-Stream Data signal for IP to DRM
 
 
-To ease the integration with most of the EDA tools, this bus has been wrapped on
-2 AXI4-Steam buses.
-
-
 DRM Activator interface with IP to protect
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
