@@ -112,8 +112,9 @@ signals.
      - Activation Code as provided by the License Key currently loaded.
 
 
-.. note:: ``activation_code`` is synchronous to ``ip_core_aclk``.
-           ``metering_event`` must be synchronous to ``ip_core_aclk``.
+.. note:: ``drm_aclk`` clock drives the internal DRM core.
+          ``activation_code`` is synchronous to ``ip_core_aclk``.
+          ``metering_event`` must be synchronous to ``ip_core_aclk``.
 
 Operations
 ----------
