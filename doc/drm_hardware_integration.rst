@@ -14,7 +14,7 @@ More details about DRM Controller and Activator logics can be found here:
 * :doc:`drm_hardware_ip_controller`.
 * :doc:`drm_hardware_ip_activator`.
 
-You can also follow this :doc:`drm_hardware_ipi_guidelines` to package the DRM IPs for Vivado IP Integrator.
+You can also follow this :doc:`drm_hardware_ipi_guidelines`.
 
 Supported hardware
 ==================
