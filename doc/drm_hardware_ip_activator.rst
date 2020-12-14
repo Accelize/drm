@@ -85,10 +85,6 @@ is supported (1 to N connections).
        - AXI4-Stream Data signal for IP to DRM
 
 
-To ease the integration with most of the EDA tools, this bus has been wrapped on
-2 AXI4-Steam buses.
-
-
 DRM Activator interface with IP to protect
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -116,8 +112,9 @@ signals.
      - Activation Code as provided by the License Key currently loaded.
 
 
-.. note:: ``activation_code`` is synchronous to ``ip_core_aclk``.
-           ``metering_event`` must be synchronous to ``ip_core_aclk``.
+.. note:: ``drm_aclk`` clock drives the internal DRM core.
+          ``activation_code`` is synchronous to ``ip_core_aclk``.
+          ``metering_event`` must be synchronous to ``ip_core_aclk``.
 
 Operations
 ----------

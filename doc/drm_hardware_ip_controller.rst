@@ -49,7 +49,7 @@ is a slave and the DRM Controller is the master.
 The DRM bus size depends on the number of Protected IP cores in the design.
 For each IP connected there are 3 parts:
 
-* The Clock and Reset ports.
+* The Clock and Reset ports
 
   .. list-table::
      :header-rows: 1
@@ -66,6 +66,8 @@ For each IP connected there are 3 parts:
        - in
        - 1
        - DRM bus asynchronous active low reset
+
+.. note:: ``drm_aclk`` clock drives the internal DRM core.
 
 * The DRM Controller to Activator channel:
 
