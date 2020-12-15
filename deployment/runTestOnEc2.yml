@@ -19,8 +19,8 @@ jobs:
       provider: awsEc2
       image: ${{ config.os_distrib }}
       instanceType: ${{ parameters.instance_type }}
-      acidDir: $(Build.SourcesDirectory)/deployment/acid
-      ansiblePlaybook: $(Build.SourcesDirectory)/deployment/playbook.yml
+      ansiblePlaybook: deployment/playbook.yml
+      ansibleRequirements: deployment/requirements.yml
       dependsOn:
       - ${{ if config.dependsOn }}:
         - runTests_Aws_${{ config.dependsOn }}
@@ -34,7 +34,7 @@ jobs:
     pool:
       name: Default
       demands:  # Use previously instantiated agent
-        - agent.Name -equals $(Build.BuildId) $(Build.DefinitionName) AWS ${{ config.os_distrib }}
+        - agent.Name -equals $(Build.BuildId) AWS ${{ config.os_distrib }}
     variables:
       ${{ if eq(config.tox_coverage, true) }}:
         tox_operation: aws-build-${{ config.tox_mode }},cpp-${{ config.tox_mode }},c-${{ config.tox_mode }},integration-${{ config.tox_mode }},coverage-${{ config.tox_mode }}
@@ -104,5 +104,4 @@ jobs:
       jobName: stopAgent_Aws_${{ config.os_distrib }}
       provider: awsEc2
       agentDescription: AWS ${{ config.os_distrib }}
-      acidDir: $(Build.SourcesDirectory)/deployment/acid
       dependsOn: runTests_Aws_${{ config.os_distrib }}

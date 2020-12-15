@@ -285,8 +285,8 @@ Instantiate the adapted IP core and DRM Activator in the wrapper and connect the
 * Connect the clock and reset of the adapted IP core to the wrapper interface.
 
 
-Encrypt the Protect IPs
-^^^^^^^^^^^^^^^^^^^^^^^
+Encrypt the Protected IPs
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. warning:: Encrypting the Protected IP is mandatory since it contains the
              activation code in clear text.
