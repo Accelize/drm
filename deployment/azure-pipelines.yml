@@ -70,11 +70,11 @@ stages:
             tox_mode: 'debug'
             tox_coverage: true
             tox_extra_option: '$(tox_mark)'
-          #- os_distrib: 'ubuntu_18_04'
-          #  tox_mode: 'debug'
-          #  tox_coverage: false
-          #  tox_extra_option: '$(tox_mark)'
-          #  dependsOn: 'centos_7'
+          - os_distrib: 'ubuntu_18_04'
+            tox_mode: 'debug'
+            tox_coverage: false
+            tox_extra_option: '$(tox_mark)'
+            dependsOn: 'centos_7'
 
   - stage: package_release
     displayName: Create and release packages
