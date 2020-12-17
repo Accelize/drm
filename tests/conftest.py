@@ -602,9 +602,12 @@ def accelize_drm(pytestconfig):
         else:
            return verbosity
 
+    # Get frequency detection version
+    freq_version = fpga_driver[0].read_register(drm_ctrl_base_addr + 0xFFF8)
+
     # Store some values for access in tests
     import accelize_drm as _accelize_drm
-    _accelize_drm.pytest_new_freq_method_supported = fpga_driver[0].read_register(drm_ctrl_base_addr + 0xFFF8) == 0x60DC0DE0
+    _accelize_drm.pytest_new_freq_method_supported = freq_version == 0x60DC0DE0
     _accelize_drm.pytest_proxy_debug = pytestconfig.getoption("proxy_debug")
     _accelize_drm.pytest_server = pytestconfig.getoption("server")
     _accelize_drm.pytest_build_environment = build_environment

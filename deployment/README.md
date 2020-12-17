@@ -100,7 +100,7 @@ Supported OS version end of life:
 - CentOS: 10 years
 - Debian: 5 years
 - Fedora: 1 year
-- Ubuntu LTS: 5 years
+- Ubuntu LTS: 10 years
 - Ubuntu rolling: 1 year
 
 #### Actions to perform

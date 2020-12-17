@@ -14,6 +14,8 @@ More details about DRM Controller and Activator logics can be found here:
 * :doc:`drm_hardware_ip_controller`.
 * :doc:`drm_hardware_ip_activator`.
 
+You can also follow this :doc:`drm_hardware_ipi_guidelines`.
+
 Supported hardware
 ==================
 
@@ -51,10 +53,10 @@ currently supported by the DRM HDK:
        * Stratix V
        * Stratix 10
 
-.. warning:: As long as Intel(R) OPAE is not exposing the Chip ID, 
+.. warning:: As long as Intel(R) OPAE is not exposing the Chip ID,
              node-locked mode can not be implemented.
 
-.. warning:: As long as IEEE-1735 encryption is supported only on Pro Editions of Quartus, 
+.. warning:: As long as IEEE-1735 encryption is supported only on Pro Editions of Quartus,
              only Pro Editions are supported.
 
 
@@ -283,8 +285,8 @@ Instantiate the adapted IP core and DRM Activator in the wrapper and connect the
 * Connect the clock and reset of the adapted IP core to the wrapper interface.
 
 
-Encrypt the Protect IPs
-^^^^^^^^^^^^^^^^^^^^^^^
+Encrypt the Protected IPs
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. warning:: Encrypting the Protected IP is mandatory since it contains the
              activation code in clear text.

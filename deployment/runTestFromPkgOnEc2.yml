@@ -17,8 +17,9 @@ jobs:
       provider: awsEc2
       image: ${{ config.os_distrib }}
       instanceType: ${{ parameters.instance_type }}
-      acidDir: $(Build.SourcesDirectory)/deployment/acid
-      ansiblePlaybook: $(Build.SourcesDirectory)/deployment/playbook_test_pkg.yml
+      agentVersion: 2.175.2
+      ansiblePlaybook: deployment/playbook_test_pkg.yml
+      ansibleRequirements: deployment/requirements.yml
       dependsOn:
       - ${{ if config.dependsOn }}:
         - runTests_Aws_${{ config.dependsOn }}
@@ -32,7 +33,7 @@ jobs:
     pool:
       name: Default
       demands:  # Use previously instantiated agent
-        - agent.Name -equals $(Build.BuildId) $(Build.DefinitionName) AWS ${{ config.os_distrib }}
+        - agent.Name -equals $(Build.BuildId) AWS ${{ config.os_distrib }}
     steps:
       - checkout: self
         submodules: true
@@ -117,5 +118,4 @@ jobs:
       jobName: stopAgent_Aws_${{ config.os_distrib }}
       provider: awsEc2
       agentDescription: AWS ${{ config.os_distrib }}
-      acidDir: $(Build.SourcesDirectory)/deployment/acid
       dependsOn: runTests_Aws_${{ config.os_distrib }}

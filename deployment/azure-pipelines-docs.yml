@@ -31,7 +31,7 @@ variables:
     releaseChannel: prerelease
 
 pool:
-  vmImage: ubuntu-latest
+  vmImage: ubuntu-20.04
 
 stages:
 
@@ -41,18 +41,11 @@ stages:
       - job:
         displayName: Update documentation
         steps:
-        - task: UsePythonVersion@0
-          inputs:
-            versionSpec: '3.x'
-            addToPath: true
-            architecture: 'x64'
-          displayName: Get Python
-  
+
         - script: |
             sudo apt-get update
             sudo apt-get install -y --no-install-recommends doxygen g++ libcurl4-openssl-dev libjsoncpp-dev make pkg-config
-            python -m pip install -U --no-cache-dir --disable-pip-version-check pip setuptools
-            pip install -U --no-cache-dir --disable-pip-version-check breathe cmake cython sphinx_rtd_theme wheel
+            sudo pip install --disable-pip-version-check --no-cache-dir breathe cython sphinx_rtd_theme
           displayName: Install dependencies
 
         - script: |

@@ -180,6 +180,7 @@ Glossary
    drm_hardware_ip_activator
    drm_hardware_ip_controller
    drm_hardware_integration
+   drm_hardware_ipi_guidelines
 
 
 .. toctree::
