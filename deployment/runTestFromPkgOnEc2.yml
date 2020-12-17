@@ -17,6 +17,7 @@ jobs:
       provider: awsEc2
       image: ${{ config.os_distrib }}
       instanceType: ${{ parameters.instance_type }}
+      agentVersion: 2.175.2
       ansiblePlaybook: deployment/playbook_test_pkg.yml
       ansibleRequirements: deployment/requirements.yml
       dependsOn:
