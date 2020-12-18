@@ -80,7 +80,7 @@ jobs:
         displayName: Create Accelize credentials file
 
       - script: |
-          sudo yum install -y yum-utils
+          sudo yum install -y yum-utils python3-pip python3-setuptools
           sudo yum-config-manager --add-repo https://tech.accelize.com/rpm/accelize_stable.repo
           sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
           sudo yum install -y python3-accelize-drm
@@ -91,7 +91,7 @@ jobs:
 
       - script: |
           sudo apt update
-          sudo apt install -y apt-transport-https software-properties-common lsb-release gnupg curl
+          sudo apt install -y apt-transport-https software-properties-common lsb-release gnupg curl python3-pip python3-setuptools
           curl -fsSL https://tech.accelize.com/gpg | sudo apt-key add -
           sudo add-apt-repository "deb https://tech.accelize.com/deb $(lsb_release -cs) stable"
           sudo apt update
