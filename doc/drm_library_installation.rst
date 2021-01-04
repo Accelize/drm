@@ -253,7 +253,7 @@ Python library requirements:
 Run following commands to install all requirements:
 
 .. code-block:: bash
-    :caption: On Debian >= 10, Ubuntu >= 18.10
+    :caption: On Debian >= 10, Ubuntu >= 20.04
 
     # Minimal requirements
     sudo apt update
@@ -263,7 +263,7 @@ Run following commands to install all requirements:
     sudo apt install -y python3-dev python3-wheel python3-setuptools cython3
 
 .. code-block:: bash
-    :caption: On Debian < 10, Ubuntu < 18.10
+    :caption: On Debian < 10, Ubuntu < 20.04
 
     # Minimal requirements
     sudo apt update
@@ -272,8 +272,8 @@ Run following commands to install all requirements:
     pip3 install --user -U cmake
 
     # Python library requirements
-    sudo apt install -y python3-dev
-    pip3 install --user -U setuptools wheel cython
+    sudo apt install -y python3-dev python3-wheel python3-setuptools
+    pip3 install --user -U cython
 
 .. code-block:: bash
     :caption: On RHEL 8, CentOS 8
@@ -287,8 +287,8 @@ Run following commands to install all requirements:
     pip3 install --user -U cmake
 
     # Python library requirements
-    sudo dnf install -y python3-devel
-    pip3 install --user -U setuptools wheel cython
+    sudo dnf config-manager --set-enabled PowerTools
+    sudo dnf install -y python3-devel python3-setuptools python3-Cython python3-wheel
 
 .. code-block:: bash
     :caption: On RHEL 7, CentOS 7
@@ -302,8 +302,8 @@ Run following commands to install all requirements:
     pip3 install --user -U cmake
 
     # Python library requirements
-    sudo yum install -y python3-devel
-    pip3 install --user -U setuptools wheel cython
+    sudo yum install -y python3-devel python3-setuptools python3-wheel
+    pip3 install --user -U cython
 
 .. code-block:: bash
     :caption: On Fedora
@@ -372,7 +372,7 @@ Once dependencies are installed, simply run the following section:
     cmake -DPYTHON3=ON -DPKG=ON ..
 
     make -j
-    make package
+    sudo make package
 
 Packages will be generated in the `drm/build/packages` directory.
 
