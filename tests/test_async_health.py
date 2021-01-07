@@ -72,7 +72,6 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json,
 
 
 @pytest.mark.no_parallel
-@pytest.mark.minimum
 def test_health_period_modification(accelize_drm, conf_json, cred_json, async_handler,
                         live_server, request):
     """
@@ -125,7 +124,6 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
 
 
 @pytest.mark.no_parallel
-@pytest.mark.minimum
 def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler,
                             live_server, request):
     """
@@ -180,7 +178,6 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
 
 
 @pytest.mark.no_parallel
-@pytest.mark.minimum
 def test_health_retry_modification(accelize_drm, conf_json, cred_json,
                             async_handler, live_server, request):
     """
@@ -244,7 +241,6 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json,
 
 
 @pytest.mark.no_parallel
-@pytest.mark.minimum
 def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json,
                     async_handler, live_server, request):
     """
