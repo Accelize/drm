@@ -466,9 +466,13 @@ protected:
 
     void getTrngStatus( bool securityAlertBit, std::string& adaptiveProportionTestError,
                         std::string& repetitionCountTestError ) const {
-        getDrmController().readSecurityAlertStatusRegister( securityAlertBit );
-        getDrmController().extractAdaptiveProportionTestFailures( adaptiveProportionTestError );
-        getDrmController().extractRepetitionCountTestFailures( repetitionCountTestError );
+        auto drmMajor = ( mDrmVersion >> 16 ) & 0xFF;
+        auto drmMinor = ( mDrmVersion >> 8  ) & 0xFF;
+        if ( ( drmMajor >= 4 ) && ( drmMajor >= 2 ) ) {
+            getDrmController().readSecurityAlertStatusRegister( securityAlertBit );
+            getDrmController().extractAdaptiveProportionTestFailures( adaptiveProportionTestError );
+            getDrmController().extractRepetitionCountTestFailures( repetitionCountTestError );
+        }
     }
 
     void logDrmCtrlTrngStatus() const {
