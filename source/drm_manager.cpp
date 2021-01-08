@@ -233,19 +233,19 @@ protected:
 
     #define checkDRMCtlrRet( func ) {                                                           \
         unsigned int errcode = DRM_OK;                                                          \
-        bool securityAlertBit( false );                                                         \
-        std::string adaptiveProportionTestError, repetitionCountTestError;                      \
         try {                                                                                   \
             std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );                  \
             errcode = func;                                                                     \
             Debug( "{} returned {}", #func, errcode );                                          \
             if ( errcode ) {                                                                    \
-                getTrngStatus( securityAlertBit, adaptiveProportionTestError, repetitionCountTestError ); \
+                logDrmCtrlError();                                                              \
+                logDrmCtrlTrngStatus();                                                         \
                 Error( "{} failed with error code {}", #func, errcode );                        \
                 Throw( DRM_CtlrError, "{} failed with error code {}", #func, errcode );         \
             }                                                                                   \
         } catch( const std::exception &e ) {                                                    \
-            getTrngStatus( securityAlertBit, adaptiveProportionTestError, repetitionCountTestError ); \
+            logDrmCtrlError();                                                                  \
+            logDrmCtrlTrngStatus();                                                             \
             Error( "{} threw an exception: {}", #func, e.what() );                              \
             Throw( DRM_CtlrError, e.what() );                                                   \
         }                                                                                       \
@@ -448,11 +448,20 @@ protected:
         }
     }
 
-    void uninitLog() {
-        if ( sLogger ) {
-            Debug( "Log messages are flushed now." );
-            sLogger->flush();
-        }
+    void getDrmCtrlError( uint8_t& activation_error, uint8_t& dna_error, uint8_t& vlnv_error, uint8_t& license_error ) const {
+        getDrmController().readActivationErrorRegister( activation_error );
+        getDrmController().readExtractDnaErrorRegister( dna_error );
+        getDrmController().readExtractVlnvErrorRegister( vlnv_error );
+        getDrmController().readLicenseTimerLoadErrorRegister( license_error );
+    }
+
+    void logDrmCtrlError() const {
+        uint8_t activation_error=0, dna_error=0, vlnv_error=0, license_error=0;
+        getDrmCtrlError( activation_error, dna_error, vlnv_error, license_error );
+        Debug( "Controller Activation error register: 0x{:02x}", activation_error );
+        Debug( "Controller DNA error register: 0x{:02x}", dna_error );
+        Debug( "Controller VLNV error register: 0x{:02x}", vlnv_error );
+        Debug( "Controller License Timer error register: 0x{:02x}", license_error );
     }
 
     void getTrngStatus( bool securityAlertBit, std::string& adaptiveProportionTestError,
@@ -460,7 +469,13 @@ protected:
         getDrmController().readSecurityAlertStatusRegister( securityAlertBit );
         getDrmController().extractAdaptiveProportionTestFailures( adaptiveProportionTestError );
         getDrmController().extractRepetitionCountTestFailures( repetitionCountTestError );
-        Debug( "security alert bit = {}, adaptative proportion test error = {}, repetition count test error = {}",
+    }
+
+    void logDrmCtrlTrngStatus() const {
+        bool securityAlertBit( false );
+        std::string adaptiveProportionTestError, repetitionCountTestError;
+        getTrngStatus( securityAlertBit, adaptiveProportionTestError, repetitionCountTestError );
+        Debug( "Controller TRNG status: security alert bit = {}, adaptative proportion test error = {}, repetition count test error = {}",
                 securityAlertBit, adaptiveProportionTestError, repetitionCountTestError );
     }
 
@@ -1887,6 +1902,8 @@ protected:
                 Error( errmsg );
                 f_asynch_error( errmsg );
             }
+            logDrmCtrlError();
+            logDrmCtrlTrngStatus();
             Debug( "Exiting background thread which maintains licensing" );
         });
     }
@@ -2163,15 +2180,16 @@ public:
 
     ~Impl() {
         TRY
-            Debug( "Calling Impl destructor" );
-            if ( mSecurityStop && isSessionRunning() ) {
-                Debug( "Security stop triggered: stopping current session" );
-                stopSession();
-            } else {
-                stopThread();
-            }
+            try {
+                Debug( "Calling Impl destructor" );
+                if ( mSecurityStop && isSessionRunning() ) {
+                    Debug( "Security stop triggered: stopping current session" );
+                    stopSession();
+                } else {
+                    stopThread();
+                }
+            } catch( ... ) {}
             unlockDrmToInstance();
-            uninitLog();
             Debug( "Exiting Impl destructor" );
         CATCH_AND_THROW
     }
