@@ -317,3 +317,38 @@ def test_drm_controller_activation_timeout(accelize_drm, conf_json, cred_json, a
         if err > 1:
             print('Reattempt after error failed!')
 
+
+@pytest.mark.lgdn
+def test_run_for_a_period_of_time(accelize_drm, conf_json, cred_json, async_handler):
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    async_cb.reset()
+
+    period = 60
+    try:
+        period = accelize_drm.pytest_params['period']
+    except:
+        pass
+    print('Using parameter "period"=%d' % period)
+
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    try:
+        assert not drm_manager.get('license_status')
+        drm_manager.activate()
+        assert drm_manager.get('license_status')
+        try:
+            wait_func_true(lambda: not drm_manager.get('license_status'), timeout=period, sleep_time=1)
+        except RuntimeError:
+            pass
+    finally:
+        drm_manager.deactivate()
+        assert not drm_manager.get('license_status')
+        del drm_manager
+    async_cb.assert_NoError()
+
