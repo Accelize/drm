@@ -468,7 +468,7 @@ protected:
                         std::string& repetitionCountTestError ) const {
         auto drmMajor = ( mDrmVersion >> 16 ) & 0xFF;
         auto drmMinor = ( mDrmVersion >> 8  ) & 0xFF;
-        if ( ( drmMajor >= 4 ) && ( drmMajor >= 2 ) ) {
+        if ( ( drmMajor >= 4 ) && ( drmMinor >= 2 ) ) {
             getDrmController().readSecurityAlertStatusRegister( securityAlertBit );
             getDrmController().extractAdaptiveProportionTestFailures( adaptiveProportionTestError );
             getDrmController().extractRepetitionCountTestFailures( repetitionCountTestError );
