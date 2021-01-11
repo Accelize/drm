@@ -6,7 +6,6 @@ import pytest
 from re import search, IGNORECASE
 
 
-@pytest.mark.minimum
 def test_wrong_drm_controller_address(accelize_drm, conf_json, cred_json, async_handler):
     """Test when a wrong DRM Controller offset is given"""
     async_cb = async_handler.create()
