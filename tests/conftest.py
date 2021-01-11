@@ -817,7 +817,7 @@ def conf_json(request, pytestconfig, tmpdir):
     if pytestconfig.getoption("logfile") is not None:
         log_param['log_file_type'] = 1
         if len(pytestconfig.getoption("logfile")) != 0:
-            log_param['log_file_path'] = pytestconfig.getoption("logfilepath")
+            log_param['log_file_path'] = pytestconfig.getoption("logfile")
         else:
             log_param['log_file_path'] = realpath("./tox_drmlib_t%f_pid%d.log" % (time(), getpid()))
         log_param['log_file_verbosity'] = pytestconfig.getoption("logfilelevel")
