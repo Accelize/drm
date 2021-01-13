@@ -342,8 +342,7 @@ design instantiate multiple Protected IPs. By this mean you can simulate each Pr
 
 In addition to the simulation top-level, you'll find in the ``sim`` folder the following files:
 
-* xilinx_sim, modelsim (with drm_controller_bfm)     : Each folder contains the BFM core encrypted for the specific tool.
-                                                       The BFM core is instantiated by the top_drm_activator_0xVVVVLLLLNNNNVVVV_sim.
+* xilinx_sim, modelsim (with drm_controller_bfm)     : Each folder contains the BFM core encrypted for the specific tool. The BFM core is instantiated by the top_drm_activator_0xVVVVLLLLNNNNVVVV_sim.
 * drm_activator_0xVVVVLLLLNNNNVVVV_sim_pkg.(sv,vhdl) : Package containing simulation parameters (see details below)
 * drm_license_package.vhdl                           : Generic license file
 * drm_activator_0xVVVVLLLLNNNNVVVV_license_file.xml  : Specific license file

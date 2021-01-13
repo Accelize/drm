@@ -1,5 +1,5 @@
 ---
-name: DRM Library - Health Test - Install and test packages
+name: DRM Health Test - Install and test packages
 
 trigger: none
 schedules:
