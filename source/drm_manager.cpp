@@ -61,9 +61,13 @@ limitations under the License.
 #define TRY try {
 
 #define CATCH_AND_THROW                   \
+        logDrmCtrlError();                \
+        logDrmCtrlTrngStatus();           \
         sLogger->flush();                 \
     }                                     \
     catch( const std::exception &e ) {    \
+        logDrmCtrlError();                \
+        logDrmCtrlTrngStatus();           \
         Fatal( e.what() );                \
         sLogger->flush();                 \
         throw;                            \
@@ -71,6 +75,8 @@ limitations under the License.
 
 #define CATCH                             \
     catch( const std::exception &e ) {    \
+        logDrmCtrlError();                \
+        logDrmCtrlTrngStatus();           \
         Fatal( e.what() );                \
         sLogger->flush();                 \
     }

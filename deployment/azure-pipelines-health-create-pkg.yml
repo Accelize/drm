@@ -1,5 +1,5 @@
 ---
-name: Health Test - Compile, test and package
+name: DRM Health Test - Compile, test and package
 
 trigger: none
 schedules:
