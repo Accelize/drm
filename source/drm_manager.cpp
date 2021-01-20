@@ -52,10 +52,12 @@ limitations under the License.
 
 #define NB_MAX_REGISTER  32
 
-#define REG_FREQ_DETECTION_VERSION  0xFFF8
-#define REG_FREQ_DETECTION_COUNTER  0xFFFC
+#define REG_FREQ_DETECTION_VERSION  0xFFF0
+#define REG_FREQ_DETECTION_COUNTER_DRMACLK  0xFFF4
+#define REG_FREQ_DETECTION_COUNTER_AXIACLK  0xFFF8
 
-#define FREQ_DETECTION_VERSION_EXPECTED	 0x60DC0DE0
+#define FREQ_DETECTION_VERSION_2	 0x60DC0DE0
+#define FREQ_DETECTION_VERSION_3	 0x60DC0DE1
 
 
 #define TRY try {
@@ -184,7 +186,7 @@ protected:
     int32_t mFrequencyCurr = 0;
     uint32_t mFrequencyDetectionPeriod = 100;       // in milliseconds
     double mFrequencyDetectionThreshold = 12.0;     // Error in percentage
-    bool mIsFreqDetectionMethod1 = false;
+    uint8_t mFreqDetectionMethod = 0;
     bool mBypassFrequencyDetection = false;
 
     // Session state
@@ -591,7 +593,7 @@ protected:
 
     Json::Value buildSettingsNode() {
         Json::Value settings;
-        settings["frequency_detection_method"] = mIsFreqDetectionMethod1? 1:2;
+        settings["frequency_detection_method"] = mFreqDetectionMethod;
         settings["bypass_frequency_detection"] = mBypassFrequencyDetection;
         settings["frequency_detection_threshold"] = mFrequencyDetectionThreshold;
         settings["frequency_detection_period"] = mFrequencyDetectionPeriod;
@@ -948,8 +950,12 @@ protected:
         // Determine frequency detection method if metering/floating mode is active
         if ( !isNodeLockedMode() ) {
             determineFrequencyDetectionMethod();
-            if ( mIsFreqDetectionMethod1 ) {
-                detectDrmFrequencyMethod1();
+            if ( mFreqDetectionMethod == 3 ) {
+                detectDrmFrequencyMethod3();
+            } else if ( mFreqDetectionMethod == 2 ) {
+                detectDrmFrequencyMethod2();
+            } else {
+                Unreachable( "Unsupported DRM frequency detection method: {} ", mFreqDetectionMethod ); //LCOV_EXCL_LINE
             }
         }
 
@@ -1686,18 +1692,38 @@ protected:
         if ( ret != 0 ) {
             Debug( "Failed to read DRM Ctrl frequency detection version register, errcode = {}. ", ret ); //LCOV_EXCL_LINE
         }
-        if ( reg == FREQ_DETECTION_VERSION_EXPECTED ) {
-            // Use Method 1
-            Debug( "Use dedicated counter to compute DRM frequency (method 1)" );
-            mIsFreqDetectionMethod1 = true;
-        } else {
+        if ( reg == FREQ_DETECTION_VERSION_3 ) {
+            // Use Method 3
+            Debug( "Use dedicated counter to compute DRM frequency (method 3)" );
+            mFreqDetectionMethod = 3;
+        } else if ( reg == FREQ_DETECTION_VERSION_2 ) {
             // Use Method 2
-            Debug( "Use license timer counter to compute DRM frequency (method 2)" );
-            mIsFreqDetectionMethod1 = false;
+            Debug( "Use dedicated counter to compute DRM frequency (method 2)" );
+            mFreqDetectionMethod = 2;
+        } else {
+            // Use Method 1
+            Debug( "Use license timer counter to compute DRM frequency (method 1)" );
+            mFreqDetectionMethod = 1;
         }
     }
 
     void detectDrmFrequencyMethod1() {
+        std::vector<int32_t> frequency_list;
+
+        if ( mBypassFrequencyDetection ) {
+            return;
+        }
+
+        frequency_list.push_back( detectDrmFrequencyFromLicenseTimer() );
+        frequency_list.push_back( detectDrmFrequencyFromLicenseTimer() );
+        frequency_list.push_back( detectDrmFrequencyFromLicenseTimer() );
+        std::sort( frequency_list.begin(), frequency_list.end());
+
+        int32_t measured_frequency = frequency_list[1];
+        checkDrmFrequency( measured_frequency );
+    }
+
+    void detectDrmFrequencyMethod2() {
         int ret;
         uint32_t counter;
         TClock::duration wait_duration = std::chrono::milliseconds( mFrequencyDetectionPeriod );
@@ -1708,16 +1734,16 @@ protected:
 
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
 
-        // Start detection counter
-        ret = writeDrmAddress( REG_FREQ_DETECTION_COUNTER, 0 );
+        // Reset detection counter by writing drm_aclk counter register
+        ret = writeDrmAddress( REG_FREQ_DETECTION_VERSION, 0 );
         if ( ret != 0 )
             Unreachable( "Failed to start DRM frequency detection counter, errcode = {}. ", ret ); //LCOV_EXCL_LINE
 
         // Wait a fixed period of time
         sleepOrExit( wait_duration );
 
-        // Sample counter
-        ret = readDrmAddress( REG_FREQ_DETECTION_COUNTER, counter );
+        // Sample drm_aclk counter
+        ret = readDrmAddress( REG_FREQ_DETECTION_COUNTER_DRMACLK, counter );
         if ( ret != 0 ) {
             Unreachable( "Failed to read DRM Ctrl frequency detection counter register, errcode = {}. ", ret ); //LCOV_EXCL_LINE
         }
@@ -1734,20 +1760,55 @@ protected:
         checkDrmFrequency( measured_frequency );
     }
 
-    void detectDrmFrequencyMethod2() {
-        std::vector<int32_t> frequency_list;
+    void detectDrmFrequencyMethod3() {
+        int ret;
+        uint32_t counter_drmaclk, counter_axiaclk;
+        TClock::duration wait_duration = std::chrono::milliseconds( mFrequencyDetectionPeriod );
 
         if ( mBypassFrequencyDetection ) {
             return;
         }
 
-        frequency_list.push_back( detectDrmFrequencyFromLicenseTimer() );
-        frequency_list.push_back( detectDrmFrequencyFromLicenseTimer() );
-        frequency_list.push_back( detectDrmFrequencyFromLicenseTimer() );
-        std::sort( frequency_list.begin(), frequency_list.end());
+        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
 
-        int32_t measured_frequency = frequency_list[1];
-        checkDrmFrequency( measured_frequency );
+        // Reset detection counter by writing drm_aclk counter register
+        ret = writeDrmAddress( REG_FREQ_DETECTION_VERSION, 0 );
+        if ( ret != 0 )
+            Unreachable( "Failed to start DRM frequency detection counter, errcode = {}. ", ret ); //LCOV_EXCL_LINE
+
+        // Wait a fixed period of time
+        sleepOrExit( wait_duration );
+
+        // Sample drm_aclk and s_axi_aclk counters
+        ret = readDrmAddress( REG_FREQ_DETECTION_COUNTER_DRMACLK, counter_drmaclk );
+        if ( ret != 0 ) {
+            Unreachable( "Failed to read drm_aclk frequency detection counter register, errcode = {}. ", ret ); //LCOV_EXCL_LINE
+        }
+        ret = readDrmAddress( REG_FREQ_DETECTION_COUNTER_AXIACLK, counter_axiaclk );
+        if ( ret != 0 ) {
+            Unreachable( "Failed to read s_axi_aclk frequency detection counter register, errcode = {}. ", ret ); //LCOV_EXCL_LINE
+        }
+
+        if ( counter_drmaclk == 0xFFFFFFFF )
+            Throw( DRM_BadFrequency, "Frequency auto-detection of drm_aclk failed: frequency_detection_period parameter ({} ms) is too long.",
+                   mFrequencyDetectionPeriod );
+        if ( counter_axiaclk == 0xFFFFFFFF )
+            Throw( DRM_BadFrequency, "Frequency auto-detection of s_axi_aclk failed: frequency_detection_period parameter ({} ms) is too long.",
+                   mFrequencyDetectionPeriod );
+
+        // Compute estimated DRM frequency for drm_aclk
+        int32_t measured_drmaclk = (int32_t)((double)counter_drmaclk / mFrequencyDetectionPeriod / 1000);
+        Debug( "Frequency detection of drm_aclk counter after {:f} ms is 0x{:08x}  => estimated frequency = {} MHz",
+            (double)mFrequencyDetectionPeriod/1000, counter_drmaclk, measured_frequency );
+
+        // Compute estimated DRM frequency for s_axi_aclk
+        int32_t measured_axiaclk = (int32_t)((double)counter_axiaclk / mFrequencyDetectionPeriod / 1000);
+        Debug( "Frequency detection of drm_aclk counter after {:f} ms is 0x{:08x}  => estimated frequency = {} MHz",
+            (double)mFrequencyDetectionPeriod/1000, counter_axiaclk, measured_frequency );
+
+        // Verify estimated frequencies remain in the accepted tolerance
+        checkDrmFrequency( measured_drmaclk );
+        checkDrmFrequency( measured_axiaclk );
     }
 
     int32_t detectDrmFrequencyFromLicenseTimer() {
@@ -1858,8 +1919,8 @@ protected:
                 getHostAndCardInfo();
 
                 /// Detecting DRM controller frequency if needed
-                if ( !mIsFreqDetectionMethod1 )
-                    detectDrmFrequencyMethod2();
+                if ( mFreqDetectionMethod == 1 )
+                    detectDrmFrequencyMethod1();
 
                 bool go_sleeping( false );
 
@@ -2452,12 +2513,9 @@ public:
                         break;
                     }
                     case ParameterKey::frequency_detection_method: {
-                        int32_t method_index = 2;
-                        if ( mIsFreqDetectionMethod1 )
-                            method_index = 1;
-                        json_value[key_str] = method_index;
+                        json_value[key_str] = mFreqDetectionMethod;
                         Debug( "Get value of parameter '{}' (ID={}): Method {}", key_str, key_id,
-                               method_index );
+                               mFreqDetectionMethod );
                         break;
                     }
                     case ParameterKey::frequency_detection_threshold: {

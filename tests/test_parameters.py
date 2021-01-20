@@ -243,43 +243,46 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     print("Test parameter 'log_file_rotating_num': PASS")
 
     # Test parameter: frequency_detection_method
-    if accelize_drm.pytest_new_freq_method_supported:
-        async_cb.reset()
-        conf_json.reset()
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
+    async_cb.reset()
+    conf_json.reset()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    if accelize_drm.pytest_freq_detection_version == 0x60DC0DE0:
+        assert drm_manager.get('frequency_detection_method') == 2
+    elif accelize_drm.pytest_freq_detection_version == 0x60DC0DE6:
+        assert drm_manager.get('frequency_detection_method') == 3
+    else:
         assert drm_manager.get('frequency_detection_method') == 1
-        print("Test parameter 'frequency_detection_method': PASS")
+    print("Test parameter 'frequency_detection_method': PASS")
 
     # Test parameter: bypass_frequency_detection
-    if accelize_drm.pytest_new_freq_method_supported:
-        async_cb.reset()
-        conf_json.reset()
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        assert not drm_manager.get('bypass_frequency_detection')
-        conf_json.reset()
-        conf_json['drm']['bypass_frequency_detection'] = True
-        conf_json.save()
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        assert drm_manager.get('bypass_frequency_detection')
-        print("Test parameter 'bypass_frequency_detection': PASS")
+    async_cb.reset()
+    conf_json.reset()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    assert not drm_manager.get('bypass_frequency_detection')
+    conf_json.reset()
+    conf_json['drm']['bypass_frequency_detection'] = True
+    conf_json.save()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    assert drm_manager.get('bypass_frequency_detection')
+    print("Test parameter 'bypass_frequency_detection': PASS")
 
     # Test parameter: drm_frequency
     async_cb.reset()
