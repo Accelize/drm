@@ -1796,19 +1796,16 @@ protected:
             Throw( DRM_BadFrequency, "Frequency auto-detection of s_axi_aclk failed: frequency_detection_period parameter ({} ms) is too long.",
                    mFrequencyDetectionPeriod );
 
+        // Compute estimated DRM frequency for s_axi_aclk
+        int32_t measured_axiaclk = (int32_t)((double)counter_axiaclk / mFrequencyDetectionPeriod / 1000);
+        Debug( "Frequency detection of s_axi_aclk counter after {:f} ms is 0x{:08x}  => estimated frequency = {} MHz",
+            (double)mFrequencyDetectionPeriod/1000, counter_axiaclk, measured_axiaclk );
+
         // Compute estimated DRM frequency for drm_aclk
         int32_t measured_drmaclk = (int32_t)((double)counter_drmaclk / mFrequencyDetectionPeriod / 1000);
         Debug( "Frequency detection of drm_aclk counter after {:f} ms is 0x{:08x}  => estimated frequency = {} MHz",
             (double)mFrequencyDetectionPeriod/1000, counter_drmaclk, measured_drmaclk );
-
-        // Compute estimated DRM frequency for s_axi_aclk
-        int32_t measured_axiaclk = (int32_t)((double)counter_axiaclk / mFrequencyDetectionPeriod / 1000);
-        Debug( "Frequency detection of drm_aclk counter after {:f} ms is 0x{:08x}  => estimated frequency = {} MHz",
-            (double)mFrequencyDetectionPeriod/1000, counter_axiaclk, measured_axiaclk );
-
-        // Verify estimated frequencies remain in the accepted tolerance
-        checkDrmFrequency( measured_drmaclk );
-        checkDrmFrequency( measured_axiaclk );
+         checkDrmFrequency( measured_drmaclk ); // Only drm_aclk can be verified because provided in the config.json
     }
 
     int32_t detectDrmFrequencyFromLicenseTimer() {
