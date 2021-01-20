@@ -188,6 +188,7 @@ protected:
     double mFrequencyDetectionThreshold = 12.0;     // Error in percentage
     uint8_t mFreqDetectionMethod = 0;
     bool mBypassFrequencyDetection = false;
+    uint32_t mAxiFrequency = 0;
 
     // Session state
     std::string mSessionID;
@@ -612,6 +613,7 @@ protected:
         settings["ws_api_retry_duration"] = mWSApiRetryDuration;
         settings["host_data_verbosity"] = static_cast<uint32_t>( mHostDataVerbosity );
         settings["simulation_flag"] = mSimulationFlag;
+        settings["axiclk_frequency"] = mAxiFrequency;
         return settings;
     }
 
@@ -1797,9 +1799,9 @@ protected:
                    mFrequencyDetectionPeriod );
 
         // Compute estimated DRM frequency for s_axi_aclk
-        int32_t measured_axiaclk = (int32_t)((double)counter_axiaclk / mFrequencyDetectionPeriod / 1000);
+        mAxiFrequency = (int32_t)((double)counter_axiaclk / mFrequencyDetectionPeriod / 1000);
         Debug( "Frequency detection of s_axi_aclk counter after {:f} ms is 0x{:08x}  => estimated frequency = {} MHz",
-            (double)mFrequencyDetectionPeriod/1000, counter_axiaclk, measured_axiaclk );
+            (double)mFrequencyDetectionPeriod/1000, counter_axiaclk, mAxiFrequency );
 
         // Compute estimated DRM frequency for drm_aclk
         int32_t measured_drmaclk = (int32_t)((double)counter_drmaclk / mFrequencyDetectionPeriod / 1000);
