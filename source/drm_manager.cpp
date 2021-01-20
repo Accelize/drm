@@ -61,13 +61,9 @@ limitations under the License.
 #define TRY try {
 
 #define CATCH_AND_THROW                   \
-        logDrmCtrlError();                \
-        logDrmCtrlTrngStatus();           \
         sLogger->flush();                 \
     }                                     \
     catch( const std::exception &e ) {    \
-        logDrmCtrlError();                \
-        logDrmCtrlTrngStatus();           \
         Fatal( e.what() );                \
         sLogger->flush();                 \
         throw;                            \
@@ -75,8 +71,6 @@ limitations under the License.
 
 #define CATCH                             \
     catch( const std::exception &e ) {    \
-        logDrmCtrlError();                \
-        logDrmCtrlTrngStatus();           \
         Fatal( e.what() );                \
         sLogger->flush();                 \
     }
@@ -985,6 +979,13 @@ protected:
             createNodelockedLicenseRequestFile();
         } else {
             mWsClient.reset( new DrmWSClient( mConfFilePath, mCredFilePath ) );
+        }
+    }
+
+    void uninitDrmInterface() {
+        if ( mDrmController ) {
+            mDrmController.reset( nullptr );
+            Debug( "DRM Controller SDK is uninitialized" );
         }
     }
 
@@ -2200,6 +2201,9 @@ public:
                 }
             } catch( ... ) {}
             unlockDrmToInstance();
+            logDrmCtrlError();
+            logDrmCtrlTrngStatus();
+            uninitDrmInterface();
             Debug( "Exiting Impl destructor" );
         CATCH_AND_THROW
     }
