@@ -1071,6 +1071,10 @@ protected:
                     json_output["dna_type"] = product_info["dna_type"];
                     Debug( "HDK DNA type: {}", json_output["dna_type"].asString() );
                 }
+                if ( product_info.isMember( "extra" ) ) {
+                    json_output["extra"] = product_info["extra"];
+                    Debug( "HDK extra data: {}", json_output["extra"].toStyledString() );
+                }
             } catch( const Exception &e ) {
                 if ( e.getErrCode() == DRM_BadFormat )
                     Throw( DRM_BadFormat, "Failed to parse Read-Only Mailbox in DRM Controller: {}", e.what() );

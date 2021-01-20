@@ -52,7 +52,7 @@
 - NEW: The Accelize DRM Systemd service now reset the FPGA on start and stop.
 - NEW: The Python library now provides a Xilinx XRT Python FPGA driver.
 - NEW: The Python library drivers now provides a "reset_fpga" method.
-- FIX: Build issue with setuptools v41.1.0.
+- FIX: Build issue with setuptools v4.1.1.0.
 - FIX: DEB/RPM packages build is now triggered on the build tools instead of the package manager.
 - DOC: Updated to match new DRM HDK file organization.
 - DOC: Updated simulation chapter and added SDAccel/Vitis paragraph.

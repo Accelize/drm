@@ -1,5 +1,5 @@
 ---
-name: DRM Library - Health Test - Install and test packages
+name: DRM Health Test - Install and test packages
 
 trigger: none
 schedules:
@@ -18,9 +18,10 @@ resources:
       type: github
       name: Accelize/acid
       endpoint: Accelize
+      ref: refs/heads/v1
 
 pool:
-  vmImage: ubuntu-latest
+  vmImage: ubuntu-20.04
 
 variables:
   # Import variable group

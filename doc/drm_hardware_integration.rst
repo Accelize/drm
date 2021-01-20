@@ -14,6 +14,8 @@ More details about DRM Controller and Activator logics can be found here:
 * :doc:`drm_hardware_ip_controller`.
 * :doc:`drm_hardware_ip_activator`.
 
+You can also follow this :doc:`drm_hardware_ipi_guidelines`.
+
 Supported hardware
 ==================
 
@@ -51,10 +53,10 @@ currently supported by the DRM HDK:
        * Stratix V
        * Stratix 10
 
-.. warning:: As long as Intel(R) OPAE is not exposing the Chip ID, 
+.. warning:: As long as Intel(R) OPAE is not exposing the Chip ID,
              node-locked mode can not be implemented.
 
-.. warning:: As long as IEEE-1735 encryption is supported only on Pro Editions of Quartus, 
+.. warning:: As long as IEEE-1735 encryption is supported only on Pro Editions of Quartus,
              only Pro Editions are supported.
 
 
@@ -283,8 +285,8 @@ Instantiate the adapted IP core and DRM Activator in the wrapper and connect the
 * Connect the clock and reset of the adapted IP core to the wrapper interface.
 
 
-Encrypt the Protect IPs
-^^^^^^^^^^^^^^^^^^^^^^^
+Encrypt the Protected IPs
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. warning:: Encrypting the Protected IP is mandatory since it contains the
              activation code in clear text.
@@ -340,8 +342,7 @@ design instantiate multiple Protected IPs. By this mean you can simulate each Pr
 
 In addition to the simulation top-level, you'll find in the ``sim`` folder the following files:
 
-* xilinx_sim, modelsim (with drm_controller_bfm)     : Each folder contains the BFM core encrypted for the specific tool.
-                                                       The BFM core is instantiated by the top_drm_activator_0xVVVVLLLLNNNNVVVV_sim.
+* xilinx_sim, modelsim (with drm_controller_bfm)     : Each folder contains the BFM core encrypted for the specific tool. The BFM core is instantiated by the top_drm_activator_0xVVVVLLLLNNNNVVVV_sim.
 * drm_activator_0xVVVVLLLLNNNNVVVV_sim_pkg.(sv,vhdl) : Package containing simulation parameters (see details below)
 * drm_license_package.vhdl                           : Generic license file
 * drm_activator_0xVVVVLLLLNNNNVVVV_license_file.xml  : Specific license file
