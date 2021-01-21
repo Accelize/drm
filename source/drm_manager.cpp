@@ -2201,8 +2201,6 @@ public:
                 }
             } catch( ... ) {}
             unlockDrmToInstance();
-            logDrmCtrlError();
-            logDrmCtrlTrngStatus();
             uninitDrmInterface();
             Debug( "Exiting Impl destructor" );
         CATCH_AND_THROW
