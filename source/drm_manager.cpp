@@ -950,8 +950,9 @@ protected:
                 detectDrmFrequencyMethod3();
             } else if ( mFreqDetectionMethod == 2 ) {
                 detectDrmFrequencyMethod2();
+            } else if ( mFreqDetectionMethod == 1 ) {
             } else {
-                Unreachable( "Unsupported DRM frequency detection method: {} ", mFreqDetectionMethod ); //LCOV_EXCL_LINE
+                Warning( "DRM frequency auto-detection is disabled: {} will be used to compute license timers", mFrequencyCurr );
             }
         }
 

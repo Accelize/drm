@@ -181,46 +181,32 @@ def test_drm_manager_frequency_detection_method1(accelize_drm, conf_json, cred_j
             driver.program_fpga(fpga_image_bkp)
 
 
-@pytest.mark.minimum
 def test_drm_manager_frequency_detection_method2(accelize_drm, conf_json, cred_json, async_handler, basic_log_file):
     """Test method2 (based on dedicated counter in AXI wrapper) to estimate drm_aclk frequency is working"""
+    if accelize_drm.pytest_freq_detection_version != 0x60DC0DE0:
+        pytest.skip("Frequency detection method 2 is not implemented in this design: test skipped")
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-    fpga_image_bkp = driver.fpga_image
-    image_id = None
-    try:
-        if accelize_drm.pytest_freq_detection_version != 0x60DC0DE0:
-            # Program FPGA with HDK 4.2.1.1 (with frequency detection method 2)
-            refdesign = accelize_drm.pytest_ref_designs
-            hdk = list(filter(lambda x: x.startswith('4.2.1.1'), refdesign.hdk_versions))[-1]
-            assert hdk.startswith('4.2.1.1')
-            image_id = refdesign.get_image_id(hdk)
-            driver.program_fpga(image_id)
-
-        conf_json.reset()
-        conf_json['settings'].update(basic_log_file.create(1))
-        conf_json.save()
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        assert drm_manager.get('frequency_detection_method') == 2
-        drm_manager.activate()
-        assert drm_manager.get('frequency_detection_method') == 2
-        drm_manager.deactivate()
-        del drm_manager
-        log_content = basic_log_file.read()
-        assert "Use dedicated counter to compute DRM frequency (method 2)" in log_content
-        assert "Frequency detection of drm_aclk counter after" in log_content
-        basic_log_file.remove()
-    finally:
-        if image_id:
-            # Reprogram FPGA with original image
-            driver.program_fpga(fpga_image_bkp)
+    conf_json.reset()
+    conf_json['settings'].update(basic_log_file.create(1))
+    conf_json.save()
+    drm_manager = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver.read_register_callback,
+        driver.write_register_callback,
+        async_cb.callback
+    )
+    assert drm_manager.get('frequency_detection_method') == 2
+    drm_manager.activate()
+    assert drm_manager.get('frequency_detection_method') == 2
+    drm_manager.deactivate()
+    del drm_manager
+    log_content = basic_log_file.read()
+    assert "Use dedicated counter to compute DRM frequency (method 2)" in log_content
+    assert "Frequency detection of drm_aclk counter after" in log_content
+    basic_log_file.remove()
 
 
 @pytest.mark.minimum
@@ -286,13 +272,13 @@ def test_drm_manager_frequency_detection_method_2_and_3_exception(accelize_drm, 
             driver.write_register_callback,
             async_cb.callback
         )
-    assert search(r'Frequency auto-detection failed: frequency_detection_period parameter \([^)]+\) is too long',
+    assert search(r'Frequency auto-detection .*? failed: frequency_detection_period parameter \([^)]+\) is too long',
                   str(excinfo.value)) is not None
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadFrequency.error_code
     async_cb.assert_NoError()
 
 
-def test_drm_manager_frequency_detection_bypass(accelize_drm, conf_json, cred_json, async_handler):
+def test_drm_manager_frequency_detection_bypass(accelize_drm, conf_json, cred_json, async_handler, basic_log_file):
     """Test bypass of frequency detection"""
 
     if accelize_drm.pytest_freq_detection_version != 0xFFFFFFFF:
@@ -305,6 +291,7 @@ def test_drm_manager_frequency_detection_bypass(accelize_drm, conf_json, cred_js
     conf_json.reset()
     conf_json['drm']['bypass_frequency_detection'] = True
     conf_json['drm']['frequency_mhz'] = 80
+    conf_json['settings'].update(basic_log_file.create(1))
     conf_json.save()
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
@@ -318,6 +305,9 @@ def test_drm_manager_frequency_detection_bypass(accelize_drm, conf_json, cred_js
         drm_manager.activate()
         sleep(1)
         assert drm_manager.get('drm_frequency') == 80
+        log_content = basic_log_file.read()
+        assert search(r'\[\s*warning\s*\] .*? DRM frequency auto-detection is disabled: .*? will be used to compute license timers', log_content)
+        basic_log_file.remove()
     finally:
         drm_manager.deactivate()
     async_cb.assert_NoError()

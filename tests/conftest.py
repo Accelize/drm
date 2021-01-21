@@ -604,6 +604,7 @@ def accelize_drm(pytestconfig):
 
     # Get frequency detection version
     freq_version = fpga_driver[0].read_register(drm_ctrl_base_addr + 0xFFF0)
+    print('Freq detection verison: 0x%08X' % freq_version)
 
     # Store some values for access in tests
     import accelize_drm as _accelize_drm
