@@ -982,13 +982,6 @@ protected:
         }
     }
 
-    void uninitDrmInterface() {
-        if ( mDrmController ) {
-            mDrmController.reset( nullptr );
-            Debug( "DRM Controller SDK is uninitialized" );
-        }
-    }
-
     // Get DRM HDK version
     std::string getDrmCtrlVersion() const {
         std::string drmVersion;
@@ -2201,7 +2194,6 @@ public:
                 }
             } catch( ... ) {}
             unlockDrmToInstance();
-            uninitDrmInterface();
             Debug( "Exiting Impl destructor" );
         CATCH_AND_THROW
     }
