@@ -63,13 +63,9 @@ limitations under the License.
 #define TRY try {
 
 #define CATCH_AND_THROW                   \
-        logDrmCtrlError();                \
-        logDrmCtrlTrngStatus();           \
         sLogger->flush();                 \
     }                                     \
     catch( const std::exception &e ) {    \
-        logDrmCtrlError();                \
-        logDrmCtrlTrngStatus();           \
         Fatal( e.what() );                \
         sLogger->flush();                 \
         throw;                            \
@@ -77,8 +73,6 @@ limitations under the License.
 
 #define CATCH                             \
     catch( const std::exception &e ) {    \
-        logDrmCtrlError();                \
-        logDrmCtrlTrngStatus();           \
         Fatal( e.what() );                \
         sLogger->flush();                 \
     }
@@ -613,7 +607,7 @@ protected:
         settings["ws_api_retry_duration"] = mWSApiRetryDuration;
         settings["host_data_verbosity"] = static_cast<uint32_t>( mHostDataVerbosity );
         settings["simulation_flag"] = mSimulationFlag;
-        settings["axiclk_frequency"] = mAxiFrequency;
+        settings["axi_frequency"] = mAxiFrequency;
         return settings;
     }
 
