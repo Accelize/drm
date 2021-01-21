@@ -254,7 +254,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     )
     if accelize_drm.pytest_freq_detection_version == 0x60DC0DE0:
         assert drm_manager.get('frequency_detection_method') == 2
-    elif accelize_drm.pytest_freq_detection_version == 0x60DC0DE6:
+    elif accelize_drm.pytest_freq_detection_version == 0x60DC0DE1:
         assert drm_manager.get('frequency_detection_method') == 3
     else:
         assert drm_manager.get('frequency_detection_method') == 1
