@@ -63,19 +63,26 @@ stages:
             tox_mode: 'debug'
             tox_coverage: true
             tox_extra_option: '$(tox_mark)'
-          - os_distrib: 'ubuntu_18_04'
-            tox_mode: 'debug'
-            tox_coverage: false
-            tox_extra_option: '$(tox_mark)'
-            dependsOn: 'centos_7'
+          #- os_distrib: 'ubuntu_18_04'
+          #  tox_mode: 'debug'
+          #  tox_coverage: false
+          #  tox_extra_option: '$(tox_mark)'
+          #  dependsOn: 'centos_7'
 
-  - stage: package_release
-    displayName: Create and release packages
+  - stage: build_packages
+    displayName: Create packages
     # Build packages only if tagged or scheduled
     dependsOn: compile_and_test
     condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags'))
     jobs:
       - template: buildPackages.yml
+
+  - stage: release_packages
+    displayName: Release packages
+    # Build packages only if tagged or scheduled
+    dependsOn: build_packages
+    condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags'))
+    jobs:
       - deployment: publishPackages
         displayName: Publish release
         # Performs release only if not scheduled
