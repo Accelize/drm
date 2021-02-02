@@ -425,6 +425,14 @@ Compile the files in the following order:
       or:
       vlog -sv -explicit -work work drm_hdk/activator_VLNV/sim/top_drm_activator_0xVVVVLLLLNNNNVVVV_sim.sv
 
+#. Compile top_drm_controller top-level:
+
+   .. code-block:: tcl
+
+      vcom -93 -explicit -work work drm_hdk/controller/rtl/sim/top_drm_controller_sim.vhdl
+      or:
+      vlog -sv -explicit -work work drm_hdk/controller/rtl/sim/top_drm_controller_sim.sv
+
 Run simulation
 ^^^^^^^^^^^^^^
 
