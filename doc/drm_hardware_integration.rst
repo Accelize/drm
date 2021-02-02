@@ -425,6 +425,12 @@ Compile the files in the following order:
       or:
       vlog -sv -explicit -work work drm_hdk/activator_VLNV/sim/top_drm_activator_0xVVVVLLLLNNNNVVVV_sim.sv
 
+#. Compile drm_ip_controller.vhdl under *drm_library* library:
+
+   .. code-block:: tcl
+
+      vcom -93 -explicit -work drm_library drm_hdk/controller/rtl/core/drm_ip_controller.vhdl
+
 #. Compile top_drm_controller top-level:
 
    .. code-block:: tcl
