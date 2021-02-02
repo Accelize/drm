@@ -22,9 +22,6 @@ jobs:
         Fedora 33:
           osName: fedora
           osVersion: "33"
-        Ubuntu LTS 16.04:
-          osName: ubuntu
-          osVersion: "16.04"
         Ubuntu LTS 18.04:
           osName: ubuntu
           osVersion: "18.04"
