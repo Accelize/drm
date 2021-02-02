@@ -79,14 +79,13 @@ stages:
 
   - stage: release_packages
     displayName: Release packages
-    # Build packages only if tagged or scheduled
+    # Build packages only if tagged and not scheduled
     dependsOn: build_packages
     condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags'), ne(variables['Build.Reason'], 'Schedule'))
     jobs:
       - deployment: publishPackages
         displayName: Publish release
         # Performs release only if not scheduled
-        dependsOn: buildPackages
         environment: drmLibrary
         variables:
           # DEB and RPM repositories paths
