@@ -900,7 +900,7 @@ protected:
         Debug( "DRM Communication Self-Test 2 succeeded" );
     }
 
-    bool isNodeLockedMode() const {
+    bool isConfigNodeLockedMode() const {
         return mLicenseType == eLicenseType::NODE_LOCKED;
     }
 
@@ -944,7 +944,7 @@ protected:
         runBistLevel2();
 
         // Determine frequency detection method if metering/floating mode is active
-        if ( !isNodeLockedMode() ) {
+        if ( !isConfigInNodeLock() ) {
             determineFrequencyDetectionMethod();
             if ( mFreqDetectionMethod == 3 ) {
                 detectDrmFrequencyMethod3();
@@ -963,7 +963,7 @@ protected:
             loadDerivedProduct( mDerivedProductFromConf );
 
         // If node-locked license is requested, create license request file
-        if ( isNodeLockedMode() ) {
+        if ( isConfigInNodeLock() ) {
 
             // Check license directory exists
             if ( !isDir( mNodeLockLicenseDirPath ) )
@@ -1068,7 +1068,7 @@ protected:
         if ( !mBoardType.empty() )
             json_output["boardType"] = mBoardType;
         json_output["mode"] = (uint8_t)mLicenseType;
-        if ( !isNodeLockedMode() )
+        if ( !isConfigInNodeLock() )
             json_output["drm_frequency_init"] = mFrequencyInit;
 
         // Fulfill with DRM section
@@ -1161,7 +1161,7 @@ protected:
         json_request["saasChallenge"] = saasChallenge;
         json_request["meteringFile"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
         json_request["request"] = "open";
-        if ( !isNodeLockedMode() )
+        if ( !isConfigInNodeLock() )
             json_request["drm_frequency"] = mFrequencyCurr;
         json_request["mode"] = (uint8_t)mLicenseType;
 
@@ -1184,7 +1184,7 @@ protected:
         json_request["sessionId"] = meteringFile[0].substr( 0, 16 );
         checkSessionIDFromDRM( json_request );
 
-        if ( !isNodeLockedMode() )
+        if ( !isConfigInNodeLock() )
             json_request["drm_frequency"] = mFrequencyCurr;
         json_request["meteringFile"] = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
         json_request["request"] = "running";
@@ -1206,7 +1206,7 @@ protected:
         json_request["sessionId"] = meteringFile[0].substr( 0, 16 );
         checkSessionIDFromDRM( json_request );
 
-        if ( !isNodeLockedMode() )
+        if ( !isConfigInNodeLock() )
             json_request["drm_frequency"] = mFrequencyCurr;
         json_request["meteringFile"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
         json_request["request"] = "close";
@@ -1226,7 +1226,7 @@ protected:
             Debug( "Build health request #{}", mHealthCounter );
             {
                 std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-                if ( isNodeLockedMode() || isSessionRunning() ) {
+                if ( isConfigInNodeLock() || isSessionRunning() ) {
                     checkDRMCtlrRet( getDrmController().asynchronousExtractMeteringFile(
                             numberOfDetectedIps, saasChallenge, meteringFile ) );
                 } else {
@@ -1438,7 +1438,7 @@ protected:
             /// Extract license key and license timer from web service response
             if ( mLicenseCounter == 0 )
                 licenseKey = JVgetRequired( dna_node, "key", Json::stringValue ).asString();
-            if ( !isNodeLockedMode() )
+            if ( !isConfigInNodeLock() )
                 licenseTimer = JVgetRequired( dna_node, "licenseTimer", Json::stringValue ).asString();
             mLicenseDuration = JVgetRequired( metering_node, "timeoutSecond", Json::uintValue ).asUInt();
             if ( mLicenseDuration == 0 )
@@ -1457,7 +1457,7 @@ protected:
         }
 
         // Load license timer
-        if ( !isNodeLockedMode() ) {
+        if ( !isConfigInNodeLock() ) {
             checkDRMCtlrRet( getDrmController().loadLicenseTimerInit( licenseTimer ) );
             Debug( "Wrote license timer #{} of session ID {} for a duration of {} seconds",
                     mLicenseCounter, mSessionID, mLicenseDuration );
@@ -1498,7 +1498,7 @@ protected:
         bool is_metered = isDrmCtrlInMetering();
         if ( is_nodelocked && is_metered )
             Unreachable( "DRM Controller cannot be in both Node-Locked and Metering/Floating license modes. " ); //LCOV_EXCL_LINE
-        if ( !isNodeLockedMode() ) {
+        if ( !isConfigInNodeLock() ) {
             if ( !is_metered )
                 Unreachable( "DRM Controller failed to switch to Metering license mode" ); //LCOV_EXCL_LINE
             Debug( "DRM Controller is in Metering license mode" );
@@ -2263,7 +2263,7 @@ public:
         TRY
             Debug( "Calling 'activate' with 'resume_session_request'={}", resume_session_request );
 
-            if ( isNodeLockedMode() ) {
+            if ( isConfigInNodeLock() ) {
                 // Install the node-locked license
                 installNodelockedLicense();
                 return;
@@ -2310,7 +2310,7 @@ public:
         TRY
             Debug( "Calling 'deactivate' with 'pause_session_request'={}", pause_session_request );
 
-            if ( isNodeLockedMode() ) {
+            if ( isConfigInNodeLock() ) {
                 return;
             }
             if ( !isSessionRunning() ) {

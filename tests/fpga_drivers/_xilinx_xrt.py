@@ -58,19 +58,32 @@ class FpgaDriver(_FpgaDriverBase):
     _name = _match(r'_(.+)\.py', _basename(__file__)).group(1)
     _reglock = _Lock()
 
-    def _get_driver(self):
+    @staticmethod
+    def get_xrt_lib():
+        """
+        Detect XRT installation path:
+        """
+        for prefix in (_environ.get("XILINX_XRT", "/opt/xilinx/xrt"),
+                       '/usr', '/usr/local'):
+            if _isfile(_join(prefix, 'bin/xbutil')):
+                return prefix
+        raise RuntimeError('Unable to find Xilinx XRT')
+
+    @staticmethod
+    def _get_driver():
         """
         Get FPGA driver
 
         Returns:
             ctypes.CDLL: FPGA driver.
         """
-        if _isfile(_join(self._xrt_prefix, "lib/libxrt_aws.so")):
-            print('Loading XRT for AWS target'
-            fpga_library = _cdll.LoadLibrary(_join(self._xrt_prefix, "lib/libxrt_aws.so"))
-        elif _isfile(_join(self._xrt_prefix, "lib/libxrt_core.so")):
-            print('Loading XRT for common target'
-            fpga_library = _cdll.LoadLibrary(_join(self._xrt_prefix, "lib/libxrt_core.so"))
+        xrt_path = get_xrt_lib()
+        if _isfile(_join(xrt_path, "lib/libxrt_aws.so")):
+            print('Loading XRT for AWS target')
+            fpga_library = _cdll.LoadLibrary(_join(xrt_path, "lib/libxrt_aws.so"))
+        elif _isfile(_join(xrt_path, "lib/libxrt_core.so")):
+            print('Loading XRT for common target')
+            fpga_library = _cdll.LoadLibrary(_join(xrt_path, "lib/libxrt_core.so"))
         else:
             raise RuntimeError('Unable to find Xilinx XRT Library')
         return fpga_library
@@ -84,24 +97,11 @@ class FpgaDriver(_FpgaDriverBase):
         return create_lock
 
     @property
-    def _xrt_prefix(self):
-        """
-        Detect XRT installation prefix:
-
-        Returns:
-            str: prefix path.
-        """
-        for prefix in (_environ.get("XILINX_XRT", "/opt/xilinx/xrt"),
-                       '/usr', '/usr/local'):
-            if _isfile(_join(prefix, 'bin/xbutil')):
-                return prefix
-        raise RuntimeError('Unable to find Xilinx XRT')
-
-    @property
     def _xbutil(self):
-        _xbutil_path = _join(self._xrt_prefix, 'bin/awssak')
+        xrt_path = get_xrt_lib()
+        _xbutil_path = _join(xrt_path, 'bin/awssak')
         if not _isfile(_xbutil_path):
-            _xbutil_path = _join(self._xrt_prefix, 'bin/xbutil')
+            _xbutil_path = _join(xrt_path, 'bin/xbutil')
         if not _isfile(_xbutil_path):
             raise RuntimeError('Unable to find Xilinx XRT Board Utility')
         return _xbutil_path
