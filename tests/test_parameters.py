@@ -1193,7 +1193,12 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         driver.write_register_callback,
         async_cb.callback
     )
-    trng_status = drm_manager.get('trng_status')
+    try:
+        trng_status = drm_manager.get('trng_status')
+    except accelize_drm.exceptions.DRMFatal as e:
+        if "Feature is not supported" in str(e):
+            hdk_version = accelize_drm.pytest_hdk_version
+            pytest.skip("'trng_status' parameter is not supported by the HDK %s" % hdk_version)
     assert 'security_alert_bit' in trng_status.keys()
     assert 'adaptive_proportion_test_error' in trng_status.keys()
     assert 'repetition_count_test_error' in trng_status.keys()

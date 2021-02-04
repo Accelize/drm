@@ -66,10 +66,14 @@ class FpgaDriver(_FpgaDriverBase):
             ctypes.CDLL: FPGA driver.
         """
         if _isfile(_join(self._xrt_prefix, "lib/libxrt_aws.so")):
-            return _cdll.LoadLibrary(_join(self._xrt_prefix, "lib/libxrt_aws.so"))
-        if _isfile(_join(self._xrt_prefix, "lib/libxrt_core.so")):
-            return _cdll.LoadLibrary(_join(self._xrt_prefix, "lib/libxrt_core.so"))
-        raise RuntimeError('Unable to find Xilinx XRT Library')
+            print('Loading XRT for AWS target'
+            fpga_library = _cdll.LoadLibrary(_join(self._xrt_prefix, "lib/libxrt_aws.so"))
+        elif _isfile(_join(self._xrt_prefix, "lib/libxrt_core.so")):
+            print('Loading XRT for common target'
+            fpga_library = _cdll.LoadLibrary(_join(self._xrt_prefix, "lib/libxrt_core.so"))
+        else:
+            raise RuntimeError('Unable to find Xilinx XRT Library')
+        return fpga_library
 
     def _get_lock(self):
         """

@@ -42,7 +42,6 @@ def test_hdk_stability_on_programming(accelize_drm, conf_json, cred_json, async_
 @pytest.mark.minimum
 def test_uncompatibilities(accelize_drm, conf_json, cred_json, async_handler):
     """Test API is not compatible with DRM HDK inferior major number"""
-    refdesign = accelize_drm.pytest_ref_designs
     hdk_version = accelize_drm.pytest_hdk_version
     if hdk_version is None:
         pytest.skip("No HDK version found with FPGA image")
@@ -68,11 +67,10 @@ def test_uncompatibilities(accelize_drm, conf_json, cred_json, async_handler):
             HDK_Limit = 3.1
 
         # Then test all HDK versions that are not compatible
-        current_num = float(match(r'^(\d+.\d+)', hdk_version).group(1))
+        refdesign = accelize_drm.pytest_ref_designs
         refdesignByMajor = ((float(match(r'^(\d+.\d+)', x).group(1)), x) for x in refdesign.hdk_versions)
-
+        current_num = float(match(r'^(\d+.\d+)', hdk_version).group(1))
         tested = False
-
         for num, versions in groupby(refdesignByMajor, lambda x: x[0]):
             if HDK_Limit <= num and num <= current_num:
                 print('Test uncompatible HDK: HDK version %s is in the compatiblity range[%s : %s]: skip version' % (num, HDK_Limit, current_num))
@@ -100,7 +98,8 @@ def test_uncompatibilities(accelize_drm, conf_json, cred_json, async_handler):
             if search(r'This DRM Library version \S+ is not compatible with the DRM HDK version', str(excinfo.value), IGNORECASE):
                 hit = True
             assert hit
-        assert tested
+        if not tested:
+            pytest.skip("Could not find a refdesign in the testsuite to test the uncompatible HDKs")
 
     finally:
         if drm_manager:
@@ -112,7 +111,6 @@ def test_uncompatibilities(accelize_drm, conf_json, cred_json, async_handler):
 @pytest.mark.minimum
 def test_compatibilities(accelize_drm, conf_json, cred_json, async_handler):
     """Test API is compatible with DRM HDK with the same major number"""
-    refdesign = accelize_drm.pytest_ref_designs
     hdk_version = accelize_drm.pytest_hdk_version
     if hdk_version is None:
         pytest.skip("FPGA image is not corresponding to a known HDK version")
@@ -138,10 +136,10 @@ def test_compatibilities(accelize_drm, conf_json, cred_json, async_handler):
             HDK_Limit = 3.1
 
         # Then test all HDK versions that are compatible
-        current_num = float(match(r'^(\d+.\d+)', hdk_version).group(1))
+        refdesign = accelize_drm.pytest_ref_designs
         refdesignByMajor = ((float(match(r'^(\d+.\d+)', x).group(1)), x) for x in refdesign.hdk_versions)
+        current_num = float(match(r'^(\d+.\d+)', hdk_version).group(1))
         tested = False
-
         for num, versions in groupby(refdesignByMajor, lambda x: x[0]):
             if num < HDK_Limit or num > current_num:
                 print('Test compatible HDK: HDK version %s is not in the range ]%s : %s[: skip version' % (num, HDK_Limit, current_num))

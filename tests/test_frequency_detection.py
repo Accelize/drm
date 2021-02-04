@@ -152,7 +152,10 @@ def test_drm_manager_frequency_detection_method1(accelize_drm, conf_json, cred_j
         if accelize_drm.pytest_freq_detection_version != 0xFFFFFFFF:
             # Program FPGA with HDK 3.x.x (with frequency detection method 1)
             refdesign = accelize_drm.pytest_ref_designs
-            hdk = list(filter(lambda x: x.startswith('3.'), refdesign.hdk_versions))[-1]
+            hdk = list(filter(lambda x: x.startswith('3.'), refdesign.hdk_versions))
+            if len(hdk) == 0:
+                pytest.skip("No refdesign with HDK v3.x could be found in the testsuite")
+            hdk = hdk[-1]
             assert hdk.startswith('3.')
             image_id = refdesign.get_image_id(hdk)
             driver.program_fpga(image_id)
@@ -221,7 +224,10 @@ def test_drm_manager_frequency_detection_method3(accelize_drm, conf_json, cred_j
         if accelize_drm.pytest_freq_detection_version != 0x60DC0DE1:
             # Program FPGA with HDK 4.2.1.2 (with frequency detection method 3)
             refdesign = accelize_drm.pytest_ref_designs
-            hdk = list(filter(lambda x: x.startswith('4.2.1.2'), refdesign.hdk_versions))[-1]
+            hdk = list(filter(lambda x: x.startswith('4.2.1.2'), refdesign.hdk_versions))
+            if len(hdk) == 0:
+                pytest.skip("No refdesign with HDK v4.2.1.2 could be found in the testsuite")
+            hdk = hdk[-1]
             assert hdk.startswith('4.2.1.2')
             image_id = refdesign.get_image_id(hdk)
             driver.program_fpga(image_id)
