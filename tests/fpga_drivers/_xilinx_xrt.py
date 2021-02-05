@@ -80,7 +80,7 @@ class FpgaDriver(_FpgaDriverBase):
         Returns:
             ctypes.CDLL: FPGA driver.
         """
-        xrt_path = get_xrt_lib()
+        xrt_path = FpgaDriver.get_xrt_lib()
         if _isfile(_join(xrt_path, "lib/libxrt_aws.so")):
             print('Loading XRT for AWS target')
             fpga_library = _cdll.LoadLibrary(_join(xrt_path, "lib/libxrt_aws.so"))
@@ -101,7 +101,7 @@ class FpgaDriver(_FpgaDriverBase):
 
     @property
     def _xbutil(self):
-        xrt_path = get_xrt_lib()
+        xrt_path = FpgaDriver.get_xrt_lib()
         _xbutil_path = _join(xrt_path, 'bin/awssak')
         if not _isfile(_xbutil_path):
             _xbutil_path = _join(xrt_path, 'bin/xbutil')

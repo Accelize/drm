@@ -900,7 +900,7 @@ protected:
         Debug( "DRM Communication Self-Test 2 succeeded" );
     }
 
-    bool isConfigNodeLockedMode() const {
+    bool isConfigInNodeLock() const {
         return mLicenseType == eLicenseType::NODE_LOCKED;
     }
 
