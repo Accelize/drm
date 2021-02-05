@@ -31,10 +31,11 @@ def test_vitis_2activator(pytestconfig, conf_json, cred_json, async_handler):
     Test one vitis configuration: dual clock kernel with different frequencies
     """
     driver_name = 'xilinx_xrt'
+    design_name = 'vitis_2activator_vhdl_250_125'
 
     slot_id = pytestconfig.getoption("fpga_slot_id")
     ref_designs = RefDesign(join(SCRIPT_DIR, 'refdesigns', driver_name))
-    fpga_image = ref_designs.get_image_id('vitis_2activator')
+    fpga_image = ref_designs.get_image_id(design_name)
     drm_ctrl_base_addr = pytestconfig.getoption("drm_controller_base_address")
     no_clear_fpga = pytestconfig.getoption("no_clear_fpga")
 
