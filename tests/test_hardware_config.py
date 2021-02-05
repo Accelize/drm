@@ -8,7 +8,7 @@ import accelize_drm as _accelize_drm
 import tests.conftest as conftest
 from tests.fpga_drivers import get_driver
 
-SCRIPT_DIR = _dirname(_realpath(__file__))
+SCRIPT_DIR = dirname(realpath(__file__))
 
 
 def findActivators(driver, base_addr):
