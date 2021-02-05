@@ -9,7 +9,7 @@ from ctypes import (
     c_uint as _c_uint, c_uint64 as _c_uint64, c_int as _c_int,
     c_void_p as _c_void_p, c_size_t as _c_size_t)
 from os import environ as _environ, fsdecode as _fsdecode
-from os.path import isfile as _isfile, join as _join, realpath as _realpath, basename as _basename
+from os.path import isfile as _isfile, join as _join, realpath as _realpath, basename as _basename, dirname as _dirname
 from re import match as _match
 from subprocess import run as _run, PIPE as _PIPE, STDOUT as _STDOUT
 from threading import Lock as _Lock
@@ -17,6 +17,9 @@ from threading import Lock as _Lock
 from tests.fpga_drivers import FpgaDriverBase as _FpgaDriverBase
 
 __all__ = ['FpgaDriver']
+
+
+SCRIPT_DIR = _dirname(_realpath(__file__))
 
 
 class XrtLock():
@@ -123,6 +126,15 @@ class FpgaDriver(_FpgaDriverBase):
         Args:
             fpga_image (str): FPGA image.
         """
+        # Workaround because clear FPGA does not work: load a different image
+        clear_image = _join(SCRIPT_DIR, 'clear.awsxclbin')
+        load_image = _run(
+            [self._xbutil, 'program',
+             '-d', str(self._fpga_slot_id), '-p', clear_image],
+            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
+        if load_image.returncode:
+            raise RuntimeError(load_image.stdout)
+        # Now load the real image
         fpga_image = _realpath(_fsdecode(fpga_image))
         load_image = _run(
             [self._xbutil, 'program',
