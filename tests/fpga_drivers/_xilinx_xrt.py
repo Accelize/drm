@@ -118,6 +118,7 @@ class FpgaDriver(_FpgaDriverBase):
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if clear_fpga.returncode:
             raise RuntimeError(clear_fpga.stdout)
+        print('FPGA cleared')
 
     def _program_fpga(self, fpga_image):
         """
