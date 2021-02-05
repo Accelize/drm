@@ -3,9 +3,9 @@
 Test metering and floating behaviors of DRM Library.
 """
 import pytest
-from os.path import join
+from os.path import join, dirname, realpath
 import accelize_drm as _accelize_drm
-import conftest
+import tests.conftest as conftest
 from tests.fpga_drivers import get_driver
 
 SCRIPT_DIR = _dirname(_realpath(__file__))
@@ -21,7 +21,7 @@ def findActivators(driver, base_addr):
         base_addr += 0x10000
     if len(base_addr_list) == 0:
         raise IOError('No activator found on slot #%d' % driver._fpga_slot_id)
-    activators = ActivatorsInFPGA(driver, base_addr_list)
+    activators = conftest.ActivatorsInFPGA(driver, base_addr_list)
     print('Found %d activator(s) on slot #%d' % (len(base_addr_list), driver._fpga_slot_id))
     return activators
 
@@ -34,13 +34,13 @@ def test_vitis_2activator(pytestconfig, conf_json, cred_json, async_handler):
     design_name = 'vitis_2activator_vhdl_250_125'
 
     slot_id = pytestconfig.getoption("fpga_slot_id")
-    ref_designs = RefDesign(join(SCRIPT_DIR, 'refdesigns', driver_name))
+    ref_designs = conftest.RefDesign(join(SCRIPT_DIR, 'refdesigns', driver_name))
     fpga_image = ref_designs.get_image_id(design_name)
     drm_ctrl_base_addr = pytestconfig.getoption("drm_controller_base_address")
     no_clear_fpga = pytestconfig.getoption("no_clear_fpga")
 
     fpga_driver_cls = get_driver(driver_name)
-    fpga_driver = fpga_driver_cls(
+    driver = fpga_driver_cls(
                     fpga_slot_id = slot_id,
                     fpga_image = fpga_image,
                     drm_ctrl_base_addr = drm_ctrl_base_addr,
@@ -52,7 +52,7 @@ def test_vitis_2activator(pytestconfig, conf_json, cred_json, async_handler):
 
     # Get activators
     base_addr = pytestconfig.getoption("activator_base_address")
-    activators = findActivators(fpga_driver, base_addr)
+    activators = findActivators(driver, base_addr)
     activators.reset_coin()
     activators.autotest()
 
