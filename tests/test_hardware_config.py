@@ -3,8 +3,9 @@
 Test metering and floating behaviors of DRM Library.
 """
 import pytest
+from datetime import datetime
 from os.path import join, dirname, realpath
-import accelize_drm as _accelize_drm
+import accelize_drm as accelize_drm
 import tests.conftest as conftest
 from tests.fpga_drivers import get_driver
 
@@ -39,6 +40,7 @@ def test_vitis_2activator(pytestconfig, conf_json, cred_json, async_handler):
     drm_ctrl_base_addr = pytestconfig.getoption("drm_controller_base_address")
     no_clear_fpga = pytestconfig.getoption("no_clear_fpga")
 
+    # Create driver and program FPGA
     fpga_driver_cls = get_driver(driver_name)
     driver = fpga_driver_cls(
                     fpga_slot_id = slot_id,
@@ -46,9 +48,6 @@ def test_vitis_2activator(pytestconfig, conf_json, cred_json, async_handler):
                     drm_ctrl_base_addr = drm_ctrl_base_addr,
                     no_clear_fpga = no_clear_fpga
                 )
-
-    # Program FPGA
-    driver.program_fpga()
 
     # Get activators
     base_addr = pytestconfig.getoption("activator_base_address")

@@ -421,8 +421,14 @@ class RefDesign:
         if not isdir(path):
             raise IOError("Following path must be a valid directory: %s" % path)
         self._path = path
-        self.image_files = {splitext(file_name)[0].strip('v'):realpath(join(self._path, file_name))
-                                    for file_name in listdir(self._path)}
+        self.image_files = {}
+        for filename in listdir(self._path):
+            bname = splitext(filename)[0]
+            s = search(r'v((\d\.)+\d)', bname)
+            if s:
+                self.image_files[s.group(0)] = realpath(join(self._path, filename))
+            else:
+                self.image_files[bname] = realpath(join(self._path, filename))
         self.hdk_versions = sorted(filter(lambda x: match(r'^\d+', x), self.image_files.keys()))
 
     def get_image_id(self, hdk_version=None):
