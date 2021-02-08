@@ -193,6 +193,7 @@ class FpgaDriverBase:
         try:
             yield
         except RuntimeError as exception:
+            print('Caugth exception:\n>', '\n> '.join(str(exception).strip().split('\n')))
             exception.args = (
                 'Unable to %s FPGA: %s' % (action, exception.args[0].strip()),)
             raise

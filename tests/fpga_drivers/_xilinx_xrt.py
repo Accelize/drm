@@ -9,7 +9,7 @@ from ctypes import (
     c_uint as _c_uint, c_uint64 as _c_uint64, c_int as _c_int,
     c_void_p as _c_void_p, c_size_t as _c_size_t)
 from os import environ as _environ, fsdecode as _fsdecode
-from os.path import isfile as _isfile, join as _join, realpath as _realpath, basename as _basename
+from os.path import isfile as _isfile, join as _join, realpath as _realpath, basename as _basename, dirname as _dirname
 from re import match as _match
 from subprocess import run as _run, PIPE as _PIPE, STDOUT as _STDOUT
 from threading import Lock as _Lock
@@ -17,6 +17,9 @@ from threading import Lock as _Lock
 from tests.fpga_drivers import FpgaDriverBase as _FpgaDriverBase
 
 __all__ = ['FpgaDriver']
+
+
+SCRIPT_DIR = _dirname(_realpath(__file__))
 
 
 class XrtLock():
@@ -58,18 +61,35 @@ class FpgaDriver(_FpgaDriverBase):
     _name = _match(r'_(.+)\.py', _basename(__file__)).group(1)
     _reglock = _Lock()
 
-    def _get_driver(self):
+    @staticmethod
+    def get_xrt_lib():
+        """
+        Detect XRT installation path:
+        """
+        for prefix in (_environ.get("XILINX_XRT", "/opt/xilinx/xrt"),
+                       '/usr', '/usr/local'):
+            if _isfile(_join(prefix, 'bin/xbutil')):
+                return prefix
+        raise RuntimeError('Unable to find Xilinx XRT')
+
+    @staticmethod
+    def _get_driver():
         """
         Get FPGA driver
 
         Returns:
             ctypes.CDLL: FPGA driver.
         """
-        if _isfile(_join(self._xrt_prefix, "lib/libxrt_aws.so")):
-            return _cdll.LoadLibrary(_join(self._xrt_prefix, "lib/libxrt_aws.so"))
-        if _isfile(_join(self._xrt_prefix, "lib/libxrt_core.so")):
-            return _cdll.LoadLibrary(_join(self._xrt_prefix, "lib/libxrt_core.so"))
-        raise RuntimeError('Unable to find Xilinx XRT Library')
+        xrt_path = FpgaDriver.get_xrt_lib()
+        if _isfile(_join(xrt_path, "lib/libxrt_aws.so")):
+            print('Loading XRT API library for AWS targets')
+            fpga_library = _cdll.LoadLibrary(_join(xrt_path, "lib/libxrt_aws.so"))
+        elif _isfile(_join(xrt_path, "lib/libxrt_core.so")):
+            print('Loading XRT API library for Xilinx targets')
+            fpga_library = _cdll.LoadLibrary(_join(xrt_path, "lib/libxrt_core.so"))
+        else:
+            raise RuntimeError('Unable to find Xilinx XRT Library')
+        return fpga_library
 
     def _get_lock(self):
         """
@@ -80,24 +100,11 @@ class FpgaDriver(_FpgaDriverBase):
         return create_lock
 
     @property
-    def _xrt_prefix(self):
-        """
-        Detect XRT installation prefix:
-
-        Returns:
-            str: prefix path.
-        """
-        for prefix in (_environ.get("XILINX_XRT", "/opt/xilinx/xrt"),
-                       '/usr', '/usr/local'):
-            if _isfile(_join(prefix, 'bin/xbutil')):
-                return prefix
-        raise RuntimeError('Unable to find Xilinx XRT')
-
-    @property
     def _xbutil(self):
-        _xbutil_path = _join(self._xrt_prefix, 'bin/awssak')
+        xrt_path = FpgaDriver.get_xrt_lib()
+        _xbutil_path = _join(xrt_path, 'bin/awssak')
         if not _isfile(_xbutil_path):
-            _xbutil_path = _join(self._xrt_prefix, 'bin/xbutil')
+            _xbutil_path = _join(xrt_path, 'bin/xbutil')
         if not _isfile(_xbutil_path):
             raise RuntimeError('Unable to find Xilinx XRT Board Utility')
         return _xbutil_path
@@ -111,6 +118,7 @@ class FpgaDriver(_FpgaDriverBase):
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if clear_fpga.returncode:
             raise RuntimeError(clear_fpga.stdout)
+        print('FPGA cleared')
 
     def _program_fpga(self, fpga_image):
         """
@@ -119,6 +127,15 @@ class FpgaDriver(_FpgaDriverBase):
         Args:
             fpga_image (str): FPGA image.
         """
+        # Workaround because clear FPGA does not work: load a different image
+        clear_image = _join(SCRIPT_DIR, 'clear.awsxclbin')
+        load_image = _run(
+            [self._xbutil, 'program',
+             '-d', str(self._fpga_slot_id), '-p', clear_image],
+            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
+        if load_image.returncode:
+            raise RuntimeError(load_image.stdout)
+        # Now load the real image
         fpga_image = _realpath(_fsdecode(fpga_image))
         load_image = _run(
             [self._xbutil, 'program',
