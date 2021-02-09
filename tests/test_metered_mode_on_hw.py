@@ -546,7 +546,6 @@ def test_stop_after_pause(accelize_drm, conf_json, cred_json, async_handler):
 @pytest.mark.minimum
 @pytest.mark.no_parallel
 @pytest.mark.hwtst
-#@pytest.mark.skip(reason='Might be the root cause of SegFault')
 def test_metering_limits_on_activate(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
     """
     Test an error is returned by the activate function and the design is locked when the limit is reached.
@@ -603,7 +602,6 @@ def test_metering_limits_on_activate(accelize_drm, conf_json, cred_json, async_h
 @pytest.mark.minimum
 @pytest.mark.no_parallel
 @pytest.mark.hwtst
-#@pytest.mark.skip(reason='Might be the root cause of SegFault')
 def test_metering_limits_on_licensing_thread(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
     """
     Test an error is returned by the async error function and the design is locked when the limit is reached.

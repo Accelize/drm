@@ -371,7 +371,6 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
     async_cb.assert_NoError()
 
 
-#@pytest.mark.skip(reason='Segment index corruption issue to be fixed')
 @pytest.mark.no_parallel
 def test_segment_index(accelize_drm, conf_json, cred_json, async_handler,
                         live_server, basic_log_file, request):

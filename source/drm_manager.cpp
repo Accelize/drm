@@ -1476,6 +1476,9 @@ protected:
         TClock::duration timeSpan;
         double mseconds( 0.0 );
         TClock::time_point timeStart = TClock::now();
+        uint32 sleep_period = 50;
+        if ( mSimulationFlag )
+            sleep_period *= 1000;
 
         while( mseconds < mActivationTransmissionTimeoutMS ) {
             checkDRMCtlrRet( getDrmController().readActivationCodesTransmittedStatusRegister(
@@ -1487,7 +1490,7 @@ protected:
                 break;
             }
             Debug2( "License #{} not transmitted yet after {:f} ms", mLicenseCounter, mseconds );
-            usleep(50);
+            usleep(sleep_period);
         }
         if ( !activationCodesTransmitted ) {
             Throw( DRM_CtlrError, "DRM Controller could not transmit Licence #{} to activators after {:f} ms. ", mLicenseCounter, mseconds ); //LCOV_EXCL_LINE
