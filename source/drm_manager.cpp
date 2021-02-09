@@ -1476,7 +1476,7 @@ protected:
         TClock::duration timeSpan;
         double mseconds( 0.0 );
         TClock::time_point timeStart = TClock::now();
-        uint32 sleep_period = 50;
+        uint32_t sleep_period = 50;
         if ( mSimulationFlag )
             sleep_period *= 1000;
 
