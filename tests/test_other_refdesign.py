@@ -5,7 +5,6 @@ Test metering and floating behaviors of DRM Library.
 import pytest
 from datetime import datetime
 from os.path import join, dirname, realpath
-import accelize_drm as accelize_drm
 import tests.conftest as conftest
 from tests.fpga_drivers import get_driver
 
@@ -27,10 +26,12 @@ def findActivators(driver, base_addr):
     return activators
 
 
+@pytest.mark.skip
 def test_vitis_2activator(pytestconfig, conf_json, cred_json, async_handler):
     """
     Test one vitis configuration: dual clock kernel with different frequencies
     """
+    import accelize_drm as _accelize_drm
     driver_name = 'xilinx_xrt'
     design_name = 'vitis_2activator_vhdl_250_125'
 
@@ -59,7 +60,7 @@ def test_vitis_2activator(pytestconfig, conf_json, cred_json, async_handler):
     async_cb = async_handler.create()
     async_cb.reset()
     conf_json.reset()
-    drm_manager = accelize_drm.DrmManager(
+    drm_manager = _accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
         driver.read_register_callback,

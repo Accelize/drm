@@ -97,7 +97,7 @@ def test_packages_import(pytestconfig):
     import accelize_drm
     api_version = accelize_drm.get_api_version()
 
-    # Check correct the backend is imported and the C/C++ library is correctly
+    # Check the correct backend is imported and the C/C++ library is correctly
     # installed
 
     assert api_version.backend == (
