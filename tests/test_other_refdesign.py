@@ -11,21 +11,6 @@ from tests.fpga_drivers import get_driver
 SCRIPT_DIR = dirname(realpath(__file__))
 
 
-def findActivators(driver, base_addr):
-    base_addr_list = []
-    while True:
-        val = driver.read_register(base_addr + conftest.INC_EVENT_REG_OFFSET)
-        if val != 0x600DC0DE:
-            break
-        base_addr_list.append(base_addr)
-        base_addr += 0x10000
-    if len(base_addr_list) == 0:
-        raise IOError('No activator found on slot #%d' % driver._fpga_slot_id)
-    activators = conftest.ActivatorsInFPGA(driver, base_addr_list)
-    print('Found %d activator(s) on slot #%d' % (len(base_addr_list), driver._fpga_slot_id))
-    return activators
-
-
 @pytest.mark.skip
 def test_vitis_2activator(pytestconfig, conf_json, cred_json, async_handler):
     """
@@ -52,7 +37,7 @@ def test_vitis_2activator(pytestconfig, conf_json, cred_json, async_handler):
 
     # Get activators
     base_addr = pytestconfig.getoption("activator_base_address")
-    activators = findActivators(driver, base_addr)
+    activators = conftest.findActivators(driver, base_addr)
     activators.reset_coin()
     activators.autotest()
 

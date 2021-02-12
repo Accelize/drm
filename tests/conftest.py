@@ -254,6 +254,21 @@ def pytest_runtest_setup(item):
             pytest.skip('"long_run" marker not selected')
 
 
+def findActivators(driver, base_addr):
+    base_addr_list = []
+    while True:
+        val = driver.read_register(base_addr + INC_EVENT_REG_OFFSET)
+        if val != 0x600DC0DE:
+            break
+        base_addr_list.append(base_addr)
+        base_addr += 0x10000
+    if len(base_addr_list) == 0:
+        raise IOError('No activator found on slot #%d' % driver._fpga_slot_id)
+    activators = ActivatorsInFPGA(driver, base_addr_list)
+    print('Found %d activator(s) on slot #%d' % (len(base_addr_list), driver._fpga_slot_id))
+    return activators
+
+
 class SingleActivator:
     """
     SingleActivator object
@@ -570,18 +585,8 @@ def accelize_drm(pytestconfig):
     # Define Activator access per slot
     fpga_activators = list()
     for driver in fpga_driver:
-        base_addr_list = []
         base_address = pytestconfig.getoption("activator_base_address")
-        while True:
-            val = driver.read_register(base_address + INC_EVENT_REG_OFFSET)
-            if val != 0x600DC0DE:
-                break
-            base_addr_list.append(base_address)
-            base_address += 0x10000
-        fpga_activators.append(ActivatorsInFPGA(driver, base_addr_list))
-        if len(base_addr_list) == 0:
-            raise IOError('No activator found on slot #%d' % driver._fpga_slot_id)
-        print('Found %d activator(s) on slot #%d' % (len(base_addr_list), driver._fpga_slot_id))
+        fpga_activators.append(findActivators(driver, base_address))
 
     # Create pytest artifacts directory
     pytest_artifacts_dir = join(pytestconfig.getoption("artifacts_dir"), 'pytest_artifacts')
