@@ -345,32 +345,30 @@ File structure
    -- sv/
    ----- altera/
    -------- altchip_id_arria10.sv
-   ----- alteraProprietary/
-   -------- altchip_id_arria10.sv
    -- vhdl/
    ----- altera/
-   -------- drm_all_components.vhdl
-   ----- alteraProprietary/
    -------- drm_all_components.vhdl
    ----- modelsim/
    -------- drm_all_components.vhdl
    ----- xilinx/
    -------- drm_all_components.vhdl
+   ----- xilinx_sim/
+   -------- drm_all_components.vhdl
    controller/
    -- rtl/
    ---- core/
+   ------ cdc_bridge.sv
    ------ drm_ip_controller.vhdl
-   ------ drm_ip_controller.v
    ---- sim/
-   ------ drm_controller_sim.vhdl
-   ------ drm_controller_sim.sv
+   ------ top_drm_controller_sim.vhdl
+   ------ top_drm_controller_sim.sv
    ---- syn/
-   ------ drm_controller.vhdl
-   ------ drm_controller.sv
-   -- sdaccel/
-   ---- scr/
-   ------ drm_controller_kernel.sv
-   ------ drm_controller_kernel.xml
+   ------ top_drm_controller.vhdl
+   ------ top_drm_controller.sv
+   -- vitis/
+   ---- src/
+   ------ kernel_drm_controller.v
+   ------ kernel_drm_controller.xml
    ---- scripts/
    ------ gen_drmctrl_xo.tcl
    ------ package_drmctrl_stage.tcl
