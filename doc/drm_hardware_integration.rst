@@ -445,6 +445,7 @@ Compile the files in the following order:
       or:
       vlog -sv -explicit -work work drm_hdk/controller/rtl/sim/top_drm_controller_sim.sv
 
+
 Run simulation
 ^^^^^^^^^^^^^^
 
