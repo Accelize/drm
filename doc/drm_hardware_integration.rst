@@ -566,6 +566,7 @@ To add the DRM Controller source to your project, you can use:
 
 .. code-block:: tcl
 
+   read_verilog -sv { drm_hdk/controller/rtl/core/cdc_bridge.sv }
    read_vhdl -library drm_library {
       drm_hdk/common/vhdl/xilinx/drm_all_components.vhdl
       drm_hdk/controller/rtl/core/drm_ip_controller.vhdl
@@ -624,6 +625,7 @@ Or a TCL script:
       drm_hdk/controller/rtl/core/drm_ip_controller.vhdl
    }
    read_verilog -sv {
+      drm_hdk/controller/rtl/core/cdc_bridge.sv
       drm_hdk/controller/rtl/syn/top_drm_controller.sv
    }
 
@@ -748,6 +750,7 @@ Or a TCL script:
 
    set_global_assignment -name VHDL_FILE drm_hdk/common/vhdl/altera/drm_all_components.vhdl -library drm_library
    set_global_assignment -name VHDL_FILE drm_hdk/controller/rtl/core/drm_ip_controller.vhdl -library drm_library
+   set_global_assignment -name SYSTEMVERILOG_FILE drm_hdk/controller/rtl/core/cdc_bridge.sv
    set_global_assignment -name VHDL_FILE drm_hdk/controller/rtl/syn/top_drm_controller.vhdl
 
 
@@ -797,6 +800,7 @@ To add the DRM Controller sources to your project, you can use:
 
    set_global_assignment -name VHDL_FILE drm_hdk/common/vhdl/altera/drm_all_components.vhdl -library drm_library
    set_global_assignment -name VHDL_FILE drm_hdk/controller/rtl/core/drm_ip_controller.vhdl -library drm_library
+   set_global_assignment -name SYSTEMVERILOG_FILE drm_hdk/controller/rtl/core/cdc_bridge.sv
    set_global_assignment -name SYSTEMVERILOG_FILE drm_hdk/controller/rtl/syn/top_drm_controller.sv
 
 
