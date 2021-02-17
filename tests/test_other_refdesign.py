@@ -11,18 +11,26 @@ from tests.fpga_drivers import get_driver
 SCRIPT_DIR = dirname(realpath(__file__))
 
 
-@pytest.mark.skip
-def test_vitis_2activator_vhdl_250_125(pytestconfig, conf_json, cred_json, async_handler):
+@pytest.fixture(autouse=True, scope='module')
+def save_restore_bitstream(accelize_drm):
+    driver = accelize_drm.pytest_fpga_driver[0]
+    fpga_image_bkp = driver.fpga_image
+    yield
+    driver.program_fpga(fpga_image_bkp)
+
+
+def create_objects(driver_name, design_name, pytestconfig, conf_json, cred_json, async_handler):
     """
     Test one vitis configuration: dual clock kernel with different frequencies
     """
     import accelize_drm as _accelize_drm
-    driver_name = 'xilinx_xrt'
-    design_name = 'vitis_2activator_vhdl_250_125'
 
     slot_id = pytestconfig.getoption("fpga_slot_id")
     ref_designs = conftest.RefDesign(join(SCRIPT_DIR, 'refdesigns', driver_name))
-    fpga_image = ref_designs.get_image_id(design_name)
+    try:
+        fpga_image = ref_designs.get_image_id(design_name)
+    except:
+        pytest.skip(f"Could not find refesign name '{design_name}' for driver '{driver_name}'")
     drm_ctrl_base_addr = pytestconfig.getoption("drm_controller_base_address")
     no_clear_fpga = pytestconfig.getoption("no_clear_fpga")
 
@@ -41,7 +49,7 @@ def test_vitis_2activator_vhdl_250_125(pytestconfig, conf_json, cred_json, async
     activators.reset_coin()
     activators.autotest()
 
-    # Run test
+    # Create drmlib object
     async_cb = async_handler.create()
     async_cb.reset()
     conf_json.reset()
@@ -52,6 +60,14 @@ def test_vitis_2activator_vhdl_250_125(pytestconfig, conf_json, cred_json, async
         driver.write_register_callback,
         async_cb.callback
     )
+
+    return (drm_manager, activators)
+
+
+def run_basic_test(drm_manager, activators):
+    """
+    Run a basic test with a drm lib object and its ativators
+    """
     try:
         assert not drm_manager.get('session_status')
         assert not drm_manager.get('license_status')
@@ -109,3 +125,50 @@ def test_vitis_2activator_vhdl_250_125(pytestconfig, conf_json, cred_json, async
     finally:
         drm_manager.deactivate()
 
+
+def test_vitis_2activator_vhdl_250_125(pytestconfig, conf_json, cred_json, async_handler):
+    """
+    Test one vitis configuration: dual clock kernel with different frequencies
+    """
+    driver_name = 'xilinx_xrt'
+    design_name = 'vitis_2activator_vhdl_250_125'
+    # Create test objects
+    drm_manager, activators = create_objects(driver_name, design_name, pytestconfig, conf_json, cred_json, async_handler)
+    # Run test
+    run_basic_test(drm_manager, activators)
+
+
+def test_vitis_2activator_50_125(pytestconfig, conf_json, cred_json, async_handler):
+    """
+    Test one vitis configuration: dual clock kernel with different frequencies
+    """
+    driver_name = 'xilinx_xrt'
+    design_name = 'vitis_2activator_50_125'
+    # Create test objects
+    drm_manager, activators = create_objects(driver_name, design_name, pytestconfig, conf_json, cred_json, async_handler)
+    # Run test
+    run_basic_test(drm_manager, activators)
+
+
+def test_vitis_2activator_slr(pytestconfig, conf_json, cred_json, async_handler):
+    """
+    Test one vitis configuration: dual clock kernel with different frequencies
+    """
+    driver_name = 'xilinx_xrt'
+    design_name = 'vitis_2activator_slr'
+    # Create test objects
+    drm_manager, activators = create_objects(driver_name, design_name, pytestconfig, conf_json, cred_json, async_handler)
+    # Run test
+    run_basic_test(drm_manager, activators)
+
+
+def test_vitis_2activator_125_125(pytestconfig, conf_json, cred_json, async_handler):
+    """
+    Test one vitis configuration: dual clock kernel with different frequencies
+    """
+    driver_name = 'xilinx_xrt'
+    design_name = 'vitis_2activator'
+    # Create test objects
+    drm_manager, activators = create_objects(driver_name, design_name, pytestconfig, conf_json, cred_json, async_handler)
+    # Run test
+    run_basic_test(drm_manager, activators)
