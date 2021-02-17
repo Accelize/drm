@@ -12,7 +12,7 @@ SCRIPT_DIR = dirname(realpath(__file__))
 
 
 @pytest.mark.skip
-def test_vitis_2activator(pytestconfig, conf_json, cred_json, async_handler):
+def test_vitis_2activator_vhdl_250_125(pytestconfig, conf_json, cred_json, async_handler):
     """
     Test one vitis configuration: dual clock kernel with different frequencies
     """
@@ -55,6 +55,7 @@ def test_vitis_2activator(pytestconfig, conf_json, cred_json, async_handler):
     try:
         assert not drm_manager.get('session_status')
         assert not drm_manager.get('license_status')
+        assert drm_manager.get('session_id') == ''
         activators.autotest(is_activated=False)
         # Start session
         drm_manager.activate()
@@ -66,7 +67,6 @@ def test_vitis_2activator(pytestconfig, conf_json, cred_json, async_handler):
         assert len(session_id) > 0
         activators.autotest(is_activated=True)
         lic_duration = drm_manager.get('license_duration')
-        assert drm_manager.get('metered_data') == 0
         activators[0].generate_coin(10)
         activators[0].check_coin(drm_manager.get('metered_data'))
         # Wait until 2 licenses are provisioned
@@ -78,7 +78,7 @@ def test_vitis_2activator(pytestconfig, conf_json, cred_json, async_handler):
         assert drm_manager.get('session_id') == session_id
         activators.autotest(is_activated=True)
         # Wait right before license expiration
-        wait_deadline(start, 2*lic_duration-2)
+        wait_deadline(start, 2*lic_duration-3)
         assert drm_manager.get('session_status')
         assert drm_manager.get('license_status')
         assert drm_manager.get('session_id') == session_id
