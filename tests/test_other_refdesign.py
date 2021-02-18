@@ -128,7 +128,7 @@ def run_basic_test(drm_manager, activators):
 
 def test_vitis_2activator_vhdl_250_125(pytestconfig, conf_json, cred_json, async_handler):
     """
-    Test one vitis configuration: dual clock kernel with different frequencies
+    Test a vitis configuration: dual clock kernels with AXI clock > DRM clock
     """
     driver_name = 'xilinx_xrt'
     design_name = 'vitis_2activator_vhdl_250_125'
@@ -140,7 +140,7 @@ def test_vitis_2activator_vhdl_250_125(pytestconfig, conf_json, cred_json, async
 
 def test_vitis_2activator_50_125(pytestconfig, conf_json, cred_json, async_handler):
     """
-    Test one vitis configuration: dual clock kernel with different frequencies
+    Test a vitis configuration: dual clock kernels with AXI clock < DRM clock
     """
     driver_name = 'xilinx_xrt'
     design_name = 'vitis_2activator_50_125'
@@ -150,12 +150,12 @@ def test_vitis_2activator_50_125(pytestconfig, conf_json, cred_json, async_handl
     run_basic_test(drm_manager, activators)
 
 
-def test_vitis_2activator_slr(pytestconfig, conf_json, cred_json, async_handler):
+def test_vitis_2activator_slr_250_125(pytestconfig, conf_json, cred_json, async_handler):
     """
-    Test one vitis configuration: dual clock kernel with different frequencies
+    Test a vitis configuration: SLR crossing with dual clock kernels
     """
     driver_name = 'xilinx_xrt'
-    design_name = 'vitis_2activator_slr'
+    design_name = 'vitis_2activator_slr_250_125'
     # Create test objects
     drm_manager, activators = create_objects(driver_name, design_name, pytestconfig, conf_json, cred_json, async_handler)
     # Run test
@@ -164,7 +164,7 @@ def test_vitis_2activator_slr(pytestconfig, conf_json, cred_json, async_handler)
 
 def test_vitis_2activator_125_125(pytestconfig, conf_json, cred_json, async_handler):
     """
-    Test one vitis configuration: dual clock kernel with different frequencies
+    Test a vitis configuration: dual clock kernels with AXI clock = DRM clock
     """
     driver_name = 'xilinx_xrt'
     design_name = 'vitis_2activator'
