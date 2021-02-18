@@ -82,8 +82,8 @@ def run_basic_test(drm_manager, activators):
         assert len(session_id) > 0
         activators.autotest(is_activated=True)
         lic_duration = drm_manager.get('license_duration')
-        activators[0].generate_coin(10)
-        activators[0].check_coin(drm_manager.get('metered_data'))
+        activators.generate_coin(10)
+        activators.check_coin(drm_manager.get('metered_data'))
         # Wait until 2 licenses are provisioned
         wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, lic_duration)
         # Pause session
@@ -104,16 +104,16 @@ def run_basic_test(drm_manager, activators):
         assert drm_manager.get('session_id') == session_id
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
-        activators[0].generate_coin(10)
-        activators[0].check_coin(drm_manager.get('metered_data'))
+        activators.generate_coin(10)
+        activators.check_coin(drm_manager.get('metered_data'))
         # Resume session
         drm_manager.activate(True)
         assert drm_manager.get('session_status')
         assert drm_manager.get('session_id') != session_id
         assert drm_manager.get('license_status')
         activators.autotest(is_activated=True)
-        activators[0].generate_coin(10)
-        activators[0].check_coin(drm_manager.get('metered_data'))
+        activators.generate_coin(10)
+        activators.check_coin(drm_manager.get('metered_data'))
         # Stop session
         drm_manager.deactivate()
         assert not drm_manager.get('session_status')
