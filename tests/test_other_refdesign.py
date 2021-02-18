@@ -60,7 +60,6 @@ def create_objects(driver_name, design_name, pytestconfig, conf_json, cred_json,
         driver.write_register_callback,
         async_cb.callback
     )
-
     return (drm_manager, activators)
 
 

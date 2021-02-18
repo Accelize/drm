@@ -13,44 +13,9 @@ from os import remove
 from tests.conftest import wait_deadline, wait_func_true
 
 
-def test_metered_start_stop_in_raw(accelize_drm, conf_json, cred_json, async_handler):
+def test_fast_start_stop(accelize_drm, conf_json, cred_json, async_handler):
     """
-    Test no error occurs in normal start/stop metering mode during a short period of time
-    """
-    driver = accelize_drm.pytest_fpga_driver[0]
-    async_cb = async_handler.create()
-    activators = accelize_drm.pytest_fpga_activators[0]
-    activators.reset_coin()
-    activators.autotest()
-    cred_json.set_user('accelize_accelerator_test_02')
-
-    async_cb.reset()
-    conf_json.reset()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    assert not drm_manager.get('license_status')
-    activators.autotest(is_activated=False)
-    activators[0].generate_coin(1000)
-    try:
-        drm_manager.activate()
-        assert drm_manager.get('metered_data') == 0
-        activators[0].check_coin(drm_manager.get('metered_data'))
-        drm_manager.deactivate()
-        assert not drm_manager.get('license_status')
-        activators.autotest(is_activated=False)
-        async_cb.assert_NoError()
-    finally:
-        drm_manager.deactivate()
-
-
-def test_metered_start_stop_1_coin_in_raw(accelize_drm, conf_json, cred_json, async_handler):
-    """
-    Test no error occurs in normal start/stop metering mode during a short period of time
+    Test no error occurs witha quick start/stop
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -71,11 +36,7 @@ def test_metered_start_stop_1_coin_in_raw(accelize_drm, conf_json, cred_json, as
     try:
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
-        activators[0].generate_coin(1000)
-        activators[0].check_coin(drm_manager.get('metered_data'))
         drm_manager.activate()
-        activators[0].generate_coin(1)
-        assert drm_manager.get('metered_data') == 1
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
@@ -111,12 +72,15 @@ def test_metered_start_stop_short_time(accelize_drm, conf_json, cred_json, async
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
         activators[0].generate_coin(1000)
+        coin = drm_manager.get('metered_data')
+        assert coin == 0
+        activators[0].check_coin(coin)
         drm_manager.activate()
-        activators[0].check_coin(drm_manager.get('metered_data'))
-        assert drm_manager.get('license_status')
         activators.autotest(is_activated=True)
-        activators[0].generate_coin(10)
-        activators[0].check_coin(drm_manager.get('metered_data'))
+        activators[0].generate_coin(1)
+        coin = drm_manager.get('metered_data')
+        assert coin == 1
+        activators[0].check_coin(coin)
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)

@@ -336,7 +336,7 @@ class SingleActivator:
             self.driver.write_register(self.base_address + CNT_EVENT_REG_OFFSET, 0)
             assert self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET) == 0
 
-    def check_coin(self, coins):
+    def check_coin(self, coins=None):
         """
         Compare coins to the expected value.
 
@@ -349,11 +349,13 @@ class SingleActivator:
         # Check counters
         try:
             # Check local counter with drm value passed in argument
-            assert self.metering_data == coins
+            if coins:
+                assert self.metering_data == coins
             if self.event_cnt_flag:
                 # Check local counter with counter in Activator IP's registery
                 assert self.metering_data == metering_data_from_activator
         except AssertionError as e:
+            e.args += f'Metering data error on activator @{self.base_address}'
             if self.event_cnt_flag:
                 e.args += ('from pytest=%d, from DRM Ctrl=%d, from IP=%d' % (self.metering_data, coins, metering_data_from_activator),)
                 if self.metering_data == metering_data_from_activator:
@@ -425,6 +427,17 @@ class ActivatorsInFPGA:
         """
         for activator in self.activators:
             activator.reset_coin()
+
+    def generate_coin(self, coins):
+        """
+        Generate coins (usage event) on each activatror in the design
+        """
+        for activator in self.activators:
+            activator.generate_coin(coins)
+
+    def check_coin(self, coins=None):
+        for activator in self.activators:
+            activator.check_coin(coins)
 
 
 
