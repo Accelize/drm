@@ -153,7 +153,7 @@ def test_vitis_2activator_vhdl_250_125(pytestconfig, conf_json, cred_json, async
     basic_log_file.remove()
 
 
-def test_vitis_2activator_50_125(pytestconfig, conf_json, cred_json, async_handler):
+def test_vitis_2activator_50_125(pytestconfig, conf_json, cred_json, async_handler, basic_log_file):
     """
     Test a vitis configuration: dual clock kernels with AXI clock < DRM clock
     """
@@ -171,7 +171,7 @@ def test_vitis_2activator_50_125(pytestconfig, conf_json, cred_json, async_handl
     basic_log_file.remove()
 
 
-def test_vitis_2activator_slr_250_125(pytestconfig, conf_json, cred_json, async_handler):
+def test_vitis_2activator_slr_250_125(pytestconfig, conf_json, cred_json, async_handler, basic_log_file):
     """
     Test a vitis configuration: SLR crossing with dual clock kernels
     """
@@ -189,7 +189,7 @@ def test_vitis_2activator_slr_250_125(pytestconfig, conf_json, cred_json, async_
     basic_log_file.remove()
 
 
-def test_vitis_2activator_125_125(pytestconfig, conf_json, cred_json, async_handler):
+def test_vitis_2activator_125_125(pytestconfig, conf_json, cred_json, async_handler, basic_log_file):
     """
     Test a vitis configuration: dual clock kernels with AXI clock = DRM clock
     """
