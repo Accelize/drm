@@ -71,20 +71,16 @@ def test_metered_start_stop_short_time(accelize_drm, conf_json, cred_json, async
     try:
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
-        activators[0].generate_coin(1000)
-        coin = drm_manager.get('metered_data')
-        assert coin == 0
-        activators[0].check_coin(coin)
+        activators.generate_coin(1000)
+        activators.check_coin()
         drm_manager.activate()
         activators.autotest(is_activated=True)
-        activators[0].generate_coin(1)
-        coin = drm_manager.get('metered_data')
-        assert coin == 1
-        activators[0].check_coin(coin)
+        activators.generate_coin(1)
+        activators.check_coin(drm_manager.get('metered_data'))
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
-        assert drm_manager.get('metered_data') == 0
+        activators.check_coin()
         async_cb.assert_NoError()
     finally:
         drm_manager.deactivate()

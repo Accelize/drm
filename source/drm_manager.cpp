@@ -1125,7 +1125,7 @@ protected:
             Debug( "No derived product to load" );
             return;
         }
-        std::vector<std::string> derived_product_component = split( derivedProductString, '/' );
+        std::vector<std::string> derived_product_component = splitByDelimiter( derivedProductString, '/' );
         Json::Value product_id = mHeaderJsonRequest["product"];
         std::string vendor = mHeaderJsonRequest["product"]["vendor"].asString();
         std::string library = mHeaderJsonRequest["product"]["library"].asString();
@@ -2428,26 +2428,27 @@ public:
                         break;
                     }
                     case ParameterKey::metered_data: {
-#if ((JSONCPP_VERSION_MAJOR ) >= 1 and ((JSONCPP_VERSION_MINOR) > 7 or ((JSONCPP_VERSION_MINOR) == 7 and JSONCPP_VERSION_PATCH >= 5)))
-                        uint64_t meteringData = 0;
-#else
+                        #if ((JSONCPP_VERSION_MAJOR ) >= 1 and ((JSONCPP_VERSION_MINOR) > 7 or ((JSONCPP_VERSION_MINOR) == 7 and JSONCPP_VERSION_PATCH >= 5)))
+                        uint64_t ip_metering = 0;
+                        #else
                         // No "int64_t" support with JsonCpp < 1.7.5
-                        unsigned long long meteringData = 0;
-#endif
+                        unsigned long long ip_metering = 0;
+                        #endif
                         Json::Value json_request = getMeteringHealth();
                         std::string meteringFileStr = json_request["meteringFile"].asString();
                         if  ( meteringFileStr.size() ) {
-                            std::string meteringDataStr = meteringFileStr.substr( 80, 16 );
-                            errno = 0;
-                            meteringData = strtoull( meteringDataStr.c_str(), nullptr, 16 );
-                            if ( errno ) {
-                                Throw( DRM_CtlrError, "Could not convert string '{}' to unsigned long long.",
-                                    meteringDataStr );
+                            std::vector<std::string> meteringFileList = splitByLength( meteringFileStr, 32 );
+                            std::vector<std::string> meteringDataList = std::vector<std::string>(meteringFileList.begin() + 2, meteringFileList.end()-1);
+                            Json::Value meteringIntList;
+                            for ( auto meteringData: meteringDataList ) {
+                                uint32_t ip_idx = (uint32_t)str2int64( meteringData.substr( 0, 16 ) );
+                                ip_metering = str2int64( meteringData.substr( 16 ) );
+                                Debug("Metering for IP#{}: {}", ip_idx, ip_metering);
+                                json_value[key_str].append( ip_metering );
                             }
                         }
-                        json_value[key_str] = meteringData;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
-                               meteringData );
+                               json_value[key_str].toStyledString() );
                         break;
                     }
                     case ParameterKey::nodelocked_request_file: {

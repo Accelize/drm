@@ -44,8 +44,8 @@ def cheap_hash(string_in, length=6):
 
 
 def is_file_busy(path):
-    #if not exists(path):
-    #    return False
+    if not exists(path):
+        raise RuntimeError(f"File '{path}' could not be found")
     try:
         rename(path, path)
         return False
@@ -349,13 +349,14 @@ class SingleActivator:
         # Check counters
         try:
             # Check local counter with drm value passed in argument
-            if coins:
+            if coins is not None:
                 assert self.metering_data == coins
             if self.event_cnt_flag:
                 # Check local counter with counter in Activator IP's registery
                 assert self.metering_data == metering_data_from_activator
+            return self.metering_data
         except AssertionError as e:
-            e.args += f'Metering data error on activator @{self.base_address}'
+            e.args += (f'Metering data error on activator @0x{self.base_address:X}',)
             if self.event_cnt_flag:
                 e.args += ('from pytest=%d, from DRM Ctrl=%d, from IP=%d' % (self.metering_data, coins, metering_data_from_activator),)
                 if self.metering_data == metering_data_from_activator:
@@ -428,16 +429,39 @@ class ActivatorsInFPGA:
         for activator in self.activators:
             activator.reset_coin()
 
-    def generate_coin(self, coins):
+    def generate_coin(self, coins=None):
         """
         Generate coins (usage event) on each activatror in the design
         """
-        for activator in self.activators:
-            activator.generate_coin(coins)
+        nbAct = self.length
+        if coins is None:
+            coin_list = [None]*nbAct
+        elif isinstance(coins, int):
+            coin_list = [coins]*nbAct
+        elif isinstance(coins, list):
+            if len(coins) == nbAct:
+                coin_list = coins
+            elif len(coins) > nbAct:
+                coin_list = coins[:nbAct]
+            else:
+                coin_list = coins + [coins[-1]]*(nbAct-len(coins))
+        for activator, event in zip(self.activators, coin_list):
+            activator.generate_coin(event)
 
     def check_coin(self, coins=None):
+        """
+        Verify metering event coherency between DRM Ctrl, Python object and IP core register
+        input:
+            coin: expected metering value for all activator
+        """
+        metering_sum = 0
         for activator in self.activators:
-            activator.check_coin(coins)
+            metering_sum += activator.check_coin()
+        if coins is not None:
+            if isinstance(coins, int):
+                assert metering_sum == coins
+            elif isinstance(coins, list):
+                assert metering_sum == sum(coins)
 
 
 
