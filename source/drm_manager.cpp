@@ -512,24 +512,12 @@ protected:
 
     void getHostAndCardInfo() {
 
-        Debug( "Host and CSP information verbosity: {}", static_cast<uint32_t>( mHostDataVerbosity ) );
+        Debug( "Host and card information verbosity: {}", static_cast<uint32_t>( mHostDataVerbosity ) );
 
         // Depending on the host data verbosity
         if ( mHostDataVerbosity == eHostDataVerbosity::NONE ) {
             return;
         }
-
-        // Gather CSP information if detected
-        Json::Value csp_node = Json::nullValue;
-        try {
-            uint32_t ws_verbosity = getDrmWSClient().getVerbosity();
-            mHostConfigData["csp"] = GetCspInfo( ws_verbosity );
-            Debug( "CSP information:\n{}", mHostConfigData["csp"].toStyledString() );
-        } catch( const std::exception &e ) {
-            Debug( "No CSP information collected: {}", e.what() );
-        }
-        Debug( "CSP information:\n{}", csp_node.toStyledString() );
-        mHostConfigData["csp"] = csp_node;
 
         // Gather host and card information if xbutil existing
         if ( findXrtUtility() ) {
@@ -584,6 +572,26 @@ protected:
             Debug( "Host and card information:\n{}", hostcard_node.toStyledString() );
             mHostConfigData["host_card"] = hostcard_node;
         }
+    }
+
+    void getCstInfo() {
+
+        // Depending on the host data verbosity
+        if ( mHostDataVerbosity == eHostDataVerbosity::NONE ) {
+            return;
+        }
+
+        // Gather CSP information if detected
+        Json::Value csp_node = Json::nullValue;
+        try {
+            uint32_t ws_verbosity = getDrmWSClient().getVerbosity();
+            mHostConfigData["csp"] = GetCspInfo( ws_verbosity );
+            Debug( "CSP information:\n{}", mHostConfigData["csp"].toStyledString() );
+        } catch( const std::exception &e ) {
+            Debug( "No CSP information collected: {}", e.what() );
+        }
+        Debug( "CSP information:\n{}", csp_node.toStyledString() );
+        mHostConfigData["csp"] = csp_node;
     }
 
     Json::Value buildSettingsNode() {
@@ -1912,8 +1920,8 @@ protected:
         mThreadKeepAlive = std::async( std::launch::async, [ this ]() {
             Debug( "Starting background thread which maintains licensing" );
             try {
-                // Collect host and card information when possible
-                getHostAndCardInfo();
+                // Collect CSP information if possible
+                getCstInfo();
 
                 /// Detecting DRM controller frequency if needed
                 if ( mFreqDetectionMethod == 1 )
@@ -2242,6 +2250,7 @@ public:
             f_write_register = f_user_write_register;
             f_asynch_error = f_user_asynch_error;
             initDrmInterface();
+            getHostAndCardInfo();
             Debug( "Exiting Impl public constructor" );
         CATCH_AND_THROW
     }
