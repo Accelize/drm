@@ -93,6 +93,7 @@ jobs:
           CODECOV_TOKEN: $(codecovToken)
           TOX_PARALLEL_NO_SPINNER: 1
           SDK_DIR: /opt/aws_fpga/sdk
+          XILINX_XRT: /opt/xilinx/xrt
 
       - publish: $(Build.SourcesDirectory)/artifacts
         artifact: AWS_Artifacts_${{ config.os_distrib }}

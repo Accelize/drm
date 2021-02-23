@@ -136,12 +136,12 @@ def run_basic_test(drm_manager, activators):
 
 
 @pytest.mark.skip
-def test_vitis_2activator_50_125(pytestconfig, conf_json, cred_json, async_handler, basic_log_file):
+def test_vitis_2activator_100_125(pytestconfig, conf_json, cred_json, async_handler, basic_log_file):
     """
     Test a vitis configuration: dual clock kernels with AXI clock < DRM clock
     """
     driver_name = 'xilinx_xrt'
-    design_name = 'vitis_2activator_50_125'
+    design_name = 'vitis_2activator_100_125'
     axiclk_freq_ref = 50
     drmclk_freq_ref = 125
     # Create test objects

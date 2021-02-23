@@ -682,7 +682,7 @@ While runing synthesis and implementation you may face the following warnings:
   cannot be timed accurately. Hardware behavior may be unpredictable* :
 
   The DRM Controller uses TRNGs for security reasons. The TRNGs are based on ring
-  oscillators (a chain of inverters) that is driving a LFSR clock but the frequency cannot
+  oscillators (a chain of inverters) that are driving a LFSR clock but the frequency cannot
   be evaluated by Vivado which causes the warning.
   You can safely ignore this message.
 
