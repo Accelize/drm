@@ -585,8 +585,7 @@ protected:
         Json::Value csp_node = Json::nullValue;
         try {
             uint32_t ws_verbosity = getDrmWSClient().getVerbosity();
-            mHostConfigData["csp"] = GetCspInfo( ws_verbosity );
-            Debug( "CSP information:\n{}", mHostConfigData["csp"].toStyledString() );
+            csp_node = GetCspInfo( ws_verbosity );
         } catch( const std::exception &e ) {
             Debug( "No CSP information collected: {}", e.what() );
         }
