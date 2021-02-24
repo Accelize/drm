@@ -267,7 +267,7 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
         driver.write_register_callback,
         async_cb.callback
     )
-    nb_pause_resume = 5
+    nb_pause_resume = 2
     try:
         assert not drm_manager.get('session_status')
         assert not drm_manager.get('license_status')
@@ -533,15 +533,15 @@ def test_metering_limits_on_activate(accelize_drm, conf_json, cred_json, async_h
         assert drm_manager.get('license_status')
         assert sum(drm_manager.get('metered_data')) == 0
         activators[0].generate_coin(999)
-        activators[0].check_coin(drm_manager.get('metered_data'))
+        activators.check_coin(drm_manager.get('metered_data'))
         drm_manager.deactivate()
-        activators[0].reset_coin()
+        activators.reset_coin()
         assert not drm_manager.get('license_status')
         drm_manager.activate()
         assert drm_manager.get('license_status')
-        activators[0].check_coin(drm_manager.get('metered_data'))
+        activators.check_coin(drm_manager.get('metered_data'))
         activators[0].generate_coin(1)
-        activators[0].check_coin(drm_manager.get('metered_data'))
+        activators.check_coin(drm_manager.get('metered_data'))
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
@@ -591,7 +591,7 @@ def test_metering_limits_on_licensing_thread(accelize_drm, conf_json, cred_json,
         lic_duration = drm_manager.get('license_duration')
         sleep(int(lic_duration/2) + 1)
         activators[0].generate_coin(1000)
-        activators[0].check_coin(drm_manager.get('metered_data'))
+        activators.check_coin(drm_manager.get('metered_data'))
         # Wait right before lock
         wait_deadline(start, 3*lic_duration-3)
         assert drm_manager.get('license_status')

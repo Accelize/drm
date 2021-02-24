@@ -347,23 +347,21 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
         session_id = drm.get('session_id')
         saas_data = ws_admin.get_last_metering_information(session_id)
         assert saas_data['session'] == session_id
-        assert saas_data['metering'] == drm.get('metered_data')
+        assert saas_data['metering'] == sum(drm.get('metered_data'))
 
     assert not drm_manager.get('license_status')
     try:
         drm_manager.activate()
         assert drm_manager.get('license_status')
-        assert drm_manager.get('metered_data') == 0
-        activators[0].check_coin(drm_manager.get('metered_data'))
+        assert sum(drm_manager.get('metered_data')) == 0
+        activators.check_coin(drm_manager.get('metered_data'))
         wait_and_check_on_next_health(drm_manager)
         total_coin = 0
         for i in range(loop):
-            new_coin = randint(1,100)
-            activators.generate_coin(new_coin)
+            total_coin += activators.generate_coin()
             activators.check_coin(drm_manager.get('metered_data'))
             wait_and_check_on_next_health(drm_manager)
-            total_coin += new_coin
-        assert drm_manager.get('metered_data') == total_coin
+        assert sum(drm_manager.get('metered_data')) == total_coin
     finally:
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
@@ -559,3 +557,4 @@ def test_no_async_call_on_pause_when_health_is_disabled(accelize_drm, conf_json,
     assert search(r'"request"\s*:\s*"health"', basic_log_file.read(), IGNORECASE) is None
     assert get_proxy_error() is None
     basic_log_file.remove()
+

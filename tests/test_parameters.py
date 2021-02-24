@@ -767,11 +767,11 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
 
     # Test parameter: metered_data
     drm_manager.activate()
-    activators[0].generate_coin(10)
-    activators[0].check_coin(drm_manager.get('metered_data'))
+    activators.generate_coin()
+    activators.check_coin(drm_manager.get('metered_data'))
     async_cb.assert_NoError()
     drm_manager.deactivate()
-    activators[0].reset_coin()
+    activators.reset_coin()
     async_cb.assert_NoError()
     print("Test parameter 'metered_data': PASS")
 
@@ -1140,7 +1140,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         assert type(drm_manager.get('host_data')) == dict
         assert len(drm_manager.get('host_data'))
     else:
-        assert drm_manager.get('host_data') is None
+        assert drm_manager.get('host_data')['host_card'] is not None
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         drm_manager.set(host_data={'test':'test'})
     async_cb.assert_NoError()

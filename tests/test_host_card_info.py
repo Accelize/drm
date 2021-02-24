@@ -89,7 +89,7 @@ def test_host_format(accelize_drm, conf_json, cred_json, async_handler):
     )
     assert drm_manager.get('host_data_verbosity') == 0
     data = drm_manager.get('host_data')
-    assert data['csp'] is None
+    assert data.get('csp') is None
     host_card = data['host_card']
     assert host_card
     runtime = host_card.get('runtime')
@@ -105,7 +105,7 @@ def test_host_format(accelize_drm, conf_json, cred_json, async_handler):
     info = board.get('info')
     assert info
     dsa_name = info.get('dsa_name')
-    assert dsa_name
+    assert dsa_name is not None
     async_cb.assert_NoError()
 
 
@@ -152,7 +152,7 @@ def test_csp_format(accelize_drm, conf_json, cred_json, async_handler):
     info = board.get('info')
     assert info
     dsa_name = info.get('dsa_name')
-    assert dsa_name
+    assert dsa_name is not None
     # Check CSP info
     csp = data['csp']
     assert host_card

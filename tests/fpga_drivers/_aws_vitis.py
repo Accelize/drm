@@ -113,19 +113,12 @@ class FpgaDriver(_FpgaDriverBase):
         """
         Clear FPGA
         """
+        """ FOLLOWING CODE ALTHOUGH RECOMMENDED BY AWS DOES NOT WORK: IT HANGS FOREVER
         clear_fpga = _run(
             ['fpga-clear-local-image', '-S', str(self._fpga_slot_id)],
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if clear_fpga.returncode:
             raise RuntimeError(clear_fpga.stdout)
-        print('FPGA cleared')
-
-    def _program_fpga(self, fpga_image):
-        """
-        Program the FPGA with the specified image.
-
-        Args:
-            fpga_image (str): FPGA image.
         """
         # Workaround because clear FPGA does not work: load a different image
         clear_image = _join(SCRIPT_DIR, 'clear.awsxclbin')
@@ -135,6 +128,18 @@ class FpgaDriver(_FpgaDriverBase):
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if load_image.returncode:
             raise RuntimeError(load_image.stdout)
+        print('FPGA cleared')
+
+    def _program_fpga(self, fpga_image):
+        """
+        Program the FPGA with the specified image.
+
+        Args:
+            fpga_image (str): FPGA image.
+        """
+        # Vitis does not reprogram a FPGA that has already the bitstream.
+        # So to force it we write another bitstream first.
+        self._clear_fpga()
         # Now load the real image
         fpga_image = _realpath(_fsdecode(fpga_image))
         load_image = _run(
@@ -210,7 +215,7 @@ class FpgaDriver(_FpgaDriverBase):
             Args:
                 register_offset (int): Offset
                 returned_data (int pointer): Return data.
-                driver (accelize_drm.fpga_drivers._xilinx_xrt.FpgaDriver):
+                driver (accelize_drm.fpga_drivers._aws_vitis.FpgaDriver):
                     Keep a reference to driver.
             """
             with driver._fpga_read_register_lock():
@@ -252,7 +257,7 @@ class FpgaDriver(_FpgaDriverBase):
             Args:
                 register_offset (int): Offset
                 data_to_write (int): Data to write.
-                driver (accelize_drm.fpga_drivers._xilinx_xrt.FpgaDriver):
+                driver (accelize_drm.fpga_drivers._aws_vitis.FpgaDriver):
                     Keep a reference to driver.
             """
             with driver._fpga_write_register_lock():

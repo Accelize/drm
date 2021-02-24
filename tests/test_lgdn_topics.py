@@ -21,6 +21,8 @@ def test_topic0_corrupted_segment_index(accelize_drm, conf_json, cred_json,
     """
     Test to reproduce the issue that corrupts the segment ID with
     both async and syn requests.
+    !!! CAUTION: THIS TEST ENDS CORRECTLY ONLY WHEN AN ERROR IS HIT !!!
+    !!!          IT SHOULD NOT BE PART OF A NORMAL REGRESSION !!!
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -48,7 +50,7 @@ def test_topic0_corrupted_segment_index(accelize_drm, conf_json, cred_json,
 
     drm_manager.activate()
     try:
-        wait_func_true(lambda: get_context()['error'])
+        wait_func_true(lambda: get_context()['error'], timeout=60)
     finally:
         drm_manager.deactivate()
     async_cb.assert_NoError()
@@ -80,28 +82,26 @@ def test_topic1_corrupted_metering(accelize_drm, conf_json, cred_json, async_han
     for r in range(nb_run):
         print('Run #%d' % r)
         try:
-            activators[0].reset_coin()
             assert not drm_manager.get('session_status')
             assert not drm_manager.get('license_status')
             activators.autotest(is_activated=False)
             async_cb.assert_NoError()
             drm_manager.activate()
             start = datetime.now()
-            assert drm_manager.get('metered_data') == 0
+            assert sum(drm_manager.get('metered_data')) == 0
             assert drm_manager.get('session_status')
             assert drm_manager.get('license_status')
-            session_id = drm_manager.get('session_id')
-            assert len(session_id) > 0
+            assert len(drm_manager.get('session_id')) > 0
             lic_duration = drm_manager.get('license_duration')
             activators.autotest(is_activated=True)
             for i in range(nb_pause_resume_max):
                 print('Pause #%d' % i)
                 try:
-                    new_coins = randint(1, 100)
-                    activators[0].generate_coin(new_coins)
+                    activators.reset_coin()
+                    activators.generate_coin()
                     data = drm_manager.get('metered_data')
                     try:
-                        activators[0].check_coin(data)
+                        activators.check_coin(data)
                     except AssertionError:
                         print("ERROR detected!!!!!!!!")
                         print("1st read gives:", data)
@@ -110,12 +110,12 @@ def test_topic1_corrupted_metering(accelize_drm, conf_json, cred_json, async_han
                         print("... and double check the metering")
                         data = drm_manager.get('metered_data')
                         print("2nd read gives:", data)
-                        activators[0].check_coin(drm_manager.get('metered_data'))
+                        activators.check_coin(drm_manager.get('metered_data'))
                     drm_manager.deactivate(True)
+                    activators.autotest(is_activated=True)
                     async_cb.assert_NoError()
                     assert drm_manager.get('session_status')
                     assert drm_manager.get('license_status')
-                    assert drm_manager.get('session_id') == session_id
                     # Wait for the limit of the expiration
                     random_wait = lic_duration*2
                     wait_deadline(start, random_wait)
@@ -166,14 +166,14 @@ def test_topic1_corrupted_metering2(accelize_drm, conf_json, cred_json,
     for r in range(nb_run):
         print('Run #%d' % r)
         try:
-            activators[0].reset_coin()
+            activators.reset_coin()
             assert not drm_manager.get('session_status')
             assert not drm_manager.get('license_status')
             activators.autotest(is_activated=False)
             async_cb.assert_NoError()
             drm_manager.activate()
             start = datetime.now()
-            assert drm_manager.get('metered_data') == 0
+            assert sum(drm_manager.get('metered_data')) == 0
             assert drm_manager.get('session_status')
             assert drm_manager.get('license_status')
             session_id = drm_manager.get('session_id')
@@ -183,11 +183,10 @@ def test_topic1_corrupted_metering2(accelize_drm, conf_json, cred_json,
             for i in range(nb_pause_resume_max):
                 print('Pause #%d' % i)
                 try:
-                    new_coins = randint(1, 100)
-                    activators[0].generate_coin(new_coins)
+                    activators.generate_coin()
                     data = drm_manager.get('metered_data')
                     try:
-                        activators[0].check_coin(data)
+                        activators.check_coin(data)
                     except AssertionError:
                         print("ERROR detected!!!!!!!!")
                         print("1st read gives:", data)
@@ -196,7 +195,7 @@ def test_topic1_corrupted_metering2(accelize_drm, conf_json, cred_json,
                         print("... and double check the metering")
                         data = drm_manager.get('metered_data')
                         print("2nd read gives:", data)
-                        activators[0].check_coin(drm_manager.get('metered_data'))
+                        activators.check_coin(drm_manager.get('metered_data'))
                     drm_manager.deactivate(True)
                     async_cb.assert_NoError()
                     assert drm_manager.get('session_status')
@@ -243,18 +242,18 @@ def test_endurance(accelize_drm, conf_json, cred_json, async_handler):
         async_cb.callback
     )
     assert not drm_manager.get('license_status')
-    activators[0].autotest(is_activated=False)
+    activators.autotest(is_activated=False)
     try:
         drm_manager.activate()
         start = datetime.now()
         lic_duration = drm_manager.get('license_duration')
         assert drm_manager.get('license_status')
-        activators[0].autotest(is_activated=True)
-        activators[0].check_coin(drm_manager.get('metered_data'))
+        activators.autotest(is_activated=True)
+        activators.check_coin(drm_manager.get('metered_data'))
         while True:
             assert drm_manager.get('license_status')
-            activators[0].generate_coin(randint(1,10))
-            activators[0].check_coin(drm_manager.get('metered_data'))
+            activators.generate_coin()
+            activators.check_coin(drm_manager.get('metered_data'))
             trng = drm_manager.get('trng_status')
             seconds_left = test_duration - (datetime.now() - start).total_seconds()
             print('Remaining time: %0.1fs  /  current coins=%d / security_alert_bit=%d adaptive_proportion_test_error=0x%s repetition_count_test_error=0x%s'
@@ -265,7 +264,7 @@ def test_endurance(accelize_drm, conf_json, cred_json, async_handler):
     finally:
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
-        activators[0].autotest(is_activated=False)
+        activators.autotest(is_activated=False)
         elapsed = datetime.now() - start
         print('Endurance test has completed:', str(timedelta(seconds=elapsed.total_seconds())))
 

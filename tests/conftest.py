@@ -554,7 +554,7 @@ def accelize_drm(pytestconfig):
             'Mutually exclusive options: Please set "fpga_driver" or "fpga_image", but not both')
     if fpga_image.lower() != 'default':
         if fpga_image.endswith('.awsxclbin'):
-            fpga_driver_name = 'xilinx_xrt'
+            fpga_driver_name = 'aws_vitis'
         elif search(r'agfi-[0-9a-f]+', fpga_image, IGNORECASE):
             fpga_driver_name = 'aws_f1'
         else:

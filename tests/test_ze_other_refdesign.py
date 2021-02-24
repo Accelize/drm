@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Test metering and floating behaviors of DRM Library.
+Test all the other reference designs
+!!!CAUTION: THESE TESTS MUST BE EXECUTED AT THE END BECAUSE OF THE CLEAR FPGA HANGING ISSUE  !!!
 """
 import pytest
 from datetime import datetime
@@ -18,8 +19,12 @@ SCRIPT_DIR = dirname(realpath(__file__))
 def save_restore_bitstream(accelize_drm):
     driver = accelize_drm.pytest_fpga_driver[0]
     fpga_image_bkp = driver.fpga_image
+    driver.clear_fpga()
+    '''
     yield
+    driver.clear_fpga()
     driver.program_fpga(fpga_image_bkp)
+    '''
 
 
 def create_objects(driver_name, design_name, pytestconfig, conf_json, cred_json, async_handler, basic_log_file):
@@ -32,6 +37,7 @@ def create_objects(driver_name, design_name, pytestconfig, conf_json, cred_json,
     ref_designs = conftest.RefDesign(join(SCRIPT_DIR, 'refdesigns', driver_name))
     try:
         fpga_image = ref_designs.get_image_id(design_name)
+        assert design_name in fpga_image
     except:
         pytest.skip(f"Could not find refesign name '{design_name}' for driver '{driver_name}'")
     drm_ctrl_base_addr = pytestconfig.getoption("drm_controller_base_address")
@@ -47,8 +53,8 @@ def create_objects(driver_name, design_name, pytestconfig, conf_json, cred_json,
                 )
 
     # Get activators
-    base_addr = pytestconfig.getoption("activator_base_address")
-    activators = conftest.findActivators(driver, base_addr)
+    act_base_addr = pytestconfig.getoption("activator_base_address")
+    activators = conftest.findActivators(driver, act_base_addr)
     activators.reset_coin()
     activators.autotest()
 
@@ -133,13 +139,14 @@ def run_basic_test(drm_manager, activators):
 
 
 @pytest.mark.skip
+@pytest.mark.no_parallel
 def test_vitis_2activator_100_125(pytestconfig, conf_json, cred_json, async_handler, basic_log_file):
     """
     Test a vitis configuration: dual clock kernels with AXI clock < DRM clock
     """
-    driver_name = 'xilinx_xrt'
+    driver_name = 'aws_vitis'
     design_name = 'vitis_2activator_100_125'
-    axiclk_freq_ref = 50
+    axiclk_freq_ref = 100
     drmclk_freq_ref = 125
     # Create test objects
     drm_manager, activators = create_objects(driver_name, design_name, pytestconfig,
@@ -157,12 +164,12 @@ def test_vitis_2activator_100_125(pytestconfig, conf_json, cred_json, async_hand
     basic_log_file.remove()
 
 
-@pytest.mark.skip
+@pytest.mark.no_parallel
 def test_vitis_2activator_slr_200_125(pytestconfig, conf_json, cred_json, async_handler, basic_log_file):
     """
     Test a vitis configuration: SLR crossing with dual clock kernels
     """
-    driver_name = 'xilinx_xrt'
+    driver_name = 'aws_vitis'
     design_name = 'vitis_2activator_slr_200_125'
     axiclk_freq_ref = 200
     drmclk_freq_ref = 125
@@ -183,11 +190,12 @@ def test_vitis_2activator_slr_200_125(pytestconfig, conf_json, cred_json, async_
 
 
 @pytest.mark.skip
+@pytest.mark.no_parallel
 def test_vitis_2activator_125_125(pytestconfig, conf_json, cred_json, async_handler, basic_log_file):
     """
     Test a vitis configuration: dual clock kernels with AXI clock = DRM clock
     """
-    driver_name = 'xilinx_xrt'
+    driver_name = 'aws_vitis'
     design_name = 'vitis_2activator_125_125'
     axiclk_freq_ref = 125
     drmclk_freq_ref = 125
@@ -208,11 +216,12 @@ def test_vitis_2activator_125_125(pytestconfig, conf_json, cred_json, async_hand
 
 
 @pytest.mark.skip
+@pytest.mark.no_parallel
 def test_vitis_5activator_high_density(pytestconfig, conf_json, cred_json, async_handler, basic_log_file):
     """
     Test a vitis configuration: 5 activator and high density design
     """
-    driver_name = 'xilinx_xrt'
+    driver_name = 'aws_vitis'
     design_name = 'vitis_5activator_high_density'
     axiclk_freq_ref = 125
     drmclk_freq_ref = 125
@@ -233,11 +242,12 @@ def test_vitis_5activator_high_density(pytestconfig, conf_json, cred_json, async
 
 
 @pytest.mark.skip
+@pytest.mark.no_parallel
 def test_vitis_2activator_350_350(pytestconfig, conf_json, cred_json, async_handler, basic_log_file):
     """
     Test a vitis configuration: 2 activators and high frequency
     """
-    driver_name = 'xilinx_xrt'
+    driver_name = 'aws_vitis'
     design_name = 'vitis_5activator'
     axiclk_freq_ref = 350
     drmclk_freq_ref = 350
@@ -258,11 +268,12 @@ def test_vitis_2activator_350_350(pytestconfig, conf_json, cred_json, async_hand
 
 
 @pytest.mark.skip
+@pytest.mark.no_parallel
 def test_vitis_30activator(pytestconfig, conf_json, cred_json, async_handler, basic_log_file):
     """
     Test a vitis configuration: 30 activators
     """
-    driver_name = 'xilinx_xrt'
+    driver_name = 'aws_vitis'
     design_name = 'vitis_30activator'
     axiclk_freq_ref = 125
     drmclk_freq_ref = 50
