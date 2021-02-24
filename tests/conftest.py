@@ -323,7 +323,7 @@ class SingleActivator:
             coins (int): Number of coins to generate.
         """
         if coins is None:
-            coins = choices(range(1,10), k=1)
+            coins = randint(1,10)
         for _ in range(coins):
             self.driver.write_register(self.base_address + INC_EVENT_REG_OFFSET, 0)
         if self.get_status():

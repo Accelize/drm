@@ -40,7 +40,7 @@ def test_fast_start_stop(accelize_drm, conf_json, cred_json, async_handler):
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
-        assert drm_manager.get('metered_data') is None
+        assert sum(drm_manager.get('metered_data')) == 0
         async_cb.assert_NoError()
     finally:
         drm_manager.deactivate()
@@ -299,7 +299,7 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
             if random_wait > lic_duration*2:
                 start = datetime.now()
                 assert drm_manager.get('session_id') != session_id
-                activators[0].reset_coin()
+                activators.reset_coin()
                 session_id = drm_manager.get('session_id')
             else:
                 start += timedelta(seconds=lic_duration)
@@ -383,7 +383,7 @@ def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, cred_json
     assert drm_manager2.get('session_status')
     assert drm_manager2.get('license_status')
     activators.autotest(is_activated=True)
-    assert sum(drm_manager2.get('metered_data')) == coin
+    activators.check_coin(drm_manager2.get('metered_data'))
     # Wait for license renewal
     sleep(lic_duration+2)
     assert drm_manager2.get('session_id') == session_id
@@ -694,7 +694,7 @@ def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handl
         driver.write_register_callback,
         async_cb.callback
     )
-    activators[0].reset_coin()
+    activators.reset_coin()
     assert not drm_manager.get('session_status')
     assert not drm_manager.get('license_status')
     activators.autotest(is_activated=False)
@@ -707,7 +707,7 @@ def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handl
         activators.check_coin(drm_manager.get('metered_data'))
         drm_manager.deactivate(True)
         sleep(1)
-        activators[0].check_coin(drm_manager.get('metered_data'))
+        activators.check_coin(drm_manager.get('metered_data'))
         assert drm_manager.get('session_status')
         assert drm_manager.get('license_status')
         session_id = drm_manager.get('session_id')
@@ -732,3 +732,4 @@ def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handl
     assert len(list(findall(r'warning\b.*\bCannot access metering data when no session is running', log_content))) == 2
     async_cb.assert_NoError()
     remove(logpath)
+
