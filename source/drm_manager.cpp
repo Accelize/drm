@@ -2454,6 +2454,8 @@ public:
                                 Debug("Metering for IP#{}: {}", ip_idx, ip_metering);
                                 json_value[key_str].append( ip_metering );
                             }
+                        } else {
+                            json_value[key_str].append(0);
                         }
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                json_value[key_str].toStyledString() );

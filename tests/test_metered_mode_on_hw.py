@@ -40,7 +40,7 @@ def test_fast_start_stop(accelize_drm, conf_json, cred_json, async_handler):
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
-        assert drm_manager.get('metered_data') == 0
+        assert drm_manager.get('metered_data') is None
         async_cb.assert_NoError()
     finally:
         drm_manager.deactivate()
@@ -112,15 +112,15 @@ def test_metered_start_stop_short_time_in_debug(accelize_drm, conf_json, cred_js
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
         drm_manager.activate()
-        assert drm_manager.get('metered_data') == 0
+        assert sum(drm_manager.get('metered_data')) == 0
         assert drm_manager.get('license_status')
         activators.autotest(is_activated=True)
-        activators[0].generate_coin(10)
-        activators[0].check_coin(drm_manager.get('metered_data'))
+        activators.generate_coin()
+        activators.check_coin(drm_manager.get('metered_data'))
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
-        assert drm_manager.get('metered_data') == 0
+        assert sum(drm_manager.get('metered_data')) == 0
         async_cb.assert_NoError()
     finally:
         drm_manager.deactivate()
@@ -155,19 +155,18 @@ def test_metered_start_stop_long_time(accelize_drm, conf_json, cred_json, async_
         start = datetime.now()
         license_duration = drm_manager.get('license_duration')
         assert drm_manager.get('license_status')
-        assert drm_manager.get('metered_data') == 0
+        assert sum(drm_manager.get('metered_data')) == 0
         activators.autotest(is_activated=True)
-        activators[0].generate_coin(10)
-        activators[0].check_coin(drm_manager.get('metered_data'))
+        activators.generate_coin()
+        activators.check_coin(drm_manager.get('metered_data'))
         for i in range(3):
             wait_period = randint(license_duration-2, license_duration+2)
             sleep(wait_period)
             start += timedelta(seconds=license_duration)
-            new_coins = randint(1,10)
             assert drm_manager.get('license_status')
             activators.autotest(is_activated=True)
-            activators[0].generate_coin(new_coins)
-            activators[0].check_coin(drm_manager.get('metered_data'))
+            activators.generate_coin()
+            activators.check_coin(drm_manager.get('metered_data'))
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
@@ -204,16 +203,16 @@ def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, asy
         activators.autotest(is_activated=False)
         drm_manager.activate()
         start = datetime.now()
-        assert drm_manager.get('metered_data') == 0
+        assert sum(drm_manager.get('metered_data')) == 0
         assert drm_manager.get('session_status')
         assert drm_manager.get('license_status')
         session_id = drm_manager.get('session_id')
         assert len(session_id) > 0
         activators.autotest(is_activated=True)
         lic_duration = drm_manager.get('license_duration')
-        assert drm_manager.get('metered_data') == 0
-        activators[0].generate_coin(10)
-        activators[0].check_coin(drm_manager.get('metered_data'))
+        assert sum(drm_manager.get('metered_data')) == 0
+        activators.generate_coin()
+        activators.check_coin(drm_manager.get('metered_data'))
         # Wait until 2 licenses are provisioned
         wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, lic_duration)
         drm_manager.deactivate(True)
@@ -276,7 +275,7 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
         async_cb.assert_NoError()
         drm_manager.activate()
         start = datetime.now()
-        assert drm_manager.get('metered_data') == 0
+        assert sum(drm_manager.get('metered_data')) == 0
         assert drm_manager.get('session_status')
         assert drm_manager.get('license_status')
         session_id = drm_manager.get('session_id')
@@ -285,9 +284,8 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
         wait_numbers = [lic_duration*2-2,lic_duration*2+2]
         activators.autotest(is_activated=True)
         for i in range(nb_pause_resume):
-            new_coins = randint(1, 100)
-            activators[0].generate_coin(new_coins)
-            activators[0].check_coin(drm_manager.get('metered_data'))
+            activators.generate_coin()
+            activators.check_coin(drm_manager.get('metered_data'))
             wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, 10)
             drm_manager.deactivate(True)
             async_cb.assert_NoError()
@@ -346,17 +344,17 @@ def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, cred_json
     activators.autotest(is_activated=False)
     drm_manager1.activate()
     start = datetime.now()
-    assert drm_manager1.get('metered_data') == 0
+    assert sum(drm_manager1.get('metered_data')) == 0
     assert drm_manager1.get('session_status')
     assert drm_manager1.get('license_status')
     session_id = drm_manager1.get('session_id')
     assert len(session_id) > 0
     activators.autotest(is_activated=True)
     lic_duration = drm_manager1.get('license_duration')
-    assert drm_manager1.get('metered_data') == 0
-    activators[0].generate_coin(10)
-    activators[0].check_coin(drm_manager1.get('metered_data'))
-    assert drm_manager1.get('metered_data') == 10
+    assert sum(drm_manager1.get('metered_data')) == 0
+    activators.generate_coin()
+    activators.check_coin(drm_manager1.get('metered_data'))
+    assert sum(drm_manager1.get('metered_data')) != 0
     # Wait enough time to be sure the 2nd license has been provisioned
     wait_deadline(start, lic_duration/2)
     drm_manager1.deactivate(True)
@@ -385,14 +383,13 @@ def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, cred_json
     assert drm_manager2.get('session_status')
     assert drm_manager2.get('license_status')
     activators.autotest(is_activated=True)
-    assert drm_manager2.get('metered_data') == 10
+    assert sum(drm_manager2.get('metered_data')) == coin
     # Wait for license renewal
     sleep(lic_duration+2)
     assert drm_manager2.get('session_id') == session_id
     assert drm_manager2.get('license_duration') == lic_duration
-    activators[0].generate_coin(10)
-    activators[0].check_coin(drm_manager2.get('metered_data'))
-    assert drm_manager2.get('metered_data') == 20
+    activators.generate_coin()
+    activators.check_coin(drm_manager2.get('metered_data'))
     drm_manager2.deactivate()
     assert not drm_manager2.get('session_status')
     assert not drm_manager2.get('license_status')
@@ -534,7 +531,7 @@ def test_metering_limits_on_activate(accelize_drm, conf_json, cred_json, async_h
         drm_manager.activate()
         assert drm_manager.get('drm_license_type') == 'Floating/Metering'
         assert drm_manager.get('license_status')
-        assert drm_manager.get('metered_data') == 0
+        assert sum(drm_manager.get('metered_data')) == 0
         activators[0].generate_coin(999)
         activators[0].check_coin(drm_manager.get('metered_data'))
         drm_manager.deactivate()
@@ -590,7 +587,7 @@ def test_metering_limits_on_licensing_thread(accelize_drm, conf_json, cred_json,
         start = datetime.now()
         assert drm_manager.get('drm_license_type') == 'Floating/Metering'
         assert drm_manager.get('license_status')
-        assert drm_manager.get('metered_data') == 0
+        assert sum(drm_manager.get('metered_data')) == 0
         lic_duration = drm_manager.get('license_duration')
         sleep(int(lic_duration/2) + 1)
         activators[0].generate_coin(1000)
@@ -701,17 +698,15 @@ def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handl
     assert not drm_manager.get('session_status')
     assert not drm_manager.get('license_status')
     activators.autotest(is_activated=False)
-    activators[0].generate_coin(randint(1,100))
-    assert drm_manager.get('metered_data') == 0
+    activators.generate_coin()
+    assert sum(drm_manager.get('metered_data')) == 0
     drm_manager.activate()
     try:
-        assert drm_manager.get('metered_data') == 0
-        coins = randint(1,100)
-        activators[0].generate_coin(coins)
-        activators[0].check_coin(drm_manager.get('metered_data'))
+        assert sum(drm_manager.get('metered_data')) == 0
+        activators.generate_coin()
+        activators.check_coin(drm_manager.get('metered_data'))
         drm_manager.deactivate(True)
         sleep(1)
-        #assert drm_manager.get('metered_data') == coins
         activators[0].check_coin(drm_manager.get('metered_data'))
         assert drm_manager.get('session_status')
         assert drm_manager.get('license_status')
@@ -724,14 +719,12 @@ def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handl
         assert not drm_manager.get('license_status')
         assert drm_manager.get('session_status')
         assert session_id == drm_manager.get('session_id')
-        #assert drm_manager.get('metered_data') == coins
-        activators[0].check_coin(drm_manager.get('metered_data'))
-        activators[0].generate_coin(5)
-        activators[0].check_coin(drm_manager.get('metered_data'))
-        assert drm_manager.get('metered_data') == coins
+        activators.check_coin(drm_manager.get('metered_data'))
+        activators.generate_coin()
+        activators.check_coin(drm_manager.get('metered_data'))
     finally:
         drm_manager.deactivate()
-    assert drm_manager.get('metered_data') == 0
+    assert sum(drm_manager.get('metered_data')) == 0
     del drm_manager
     wait_func_true(lambda: isfile(logpath), 10)
     with open(logpath, 'rt') as f:

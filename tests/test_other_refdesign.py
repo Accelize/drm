@@ -89,8 +89,7 @@ def run_basic_test(drm_manager, activators):
         assert len(session_id) > 0
         activators.autotest(is_activated=True)
         lic_duration = drm_manager.get('license_duration')
-        coin_list = choices(range(1,10), k=activators.length)
-        activators.generate_coin(coin_list)
+        activators.generate_coin()
         activators.check_coin(drm_manager.get('metered_data'))
         # Wait until 2 licenses are provisioned
         conftest.wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, lic_duration)
@@ -112,8 +111,7 @@ def run_basic_test(drm_manager, activators):
         assert drm_manager.get('session_id') == session_id
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
-        coin_list = choices(range(1,10), k=activators.length)
-        activators.generate_coin(coin_list)
+        activators.generate_coin()
         activators.check_coin(drm_manager.get('metered_data'))
         # Resume session
         drm_manager.activate(True)
@@ -122,8 +120,7 @@ def run_basic_test(drm_manager, activators):
         assert drm_manager.get('license_status')
         activators.reset_coin()
         activators.autotest(is_activated=True)
-        coin_list = choices(range(1,10), k=activators.length)
-        activators.generate_coin(coin_list)
+        activators.generate_coin()
         activators.check_coin(drm_manager.get('metered_data'))
         # Stop session
         drm_manager.deactivate()

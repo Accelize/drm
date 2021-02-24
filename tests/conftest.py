@@ -315,17 +315,20 @@ class SingleActivator:
         """
         return self.driver.read_register(self.base_address + ACT_STATUS_REG_OFFSET) == 3
 
-    def generate_coin(self, coins):
+    def generate_coin(self, coins=None):
         """
         Generate coins.
 
         Args:
             coins (int): Number of coins to generate.
         """
+        if coins is None:
+            coins = choices(range(1,10), k=1)
         for _ in range(coins):
             self.driver.write_register(self.base_address + INC_EVENT_REG_OFFSET, 0)
         if self.get_status():
             self.metering_data += coins
+        return coins
 
     def reset_coin(self):
         """
@@ -433,20 +436,17 @@ class ActivatorsInFPGA:
         """
         Generate coins (usage event) on each activatror in the design
         """
-        nbAct = self.length
         if coins is None:
-            coin_list = [None]*nbAct
+            coin_list = [None]*self.length
         elif isinstance(coins, int):
-            coin_list = [coins]*nbAct
+            coin_list = [coins]*self.length
         elif isinstance(coins, list):
-            if len(coins) == nbAct:
-                coin_list = coins
-            elif len(coins) > nbAct:
-                coin_list = coins[:nbAct]
-            else:
-                coin_list = coins + [coins[-1]]*(nbAct-len(coins))
-        for activator, event in zip(self.activators, coin_list):
-            activator.generate_coin(event)
+            assert len(coins) == self.length
+            coin_list = coins
+        coin_sum = 0
+        for activator, coin in zip(self.activators, coin_list):
+            coin_sum += activator.generate_coin(coin)
+        return coin_sum
 
     def check_coin(self, coins=None):
         """

@@ -359,8 +359,8 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
         total_coin = 0
         for i in range(loop):
             new_coin = randint(1,100)
-            activators[0].generate_coin(new_coin)
-            activators[0].check_coin(drm_manager.get('metered_data'))
+            activators.generate_coin(new_coin)
+            activators.check_coin(drm_manager.get('metered_data'))
             wait_and_check_on_next_health(drm_manager)
             total_coin += new_coin
         assert drm_manager.get('metered_data') == total_coin
