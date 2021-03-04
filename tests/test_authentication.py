@@ -20,7 +20,7 @@ from tests.proxy import get_context, set_context
 
 @pytest.mark.no_parallel
 def test_authentication_bad_token(accelize_drm, conf_json, cred_json,
-                    async_handler, live_server, basic_log_file, request):
+                    async_handler, live_server, log_file_factory, request):
     """Test when a bad authentication token is used"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -29,7 +29,8 @@ def test_authentication_bad_token(accelize_drm, conf_json, cred_json,
 
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + request.function.__name__
-    conf_json['settings'].update(basic_log_file.create(3))
+    logfile = log_file_factory.create(3)
+    conf_json['settings'].update(logfile.json)
     conf_json.save()
 
     # Set initial context on the live server
@@ -54,10 +55,10 @@ def test_authentication_bad_token(accelize_drm, conf_json, cred_json,
     finally:
         drm_manager.deactivate()
     del drm_manager
-    file_log_content = basic_log_file.read()
+    file_log_content = logfile.read()
     assert search(r'\bAuthentication credentials were not provided\b', file_log_content)
     async_cb.assert_NoError()
-    basic_log_file.remove()
+    logfile.remove()
 
 
 def test_authentication_validity_after_deactivation(accelize_drm, conf_json, cred_json, async_handler):

@@ -141,7 +141,7 @@ def test_invalid_derived_product_name(accelize_drm, conf_json, cred_json,
 @pytest.mark.minimum
 @pytest.mark.packages
 def test_valid_derived_product(accelize_drm, conf_json, cred_json,
-                    async_handler, live_server, basic_log_file, request):
+                    async_handler, live_server, log_file_factory, request):
     """
     Test a valid derived product behaves as expected.
     """
@@ -149,7 +149,8 @@ def test_valid_derived_product(accelize_drm, conf_json, cred_json,
     async_cb = async_handler.create()
 
     conf_json['licensing']['url'] = _request.url + request.function.__name__
-    conf_json['settings'].update(basic_log_file.create(1))
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(
@@ -176,7 +177,7 @@ def test_valid_derived_product(accelize_drm, conf_json, cred_json,
         assert context['derived_product'] == new_deriv_prod
     finally:
         drm_manager.deactivate()
-    log_content = basic_log_file.read()
+    log_content = logfile.read()
     assert search('Loaded new derived product: %s' % new_deriv_prod, log_content, MULTILINE)
     assert get_proxy_error() is None
     async_cb.assert_NoError()
@@ -207,11 +208,11 @@ def test_valid_derived_product(accelize_drm, conf_json, cred_json,
         assert context['derived_product'] == new_deriv_prod
     finally:
         drm_manager.deactivate()
-    log_content = basic_log_file.read()
+    log_content = logfile.read()
     assert search('Loaded new derived product: %s' % new_deriv_prod, log_content, MULTILINE)
     assert get_proxy_error() is None
     async_cb.assert_NoError()
-    basic_log_file.remove()
+    logfile.remove()
 
 
 def test_derived_product_during_running_session(accelize_drm, conf_json, cred_json,

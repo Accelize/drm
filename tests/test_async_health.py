@@ -20,7 +20,7 @@ from tests.proxy import get_context, set_context, get_proxy_error
 @pytest.mark.no_parallel
 @pytest.mark.minimum
 def test_health_period_disabled(accelize_drm, conf_json, cred_json,
-                    async_handler, live_server, basic_log_file, request):
+                    async_handler, live_server, log_file_factory, request):
     """
     Test the asynchronous health feature can be disabled.
     """
@@ -30,7 +30,8 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json,
 
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + request.function.__name__
-    conf_json['settings'].update(basic_log_file.create(1))
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(
@@ -60,7 +61,7 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json,
     finally:
         drm_manager.deactivate()
     del drm_manager
-    log_content = basic_log_file.read()
+    log_content = logfile.read()
     assert search(r'Exiting background thread which checks health', log_content, MULTILINE)
     assert search(r'Health thread is disabled', log_content, MULTILINE)
     assert search(r'Exiting background thread which checks health', log_content, MULTILINE)
@@ -68,7 +69,7 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json,
     assert len(list(health_req)) == nb_health
     assert get_proxy_error() is None
     async_cb.assert_NoError()
-    basic_log_file.remove()
+    logfile.remove()
 
 
 @pytest.mark.no_parallel
@@ -371,7 +372,7 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
 
 @pytest.mark.no_parallel
 def test_segment_index(accelize_drm, conf_json, cred_json, async_handler,
-                        live_server, basic_log_file, request):
+                        live_server, log_file_factory, request):
     """
     Test the DRM Controller capacity to handle stressfully health and license requests
     """
@@ -381,7 +382,8 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler,
 
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + request.function.__name__
-    conf_json['settings'].update(basic_log_file.create(1))
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(
@@ -427,7 +429,7 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler,
     finally:
         drm_manager.deactivate()
     async_cb.assert_NoError()
-    log_content = basic_log_file.read()
+    log_content = logfile.read()
     segment_idx_expected = 0
     for m in findall(r'"meteringFile"\s*:\s*"([^"]*)"', log_content):
         assert len(m) > 0
@@ -448,12 +450,12 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler,
         if close_flag == '1':
             segment_idx_expected = 0
     assert get_proxy_error() is None
-    basic_log_file.remove()
+    logfile.remove()
 
 
 @pytest.mark.no_parallel
 def test_async_call_on_pause_when_health_is_enabled(accelize_drm, conf_json, cred_json,
-                            async_handler, live_server, basic_log_file, request):
+                            async_handler, live_server, log_file_factory, request):
     """
     Test the DRM pause function does perform a async request before pausing
     """
@@ -463,7 +465,8 @@ def test_async_call_on_pause_when_health_is_enabled(accelize_drm, conf_json, cre
 
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + 'test_async_call_on_pause_depending_on_health_status'
-    conf_json['settings'].update(basic_log_file.create(1))
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(
@@ -498,7 +501,7 @@ def test_async_call_on_pause_when_health_is_enabled(accelize_drm, conf_json, cre
     pause_line = 0
     health_line = 0
     stop_line = 0
-    for i, line in enumerate(basic_log_file.read().split('\n')):
+    for i, line in enumerate(logfile.read().split('\n')):
         if search(r"'pause_session_request'\s*=\s*true", line, IGNORECASE):
             pause_line = i
         elif search(r'"request"\s*:\s*"health"', line, IGNORECASE):
@@ -508,12 +511,12 @@ def test_async_call_on_pause_when_health_is_enabled(accelize_drm, conf_json, cre
     assert pause_line > 0 and health_line > 0 and stop_line > 0
     assert pause_line < health_line < stop_line
     assert get_proxy_error() is None
-    basic_log_file.remove()
+    logfile.remove()
 
 
 @pytest.mark.no_parallel
 def test_no_async_call_on_pause_when_health_is_disabled(accelize_drm, conf_json, cred_json,
-                            async_handler, live_server, basic_log_file, request):
+                            async_handler, live_server, log_file_factory, request):
     """
     Test the DRM pause function does NOT perform a async request before pausing
     """
@@ -523,7 +526,8 @@ def test_no_async_call_on_pause_when_health_is_disabled(accelize_drm, conf_json,
 
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + 'test_async_call_on_pause_depending_on_health_status'
-    conf_json['settings'].update(basic_log_file.create(1))
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(
@@ -554,7 +558,7 @@ def test_no_async_call_on_pause_when_health_is_disabled(accelize_drm, conf_json,
     context = get_context()
     assert context['health_cnt'] == 0
     # Check no health request appeared in the log file
-    assert search(r'"request"\s*:\s*"health"', basic_log_file.read(), IGNORECASE) is None
+    assert search(r'"request"\s*:\s*"health"', logfile.read(), IGNORECASE) is None
     assert get_proxy_error() is None
-    basic_log_file.remove()
+    logfile.remove()
 

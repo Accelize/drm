@@ -82,14 +82,15 @@ def test_mailbox_type_error(accelize_drm, conf_json, cred_json, async_handler):
     async_cb.assert_NoError()
 
 
-def test_empty_product_id(accelize_drm, conf_json, cred_json, async_handler, basic_log_file):
+def test_empty_product_id(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """Test error with a design having an empty Product ID"""
     refdesign = accelize_drm.pytest_ref_designs
     driver = accelize_drm.pytest_fpga_driver[0]
     fpga_image_bkp = driver.fpga_image
     async_cb = async_handler.create()
     cred_json.set_user('accelize_accelerator_test_02')
-    conf_json['settings'].update(basic_log_file.create(1))
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
     conf_json.save()
     empty_fpga_image = refdesign.get_image_id('empty_product_id')
     if empty_fpga_image is None:
@@ -108,12 +109,12 @@ def test_empty_product_id(accelize_drm, conf_json, cred_json, async_handler, bas
             )
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
         assert search(r'UDID and Product ID cannot be both missing', str(excinfo.value), IGNORECASE)
-        assert search(r'Could not find Product ID information in DRM Controller Memory', basic_log_file.read(), IGNORECASE)
+        assert search(r'Could not find Product ID information in DRM Controller Memory', logfile.read(), IGNORECASE)
         async_cb.assert_NoError()
     finally:
         # Reprogram FPGA with original image
         driver.program_fpga(fpga_image_bkp)
-    basic_log_file.remove()
+    logfile.remove()
 
 
 def test_malformed_product_id(accelize_drm, conf_json, cred_json, async_handler):

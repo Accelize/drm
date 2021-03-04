@@ -26,11 +26,9 @@ LOG_FORMAT_LONG = "%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v"
 REGEX_PATTERN = r'Starting license request to \S+ with request:\n(^{.+?\n}$)'
 
 
-def parse_and_save_challenge(logpath, pattern, save_path=None):
+def parse_and_save_challenge(text, pattern, save_path=None):
     # Parse log file
     print('Parsing requests from log file: %s' % logpath)
-    with open(logpath, 'rt') as f:
-        text = f.read()
     request_list = list()
     for challenge in finditer(pattern, text, re.I | re.MULTILINE | re.DOTALL):
         request_list.append(loads(challenge.group(1)))
@@ -159,7 +157,7 @@ def test_global_challenge_quality():
 
 
 @pytest.mark.security
-def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async_handler, basic_log_file):
+def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """Preprogram N times the board and start a session with M licenses.
     """
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -194,7 +192,8 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
     async_cb.reset()
     cred_json.set_user(access_key)
     conf_json.reset()
-    conf_json['settings'].update(basic_log_file.create(1, LOG_FORMAT_LONG))
+    logfile = log_file_factory.create(1, LOG_FORMAT_LONG)
+    conf_json['settings'].update(logfile.json)
     conf_json.save()
     test_file_path = 'test_dna_and_challenge_duplication.%d.%d.json' % (time(), randrange(0xFFFFFFFF))
     session_cnt = 0
@@ -242,12 +241,13 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
                     sleep(1)
             activators.autotest(is_activated=False)
             del drm_manager
-            wait_func_true(lambda: isfile(basic_log_file._path), 10)
+            log_content = logfile.read()
             if no_err:
                 session_cnt += 1
         async_cb.assert_NoError()
         # Parse log file
-        parse_and_save_challenge(basic_log_file._path, REGEX_PATTERN, test_file_path)
+        parse_and_save_challenge(log_content, REGEX_PATTERN, test_file_path)
+        logfile.remove()
 
     # Check validity
     assert session_cnt >= num_sessions

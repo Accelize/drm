@@ -630,7 +630,7 @@ def accelize_drm(pytestconfig):
     if not isdir(pytest_artifacts_dir):
         makedirs(pytest_artifacts_dir)
     print('pytest artifacts directory: ', pytest_artifacts_dir)
-
+    """
     # Define function to create log file path
     def create_log_path(prefix=None):
         if prefix is None:
@@ -649,7 +649,7 @@ def accelize_drm(pytestconfig):
             return verb_option
         else:
            return verbosity
-
+   """
     # Get frequency detection version
     freq_version = fpga_driver[0].read_register(drm_ctrl_base_addr + 0xFFF0)
     print('Frequency detection version: 0x%08X' % freq_version)
@@ -676,8 +676,8 @@ def accelize_drm(pytestconfig):
         *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
     _accelize_drm.pytest_params = param2dict(pytestconfig.getoption("params"))
     _accelize_drm.pytest_artifacts_dir = pytest_artifacts_dir
-    _accelize_drm.create_log_path = create_log_path
-    _accelize_drm.create_log_level = create_log_level
+#    _accelize_drm.create_log_path = create_log_path
+#    _accelize_drm.create_log_level = create_log_level
 
     return _accelize_drm
 
@@ -1189,29 +1189,24 @@ def app(pytestconfig):
 #-----------------
 
 
-class BasicLogFile:
+class LogFile:
 
-    def __init__(self, basepath=getcwd(), verbosity=None, append=False, keep=False):
-        self._basepath = basepath
-        self._path = None
+    def __init__(self, path, verbosity=None, type=1, append=False, keep=False, format=LOG_FORMAT_LONG):
+        self._path = path
         self._verbosity = verbosity
+        self._type = type
         self._append = append
         self._keep = keep
+        self._format = format
 
-    def create(self, verbosity, format=LOG_FORMAT_LONG):
+    @property
+    def json(self):
         log_param =  dict()
-        while True:
-            self._path = '%s__%d__%s.log' % (self._basepath, getpid(), time())
-            if not isfile(self._path):
-                break
         log_param['log_file_path'] = self._path
-        log_param['log_file_type'] = 1
+        log_param['log_file_type'] = self._type
         log_param['log_file_append'] = self._append
-        log_param['log_file_format'] = format
-        if self._verbosity is not None and self._verbosity < verbosity:
-            log_param['log_file_verbosity'] = self._verbosity
-        else:
-            log_param['log_file_verbosity'] = verbosity
+        log_param['log_file_format'] = self._format
+        log_param['log_file_verbosity'] = self._verbosity
         return log_param
 
     def read(self):
@@ -1225,8 +1220,30 @@ class BasicLogFile:
             remove(self._path)
 
 
+class LogFileFactory:
+
+    def __init__(self, basepath=getcwd(), verbosity=None, append=False, keep=False):
+        self._basepath = basepath
+        self._verbosity = verbosity
+        self._append = append
+        self._keep = keep
+
+    def create(self, verbosity=None, format=LOG_FORMAT_LONG):
+        while True:
+            log_file_path = '%s__%d__%s.log' % (self._basepath, getpid(), time())
+            if not isfile(log_file_path):
+                break
+        if self._verbosity is not None and self._verbosity < verbosity:
+            log_file_verbosity = self._verbosity
+        else:
+            log_file_verbosity = verbosity
+        log_file_format = format
+        return LogFile(log_file_path, verbosity=self._verbosity, append=self._append,
+                            keep=self._keep, format=log_file_format)
+
+
 @pytest.fixture
-def basic_log_file(pytestconfig, request, accelize_drm):
+def log_file_factory(pytestconfig, request, accelize_drm):
     """
     Return an object to handle log file parameter and associated resources
     """
@@ -1251,6 +1268,6 @@ def basic_log_file(pytestconfig, request, accelize_drm):
     log_file_append = pytestconfig.getoption("logfileappend")
 
     # Determine keep argument
-    keep = pytestconfig.getoption("logfile") is not None
+    log_file_keep = pytestconfig.getoption("logfile") is not None
 
-    return BasicLogFile(log_file_basepath, log_file_verbosity, log_file_append, keep)
+    return LogFileFactory(log_file_basepath, log_file_verbosity, log_file_append, log_file_keep)
