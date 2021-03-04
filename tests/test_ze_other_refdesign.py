@@ -144,7 +144,7 @@ def test_vitis_2activator_100_125(pytestconfig, conf_json, cred_json, async_hand
     """
     Test a vitis configuration: dual clock kernels with AXI clock < DRM clock
     """
-    driver_name = 'aws_vitis'
+    driver_name = 'aws_xrt'
     design_name = 'vitis_2activator_100_125'
     axiclk_freq_ref = 100
     drmclk_freq_ref = 125
@@ -169,7 +169,7 @@ def test_vitis_2activator_slr_200_125(pytestconfig, conf_json, cred_json, async_
     """
     Test a vitis configuration: SLR crossing with dual clock kernels
     """
-    driver_name = 'aws_vitis'
+    driver_name = 'aws_xrt'
     design_name = 'vitis_2activator_slr_200_125'
     axiclk_freq_ref = 200
     drmclk_freq_ref = 125
@@ -195,7 +195,7 @@ def test_vitis_2activator_125_125(pytestconfig, conf_json, cred_json, async_hand
     """
     Test a vitis configuration: dual clock kernels with AXI clock = DRM clock
     """
-    driver_name = 'aws_vitis'
+    driver_name = 'aws_xrt'
     design_name = 'vitis_2activator_125_125'
     axiclk_freq_ref = 125
     drmclk_freq_ref = 125
@@ -221,7 +221,7 @@ def test_vitis_5activator_high_density(pytestconfig, conf_json, cred_json, async
     """
     Test a vitis configuration: 5 activator and high density design
     """
-    driver_name = 'aws_vitis'
+    driver_name = 'aws_xrt'
     design_name = 'vitis_5activator_high_density'
     axiclk_freq_ref = 125
     drmclk_freq_ref = 125
@@ -247,7 +247,7 @@ def test_vitis_2activator_350_350(pytestconfig, conf_json, cred_json, async_hand
     """
     Test a vitis configuration: 2 activators and high frequency
     """
-    driver_name = 'aws_vitis'
+    driver_name = 'aws_xrt'
     design_name = 'vitis_5activator'
     axiclk_freq_ref = 350
     drmclk_freq_ref = 350
@@ -273,7 +273,7 @@ def test_vitis_30activator(pytestconfig, conf_json, cred_json, async_handler, ba
     """
     Test a vitis configuration: 30 activators
     """
-    driver_name = 'aws_vitis'
+    driver_name = 'aws_xrt'
     design_name = 'vitis_30activator'
     axiclk_freq_ref = 125
     drmclk_freq_ref = 50

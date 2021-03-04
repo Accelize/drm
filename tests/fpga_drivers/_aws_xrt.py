@@ -215,7 +215,7 @@ class FpgaDriver(_FpgaDriverBase):
             Args:
                 register_offset (int): Offset
                 returned_data (int pointer): Return data.
-                driver (accelize_drm.fpga_drivers._aws_vitis.FpgaDriver):
+                driver (accelize_drm.fpga_drivers._aws_xrt.FpgaDriver):
                     Keep a reference to driver.
             """
             with driver._fpga_read_register_lock():
@@ -257,7 +257,7 @@ class FpgaDriver(_FpgaDriverBase):
             Args:
                 register_offset (int): Offset
                 data_to_write (int): Data to write.
-                driver (accelize_drm.fpga_drivers._aws_vitis.FpgaDriver):
+                driver (accelize_drm.fpga_drivers._aws_xrt.FpgaDriver):
                     Keep a reference to driver.
             """
             with driver._fpga_write_register_lock():

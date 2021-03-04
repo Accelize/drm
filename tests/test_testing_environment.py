@@ -189,8 +189,8 @@ def test_get_driver():
     from tests.fpga_drivers._aws_f1 import FpgaDriver as AwsDriver
     assert get_driver('aws_f1') is AwsDriver
 
-    from tests.fpga_drivers._aws_vitis import FpgaDriver as XrtDriver
-    assert get_driver('aws_vitis') is XrtDriver
+    from tests.fpga_drivers._aws_xrt import FpgaDriver as XrtDriver
+    assert get_driver('aws_xrt') is XrtDriver
 
 
 @pytest.mark.hwtst

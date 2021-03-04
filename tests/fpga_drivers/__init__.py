@@ -27,7 +27,7 @@ def get_driver(name):
     Args:
         name (str): Driver name. Possible values:
             `aws_f1` (AWS F1 instances types),
-            `xilinx_xrt` (Xilinx XRT).
+            `aws_xrt` (AWS XRT).
 
     Returns:
         FpgaDriverBase subclass: driver class.
