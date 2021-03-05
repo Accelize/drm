@@ -27,7 +27,7 @@ def test_file_path(accelize_drm, conf_json, cred_json, async_handler, request,
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    logfile = log_file_factory.create()
+    logfile = log_file_factory.create(2)
     conf_json.reset()
     conf_json['settings']['log_verbosity'] = 6
     conf_json['settings'].update(logfile.json)
@@ -213,7 +213,7 @@ def test_file_append(accelize_drm, conf_json, cred_json, async_handler, request,
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    logfile = log_file_factory.create(type=1, append=True)
+    logfile = log_file_factory.create(2, type=1, append=True)
     conf_json.reset()
     conf_json['settings'].update(logfile.json)
     conf_json['settings']['log_verbosity'] = 6
@@ -242,7 +242,7 @@ def test_file_truncate(accelize_drm, conf_json, cred_json, async_handler, reques
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    logfile = log_file_factory.create(type=1, append=False)
+    logfile = log_file_factory.create(2, type=1, append=False)
     conf_json.reset()
     conf_json['settings'].update(logfile.json)
     conf_json['settings']['log_verbosity'] = 6
@@ -271,7 +271,7 @@ def test_file_rotating_parameters(accelize_drm, conf_json, cred_json, async_hand
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    logfile = log_file_factory.create(verbosity=2, type=2,
+    logfile = log_file_factory.create(2, type=2,
                              rotating_size_kb=1, rotating_num=5)
     conf_json.reset()
     conf_json['settings'].update(logfile.json)
@@ -311,7 +311,7 @@ def test_versions_displayed_in_log_file(accelize_drm, conf_json, cred_json, asyn
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    logfile = log_file_factory.create(verbosity=5, type=1)
+    logfile = log_file_factory.create(5, type=1)
     conf_json.reset()
     conf_json['settings'].update(logfile.json)
     conf_json['settings']['log_verbosity'] = 6
@@ -342,7 +342,7 @@ def test_log_file_parameters_modifiability(accelize_drm, conf_json, cred_json, a
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    logfile = log_file_factory.create(verbosity=3, type=2, format=LOG_FORMAT_LONG,
+    logfile = log_file_factory.create(3, type=2, format=LOG_FORMAT_LONG,
                                 rotating_size_kb=10, rotating_num=0)
     # Test from config file
     conf_json.reset()
@@ -501,7 +501,7 @@ def test_log_file_without_credential_data_in_debug(accelize_drm, conf_json, cred
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    logfile = log_file_factory.create(verbosity=1, type=1)
+    logfile = log_file_factory.create(1, type=1)
     conf_json.reset()
     conf_json['settings'].update(logfile.json)
     conf_json.save()
@@ -530,7 +530,7 @@ def test_log_file_without_credential_data_in_debug2(accelize_drm, conf_json, cre
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    logfile = log_file_factory.create(verbosity=0, type=1)
+    logfile = log_file_factory.create(0, type=1)
     conf_json.reset()
     conf_json['settings'].update(logfile.json)
     conf_json.save()
