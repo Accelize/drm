@@ -201,7 +201,7 @@ def test_drm_manager_frequency_detection_method2(accelize_drm, conf_json, cred_j
                 driver.read_register_callback,
                 driver.write_register_callback,
                 async_cb.callback
-            ) as drm_manager
+            ) as drm_manager:
         assert drm_manager.get('frequency_detection_method') == 2
         drm_manager.activate()
         assert drm_manager.get('frequency_detection_method') == 2
