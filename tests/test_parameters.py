@@ -76,7 +76,7 @@ _PARAM_LIST = ('license_type',
 
 @pytest.mark.minimum
 def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cred_json,
-                                                     async_handler, request):
+                                                     async_handler, log_file_factory, request):
     """Test accesses to parameters"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -177,8 +177,8 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     # Test parameter: log_file_path
     async_cb.reset()
     conf_json.reset()
-    exp_value = accelize_drm.create_log_path(request.function.__name__)
-    conf_json['settings']['log_file_path'] = exp_value
+    logfile = log_file_factory.create(1)
+    conf_json['settings']['log_file_path'] = logfile.path
     conf_json.save()
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
@@ -187,7 +187,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
         driver.write_register_callback,
         async_cb.callback
     )
-    assert drm_manager.get('log_file_path') == exp_value
+    assert drm_manager.get('log_file_path') == logfile.path
     async_cb.assert_NoError()
     print("Test parameter 'log_file_path': PASS")
 
@@ -637,7 +637,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
 
 
 def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_json, async_handler,
-                                                 ws_admin, request):
+                                                 ws_admin, request, log_file_factory):
     """Test accesses to parameter"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -1011,31 +1011,27 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     # Test parameter: log_message
     async_cb.reset()
     conf_json.reset()
-    logpath = accelize_drm.create_log_path(request.function.__name__)
-    verbosity = 5
-    conf_json['settings']['log_file_verbosity'] = verbosity
-    conf_json['settings']['log_file_type'] = 1
-    conf_json['settings']['log_file_path'] = logpath
+    logfile = log_file_factory.create(5)
+    conf_json['settings'].update(logfile.json)
     conf_json.save()
-
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    drm_manager.set(log_message_level=verbosity)
-    msg = 'This line should appear in log file'
-    drm_manager.set(log_message=msg)
-    del drm_manager
-    wait_func_true(lambda: isfile(logpath), 10)
-    with open(logpath, 'rt') as f:
-        log_content = f.read()
+    try:
+        drm_manager = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+        drm_manager.set(log_message_level=verbosity)
+        msg = 'This line should appear in log file'
+        drm_manager.set(log_message=msg)
+    finally:
+        pass
+    log_content = logfile.read()
     assert "critical" in log_content
     assert msg in log_content
     async_cb.assert_NoError()
-    remove(logpath)
+    logfile.remove()
     print("Test parameter 'log_message': PASS")
 
     # Test parameter: hdk_compatibility

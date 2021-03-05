@@ -28,7 +28,7 @@ def test_normal_usage(accelize_drm, request, exec_func, live_server, tmpdir,
     # Create C/C++ executable
     exec_func._conf_json['licensing']['url'] = _request.url + request.function.__name__
     logfile = log_file_factory.create(0)
-    conf_json['settings'].update(logfile.json)
+    exec_func._conf_json['settings'].update(logfile.json)
     exec_func._conf_json.save()
     driver = accelize_drm.pytest_fpga_driver[0]
     valgrind_log_file = join(accelize_drm.pytest_artifacts_dir, 'valgrind.log')

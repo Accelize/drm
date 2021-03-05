@@ -630,26 +630,7 @@ def accelize_drm(pytestconfig):
     if not isdir(pytest_artifacts_dir):
         makedirs(pytest_artifacts_dir)
     print('pytest artifacts directory: ', pytest_artifacts_dir)
-    """
-    # Define function to create log file path
-    def create_log_path(prefix=None):
-        if prefix is None:
-            prefix = "pytest_drmlib"
-        while True:
-            log_path = realpath(join(pytest_artifacts_dir, "%s.%s.%d.log" % (prefix, time(), getpid())))
-            if not isfile(log_path):
-                return log_path
 
-    # Define function to create log file verbosity with regard of --logfile
-    def create_log_level(verbosity):
-        if not pytestconfig.getoption("logfile"):
-            return verbosity
-        verb_option = int(pytestconfig.getoption("logfilelevel"))
-        if verbosity > verb_option:
-            return verb_option
-        else:
-           return verbosity
-   """
     # Get frequency detection version
     freq_version = fpga_driver[0].read_register(drm_ctrl_base_addr + 0xFFF0)
     print('Frequency detection version: 0x%08X' % freq_version)
@@ -676,9 +657,6 @@ def accelize_drm(pytestconfig):
         *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
     _accelize_drm.pytest_params = param2dict(pytestconfig.getoption("params"))
     _accelize_drm.pytest_artifacts_dir = pytest_artifacts_dir
-#    _accelize_drm.create_log_path = create_log_path
-#    _accelize_drm.create_log_level = create_log_level
-
     return _accelize_drm
 
 
@@ -1191,13 +1169,47 @@ def app(pytestconfig):
 
 class LogFile:
 
-    def __init__(self, path, verbosity=None, type=1, append=False, keep=False, format=LOG_FORMAT_LONG):
+    def __init__(self, path, verbosity=2, type=1, format=LOG_FORMAT_LONG, append=False, rotating_size_kb=10*1024, rotating_num=3, keep=False):
         self._path = path
         self._verbosity = verbosity
         self._type = type
         self._append = append
         self._keep = keep
         self._format = format
+        self._rotating_size_kb = rotating_size_kb
+        self._rotating_num = rotating_num
+
+    @property
+    def path(self):
+        return self._path
+
+    @property
+    def format(self):
+        return self._format
+
+    @property
+    def type(self):
+        return self._type
+
+    @property
+    def verbosity(self):
+        return self._verbosity
+
+    @property
+    def rotating_size_kb(self):
+        return self._rotating_size_kb
+
+    @property
+    def rotating_num(self):
+        return self._rotating_num
+
+    @property
+    def append(self):
+        return self._append
+
+    @property
+    def keep(self):
+        return self._keep
 
     @property
     def json(self):
@@ -1207,39 +1219,68 @@ class LogFile:
         log_param['log_file_append'] = self._append
         log_param['log_file_format'] = self._format
         log_param['log_file_verbosity'] = self._verbosity
+        if self._type == 2:
+            log_param['log_file_rotating_size'] = self._rotating_size_kb
+            log_param['log_file_rotating_num'] = self._rotating_num
         return log_param
 
-    def read(self):
+    def read(self, index=0):
         wait_func_true(lambda: not is_file_busy(self._path), 10)
-        with open(self._path, 'rt') as f:
-            log_content = f.read()
+        if index == 0:
+            with open(self._path, 'rt') as f:
+                log_content = f.read()
+        elif self._type == 2:
+            fname, ext = splitext(self._path)
+            fpath = f'{fname}.{index}{ext}'
+            assert isfile(fpath)
+            with open(fpath, 'rt') as f:
+                log_content = f.read()
         return log_content
 
-    def remove(self):
-        if not self._keep and isfile(self._path):
+    def remove(self, index=-1):
+        if self._keep:
+            return
+        if self._type == 1 or index == 0:
+            assert isfile(self._path)
             remove(self._path)
+        elif self._type == 2:
+            fname, ext = splitext(self._path)
+            fpath = f'{fname}.{index}{ext}'
+            for f in glob(f'{fname}*{ext}'):
+                if index == -1 or f == fpath:
+                    assert isfile(f)
+                    remove(f)
+
 
 
 class LogFileFactory:
 
-    def __init__(self, basepath=getcwd(), verbosity=None, append=False, keep=False):
+    def __init__(self, basepath=getcwd(), default_verbosity=2, default_type=1,
+                 default_format=LOG_FORMAT_SHORT, default_append=False, keep=False):
         self._basepath = basepath
-        self._verbosity = verbosity
-        self._append = append
+        self._verbosity = default_verbosity
+        self._type = default_type
+        self._format = default_format
+        self._append = default_append
+        self._rotating_size_kb = 10*1024
+        self._rotating_num = 3
         self._keep = keep
 
-    def create(self, verbosity=None, format=LOG_FORMAT_LONG):
+    def create(self, verbosity=None, type=None, format=None, append=None, rotating_size_kb=None, rotating_num=None):
+        param = dict()
         while True:
             log_file_path = '%s__%d__%s.log' % (self._basepath, getpid(), time())
             if not isfile(log_file_path):
                 break
-        if self._verbosity is not None and self._verbosity < verbosity:
-            log_file_verbosity = self._verbosity
-        else:
-            log_file_verbosity = verbosity
-        log_file_format = format
-        return LogFile(log_file_path, verbosity=self._verbosity, append=self._append,
-                            keep=self._keep, format=log_file_format)
+        param['path'] = log_file_path
+        param['verbosity'] = min(self._verbosity, verbosity)
+                                if verbosity is not None else self._verbosity
+        param['format'] = format if format is not None else self._format
+        param['append'] = append if append is not None else self._append
+        param['rotating_size_kb'] = rotating_size_kb if rotating_size_kb is not None else self._append
+        param['rotating_num'] = rotating_num if rotating_num is not None else self._rotating_num
+        param['keep'] = self._keep
+        return LogFile(**param)
 
 
 @pytest.fixture
@@ -1262,7 +1303,7 @@ def log_file_factory(pytestconfig, request, accelize_drm):
     if pytestconfig.getoption("logfile") is not None:
         log_file_verbosity = pytestconfig.getoption("logfilelevel")
     else:
-        log_file_verbosity = None
+        log_file_verbosity = 2
 
     # Determine log file append mode
     log_file_append = pytestconfig.getoption("logfileappend")
@@ -1270,4 +1311,5 @@ def log_file_factory(pytestconfig, request, accelize_drm):
     # Determine keep argument
     log_file_keep = pytestconfig.getoption("logfile") is not None
 
-    return LogFileFactory(log_file_basepath, log_file_verbosity, log_file_append, log_file_keep)
+    return LogFileFactory(basepath=log_file_basepath, default_verbosity=log_file_verbosity,
+                          default_append=log_file_append, keep=log_file_keep)
