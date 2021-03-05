@@ -69,7 +69,7 @@ def test_improve_coverage_getHostAndCardInfo(accelize_drm, conf_json, cred_json,
         sleep(5)
     finally:
         drm_manager.deactivate()
-    assert search(r'Host and CSP information verbosity:\s*2', logfile.read(), IGNORECASE)
+    assert search(r'Host and card information verbosity:\s*2', logfile.read(), IGNORECASE)
     logfile.remove()
     async_cb.assert_NoError()
 

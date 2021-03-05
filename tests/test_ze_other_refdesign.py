@@ -141,6 +141,7 @@ def run_basic_test(drm_manager, activators):
 
 @pytest.mark.skip
 @pytest.mark.no_parallel
+@pytest.mark.last
 def test_vitis_2activator_100_125(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test a vitis configuration: dual clock kernels with AXI clock < DRM clock

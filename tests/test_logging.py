@@ -87,7 +87,7 @@ def test_file_verbosity(accelize_drm, conf_json, cred_json, async_handler, reque
             trace_hit += 1
         assert trace_hit == 6-verbosity
         async_cb.assert_NoError()
-        log_content.remove()
+        logfile.remove()
 
 
 def test_file_short_format(accelize_drm, conf_json, cred_json, async_handler, request,
@@ -180,7 +180,8 @@ def test_file_types(accelize_drm, conf_json, cred_json, async_handler, request,
                 driver.write_register_callback,
                 async_cb.callback
             )
-            drm_manager.set(log_message_level=verbosity)
+            assert drm_manager.get('log_file_type') == log_type
+            drm_manager.set(log_message_level=logfile.verbosity)
             assert drm_manager.get('log_message_level') == logfile.verbosity
             for _ in range(2 * int(size / len(msg)) + 1):
                 drm_manager.set(log_message=msg)
@@ -229,10 +230,10 @@ def test_file_append(accelize_drm, conf_json, cred_json, async_handler, request,
             )
         finally:
             pass
-    log_content.read()
+    log_content = logfile.read()
     assert len(findall(r'Installed versions', log_content)) == nb_loop
     async_cb.assert_NoError()
-    log_content.remove()
+    logfile.remove()
 
 
 def test_file_truncate(accelize_drm, conf_json, cred_json, async_handler, request,
@@ -378,12 +379,12 @@ def test_log_file_parameters_modifiability(accelize_drm, conf_json, cred_json, a
         # Try to modify rotating size => not authorized
         exp_value = int(logfile.rotating_size_kb / 2)
         with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-            drm_manager.set(logfile.rotating_size_kb=exp_value)
+            drm_manager.set(log_file_rotating_size=exp_value)
         assert drm_manager.get('log_file_rotating_size') == logfile.rotating_size_kb
         # Try to modify rotating num => not authorized
         exp_value = int(logfile.rotating_num / 2)
         with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-            drm_manager.set(logfile.rotating_num=exp_value)
+            drm_manager.set(log_file_rotating_num=exp_value)
         assert drm_manager.get('log_file_rotating_num') == logfile.rotating_num
     finally:
         pass
