@@ -32,17 +32,14 @@ def test_file_path(accelize_drm, conf_json, cred_json, async_handler, request,
     conf_json['settings']['log_verbosity'] = 6
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-    try:
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         assert drm_manager.get('log_file_path') == logfile.path
-    finally:
-        pass
     logfile.read()
     async_cb.assert_NoError()
     logfile.remove()
@@ -63,21 +60,18 @@ def test_file_verbosity(accelize_drm, conf_json, cred_json, async_handler, reque
         conf_json['settings'].update(logfile.json)
         conf_json['settings']['log_verbosity'] = 6
         conf_json.save()
-        try:
-            drm_manager = accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            )
+        with accelize_drm.DrmManager(
+                    conf_json.path,
+                    cred_json.path,
+                    driver.read_register_callback,
+                    driver.write_register_callback,
+                    async_cb.callback
+                ) as drm_manager:
             drm_manager.set(log_file_verbosity=verbosity)
             assert drm_manager.get('log_file_verbosity') == verbosity
             for i in sorted(level_dict.keys()):
                 drm_manager.set(log_message_level=i)
                 drm_manager.set(log_message=msg % level_dict[i])
-        finally:
-            pass
         log_content = logfile.read()
         regex = REGEX_FORMAT_LONG % (msg % '(.*)')
         trace_hit = 0
@@ -103,18 +97,15 @@ def test_file_short_format(accelize_drm, conf_json, cred_json, async_handler, re
     conf_json['settings'].update(logfile.json)
     conf_json['settings']['log_verbosity'] = 6
     conf_json.save()
-    try:
-        drm_manager = accelize_drm.DrmManager(
+    with accelize_drm.DrmManager(
                 conf_json.path,
                 cred_json.path,
                 driver.read_register_callback,
                 driver.write_register_callback,
                 async_cb.callback
-            )
+            ) as drm_manager:
         drm_manager.set(log_message_level=2)
         drm_manager.set(log_message=msg)
-    finally:
-        pass
     log_content = logfile.read()
     m = search(regex_short, log_content, MULTILINE)
     assert m is not None
@@ -136,18 +127,15 @@ def test_file_long_format(accelize_drm, conf_json, cred_json, async_handler, req
     conf_json['settings'].update(logfile.json)
     conf_json['settings']['log_verbosity'] = 6
     conf_json.save()
-    try:
-        drm_manager = accelize_drm.DrmManager(
+    with accelize_drm.DrmManager(
                 conf_json.path,
                 cred_json.path,
                 driver.read_register_callback,
                 driver.write_register_callback,
                 async_cb.callback
-            )
+            ) as drm_manager:
         drm_manager.set(log_message_level=2)
         drm_manager.set(log_message=msg)
-    finally:
-        pass
     log_content = logfile.read()
     m = search(regex_long, log_content, MULTILINE)
     assert m is not None
@@ -172,21 +160,18 @@ def test_file_types(accelize_drm, conf_json, cred_json, async_handler, request,
         conf_json['settings'].update(logfile.json)
         conf_json['settings']['log_verbosity'] = 6
         conf_json.save()
-        try:
-            drm_manager = accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            )
+        with accelize_drm.DrmManager(
+                    conf_json.path,
+                    cred_json.path,
+                    driver.read_register_callback,
+                    driver.write_register_callback,
+                    async_cb.callback
+                ) as drm_manager:
             assert drm_manager.get('log_file_type') == log_type
             drm_manager.set(log_message_level=logfile.verbosity)
             assert drm_manager.get('log_message_level') == logfile.verbosity
             for _ in range(2 * int(size / len(msg)) + 1):
                 drm_manager.set(log_message=msg)
-        finally:
-            pass
         if log_type == 0:
             assert not isfile(logfile.path)
         elif log_type == 1:
@@ -220,15 +205,13 @@ def test_file_append(accelize_drm, conf_json, cred_json, async_handler, request,
     conf_json.save()
     nb_loop = 5
     for i in range(nb_loop):
-        try:
-            drm_manager = accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            )
-        finally:
+        with accelize_drm.DrmManager(
+                    conf_json.path,
+                    cred_json.path,
+                    driver.read_register_callback,
+                    driver.write_register_callback,
+                    async_cb.callback
+                ) as drm_manager:
             pass
     log_content = logfile.read()
     assert len(findall(r'Installed versions', log_content)) == nb_loop
@@ -249,15 +232,13 @@ def test_file_truncate(accelize_drm, conf_json, cred_json, async_handler, reques
     conf_json.save()
     nb_loop = 5
     for i in range(nb_loop):
-        try:
-            drm_manager = accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            )
-        finally:
+        with accelize_drm.DrmManager(
+                    conf_json.path,
+                    cred_json.path,
+                    driver.read_register_callback,
+                    driver.write_register_callback,
+                    async_cb.callback
+                ) as drm_manager:
             pass
     log_content = logfile.read()
     assert len(findall(r'Installed versions', log_content)) == 1
@@ -278,22 +259,19 @@ def test_file_rotating_parameters(accelize_drm, conf_json, cred_json, async_hand
     conf_json['settings']['log_verbosity'] = 6
     conf_json.save()
     msg = 'This is a message'
-    try:
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         assert drm_manager.get('log_file_rotating_size') == logfile.rotating_size_kb
         assert drm_manager.get('log_file_rotating_num') == logfile.rotating_num
         drm_manager.set(log_message_level=logfile.verbosity)
         assert drm_manager.get('log_message_level') == logfile.verbosity
         for _ in range(2 * logfile.rotating_num * int(logfile.rotating_size_kb*1024 / len(msg) + 10)):
             drm_manager.set(log_message=msg)
-    finally:
-        pass
     for i in range(logfile.rotating_num+1):
         log_content = logfile.read(i)
         assert len(log_content) < 2 * logfile.rotating_size_kb*1024
@@ -316,17 +294,14 @@ def test_versions_displayed_in_log_file(accelize_drm, conf_json, cred_json, asyn
     conf_json['settings'].update(logfile.json)
     conf_json['settings']['log_verbosity'] = 6
     conf_json.save()
-    try:
-        drm_manager = accelize_drm.DrmManager(
+    with accelize_drm.DrmManager(
                 conf_json.path,
                 cred_json.path,
                 driver.read_register_callback,
                 driver.write_register_callback,
                 async_cb.callback
-            )
+            ) as drm_manager:
         assert drm_manager.get('log_file_verbosity') == logfile.verbosity
-    finally:
-        pass
     log_content = logfile.read()
     assert search(r'drmlib\s*:\s*\d+\.\d+\.\d+', log_content)
     assert search(r'libcurl\s*:(\s+[^/]+/\d+\.\d+(\.\d+)?)+', log_content)
@@ -349,14 +324,13 @@ def test_log_file_parameters_modifiability(accelize_drm, conf_json, cred_json, a
     conf_json['settings'].update(logfile.json)
     conf_json['settings']['log_verbosity'] = 6
     conf_json.save()
-    try:
-        drm_manager = accelize_drm.DrmManager(
+    with accelize_drm.DrmManager(
                 conf_json.path,
                 cred_json.path,
                 driver.read_register_callback,
                 driver.write_register_callback,
                 async_cb.callback
-            )
+            ) as drm_manager:
         assert drm_manager.get('log_file_verbosity') == logfile.verbosity
         assert drm_manager.get('log_file_format') == logfile.format
         assert drm_manager.get('log_file_path') == logfile.path
@@ -386,8 +360,6 @@ def test_log_file_parameters_modifiability(accelize_drm, conf_json, cred_json, a
         with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
             drm_manager.set(log_file_rotating_num=exp_value)
         assert drm_manager.get('log_file_rotating_num') == logfile.rotating_num
-    finally:
-        pass
     log_content = logfile.read()
     critical_list = findall(r'\[\s*critical\s*\].* Parameter \S* cannot be overwritten', log_content)
     assert len(critical_list) == 3
@@ -449,15 +421,13 @@ def test_log_file_on_existing_directory(accelize_drm, conf_json, cred_json, asyn
     conf_json['settings']['log_file_path'] = log_path
     conf_json['settings']['log_file_type'] = log_type
     conf_json.save()
-    try:
-        drm_manager = accelize_drm.DrmManager(
+    with accelize_drm.DrmManager(
                 conf_json.path,
                 cred_json.path,
                 driver.read_register_callback,
                 driver.write_register_callback,
                 async_cb.callback
-            )
-    finally:
+            ) as drm_manager:
         pass
     wait_func_true(lambda: isfile(log_path), 10)
     if isdir(log_dir):
@@ -481,18 +451,18 @@ def test_log_file_directory_creation(accelize_drm, conf_json, cred_json, async_h
         conf_json['settings']['log_file_path'] = log_path
         conf_json['settings']['log_file_type'] = log_type
         conf_json.save()
-        drm_manager = accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            )
+        with accelize_drm.DrmManager(
+                    conf_json.path,
+                    cred_json.path,
+                    driver.read_register_callback,
+                    driver.write_register_callback,
+                    async_cb.callback
+                ) as drm_manager:
+            pass
+        wait_func_true(lambda: isfile(log_path), 10)
     finally:
-        pass
-    wait_func_true(lambda: isfile(log_path), 10)
-    if isdir(log_dir):
-        rmtree(log_dir)
+        if isdir(log_dir):
+            rmtree(log_dir)
 
 
 def test_log_file_without_credential_data_in_debug(accelize_drm, conf_json, cred_json, async_handler,
@@ -505,19 +475,16 @@ def test_log_file_without_credential_data_in_debug(accelize_drm, conf_json, cred
     conf_json.reset()
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-    try:
-        drm_manager = accelize_drm.DrmManager(
+    with accelize_drm.DrmManager(
                 conf_json.path,
                 cred_json.path,
                 driver.read_register_callback,
                 driver.write_register_callback,
                 async_cb.callback
-            )
+            ) as drm_manager:
         drm_manager.activate()
         sleep(1)
         drm_manager.deactivate()
-    finally:
-        pass
     log_content = logfile.read()
     assert not search(cred_json['client_id'], log_content)
     assert not search(cred_json['client_secret'], log_content)
@@ -534,19 +501,16 @@ def test_log_file_without_credential_data_in_debug2(accelize_drm, conf_json, cre
     conf_json.reset()
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-    try:
-        drm_manager = accelize_drm.DrmManager(
+    with accelize_drm.DrmManager(
                 conf_json.path,
                 cred_json.path,
                 driver.read_register_callback,
                 driver.write_register_callback,
                 async_cb.callback
-            )
+            ) as drm_manager:
         drm_manager.activate()
         sleep(1)
         drm_manager.deactivate()
-    finally:
-        pass
     log_content = logfile.read()
     assert not search(cred_json['client_id'], log_content)
     assert not search(cred_json['client_secret'], log_content)

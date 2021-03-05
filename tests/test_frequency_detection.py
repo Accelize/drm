@@ -164,18 +164,17 @@ def test_drm_manager_frequency_detection_method1(accelize_drm, conf_json, cred_j
         logfile = log_file_factory.create(1)
         conf_json['settings'].update(logfile.json)
         conf_json.save()
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        assert drm_manager.get('frequency_detection_method') == 1
-        drm_manager.activate()
-        assert drm_manager.get('frequency_detection_method') == 1
-        drm_manager.deactivate()
-        del drm_manager
+        with accelize_drm.DrmManager(
+                    conf_json.path,
+                    cred_json.path,
+                    driver.read_register_callback,
+                    driver.write_register_callback,
+                    async_cb.callback
+                ) as drm_manager:
+            assert drm_manager.get('frequency_detection_method') == 1
+            drm_manager.activate()
+            assert drm_manager.get('frequency_detection_method') == 1
+            drm_manager.deactivate()
         log_content = logfile.read()
         assert "Use license timer counter to compute DRM frequency (method 1)" in log_content
         logfile.remove()
@@ -196,18 +195,17 @@ def test_drm_manager_frequency_detection_method2(accelize_drm, conf_json, cred_j
     logfile = log_file_factory.create(1)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    assert drm_manager.get('frequency_detection_method') == 2
-    drm_manager.activate()
-    assert drm_manager.get('frequency_detection_method') == 2
-    drm_manager.deactivate()
-    del drm_manager
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager
+        assert drm_manager.get('frequency_detection_method') == 2
+        drm_manager.activate()
+        assert drm_manager.get('frequency_detection_method') == 2
+        drm_manager.deactivate()
     log_content = logfile.read()
     assert "Use dedicated counter to compute DRM frequency (method 2)" in log_content
     assert "Frequency detection of drm_aclk counter after" in log_content
@@ -238,18 +236,17 @@ def test_drm_manager_frequency_detection_method3(accelize_drm, conf_json, cred_j
         logfile = log_file_factory.create(1)
         conf_json['settings'].update(logfile.json)
         conf_json.save()
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        assert drm_manager.get('frequency_detection_method') == 3
-        drm_manager.activate()
-        assert drm_manager.get('frequency_detection_method') == 3
-        drm_manager.deactivate()
-        del drm_manager
+        with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+            assert drm_manager.get('frequency_detection_method') == 3
+            drm_manager.activate()
+            assert drm_manager.get('frequency_detection_method') == 3
+            drm_manager.deactivate()
         log_content = logfile.read()
         assert "Use dedicated counter to compute DRM frequency (method 3)" in log_content
         assert "Frequency detection of drm_aclk counter after" in log_content
@@ -303,22 +300,20 @@ def test_drm_manager_frequency_detection_bypass(accelize_drm, conf_json, cred_js
     logfile = log_file_factory.create(1)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    assert drm_manager.get('drm_frequency') == 80
-    try:
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        assert drm_manager.get('drm_frequency') == 80
         drm_manager.activate()
         sleep(1)
         assert drm_manager.get('drm_frequency') == 80
         log_content = logfile.read()
         assert search(r'\[\s*warning\s*\] .*? DRM frequency auto-detection is disabled: .*? will be used to compute license timers', log_content)
         logfile.remove()
-    finally:
         drm_manager.deactivate()
     async_cb.assert_NoError()
     print('Test bypass_frequency_detection=true: PASS')

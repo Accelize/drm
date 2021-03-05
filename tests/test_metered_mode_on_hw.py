@@ -28,14 +28,13 @@ def test_fast_start_stop(accelize_drm, conf_json, cred_json, async_handler, log_
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    try:
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
         drm_manager.activate()
@@ -44,7 +43,6 @@ def test_fast_start_stop(accelize_drm, conf_json, cred_json, async_handler, log_
         activators.autotest(is_activated=False)
         assert sum(drm_manager.get('metered_data')) == 0
         async_cb.assert_NoError()
-    finally:
         drm_manager.deactivate()
     logfile.remove()
 
@@ -67,14 +65,13 @@ def test_metered_start_stop_short_time(accelize_drm, conf_json, cred_json, async
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    try:
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
         activators.generate_coin(1000)
@@ -88,7 +85,6 @@ def test_metered_start_stop_short_time(accelize_drm, conf_json, cred_json, async
         activators.autotest(is_activated=False)
         activators.check_coin()
         async_cb.assert_NoError()
-    finally:
         drm_manager.deactivate()
     logfile.remove()
 
@@ -109,14 +105,13 @@ def test_metered_start_stop_short_time_in_debug(accelize_drm, conf_json, cred_js
     logfile = log_file_factory.create(1)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    try:
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
         drm_manager.activate()
@@ -130,7 +125,6 @@ def test_metered_start_stop_short_time_in_debug(accelize_drm, conf_json, cred_js
         activators.autotest(is_activated=False)
         assert sum(drm_manager.get('metered_data')) == 0
         async_cb.assert_NoError()
-    finally:
         drm_manager.deactivate()
     logfile.remove()
 
@@ -153,15 +147,13 @@ def test_metered_start_stop_long_time(accelize_drm, conf_json, cred_json, async_
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    try:
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
         drm_manager.activate()
@@ -184,7 +176,6 @@ def test_metered_start_stop_long_time(accelize_drm, conf_json, cred_json, async_
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
         async_cb.assert_NoError()
-    finally:
         drm_manager.deactivate()
     logfile.remove()
 
@@ -208,14 +199,13 @@ def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, asy
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    try:
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         assert not drm_manager.get('session_status')
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
@@ -261,7 +251,6 @@ def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, asy
         activators.autotest(is_activated=False)
         assert drm_manager.get('session_id') == ''
         async_cb.assert_NoError()
-    finally:
         drm_manager.deactivate()
     logfile.remove()
 
@@ -282,15 +271,14 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    nb_pause_resume = 2
-    try:
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+        nb_pause_resume = 2
         assert not drm_manager.get('session_status')
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
@@ -336,7 +324,6 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
         activators.autotest(is_activated=False)
         assert drm_manager.get('session_id') != session_id
         async_cb.assert_NoError()
-    finally:
         drm_manager.deactivate()
     logfile.remove()
 
@@ -439,14 +426,14 @@ def test_async_on_pause(accelize_drm, conf_json, cred_json, async_handler, log_f
     logfile = log_file_factory.create(0)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-    try:
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
+
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         assert not drm_manager.get('session_status')
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
@@ -466,7 +453,6 @@ def test_async_on_pause(accelize_drm, conf_json, cred_json, async_handler, log_f
         assert drm_manager.get('license_status')
         assert drm_manager.get('session_id') == session_id
         activators.autotest(is_activated=True)
-    finally:
         drm_manager.deactivate()
     log_content = logfile.read()
     assert len(list(findall(r'"request"\s*:\s*"health"', log_content))) == 1
@@ -489,19 +475,17 @@ def test_stop_after_pause(accelize_drm, conf_json, cred_json, async_handler, log
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    assert not drm_manager.get('session_status')
-    assert not drm_manager.get('license_status')
-    activators.autotest(is_activated=False)
-    drm_manager.activate()
-    try:
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        assert not drm_manager.get('session_status')
+        assert not drm_manager.get('license_status')
+        activators.autotest(is_activated=False)
+        drm_manager.activate()
         start = datetime.now()
         lic_duration = drm_manager.get('license_duration')
         assert drm_manager.get('session_status')
@@ -514,7 +498,6 @@ def test_stop_after_pause(accelize_drm, conf_json, cred_json, async_handler, log
         assert drm_manager.get('license_status')
         assert drm_manager.get('session_id') == session_id
         activators.autotest(is_activated=True)
-    finally:
         drm_manager.deactivate()
         assert not drm_manager.get('session_status')
         assert not drm_manager.get('license_status')
@@ -545,14 +528,13 @@ def test_metering_limits_on_activate(accelize_drm, conf_json, cred_json, async_h
     conf_json.save()
     cred_json.set_user('accelize_accelerator_test_03')
     accelize_drm.clean_metering_env(cred_json, ws_admin)
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    try:
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         assert drm_manager.get('license_type') == 'Floating/Metering'
         assert not drm_manager.get('license_status')
         drm_manager.activate()
@@ -579,7 +561,6 @@ def test_metering_limits_on_activate(accelize_drm, conf_json, cred_json, async_h
         assert 'You have reached the maximum quantity of 1000. usage_unit for metered entitlement (licensed)' in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_NoError()
-    finally:
         drm_manager.deactivate()
     logfile.remove()
 
@@ -604,14 +585,13 @@ def test_metering_limits_on_licensing_thread(accelize_drm, conf_json, cred_json,
     conf_json.save()
     cred_json.set_user('accelize_accelerator_test_03')
     accelize_drm.clean_metering_env(cred_json, ws_admin)
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    try:
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         assert drm_manager.get('license_type') == 'Floating/Metering'
         assert not drm_manager.get('license_status')
         drm_manager.activate()
@@ -640,7 +620,6 @@ def test_metering_limits_on_licensing_thread(accelize_drm, conf_json, cred_json,
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
-    finally:
         drm_manager.deactivate()
     logfile.remove()
 
@@ -660,9 +639,9 @@ def test_floating_limits(accelize_drm, conf_json, cred_json, async_handler, log_
     async_cb1.reset()
 
     cred_json.set_user('accelize_accelerator_test_04')
+    logfile0 = log_file_factory.create(2)
     conf_json.reset()
-    logfile1 = log_file_factory.create(2)
-    conf_json['settings'].update(logfile.json)
+    conf_json['settings'].update(logfile0.json)
     conf_json.save()
 
     drm_manager0 = accelize_drm.DrmManager(
@@ -672,9 +651,9 @@ def test_floating_limits(accelize_drm, conf_json, cred_json, async_handler, log_
         driver0.write_register_callback,
         async_cb0.callback
     )
+    logfile1 = log_file_factory.create(2)
     conf_json.reset()
-    logfile2 = log_file_factory.create(2)
-    conf_json['settings'].update(logfile.json)
+    conf_json['settings'].update(logfile1.json)
     conf_json.save()
     drm_manager1 = accelize_drm.DrmManager(
         conf_json.path,
@@ -697,7 +676,6 @@ def test_floating_limits(accelize_drm, conf_json, cred_json, async_handler, log_
         drm_manager0.deactivate()
         assert not drm_manager0.get('license_status')
         async_cb0.assert_NoError()
-    logfile1.remove()
     try:
         drm_manager1.activate()
         assert drm_manager1.get('license_status')
@@ -710,7 +688,8 @@ def test_floating_limits(accelize_drm, conf_json, cred_json, async_handler, log_
         drm_manager1.deactivate()
         assert not drm_manager1.get('license_status')
         async_cb1.assert_NoError()
-    logfile2.remove()
+    logfile0.remove()
+    logfile1.remove()
 
 
 def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handler, log_file_factory, request):
@@ -726,14 +705,13 @@ def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handl
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
-    try:
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         activators.reset_coin()
         assert not drm_manager.get('session_status')
         assert not drm_manager.get('license_status')
@@ -761,7 +739,6 @@ def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handl
         activators.check_coin(drm_manager.get('metered_data'))
         activators.generate_coin()
         activators.check_coin(drm_manager.get('metered_data'))
-    finally:
         drm_manager.deactivate()
     assert sum(drm_manager.get('metered_data')) == 0
     log_content = logfile.read()
