@@ -1014,19 +1014,16 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     logfile = log_file_factory.create(5)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-    try:
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         drm_manager.set(log_message_level=logfile.verbosity)
         msg = 'This line should appear in log file'
         drm_manager.set(log_message=msg)
-    finally:
-        pass
     log_content = logfile.read()
     assert "critical" in log_content
     assert msg in log_content
@@ -1267,81 +1264,75 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-
-    drm_manager = None
     print()
-    try:
-        # Test when authentication url in configuration file is wrong
-        async_cb.reset()
-        cred_json.set_user('accelize_accelerator_test_02')
-        conf_json.reset()
-        conf_json['licensing']['url'] = "http://acme.com"
-        conf_json['settings']['ws_api_retry_duration'] = 5
-        conf_json['settings']['ws_retry_period_short'] = 1
-        conf_json.save()
-        assert conf_json['licensing']['url'] == "http://acme.com"
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
+
+    # Test when authentication url in configuration file is wrong
+    async_cb.reset()
+    cred_json.set_user('accelize_accelerator_test_02')
+    conf_json.reset()
+    conf_json['licensing']['url'] = "http://acme.com"
+    conf_json['settings']['ws_api_retry_duration'] = 5
+    conf_json['settings']['ws_retry_period_short'] = 1
+    conf_json.save()
+    assert conf_json['licensing']['url'] == "http://acme.com"
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
-        assert "OAuth2 Web Service error 404" in str(excinfo.value)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
-        async_cb.assert_NoError()
-        print('Test when authentication url in configuration file is wrong: PASS')
+    assert "OAuth2 Web Service error 404" in str(excinfo.value)
+    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+    async_cb.assert_NoError()
+    print('Test when authentication url in configuration file is wrong: PASS')
 
-        # Test when client_id is wrong
-        async_cb.reset()
-        conf_json.reset()
-        cred_json.set_user('accelize_accelerator_test_02')
-        orig_client_id = cred_json.client_id
-        replaced_char = 'A' if orig_client_id[0]!='A' else 'B'
-        cred_json.client_id = orig_client_id.replace(orig_client_id[0], replaced_char)
-        assert orig_client_id != cred_json.client_id
-        cred_json.save()
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
+    # Test when client_id is wrong
+    async_cb.reset()
+    conf_json.reset()
+    cred_json.set_user('accelize_accelerator_test_02')
+    orig_client_id = cred_json.client_id
+    replaced_char = 'A' if orig_client_id[0]!='A' else 'B'
+    cred_json.client_id = orig_client_id.replace(orig_client_id[0], replaced_char)
+    assert orig_client_id != cred_json.client_id
+    cred_json.save()
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
-        assert "OAuth2 Web Service error 401" in str(excinfo.value)
-        assert "invalid_client" in str(excinfo.value)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
-        async_cb.assert_NoError()
-        print('Test when client_id is wrong: PASS')
+    assert "OAuth2 Web Service error 401" in str(excinfo.value)
+    assert "invalid_client" in str(excinfo.value)
+    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+    async_cb.assert_NoError()
+    print('Test when client_id is wrong: PASS')
 
-        # Test when client_secret is wrong
-        async_cb.reset()
-        conf_json.reset()
-        cred_json.set_user('accelize_accelerator_test_02')
-        orig_client_secret = cred_json.client_secret
-        replaced_char = 'A' if orig_client_secret[0]!='A' else 'B'
-        cred_json.client_secret = orig_client_secret.replace(orig_client_secret[0], replaced_char)
-        cred_json.save()
-        assert orig_client_secret != cred_json.client_secret
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
+    # Test when client_secret is wrong
+    async_cb.reset()
+    conf_json.reset()
+    cred_json.set_user('accelize_accelerator_test_02')
+    orig_client_secret = cred_json.client_secret
+    replaced_char = 'A' if orig_client_secret[0]!='A' else 'B'
+    cred_json.client_secret = orig_client_secret.replace(orig_client_secret[0], replaced_char)
+    cred_json.save()
+    assert orig_client_secret != cred_json.client_secret
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
-        assert "OAuth2 Web Service error 401" in str(excinfo.value)
-        assert "invalid_client" in str(excinfo.value)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
-        async_cb.assert_NoError()
-        print('Test when client_secret is wrong: PASS')
-
-    finally:
-        if drm_manager:
-            drm_manager.deactivate()
+    assert "OAuth2 Web Service error 401" in str(excinfo.value)
+    assert "invalid_client" in str(excinfo.value)
+    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+    async_cb.assert_NoError()
+    print('Test when client_secret is wrong: PASS')

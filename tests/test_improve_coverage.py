@@ -57,17 +57,15 @@ def test_improve_coverage_getHostAndCardInfo(accelize_drm, conf_json, cred_json,
     conf_json['settings']['host_data_verbosity'] = 2
     conf_json.save()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    try:
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         drm_manager.activate()
         sleep(5)
-    finally:
         drm_manager.deactivate()
     assert search(r'Host and card information verbosity:\s*2', logfile.read(), IGNORECASE)
     logfile.remove()
@@ -229,16 +227,14 @@ def test_improve_coverage_getMeteringHeader(accelize_drm, conf_json, cred_json, 
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    try:
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         drm_manager.activate()
-    finally:
         drm_manager.deactivate()
     content = logfile.read()
     assert search(r'Found parameter \'udid\' of type String: return its value "([0-9a-f]+-?)+"', content, IGNORECASE)
@@ -300,17 +296,15 @@ def test_improve_coverage_setLicense(accelize_drm, conf_json, cred_json, async_h
     conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    try:
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         drm_manager.activate()
         sleep(4)
-    finally:
         drm_manager.deactivate()
     assert async_cb.was_called
     assert async_cb.errcode == accelize_drm.exceptions.DRMWSRespError.error_code
@@ -330,16 +324,14 @@ def test_improve_coverage_detectDrmFrequencyMethod1(accelize_drm, conf_json, cre
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    try:
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         drm_manager.activate()
-    finally:
         drm_manager.deactivate()
     log_content = logfile.read()
     assert search(r'Use dedicated counter to compute DRM frequency', log_content, IGNORECASE) is None
@@ -361,17 +353,15 @@ def test_improve_coverage_perform(accelize_drm, conf_json, cred_json, async_hand
     conf_json['settings']['ws_request_timeout'] = 5
     conf_json.save()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    try:
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
             drm_manager.activate()
-    finally:
         drm_manager.deactivate()
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
     assert search(r'Failed to perform HTTP request to Accelize webservice', str(excinfo.value), IGNORECASE)
