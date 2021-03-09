@@ -72,12 +72,19 @@ class FpgaDriver(_FpgaDriverBase):
         Args:
             fpga_image (str): FPGA image.
         """
-        load_image = _run(
-            ['fpga-load-local-image', '-S', str(self._fpga_slot_id),
-             '-I', fpga_image],
-            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
-        if load_image.returncode:
-            raise RuntimeError(load_image.stdout)
+        retries = 0
+        while True:
+            load_image = _run(
+                ['fpga-load-local-image', '-S', str(self._fpga_slot_id),
+                 '-I', fpga_image],
+                stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
+            if load_image.returncode == 0:
+                break
+            elif load_image.returncode == -110 and retries < 3:
+                retries += 1
+                print('Retry programming')
+            else:
+                raise RuntimeError(load_image.stdout)
 
     def _reset_fpga(self):
         """

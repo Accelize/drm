@@ -77,9 +77,10 @@ def test_uncompatibilities(accelize_drm, conf_json, cred_json, async_handler):
                 continue
             tested = True
 
-            print('Testing HDK version %s is not compatible ...' % num)
             # Program FPGA with older HDK
-            hdk = sorted((e[1] for e in versions))[0]
+            hdks = [e[1] for e in versions]
+            hdk = sorted(hdks, key=lambda x: list(map(int, x.split('.'))))[0]
+            print('Testing HDK version %s is not compatible ...' % hdk)
             image_id = refdesign.get_image_id(hdk)
             driver.program_fpga(image_id)
 
@@ -146,9 +147,12 @@ def test_compatibilities(accelize_drm, conf_json, cred_json, async_handler):
                 continue
             tested = True
 
-            print('Testing HDK version %s is compatible ...' % num)
             # Program FPGA with lastest HDK per major number
-            hdk = sorted((e[1] for e in versions))[-1]
+            hdks = [e[1] for e in versions]
+            if hdk_version in hdks:
+                hdks.remove(hdk_version)
+            hdk = sorted(hdks, key=lambda x: list(map(int, x.split('.'))))[-1]
+            print('Testing HDK version %s is compatible ...' % hdk)
             image_id = refdesign.get_image_id(hdk)
             driver.program_fpga(image_id)
 
