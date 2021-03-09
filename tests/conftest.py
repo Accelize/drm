@@ -478,12 +478,12 @@ class RefDesign:
         self.image_files = {}
         for filename in listdir(self._path):
             bname = splitext(filename)[0]
-            s = search(r'v((\d+\.)+\d+)', bname)
+            s = search(r'^v((\d+\.)+\d+)$', bname)
             if s:
                 self.image_files[s.group(1)] = realpath(join(self._path, filename))
             else:
                 self.image_files[bname] = realpath(join(self._path, filename))
-        self.hdk_versions = sorted(filter(lambda x: match(r'^\d+', x), self.image_files.keys()), key=lambda x: list(map(int, x.split('.'))))
+        self.hdk_versions = sorted(filter(lambda x: match(r'^(\d+\.)+\d+$', x), self.image_files.keys()), key=lambda x: list(map(int, x.split('.'))))
 
     def get_image_id(self, hdk_version=None):
         if hdk_version is None:
