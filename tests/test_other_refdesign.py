@@ -139,183 +139,174 @@ def run_basic_test(drm_manager, activators):
         drm_manager.deactivate()
 
 
+def test_refdesign(pytestconfig, conf_json, cred_json, async_handler, log_file_factory,
+                    driver_name, design_name, axiclk_freq_ref, drmclk_freq_ref):
+    # Create test objects
+    drm_manager, activators, logfile = create_objects(driver_name, design_name, pytestconfig,
+                                       conf_json, cred_json, async_handler, log_file_factory)
+    # Run test
+    run_basic_test(drm_manager, activators)
+    # Check result
+    log_content = logfile.read()
+    assert search(r'calling', log_content)
+    drmclk_match = search(r'Frequency detection of drm_aclk counter after .+ => estimated frequency = (\d+) MHz', log_content)
+    drmclk_freq_measure = int(drmclk_match.group(1))
+    assert drmclk_freq_ref*0.9 < drmclk_freq_measure < drmclk_freq_ref*1.1
+    axiclk_match = search(r'Frequency detection of s_axi_aclk counter after .+ => estimated frequency = (\d+) MHz', log_content)
+    axiclk_freq_measure = int(axiclk_match.group(1))
+    assert axiclk_freq_ref*0.9 < axiclk_freq_measure < axiclk_freq_ref*1.1
+    # Return logfile handler for more specific verification
+    return logfile
+
 @pytest.mark.no_parallel
 @pytest.mark.last
+def test_2activator_axi4_2clk(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
+    """
+    Test a vivado configuration: dual clock kernels
+    """
+    # Run test
+    driver_name = 'aws_f1'
+    design_name = '2activator_axi4_2clk'
+    axiclk_freq_ref = 250
+    drmclk_freq_ref = 125
+    logfile = test_refdesign(pytestconfig, conf_json, cred_json, async_handler, log_file_factory, driver_name,
+                             design_name, axiclk_freq_ref, drmclk_freq_ref)
+    logfile.remove()
+
+
+@pytest.mark.no_parallel
 def test_2activator_axi4_swap_activator(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test a vivado configuration: dual clock kernels with activators inverted on LGDN bus
     """
+    # Run test
     driver_name = 'aws_f1'
     design_name = '2activator_axi4_swap_activator'
     axiclk_freq_ref = 250
     drmclk_freq_ref = 125
-    # Create test objects
-    drm_manager, activators, logfile = create_objects(driver_name, design_name, pytestconfig,
-                                       conf_json, cred_json, async_handler, log_file_factory)
-    # Run test
-    run_basic_test(drm_manager, activators)
-    # Check result
-    log_content = logfile.read()
-    drmclk_match = search(r'Frequency detection of drm_aclk counter after .+ => estimated frequency = (\d+) MHz', log_content)
-    drmclk_freq = int(drmclk_match.group(1))
-    assert drmclk_freq_ref*0.9 < drmclk_freq < drmclk_freq_ref*1.1
-    axiclk_match = search(r'Frequency detection of s_axi_aclk counter after .+ => estimated frequency = (\d+) MHz', log_content)
-    axiclk_freq = int(axiclk_match.group(1))
-    assert axiclk_freq_ref*0.9 < axiclk_freq < axiclk_freq_ref*1.1
+    logfile = test_refdesign(pytestconfig, conf_json, cred_json, async_handler, log_file_factory, driver_name,
+                             design_name, axiclk_freq_ref, drmclk_freq_ref)
     logfile.remove()
 
 
-@pytest.mark.skip
-@pytest.mark.no_parallel
-def test_vitis_2activator_100_125(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
-    """
-    Test a vitis configuration: dual clock kernels with AXI clock < DRM clock
-    """
-    driver_name = 'aws_xrt'
-    design_name = 'vitis_2activator_100_125'
-    axiclk_freq_ref = 100
-    drmclk_freq_ref = 125
-    # Create test objects
-    drm_manager, activators, logfile = create_objects(driver_name, design_name, pytestconfig,
-                                       conf_json, cred_json, async_handler, log_file_factory)
-    # Run test
-    run_basic_test(drm_manager, activators)
-    # Check result
-    log_content = logfile.read()
-    drmclk_match = search(r'Frequency detection of drm_aclk counter after .+ => estimated frequency = (\d+) MHz', log_content)
-    drmclk_freq = int(drmclk_match.group(1))
-    assert drmclk_freq_ref*0.9 < drmclk_freq < drmclk_freq_ref*1.1
-    axiclk_match = search(r'Frequency detection of s_axi_aclk counter after .+ => estimated frequency = (\d+) MHz', log_content)
-    axiclk_freq = int(axiclk_match.group(1))
-    assert axiclk_freq_ref*0.9 < axiclk_freq < axiclk_freq_ref*1.1
-    logfile.remove()
-
-
-@pytest.mark.skip
-@pytest.mark.no_parallel
-def test_vitis_2activator_slr_200_125(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
-    """
-    Test a vitis configuration: SLR crossing with dual clock kernels
-    """
-    driver_name = 'aws_xrt'
-    design_name = 'vitis_2activator_slr_200_125'
-    axiclk_freq_ref = 200
-    drmclk_freq_ref = 125
-    # Create test objects
-    drm_manager, activators, logfile = create_objects(driver_name, design_name, pytestconfig,
-                              conf_json, cred_json, async_handler, log_file_factory)
-    # Run test
-    run_basic_test(drm_manager, activators)
-    # Check result
-    log_content = logfile.read()
-    drmclk_match = search(r'Frequency detection of drm_aclk counter after .+ => estimated frequency = (\d+) MHz', log_content)
-    drmclk_freq = int(drmclk_match.group(1))
-    assert drmclk_freq_ref*0.9 < drmclk_freq < drmclk_freq_ref*1.1
-    axiclk_match = search(r'Frequency detection of s_axi_aclk counter after .+ => estimated frequency = (\d+) MHz', log_content)
-    axiclk_freq = int(axiclk_match.group(1))
-    assert axiclk_freq_ref*0.9 < axiclk_freq < axiclk_freq_ref*1.1
-    logfile.remove()
-
-
-@pytest.mark.skip
 @pytest.mark.no_parallel
 def test_vitis_2activator_125_125(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test a vitis configuration: dual clock kernels with AXI clock = DRM clock
     """
+    # Run test
     driver_name = 'aws_xrt'
     design_name = 'vitis_2activator_125_125'
     axiclk_freq_ref = 125
     drmclk_freq_ref = 125
-    # Create test objects
-    drm_manager, activators, logfile = create_objects(driver_name, design_name, pytestconfig,
-                              conf_json, cred_json, async_handler, log_file_factory)
-    # Run test
-    run_basic_test(drm_manager, activators)
-    # Check result
-    log_content = logfile.read()
-    drmclk_match = search(r'Frequency detection of drm_aclk counter after .+ => estimated frequency = (\d+) MHz', log_content)
-    drmclk_freq = int(drmclk_match.group(1))
-    assert drmclk_freq_ref*0.9 < drmclk_freq < drmclk_freq_ref*1.1
-    axiclk_match = search(r'Frequency detection of s_axi_aclk counter after .+ => estimated frequency = (\d+) MHz', log_content)
-    axiclk_freq = int(axiclk_match.group(1))
-    assert axiclk_freq_ref*0.9 < axiclk_freq < axiclk_freq_ref*1.1
+    logfile = test_refdesign(pytestconfig, conf_json, cred_json, async_handler, log_file_factory, driver_name,
+                             design_name, axiclk_freq_ref, drmclk_freq_ref)
     logfile.remove()
 
 
-@pytest.mark.skip
 @pytest.mark.no_parallel
-def test_vitis_5activator_high_density(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
+def test_vitis_2activator_vhdl_250_125(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
     """
-    Test a vitis configuration: 5 activator and high density design
+    Test a VHDL vitis configuration: dual clock kernels with AXI clock > DRM clock
     """
-    driver_name = 'aws_xrt'
-    design_name = 'vitis_5activator_high_density'
-    axiclk_freq_ref = 125
-    drmclk_freq_ref = 125
-    # Create test objects
-    drm_manager, activators, logfile = create_objects(driver_name, design_name, pytestconfig,
-                              conf_json, cred_json, async_handler, log_file_factory)
     # Run test
-    run_basic_test(drm_manager, activators)
-    # Check result
-    log_content = logfile.read()
-    drmclk_match = search(r'Frequency detection of drm_aclk counter after .+ => estimated frequency = (\d+) MHz', log_content)
-    drmclk_freq = int(drmclk_match.group(1))
-    assert drmclk_freq_ref*0.9 < drmclk_freq < drmclk_freq_ref*1.1
-    axiclk_match = search(r'Frequency detection of s_axi_aclk counter after .+ => estimated frequency = (\d+) MHz', log_content)
-    axiclk_freq = int(axiclk_match.group(1))
-    assert axiclk_freq_ref*0.9 < axiclk_freq < axiclk_freq_ref*1.1
+    driver_name = 'aws_xrt'
+    design_name = 'vitis_2activator_vhdl_250_125'
+    axiclk_freq_ref = 250
+    drmclk_freq_ref = 125
+    logfile = test_refdesign(pytestconfig, conf_json, cred_json, async_handler, log_file_factory, driver_name,
+                             design_name, axiclk_freq_ref, drmclk_freq_ref)
     logfile.remove()
 
 
-@pytest.mark.skip
+@pytest.mark.no_parallel
+def test_vitis_2activator_100_125(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
+    """
+    Test a vitis configuration: dual clock kernels with AXI clock < DRM clock
+    """
+    # Run test
+    driver_name = 'aws_xrt'
+    design_name = 'vitis_2activator_100_125'
+    axiclk_freq_ref = 100
+    drmclk_freq_ref = 125
+    logfile = test_refdesign(pytestconfig, conf_json, cred_json, async_handler, log_file_factory, driver_name,
+                             design_name, axiclk_freq_ref, drmclk_freq_ref)
+    logfile.remove()
+
+
+@pytest.mark.no_parallel
+def test_vitis_2activator_slr_200_125(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
+    """
+    Test a vitis configuration: SLR crossing with dual clock kernels
+    """
+    # Run test
+    driver_name = 'aws_xrt'
+    design_name = 'vitis_2activator_slr_200_125'
+    axiclk_freq_ref = 200
+    drmclk_freq_ref = 125
+    logfile = test_refdesign(pytestconfig, conf_json, cred_json, async_handler, log_file_factory, driver_name,
+                             design_name, axiclk_freq_ref, drmclk_freq_ref)
+    logfile.remove()
+
+
+@pytest.mark.skip(reason='No design yet available')
+@pytest.mark.no_parallel
+def test_vitis_2activator_dualclkfifo(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
+    """
+    Test a vitis configuration: 2 activator with dual clock FIFOs on each DRM Bus stream
+    """
+    # Run test
+    driver_name = 'aws_xrt'
+    design_name = 'vitis_2activator_dualclkfifo'
+    axiclk_freq_ref = 200
+    drmclk_freq_ref = 125
+    logfile = test_refdesign(pytestconfig, conf_json, cred_json, async_handler, log_file_factory, driver_name,
+                             design_name, axiclk_freq_ref, drmclk_freq_ref)
+    logfile.remove()
+
+
 @pytest.mark.no_parallel
 def test_vitis_2activator_350_350(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test a vitis configuration: 2 activators and high frequency
     """
+    # Run test
     driver_name = 'aws_xrt'
-    design_name = 'vitis_5activator'
+    design_name = 'vitis_2activator_350_350'
     axiclk_freq_ref = 350
     drmclk_freq_ref = 350
-    # Create test objects
-    drm_manager, activators, logfile = create_objects(driver_name, design_name, pytestconfig,
-                              conf_json, cred_json, async_handler, log_file_factory)
-    # Run test
-    run_basic_test(drm_manager, activators)
-    # Check result
-    log_content = logfile.read()
-    drmclk_match = search(r'Frequency detection of drm_aclk counter after .+ => estimated frequency = (\d+) MHz', log_content)
-    drmclk_freq = int(drmclk_match.group(1))
-    assert drmclk_freq_ref*0.9 < drmclk_freq < drmclk_freq_ref*1.1
-    axiclk_match = search(r'Frequency detection of s_axi_aclk counter after .+ => estimated frequency = (\d+) MHz', log_content)
-    axiclk_freq = int(axiclk_match.group(1))
-    assert axiclk_freq_ref*0.9 < axiclk_freq < axiclk_freq_ref*1.1
+    logfile = test_refdesign(pytestconfig, conf_json, cred_json, async_handler, log_file_factory, driver_name,
+                             design_name, axiclk_freq_ref, drmclk_freq_ref)
     logfile.remove()
 
 
-@pytest.mark.skip
+@pytest.mark.skip(reason='No design yet available')
+@pytest.mark.no_parallel
+def test_vitis_5activator_high_density(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
+    """
+    Test a vitis configuration: 5 dual clock activators in a high density design
+    """
+    # Run test
+    driver_name = 'aws_xrt'
+    design_name = 'vitis_5activator_high_density'
+    axiclk_freq_ref = 100
+    drmclk_freq_ref = 125
+    logfile = test_refdesign(pytestconfig, conf_json, cred_json, async_handler, log_file_factory, driver_name,
+                             design_name, axiclk_freq_ref, drmclk_freq_ref)
+    logfile.remove()
+
+
+@pytest.mark.skip(reason='No design yet available')
 @pytest.mark.no_parallel
 def test_vitis_30activator(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test a vitis configuration: 30 activators
     """
+    # Run test
     driver_name = 'aws_xrt'
     design_name = 'vitis_30activator'
-    axiclk_freq_ref = 125
-    drmclk_freq_ref = 50
-    # Create test objects
-    drm_manager, activators, logfile = create_objects(driver_name, design_name, pytestconfig,
-                              conf_json, cred_json, async_handler, log_file_factory)
-    # Run test
-    run_basic_test(drm_manager, activators)
-    # Check result
-    log_content = logfile.read()
-    drmclk_match = search(r'Frequency detection of drm_aclk counter after .+ => estimated frequency = (\d+) MHz', log_content)
-    drmclk_freq = int(drmclk_match.group(1))
-    assert drmclk_freq_ref*0.9 < drmclk_freq < drmclk_freq_ref*1.1
-    axiclk_match = search(r'Frequency detection of s_axi_aclk counter after .+ => estimated frequency = (\d+) MHz', log_content)
-    axiclk_freq = int(axiclk_match.group(1))
-    assert axiclk_freq_ref*0.9 < axiclk_freq < axiclk_freq_ref*1.1
+    axiclk_freq_ref = 100
+    drmclk_freq_ref = 125
+    logfile = test_refdesign(pytestconfig, conf_json, cred_json, async_handler, log_file_factory, driver_name,
+                             design_name, axiclk_freq_ref, drmclk_freq_ref)
     logfile.remove()
