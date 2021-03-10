@@ -102,7 +102,7 @@ def check_bit_dispersion(value_list):
 
 @pytest.mark.security
 @pytest.mark.no_parallel
-@pytest.mark.second_to_last
+@pytest.mark.last
 def test_global_challenge_quality():
     print()
     value_json = {'requests' : list()}

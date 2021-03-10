@@ -158,8 +158,8 @@ def test_refdesign(pytestconfig, conf_json, cred_json, async_handler, log_file_f
     # Return logfile handler for more specific verification
     return logfile
 
+
 @pytest.mark.no_parallel
-@pytest.mark.last
 def test_2activator_axi4_2clk(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test a vivado configuration: dual clock kernels
