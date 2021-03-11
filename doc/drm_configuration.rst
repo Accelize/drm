@@ -77,8 +77,6 @@ From the precision of the DRM Controller frequency depends the correctness of th
 The DRM Controller is embedding a frequency self-check that returns en error if the seld-evaluated
 frequency differ from the one provided in the configuraiton file through the ``frequency_mhz``
 parameter.
-You can disable this frequency self-check by creating an additional ``bypass_frequency_detection`` in
-the ``drm`` section with the value ``true``.
 
 Node-locked parameters
 ~~~~~~~~~~~~~~~~~~~~~~
