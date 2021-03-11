@@ -89,7 +89,6 @@ token_string                   string    Read-only     -                       r
 token_validity                 uint32_t  Read-only     -                       return the validity in seconds of the current token as provided by the WOAuth2 WS
 token_time_left                uint32_t  Read-only     -                       return the number of seconds left until the current token expires
 frequency_detection_method     int32_t   Read-only     -                       return the method index used to detect the DRM frequency
-bypass_frequency_detection     bool      Read-only     true or false           return true if the frequency detection system is disabled, false otherwise
 log_file_path                  string    Read-(write)  -                       read (or write) the logging file path: default path is "./drm_lib.log". Can be set only from configuration file (no override from C/C++ code)
 log_file_type                  int32_t   Read-(write)  [0-2]                   read (or write) the logging file type 0=no logging file, 1=basic file, 2=rotation file. Set only from configuration file (no override from C code)
 log_file_rotating_size         int32_t   Read-(write)  -                       read (or write) the logging rotating file size in KBytes: default=1024 (KBytes). Set only from configuration file (no override from C code)
