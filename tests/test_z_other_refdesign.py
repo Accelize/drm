@@ -74,7 +74,7 @@ def create_objects(driver_name, design_name, pytestconfig, conf_json, cred_json,
     return (drm_manager, activators, logfile)
 
 
-def run_basic_test(drm_manager, activators):
+def execute_basic_test(drm_manager, activators):
     """
     Run a basic test with a drm lib object and its ativators
     """
@@ -138,13 +138,13 @@ def run_basic_test(drm_manager, activators):
         drm_manager.deactivate()
 
 
-def test_refdesign(pytestconfig, conf_json, cred_json, async_handler, log_file_factory,
+def run_refdesign_test(pytestconfig, conf_json, cred_json, async_handler, log_file_factory,
                     driver_name, design_name, axiclk_freq_ref, drmclk_freq_ref):
     # Create test objects
     drm_manager, activators, logfile = create_objects(driver_name, design_name, pytestconfig,
                                        conf_json, cred_json, async_handler, log_file_factory)
     # Run test
-    run_basic_test(drm_manager, activators)
+    execute_basic_test(drm_manager, activators)
     # Check result
     log_content = logfile.read()
     assert search(r'calling', log_content)
@@ -168,8 +168,8 @@ def test_2activator_axi4_2clk(pytestconfig, conf_json, cred_json, async_handler,
     design_name = '2activator_axi4_2clk'
     axiclk_freq_ref = 250
     drmclk_freq_ref = 125
-    logfile = test_refdesign(pytestconfig, conf_json, cred_json, async_handler, log_file_factory, driver_name,
-                             design_name, axiclk_freq_ref, drmclk_freq_ref)
+    logfile = run_refdesign_test(pytestconfig, conf_json, cred_json, async_handler, log_file_factory,
+                             driver_name, design_name, axiclk_freq_ref, drmclk_freq_ref)
     logfile.remove()
 
 
@@ -183,8 +183,8 @@ def test_2activator_axi4_swap_activator(pytestconfig, conf_json, cred_json, asyn
     design_name = '2activator_axi4_swap_activator'
     axiclk_freq_ref = 250
     drmclk_freq_ref = 125
-    logfile = test_refdesign(pytestconfig, conf_json, cred_json, async_handler, log_file_factory, driver_name,
-                             design_name, axiclk_freq_ref, drmclk_freq_ref)
+    logfile = run_refdesign_test(pytestconfig, conf_json, cred_json, async_handler, log_file_factory,
+                             driver_name, design_name, axiclk_freq_ref, drmclk_freq_ref)
     logfile.remove()
 
 
@@ -198,8 +198,8 @@ def test_vitis_2activator_125_125(pytestconfig, conf_json, cred_json, async_hand
     design_name = 'vitis_2activator_125_125'
     axiclk_freq_ref = 125
     drmclk_freq_ref = 125
-    logfile = test_refdesign(pytestconfig, conf_json, cred_json, async_handler, log_file_factory, driver_name,
-                             design_name, axiclk_freq_ref, drmclk_freq_ref)
+    logfile = run_refdesign_test(pytestconfig, conf_json, cred_json, async_handler, log_file_factory,
+                             driver_name, design_name, axiclk_freq_ref, drmclk_freq_ref)
     logfile.remove()
 
 
@@ -213,8 +213,8 @@ def test_vitis_2activator_vhdl_250_125(pytestconfig, conf_json, cred_json, async
     design_name = 'vitis_2activator_vhdl_250_125'
     axiclk_freq_ref = 250
     drmclk_freq_ref = 125
-    logfile = test_refdesign(pytestconfig, conf_json, cred_json, async_handler, log_file_factory, driver_name,
-                             design_name, axiclk_freq_ref, drmclk_freq_ref)
+    logfile = run_refdesign_test(pytestconfig, conf_json, cred_json, async_handler, log_file_factory,
+                             driver_name, design_name, axiclk_freq_ref, drmclk_freq_ref)
     logfile.remove()
 
 
@@ -228,8 +228,8 @@ def test_vitis_2activator_100_125(pytestconfig, conf_json, cred_json, async_hand
     design_name = 'vitis_2activator_100_125'
     axiclk_freq_ref = 100
     drmclk_freq_ref = 125
-    logfile = test_refdesign(pytestconfig, conf_json, cred_json, async_handler, log_file_factory, driver_name,
-                             design_name, axiclk_freq_ref, drmclk_freq_ref)
+    logfile = run_refdesign_test(pytestconfig, conf_json, cred_json, async_handler, log_file_factory,
+                             driver_name, design_name, axiclk_freq_ref, drmclk_freq_ref)
     logfile.remove()
 
 
@@ -243,8 +243,8 @@ def test_vitis_2activator_slr_200_125(pytestconfig, conf_json, cred_json, async_
     design_name = 'vitis_2activator_slr_200_125'
     axiclk_freq_ref = 200
     drmclk_freq_ref = 125
-    logfile = test_refdesign(pytestconfig, conf_json, cred_json, async_handler, log_file_factory, driver_name,
-                             design_name, axiclk_freq_ref, drmclk_freq_ref)
+    logfile = run_refdesign_test(pytestconfig, conf_json, cred_json, async_handler, log_file_factory,
+                             driver_name, design_name, axiclk_freq_ref, drmclk_freq_ref)
     logfile.remove()
 
 
@@ -259,8 +259,8 @@ def test_vitis_2activator_dualclkfifo(pytestconfig, conf_json, cred_json, async_
     design_name = 'vitis_2activator_dualclkfifo'
     axiclk_freq_ref = 200
     drmclk_freq_ref = 125
-    logfile = test_refdesign(pytestconfig, conf_json, cred_json, async_handler, log_file_factory, driver_name,
-                             design_name, axiclk_freq_ref, drmclk_freq_ref)
+    logfile = run_refdesign_test(pytestconfig, conf_json, cred_json, async_handler, log_file_factory,
+                             driver_name, design_name, axiclk_freq_ref, drmclk_freq_ref)
     logfile.remove()
 
 
@@ -274,8 +274,8 @@ def test_vitis_2activator_350_350(pytestconfig, conf_json, cred_json, async_hand
     design_name = 'vitis_2activator_350_350'
     axiclk_freq_ref = 350
     drmclk_freq_ref = 350
-    logfile = test_refdesign(pytestconfig, conf_json, cred_json, async_handler, log_file_factory, driver_name,
-                             design_name, axiclk_freq_ref, drmclk_freq_ref)
+    logfile = run_refdesign_test(pytestconfig, conf_json, cred_json, async_handler, log_file_factory,
+                             driver_name, design_name, axiclk_freq_ref, drmclk_freq_ref)
     logfile.remove()
 
 
@@ -290,8 +290,8 @@ def test_vitis_5activator_high_density(pytestconfig, conf_json, cred_json, async
     design_name = 'vitis_5activator_high_density'
     axiclk_freq_ref = 100
     drmclk_freq_ref = 125
-    logfile = test_refdesign(pytestconfig, conf_json, cred_json, async_handler, log_file_factory, driver_name,
-                             design_name, axiclk_freq_ref, drmclk_freq_ref)
+    logfile = run_refdesign_test(pytestconfig, conf_json, cred_json, async_handler, log_file_factory,
+                             driver_name, design_name, axiclk_freq_ref, drmclk_freq_ref)
     logfile.remove()
 
 
@@ -306,6 +306,6 @@ def test_vitis_30activator(pytestconfig, conf_json, cred_json, async_handler, lo
     design_name = 'vitis_30activator'
     axiclk_freq_ref = 100
     drmclk_freq_ref = 125
-    logfile = test_refdesign(pytestconfig, conf_json, cred_json, async_handler, log_file_factory, driver_name,
-                             design_name, axiclk_freq_ref, drmclk_freq_ref)
+    logfile = run_refdesign_test(pytestconfig, conf_json, cred_json, async_handler, log_file_factory,
+                             driver_name, design_name, axiclk_freq_ref, drmclk_freq_ref)
     logfile.remove()
