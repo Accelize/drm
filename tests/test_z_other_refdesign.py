@@ -37,7 +37,6 @@ def create_objects(driver_name, design_name, pytestconfig, conf_json, cred_json,
     ref_designs = conftest.RefDesign(join(SCRIPT_DIR, 'refdesigns', driver_name))
     try:
         fpga_image = ref_designs.get_image_id(design_name)
-        assert design_name in fpga_image
     except:
         pytest.skip(f"Could not find refesign name '{design_name}' for driver '{driver_name}'")
     drm_ctrl_base_addr = pytestconfig.getoption("drm_controller_base_address")
