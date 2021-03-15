@@ -12,14 +12,14 @@ from os.path import realpath, isfile
 from tests.conftest import wait_deadline, wait_func_true
 
 
-def test_fast_start_stop(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
+def test_fast_start_stop(fpga_env, accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test no error occurs witha quick start/stop
     """
-    driver = accelize_drm.pytest_fpga_driver[0]
+    driver = fpga_env.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    activators = accelize_drm.pytest_fpga_activators[0]
+    activators = fpga_env.pytest_fpga_activators[0]
     activators.reset_coin()
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_02')
@@ -46,7 +46,7 @@ def test_fast_start_stop(accelize_drm, conf_json, cred_json, async_handler, log_
         drm_manager.deactivate()
     logfile.remove()
 
-
+'''
 @pytest.mark.minimum
 @pytest.mark.hwtst
 def test_metered_start_stop_short_time(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
@@ -745,4 +745,4 @@ def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handl
     assert len(list(findall(r'warning\b.*\bCannot access metering data when no session is running', log_content))) == 2
     async_cb.assert_NoError()
     logfile.remove()
-
+'''
