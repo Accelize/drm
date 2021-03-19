@@ -157,7 +157,7 @@ def run_refdesign_test(pytestconfig, conf_json, cred_json, async_handler, log_fi
     # Return logfile handler for more specific verification
     return logfile
 
-
+@pytest.mark.skip(reason='Not yet ready')
 @pytest.mark.no_parallel
 def test_2activator_axi4_2clk(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
     """
@@ -172,7 +172,7 @@ def test_2activator_axi4_2clk(pytestconfig, conf_json, cred_json, async_handler,
                              driver_name, design_name, axiclk_freq_ref, drmclk_freq_ref)
     logfile.remove()
 
-
+@pytest.mark.skip(reason='Not yet ready')
 @pytest.mark.no_parallel
 def test_2activator_axi4_swap_activator(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
     """
@@ -187,7 +187,7 @@ def test_2activator_axi4_swap_activator(pytestconfig, conf_json, cred_json, asyn
                              driver_name, design_name, axiclk_freq_ref, drmclk_freq_ref)
     logfile.remove()
 
-
+@pytest.mark.skip(reason='Not yet ready')
 @pytest.mark.no_parallel
 def test_vitis_2activator_125_125(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
     """
@@ -202,7 +202,7 @@ def test_vitis_2activator_125_125(pytestconfig, conf_json, cred_json, async_hand
                              driver_name, design_name, axiclk_freq_ref, drmclk_freq_ref)
     logfile.remove()
 
-
+@pytest.mark.skip(reason='Not yet ready')
 @pytest.mark.no_parallel
 def test_vitis_2activator_vhdl_250_125(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
     """
@@ -217,7 +217,7 @@ def test_vitis_2activator_vhdl_250_125(pytestconfig, conf_json, cred_json, async
                              driver_name, design_name, axiclk_freq_ref, drmclk_freq_ref)
     logfile.remove()
 
-
+@pytest.mark.skip(reason='Not yet ready')
 @pytest.mark.no_parallel
 def test_vitis_2activator_100_125(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
     """
@@ -232,7 +232,7 @@ def test_vitis_2activator_100_125(pytestconfig, conf_json, cred_json, async_hand
                              driver_name, design_name, axiclk_freq_ref, drmclk_freq_ref)
     logfile.remove()
 
-
+@pytest.mark.skip(reason='Not yet ready')
 @pytest.mark.no_parallel
 def test_vitis_2activator_slr_200_125(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
     """
@@ -263,7 +263,7 @@ def test_vitis_2activator_dualclkfifo(pytestconfig, conf_json, cred_json, async_
                              driver_name, design_name, axiclk_freq_ref, drmclk_freq_ref)
     logfile.remove()
 
-
+@pytest.mark.skip(reason='Not yet ready')
 @pytest.mark.no_parallel
 def test_vitis_2activator_350_350(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
     """
