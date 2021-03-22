@@ -13,10 +13,14 @@ from tests.conftest import wait_deadline, wait_func_true
 
 
 @pytest.fixture(autouse=True, scope='module')
-def select_fpga_env(fpga_env):
+def select_fpga_env(fpga_env_factory, accelize_drm):
+    fpga_env_factory.load()
+    accelize_drm.pytest_fpga_env = fpga_env_factory
+    '''
     driver = accelize_drm.pytest_fpga_driver[0]
     fpga_image_bkp = driver.fpga_image
     driver.clear_fpga()
+    '''
     '''
     yield
     driver.clear_fpga()
@@ -25,14 +29,14 @@ def select_fpga_env(fpga_env):
 
 
 
-def test_fast_start_stop(fpga_env, accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
+def test_fast_start_stop(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test no error occurs witha quick start/stop
     """
-    driver = fpga_env.pytest_fpga_driver[0]
+    driver = accelize.pytest_fpga_env.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    activators = fpga_env.pytest_fpga_activators[0]
+    activators = accelize.pytest_fpga_env.pytest_fpga_activators[0]
     activators.reset_coin()
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_02')
