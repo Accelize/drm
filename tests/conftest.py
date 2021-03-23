@@ -756,8 +756,9 @@ class FpgaEnv:
             # Use user defined slot
             fpga_slot_id = [pytestconfig.getoption("fpga_slot_id")]
 
-        # Get DRM Ctrl base address
+        # Get DRM IPs base addresses
         drm_ctrl_base_addr = pytestconfig.getoption("drm_controller_base_address")
+        drm_actr_base_addr = pytestconfig.getoption("activator_base_address")
 
         # Get addition options
         no_clear_fpga = pytestconfig.getoption("no_clear_fpga")
@@ -774,6 +775,7 @@ class FpgaEnv:
         self.pytest_fpga_image = fpga_image
         self.pytest_hdk_version = hdk_version
         self.pytest_drm_ctrl_base_addr = drm_ctrl_base_addr
+        self.pytest_drm_actr_base_addr = drm_actr_base_addr
         self.pytest_no_clear_fpga = no_clear_fpga
         self.pytest_artifacts_dir = pytest_artifacts_dir
         self.pytest_params = param2dict(pytestconfig.getoption("params"))
@@ -795,7 +797,7 @@ class FpgaEnv:
         # Get Ref Designs available
         ref_designs = RefDesign(join(build_source_dir, 'tests', 'refdesigns', driver_name))
 
-        if self.pytest_fpga_image.lower() == 'default' or self.pytest_hdk_version:
+        if self.pytest_fpga_image is None or self.pytest_hdk_version:
             # Use specified HDK version
             if self.pytest_hdk_version:
                 self.pytest_hdk_version = self.pytest_hdk_version.strip('v')
@@ -821,8 +823,8 @@ class FpgaEnv:
                 fpga_driver.append(
                     fpga_driver_cls( fpga_slot_id=slot_id,
                         fpga_image=self.pytest_fpga_image,
-                        drm_ctrl_base_addr=drm_ctrl_base_addr,
-                        no_clear_fpga=no_clear_fpga
+                        drm_ctrl_base_addr=self.pytest_drm_ctrl_base_addr,
+                        no_clear_fpga=self.pytest_no_clear_fpga
                     )
                 )
             except:
@@ -831,11 +833,10 @@ class FpgaEnv:
         # Define Activator access per slot
         fpga_activators = list()
         for driver in fpga_driver:
-            base_address = pytestconfig.getoption("activator_base_address")
-            fpga_activators.append(findActivators(driver, base_address))
+            fpga_activators.append(findActivators(driver, self.pytest_drm_actr_base_addr))
 
         # Get frequency detection version
-        freq_version = fpga_driver[0].read_register(drm_ctrl_base_addr + 0xFFF0)
+        freq_version = fpga_driver[0].read_register(self.pytest_drm_ctrl_base_addr + 0xFFF0)
         print('Frequency detection version: 0x%08X' % freq_version)
 
         # Store some values for access in tests
