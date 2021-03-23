@@ -696,7 +696,6 @@ def accelize_drm(pytestconfig):
     backend = pytestconfig.getoption("backend")
     if backend == 'c':
         environ['ACCELIZE_DRM_PYTHON_USE_C'] = '1'
-
     elif backend != 'c++':
         raise ValueError('Invalid value for "--backend"')
 
@@ -724,9 +723,6 @@ def accelize_drm(pytestconfig):
 
 class FpgaEnv:
     def __init__(self, pytestconfig):
-        # Get FPGA driver
-        from tests.fpga_drivers import get_driver
-
         # Get FPGA image
         fpga_image = pytestconfig.getoption("fpga_image")
         hdk_version = pytestconfig.getoption("hdk_version")
@@ -740,15 +736,8 @@ class FpgaEnv:
             raise ValueError(
                 'Mutually exclusive options: Please set "fpga_driver" or "fpga_image", but not both')
 
-        # Select C or C++ based on environment and import Python Accelize Library
-        backend = pytestconfig.getoption("backend")
-        if backend == 'c':
-            environ['ACCELIZE_DRM_PYTHON_USE_C'] = '1'
-
-        elif backend != 'c++':
-            raise ValueError('Invalid value for "--backend"')
-
         # Define or get FPGA Slot
+        backend = pytestconfig.getoption("backend")
         if pytestconfig.getoption('integration'):
             # Integration tests requires 2 slots
             fpga_slot_id = [0, 1]
@@ -759,30 +748,11 @@ class FpgaEnv:
             # Use user defined slot
             fpga_slot_id = [pytestconfig.getoption("fpga_slot_id")]
 
-        # Initialize FPGA
-        no_clear_fpga = pytestconfig.getoption("no_clear_fpga")
+        # Get DRM Ctrl base address
         drm_ctrl_base_addr = pytestconfig.getoption("drm_controller_base_address")
-        print('FPGA SLOT ID:', fpga_slot_id)
-        print('FPGA IMAGE:', basename(fpga_image))
-        print('HDK VERSION:', hdk_version)
-        fpga_driver = list()
-        for slot_id in fpga_slot_id:
-            try:
-                fpga_driver.append(
-                    fpga_driver_cls( fpga_slot_id=slot_id,
-                        fpga_image=fpga_image,
-                        drm_ctrl_base_addr=drm_ctrl_base_addr,
-                        no_clear_fpga=no_clear_fpga
-                    )
-                )
-            except:
-                raise IOError("Failed to load driver on slot %d" % slot_id)
 
-        # Define Activator access per slot
-        fpga_activators = list()
-        for driver in fpga_driver:
-            base_address = pytestconfig.getoption("activator_base_address")
-            fpga_activators.append(findActivators(driver, base_address))
+        # Get addition options
+        no_clear_fpga = pytestconfig.getoption("no_clear_fpga")
 
         # Create pytest artifacts directory
         pytest_artifacts_dir = join(pytestconfig.getoption("artifacts_dir"), 'pytest_artifacts')
@@ -790,25 +760,15 @@ class FpgaEnv:
             makedirs(pytest_artifacts_dir)
         print('pytest artifacts directory: ', pytest_artifacts_dir)
 
-        # Get frequency detection version
-        freq_version = fpga_driver[0].read_register(drm_ctrl_base_addr + 0xFFF0)
-        print('Frequency detection version: 0x%08X' % freq_version)
-
         # Store some values for access in tests
-        self.pytest_freq_detection_version = freq_version
-        self.pytest_fpga_driver = fpga_driver
         self.pytest_fpga_driver_name = driver_name
         self.pytest_fpga_slot_id = fpga_slot_id
         self.pytest_fpga_image = fpga_image
         self.pytest_hdk_version = hdk_version
-        self.pytest_fpga_activators = fpga_activators
-        self.pytest_ref_designs = ref_designs
-        self.clean_nodelock_env = lambda *kargs, **kwargs: clean_nodelock_env(
-            *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
-        self.clean_metering_env = lambda *kargs, **kwargs: clean_metering_env(
-            *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
-        self.pytest_params = param2dict(pytestconfig.getoption("params"))
+        self.pytest_drm_ctrl_base_addr = drm_ctrl_base_addr
+        self.pytest_no_clear_fpga = no_clear_fpga
         self.pytest_artifacts_dir = pytest_artifacts_dir
+        self.pytest_params = param2dict(pytestconfig.getoption("params"))
 
     def load(self, driver_name=None):
         # Get FPGA driver
@@ -816,19 +776,7 @@ class FpgaEnv:
 
         # Get FPGA driver
         if driver_name is None:
-            self.driver_name = pytestconfig.getoption("fpga_driver")
-        if driver_name and fpga_image.lower() != 'default':
-            raise ValueError(
-                'Mutually exclusive options: Please set "fpga_driver" or "fpga_image", but not both')
-        if fpga_image.lower() != 'default':
-            if fpga_image.endswith('.awsxclbin'):
-                driver_name = 'aws_xrt'
-            elif search(r'agfi-[0-9a-f]+', fpga_image, IGNORECASE):
-                driver_name = 'aws_f1'
-            else:
-                raise ValueError("Unsupported 'fpga_image' option")
-        elif driver_name is None:
-            driver_name = 'aws_f1'
+            driver_name = self.pytest_fpga_driver_name
         fpga_driver_cls = get_driver(driver_name)
 
         # Get cmake building directory
@@ -839,52 +787,32 @@ class FpgaEnv:
         # Get Ref Designs available
         ref_designs = RefDesign(join(build_source_dir, 'tests', 'refdesigns', driver_name))
 
-        if fpga_image.lower() == 'default' or hdk_version:
+        if self.pytest_fpga_image.lower() == 'default' or self.pytest_hdk_version:
             # Use specified HDK version
-            if hdk_version:
-                hdk_version = hdk_version.strip('v')
-                if hdk_version not in ref_designs.hdk_versions:
+            if self.pytest_hdk_version:
+                self.pytest_hdk_version = self.pytest_hdk_version.strip('v')
+                if self.pytest_hdk_version not in ref_designs.hdk_versions:
                     raise ValueError((
                         'HDK version %s is not supported. '
                         'Available versions are: %s') % (
-                        hdk_version, ", ".join(ref_designs.hdk_versions)))
+                        self.pytest_hdk_version, ", ".join(ref_designs.hdk_versions)))
             # Get last HDK version as default
             else:
-                hdk_version = ref_designs.hdk_versions[-1]
+                self.pytest_hdk_version = ref_designs.hdk_versions[-1]
             # Get FPGA image from HDK version
-            fpga_image = ref_designs.get_image_id(hdk_version)
-
-        # Select C or C++ based on environment and import Python Accelize Library
-        backend = pytestconfig.getoption("backend")
-        if backend == 'c':
-            environ['ACCELIZE_DRM_PYTHON_USE_C'] = '1'
-
-        elif backend != 'c++':
-            raise ValueError('Invalid value for "--backend"')
-
-        # Define or get FPGA Slot
-        if pytestconfig.getoption('integration'):
-            # Integration tests requires 2 slots
-            fpga_slot_id = [0, 1]
-        elif environ.get('TOX_PARALLEL_ENV'):
-            # Define FPGA slot for Tox parallel execution
-            fpga_slot_id = [0 if backend == 'c' else 1]
-        else:
-            # Use user defined slot
-            fpga_slot_id = [pytestconfig.getoption("fpga_slot_id")]
+            self.pytest_fpga_image = ref_designs.get_image_id(self.pytest_hdk_version)
 
         # Initialize FPGA
-        no_clear_fpga = pytestconfig.getoption("no_clear_fpga")
-        drm_ctrl_base_addr = pytestconfig.getoption("drm_controller_base_address")
-        print('FPGA SLOT ID:', fpga_slot_id)
-        print('FPGA IMAGE:', basename(fpga_image))
-        print('HDK VERSION:', hdk_version)
+        print('FPGA SLOT ID:', self.pytest_fpga_slot_id)
+        print('FPGA IMAGE:', basename(self.pytest_fpga_image))
+        print('HDK VERSION:', self.pytest_hdk_version)
         fpga_driver = list()
-        for slot_id in fpga_slot_id:
+        fpga_driver_cls = get_driver(driver_name)
+        for slot_id in self.pytest_fpga_slot_id:
             try:
                 fpga_driver.append(
                     fpga_driver_cls( fpga_slot_id=slot_id,
-                        fpga_image=fpga_image,
+                        fpga_image=self.pytest_fpga_image,
                         drm_ctrl_base_addr=drm_ctrl_base_addr,
                         no_clear_fpga=no_clear_fpga
                     )
@@ -898,31 +826,20 @@ class FpgaEnv:
             base_address = pytestconfig.getoption("activator_base_address")
             fpga_activators.append(findActivators(driver, base_address))
 
-        # Create pytest artifacts directory
-        pytest_artifacts_dir = join(pytestconfig.getoption("artifacts_dir"), 'pytest_artifacts')
-        if not isdir(pytest_artifacts_dir):
-            makedirs(pytest_artifacts_dir)
-        print('pytest artifacts directory: ', pytest_artifacts_dir)
-
         # Get frequency detection version
         freq_version = fpga_driver[0].read_register(drm_ctrl_base_addr + 0xFFF0)
         print('Frequency detection version: 0x%08X' % freq_version)
 
         # Store some values for access in tests
-        self.obj.pytest_freq_detection_version = freq_version
-        self.obj.pytest_fpga_driver = fpga_driver
-        self.obj.pytest_fpga_driver_name = driver_name
-        self.obj.pytest_fpga_slot_id = fpga_slot_id
-        self.obj.pytest_fpga_image = fpga_image
-        self.obj.pytest_hdk_version = hdk_version
-        self.obj.pytest_fpga_activators = fpga_activators
-        self.obj.pytest_ref_designs = ref_designs
-        self.obj.clean_nodelock_env = lambda *kargs, **kwargs: clean_nodelock_env(
+        self.pytest_freq_detection_version = freq_version
+        self.pytest_fpga_driver = fpga_driver
+        self.pytest_fpga_driver_name = driver_name
+        self.pytest_fpga_activators = fpga_activators
+        self.pytest_ref_designs = ref_designs
+        self.clean_nodelock_env = lambda *kargs, **kwargs: clean_nodelock_env(
             *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
         self.clean_metering_env = lambda *kargs, **kwargs: clean_metering_env(
             *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
-        self.pytest_params = param2dict(pytestconfig.getoption("params"))
-        self.pytest_artifacts_dir = pytest_artifacts_dir
 
 
 
