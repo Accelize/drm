@@ -182,7 +182,7 @@ def pytest_addoption(parser):
         "--proxy_debug", action="store_true", default=False,
         help='Activate debug for proxy')
     parser.addoption(
-        "--fpga_image", default="default",
+        "--fpga_image", default=None,
         help='Select FPGA image to program the FPGA with. '
              'By default, use default FPGA image for the selected driver and '
              'last HDK version.')
@@ -726,15 +726,23 @@ class FpgaEnv:
         # Get FPGA image
         fpga_image = pytestconfig.getoption("fpga_image")
         hdk_version = pytestconfig.getoption("hdk_version")
-        if hdk_version and fpga_image.lower() != 'default':
+        if hdk_version and fpga_image:
             raise ValueError(
                 'Mutually exclusive options: Please set "hdk_version" or "fpga_image", but not both')
-
         # Get FPGA driver
         driver_name = pytestconfig.getoption("fpga_driver")
-        if driver_name and fpga_image.lower() != 'default':
+        if driver_name and fpga_image:
             raise ValueError(
                 'Mutually exclusive options: Please set "fpga_driver" or "fpga_image", but not both')
+        if fpga_image:
+            if fpga_image.endswith('.awsxclbin'):
+                driver_name = 'aws_xrt'
+            elif search(r'agfi-[0-9a-f]+', fpga_image, IGNORECASE):
+                driver_name = 'aws_f1'
+            else:
+                raise ValueError("Unsupported 'fpga_image' option")
+        elif driver_name is None:
+            driver_name = 'aws_f1'
 
         # Define or get FPGA Slot
         backend = pytestconfig.getoption("backend")
