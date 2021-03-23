@@ -23,8 +23,8 @@ def select_fpga_env(fpga_env_factory, accelize_drm):
     accelize_drm.pytest_fpga_env = fpga_env_factory
 
 
-def run_test_on_design(accelize_drm, driver_name, conf_json, cred_json, async_handler, log_file_factory,
-                       axiclk_freq_ref, drmclk_freq_ref):
+def run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
+                       log_file_factory, axiclk_freq_ref, drmclk_freq_ref):
 
     # Program board with design
     driver = accelize_drm.pytest_fpga_env.pytest_fpga_driver[0]
@@ -158,8 +158,8 @@ def test_vitis_2activator_125_125(accelize_drm, conf_json, cred_json, async_hand
     design_name = 'vitis_2activator_125_125'
     axiclk_freq_ref = 125
     drmclk_freq_ref = 125
-    log_content = run_test_on_design(accelize_drm, driver_name, conf_json, cred_json, async_handler,
-                                    log_file_factory, design_name, axiclk_freq_ref, drmclk_freq_ref)
+    log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
+                                    log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
 
 
 
@@ -172,8 +172,8 @@ def test_vitis_2activator_vhdl_250_125(pytestconfig, conf_json, cred_json, async
     design_name = 'vitis_2activator_vhdl_250_125'
     axiclk_freq_ref = 250
     drmclk_freq_ref = 125
-    log_content = run_test_on_design(accelize_drm, driver_name, conf_json, cred_json, async_handler,
-                                 log_file_factory, design_name, axiclk_freq_ref, drmclk_freq_ref)
+    log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
+                                    log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
 
 
 @pytest.mark.no_parallel
@@ -185,8 +185,8 @@ def test_vitis_2activator_100_125(pytestconfig, conf_json, cred_json, async_hand
     design_name = 'vitis_2activator_100_125'
     axiclk_freq_ref = 100
     drmclk_freq_ref = 125
-    log_content = run_test_on_design(accelize_drm, driver_name, conf_json, cred_json, async_handler,
-                                 log_file_factory, design_name, axiclk_freq_ref, drmclk_freq_ref)
+    log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
+                                    log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
 
 
 @pytest.mark.no_parallel
@@ -198,8 +198,8 @@ def test_vitis_2activator_slr_200_125(pytestconfig, conf_json, cred_json, async_
     design_name = 'vitis_2activator_slr_200_125'
     axiclk_freq_ref = 200
     drmclk_freq_ref = 125
-    log_content = run_test_on_design(accelize_drm, driver_name, conf_json, cred_json, async_handler,
-                                 log_file_factory, design_name, axiclk_freq_ref, drmclk_freq_ref)
+    log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
+                                    log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
 
 
 @pytest.mark.skip(reason='No design yet available')
@@ -212,8 +212,8 @@ def test_vitis_2activator_dualclkfifo(pytestconfig, conf_json, cred_json, async_
     design_name = 'vitis_2activator_dualclkfifo'
     axiclk_freq_ref = 200
     drmclk_freq_ref = 125
-    log_content = run_test_on_design(accelize_drm, driver_name, conf_json, cred_json, async_handler,
-                                 log_file_factory, design_name, axiclk_freq_ref, drmclk_freq_ref)
+    log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
+                                    log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
 
 
 @pytest.mark.no_parallel
@@ -225,8 +225,8 @@ def test_vitis_2activator_350_350(pytestconfig, conf_json, cred_json, async_hand
     design_name = 'vitis_2activator_350_350'
     axiclk_freq_ref = 350
     drmclk_freq_ref = 350
-    log_content = run_test_on_design(accelize_drm, driver_name, conf_json, cred_json, async_handler,
-                                 log_file_factory, design_name, axiclk_freq_ref, drmclk_freq_ref)
+    log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
+                                    log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
 
 
 @pytest.mark.skip(reason='No design yet available')
@@ -239,8 +239,8 @@ def test_vitis_5activator_high_density(pytestconfig, conf_json, cred_json, async
     design_name = 'vitis_5activator_high_density'
     axiclk_freq_ref = 100
     drmclk_freq_ref = 125
-    log_content = run_test_on_design(accelize_drm, driver_name, conf_json, cred_json, async_handler,
-                                 log_file_factory, design_name, axiclk_freq_ref, drmclk_freq_ref)
+    log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
+                                    log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
 
 
 @pytest.mark.skip(reason='No design yet available')
@@ -253,5 +253,5 @@ def test_vitis_30activator(pytestconfig, conf_json, cred_json, async_handler, lo
     design_name = 'vitis_30activator'
     axiclk_freq_ref = 100
     drmclk_freq_ref = 125
-    log_content = run_test_on_design(accelize_drm, driver_name, conf_json, cred_json, async_handler,
-                                 log_file_factory, design_name, axiclk_freq_ref, drmclk_freq_ref)
+    log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
+                                    log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
