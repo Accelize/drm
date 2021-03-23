@@ -70,9 +70,9 @@ def test_metered_start_stop_short_time(accelize_drm, conf_json, cred_json, async
     """
     Test no error occurs in normal start/stop metering mode during a short period of time
     """
-    driver = accelize_drm.pytest_fpga_driver[0]
+    driver = accelize_drm.pytest_fpga_env.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-    activators = accelize_drm.pytest_fpga_activators[0]
+    activators = accelize_drm.pytest_fpga_env.pytest_fpga_activators[0]
     activators.reset_coin()
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_02')
@@ -110,9 +110,9 @@ def test_metered_start_stop_short_time_in_debug(accelize_drm, conf_json, cred_js
     """
     Test no error occurs in normal start/stop metering mode during a short period of time
     """
-    driver = accelize_drm.pytest_fpga_driver[0]
+    driver = accelize_drm.pytest_fpga_env.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-    activators =accelize_drm.pytest_fpga_activators[0]
+    activators =accelize_drm.pytest_fpga_env.pytest_fpga_activators[0]
     activators.reset_coin()
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_02')
@@ -152,9 +152,9 @@ def test_metered_start_stop_long_time(accelize_drm, conf_json, cred_json, async_
     """
     Test no error occurs in normal start/stop metering mode during a long period of time
     """
-    driver = accelize_drm.pytest_fpga_driver[0]
+    driver = accelize_drm.pytest_fpga_env.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-    activators = accelize_drm.pytest_fpga_activators[0]
+    activators = accelize_drm.pytest_fpga_env.pytest_fpga_activators[0]
     activators.reset_coin()
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_02')
@@ -203,9 +203,9 @@ def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, asy
     """
     Test no error occurs in normal pause/resume metering mode during a short period of time
     """
-    driver = accelize_drm.pytest_fpga_driver[0]
+    driver = accelize_drm.pytest_fpga_env.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-    activators = accelize_drm.pytest_fpga_activators[0]
+    activators = accelize_drm.pytest_fpga_env.pytest_fpga_activators[0]
     activators.reset_coin()
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_02')
@@ -277,10 +277,10 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
     """
     Test no error occurs in normal start/stop metering mode during a long period of time
     """
-    driver = accelize_drm.pytest_fpga_driver[0]
+    driver = accelize_drm.pytest_fpga_env.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    activators = accelize_drm.pytest_fpga_activators[0]
+    activators = accelize_drm.pytest_fpga_env.pytest_fpga_activators[0]
     activators.reset_coin()
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_02')
@@ -350,10 +350,10 @@ def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, cred_json
     """
     Test no error occurs in normal pause/resume metering mode when the resume is executed from a new object and before the license expires
     """
-    driver = accelize_drm.pytest_fpga_driver[0]
+    driver = accelize_drm.pytest_fpga_env.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    activators = accelize_drm.pytest_fpga_activators[0]
+    activators = accelize_drm.pytest_fpga_env.pytest_fpga_activators[0]
     activators.reset_coin()
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_02')
@@ -434,10 +434,10 @@ def test_async_on_pause(accelize_drm, conf_json, cred_json, async_handler, log_f
     """
     Test an async health commande is executed on pause.
     """
-    driver = accelize_drm.pytest_fpga_driver[0]
+    driver = accelize_drm.pytest_fpga_env.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    activators = accelize_drm.pytest_fpga_activators[0]
+    activators = accelize_drm.pytest_fpga_env.pytest_fpga_activators[0]
     cred_json.set_user('accelize_accelerator_test_02')
     conf_json.reset()
     logfile = log_file_factory.create(0)
@@ -483,10 +483,10 @@ def test_stop_after_pause(accelize_drm, conf_json, cred_json, async_handler, log
     """
     Test an async health commande is executed on pause.
     """
-    driver = accelize_drm.pytest_fpga_driver[0]
+    driver = accelize_drm.pytest_fpga_env.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    activators = accelize_drm.pytest_fpga_activators[0]
+    activators = accelize_drm.pytest_fpga_env.pytest_fpga_activators[0]
     cred_json.set_user('accelize_accelerator_test_02')
     conf_json.reset()
     logfile = log_file_factory.create(2)
@@ -531,9 +531,9 @@ def test_metering_limits_on_activate(accelize_drm, conf_json, cred_json, async_h
     """
     Test an error is returned by the activate function and the design is locked when the limit is reached.
     """
-    driver = accelize_drm.pytest_fpga_driver[0]
+    driver = accelize_drm.pytest_fpga_env.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-    activators = accelize_drm.pytest_fpga_activators[0]
+    activators = accelize_drm.pytest_fpga_env.pytest_fpga_activators[0]
     activators.reset_coin()
     activators.autotest()
 
@@ -544,7 +544,7 @@ def test_metering_limits_on_activate(accelize_drm, conf_json, cred_json, async_h
     conf_json['settings'].update(logfile.json)
     conf_json.save()
     cred_json.set_user('accelize_accelerator_test_03')
-    accelize_drm.clean_metering_env(cred_json, ws_admin)
+    accelize_drm.pytest_fpga_env.clean_metering_env(cred_json, ws_admin)
     with accelize_drm.DrmManager(
                 conf_json.path,
                 cred_json.path,
@@ -589,9 +589,9 @@ def test_metering_limits_on_licensing_thread(accelize_drm, conf_json, cred_json,
     """
     Test an error is returned by the async error function and the design is locked when the limit is reached.
     """
-    driver = accelize_drm.pytest_fpga_driver[0]
+    driver = accelize_drm.pytest_fpga_env.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-    activators = accelize_drm.pytest_fpga_activators[0]
+    activators = accelize_drm.pytest_fpga_env.pytest_fpga_activators[0]
     activators.reset_coin()
     activators.autotest()
 
@@ -601,7 +601,7 @@ def test_metering_limits_on_licensing_thread(accelize_drm, conf_json, cred_json,
     conf_json['settings'].update(logfile.json)
     conf_json.save()
     cred_json.set_user('accelize_accelerator_test_03')
-    accelize_drm.clean_metering_env(cred_json, ws_admin)
+    accelize_drm.pytest_fpga_env.clean_metering_env(cred_json, ws_admin)
     with accelize_drm.DrmManager(
                 conf_json.path,
                 cred_json.path,
@@ -648,8 +648,8 @@ def test_floating_limits(accelize_drm, conf_json, cred_json, async_handler, log_
     """
     Test an error is returned when the floating limit is reached
     """
-    driver0 = accelize_drm.pytest_fpga_driver[0]
-    driver1 = accelize_drm.pytest_fpga_driver[1]
+    driver0 = accelize_drm.pytest_fpga_env.pytest_fpga_driver[0]
+    driver1 = accelize_drm.pytest_fpga_env.pytest_fpga_driver[1]
     async_cb0 = async_handler.create()
     async_cb0.reset()
     async_cb1 = async_handler.create()
@@ -710,10 +710,10 @@ def test_floating_limits(accelize_drm, conf_json, cred_json, async_handler, log_
 
 
 def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handler, log_file_factory, request):
-    driver = accelize_drm.pytest_fpga_driver[0]
+    driver = accelize_drm.pytest_fpga_env.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    activators = accelize_drm.pytest_fpga_activators[0]
+    activators = accelize_drm.pytest_fpga_env.pytest_fpga_activators[0]
     activators.reset_coin()
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_02')
