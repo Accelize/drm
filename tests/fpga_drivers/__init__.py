@@ -47,6 +47,15 @@ class FpgaDriverBase:
             directory. Default to current directory.
     """
 
+    @staticmethod
+    @_abstractmethod
+    def detect_fpga():
+        """
+        Detect number of FPGA.
+        """
+        pass
+
+
     def __init__(self, fpga_slot_id=0, fpga_image=None, drm_ctrl_base_addr=0,
                  log_dir='.', no_clear_fpga=False):
         self._fpga_slot_id = fpga_slot_id

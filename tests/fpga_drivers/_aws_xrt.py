@@ -62,7 +62,7 @@ class FpgaDriver(_FpgaDriverBase):
     _reglock = _Lock()
 
     @staticmethod
-    def get_xrt_lib():
+    def _get_xrt_lib():
         """
         Detect XRT installation path:
         """
@@ -80,7 +80,7 @@ class FpgaDriver(_FpgaDriverBase):
         Returns:
             ctypes.CDLL: FPGA driver.
         """
-        xrt_path = FpgaDriver.get_xrt_lib()
+        xrt_path = FpgaDriver._get_xrt_lib()
         if _isfile(_join(xrt_path, "lib/libxrt_aws.so")):
             print('Loading XRT API library for AWS targets')
             fpga_library = _cdll.LoadLibrary(_join(xrt_path, "lib/libxrt_aws.so"))
@@ -91,17 +91,9 @@ class FpgaDriver(_FpgaDriverBase):
             raise RuntimeError('Unable to find Xilinx XRT Library')
         return fpga_library
 
-    def _get_lock(self):
-        """
-        Get a lock on the FPGA driver
-        """
-        def create_lock():
-            return XrtLock(self)
-        return create_lock
-
     @staticmethod
     def _get_xbutil():
-        xrt_path = FpgaDriver.get_xrt_lib()
+        xrt_path = FpgaDriver._get_xrt_lib()
         _xbutil_path = _join(xrt_path, 'bin/awssak')
         if not _isfile(_xbutil_path):
             _xbutil_path = _join(xrt_path, 'bin/xbutil')
@@ -109,9 +101,30 @@ class FpgaDriver(_FpgaDriverBase):
             raise RuntimeError('Unable to find Xilinx XRT Board Utility')
         return _xbutil_path
 
+    @staticmethod
+    def detect_fpga():
+        """
+        Detect the number of boards
+        """
+        xbutil = __class__._get_xbutil()
+        detect_fpga = _run(
+            [xbutil, 'status'],
+            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
+        if detect_fpga.returncode:
+            raise RuntimeError(detect_fpga.stdout)
+        return detect_fpga.stdout.split()
+
     @property
     def _xbutil(self):
         return self._get_xbutil()
+
+    def _get_lock(self):
+        """
+        Get a lock on the FPGA driver
+        """
+        def create_lock():
+            return XrtLock(self)
+        return create_lock
 
     def _clear_fpga(self):
         """

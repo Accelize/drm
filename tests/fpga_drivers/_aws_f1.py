@@ -55,6 +55,18 @@ class FpgaDriver(_FpgaDriverBase):
         """
         return _Lock
 
+    @staticmethod
+    def detect_fpga():
+        """
+        Detect the number of boards
+        """
+        detect_fpga = _run(
+            ['fpga-describe-local-image-slots'],
+            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
+        if detect_fpga.returncode:
+            raise RuntimeError(detect_fpga.stdout)
+        return detect_fpga.stdout.split()
+
     def _clear_fpga(self):
         """
         Clear FPGA
