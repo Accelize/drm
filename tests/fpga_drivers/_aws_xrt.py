@@ -99,8 +99,8 @@ class FpgaDriver(_FpgaDriverBase):
             return XrtLock(self)
         return create_lock
 
-    @property
-    def _xbutil(self):
+    @staticmethod
+    def _get_xbutil():
         xrt_path = FpgaDriver.get_xrt_lib()
         _xbutil_path = _join(xrt_path, 'bin/awssak')
         if not _isfile(_xbutil_path):
@@ -108,6 +108,23 @@ class FpgaDriver(_FpgaDriverBase):
         if not _isfile(_xbutil_path):
             raise RuntimeError('Unable to find Xilinx XRT Board Utility')
         return _xbutil_path
+
+    @staticmethod
+    def _detect_board():
+        """
+        Detect the number of boards
+        """
+        xbutil = self._get_xbutil()
+        detect_fpga = _run(
+            [xbutil, 'status'],
+            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
+        if detect_fpga.returncode:
+            raise RuntimeError(detect_fpga.stdout)
+        return detect_fpga.stdout.split()
+
+    @property
+    def _xbutil(self):
+        return self._get_xbutil()
 
     def _clear_fpga(self):
         """

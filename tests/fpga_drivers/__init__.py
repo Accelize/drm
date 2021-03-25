@@ -148,6 +148,14 @@ class FpgaDriverBase:
         """
         return self._write_register_callback
 
+    @staticmethod
+    def detect_fpga():
+        """
+        Detect FPGA available.
+        """
+        with self._augment_exception('detect'):
+            return self._detect_fpga()
+
     def clear_fpga(self):
         """
         Clear FPGA including FPGA image.
@@ -220,6 +228,12 @@ class FpgaDriverBase:
     def _clear_fpga(self):
         """
         Clear the FPGA.
+        """
+
+    @_abstractmethod
+    def _detect_fpga(self):
+        """
+        Detect number of FPGA.
         """
 
     @_abstractmethod
