@@ -660,6 +660,9 @@ class FpgaEnv:
         print('HDK VERSION:', self.pytest_hdk_version)
         fpga_driver = list()
         fpga_driver_cls = get_driver(driver_name)
+        detected_fpga = len(fpga_driver_cls.detect_fpga())
+        if len(self.pytest_fpga_slot_id) > detected_fpga:
+            self.pytest_fpga_slot_id = list(range(detected_fpga))
         for slot_id in self.pytest_fpga_slot_id:
             try:
                 fpga_driver.append(

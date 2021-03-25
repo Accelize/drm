@@ -112,8 +112,7 @@ class FpgaDriver(_FpgaDriverBase):
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if detect_fpga.returncode:
             raise RuntimeError(detect_fpga.stdout)
-        devices = _findall(r'\[\d+\]\s*\d{4}:', detect_fpga.stdout)
-        return devices
+        return detect_fpga.stdout.split()
 
     @property
     def _xbutil(self):
