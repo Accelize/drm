@@ -819,6 +819,7 @@ class FpgaEnv:
         fpga_driver = list()
         fpga_driver_cls = get_driver(driver_name)
         print('Nb FPGA BOARDS=', fpga_driver_cls.detect_fpga())
+        slot_id_list = list()
         for slot_id in self.pytest_fpga_slot_id:
             try:
                 fpga_driver.append(
@@ -828,8 +829,10 @@ class FpgaEnv:
                         no_clear_fpga=self.pytest_no_clear_fpga
                     )
                 )
+                slot_id_list.append(slot_id)
             except:
-                raise IOError("Failed to load driver on slot %d" % slot_id)
+                print('WARNING: Could not load driver on slot %d' % slot_id)
+
 
         # Define Activator access per slot
         fpga_activators = list()

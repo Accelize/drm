@@ -109,6 +109,19 @@ class FpgaDriver(_FpgaDriverBase):
             raise RuntimeError('Unable to find Xilinx XRT Board Utility')
         return _xbutil_path
 
+    @staticmethod
+    def _detect_fpga():
+        """
+        Detect the number of boards
+        """
+        xbutil = __class__._get_xbutil()
+        detect_fpga = _run(
+            [xbutil, 'status'],
+            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
+        if detect_fpga.returncode:
+            raise RuntimeError(detect_fpga.stdout)
+        return detect_fpga.stdout.split()
+
     @property
     def _xbutil(self):
         return self._get_xbutil()
