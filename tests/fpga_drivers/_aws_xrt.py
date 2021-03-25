@@ -10,7 +10,7 @@ from ctypes import (
     c_void_p as _c_void_p, c_size_t as _c_size_t)
 from os import environ as _environ, fsdecode as _fsdecode
 from os.path import isfile as _isfile, join as _join, realpath as _realpath, basename as _basename, dirname as _dirname
-from re import match as _match
+from re import match as _match, findall as _findall
 from subprocess import run as _run, PIPE as _PIPE, STDOUT as _STDOUT
 from threading import Lock as _Lock
 
@@ -108,11 +108,12 @@ class FpgaDriver(_FpgaDriverBase):
         """
         xbutil = __class__._get_xbutil()
         detect_fpga = _run(
-            [xbutil, 'status'],
+            [xbutil, 'scan'],
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if detect_fpga.returncode:
             raise RuntimeError(detect_fpga.stdout)
-        return detect_fpga.stdout.split()
+        devices = _findall(r'\[\d+\]\s*\d{4}:', detect_fpga.stdout)
+        return devices
 
     @property
     def _xbutil(self):
