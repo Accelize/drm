@@ -110,11 +110,11 @@ class FpgaDriver(_FpgaDriverBase):
         return _xbutil_path
 
     @staticmethod
-    def _detect_board():
+    def _detect_fpga():
         """
         Detect the number of boards
         """
-        xbutil = self._get_xbutil()
+        xbutil = __class__._get_xbutil()
         detect_fpga = _run(
             [xbutil, 'status'],
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)

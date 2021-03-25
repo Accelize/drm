@@ -153,8 +153,8 @@ class FpgaDriverBase:
         """
         Detect FPGA available.
         """
-        with self._augment_exception('detect'):
-            return self._detect_fpga()
+        with __class__._augment_exception('detect'):
+            return __class__._detect_fpga()
 
     def clear_fpga(self):
         """

@@ -56,7 +56,7 @@ class FpgaDriver(_FpgaDriverBase):
         return _Lock
 
     @staticmethod
-    def _detect_board():
+    def _detect_fpga():
         """
         Detect the number of boards
         """
