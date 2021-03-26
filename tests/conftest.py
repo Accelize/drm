@@ -657,6 +657,7 @@ class FpgaEnv:
 
         # Initialize FPGA
         print('FPGA SLOT ID:', self.pytest_fpga_slot_id)
+        print('FPGA DRIVER:', self.pytest_fpga_driver_name)
         print('FPGA IMAGE:', self.pytest_fpga_image)
         print('HDK VERSION:', self.pytest_hdk_version)
         fpga_driver_cls = get_driver(self.pytest_fpga_driver_name)
