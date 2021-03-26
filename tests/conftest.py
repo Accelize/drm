@@ -621,6 +621,22 @@ class FpgaEnv:
         self.pytest_artifacts_dir = pytest_artifacts_dir
         self.pytest_params = param2dict(pytestconfig.getoption("params"))
 
+    def scan(self):
+        # Define Activator access per slot
+        fpga_activators = list()
+        for driver in self.pytest_fpga_driver:
+            fpga_activators.append(findActivators(driver, self.pytest_drm_actr_base_addr))
+        # Get frequency detection version
+        freq_version = fpga_driver[0].read_register(self.pytest_drm_ctrl_base_addr + 0xFFF0)
+        print('Frequency detection version: 0x%08X' % freq_version)
+        # Store some values for access in tests
+        self.pytest_freq_detection_version = freq_version
+        self.pytest_fpga_activators = fpga_activators
+        self.clean_nodelock_env = lambda *kargs, **kwargs: clean_nodelock_env(
+            *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
+        self.clean_metering_env = lambda *kargs, **kwargs: clean_metering_env(
+            *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
+
     def load(self, driver_name=None):
         # Get FPGA driver
         from tests.fpga_drivers import get_driver
@@ -654,6 +670,7 @@ class FpgaEnv:
                 self.pytest_hdk_version = ref_designs.hdk_versions[-1]
             # Get FPGA image from HDK version
             self.pytest_fpga_image = ref_designs.get_image_id(self.pytest_hdk_version)
+        self.pytest_ref_designs = ref_designs
 
         # Initialize FPGA
         print('FPGA SLOT ID:', self.pytest_fpga_slot_id)
@@ -676,26 +693,10 @@ class FpgaEnv:
                 )
             except:
                 raise IOError("Failed to load driver on slot %d" % slot_id)
-
-        # Define Activator access per slot
-        fpga_activators = list()
-        for driver in fpga_driver:
-            fpga_activators.append(findActivators(driver, self.pytest_drm_actr_base_addr))
-
-        # Get frequency detection version
-        freq_version = fpga_driver[0].read_register(self.pytest_drm_ctrl_base_addr + 0xFFF0)
-        print('Frequency detection version: 0x%08X' % freq_version)
-
-        # Store some values for access in tests
-        self.pytest_freq_detection_version = freq_version
         self.pytest_fpga_driver = fpga_driver
-        self.pytest_fpga_activators = fpga_activators
-        self.pytest_ref_designs = ref_designs
-        self.clean_nodelock_env = lambda *kargs, **kwargs: clean_nodelock_env(
-            *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
-        self.clean_metering_env = lambda *kargs, **kwargs: clean_metering_env(
-            *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
 
+        if self.pytest_fpga_image is not None or self.pytest_hdk_version is not None:
+            self.scan()
 
 
 @pytest.fixture(scope='module')
