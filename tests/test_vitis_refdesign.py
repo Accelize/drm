@@ -27,15 +27,20 @@ def run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_ha
                        log_file_factory, axiclk_freq_ref, drmclk_freq_ref):
 
     # Program board with design
+    ref_designs = accelize_drm.pytest_fpga_env.pytest_ref_designs
+    try:
+        fpga_image = ref_designs.get_image_id(design_name)
+    except:
+        pytest.skip(f"Could not find refesign name '{design_name}' for driver '{DRIVER_NAME}'")
     driver = accelize_drm.pytest_fpga_env.pytest_fpga_driver[0]
-    driver.program_fpga(design_name)
+    driver.program_fpga(fpga_image)
     # Run test
     async_cb = async_handler.create()
     async_cb.reset()
     activators = accelize_drm.pytest_fpga_env.pytest_fpga_activators[0]
     activators.reset_coin()
     activators.autotest()
-    logfile = log_file_factory.create(2)
+    logfile = log_file_factory.create(1)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
     with accelize_drm.DrmManager(
@@ -164,7 +169,7 @@ def test_vitis_2activator_125_125(accelize_drm, conf_json, cred_json, async_hand
 
 
 @pytest.mark.no_parallel
-def test_vitis_2activator_vhdl_250_125(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
+def test_vitis_2activator_vhdl_250_125(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test a VHDL vitis configuration: dual clock kernels with AXI clock > DRM clock
     """
@@ -177,7 +182,7 @@ def test_vitis_2activator_vhdl_250_125(pytestconfig, conf_json, cred_json, async
 
 
 @pytest.mark.no_parallel
-def test_vitis_2activator_100_125(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
+def test_vitis_2activator_100_125(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test a vitis configuration: dual clock kernels with AXI clock < DRM clock
     """
@@ -190,7 +195,7 @@ def test_vitis_2activator_100_125(pytestconfig, conf_json, cred_json, async_hand
 
 
 @pytest.mark.no_parallel
-def test_vitis_2activator_slr_200_125(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
+def test_vitis_2activator_slr_200_125(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test a vitis configuration: SLR crossing with dual clock kernels
     """
@@ -204,7 +209,7 @@ def test_vitis_2activator_slr_200_125(pytestconfig, conf_json, cred_json, async_
 
 @pytest.mark.skip(reason='No design yet available')
 @pytest.mark.no_parallel
-def test_vitis_2activator_dualclkfifo(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
+def test_vitis_2activator_dualclkfifo(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test a vitis configuration: 2 activator with dual clock FIFOs on each DRM Bus stream
     """
@@ -217,7 +222,7 @@ def test_vitis_2activator_dualclkfifo(pytestconfig, conf_json, cred_json, async_
 
 
 @pytest.mark.no_parallel
-def test_vitis_2activator_350_350(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
+def test_vitis_2activator_350_350(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test a vitis configuration: 2 activators and high frequency
     """
@@ -231,7 +236,7 @@ def test_vitis_2activator_350_350(pytestconfig, conf_json, cred_json, async_hand
 
 @pytest.mark.skip(reason='No design yet available')
 @pytest.mark.no_parallel
-def test_vitis_5activator_high_density(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
+def test_vitis_5activator_high_density(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test a vitis configuration: 5 dual clock activators in a high density design
     """
@@ -245,7 +250,7 @@ def test_vitis_5activator_high_density(pytestconfig, conf_json, cred_json, async
 
 @pytest.mark.skip(reason='No design yet available')
 @pytest.mark.no_parallel
-def test_vitis_30activator(pytestconfig, conf_json, cred_json, async_handler, log_file_factory):
+def test_vitis_30activator(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test a vitis configuration: 30 activators
     """

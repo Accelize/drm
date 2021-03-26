@@ -155,7 +155,7 @@ class FpgaDriver(_FpgaDriverBase):
             fpga_image (str): FPGA image.
         """
         # Vitis does not reprogram a FPGA that has already the bitstream.
-        # So to force it we write another bitstream first.
+        # So to force it, we first program with a dummy bitstream.
         self._clear_fpga()
         # Now load the real image
         fpga_image = _realpath(_fsdecode(fpga_image))

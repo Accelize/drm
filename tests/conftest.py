@@ -490,16 +490,15 @@ class RefDesign:
             hdk_version = self.hdk_versions[-1]
         elif hdk_version not in self.image_files.keys():
             return None
-        filename = join(self._path, self.image_files[hdk_version])
+        #filename = join(self._path, self.image_files[hdk_version])
+        filename = self.image_files[hdk_version]
         ext = splitext(filename)[1]
         try:
             if ext == '.json':
                 with open(filename, 'rt') as fp:
                     return load(fp)['FpgaImageGlobalId']
             elif ext == '.awsxclbin':
-                return self.image_files[hdk_version]
-                with open(filename, 'rb') as fp:
-                    return search(r'(agfi-[0-9a-fA-F]+)', str(fp.read())).group(1)
+                return filename
         except Exception as e:
             raise Exception('No FPGA image found for %s: %s' % (hdk_version, str(e)))
 
