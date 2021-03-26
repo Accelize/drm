@@ -627,7 +627,7 @@ class FpgaEnv:
         for driver in self.pytest_fpga_driver:
             fpga_activators.append(findActivators(driver, self.pytest_drm_actr_base_addr))
         # Get frequency detection version
-        freq_version = fpga_driver[0].read_register(self.pytest_drm_ctrl_base_addr + 0xFFF0)
+        freq_version = self.pytest_fpga_driver[0].read_register(self.pytest_drm_ctrl_base_addr + 0xFFF0)
         print('Frequency detection version: 0x%08X' % freq_version)
         # Store some values for access in tests
         self.pytest_freq_detection_version = freq_version
