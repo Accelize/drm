@@ -58,7 +58,7 @@ basic ``conf.json`` file content:
             "frequency_mhz": 125
         },
         "design": {
-            "boardType": "ISV custom data"
+            "boardType": "Enter any key word related to this product (Name, Model, ...) you want to see in your portal"
         }
     }
 
@@ -67,7 +67,7 @@ basic ``conf.json`` file content:
   .. important:: For Chinese mainland, url must be set to ``https://alibaba.metering.accelize.com:4443``.
 
 * ``frequency_mhz``: Must be set to the effective frequency in MHz of the DRM Controller IP.
-* ``boardType``: Store any string information that the ISV (IP/App vendor) might want to save
+* ``boardType``: Any string of 30 characters maximum to store any piece of information this product the ISV (IP/App vendor) might want to save
   on his/her portal database.
 
 DRM Controller IP Frequency
