@@ -625,47 +625,45 @@ class FpgaEnv:
         # Get FPGA driver
         from tests.fpga_drivers import get_driver
 
-        # Get FPGA driver
-        if driver_name is None:
-            driver_name = self.pytest_fpga_driver_name
-        fpga_driver_cls = get_driver(driver_name)
-
         # Get cmake building directory
         build_source_dir = '@CMAKE_CURRENT_SOURCE_DIR@'
         if build_source_dir.startswith('@'):
             build_source_dir = realpath('.')
 
+        # Get FPGA driver
+        if driver_name is not None:
+            self.pytest_fpga_driver_name = driver_name
+
         # Get Ref Designs available
-        ref_designs = RefDesign(join(build_source_dir, 'tests', 'refdesigns', driver_name))
+        ref_designs = RefDesign(join(build_source_dir, 'tests', 'refdesigns', self.pytest_fpga_driver_name))
 
         if driver_name is not None:
             self.pytest_fpga_image = None
             self.pytest_hdk_version = None
-        else:
-            if self.pytest_fpga_image is None or self.pytest_hdk_version:
-                # Use specified HDK version
-                if self.pytest_hdk_version:
-                    self.pytest_hdk_version = self.pytest_hdk_version.strip('v')
-                    if self.pytest_hdk_version not in ref_designs.hdk_versions:
-                        raise ValueError((
-                            'HDK version %s is not supported. '
-                            'Available versions are: %s') % (
-                            self.pytest_hdk_version, ", ".join(ref_designs.hdk_versions)))
-                # Get last HDK version as default
-                else:
-                    self.pytest_hdk_version = ref_designs.hdk_versions[-1]
-                # Get FPGA image from HDK version
-                self.pytest_fpga_image = ref_designs.get_image_id(self.pytest_hdk_version)
-            print('FPGA IMAGE:', basename(self.pytest_fpga_image))
-            print('HDK VERSION:', self.pytest_hdk_version)
+        elif self.pytest_fpga_image is None or self.pytest_hdk_version:
+            # Use specified HDK version
+            if self.pytest_hdk_version:
+                self.pytest_hdk_version = self.pytest_hdk_version.strip('v')
+                if self.pytest_hdk_version not in ref_designs.hdk_versions:
+                    raise ValueError((
+                        'HDK version %s is not supported. '
+                        'Available versions are: %s') % (
+                        self.pytest_hdk_version, ", ".join(ref_designs.hdk_versions)))
+            # Get last HDK version as default
+            else:
+                self.pytest_hdk_version = ref_designs.hdk_versions[-1]
+            # Get FPGA image from HDK version
+            self.pytest_fpga_image = ref_designs.get_image_id(self.pytest_hdk_version)
 
         # Initialize FPGA
         print('FPGA SLOT ID:', self.pytest_fpga_slot_id)
-        fpga_driver = list()
-        fpga_driver_cls = get_driver(driver_name)
+        print('FPGA IMAGE:', self.pytest_fpga_image)
+        print('HDK VERSION:', self.pytest_hdk_version)
+        fpga_driver_cls = get_driver(self.pytest_fpga_driver_name)
         detected_fpga = len(fpga_driver_cls.detect_fpga())
         if len(self.pytest_fpga_slot_id) > detected_fpga:
             self.pytest_fpga_slot_id = list(range(detected_fpga))
+        fpga_driver = list()
         for slot_id in self.pytest_fpga_slot_id:
             try:
                 fpga_driver.append(
@@ -690,7 +688,6 @@ class FpgaEnv:
         # Store some values for access in tests
         self.pytest_freq_detection_version = freq_version
         self.pytest_fpga_driver = fpga_driver
-        self.pytest_fpga_driver_name = driver_name
         self.pytest_fpga_activators = fpga_activators
         self.pytest_ref_designs = ref_designs
         self.clean_nodelock_env = lambda *kargs, **kwargs: clean_nodelock_env(
@@ -703,6 +700,12 @@ class FpgaEnv:
 @pytest.fixture(scope='module')
 def fpga_env_factory(pytestconfig):
     return FpgaEnv(pytestconfig)
+
+
+@pytest.fixture(autouse=True, scope='module')
+def select_fpga_env(fpga_env_factory, accelize_drm):
+    fpga_env_factory.load()
+    accelize_drm.pytest_fpga_env = fpga_env_factory
 
 
 class _Json:

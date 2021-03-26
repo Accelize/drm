@@ -11,23 +11,12 @@ from os.path import realpath, isfile
 
 from tests.conftest import wait_deadline, wait_func_true
 
-
+'''
 @pytest.fixture(autouse=True, scope='module')
 def select_fpga_env(fpga_env_factory, accelize_drm):
     fpga_env_factory.load()
     accelize_drm.pytest_fpga_env = fpga_env_factory
-    '''
-    driver = accelize_drm.pytest_fpga_driver[0]
-    fpga_image_bkp = driver.fpga_image
-    driver.clear_fpga()
-    '''
-    '''
-    yield
-    driver.clear_fpga()
-    driver.program_fpga(fpga_image_bkp)
-    '''
-
-
+'''
 
 def test_fast_start_stop(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
