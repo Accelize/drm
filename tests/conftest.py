@@ -638,25 +638,29 @@ class FpgaEnv:
         # Get Ref Designs available
         ref_designs = RefDesign(join(build_source_dir, 'tests', 'refdesigns', driver_name))
 
-        if self.pytest_fpga_image is None or self.pytest_hdk_version:
-            # Use specified HDK version
-            if self.pytest_hdk_version:
-                self.pytest_hdk_version = self.pytest_hdk_version.strip('v')
-                if self.pytest_hdk_version not in ref_designs.hdk_versions:
-                    raise ValueError((
-                        'HDK version %s is not supported. '
-                        'Available versions are: %s') % (
-                        self.pytest_hdk_version, ", ".join(ref_designs.hdk_versions)))
-            # Get last HDK version as default
-            else:
-                self.pytest_hdk_version = ref_designs.hdk_versions[-1]
-            # Get FPGA image from HDK version
-            self.pytest_fpga_image = ref_designs.get_image_id(self.pytest_hdk_version)
+        if driver_name is not None:
+            self.pytest_fpga_image = None
+            self.pytest_hdk_version = None
+        else:
+            if self.pytest_fpga_image is None or self.pytest_hdk_version:
+                # Use specified HDK version
+                if self.pytest_hdk_version:
+                    self.pytest_hdk_version = self.pytest_hdk_version.strip('v')
+                    if self.pytest_hdk_version not in ref_designs.hdk_versions:
+                        raise ValueError((
+                            'HDK version %s is not supported. '
+                            'Available versions are: %s') % (
+                            self.pytest_hdk_version, ", ".join(ref_designs.hdk_versions)))
+                # Get last HDK version as default
+                else:
+                    self.pytest_hdk_version = ref_designs.hdk_versions[-1]
+                # Get FPGA image from HDK version
+                self.pytest_fpga_image = ref_designs.get_image_id(self.pytest_hdk_version)
+            print('FPGA IMAGE:', basename(self.pytest_fpga_image))
+            print('HDK VERSION:', self.pytest_hdk_version)
 
         # Initialize FPGA
         print('FPGA SLOT ID:', self.pytest_fpga_slot_id)
-        print('FPGA IMAGE:', basename(self.pytest_fpga_image))
-        print('HDK VERSION:', self.pytest_hdk_version)
         fpga_driver = list()
         fpga_driver_cls = get_driver(driver_name)
         detected_fpga = len(fpga_driver_cls.detect_fpga())

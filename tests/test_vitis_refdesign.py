@@ -42,6 +42,7 @@ def run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_ha
     activators.autotest()
     logfile = log_file_factory.create(1)
     conf_json['settings'].update(logfile.json)
+    conf_json['drm']['frequency_mhz'] = drmclk_freq_ref
     conf_json.save()
     with accelize_drm.DrmManager(
                 conf_json.path,
