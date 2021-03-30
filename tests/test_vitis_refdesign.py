@@ -34,7 +34,7 @@ def run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_ha
         pytest.skip(f"Could not find refesign name '{design_name}' for driver '{DRIVER_NAME}'")
     driver = accelize_drm.pytest_fpga_env.pytest_fpga_driver[0]
     driver.program_fpga(fpga_image)
-    accelize_drm.pytest_fpga_env.scan()
+    accelize_drm.pytest_fpga_env.scan(0)
     # Run test
     async_cb = async_handler.create()
     async_cb.reset()
