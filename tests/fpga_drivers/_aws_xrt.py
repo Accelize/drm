@@ -117,21 +117,11 @@ class FpgaDriver(_FpgaDriverBase):
         """
         Clear FPGA
         """
-        """ FOLLOWING CODE ALTHOUGH RECOMMENDED BY AWS DOES NOT WORK: IT HANGS FOREVER
         clear_fpga = _run(
             ['fpga-clear-local-image', '-S', str(self._fpga_slot_id)],
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if clear_fpga.returncode:
             raise RuntimeError(clear_fpga.stdout)
-        """
-        # Workaround because clear FPGA does not work: load a different image
-        clear_image = _join(SCRIPT_DIR, 'clear.awsxclbin')
-        load_image = _run(
-            [self._xbutil, 'program',
-             '-d', str(self._fpga_slot_id), '-p', clear_image],
-            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
-        if load_image.returncode:
-            raise RuntimeError(load_image.stdout)
         print('FPGA cleared')
 
     def _program_fpga(self, fpga_image):
@@ -143,7 +133,14 @@ class FpgaDriver(_FpgaDriverBase):
         """
         # Vitis does not reprogram a FPGA that has already the bitstream.
         # So to force it we write another bitstream first.
-        self._clear_fpga()
+        clear_image = _join(SCRIPT_DIR, 'clear.awsxclbin')
+        load_image = _run(
+            [self._xbutil, 'program',
+             '-d', str(self._fpga_slot_id), '-p', clear_image],
+            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
+        if load_image.returncode:
+            raise RuntimeError(load_image.stdout)
+
         # Now load the real image
         fpga_image = _realpath(_fsdecode(fpga_image))
         load_image = _run(

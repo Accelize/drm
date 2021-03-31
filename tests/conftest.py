@@ -16,6 +16,7 @@ from time import time, sleep
 from shutil import rmtree
 from datetime import datetime, timedelta
 from glob import glob
+import types
 
 from tests.proxy import create_app, get_context, set_context
 from tests.ws_admin_functions import WSListFunction
@@ -147,7 +148,7 @@ def pytest_addoption(parser):
     Add command lines arguments
     """
     parser.addoption(
-        "--backend", action="store", default="c++",
+        "--backend", action="store", default="c",
         help='Use specified Accelize DRM library API as backend: "c" or "c++"')
     parser.addoption(
         "--fpga_driver", action="store", default=None,
@@ -214,11 +215,14 @@ def pytest_runtest_setup(item):
     Configure test initialization
     """
     # Check awsxrt tests
-    markers = tuple(item.iter_markers(name='vitis'))
-    if not item.config.getoption("awsxrt") and markers:
-        pytest.skip("Don't run Vitis (XRT) tests.")
-    elif item.config.getoption("awsxrt") and not markers:
-        pytest.skip("Run Vitis (XRT) tests.")
+    m_option = item.config.getoption('-m')
+    if search(r'\bawsxrt\b', m_option) and not search(r'\nnot\n\s+\bawsxrt\b', m_option):
+        skip_awsxrt = False
+    else:
+        skip_awsxrt = True
+    markers = tuple(item.iter_markers(name='awsxrt'))
+    if skip_awsxrt and markers:
+        pytest.skip("Don't run XRT (Vitis) tests.")
 
     # Check integration tests
     markers = tuple(item.iter_markers(name='no_parallel'))
@@ -561,10 +565,7 @@ def accelize_drm(pytestconfig):
             'Mutually exclusive options: Please set "hdk_version" or "fpga_image", but not both')
 
     # Get FPGA driver
-    if pytestconfig.getoption("awsxrt"):
-        fpga_driver_name = 'aws_xrt'
-    else:
-        fpga_driver_name = pytestconfig.getoption("fpga_driver")
+    fpga_driver_name = pytestconfig.getoption("fpga_driver")
     if fpga_driver_name and fpga_image:
         raise ValueError(
             'Mutually exclusive options: Please set "fpga_driver" or "fpga_image", but not both')
@@ -638,6 +639,9 @@ def accelize_drm(pytestconfig):
 
     actr_base_address = pytestconfig.getoption("activator_base_address")
     fpga_activators = scanAllActivators(fpga_driver, actr_base_address)
+    def scan(self):
+        self.pytest_fpga_activators = scanAllActivators(
+                self.pytest_fpga_driver, self.pytest_actr_base_address)
 
     # Create pytest artifacts directory
     pytest_artifacts_dir = join(pytestconfig.getoption("artifacts_dir"), 'pytest_artifacts')
@@ -670,8 +674,7 @@ def accelize_drm(pytestconfig):
         *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
     _accelize_drm.clean_metering_env = lambda *kargs, **kwargs: clean_metering_env(
         *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
-    _accelize_drm.scanActivators = lambda:_accelize_drm.pytest_fpga_activators = scanAllActivators(
-        _accelize_drm.pytest_fpga_driver, _accelize_drm.pytest_actr_base_address)
+    _accelize_drm.scanActivators = types.MethodType( scan, _accelize_drm )
     _accelize_drm.pytest_params = param2dict(pytestconfig.getoption("params"))
     _accelize_drm.pytest_artifacts_dir = pytest_artifacts_dir
     return _accelize_drm

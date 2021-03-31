@@ -134,7 +134,7 @@ def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_jso
     with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
         drm_manager.activate()
     assert 'Metering Web Service error 400' in str(excinfo.value)
-    assert 'Ensure this value is less than or equal to 320' in str(excinfo.value)
+    assert 'Ensure this value is less than or equal to 351' in str(excinfo.value)
     err_code = async_handler.get_error_code(str(excinfo.value))
     assert err_code == accelize_drm.exceptions.DRMWSReqError.error_code
     print('Test frequency overflow: PASS')
