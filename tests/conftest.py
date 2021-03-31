@@ -213,6 +213,13 @@ def pytest_runtest_setup(item):
     """
     Configure test initialization
     """
+    # Check awsxrt tests
+    markers = tuple(item.iter_markers(name='vitis'))
+    if not item.config.getoption("awsxrt") and markers:
+        pytest.skip("Don't run Vitis (XRT) tests.")
+    elif item.config.getoption("awsxrt") and not markers:
+        pytest.skip("Run Vitis (XRT) tests.")
+
     # Check integration tests
     markers = tuple(item.iter_markers(name='no_parallel'))
     markers += tuple(item.iter_markers(name='on_2_fpga'))
@@ -256,7 +263,7 @@ def pytest_runtest_setup(item):
             pytest.skip('"long_run" marker not selected')
 
 
-def findActivators(driver, base_addr):
+def scanActivatorsByCard(driver, base_addr):
     base_addr_list = []
     while True:
         val = driver.read_register(base_addr + INC_EVENT_REG_OFFSET)
@@ -502,6 +509,13 @@ class RefDesign:
             raise Exception('No FPGA image found for %s: %s' % (hdk_version, str(e)))
 
 
+def scanAllActivators(fpga_driver, actr_base_address):
+    # Define Activator access per slot
+    fpga_activators = list()
+    for driver in fpga_driver:
+        fpga_activators.append(scanActivatorsByCard(driver, actr_base_address))
+    return fpga_activators
+
 # Pytest Fixtures
 @pytest.fixture(scope='session')
 def accelize_drm(pytestconfig):
@@ -542,16 +556,19 @@ def accelize_drm(pytestconfig):
     # Get FPGA image
     fpga_image = pytestconfig.getoption("fpga_image")
     hdk_version = pytestconfig.getoption("hdk_version")
-    if hdk_version and fpga_image.lower() != 'default':
+    if hdk_version and fpga_image:
         raise ValueError(
             'Mutually exclusive options: Please set "hdk_version" or "fpga_image", but not both')
 
     # Get FPGA driver
-    fpga_driver_name = pytestconfig.getoption("fpga_driver")
-    if fpga_driver_name and fpga_image.lower() != 'default':
+    if pytestconfig.getoption("awsxrt"):
+        fpga_driver_name = 'aws_xrt'
+    else:
+        fpga_driver_name = pytestconfig.getoption("fpga_driver")
+    if fpga_driver_name and fpga_image:
         raise ValueError(
             'Mutually exclusive options: Please set "fpga_driver" or "fpga_image", but not both')
-    if fpga_image.lower() != 'default':
+    if fpga_image:
         if fpga_image.endswith('.awsxclbin'):
             fpga_driver_name = 'aws_xrt'
         elif search(r'agfi-[0-9a-f]+', fpga_image, IGNORECASE):
@@ -569,7 +586,7 @@ def accelize_drm(pytestconfig):
     # Get Ref Designs available
     ref_designs = RefDesign(join(build_source_dir, 'tests', 'refdesigns', fpga_driver_name))
 
-    if fpga_image.lower() == 'default' or hdk_version:
+    if fpga_image is None or hdk_version:
         # Use specified HDK version
         if hdk_version:
             hdk_version = hdk_version.strip('v')
@@ -603,7 +620,8 @@ def accelize_drm(pytestconfig):
     no_clear_fpga = pytestconfig.getoption("no_clear_fpga")
     drm_ctrl_base_addr = pytestconfig.getoption("drm_controller_base_address")
     print('FPGA SLOT ID:', fpga_slot_id)
-    print('FPGA IMAGE:', basename(fpga_image))
+    print('FPGA DRIVER:', fpga_driver_name)
+    print('FPGA IMAGE:', fpga_image)
     print('HDK VERSION:', hdk_version)
     fpga_driver = list()
     for slot_id in fpga_slot_id:
@@ -618,11 +636,8 @@ def accelize_drm(pytestconfig):
         except:
             raise IOError("Failed to load driver on slot %d" % slot_id)
 
-    # Define Activator access per slot
-    fpga_activators = list()
-    for driver in fpga_driver:
-        base_address = pytestconfig.getoption("activator_base_address")
-        fpga_activators.append(findActivators(driver, base_address))
+    actr_base_address = pytestconfig.getoption("activator_base_address")
+    fpga_activators = scanAllActivators(fpga_driver, actr_base_address)
 
     # Create pytest artifacts directory
     pytest_artifacts_dir = join(pytestconfig.getoption("artifacts_dir"), 'pytest_artifacts')
@@ -648,12 +663,15 @@ def accelize_drm(pytestconfig):
     _accelize_drm.pytest_fpga_slot_id = fpga_slot_id
     _accelize_drm.pytest_fpga_image = fpga_image
     _accelize_drm.pytest_hdk_version = hdk_version
+    _accelize_drm.pytest_actr_base_address = actr_base_address
     _accelize_drm.pytest_fpga_activators = fpga_activators
     _accelize_drm.pytest_ref_designs = ref_designs
     _accelize_drm.clean_nodelock_env = lambda *kargs, **kwargs: clean_nodelock_env(
         *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
     _accelize_drm.clean_metering_env = lambda *kargs, **kwargs: clean_metering_env(
         *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
+    _accelize_drm.scanActivators = lambda:_accelize_drm.pytest_fpga_activators = scanAllActivators(
+        _accelize_drm.pytest_fpga_driver, _accelize_drm.pytest_actr_base_address)
     _accelize_drm.pytest_params = param2dict(pytestconfig.getoption("params"))
     _accelize_drm.pytest_artifacts_dir = pytest_artifacts_dir
     return _accelize_drm

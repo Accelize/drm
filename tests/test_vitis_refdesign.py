@@ -14,25 +14,21 @@ import tests.conftest as conftest
 SCRIPT_DIR = dirname(realpath(__file__))
 
 
-
-@pytest.fixture(autouse=True, scope='module')
-def select_fpga_env(fpga_env_factory, accelize_drm):
-    fpga_env_factory.load(DRIVER_NAME)
-    accelize_drm.pytest_fpga_env = fpga_env_factory
-
-
 def run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
                        log_file_factory, axiclk_freq_ref, drmclk_freq_ref):
 
     # Program board with design
-    ref_designs = accelize_drm.pytest_fpga_env.pytest_ref_designs
+    ref_designs = accelize_drm.pytest_ref_designs
     try:
         fpga_image = ref_designs.get_image_id(design_name)
     except:
         pytest.skip(f"Could not find refesign name '{design_name}' for driver '{DRIVER_NAME}'")
-    driver = accelize_drm.pytest_fpga_env.pytest_fpga_driver[0]
+    driver = accelize_drm.pytest_fpga_driver[0]
     driver.program_fpga(fpga_image)
-    accelize_drm.pytest_fpga_env.scan(0)
+    act_base_addr = pytestconfig.getoption("activator_base_address")
+    activators = conftest.scanAllActivators(driver, act_base_addr)
+
+    accelize_drm.scan(0)
     # Run test
     async_cb = async_handler.create()
     async_cb.reset()
