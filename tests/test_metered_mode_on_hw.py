@@ -620,7 +620,6 @@ def test_metering_limits_on_licensing_thread(accelize_drm, conf_json, cred_json,
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
-        drm_manager.deactivate()
     logfile.remove()
 
 

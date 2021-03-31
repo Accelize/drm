@@ -62,13 +62,13 @@ class FpgaDriver(_FpgaDriverBase):
     _reglock = _Lock()
 
     @staticmethod
-    def get_xrt_lib():
+    def _get_xrt_lib():
         """
         Detect XRT installation path:
         """
         for prefix in (_environ.get("XILINX_XRT", "/opt/xilinx/xrt"),
                        '/usr', '/usr/local'):
-            if _isfile(_join(prefix, 'bin/xbutil')):
+            if _isfile(_join(prefix, 'bin','xbutil')):
                 return prefix
         raise RuntimeError('Unable to find Xilinx XRT')
 
@@ -80,16 +80,30 @@ class FpgaDriver(_FpgaDriverBase):
         Returns:
             ctypes.CDLL: FPGA driver.
         """
-        xrt_path = FpgaDriver.get_xrt_lib()
-        if _isfile(_join(xrt_path, "lib/libxrt_aws.so")):
+        xrt_path = FpgaDriver._get_xrt_lib()
+        if _isfile(_join(xrt_path, 'lib','libxrt_aws.so')):
             print('Loading XRT API library for AWS targets')
-            fpga_library = _cdll.LoadLibrary(_join(xrt_path, "lib/libxrt_aws.so"))
-        elif _isfile(_join(xrt_path, "lib/libxrt_core.so")):
+            fpga_library = _cdll.LoadLibrary(_join(xrt_path, 'lib','libxrt_aws.so'))
+        elif _isfile(_join(xrt_path, 'lib','libxrt_core.so')):
             print('Loading XRT API library for Xilinx targets')
-            fpga_library = _cdll.LoadLibrary(_join(xrt_path, "lib/libxrt_core.so"))
+            fpga_library = _cdll.LoadLibrary(_join(xrt_path, 'lib','libxrt_core.so'))
         else:
             raise RuntimeError('Unable to find Xilinx XRT Library')
         return fpga_library
+
+    @staticmethod
+    def _get_xbutil():
+        xrt_path = FpgaDriver._get_xrt_lib()
+        _xbutil_path = _join(xrt_path,'bin','awssak')
+        if not _isfile(_xbutil_path):
+            _xbutil_path = _join(xrt_path, 'bin','xbutil')
+        if not _isfile(_xbutil_path):
+            raise RuntimeError('Unable to find Xilinx XRT Board Utility')
+        return _xbutil_path
+
+    @property
+    def _xbutil(self):
+        return self._get_xbutil()
 
     def _get_lock(self):
         """
@@ -98,16 +112,6 @@ class FpgaDriver(_FpgaDriverBase):
         def create_lock():
             return XrtLock(self)
         return create_lock
-
-    @property
-    def _xbutil(self):
-        xrt_path = FpgaDriver.get_xrt_lib()
-        _xbutil_path = _join(xrt_path, 'bin/awssak')
-        if not _isfile(_xbutil_path):
-            _xbutil_path = _join(xrt_path, 'bin/xbutil')
-        if not _isfile(_xbutil_path):
-            raise RuntimeError('Unable to find Xilinx XRT Board Utility')
-        return _xbutil_path
 
     def _clear_fpga(self):
         """
