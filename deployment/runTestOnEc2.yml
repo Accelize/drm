@@ -15,7 +15,7 @@ jobs:
   # Start AWS agents
   - template: agents/start.yml@acid
     parameters:
-      jobName: startAgent_${{ config.identifier }}_on_${{ config.os_distrib }}
+      jobName: startAgent_${{ parameters.identifier }}_on_${{ config.os_distrib }}
       agentDescription: AWS ${{ config.os_distrib }}
       provider: awsEc2
       image: ${{ config.os_distrib }}
@@ -29,9 +29,9 @@ jobs:
       condition: succeededOrFailed()
 
   # Run tests on AWS agent
-  - job: runTests_${{ config.identifier }}_on_${{ config.os_distrib }}
+  - job: runTests_${{ parameters.identifier }}_on_${{ config.os_distrib }}
     displayName: ${{ config.displayName }} on ${{ config.os_distrib }}
-    dependsOn: startAgent_${{ config.identifier }}_on_${{ config.os_distrib }}
+    dependsOn: startAgent_${{ parameters.identifier }}_on_${{ config.os_distrib }}
     condition: succeededOrFailed()
     pool:
       name: Default
@@ -98,7 +98,7 @@ jobs:
   # Stop AWS agent
   - template: agents/stop.yml@acid
     parameters:
-      jobName: stopAgent_${{ config.identifier }}_on_${{ config.os_distrib }}
+      jobName: stopAgent_${{ parameters.identifier }}_on_${{ config.os_distrib }}
       provider: awsEc2
       agentDescription: AWS ${{ config.os_distrib }}
-      dependsOn: runTests_${{ config.identifier }}_on_${{ config.os_distrib }}
+      dependsOn: runTests_${{ parameters.identifier }}_on_${{ config.os_distrib }}
