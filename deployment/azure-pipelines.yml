@@ -41,7 +41,7 @@ variables:
     value: $(Build.SourcesDirectory)/deployment
 
 stages:
-  - stage: compile_and_full_test
+  - stage: compile_and_fully_test
     displayName: Compile sources and test on multiple hardware designs
     variables:
       # Set Git branch conditional variables
@@ -57,6 +57,7 @@ stages:
     jobs:
       - template: runTestOnEc2.yml
         parameters:
+          identifier: test_advanced_features
           displayName: Test advanced features on one standard design
           instance_type: 'f1.4xlarge'
           config_list:
@@ -70,6 +71,7 @@ stages:
 
       - template: runTestOnEc2.yml
         parameters:
+          identifier: test_awsxrt_specific_design
           displayName: Test AWS XRT specific hardware configuration
           instance_type: 'f1.2xlarge'
           config_list:
@@ -83,6 +85,7 @@ stages:
 
       - template: runTestOnEc2.yml
         parameters:
+          identifier: test_awsf1_specific_design
           displayName: Test AWS F1 specific hardware configuration
           instance_type: 'f1.2xlarge'
           config_list:
