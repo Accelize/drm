@@ -39,22 +39,18 @@ def test_authentication_bad_token(accelize_drm, conf_json, cred_json,
     set_context(context)
     assert get_context() == context
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    try:
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
         with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
             drm_manager.activate()
         assert search(r'Timeout on License request after \d+ attempts', str(excinfo.value))
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
         assert drm_manager.get('token_string') == access_token
-    finally:
-        drm_manager.deactivate()
-    del drm_manager
     file_log_content = logfile.read()
     assert search(r'\bAuthentication credentials were not provided\b', file_log_content)
     async_cb.assert_NoError()
@@ -70,14 +66,13 @@ def test_authentication_validity_after_deactivation(accelize_drm, conf_json, cre
     conf_json.reset()
     cred_json.set_user('accelize_accelerator_test_02')
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    try:
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
         drm_manager.activate()
         token_time_left = drm_manager.get('token_time_left')
         if token_time_left <= 15:
@@ -99,8 +94,6 @@ def test_authentication_validity_after_deactivation(accelize_drm, conf_json, cre
         assert token_string == exp_token_string
         async_cb.assert_NoError()
         print('Test token validity after deactivate: PASS')
-    finally:
-        drm_manager.deactivate()
 
 
 @pytest.mark.no_parallel
@@ -124,14 +117,13 @@ def test_authentication_token_renewal(accelize_drm, conf_json, cred_json,
     set_context(context)
     assert get_context() == context
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    try:
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
         drm_manager.activate()
         start = datetime.now()
         lic_duration = drm_manager.get('license_duration')
@@ -143,8 +135,6 @@ def test_authentication_token_renewal(accelize_drm, conf_json, cred_json,
         next_lic_expiration = ((q+1) * lic_duration) % expires_in
         sleep(next_lic_expiration + 5)  # Wait current license expiration
         assert drm_manager.get('token_string') != token_string
-    finally:
-        drm_manager.deactivate()
 
 
 @pytest.mark.endurance
@@ -162,18 +152,17 @@ def test_authentication_endurance(accelize_drm, conf_json, cred_json, async_hand
         test_duration = 14000
         print('Warning: Missing argument "duration". Using default value %d' % test_duration)
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    activators[0].generate_coin(1000)
-    assert not drm_manager.get('license_status')
-    activators[0].autotest(is_activated=False)
-    drm_manager.activate()
-    try:
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        activators[0].generate_coin(1000)
+        assert not drm_manager.get('license_status')
+        activators[0].autotest(is_activated=False)
+        drm_manager.activate()
         lic_duration = drm_manager.get('license_duration')
         assert drm_manager.get('license_status')
         activators[0].autotest(is_activated=True)
@@ -188,8 +177,7 @@ def test_authentication_endurance(accelize_drm, conf_json, cred_json, async_hand
             if seconds_left < 0:
                 break
             sleep(60)
-    finally:
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
-        activators[0].autotest(is_activated=False)
-        print('Endurance test has completed')
+    activators[0].autotest(is_activated=False)
+    print('Endurance test has completed')
