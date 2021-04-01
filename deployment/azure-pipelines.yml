@@ -41,7 +41,7 @@ variables:
     value: $(Build.SourcesDirectory)/deployment
 
 stages:
-  - stage: compile_and_fully_test
+  - stage: compile_and_test
     displayName: Compile sources and test on multiple hardware designs
     variables:
       # Set Git branch conditional variables
