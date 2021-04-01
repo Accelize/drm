@@ -2,7 +2,7 @@
 # runTestOnEc2.yml
 
 parameters:
-  identifier: 'test_on_aws'
+  identifier: 'AWS'
   displayName: 'Test on AWS'
   instance_type: 'f1.4xlarge'
   config_list:
@@ -15,7 +15,7 @@ jobs:
   # Start AWS agents
   - template: agents/start.yml@acid
     parameters:
-      jobName: startAgent_Aws_${{ config.os_distrib }}
+      jobName: startAgent_${{ config.identifier }}_${{ config.os_distrib }}
       agentDescription: AWS ${{ config.os_distrib }}
       provider: awsEc2
       image: ${{ config.os_distrib }}
@@ -29,9 +29,9 @@ jobs:
       condition: succeededOrFailed()
 
   # Run tests on AWS agent
-  - job: ${{ config.identifier }}_on_${{ config.os_distrib }}
+  - job: runTests_${{ config.identifier }}_${{ config.os_distrib }}
     displayName: ${{ config.displayName }} on ${{ config.os_distrib }}
-    dependsOn: startAgent_Aws_${{ config.os_distrib }}
+    dependsOn: startAgent_${{ config.identifier }}_${{ config.os_distrib }}
     condition: succeededOrFailed()
     pool:
       name: Default
@@ -101,4 +101,4 @@ jobs:
       jobName: stopAgent_Aws_${{ config.os_distrib }}
       provider: awsEc2
       agentDescription: AWS ${{ config.os_distrib }}
-      dependsOn: runTests_Aws_${{ config.os_distrib }}
+      dependsOn: runTests_${{ config.identifier }}_${{ config.os_distrib }}
