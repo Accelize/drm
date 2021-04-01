@@ -100,5 +100,5 @@ jobs:
     parameters:
       jobName: stopAgent_${{ parameters.identifier }}_on_${{ config.os_distrib }}
       provider: awsEc2
-      agentDescription: AWS ${{ config.os_distrib }}
+      agentDescription: ${{ parameters.identifier }} on AWS ${{ config.os_distrib }}
       dependsOn: runTests_${{ parameters.identifier }}_on_${{ config.os_distrib }}
