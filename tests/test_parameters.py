@@ -89,8 +89,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     async_cb.reset()
     conf_json.reset()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -115,8 +114,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json['settings']['log_verbosity'] = exp_value
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -132,8 +130,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json['settings']['log_format'] = exp_value
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -149,8 +146,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json['settings']['log_file_verbosity'] = exp_value
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -166,8 +162,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json['settings']['log_file_format'] = exp_value
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -183,8 +178,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json['settings']['log_file_path'] = logfile.path
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -200,8 +194,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json['settings']['log_file_type'] = exp_value
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -217,8 +210,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json['settings']['log_file_rotating_size'] = exp_value
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -234,8 +226,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json['settings']['log_file_rotating_num'] = exp_value
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -248,8 +239,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     async_cb.reset()
     conf_json.reset()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -266,8 +256,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     async_cb.reset()
     conf_json.reset()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -277,8 +266,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json['drm']['bypass_frequency_detection'] = True
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -294,8 +282,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json['drm']['frequency_mhz'] = exp_value
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -311,8 +298,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json['settings']['frequency_detection_period'] = exp_value
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -328,8 +314,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json['settings']['frequency_detection_threshold'] = exp_value
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -346,8 +331,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json.save()
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -363,8 +347,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json['settings']['ws_retry_period_long'] = exp_value
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -381,8 +364,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json.save()
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -399,8 +381,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json['settings']['ws_retry_period_short'] = exp_value
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -415,8 +396,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json['settings']['ws_api_retry_duration'] = 0
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -428,8 +408,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json['settings']['ws_api_retry_duration'] = exp_value
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -445,8 +424,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json.save()
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -460,8 +438,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json['settings']['ws_request_timeout'] = exp_value
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -477,8 +454,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json['settings']['host_data_verbosity'] = expectVal
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -490,8 +466,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json['settings']['host_data_verbosity'] = expectVal
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -507,8 +482,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json['settings']['log_file_append'] = expectVal
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -520,8 +494,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json['settings']['log_file_append'] = expectVal
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -537,8 +510,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json['settings']['ws_verbosity'] = expectVal
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -549,8 +521,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json['settings']['ws_verbosity'] = expectVal
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -564,8 +535,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json.reset()
     deriv_prod = ''
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -575,8 +545,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json['derived_product'] = deriv_prod
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -592,8 +561,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json['settings']['ws_connection_timeout'] = expect_value
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -608,8 +576,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json['settings']['unsupported_param'] = 10.2
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -624,8 +591,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     conf_json['settings'] = {'': 10.2}
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -657,8 +623,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     cred_json.set_user('accelize_accelerator_test_02')
     conf_json.reset()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -1012,8 +977,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     conf_json['settings'].update(logfile.json)
     conf_json.save()
     with accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
+                conf_json.path, cred_json.path,
                 driver.read_register_callback,
                 driver.write_register_callback,
                 async_cb.callback
@@ -1032,8 +996,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     async_cb.reset()
     conf_json.reset()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -1065,8 +1028,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     conf_json['settings']['host_data_verbosity'] = expectVal
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -1085,8 +1047,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     conf_json['settings']['host_data'] = 0
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -1107,8 +1068,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     conf_json['settings']['log_file_append'] = False
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -1126,8 +1086,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     conf_json['settings']['ws_verbosity'] = expvalue
     conf_json.save()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -1142,8 +1101,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     async_cb.reset()
     conf_json.reset()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -1211,8 +1169,7 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
     conf_json.save()
     assert conf_json['licensing']['url'] == "http://acme.com"
     with accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
+                conf_json.path, cred_json.path,
                 driver.read_register_callback,
                 driver.write_register_callback,
                 async_cb.callback
@@ -1234,8 +1191,7 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
     assert orig_client_id != cred_json.client_id
     cred_json.save()
     with accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
+                conf_json.path, cred_json.path,
                 driver.read_register_callback,
                 driver.write_register_callback,
                 async_cb.callback
@@ -1258,8 +1214,7 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
     cred_json.save()
     assert orig_client_secret != cred_json.client_secret
     with accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
+                conf_json.path, cred_json.path,
                 driver.read_register_callback,
                 driver.write_register_callback,
                 async_cb.callback
