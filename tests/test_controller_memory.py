@@ -16,8 +16,7 @@ def test_wrong_drm_controller_address(accelize_drm, conf_json, cred_json, async_
     try:
         with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
             drm_manager = accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
+                conf_json.path, cred_json.path,
                 driver.read_register_callback,
                 driver.write_register_callback,
                 async_cb.callback
@@ -39,8 +38,7 @@ def test_mailbox_write_overflow(accelize_drm, conf_json, cred_json, async_handle
     cred_json.reset()
     conf_json.reset()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -67,8 +65,7 @@ def test_mailbox_type_error(accelize_drm, conf_json, cred_json, async_handler):
     cred_json.reset()
     conf_json.reset()
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -100,8 +97,7 @@ def test_empty_product_id(accelize_drm, conf_json, cred_json, async_handler, log
         async_cb.reset()
         with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
             drm_manager = accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
+                conf_json.path, cred_json.path,
                 driver.read_register_callback,
                 driver.write_register_callback,
                 async_cb.callback
@@ -132,8 +128,7 @@ def test_malformed_product_id(accelize_drm, conf_json, cred_json, async_handler)
         async_cb.reset()
         with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
             drm_manager = accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
+                conf_json.path, cred_json.path,
                 driver.read_register_callback,
                 driver.write_register_callback,
                 async_cb.callback
@@ -160,8 +155,7 @@ def test_2_drm_manager_concurrently(accelize_drm, conf_json, cred_json, async_ha
     cred_json.set_user('accelize_accelerator_test_02')
 
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb1.callback
@@ -169,8 +163,7 @@ def test_2_drm_manager_concurrently(accelize_drm, conf_json, cred_json, async_ha
 
         with pytest.raises(accelize_drm.exceptions.DRMBadUsage) as excinfo:
             drm_manager2 = accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
+                conf_json.path, cred_json.path,
                 driver.read_register_callback,
                 driver.write_register_callback,
                 async_cb2.callback
@@ -193,8 +186,7 @@ def test_drm_manager_bist(accelize_drm, conf_json, cred_json, async_handler):
         return driver.read_register_callback(addr, returned_data, driver)
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             my_wrong_read_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -209,8 +201,7 @@ def test_drm_manager_bist(accelize_drm, conf_json, cred_json, async_handler):
         return driver.write_register_callback(register_offset*2, data_to_write, driver)
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             my_wrong_write_callback,
             async_cb.callback
