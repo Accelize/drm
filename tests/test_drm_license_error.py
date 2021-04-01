@@ -34,8 +34,7 @@ def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler,
     conf_json.save()
 
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -76,8 +75,7 @@ def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_
     conf_json.save()
 
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -121,8 +119,7 @@ def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler,
     conf_json.save()
 
     with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
