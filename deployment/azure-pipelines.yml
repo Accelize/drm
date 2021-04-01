@@ -56,8 +56,8 @@ stages:
 
     jobs:
       - template: runTestOnEc2.yml
-        displayName: Test advanced features on one standard design
         parameters:
+          displayName: Test advanced features on one standard design
           instance_type: 'f1.4xlarge'
           config_list:
           - os_distrib: 'centos_7'
@@ -69,8 +69,8 @@ stages:
           #  dependsOn: 'centos_7'
 
       - template: runTestOnEc2.yml
-        displayName: Test AWS XRT specific hardware configuration
         parameters:
+          displayName: Test AWS XRT specific hardware configuration
           instance_type: 'f1.2xlarge'
           config_list:
           - os_distrib: 'centos_7'
@@ -82,8 +82,8 @@ stages:
           #  dependsOn: 'centos_7'
 
       - template: runTestOnEc2.yml
-        displayName: Test AWS F1 specific hardware configuration
         parameters:
+          displayName: Test AWS F1 specific hardware configuration
           instance_type: 'f1.2xlarge'
           config_list:
           - os_distrib: 'centos_7'

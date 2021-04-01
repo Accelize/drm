@@ -2,6 +2,7 @@
 # runTestOnEc2.yml
 
 parameters:
+  displayName: 'Test on AWS'
   instance_type: 'f1.4xlarge'
   config_list:
   - os_distrib: 'centos_7'
@@ -28,7 +29,7 @@ jobs:
 
   # Run tests on AWS agent
   - job: runTests_Aws_${{ config.os_distrib }}
-    displayName: Run tests on AWS ${{ config.os_distrib }}
+    displayName: ${{ config.displayName }} on ${{ config.os_distrib }}
     dependsOn: startAgent_Aws_${{ config.os_distrib }}
     condition: succeededOrFailed()
     pool:
