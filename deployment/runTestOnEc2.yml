@@ -5,8 +5,7 @@ parameters:
   instance_type: 'f1.4xlarge'
   config_list:
   - os_distrib: 'centos_7'
-    tox_mode: 'release'
-    tox_coverage: false
+    tox_operation: 'aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug'
     tox_extra_option: ''
 
 jobs:
@@ -36,11 +35,6 @@ jobs:
       name: Default
       demands:  # Use previously instantiated agent
         - agent.Name -equals $(Build.BuildId) AWS ${{ config.os_distrib }}
-    variables:
-      ${{ if eq(config.tox_coverage, true) }}:
-        tox_operation: aws-build-${{ config.tox_mode }},cpp-${{ config.tox_mode }},c-${{ config.tox_mode }},integration-${{ config.tox_mode }},coverage-${{ config.tox_mode }}
-      ${{ if ne(config.tox_coverage, true) }}:
-        tox_operation: aws-build-${{ config.tox_mode }},cpp-${{ config.tox_mode }},c-${{ config.tox_mode }},integration-${{ config.tox_mode }}
     steps:
       - checkout: self
         submodules: true
@@ -86,7 +80,7 @@ jobs:
           EOF
         displayName: Create Accelize credentials file
 
-      - script: sudo -E tox -p all -e $(tox_operation)
+      - script: sudo -E tox -p all -e $(config.tox_operation)
                 -- --cred=$(Build.SourcesDirectory)/cred.json --server=$(meteringServer) --artifacts_dir=$(Build.SourcesDirectory)/artifacts -rxs ${{ config.tox_extra_option }}
         displayName: Run tests with Tox
         env:

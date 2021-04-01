@@ -216,6 +216,16 @@ def pytest_runtest_setup(item):
     """
     # Check awsxrt tests
     m_option = item.config.getoption('-m')
+    if search(r'\bawsf1\b', m_option) and not search(r'\nnot\n\s+\bawsf1\b', m_option):
+        skip_awsf1 = False
+    else:
+        skip_awsf1 = True
+    markers = tuple(item.iter_markers(name='awsf1'))
+    if skip_awsf1 and markers:
+        pytest.skip("Don't run AWS F1 (Vivado RTL) tests.")
+
+    # Check awsxrt tests
+    m_option = item.config.getoption('-m')
     if search(r'\bawsxrt\b', m_option) and not search(r'\nnot\n\s+\bawsxrt\b', m_option):
         skip_awsxrt = False
     else:

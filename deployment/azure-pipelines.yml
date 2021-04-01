@@ -41,8 +41,8 @@ variables:
     value: $(Build.SourcesDirectory)/deployment
 
 stages:
-  - stage: compile_and_test
-    displayName: Compile sources and test on hardware
+  - stage: compile_and_full_test
+    displayName: Compile sources and test on multiple hardware designs
     variables:
       # Set Git branch conditional variables
       ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/master') }}:
@@ -56,16 +56,41 @@ stages:
 
     jobs:
       - template: runTestOnEc2.yml
+        displayName: Test advanced features on one standard design
         parameters:
           instance_type: 'f1.4xlarge'
           config_list:
           - os_distrib: 'centos_7'
-            tox_mode: 'debug'
-            tox_coverage: true
+            tox_operation: 'aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug'
             tox_extra_option: '$(tox_mark)'
           #- os_distrib: 'ubuntu_18_04'
-          #  tox_mode: 'debug'
-          #  tox_coverage: false
+          #  tox_operation: 'aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug'
+          #  tox_extra_option: '$(tox_mark)'
+          #  dependsOn: 'centos_7'
+
+      - template: runTestOnEc2.yml
+        displayName: Test AWS XRT specific hardware configuration
+        parameters:
+          instance_type: 'f1.2xlarge'
+          config_list:
+          - os_distrib: 'centos_7'
+            tox_operation: 'aws-build-debug,awsxrt-debug'
+            tox_extra_option: '$(tox_mark)'
+          #- os_distrib: 'ubuntu_18_04'
+          #  tox_operation: 'aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug'
+          #  tox_extra_option: '$(tox_mark)'
+          #  dependsOn: 'centos_7'
+
+      - template: runTestOnEc2.yml
+        displayName: Test AWS F1 specific hardware configuration
+        parameters:
+          instance_type: 'f1.2xlarge'
+          config_list:
+          - os_distrib: 'centos_7'
+            tox_operation: 'aws-build-debug,awsf1-debug'
+            tox_extra_option: '$(tox_mark)'
+          #- os_distrib: 'ubuntu_18_04'
+          #  tox_operation: 'aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug'
           #  tox_extra_option: '$(tox_mark)'
           #  dependsOn: 'centos_7'
 

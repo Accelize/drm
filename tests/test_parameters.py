@@ -148,7 +148,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     exp_value = 0
     conf_json['settings']['log_file_verbosity'] = exp_value
     conf_json.save()
-    accelize_drm.DrmManager(
+    with accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
             driver.read_register_callback,
@@ -205,7 +205,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
-        ) as drm_manager
+        ) as drm_manager:
         assert drm_manager.get('log_file_type') == exp_value
     async_cb.assert_NoError()
     print("Test parameter 'log_file_type': PASS")
@@ -308,7 +308,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     async_cb.reset()
     conf_json.reset()
     exp_value = 2*orig_frequency_detect_period
-    conf_json['settings'] = {'frequency_detection_period': exp_value}
+    conf_json['settings']['frequency_detection_period'] = exp_value
     conf_json.save()
     with accelize_drm.DrmManager(
             conf_json.path,
@@ -325,7 +325,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     async_cb.reset()
     conf_json.reset()
     exp_value = 2*orig_frequency_detect_threshold
-    conf_json['settings'] = {'frequency_detection_threshold': exp_value}
+    conf_json['settings']['frequency_detection_threshold'] = exp_value
     conf_json.save()
     with accelize_drm.DrmManager(
             conf_json.path,
@@ -342,7 +342,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     async_cb.reset()
     conf_json.reset()
     # Check error: ws_retry_period_long must be != ws_retry_period_short
-    conf_json['settings'] = {'ws_retry_period_long': orig_retry_period_short}
+    conf_json['settings']['ws_retry_period_long'] = orig_retry_period_short
     conf_json.save()
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         accelize_drm.DrmManager(
@@ -360,7 +360,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     async_cb.reset()
     conf_json.reset()
     exp_value = orig_retry_period_long + 1
-    conf_json['settings'] = {'ws_retry_period_long': exp_value}
+    conf_json['settings']['ws_retry_period_long'] = exp_value
     conf_json.save()
     with accelize_drm.DrmManager(
             conf_json.path,
@@ -377,7 +377,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     async_cb.reset()
     conf_json.reset()
     # Check error: ws_retry_period_long must be != ws_retry_period_short
-    conf_json['settings'] = {'ws_retry_period_short': orig_retry_period_long}
+    conf_json['settings']['ws_retry_period_short'] = orig_retry_period_long
     conf_json.save()
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         accelize_drm.DrmManager(
@@ -396,7 +396,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     async_cb.reset()
     conf_json.reset()
     exp_value = orig_retry_period_short + 1
-    conf_json['settings'] = {'ws_retry_period_short': exp_value}
+    conf_json['settings']['ws_retry_period_short'] = exp_value
     conf_json.save()
     with accelize_drm.DrmManager(
             conf_json.path,
@@ -412,7 +412,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     # Test parameter: ws_api_retry_duration
     async_cb.reset()
     conf_json.reset()
-    conf_json['settings'] = {'ws_api_retry_duration': 0}
+    conf_json['settings']['ws_api_retry_duration'] = 0
     conf_json.save()
     with accelize_drm.DrmManager(
             conf_json.path,
@@ -425,7 +425,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     async_cb.reset()
     conf_json.reset()
     exp_value = orig_api_retry_duration + 1
-    conf_json['settings'] = {'ws_api_retry_duration': exp_value}
+    conf_json['settings']['ws_api_retry_duration'] = exp_value
     conf_json.save()
     with accelize_drm.DrmManager(
             conf_json.path,
@@ -441,7 +441,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     # Test parameter: ws_request_timeout
     async_cb.reset()
     conf_json.reset()
-    conf_json['settings'] = {'ws_request_timeout': 0}
+    conf_json['settings']['ws_request_timeout'] = 0
     conf_json.save()
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         accelize_drm.DrmManager(
@@ -457,7 +457,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     async_cb.reset()
     conf_json.reset()
     exp_value = 2*orig_request_timeout
-    conf_json['settings'] = {'ws_request_timeout': exp_value}
+    conf_json['settings']['ws_request_timeout'] = exp_value
     conf_json.save()
     with accelize_drm.DrmManager(
             conf_json.path,
@@ -474,7 +474,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     async_cb.reset()
     conf_json.reset()
     expectVal = 0
-    conf_json['settings'] = {'host_data_verbosity': expectVal}
+    conf_json['settings']['host_data_verbosity'] = expectVal
     conf_json.save()
     with accelize_drm.DrmManager(
             conf_json.path,
@@ -487,7 +487,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
 
     conf_json.reset()
     expectVal = 2
-    conf_json['settings'] = {'host_data_verbosity': expectVal}
+    conf_json['settings']['host_data_verbosity'] = expectVal
     conf_json.save()
     with accelize_drm.DrmManager(
             conf_json.path,
@@ -504,7 +504,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     async_cb.reset()
     conf_json.reset()
     expectVal = False
-    conf_json['settings'] = {'log_file_append': expectVal}
+    conf_json['settings']['log_file_append'] = expectVal
     conf_json.save()
     with accelize_drm.DrmManager(
             conf_json.path,
@@ -515,9 +515,9 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
         ) as drm_manager:
         assert drm_manager.get('log_file_append') == expectVal
 
-    conf_json.reset()
     expectVal = True
-    conf_json['settings'] = {'log_file_append': expectVal}
+    conf_json.reset()
+    conf_json['settings']['log_file_append'] = expectVal
     conf_json.save()
     with accelize_drm.DrmManager(
             conf_json.path,
@@ -525,7 +525,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
-        ) as drm_manage:
+        ) as drm_manager:
         assert drm_manager.get('log_file_append') == expectVal
     async_cb.assert_NoError()
     print("Test parameter 'log_file_append': PASS")
@@ -534,7 +534,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     async_cb.reset()
     conf_json.reset()
     expectVal = 1
-    conf_json['settings'] = {'ws_verbosity': expectVal}
+    conf_json['settings']['ws_verbosity'] = expectVal
     conf_json.save()
     with accelize_drm.DrmManager(
             conf_json.path,
@@ -546,7 +546,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
         assert drm_manager.get('ws_verbosity') == expectVal
     conf_json.reset()
     expectVal = 0
-    conf_json['settings'] = {'ws_verbosity': expectVal}
+    conf_json['settings']['ws_verbosity'] = expectVal
     conf_json.save()
     with accelize_drm.DrmManager(
             conf_json.path,
@@ -605,7 +605,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     # Test unsupported parameter
     async_cb.reset()
     conf_json.reset()
-    conf_json['settings'] = {'unsupported_param': 10.2}
+    conf_json['settings']['unsupported_param'] = 10.2
     conf_json.save()
     with accelize_drm.DrmManager(
             conf_json.path,
@@ -685,7 +685,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         exp_val = LOG_FORMAT_LONG
         drm_manager.set(log_format=exp_val)
         assert drm_manager.get('log_format') == exp_val
-        drm_    manager.set(log_format=orig_val)
+        drm_manager.set(log_format=orig_val)
         async_cb.assert_NoError()
         print("Test parameter 'log_format': PASS")
 
@@ -1082,7 +1082,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     # Test parameter: host_data
     async_cb.reset()
     conf_json.reset()
-    conf_json['settings'] = {'host_data': 0}
+    conf_json['settings']['host_data'] = 0
     conf_json.save()
     with accelize_drm.DrmManager(
             conf_json.path,
@@ -1104,7 +1104,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     # Test parameter: log_file_append
     async_cb.reset()
     conf_json.reset()
-    conf_json['settings'] = {'log_file_append': False}
+    conf_json['settings']['log_file_append'] = False
     conf_json.save()
     with accelize_drm.DrmManager(
             conf_json.path,
@@ -1123,7 +1123,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     async_cb.reset()
     conf_json.reset()
     expvalue = 0
-    conf_json['settings'] = {'ws_verbosity': expvalue}
+    conf_json['settings']['ws_verbosity'] = expvalue
     conf_json.save()
     with accelize_drm.DrmManager(
             conf_json.path,
