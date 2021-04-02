@@ -122,10 +122,10 @@ def test_compatibilities(accelize_drm, conf_json, cred_json, async_handler):
             driver.write_register_callback,
             async_cb.callback
         ) as drm_manager:
-    try:
-        HDK_Limit = float(drm_manager.get('hdk_compatibility'))
-    except:
-        HDK_Limit = 3.1
+        try:
+            HDK_Limit = float(drm_manager.get('hdk_compatibility'))
+        except:
+            HDK_Limit = 3.1
 
     # Then test all HDK versions that are compatible
     refdesign = accelize_drm.pytest_ref_designs
