@@ -180,7 +180,7 @@ def test_metered_start_stop_long_time(accelize_drm, conf_json, cred_json, async_
     logfile.remove()
 
 
-@pytest.mark.minimum
+@pytest.mark.skip(reason='Nearly as long as test_metered_pause_resume_long_time')
 @pytest.mark.hwtst
 def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
@@ -255,6 +255,7 @@ def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, asy
     logfile.remove()
 
 
+@pytest.mark.minimum
 @pytest.mark.hwtst
 def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
@@ -638,6 +639,8 @@ def test_floating_limits(accelize_drm, conf_json, cred_json, async_handler, log_
     async_cb1.reset()
     cred_json.set_user('accelize_accelerator_test_04')
     conf_json.reset()
+    conf_json['settings']['ws_api_retry_duration'] = 3
+    conf_json.save()
 
     drm_manager0 = accelize_drm.DrmManager(
         conf_json.path,
@@ -646,9 +649,6 @@ def test_floating_limits(accelize_drm, conf_json, cred_json, async_handler, log_
         driver0.write_register_callback,
         async_cb0.callback
     )
-
-    conf_json.reset()
-    conf_json.save()
     drm_manager1 = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,

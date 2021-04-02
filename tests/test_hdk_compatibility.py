@@ -15,7 +15,7 @@ def test_hdk_stability_on_programming(accelize_drm, conf_json, cred_json, async_
     async_cb.reset()
     drm_manager = None
 
-    nb_reset = 10
+    nb_reset = 5
     for i in range(nb_reset):
         # Program FPGA with lastest HDK per major number
         driver.program_fpga(image_id)
