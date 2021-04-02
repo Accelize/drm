@@ -32,26 +32,24 @@ def test_topic0_corrupted_segment_index(accelize_drm, conf_json, cred_json,
     conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
 
-    # Set initial context on the live server
-    healthPeriod = 10
-    context = {'error':0,
-               'healthPeriod':healthPeriod
-    }
-    set_context(context)
-    assert get_context() == context
+        # Set initial context on the live server
+        healthPeriod = 10
+        context = {'error':0,
+                   'healthPeriod':healthPeriod
+        }
+        set_context(context)
+        assert get_context() == context
 
-    drm_manager.activate()
-    try:
+        drm_manager.activate()
         wait_func_true(lambda: get_context()['error'], timeout=60)
-    finally:
         drm_manager.deactivate()
     async_cb.assert_NoError()
 
@@ -70,18 +68,17 @@ def test_topic1_corrupted_metering(accelize_drm, conf_json, cred_json, async_han
 
     async_cb.reset()
     conf_json.reset()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
     nb_run = 5
     nb_pause_resume_max = 100
     for r in range(nb_run):
         print('Run #%d' % r)
-        try:
+        with accelize_drm.DrmManager(
+                    conf_json.path,
+                    cred_json.path,
+                    driver.read_register_callback,
+                    driver.write_register_callback,
+                    async_cb.callback
+                ) as drm_manager:
             assert not drm_manager.get('session_status')
             assert not drm_manager.get('license_status')
             activators.autotest(is_activated=False)
@@ -129,8 +126,6 @@ def test_topic1_corrupted_metering(accelize_drm, conf_json, cred_json, async_han
             activators.autotest(is_activated=False)
             assert drm_manager.get('session_id') != session_id
             async_cb.assert_NoError()
-        finally:
-            drm_manager.deactivate()
 
 
 @pytest.mark.lgdn
@@ -154,18 +149,17 @@ def test_topic1_corrupted_metering2(accelize_drm, conf_json, cred_json,
     async_cb.reset()
     conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
     nb_run = 5
     nb_pause_resume_max = 100
     for r in range(nb_run):
         print('Run #%d' % r)
-        try:
+        with accelize_drm.DrmManager(
+                    conf_json.path,
+                    cred_json.path,
+                    driver.read_register_callback,
+                    driver.write_register_callback,
+                    async_cb.callback
+                ) as drm_manager:
             activators.reset_coin()
             assert not drm_manager.get('session_status')
             assert not drm_manager.get('license_status')
@@ -214,8 +208,6 @@ def test_topic1_corrupted_metering2(accelize_drm, conf_json, cred_json,
             activators.autotest(is_activated=False)
             assert drm_manager.get('session_id') != session_id
             async_cb.assert_NoError()
-        finally:
-            drm_manager.deactivate()
 
 
 @pytest.mark.lgdn
@@ -234,16 +226,15 @@ def test_endurance(accelize_drm, conf_json, cred_json, async_handler):
         test_duration = 24*3600  # 1 day
         print('Warning: Missing argument "duration". Using default value %d' % test_duration)
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    assert not drm_manager.get('license_status')
-    activators.autotest(is_activated=False)
-    try:
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        assert not drm_manager.get('license_status')
+        activators.autotest(is_activated=False)
         drm_manager.activate()
         start = datetime.now()
         lic_duration = drm_manager.get('license_duration')
@@ -261,12 +252,11 @@ def test_endurance(accelize_drm, conf_json, cred_json, async_handler):
             if seconds_left < 0:
                 break
             sleep(randint(10, 3*lic_duration))
-    finally:
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
-        activators.autotest(is_activated=False)
-        elapsed = datetime.now() - start
-        print('Endurance test has completed:', str(timedelta(seconds=elapsed.total_seconds())))
+    activators.autotest(is_activated=False)
+    elapsed = datetime.now() - start
+    print('Endurance test has completed:', str(timedelta(seconds=elapsed.total_seconds())))
 
 
 @pytest.mark.lgdn
@@ -292,21 +282,18 @@ def test_drm_controller_activation_timeout(accelize_drm, conf_json, cred_json, a
         driver.program_fpga(image_id)
         try:
             # Test no compatibility issue
-            drm_manager = accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            )
-            assert not drm_manager.get('license_status')
-            try:
+            with accelize_drm.DrmManager(
+                    conf_json.path,
+                    cred_json.path,
+                    driver.read_register_callback,
+                    driver.write_register_callback,
+                    async_cb.callback
+                ) as drm_manager:
+                assert not drm_manager.get('license_status')
                 drm_manager.activate()
                 assert drm_manager.get('license_status')
-            finally:
                 drm_manager.deactivate()
                 assert not drm_manager.get('license_status')
-                del drm_manager
             async_cb.assert_NoError()
             if err > 0:
                 print('Reattempt after error succeeded!')
@@ -330,14 +317,13 @@ def test_run_for_a_period_of_time(accelize_drm, conf_json, cred_json, async_hand
         pass
     print('Using parameter "period"=%d' % period)
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    try:
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
         assert not drm_manager.get('license_status')
         drm_manager.activate()
         assert drm_manager.get('license_status')
@@ -345,9 +331,6 @@ def test_run_for_a_period_of_time(accelize_drm, conf_json, cred_json, async_hand
             wait_func_true(lambda: not drm_manager.get('license_status'), timeout=period, sleep_time=1)
         except RuntimeError:
             pass
-    finally:
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
-        del drm_manager
     async_cb.assert_NoError()
-
