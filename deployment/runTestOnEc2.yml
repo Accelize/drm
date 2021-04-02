@@ -25,7 +25,7 @@ jobs:
       ansibleRequirements: deployment/requirements.yml
       dependsOn:
       - ${{ if config.dependsOn }}:
-        - runTests_Aws_${{ config.dependsOn }}
+        - runTests_${{ parameters.identifier }}_on_${{ config.dependsOn }}
       condition: succeededOrFailed()
 
   # Run tests on AWS agent
@@ -82,7 +82,7 @@ jobs:
           EOF
         displayName: Create Accelize credentials file
 
-      - script: sudo -E tox -p all -e $(config.tox_operation)
+      - script: sudo -E tox -p all -e ${{ config.tox_operation }}
                 -- --cred=$(Build.SourcesDirectory)/cred.json --server=$(meteringServer) --artifacts_dir=$(Build.SourcesDirectory)/artifacts -rxs ${{ config.tox_extra_option }}
         displayName: Run tests with Tox
         env:

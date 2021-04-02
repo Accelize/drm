@@ -42,7 +42,7 @@ variables:
 
 stages:
   - stage: compile_and_test
-    displayName: Compile sources and test on multiple hardware designs
+    displayName: Compile sources and test multiple hardware designs
     variables:
       # Set Git branch conditional variables
       ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/master') }}:
