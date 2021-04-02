@@ -511,43 +511,43 @@ def test_drm_manager_get_and_set_bad_arguments(accelize_drm, conf_json, cred_jso
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
 
-    # Test when parameter is None
-    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        drm_manager.get(None)
-    assert 'keys argument is empty' in str(excinfo.value)
-    async_cb.assert_NoError()
-    print("Test when parameter is None: PASS")
+        # Test when parameter is None
+        with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+            drm_manager.get(None)
+        assert 'keys argument is empty' in str(excinfo.value)
+        async_cb.assert_NoError()
+        print("Test when parameter is None: PASS")
 
-    # Test when parameter is empty
-    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        drm_manager.get('')
-    assert 'keys argument is empty' in str(excinfo.value)
-    async_cb.assert_NoError()
-    print("Test empty parameter: PASS")
+        # Test when parameter is empty
+        with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+            drm_manager.get('')
+        assert 'keys argument is empty' in str(excinfo.value)
+        async_cb.assert_NoError()
+        print("Test empty parameter: PASS")
 
-    # Test when bad argument is given to get
-    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        drm_manager.get('unknown_parameter')
-    assert "Cannot find parameter: unknown_parameter" in str(excinfo.value)
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
-    print("Test bad argument is given to get: PASS")
+        # Test when bad argument is given to get
+        with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+            drm_manager.get('unknown_parameter')
+        assert "Cannot find parameter: unknown_parameter" in str(excinfo.value)
+        err_code = async_handler.get_error_code(str(excinfo.value))
+        assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
+        print("Test bad argument is given to get: PASS")
 
-    # Test when bad argument is given to set
-    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        drm_manager.set(unknown_parameter=-1)
-    assert "Cannot find parameter: unknown_parameter" in str(excinfo.value)
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
-    print("Test when bad argument is given to set: PASS")
+        # Test when bad argument is given to set
+        with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+            drm_manager.set(unknown_parameter=-1)
+        assert "Cannot find parameter: unknown_parameter" in str(excinfo.value)
+        err_code = async_handler.get_error_code(str(excinfo.value))
+        assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
+        print("Test when bad argument is given to set: PASS")
 
 
 @pytest.mark.aws
