@@ -151,7 +151,7 @@ def pytest_addoption(parser):
         "--backend", action="store", default="c",
         help='Use specified Accelize DRM library API as backend: "c" or "c++"')
     parser.addoption(
-        "--fpga_driver", action="store", default=None,
+        "--fpga_driver", action="store", default='aws_f1',
         help='Specify FPGA driver to use with DRM library')
     parser.addoption(
         "--fpga_slot_id", action="store", default=0, type=int,
@@ -586,8 +586,6 @@ def accelize_drm(pytestconfig):
             fpga_driver_name = 'aws_f1'
         else:
             raise ValueError("Unsupported 'fpga_image' option")
-    elif fpga_driver_name is None:
-        fpga_driver_name = 'aws_f1'
 
     # Get cmake building directory
     build_source_dir = '@CMAKE_CURRENT_SOURCE_DIR@'
