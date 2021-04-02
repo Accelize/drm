@@ -36,7 +36,7 @@ jobs:
     pool:
       name: Default
       demands:  # Use previously instantiated agent
-        - agent.Name -equals $(Build.BuildId) AWS ${{ config.os_distrib }}
+        - agent.Name -equals $(Build.BuildId) ${{ parameters.description }} on AWS ${{ config.os_distrib }}
     steps:
       - checkout: self
         submodules: true
