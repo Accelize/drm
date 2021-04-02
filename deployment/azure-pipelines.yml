@@ -69,33 +69,33 @@ stages:
           #  tox_extra_option: '$(tox_mark)'
           #  dependsOn: 'centos_7'
 
-#      - template: runTestOnEc2.yml
-#        parameters:
-#          identifier: awsxrt_specific_designs
-#          description:  AWS XRT specific designs
-#          instance_type: 'f1.2xlarge'
-#          config_list:
-#          - os_distrib: 'centos_7'
-#            tox_operation: 'aws-build-debug,awsxrt-debug'
-#            tox_extra_option: '$(tox_mark)'
-#          #- os_distrib: 'ubuntu_18_04'
-#          #  tox_operation: 'aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug'
-#          #  tox_extra_option: '$(tox_mark)'
-#          #  dependsOn: 'centos_7'
-#
-#      - template: runTestOnEc2.yml
-#        parameters:
-#          identifier: awsf1_specific_designs
-#          description: AWS F1 specific designs
-#          instance_type: 'f1.2xlarge'
-#          config_list:
-#          - os_distrib: 'centos_7'
-#            tox_operation: 'aws-build-debug,awsf1-debug'
-#            tox_extra_option: '$(tox_mark)'
-#          #- os_distrib: 'ubuntu_18_04'
-#          #  tox_operation: 'aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug'
-#          #  tox_extra_option: '$(tox_mark)'
-#          #  dependsOn: 'centos_7'
+      - template: runTestOnEc2.yml
+        parameters:
+          identifier: awsxrt_specific_designs
+          description:  AWS XRT specific designs
+          instance_type: 'f1.2xlarge'
+          config_list:
+          - os_distrib: 'centos_7'
+            tox_operation: 'aws-build-debug,awsxrt-debug'
+            tox_extra_option: '$(tox_mark)'
+          #- os_distrib: 'ubuntu_18_04'
+          #  tox_operation: 'aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug'
+          #  tox_extra_option: '$(tox_mark)'
+          #  dependsOn: 'centos_7'
+
+      - template: runTestOnEc2.yml
+        parameters:
+          identifier: awsf1_specific_designs
+          description: AWS F1 specific designs
+          instance_type: 'f1.2xlarge'
+          config_list:
+          - os_distrib: 'centos_7'
+            tox_operation: 'aws-build-debug,awsf1-debug'
+            tox_extra_option: '$(tox_mark)'
+          #- os_distrib: 'ubuntu_18_04'
+          #  tox_operation: 'aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug'
+          #  tox_extra_option: '$(tox_mark)'
+          #  dependsOn: 'centos_7'
 
   - stage: build_packages
     displayName: Create packages
