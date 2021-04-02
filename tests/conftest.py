@@ -148,7 +148,7 @@ def pytest_addoption(parser):
     Add command lines arguments
     """
     parser.addoption(
-        "--backend", action="store", default="c",
+        "--backend", action="store", default="c++",
         help='Use specified Accelize DRM library API as backend: "c" or "c++"')
     parser.addoption(
         "--fpga_driver", action="store", default='aws_f1',
@@ -616,7 +616,7 @@ def accelize_drm(pytestconfig):
         fpga_slot_id = [0, 1]
     elif environ.get('TOX_PARALLEL_ENV'):
         # Define FPGA slot for Tox parallel execution
-        fpga_slot_id = [0 if backend == 'c' else 1]
+        fpga_slot_id = [0 if backend == 'c++' else 1]
     else:
         # Use user defined slot
         fpga_slot_id = [pytestconfig.getoption("fpga_slot_id")]
