@@ -57,8 +57,8 @@ stages:
     jobs:
       - template: runTestOnEc2.yml
         parameters:
-          identifier: advanced_features_on_standard_design
-          displayName: Test advanced features on standard design
+          identifier: full_features
+          displayName: full features
           instance_type: 'f1.4xlarge'
           config_list:
           - os_distrib: 'centos_7'
@@ -71,8 +71,8 @@ stages:
 
       - template: runTestOnEc2.yml
         parameters:
-          identifier: awsxrt_specific_design
-          displayName: Test AWS XRT specific hardware configuration
+          identifier: awsxrt_specific_designs
+          displayName:  AWS XRT specific designs
           instance_type: 'f1.2xlarge'
           config_list:
           - os_distrib: 'centos_7'
@@ -85,8 +85,8 @@ stages:
 
       - template: runTestOnEc2.yml
         parameters:
-          identifier: awsf1_specific_design
-          displayName: Test AWS F1 specific hardware configuration
+          identifier: awsf1_specific_designs
+          displayName: AWS F1 specific designs
           instance_type: 'f1.2xlarge'
           config_list:
           - os_distrib: 'centos_7'
