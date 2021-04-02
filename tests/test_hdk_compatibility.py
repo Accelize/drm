@@ -21,21 +21,18 @@ def test_hdk_stability_on_programming(accelize_drm, conf_json, cred_json, async_
         driver.program_fpga(image_id)
 
         # Test no compatibility issue
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        assert not drm_manager.get('license_status')
-        try:
+        with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+            assert not drm_manager.get('license_status')
             drm_manager.activate()
             assert drm_manager.get('license_status')
-        finally:
             drm_manager.deactivate()
             assert not drm_manager.get('license_status')
-            del drm_manager
         async_cb.assert_NoError()
 
 
@@ -50,27 +47,26 @@ def test_uncompatibilities(accelize_drm, conf_json, cred_json, async_handler):
     fpga_image_bkp = driver.fpga_image
     async_cb = async_handler.create()
     async_cb.reset()
-    drm_manager = None
 
-    try:
-        # First instanciate an object to get the HDK compatbility version
-        drm_manager = accelize_drm.DrmManager(
+    # First instanciate an object to get the HDK compatbility version
+    with accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
-        )
+        ) as drm_manager:
         try:
             HDK_Limit = float(drm_manager.get('hdk_compatibility'))
         except:
             HDK_Limit = 3.1
 
-        # Then test all HDK versions that are not compatible
-        refdesign = accelize_drm.pytest_ref_designs
-        refdesignByMajor = ((float(match(r'^(\d+.\d+)', x).group(1)), x) for x in refdesign.hdk_versions)
-        current_num = float(match(r'^(\d+.\d+)', hdk_version).group(1))
-        tested = False
+    # Then test all HDK versions that are not compatible
+    refdesign = accelize_drm.pytest_ref_designs
+    refdesignByMajor = ((float(match(r'^(\d+.\d+)', x).group(1)), x) for x in refdesign.hdk_versions)
+    current_num = float(match(r'^(\d+.\d+)', hdk_version).group(1))
+    tested = False
+    try:
         for num, versions in groupby(refdesignByMajor, lambda x: x[0]):
             if HDK_Limit <= num and num <= current_num:
                 print('Test uncompatible HDK: HDK version %s is in the compatiblity range[%s : %s]: skip version' % (num, HDK_Limit, current_num))
@@ -86,7 +82,7 @@ def test_uncompatibilities(accelize_drm, conf_json, cred_json, async_handler):
 
             # Test compatibility issue
             with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
-                drm_manager = accelize_drm.DrmManager(
+                accelize_drm.DrmManager(
                     conf_json.path,
                     cred_json.path,
                     driver.read_register_callback,
@@ -101,10 +97,7 @@ def test_uncompatibilities(accelize_drm, conf_json, cred_json, async_handler):
             assert hit
         if not tested:
             pytest.skip("Could not find a refdesign in the testsuite to test the uncompatible HDKs")
-
     finally:
-        if drm_manager:
-            del drm_manager
         # Reprogram FPGA with original image
         driver.program_fpga(fpga_image_bkp)
 
@@ -120,27 +113,26 @@ def test_compatibilities(accelize_drm, conf_json, cred_json, async_handler):
     fpga_image_bkp = driver.fpga_image
     async_cb = async_handler.create()
     async_cb.reset()
-    drm_manager = None
 
+    # First instanciate an object to get the HDK compatbility version
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
     try:
-        # First instanciate an object to get the HDK compatbility version
-        try:
-            drm_manager = accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            )
-            HDK_Limit = float(drm_manager.get('hdk_compatibility'))
-        except:
-            HDK_Limit = 3.1
+        HDK_Limit = float(drm_manager.get('hdk_compatibility'))
+    except:
+        HDK_Limit = 3.1
 
-        # Then test all HDK versions that are compatible
-        refdesign = accelize_drm.pytest_ref_designs
-        refdesignByMajor = ((float(match(r'^(\d+.\d+)', x).group(1)), x) for x in refdesign.hdk_versions)
-        current_num = float(match(r'^(\d+.\d+)', hdk_version).group(1))
-        tested = False
+    # Then test all HDK versions that are compatible
+    refdesign = accelize_drm.pytest_ref_designs
+    refdesignByMajor = ((float(match(r'^(\d+.\d+)', x).group(1)), x) for x in refdesign.hdk_versions)
+    current_num = float(match(r'^(\d+.\d+)', hdk_version).group(1))
+    tested = False
+    try:
         for num, versions in groupby(refdesignByMajor, lambda x: x[0]):
             if num < HDK_Limit or num > current_num:
                 print('Test compatible HDK: HDK version %s is not in the range ]%s : %s[: skip version' % (num, HDK_Limit, current_num))
@@ -157,22 +149,20 @@ def test_compatibilities(accelize_drm, conf_json, cred_json, async_handler):
             driver.program_fpga(image_id)
 
             # Test no compatibility issue
-            drm_manager = accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            )
-            assert not drm_manager.get('license_status')
-            drm_manager.activate()
-            assert drm_manager.get('license_status')
-            drm_manager.deactivate()
-            assert not drm_manager.get('license_status')
+            with accelize_drm.DrmManager(
+                    conf_json.path,
+                    cred_json.path,
+                    driver.read_register_callback,
+                    driver.write_register_callback,
+                    async_cb.callback
+                ) as drm_manager:
+                assert not drm_manager.get('license_status')
+                drm_manager.activate()
+                assert drm_manager.get('license_status')
+                drm_manager.deactivate()
+                assert not drm_manager.get('license_status')
             async_cb.assert_NoError()
         assert tested
     finally:
-        if drm_manager:
-            del drm_manager
         # Reprogram FPGA with original image
         driver.program_fpga(fpga_image_bkp)
