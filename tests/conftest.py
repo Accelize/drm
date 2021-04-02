@@ -222,7 +222,7 @@ def pytest_runtest_setup(item):
         skip_awsf1 = True
     markers = tuple(item.iter_markers(name='awsf1'))
     if skip_awsf1 and markers:
-        pytest.skip("Don't run AWS F1 (Vivado RTL) tests.")
+        pytest.skip("Don't run AWS F1 (Vivado) tests.")
 
     # Check awsxrt tests
     m_option = item.config.getoption('-m')
