@@ -16,7 +16,7 @@ jobs:
   - template: agents/start.yml@acid
     parameters:
       jobName: startAgent_${{ parameters.identifier }}_on_${{ config.os_distrib }}
-      agentDescription: ${{ parameters.identifier }} on AWS ${{ config.os_distrib }}
+      agentDescription: Start ${{ parameters.identifier }} on AWS ${{ config.os_distrib }}
       provider: awsEc2
       image: ${{ config.os_distrib }}
       instanceType: ${{ parameters.instance_type }}
@@ -30,7 +30,7 @@ jobs:
 
   # Run tests on AWS agent
   - job: runTests_${{ parameters.identifier }}_on_${{ config.os_distrib }}
-    displayName: ${{ parameters.displayName }} on ${{ config.os_distrib }}
+    displayName: Run ${{ parameters.displayName }} on ${{ config.os_distrib }}
     dependsOn: startAgent_${{ parameters.identifier }}_on_${{ config.os_distrib }}
     condition: succeededOrFailed()
     pool:
@@ -100,5 +100,5 @@ jobs:
     parameters:
       jobName: stopAgent_${{ parameters.identifier }}_on_${{ config.os_distrib }}
       provider: awsEc2
-      agentDescription: ${{ parameters.identifier }} on AWS ${{ config.os_distrib }}
+      agentDescription: Stop ${{ parameters.identifier }} on AWS ${{ config.os_distrib }}
       dependsOn: runTests_${{ parameters.identifier }}_on_${{ config.os_distrib }}
