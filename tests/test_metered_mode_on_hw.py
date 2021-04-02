@@ -630,42 +630,35 @@ def test_floating_limits(accelize_drm, conf_json, cred_json, async_handler, log_
     """
     Test an error is returned when the floating limit is reached
     """
-    from copy import deepcopy
     driver0 = accelize_drm.pytest_fpga_driver[0]
     driver1 = accelize_drm.pytest_fpga_driver[1]
     async_cb0 = async_handler.create()
     async_cb0.reset()
     async_cb1 = async_handler.create()
     async_cb1.reset()
-
     cred_json.set_user('accelize_accelerator_test_04')
-    logfile0 = log_file_factory.create(2)
     conf_json.reset()
-    conf_json['settings'].update(logfile0.json)
+
+    drm_manager0 = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver0.read_register_callback,
+        driver0.write_register_callback,
+        async_cb0.callback
+    )
+
+    conf_json.reset()
     conf_json.save()
-
-    logfile1 = log_file_factory.create(2)
-    conf_json1 = deepcopy(conf_json)
-    conf_json1.reset()
-    conf_json1['settings'].update(logfile1.json)
-    conf_json1.save()
-
-    with accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver0.read_register_callback,
-                driver0.write_register_callback,
-                async_cb0.callback
-            ) as drm_manager0, accelize_drm.DrmManager(
-                conf_json1.path,
-                cred_json.path,
-                driver1.read_register_callback,
-                driver1.write_register_callback,
-                async_cb1.callback
-            ) as drm_manager1:
-
-        assert not drm_manager0.get('license_status')
-        assert not drm_manager1.get('license_status')
+    drm_manager1 = accelize_drm.DrmManager(
+        conf_json.path,
+        cred_json.path,
+        driver1.read_register_callback,
+        driver1.write_register_callback,
+        async_cb1.callback
+    )
+    assert not drm_manager0.get('license_status')
+    assert not drm_manager1.get('license_status')
+    try:
         drm_manager0.activate()
         assert drm_manager0.get('license_status')
         with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
@@ -673,23 +666,22 @@ def test_floating_limits(accelize_drm, conf_json, cred_json, async_handler, log_
         assert search(r'Timeout on License request after .+ attempts', str(excinfo.value)) is not None
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
         async_cb1.assert_NoError()
+    finally:
         drm_manager0.deactivate()
         assert not drm_manager0.get('license_status')
         async_cb0.assert_NoError()
-
+    try:
         drm_manager1.activate()
         assert drm_manager1.get('license_status')
         with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
             drm_manager0.activate()
         assert search(r'Timeout on License request after .+ attempts', str(excinfo.value)) is not None
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
+        async_cb0.assert_NoError()
+    finally:
         drm_manager1.deactivate()
         assert not drm_manager1.get('license_status')
-
-    async_cb0.assert_NoError()
-    async_cb1.assert_NoError()
-    logfile0.remove()
-    logfile1.remove()
+        async_cb1.assert_NoError()
 
 
 def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handler, log_file_factory, request):
