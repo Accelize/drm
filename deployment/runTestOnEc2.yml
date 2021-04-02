@@ -3,7 +3,7 @@
 
 parameters:
   identifier: 'test_on_aws'
-  displayName: 'Test on AWS'
+  description: 'Test on AWS'
   instance_type: 'f1.4xlarge'
   config_list:
   - os_distrib: 'centos_7'
@@ -16,7 +16,7 @@ jobs:
   - template: agents/start.yml@acid
     parameters:
       jobName: startAgent_${{ parameters.identifier }}_on_${{ config.os_distrib }}
-      agentDescription: Start ${{ parameters.displayName }} on AWS ${{ config.os_distrib }}
+      agentDescription: ${{ parameters.description }} on AWS ${{ config.os_distrib }}
       provider: awsEc2
       image: ${{ config.os_distrib }}
       instanceType: ${{ parameters.instance_type }}
@@ -30,7 +30,7 @@ jobs:
 
   # Run tests on AWS agent
   - job: runTests_${{ parameters.identifier }}_on_${{ config.os_distrib }}
-    displayName: Run ${{ parameters.displayName }} on ${{ config.os_distrib }}
+    displayName: Test ${{ parameters.description }} on ${{ config.os_distrib }}
     dependsOn: startAgent_${{ parameters.identifier }}_on_${{ config.os_distrib }}
     condition: succeededOrFailed()
     pool:
@@ -100,5 +100,5 @@ jobs:
     parameters:
       jobName: stopAgent_${{ parameters.identifier }}_on_${{ config.os_distrib }}
       provider: awsEc2
-      agentDescription: Stop ${{ parameters.displayName }} on AWS ${{ config.os_distrib }}
+      agentDescription: ${{ parameters.description }} on AWS ${{ config.os_distrib }}
       dependsOn: runTests_${{ parameters.identifier }}_on_${{ config.os_distrib }}
