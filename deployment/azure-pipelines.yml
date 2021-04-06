@@ -115,6 +115,8 @@ stages:
         displayName: Publish release
         # Performs release only if not scheduled
         environment: drmLibrary
+        pool:
+          vmImage: ubuntu-18.04
         variables:
           # DEB and RPM repositories paths
           debRepo: /tmp/deb_repo
@@ -175,6 +177,13 @@ stages:
                   name: gpgPrivateKey
                   inputs:
                     secureFile: gpgPrivateKey
+
+                - task: UsePythonVersion@0
+                  inputs:
+                    versionSpec: '3.x'
+                    addToPath: true
+                    architecture: 'x64'
+                  displayName: Get Python
 
                 # Update repositories
                 - task: PythonScript@0
