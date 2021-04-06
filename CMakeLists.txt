@@ -195,24 +195,19 @@ set(CMAKE_INCLUDE_DIR ${CMAKE_BINARY_DIR}/include)
 include_directories(${CMAKE_INCLUDE_DIR})
 include_directories(internal_inc)
 include_directories(include)
-include_directories(spdlog/include)
 
-## spdlog
+## DRMLib sources
 set(TARGET_SOURCES
-    spdlog/src/fmt.cpp
-    spdlog/src/spdlog.cpp
-    spdlog/src/async.cpp
-    spdlog/src/color_sinks.cpp
-    spdlog/src/file_sinks.cpp
-    source/ws_client.cpp
-    source/csp.cpp
-    source/drm_manager.cpp
-    source/utils.cpp
-    source/error.cpp
-    source/log.cpp
+	source/ws_client.cpp
+	source/csp.cpp
+	source/drm_manager.cpp
+	source/utils.cpp
+	source/error.cpp
+	source/log.cpp
 )
 add_library(accelize_drm SHARED ${TARGET_SOURCES})
-target_compile_options(accelize_drm PRIVATE -DSPDLOG_COMPILED_LIB)
+#target_compile_options(accelize_drm PRIVATE -DSPDLOG_COMPILED_LIB)
+target_include_directories(accelize_drm PUBLIC spdlog/include)
 
 ## libaccelize_drm
 set_target_properties(accelize_drm PROPERTIES VERSION ${ACCELIZEDRM_VERSION} SOVERSION ${ABI_VERSION})
