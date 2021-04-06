@@ -1,6 +1,6 @@
 * Mon Apr 6 2021 Accelize v2.5.2-rc.1
 - NEW: Support detection of both drm_aclk and axi_aclk frequences in the DRM Controller
-- NEW: Optimize gathering pof CSP and Host/Card metadata
+- NEW: Optimize gathering of CSP and Host/Card metadata
 - FIX: Metering data collected by the 'metered_data' parameter now include values from every activator
 - FIX: CSP metadata are correctly processed (when available)
 
