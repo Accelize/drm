@@ -16,8 +16,7 @@ def test_wrong_drm_controller_address(accelize_drm, conf_json, cred_json, async_
     try:
         with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
             drm_manager = accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
+                conf_json.path, cred_json.path,
                 driver.read_register_callback,
                 driver.write_register_callback,
                 async_cb.callback
@@ -38,23 +37,21 @@ def test_mailbox_write_overflow(accelize_drm, conf_json, cred_json, async_handle
     async_cb.reset()
     cred_json.reset()
     conf_json.reset()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    mb_size = drm_manager.get('mailbox_size')
-    assert mb_size > 0
-
-    mb_data = sample(range(0xFFFFFFFF), mb_size + 1)
-    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        drm_manager.set(mailbox_data=mb_data)
-    assert 'Trying to write out of Mailbox memory space' in str(excinfo.value)
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
-    async_cb.assert_NoError()
+    with accelize_drm.DrmManager(
+            conf_json.path, cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        mb_size = drm_manager.get('mailbox_size')
+        assert mb_size > 0
+        mb_data = sample(range(0xFFFFFFFF), mb_size + 1)
+        with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+            drm_manager.set(mailbox_data=mb_data)
+        assert 'Trying to write out of Mailbox memory space' in str(excinfo.value)
+        err_code = async_handler.get_error_code(str(excinfo.value))
+        assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
+        async_cb.assert_NoError()
 
 
 def test_mailbox_type_error(accelize_drm, conf_json, cred_json, async_handler):
@@ -67,18 +64,17 @@ def test_mailbox_type_error(accelize_drm, conf_json, cred_json, async_handler):
     async_cb.reset()
     cred_json.reset()
     conf_json.reset()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        drm_manager.set(mailbox_data='this is bad type')
-    assert 'Value must be an array of integers' in str(excinfo.value)
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
+    with accelize_drm.DrmManager(
+            conf_json.path, cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+            drm_manager.set(mailbox_data='this is bad type')
+        assert 'Value must be an array of integers' in str(excinfo.value)
+        err_code = async_handler.get_error_code(str(excinfo.value))
+        assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
     async_cb.assert_NoError()
 
 
@@ -101,8 +97,7 @@ def test_empty_product_id(accelize_drm, conf_json, cred_json, async_handler, log
         async_cb.reset()
         with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
             drm_manager = accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
+                conf_json.path, cred_json.path,
                 driver.read_register_callback,
                 driver.write_register_callback,
                 async_cb.callback
@@ -133,8 +128,7 @@ def test_malformed_product_id(accelize_drm, conf_json, cred_json, async_handler)
         async_cb.reset()
         with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
             drm_manager = accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
+                conf_json.path, cred_json.path,
                 driver.read_register_callback,
                 driver.write_register_callback,
                 async_cb.callback
@@ -160,22 +154,20 @@ def test_2_drm_manager_concurrently(accelize_drm, conf_json, cred_json, async_ha
 
     cred_json.set_user('accelize_accelerator_test_02')
 
-    drm_manager1 = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb1.callback
-    )
-
-    with pytest.raises(accelize_drm.exceptions.DRMBadUsage) as excinfo:
-        drm_manager2 = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+    with accelize_drm.DrmManager(
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
-            async_cb2.callback
-        )
+            async_cb1.callback
+        ) as drm_manager1:
+
+        with pytest.raises(accelize_drm.exceptions.DRMBadUsage) as excinfo:
+            drm_manager2 = accelize_drm.DrmManager(
+                conf_json.path, cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb2.callback
+            )
     assert 'Another instance of the DRM Manager is currently owning the HW' in str(excinfo.value)
 
 
@@ -194,8 +186,7 @@ def test_drm_manager_bist(accelize_drm, conf_json, cred_json, async_handler):
         return driver.read_register_callback(addr, returned_data, driver)
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             my_wrong_read_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -210,8 +201,7 @@ def test_drm_manager_bist(accelize_drm, conf_json, cred_json, async_handler):
         return driver.write_register_callback(register_offset*2, data_to_write, driver)
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             my_wrong_write_callback,
             async_cb.callback

@@ -23,38 +23,15 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
     async_cb.reset()
     cred_json.set_user('accelize_accelerator_test_01')
     conf_json.reset()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    assert drm_manager.get('license_type') == 'Floating/Metering'
-    drmLicType = drm_manager.get('drm_license_type')
-    with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
-        drm_manager.activate()
-    assert "Metering Web Service error 400" in str(excinfo.value)
-    assert "DRM WS request failed" in str(excinfo.value)
-    assert search(r'\\"No Entitlement\\" with .+ for \S+_test_01@accelize.com', str(excinfo.value))
-    assert "User account has no entitlement. Purchase additional licenses via your portal" in str(excinfo.value)
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
-    async_cb.assert_NoError()
-    # Request nodelock license
-    try:
-        async_cb.reset()
-        cred_json.set_user('accelize_accelerator_test_01')
-        conf_json.reset()
-        conf_json.addNodelock()
-        drm_manager = accelize_drm.DrmManager(
+    with accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
-        )
-        assert drm_manager.get('license_type') == 'Node-Locked'
-        assert drm_manager.get('drm_license_type') == drmLicType
+        ) as drm_manager:
+        assert drm_manager.get('license_type') == 'Floating/Metering'
+        drmLicType = drm_manager.get('drm_license_type')
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
         assert "Metering Web Service error 400" in str(excinfo.value)
@@ -62,6 +39,29 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
         assert search(r'\\"No Entitlement\\" with .+ for \S+_test_01@accelize.com', str(excinfo.value))
         assert "User account has no entitlement. Purchase additional licenses via your portal" in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+        async_cb.assert_NoError()
+    # Request nodelock license
+    try:
+        async_cb.reset()
+        cred_json.set_user('accelize_accelerator_test_01')
+        conf_json.reset()
+        conf_json.addNodelock()
+        with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+            assert drm_manager.get('license_type') == 'Node-Locked'
+            assert drm_manager.get('drm_license_type') == drmLicType
+            with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+                drm_manager.activate()
+            assert "Metering Web Service error 400" in str(excinfo.value)
+            assert "DRM WS request failed" in str(excinfo.value)
+            assert search(r'\\"No Entitlement\\" with .+ for \S+_test_01@accelize.com', str(excinfo.value))
+            assert "User account has no entitlement. Purchase additional licenses via your portal" in str(excinfo.value)
+            assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_NoError()
     finally:
         accelize_drm.clean_nodelock_env(conf_json=conf_json)
@@ -72,40 +72,40 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
     async_cb.reset()
     cred_json.set_user('accelize_accelerator_test_02')
     conf_json.reset()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    assert drm_manager.get('license_type') == 'Floating/Metering'
-    assert drm_manager.get('drm_license_type') == drmLicType
-    drm_manager.activate()
-    assert drm_manager.get('drm_license_type') == 'Floating/Metering'
-    drm_manager.deactivate()
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        assert drm_manager.get('license_type') == 'Floating/Metering'
+        assert drm_manager.get('drm_license_type') == drmLicType
+        drm_manager.activate()
+        assert drm_manager.get('drm_license_type') == 'Floating/Metering'
+        drm_manager.deactivate()
     async_cb.assert_NoError()
     # Request nodelock license
     try:
         async_cb.reset()
         conf_json.reset()
         conf_json.addNodelock()
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        assert drm_manager.get('license_type') == 'Node-Locked'
-        assert drm_manager.get('drm_license_type') == 'Floating/Metering'
-        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
-            drm_manager.activate()
-        assert "Metering Web Service error 400" in str(excinfo.value)
-        assert "DRM WS request failed" in str(excinfo.value)
-        assert search(r'\\"No Entitlement\\" with .+ for \S+_test_02@accelize.com', str(excinfo.value))
-        assert 'No valid NodeLocked entitlement found for your account' in str(excinfo.value)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+        with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+            assert drm_manager.get('license_type') == 'Node-Locked'
+            assert drm_manager.get('drm_license_type') == 'Floating/Metering'
+            with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+                drm_manager.activate()
+            assert "Metering Web Service error 400" in str(excinfo.value)
+            assert "DRM WS request failed" in str(excinfo.value)
+            assert search(r'\\"No Entitlement\\" with .+ for \S+_test_02@accelize.com', str(excinfo.value))
+            assert 'No valid NodeLocked entitlement found for your account' in str(excinfo.value)
+            assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_NoError()
     finally:
         accelize_drm.clean_nodelock_env(conf_json=conf_json)
@@ -117,18 +117,18 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
     async_cb.reset()
     conf_json.reset()
     accelize_drm.clean_metering_env(cred_json, ws_admin)
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    assert drm_manager.get('license_type') == 'Floating/Metering'
-    assert drm_manager.get('drm_license_type') == 'Floating/Metering'
-    drm_manager.activate()
-    assert drm_manager.get('drm_license_type') == 'Floating/Metering'
-    drm_manager.deactivate()
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        assert drm_manager.get('license_type') == 'Floating/Metering'
+        assert drm_manager.get('drm_license_type') == 'Floating/Metering'
+        drm_manager.activate()
+        assert drm_manager.get('drm_license_type') == 'Floating/Metering'
+        drm_manager.deactivate()
     async_cb.assert_NoError()
     # Request nodelock license
     try:
@@ -136,19 +136,19 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
         conf_json.reset()
         conf_json.addNodelock()
         accelize_drm.clean_nodelock_env(None, driver, conf_json, cred_json, ws_admin)
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        assert drm_manager.get('license_type') == 'Node-Locked'
-        # Start application
-        assert drm_manager.get('drm_license_type') == 'Idle'
-        drm_manager.activate()
-        assert drm_manager.get('drm_license_type') == 'Node-Locked'
-        drm_manager.deactivate()
+        with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+            assert drm_manager.get('license_type') == 'Node-Locked'
+            # Start application
+            assert drm_manager.get('drm_license_type') == 'Idle'
+            drm_manager.activate()
+            assert drm_manager.get('drm_license_type') == 'Node-Locked'
+            drm_manager.deactivate()
         async_cb.assert_NoError()
     finally:
         accelize_drm.clean_nodelock_env(drm_manager, driver, conf_json, cred_json, ws_admin)
@@ -159,41 +159,41 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
     cred_json.set_user('accelize_accelerator_test_04')
     async_cb.reset()
     conf_json.reset()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    drm_manager.set(log_verbosity=1)
-    assert drm_manager.get('license_type') == 'Floating/Metering'
-    assert drm_manager.get('drm_license_type') == 'Idle'
-    drm_manager.activate()
-    assert drm_manager.get('drm_license_type') == 'Floating/Metering'
-    drm_manager.deactivate()
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        drm_manager.set(log_verbosity=1)
+        assert drm_manager.get('license_type') == 'Floating/Metering'
+        assert drm_manager.get('drm_license_type') == 'Idle'
+        drm_manager.activate()
+        assert drm_manager.get('drm_license_type') == 'Floating/Metering'
+        drm_manager.deactivate()
     async_cb.assert_NoError()
     # Request nodelock license
     try:
         async_cb.reset()
         conf_json.reset()
         conf_json.addNodelock()
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        assert drm_manager.get('license_type') == 'Node-Locked'
-        assert drm_manager.get('drm_license_type') == 'Floating/Metering'
-        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
-            drm_manager.activate()
-        assert "Metering Web Service error 400" in str(excinfo.value)
-        assert "DRM WS request failed" in str(excinfo.value)
-        assert search(r'\\"No Entitlement\\" with .+ for \S+_test_04@accelize.com', str(excinfo.value))
-        assert 'No valid NodeLocked entitlement found for your account' in str(excinfo.value)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+        with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+            assert drm_manager.get('license_type') == 'Node-Locked'
+            assert drm_manager.get('drm_license_type') == 'Floating/Metering'
+            with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+                drm_manager.activate()
+            assert "Metering Web Service error 400" in str(excinfo.value)
+            assert "DRM WS request failed" in str(excinfo.value)
+            assert search(r'\\"No Entitlement\\" with .+ for \S+_test_04@accelize.com', str(excinfo.value))
+            assert 'No valid NodeLocked entitlement found for your account' in str(excinfo.value)
+            assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_NoError()
     finally:
         accelize_drm.clean_nodelock_env(conf_json=conf_json)

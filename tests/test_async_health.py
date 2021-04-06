@@ -35,8 +35,7 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json,
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
+        conf_json.path, cred_json.path,
         driver.read_register_callback,
         driver.write_register_callback,
         async_cb.callback
@@ -86,32 +85,29 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
     conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
+    with accelize_drm.DrmManager(
+            conf_json.path, cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
 
-    # Set initial context on the live server
-    nb_health = 4
-    healthPeriod = 2
-    healthRetry = 0  # no retry
-    healthRetrySleep = 1
-    context = {'data': list(),
-               'healthPeriod':healthPeriod,
-               'healthRetry':healthRetry,
-               'healthRetrySleep':healthRetrySleep
-    }
-    set_context(context)
-    assert get_context() == context
+        # Set initial context on the live server
+        nb_health = 4
+        healthPeriod = 2
+        healthRetry = 0  # no retry
+        healthRetrySleep = 1
+        context = {'data': list(),
+                   'healthPeriod':healthPeriod,
+                   'healthRetry':healthRetry,
+                   'healthRetrySleep':healthRetrySleep
+        }
+        set_context(context)
+        assert get_context() == context
 
-    drm_manager.activate()
-    try:
+        drm_manager.activate()
         wait_func_true(lambda: len(get_context()['data']) >= nb_health,
                 timeout=(healthPeriod+3) * (nb_health+2))
-    finally:
         drm_manager.deactivate()
     async_cb.assert_NoError()
     data_list = get_context()['data']
@@ -138,30 +134,27 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
     conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
+    with accelize_drm.DrmManager(
+            conf_json.path, cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
 
-    # Set initial context on the live server
-    nb_health = 2
-    healthPeriod = 3
-    healthRetrySleep = 1
-    context = {'data': list(),
-               'healthPeriod':healthPeriod,
-               'healthRetrySleep':healthRetrySleep
-    }
-    set_context(context)
-    assert get_context() == context
+        # Set initial context on the live server
+        nb_health = 2
+        healthPeriod = 3
+        healthRetrySleep = 1
+        context = {'data': list(),
+                   'healthPeriod':healthPeriod,
+                   'healthRetrySleep':healthRetrySleep
+        }
+        set_context(context)
+        assert get_context() == context
 
-    drm_manager.activate()
-    try:
+        drm_manager.activate()
         wait_func_true(lambda: len(get_context()['data']) >= nb_health,
                 timeout=(healthPeriod+3) * (nb_health+2))
-    finally:
         drm_manager.deactivate()
     async_cb.assert_NoError()
     data_list = get_context()['data']
@@ -211,18 +204,15 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json,
         set_context(context)
         assert get_context() == context
 
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        drm_manager.activate()
-        try:
+        with accelize_drm.DrmManager(
+                conf_json.path, cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+            drm_manager.activate()
             wait_func_true(lambda: get_context()['exit'],
                 timeout=(retry_timeout+3) * 2)
-        finally:
             drm_manager.deactivate()
 
         async_cb.assert_NoError()
@@ -274,18 +264,15 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json,
         set_context(context)
         assert get_context() == context
 
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        drm_manager.activate()
-        try:
+        with accelize_drm.DrmManager(
+                conf_json.path, cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+            drm_manager.activate()
             wait_func_true(lambda: get_context()['exit'],
                 timeout=(healthRetry + healthRetry)*2)
-        finally:
             drm_manager.deactivate()
 
         async_cb.assert_NoError()
@@ -323,35 +310,33 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
     conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
+    with accelize_drm.DrmManager(
+            conf_json.path, cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
 
-    # Set initial context on the live server
-    loop = 5
-    healthPeriod = 3
-    healthRetry = 0  # No retry
-    context = {'health_id':0,
-               'healthPeriod':healthPeriod,
-               'healthRetry':healthRetry
-    }
-    set_context(context)
-    assert get_context() == context
+        # Set initial context on the live server
+        loop = 5
+        healthPeriod = 3
+        healthRetry = 0  # No retry
+        context = {'health_id':0,
+                   'healthPeriod':healthPeriod,
+                   'healthRetry':healthRetry
+        }
+        set_context(context)
+        assert get_context() == context
 
-    def wait_and_check_on_next_health(drm):
-        next_health_id = get_context()['health_id'] + 1
-        wait_func_true(lambda: get_context()['health_id'] >= next_health_id)
-        session_id = drm.get('session_id')
-        saas_data = ws_admin.get_last_metering_information(session_id)
-        assert saas_data['session'] == session_id
-        assert saas_data['metering'] == sum(drm.get('metered_data'))
+        def wait_and_check_on_next_health(drm):
+            next_health_id = get_context()['health_id'] + 1
+            wait_func_true(lambda: get_context()['health_id'] >= next_health_id)
+            session_id = drm.get('session_id')
+            saas_data = ws_admin.get_last_metering_information(session_id)
+            assert saas_data['session'] == session_id
+            assert saas_data['metering'] == sum(drm.get('metered_data'))
 
-    assert not drm_manager.get('license_status')
-    try:
+        assert not drm_manager.get('license_status')
         drm_manager.activate()
         assert drm_manager.get('license_status')
         assert sum(drm_manager.get('metered_data')) == 0
@@ -363,7 +348,6 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
             activators.check_coin(drm_manager.get('metered_data'))
             wait_and_check_on_next_health(drm_manager)
         assert sum(drm_manager.get('metered_data')) == total_coin
-    finally:
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
     assert get_proxy_error() is None
@@ -386,47 +370,42 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler,
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
+    with accelize_drm.DrmManager(
+            conf_json.path, cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
 
-    # Set initial context on the live server
-    nb_genlic = 3
-    healthPeriod = 300
-    healthRetry = 0  # no retry
-    context = {'nb_genlic':0,
-               'healthPeriod':healthPeriod,
-               'healthRetry':healthRetry
-    }
-    set_context(context)
-    assert get_context() == context
+        # Set initial context on the live server
+        nb_genlic = 3
+        healthPeriod = 300
+        healthRetry = 0  # no retry
+        context = {'nb_genlic':0,
+                   'healthPeriod':healthPeriod,
+                   'healthRetry':healthRetry
+        }
+        set_context(context)
+        assert get_context() == context
 
-    # First, get license duration to align health period on it
-    try:
+        # First, get license duration to align health period on it
         drm_manager.activate()
         lic_dur = drm_manager.get('license_duration')
-    finally:
         drm_manager.deactivate()
 
-    # Adjust health period to license duration
-    healthPeriod = lic_dur
-    context = {'nb_genlic':0,
-               'healthPeriod':healthPeriod,
-               'healthRetry':healthRetry
-    }
-    set_context(context)
-    assert get_context() == context
+        # Adjust health period to license duration
+        healthPeriod = lic_dur
+        context = {'nb_genlic':0,
+                   'healthPeriod':healthPeriod,
+                   'healthRetry':healthRetry
+        }
+        set_context(context)
+        assert get_context() == context
 
-    try:
         drm_manager.activate()
         assert drm_manager.get('health_period') == healthPeriod
         wait_func_true(lambda: get_context()['nb_genlic'] >= nb_genlic,
                 timeout=lic_dur * nb_genlic + 2)
-    finally:
         drm_manager.deactivate()
     async_cb.assert_NoError()
     log_content = logfile.read()
@@ -469,30 +448,27 @@ def test_async_call_on_pause_when_health_is_enabled(accelize_drm, conf_json, cre
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
+    with accelize_drm.DrmManager(
+            conf_json.path, cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
 
-    # Set initial context on the live server
-    context = {'healthPeriod':300,
-               'healthRetry':0,
-               'health_cnt':0
-    }
-    set_context(context)
-    assert get_context() == context
+        # Set initial context on the live server
+        context = {'healthPeriod':300,
+                   'healthRetry':0,
+                   'health_cnt':0
+        }
+        set_context(context)
+        assert get_context() == context
 
-    # First, get license duration to align health period on it
-    try:
+        # First, get license duration to align health period on it
         drm_manager.activate()
         lic_dur = drm_manager.get('license_duration')
         drm_manager.deactivate(True) # Pause session
-    finally:
         drm_manager.deactivate()
-    del drm_manager
+
     async_cb.assert_NoError()
     # Check the proxy received only 1 health request (corresponding to the pause call)
     context = get_context()
@@ -530,28 +506,25 @@ def test_no_async_call_on_pause_when_health_is_disabled(accelize_drm, conf_json,
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
+    with accelize_drm.DrmManager(
+            conf_json.path, cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
 
-    # Set initial context on the live server
-    context = {'healthPeriod':0,
-               'healthRetry':0,
-               'health_cnt':0
-    }
-    set_context(context)
-    assert get_context() == context
+        # Set initial context on the live server
+        context = {'healthPeriod':0,
+                   'healthRetry':0,
+                   'health_cnt':0
+        }
+        set_context(context)
+        assert get_context() == context
 
-    # First, get license duration to align health period on it
-    try:
+        # First, get license duration to align health period on it
         drm_manager.activate()
         lic_dur = drm_manager.get('license_duration')
         drm_manager.deactivate(True) # Pause session
-    finally:
         drm_manager.deactivate()
     async_cb.assert_NoError()
     # Check the proxy did not receive any health request
@@ -561,4 +534,3 @@ def test_no_async_call_on_pause_when_health_is_disabled(accelize_drm, conf_json,
     assert search(r'"request"\s*:\s*"health"', logfile.read(), IGNORECASE) is None
     assert get_proxy_error() is None
     logfile.remove()
-

@@ -72,7 +72,7 @@ class FpgaDriver(_FpgaDriverBase):
         Args:
             fpga_image (str): FPGA image.
         """
-        retries = 0
+        retries = 3
         while True:
             load_image = _run(
                 ['fpga-load-local-image', '-S', str(self._fpga_slot_id),
@@ -80,8 +80,8 @@ class FpgaDriver(_FpgaDriverBase):
                 stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
             if load_image.returncode == 0:
                 break
-            elif load_image.returncode == -110 and retries < 3:
-                retries += 1
+            elif ("-110" in load_image.stdout) and (retries != 0):
+                retries -= 1
                 print('Retry programming')
             else:
                 raise RuntimeError(load_image.stdout)

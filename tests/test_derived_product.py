@@ -24,26 +24,26 @@ def test_invalid_derived_product_vendor(accelize_drm, conf_json, cred_json, asyn
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    deriv_prod = drm_manager.get('derived_product')
-    new_deriv_prod = 'a' + deriv_prod
-    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        drm_manager.set(derived_product=new_deriv_prod)
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
-    assert "Invalid derived product information: vendor mismatch" in str(excinfo.value)
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        deriv_prod = drm_manager.get('derived_product')
+        new_deriv_prod = 'a' + deriv_prod
+        with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+            drm_manager.set(derived_product=new_deriv_prod)
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+        assert "Invalid derived product information: vendor mismatch" in str(excinfo.value)
 
     # Same test but using config file
     new_deriv_prod = 'b' + deriv_prod
     conf_json['derived_product'] = new_deriv_prod
     conf_json.save()
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        drm_manager = accelize_drm.DrmManager(
+        accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
             driver.read_register_callback,
@@ -61,21 +61,21 @@ def test_invalid_derived_product_library(accelize_drm, conf_json, cred_json, asy
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    deriv_prod = drm_manager.get('derived_product')
-    deriv_prod_list = deriv_prod.split('/')
-    deriv_prod_list[1] += 'a'
-    new_deriv_prod = '/'.join(deriv_prod_list)
-    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        drm_manager.set(derived_product=new_deriv_prod)
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
-    assert "Invalid derived product information: library mismatch" in str(excinfo.value)
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        deriv_prod = drm_manager.get('derived_product')
+        deriv_prod_list = deriv_prod.split('/')
+        deriv_prod_list[1] += 'a'
+        new_deriv_prod = '/'.join(deriv_prod_list)
+        with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+            drm_manager.set(derived_product=new_deriv_prod)
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+        assert "Invalid derived product information: library mismatch" in str(excinfo.value)
 
     # Same test but using config file
     deriv_prod_list = deriv_prod.split('/')
@@ -84,7 +84,7 @@ def test_invalid_derived_product_library(accelize_drm, conf_json, cred_json, asy
     conf_json['derived_product'] = new_deriv_prod
     conf_json.save()
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        drm_manager = accelize_drm.DrmManager(
+        accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
             driver.read_register_callback,
@@ -103,21 +103,21 @@ def test_invalid_derived_product_name(accelize_drm, conf_json, cred_json,
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    deriv_prod = drm_manager.get('derived_product')
-    deriv_prod_list = deriv_prod.split('/')
-    deriv_prod_list[2] = 'a' + deriv_prod_list[2]
-    new_deriv_prod = '/'.join(deriv_prod_list)
-    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        drm_manager.set(derived_product=new_deriv_prod)
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
-    assert "Invalid derived product information: name mismatch" in str(excinfo.value)
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        deriv_prod = drm_manager.get('derived_product')
+        deriv_prod_list = deriv_prod.split('/')
+        deriv_prod_list[2] = 'a' + deriv_prod_list[2]
+        new_deriv_prod = '/'.join(deriv_prod_list)
+        with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+            drm_manager.set(derived_product=new_deriv_prod)
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+        assert "Invalid derived product information: name mismatch" in str(excinfo.value)
 
     # Same test but using config file
     deriv_prod_list = deriv_prod.split('/')
@@ -126,7 +126,7 @@ def test_invalid_derived_product_name(accelize_drm, conf_json, cred_json,
     conf_json['derived_product'] = new_deriv_prod
     conf_json.save()
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        drm_manager = accelize_drm.DrmManager(
+        accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
             driver.read_register_callback,
@@ -153,29 +153,26 @@ def test_valid_derived_product(accelize_drm, conf_json, cred_json,
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    deriv_prod = drm_manager.get('derived_product')
-    suffix = '_subproduct1'
-    new_deriv_prod = deriv_prod + suffix
-    drm_manager.set(derived_product=new_deriv_prod)
-    assert drm_manager.get('derived_product') == new_deriv_prod
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        deriv_prod = drm_manager.get('derived_product')
+        suffix = '_subproduct1'
+        new_deriv_prod = deriv_prod + suffix
+        drm_manager.set(derived_product=new_deriv_prod)
+        assert drm_manager.get('derived_product') == new_deriv_prod
 
-    # Set initial context on the live server
-    context = {'product_suffix':suffix}
-    set_context(context)
-    assert get_context() == context
-
-    try:
+        # Set initial context on the live server
+        context = {'product_suffix':suffix}
+        set_context(context)
+        assert get_context() == context
         drm_manager.activate()
         context = get_context()
         assert context['derived_product'] == new_deriv_prod
-    finally:
         drm_manager.deactivate()
     log_content = logfile.read()
     assert search('Loaded new derived product: %s' % new_deriv_prod, log_content, MULTILINE)
@@ -188,25 +185,22 @@ def test_valid_derived_product(accelize_drm, conf_json, cred_json,
     conf_json['derived_product'] = new_deriv_prod
     conf_json.save()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    assert drm_manager.get('derived_product') == new_deriv_prod
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        assert drm_manager.get('derived_product') == new_deriv_prod
 
-    # Set initial context on the live server
-    context = {'product_suffix':suffix}
-    set_context(context)
-    assert get_context() == context
-
-    try:
+        # Set initial context on the live server
+        context = {'product_suffix':suffix}
+        set_context(context)
+        assert get_context() == context
         drm_manager.activate()
         context = get_context()
         assert context['derived_product'] == new_deriv_prod
-    finally:
         drm_manager.deactivate()
     log_content = logfile.read()
     assert search('Loaded new derived product: %s' % new_deriv_prod, log_content, MULTILINE)
@@ -223,23 +217,21 @@ def test_derived_product_during_running_session(accelize_drm, conf_json, cred_js
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    deriv_prod = drm_manager.get('derived_product')
-    new_deriv_prod = deriv_prod + '_subproduct'
-    try:
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        deriv_prod = drm_manager.get('derived_product')
+        new_deriv_prod = deriv_prod + '_subproduct'
         drm_manager.activate()
         # try to modify derived product
         with pytest.raises(accelize_drm.exceptions.DRMBadUsage) as excinfo:
             drm_manager.set(derived_product=new_deriv_prod)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadUsage.error_code
         assert "Derived product cannot be loaded if a session is still running" in str(excinfo.value)
-    finally:
         drm_manager.deactivate()
         # new derived product can now be loaded
         drm_manager.set(derived_product=new_deriv_prod)

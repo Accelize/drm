@@ -26,14 +26,13 @@ def test_activation_and_license_status(accelize_drm, conf_json, cred_json, async
     activators = accelize_drm.pytest_fpga_activators[0]
     cred_json.set_user('accelize_accelerator_test_02')
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    try:
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
         print()
 
         # Test license status on start/stop
@@ -158,10 +157,6 @@ def test_activation_and_license_status(accelize_drm, conf_json, cred_json, async
         async_cb.assert_NoError()
         print('Test license status on restart: PASS')
 
-    finally:
-        if drm_manager:
-            drm_manager.deactivate()
-
 
 @pytest.mark.long_run
 @pytest.mark.hwtst
@@ -172,14 +167,13 @@ def test_session_status(accelize_drm, conf_json, cred_json, async_handler):
     async_cb = async_handler.create()
     cred_json.set_user('accelize_accelerator_test_02')
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    try:
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
         print()
 
         # Test session status on start/stop
@@ -335,10 +329,6 @@ def test_session_status(accelize_drm, conf_json, cred_json, async_handler):
         async_cb.assert_NoError()
         print('Test session status on restart: PASS')
 
-    finally:
-        if drm_manager:
-            drm_manager.deactivate()
-
 
 @pytest.mark.long_run
 @pytest.mark.hwtst
@@ -350,15 +340,13 @@ def test_license_expiration(accelize_drm, conf_json, cred_json, async_handler):
     activators = accelize_drm.pytest_fpga_activators[0]
     cred_json.set_user('accelize_accelerator_test_02')
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-
-    try:
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
         print()
 
         # Test license expires after 2 duration periods when start/pause
@@ -458,10 +446,6 @@ def test_license_expiration(accelize_drm, conf_json, cred_json, async_handler):
         async_cb.assert_NoError()
         print('Test license does not expire after 3 duration periods when start/pause: PASS')
 
-    finally:
-        if drm_manager:
-            drm_manager.deactivate()
-
 
 @pytest.mark.hwtst
 def test_multiple_call(accelize_drm, conf_json, cred_json, async_handler):
@@ -471,15 +455,13 @@ def test_multiple_call(accelize_drm, conf_json, cred_json, async_handler):
     async_cb = async_handler.create()
     cred_json.set_user('accelize_accelerator_test_02')
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-
-    try:
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
         print()
 
         # Test multiple activate
@@ -555,10 +537,6 @@ def test_multiple_call(accelize_drm, conf_json, cred_json, async_handler):
         assert len(session_id) == 0
         async_cb.assert_NoError()
 
-    finally:
-        if drm_manager:
-            drm_manager.deactivate()
-
 
 def test_security_stop(accelize_drm, conf_json, cred_json, async_handler):
     """
@@ -604,18 +582,18 @@ def test_curl_host_resolve(accelize_drm, conf_json, cred_json, async_handler):
     conf_json['licensing']['host_resolves'] = {'%s:443' % url.replace('https://',''): '78.153.251.226'}
     conf_json.save()
     async_cb.reset()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    with pytest.raises(accelize_drm.exceptions.DRMExternFail) as excinfo:
-        drm_manager.activate()
-    assert 'Failed to perform HTTP request to Accelize webservice' in str(excinfo.value)
-    assert search(r'peer certificate', str(excinfo.value), IGNORECASE)
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMExternFail.error_code
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        with pytest.raises(accelize_drm.exceptions.DRMExternFail) as excinfo:
+            drm_manager.activate()
+        assert 'Failed to perform HTTP request to Accelize webservice' in str(excinfo.value)
+        assert search(r'peer certificate', str(excinfo.value), IGNORECASE)
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMExternFail.error_code
     async_cb.assert_NoError()
 
 
@@ -632,14 +610,13 @@ def test_http_header_api_version(accelize_drm, conf_json, cred_json,
     conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    drm_manager.activate()
-    drm_manager.deactivate()
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        drm_manager.activate()
     async_cb.assert_NoError()
 

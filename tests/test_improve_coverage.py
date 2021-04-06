@@ -23,24 +23,24 @@ def test_improve_coverage_ws_client(accelize_drm, conf_json, cred_json,
     conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
 
-    # Set initial context on the live server
-    error_code = 600
-    context = {'error_code':error_code}
-    set_context(context)
-    assert get_context() == context
+        # Set initial context on the live server
+        error_code = 600
+        context = {'error_code':error_code}
+        set_context(context)
+        assert get_context() == context
 
-    with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
-        drm_manager.activate()
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
-    assert get_proxy_error() is None
+        with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
+            drm_manager.activate()
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
+        assert get_proxy_error() is None
     async_cb.assert_NoError()
 
 
@@ -88,7 +88,7 @@ def test_improve_coverage_readDrmAddress(accelize_drm, conf_json, cred_json, asy
     conf_json.save()
 
     with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
-        drm_manager = accelize_drm.DrmManager(
+        accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
             my_bad_read_register,
@@ -117,7 +117,7 @@ def test_improve_coverage_writeDrmAddress(accelize_drm, conf_json, cred_json, as
     conf_json.save()
 
     with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
-        drm_manager = accelize_drm.DrmManager(
+        accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
             driver.read_register_callback,
@@ -156,7 +156,7 @@ def test_improve_coverage_runBistLevel2_bad_size(accelize_drm, conf_json, cred_j
     context = {'page':0}
 
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        drm_manager = accelize_drm.DrmManager(
+        accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
             lambda x,y: my_bad_read_register(x,y, context),
@@ -199,7 +199,7 @@ def test_improve_coverage_runBistLevel2_bad_data(accelize_drm, conf_json, cred_j
     context = {'page':0, 'rwOffset':0x10000}
 
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        drm_manager = accelize_drm.DrmManager(
+        accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
             lambda x,y: my_bad_read_register(x,y, context),
@@ -271,7 +271,7 @@ def test_improve_coverage_getDesignInfo(accelize_drm, conf_json, cred_json, asyn
     context = {'page':0, 'cnt':0}
 
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        drm_manager = accelize_drm.DrmManager(
+        accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
             lambda x,y: my_read_register(x,y, context),

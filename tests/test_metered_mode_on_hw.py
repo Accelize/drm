@@ -180,7 +180,7 @@ def test_metered_start_stop_long_time(accelize_drm, conf_json, cred_json, async_
     logfile.remove()
 
 
-@pytest.mark.minimum
+@pytest.mark.skip(reason='Nearly as long as test_metered_pause_resume_long_time')
 @pytest.mark.hwtst
 def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
@@ -255,6 +255,7 @@ def test_metered_pause_resume_short_time(accelize_drm, conf_json, cred_json, asy
     logfile.remove()
 
 
+@pytest.mark.minimum
 @pytest.mark.hwtst
 def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
@@ -620,7 +621,6 @@ def test_metering_limits_on_licensing_thread(accelize_drm, conf_json, cred_json,
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
-        drm_manager.deactivate()
     logfile.remove()
 
 
@@ -637,11 +637,9 @@ def test_floating_limits(accelize_drm, conf_json, cred_json, async_handler, log_
     async_cb0.reset()
     async_cb1 = async_handler.create()
     async_cb1.reset()
-
     cred_json.set_user('accelize_accelerator_test_04')
-    logfile0 = log_file_factory.create(2)
     conf_json.reset()
-    conf_json['settings'].update(logfile0.json)
+    conf_json['settings']['ws_api_retry_duration'] = 3
     conf_json.save()
 
     drm_manager0 = accelize_drm.DrmManager(
@@ -651,10 +649,6 @@ def test_floating_limits(accelize_drm, conf_json, cred_json, async_handler, log_
         driver0.write_register_callback,
         async_cb0.callback
     )
-    logfile1 = log_file_factory.create(2)
-    conf_json.reset()
-    conf_json['settings'].update(logfile1.json)
-    conf_json.save()
     drm_manager1 = accelize_drm.DrmManager(
         conf_json.path,
         cred_json.path,
@@ -688,8 +682,6 @@ def test_floating_limits(accelize_drm, conf_json, cred_json, async_handler, log_
         drm_manager1.deactivate()
         assert not drm_manager1.get('license_status')
         async_cb1.assert_NoError()
-    logfile0.remove()
-    logfile1.remove()
 
 
 def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handler, log_file_factory, request):

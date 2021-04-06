@@ -23,48 +23,48 @@ def test_host_data_verbosity(accelize_drm, conf_json, cred_json, async_handler):
     # Get full data
     conf_json['settings']['host_data_verbosity'] = 0
     conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    assert drm_manager.get('host_data_verbosity') == 0
-    data_full = drm_manager.get('host_data')
-    assert type(data_full) == dict
-    assert len(str(data_full))
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        assert drm_manager.get('host_data_verbosity') == 0
+        data_full = drm_manager.get('host_data')
+        assert type(data_full) == dict
+        assert len(str(data_full))
     async_cb.assert_NoError()
 
     # Get partial data
     conf_json['settings']['host_data_verbosity'] = 1
     conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    assert drm_manager.get('host_data_verbosity') == 1
-    data_partial = drm_manager.get('host_data')
-    assert type(data_partial) == dict
-    assert len(str(data_partial))
-    assert len(str(data_full)) > len(str(data_partial)) > 0
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        assert drm_manager.get('host_data_verbosity') == 1
+        data_partial = drm_manager.get('host_data')
+        assert type(data_partial) == dict
+        assert len(str(data_partial))
+        assert len(str(data_full)) > len(str(data_partial)) > 0
 
     # Get none data
     conf_json['settings']['host_data_verbosity'] = 2
     conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    assert drm_manager.get('host_data_verbosity') == 2
-    data_none = drm_manager.get('host_data')
-    assert type(data_none) == type(None)
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        assert drm_manager.get('host_data_verbosity') == 2
+        data_none = drm_manager.get('host_data')
+        assert type(data_none) == type(None)
 
 
 def test_host_format(accelize_drm, conf_json, cred_json, async_handler):
@@ -80,15 +80,15 @@ def test_host_format(accelize_drm, conf_json, cred_json, async_handler):
     conf_json.reset()
     conf_json['settings']['host_data_verbosity'] = 0
     conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    assert drm_manager.get('host_data_verbosity') == 0
-    data = drm_manager.get('host_data')
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        assert drm_manager.get('host_data_verbosity') == 0
+        data = drm_manager.get('host_data')
     assert data.get('csp') is None
     host_card = data['host_card']
     assert host_card
@@ -122,19 +122,17 @@ def test_csp_format(accelize_drm, conf_json, cred_json, async_handler):
     conf_json.reset()
     conf_json['settings']['host_data_verbosity'] = 0
     conf_json.save()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    try:
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
         drm_manager.activate()
         sleep(4)
         assert drm_manager.get('host_data_verbosity') == 0
         data = drm_manager.get('host_data')
-    finally:
         drm_manager.deactivate()
     # Check host info
     host_card = data['host_card']
@@ -165,4 +163,3 @@ def test_csp_format(accelize_drm, conf_json, cred_json, async_handler):
     region = csp.get('region')
     assert region
     async_cb.assert_NoError()
-
