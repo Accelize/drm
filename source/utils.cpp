@@ -286,16 +286,44 @@ std::string toUpHex( const uint64_t& i ) {
 }
 
 
-std::vector<std::string> split(const std::string& str, char delimiter)
+std::vector<std::string> splitByDelimiter(const std::string& str, char delimiter)
 {
-   std::vector<std::string> tokens;
-   std::string token;
-   std::istringstream tokenStream(str);
-   while (std::getline(tokenStream, token, delimiter))
-   {
-      tokens.push_back(token);
-   }
-   return tokens;
+    std::vector<std::string> tokens;
+    std::string token;
+    std::istringstream tokenStream(str);
+    while (std::getline(tokenStream, token, delimiter)) {
+        tokens.push_back(token);
+    }
+    return tokens;
+}
+
+
+std::vector<std::string> splitByLength( const std::string& str, uint32_t splitLength )
+{
+    uint32_t numSubStrings = str.length() / splitLength;
+    std::vector<std::string> ret;
+
+    for ( uint32_t i = 0; i < numSubStrings; i++ ) {
+        ret.push_back( str.substr( i * splitLength, splitLength ) );
+    }
+    // If there are leftover characters, create a shorter item at the end.
+    if ( str.length() % splitLength != 0 ) {
+        ret.push_back(str.substr(splitLength * numSubStrings));
+    }
+
+    return ret;
+}
+
+
+uint64_t str2int64( std::string num_str )
+{
+    errno = 0;
+    uint64_t num_int = strtoull( num_str.c_str(), nullptr, 16 );
+    if ( errno ) {
+        Throw( DRM_CtlrError, "Could not convert string '{}' to unsigned long long.",
+            num_str );
+    }
+    return num_int;
 }
 
 

@@ -12,7 +12,7 @@ from tests.proxy import get_context, set_context
 
 
 def test_normal_usage(accelize_drm, request, exec_func, live_server, tmpdir,
-                      basic_log_file):
+                      log_file_factory):
     """Check memory leak with valgrind"""
     if 'aws' not in accelize_drm.pytest_fpga_driver_name:
         pytest.skip("C unit-tests are only supported with AWS driver.")
@@ -27,7 +27,8 @@ def test_normal_usage(accelize_drm, request, exec_func, live_server, tmpdir,
 
     # Create C/C++ executable
     exec_func._conf_json['licensing']['url'] = _request.url + request.function.__name__
-    exec_func._conf_json['settings'].update(basic_log_file.create(0))
+    logfile = log_file_factory.create(0)
+    exec_func._conf_json['settings'].update(logfile.json)
     exec_func._conf_json.save()
     driver = accelize_drm.pytest_fpga_driver[0]
     valgrind_log_file = join(accelize_drm.pytest_artifacts_dir, 'valgrind.log')
@@ -38,7 +39,7 @@ def test_normal_usage(accelize_drm, request, exec_func, live_server, tmpdir,
     param_file.write('{"nb_running":%d}' % nb_running)     # Save exec parameters to file
     exec_lib.run(request.function.__name__, param_file)
     assert exec_lib.returncode == 0
-    content = basic_log_file.read()
+    content = logfile.read()
     assert search(r'DRM session \S{16} created', content, IGNORECASE)
     assert search(r'DRM session \S{16} stopped', content, IGNORECASE)
     assert search(r'\[\s*(error|critical)\s*\]', content, IGNORECASE) is None
@@ -51,5 +52,5 @@ def test_normal_usage(accelize_drm, request, exec_func, live_server, tmpdir,
     assert search(r'indirectly lost: 0 bytes in 0 blocks', content, IGNORECASE)
     assert search(r'possibly lost: 0 bytes in 0 blocks', content, IGNORECASE)
     assert search(r'ERROR SUMMARY: 0 errors from 0 contexts', content, IGNORECASE)
-    basic_log_file.remove()
+    logfile.remove()
 

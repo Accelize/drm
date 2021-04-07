@@ -1,3 +1,9 @@
+* Mon Apr 7 2021 Accelize v2.5.2
+- NEW: Support detection of both drm_aclk and axi_aclk frequences in the DRM Controller
+- NEW: Optimize gathering of CSP and Host/Card metadata
+- FIX: Metering data collected by the 'metered_data' parameter now include values from every activator
+- FIX: CSP metadata are correctly processed (when available)
+
 * Mon Nov 30 2020 Accelize v2.5.1
 - NEW: Support derived product feature (not yet activated at server side)
 - NEW: Improve retry mechanism: make connection and request timeouts independent, increase timeout period, optimize resource, HTTP codes 495 and 526 are retryable

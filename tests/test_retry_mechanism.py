@@ -21,7 +21,7 @@ from tests.proxy import get_context, set_context
 
 @pytest.mark.no_parallel
 def test_api_retry_disabled(accelize_drm, conf_json, cred_json, async_handler,
-                    live_server, basic_log_file, request):
+                    live_server, log_file_factory, request):
     """
     Test retry mechanism is disabled on API function (not including
     the retry in background thread)
@@ -32,7 +32,8 @@ def test_api_retry_disabled(accelize_drm, conf_json, cred_json, async_handler,
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + 'test_api_retry'
     conf_json['settings']['ws_api_retry_duration'] = 0  # Disable retry on function call
-    conf_json['settings'].update(basic_log_file.create(2))
+    logfile = log_file_factory.create(2)
+    conf_json['settings'].update(logfile.json)
     conf_json.save()
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
@@ -48,17 +49,17 @@ def test_api_retry_disabled(accelize_drm, conf_json, cred_json, async_handler,
     end = datetime.now()
     del drm_manager
     assert (end - start).total_seconds() < 1
-    log_content = basic_log_file.read()
+    log_content = logfile.read()
     assert search(r'\[\s*critical\s*\]\s*\d+\s*,\s*\[errCode=\d+\]\s*Metering Web Service error 408',
             log_content, IGNORECASE)
     assert not search(r'attempt', log_content, IGNORECASE)
     async_cb.assert_NoError()
-    basic_log_file.remove()
+    logfile.remove()
 
 
 @pytest.mark.no_parallel
 def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler,
-                   live_server, basic_log_file, request):
+                   live_server, log_file_factory, request):
     """
     Test retry mechanism is working on API function (not including the
     retry in background thread)
@@ -67,7 +68,8 @@ def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler,
     async_cb = async_handler.create()
     async_cb.reset()
     conf_json['licensing']['url'] = _request.url + 'test_api_retry'
-    conf_json['settings'].update(basic_log_file.create(2))
+    logfile = log_file_factory.create(2)
+    conf_json['settings'].update(logfile.json)
     conf_json.save()
     drm_manager = accelize_drm.DrmManager(
         conf_json.path,
@@ -88,7 +90,7 @@ def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler,
     del drm_manager
     total_seconds = int((end - start).total_seconds())
     assert retry_duration - 1 <= total_seconds <= retry_duration
-    log_content = basic_log_file.read()
+    log_content = logfile.read()
     m = search(r'\[\s*critical\s*\]\s*\d+\s*,\s*\[errCode=\d+\]\s*Timeout on License request after (\d+) attempts',
             log_content, IGNORECASE)
     assert m is not None
@@ -96,7 +98,7 @@ def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler,
     assert nb_attempts > 1
     assert nb_attempts_expected - 1 <= nb_attempts <= nb_attempts_expected
     async_cb.assert_NoError()
-    basic_log_file.remove()
+    logfile.remove()
 
 
 @pytest.mark.no_parallel
@@ -232,7 +234,7 @@ def test_long_to_short_retry_switch_on_license(accelize_drm, conf_json, cred_jso
 
 @pytest.mark.no_parallel
 def test_api_retry_on_lost_connection(accelize_drm, conf_json, cred_json, async_handler,
-                    live_server, basic_log_file, request):
+                    live_server, log_file_factory, request):
     """
     Test the number of expected retries and the gap between 2 retries
     are correct when the requests are lost on the activate call
@@ -243,7 +245,8 @@ def test_api_retry_on_lost_connection(accelize_drm, conf_json, cred_json, async_
 
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + request.function.__name__
-    conf_json['settings'].update(basic_log_file.create(1))
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(
@@ -274,7 +277,7 @@ def test_api_retry_on_lost_connection(accelize_drm, conf_json, cred_json, async_
     assert m is not None
     nb_attempts = int(m.group(1))
     assert nb_attempts_expected == nb_attempts
-    log_content = basic_log_file.read()
+    log_content = logfile.read()
     attempts_list = [int(e) for e in findall(r'Attempt #(\d+) to obtain a new License failed with message', log_content)]
     assert len(attempts_list) == nb_attempts_expected
     assert sorted(list(attempts_list)) == list(range(1,nb_attempts + 1))
@@ -287,12 +290,12 @@ def test_api_retry_on_lost_connection(accelize_drm, conf_json, cred_json, async_
         assert retry_timeout + retry_sleep - 1 <= delta <= retry_timeout + retry_sleep
         prev_time = parser.parse(time)
     async_cb.assert_NoError()
-    basic_log_file.remove()
+    logfile.remove()
 
 
 @pytest.mark.no_parallel
 def test_thread_retry_on_lost_connection(accelize_drm, conf_json, cred_json, async_handler,
-                    live_server, basic_log_file, request):
+                    live_server, log_file_factory, request):
     """
     Test the number of expected retries and the gap between 2 retries
     are correct when the requests are lost on the background thread
@@ -315,7 +318,8 @@ def test_thread_retry_on_lost_connection(accelize_drm, conf_json, cred_json, asy
     conf_json['settings']['ws_retry_period_short'] = retryShortPeriod
     conf_json['settings']['ws_retry_period_long'] = retryLongPeriod
     conf_json['settings']['ws_request_timeout'] = requestTimeout
-    conf_json['settings'].update(basic_log_file.create(1))
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
     conf_json.save()
 
     drm_manager = accelize_drm.DrmManager(
@@ -345,8 +349,8 @@ def test_thread_retry_on_lost_connection(accelize_drm, conf_json, cred_json, asy
     assert m is not None
     nb_attempts = int(m.group(1))
     assert nb_retry == nb_attempts
-    log_content = basic_log_file.read()
+    log_content = logfile.read()
     attempts_list = [int(e) for e in findall(r'Attempt #(\d+) to obtain a new License failed with message', log_content)]
     assert len(attempts_list) == nb_retry
     assert sorted(list(attempts_list)) == list(range(1,nb_retry+1))
-    basic_log_file.remove()
+    logfile.remove()

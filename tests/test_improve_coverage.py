@@ -23,58 +23,57 @@ def test_improve_coverage_ws_client(accelize_drm, conf_json, cred_json,
     conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
 
-    # Set initial context on the live server
-    error_code = 600
-    context = {'error_code':error_code}
-    set_context(context)
-    assert get_context() == context
+        # Set initial context on the live server
+        error_code = 600
+        context = {'error_code':error_code}
+        set_context(context)
+        assert get_context() == context
 
-    with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
-        drm_manager.activate()
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
-    assert get_proxy_error() is None
+        with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
+            drm_manager.activate()
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
+        assert get_proxy_error() is None
     async_cb.assert_NoError()
 
 
 def test_improve_coverage_getHostAndCardInfo(accelize_drm, conf_json, cred_json, async_handler,
-                                             basic_log_file):
+                                             log_file_factory):
     """
     Improve coverage of the getHostAndCardInfo function
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    conf_json['settings'].update(basic_log_file.create(1))
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
     conf_json['settings']['host_data_verbosity'] = 2
     conf_json.save()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    try:
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         drm_manager.activate()
         sleep(5)
-    finally:
         drm_manager.deactivate()
-    assert search(r'Host and CSP information verbosity:\s*2', basic_log_file.read(), IGNORECASE)
-    basic_log_file.remove()
+    assert search(r'Host and card information verbosity:\s*2', logfile.read(), IGNORECASE)
+    logfile.remove()
     async_cb.assert_NoError()
 
 
 def test_improve_coverage_readDrmAddress(accelize_drm, conf_json, cred_json, async_handler,
-                                         basic_log_file):
+                                         log_file_factory):
     """
     Improve coverage of the readDrmAddress function
     """
@@ -84,11 +83,12 @@ def test_improve_coverage_readDrmAddress(accelize_drm, conf_json, cred_json, asy
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    conf_json['settings'].update(basic_log_file.create(1))
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
     conf_json.save()
 
     with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
-        drm_manager = accelize_drm.DrmManager(
+        accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
             my_bad_read_register,
@@ -96,13 +96,13 @@ def test_improve_coverage_readDrmAddress(accelize_drm, conf_json, cred_json, asy
             async_cb.callback
         )
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
-    assert search(r'Error in read register callback, errcode = 123: failed to read address', basic_log_file.read(), IGNORECASE)
+    assert search(r'Error in read register callback, errcode = 123: failed to read address', logfile.read(), IGNORECASE)
     async_cb.assert_NoError()
-    basic_log_file.remove()
+    logfile.remove()
 
 
 def test_improve_coverage_writeDrmAddress(accelize_drm, conf_json, cred_json, async_handler,
-                                         basic_log_file):
+                                         log_file_factory):
     """
     Improve coverage of the writeDrmAddress function
     """
@@ -112,11 +112,12 @@ def test_improve_coverage_writeDrmAddress(accelize_drm, conf_json, cred_json, as
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    conf_json['settings'].update(basic_log_file.create(1))
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
     conf_json.save()
 
     with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
-        drm_manager = accelize_drm.DrmManager(
+        accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
             driver.read_register_callback,
@@ -124,20 +125,21 @@ def test_improve_coverage_writeDrmAddress(accelize_drm, conf_json, cred_json, as
             async_cb.callback
         )
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
-    assert search(r'Error in write register callback, errcode = 123: failed to write', basic_log_file.read(), IGNORECASE)
+    assert search(r'Error in write register callback, errcode = 123: failed to write', logfile.read(), IGNORECASE)
     async_cb.assert_NoError()
-    basic_log_file.remove()
+    logfile.remove()
 
 
 def test_improve_coverage_runBistLevel2_bad_size(accelize_drm, conf_json, cred_json, async_handler,
-                                         basic_log_file):
+                                         log_file_factory):
     """
     Improve coverage of the runBistLevel2 function: generate bad mailbox size
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    conf_json['settings'].update(basic_log_file.create(1))
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
     conf_json.save()
 
     def my_bad_read_register(register_offset, returned_data, ctx):
@@ -154,7 +156,7 @@ def test_improve_coverage_runBistLevel2_bad_size(accelize_drm, conf_json, cred_j
     context = {'page':0}
 
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        drm_manager = accelize_drm.DrmManager(
+        accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
             lambda x,y: my_bad_read_register(x,y, context),
@@ -162,20 +164,21 @@ def test_improve_coverage_runBistLevel2_bad_size(accelize_drm, conf_json, cred_j
             async_cb.callback
         )
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
-    assert search(r'DRM Communication Self-Test 2 failed: bad size', basic_log_file.read(), IGNORECASE)
+    assert search(r'DRM Communication Self-Test 2 failed: bad size', logfile.read(), IGNORECASE)
     async_cb.assert_NoError()
-    basic_log_file.remove()
+    logfile.remove()
 
 
 def test_improve_coverage_runBistLevel2_bad_data(accelize_drm, conf_json, cred_json, async_handler,
-                                         basic_log_file):
+                                         log_file_factory):
     """
     Improve coverage of the runBistLevel2 function: generate bad data
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    conf_json['settings'].update(basic_log_file.create(1))
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
     conf_json.save()
 
     def my_bad_read_register(register_offset, returned_data, ctx):
@@ -196,22 +199,23 @@ def test_improve_coverage_runBistLevel2_bad_data(accelize_drm, conf_json, cred_j
     context = {'page':0, 'rwOffset':0x10000}
 
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        drm_manager = accelize_drm.DrmManager(
+        accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
             lambda x,y: my_bad_read_register(x,y, context),
             lambda x,y: my_bad_write_register(x,y, context),
             async_cb.callback
         )
+    content = logfile.read()
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
-    assert len(findall(r'Mailbox\[\d+\]=0x[0-9A-F]{8} != 0x[0-9A-F]{8}', basic_log_file.read(), IGNORECASE)) == 1
-    assert search(r'DRM Communication Self-Test 2 failed: random test failed.', basic_log_file.read(), IGNORECASE)
+    assert len(findall(r'Mailbox\[\d+\]=0x[0-9A-F]{8} != 0x[0-9A-F]{8}', content, IGNORECASE)) == 1
+    assert search(r'DRM Communication Self-Test 2 failed: random test failed.', content, IGNORECASE)
     async_cb.assert_NoError()
-    basic_log_file.remove()
+    logfile.remove()
 
 
 def test_improve_coverage_getMeteringHeader(accelize_drm, conf_json, cred_json, async_handler,
-                                            basic_log_file):
+                                            log_file_factory):
     """
     Improve coverage of the getMeteringHeader function
     """
@@ -219,35 +223,36 @@ def test_improve_coverage_getMeteringHeader(accelize_drm, conf_json, cred_json, 
     async_cb = async_handler.create()
     async_cb.reset()
     conf_json['design']['udid'] = '2fb8d54f-920e-4d69-aa56-197c7c72d8a3';
-    conf_json['settings'].update(basic_log_file.create(1))
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
     conf_json.save()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    try:
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         drm_manager.activate()
-    finally:
         drm_manager.deactivate()
-    assert search(r'Found parameter \'udid\' of type String: return its value "([0-9a-f]+-?)+"', basic_log_file.read(), IGNORECASE)
-    assert len(findall(r'"udid"\s*:\s*"([0-9a-f]+-?)+"', basic_log_file.read(), IGNORECASE)) >= 2
+    content = logfile.read()
+    assert search(r'Found parameter \'udid\' of type String: return its value "([0-9a-f]+-?)+"', content, IGNORECASE)
+    assert len(findall(r'"udid"\s*:\s*"([0-9a-f]+-?)+"', content, IGNORECASE)) >= 2
     async_cb.assert_NoError()
-    basic_log_file.remove()
+    logfile.remove()
 
 
 def test_improve_coverage_getDesignInfo(accelize_drm, conf_json, cred_json, async_handler,
-                                        basic_log_file):
+                                        log_file_factory):
     """
     Improve coverage of the getDesignInfo function
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    conf_json['settings'].update(basic_log_file.create(1))
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
     conf_json.save()
 
     def my_read_register(register_offset, returned_data, ctx):
@@ -266,7 +271,7 @@ def test_improve_coverage_getDesignInfo(accelize_drm, conf_json, cred_json, asyn
     context = {'page':0, 'cnt':0}
 
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        drm_manager = accelize_drm.DrmManager(
+        accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
             lambda x,y: my_read_register(x,y, context),
@@ -275,9 +280,9 @@ def test_improve_coverage_getDesignInfo(accelize_drm, conf_json, cred_json, asyn
         )
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
     assert search(r'UDID and Product ID cannot be both missing', str(excinfo.value), IGNORECASE)
-    assert search(r'Mailbox sizes: read-only=0', basic_log_file.read(), IGNORECASE)
+    assert search(r'Mailbox sizes: read-only=0', logfile.read(), IGNORECASE)
     async_cb.assert_NoError()
-    basic_log_file.remove()
+    logfile.remove()
 
 
 def test_improve_coverage_setLicense(accelize_drm, conf_json, cred_json, async_handler,
@@ -291,17 +296,15 @@ def test_improve_coverage_setLicense(accelize_drm, conf_json, cred_json, async_h
     conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    try:
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         drm_manager.activate()
         sleep(4)
-    finally:
         drm_manager.deactivate()
     assert async_cb.was_called
     assert async_cb.errcode == accelize_drm.exceptions.DRMWSRespError.error_code
@@ -309,7 +312,7 @@ def test_improve_coverage_setLicense(accelize_drm, conf_json, cred_json, async_h
 
 
 def test_improve_coverage_detectDrmFrequencyMethod1(accelize_drm, conf_json, cred_json, async_handler,
-                                                    basic_log_file):
+                                                    log_file_factory):
     """
     Improve coverage of the detectDrmFrequencyMethod1 function
     """
@@ -317,25 +320,24 @@ def test_improve_coverage_detectDrmFrequencyMethod1(accelize_drm, conf_json, cre
     async_cb = async_handler.create()
     async_cb.reset()
     conf_json['drm']['bypass_frequency_detection'] = True;
-    conf_json['settings'].update(basic_log_file.create(1))
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
     conf_json.save()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    try:
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         drm_manager.activate()
-    finally:
         drm_manager.deactivate()
-    log_content = basic_log_file.read()
+    log_content = logfile.read()
     assert search(r'Use dedicated counter to compute DRM frequency', log_content, IGNORECASE) is None
     assert search(r'Frequency detection counter after', log_content, IGNORECASE) is None
     async_cb.assert_NoError()
-    basic_log_file.remove()
+    logfile.remove()
 
 
 @pytest.mark.no_parallel
@@ -351,17 +353,15 @@ def test_improve_coverage_perform(accelize_drm, conf_json, cred_json, async_hand
     conf_json['settings']['ws_request_timeout'] = 5
     conf_json.save()
 
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    try:
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
             drm_manager.activate()
-    finally:
         drm_manager.deactivate()
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
     assert search(r'Failed to perform HTTP request to Accelize webservice', str(excinfo.value), IGNORECASE)

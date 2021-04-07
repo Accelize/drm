@@ -15,6 +15,9 @@ from datetime import datetime
 from time import time, sleep
 from shutil import rmtree
 from datetime import datetime, timedelta
+from glob import glob
+import types
+
 from tests.proxy import create_app, get_context, set_context
 from tests.ws_admin_functions import WSListFunction
 
@@ -44,8 +47,8 @@ def cheap_hash(string_in, length=6):
 
 
 def is_file_busy(path):
-    #if not exists(path):
-    #    return False
+    if not exists(path):
+        raise RuntimeError(f"File '{path}' could not be found")
     try:
         rename(path, path)
         return False
@@ -180,7 +183,7 @@ def pytest_addoption(parser):
         "--proxy_debug", action="store_true", default=False,
         help='Activate debug for proxy')
     parser.addoption(
-        "--fpga_image", default="default",
+        "--fpga_image", default=None,
         help='Select FPGA image to program the FPGA with. '
              'By default, use default FPGA image for the selected driver and '
              'last HDK version.')
@@ -211,6 +214,26 @@ def pytest_runtest_setup(item):
     """
     Configure test initialization
     """
+    # Check awsxrt tests
+    m_option = item.config.getoption('-m')
+    if search(r'\bawsf1\b', m_option) and not search(r'\nnot\n\s+\bawsf1\b', m_option):
+        skip_awsf1 = False
+    else:
+        skip_awsf1 = True
+    markers = tuple(item.iter_markers(name='awsf1'))
+    if skip_awsf1 and markers:
+        pytest.skip("Don't run AWS F1 (Vivado) tests.")
+
+    # Check awsxrt tests
+    m_option = item.config.getoption('-m')
+    if search(r'\bawsxrt\b', m_option) and not search(r'\nnot\n\s+\bawsxrt\b', m_option):
+        skip_awsxrt = False
+    else:
+        skip_awsxrt = True
+    markers = tuple(item.iter_markers(name='awsxrt'))
+    if skip_awsxrt and markers:
+        pytest.skip("Don't run XRT (Vitis) tests.")
+
     # Check integration tests
     markers = tuple(item.iter_markers(name='no_parallel'))
     markers += tuple(item.iter_markers(name='on_2_fpga'))
@@ -252,6 +275,21 @@ def pytest_runtest_setup(item):
     for marker in item.iter_markers():
         if 'long_run' == marker.name and 'long_run' not in item.config.option.markexpr:
             pytest.skip('"long_run" marker not selected')
+
+
+def scanActivatorsByCard(driver, base_addr):
+    base_addr_list = []
+    while True:
+        val = driver.read_register(base_addr + INC_EVENT_REG_OFFSET)
+        if val != 0x600DC0DE:
+            break
+        base_addr_list.append(base_addr)
+        base_addr += 0x10000
+    if len(base_addr_list) == 0:
+        raise IOError('No activator found on slot #%d' % driver._fpga_slot_id)
+    activators = ActivatorsInFPGA(driver, base_addr_list)
+    print('Found %d activator(s) on slot #%d' % (len(base_addr_list), driver._fpga_slot_id))
+    return activators
 
 
 class SingleActivator:
@@ -300,17 +338,20 @@ class SingleActivator:
         """
         return self.driver.read_register(self.base_address + ACT_STATUS_REG_OFFSET) == 3
 
-    def generate_coin(self, coins):
+    def generate_coin(self, coins=None):
         """
         Generate coins.
 
         Args:
             coins (int): Number of coins to generate.
         """
+        if coins is None:
+            coins = randint(1,10)
         for _ in range(coins):
             self.driver.write_register(self.base_address + INC_EVENT_REG_OFFSET, 0)
         if self.get_status():
             self.metering_data += coins
+        return coins
 
     def reset_coin(self):
         """
@@ -321,7 +362,7 @@ class SingleActivator:
             self.driver.write_register(self.base_address + CNT_EVENT_REG_OFFSET, 0)
             assert self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET) == 0
 
-    def check_coin(self, coins):
+    def check_coin(self, coins=None):
         """
         Compare coins to the expected value.
 
@@ -334,11 +375,14 @@ class SingleActivator:
         # Check counters
         try:
             # Check local counter with drm value passed in argument
-            assert self.metering_data == coins
+            if coins is not None:
+                assert self.metering_data == coins
             if self.event_cnt_flag:
                 # Check local counter with counter in Activator IP's registery
                 assert self.metering_data == metering_data_from_activator
+            return self.metering_data
         except AssertionError as e:
+            e.args += (f'Metering data error on activator @0x{self.base_address:X}',)
             if self.event_cnt_flag:
                 e.args += ('from pytest=%d, from DRM Ctrl=%d, from IP=%d' % (self.metering_data, coins, metering_data_from_activator),)
                 if self.metering_data == metering_data_from_activator:
@@ -411,6 +455,37 @@ class ActivatorsInFPGA:
         for activator in self.activators:
             activator.reset_coin()
 
+    def generate_coin(self, coins=None):
+        """
+        Generate coins (usage event) on each activatror in the design
+        """
+        if coins is None:
+            coin_list = [None]*self.length
+        elif isinstance(coins, int):
+            coin_list = [coins]*self.length
+        elif isinstance(coins, list):
+            assert len(coins) == self.length
+            coin_list = coins
+        coin_sum = 0
+        for activator, coin in zip(self.activators, coin_list):
+            coin_sum += activator.generate_coin(coin)
+        return coin_sum
+
+    def check_coin(self, coins=None):
+        """
+        Verify metering event coherency between DRM Ctrl, Python object and IP core register
+        input:
+            coin: expected metering value for all activator
+        """
+        metering_sum = 0
+        for activator in self.activators:
+            metering_sum += activator.check_coin()
+        if coins is not None:
+            if isinstance(coins, int):
+                assert metering_sum == coins
+            elif isinstance(coins, list):
+                assert metering_sum == sum(coins)
+
 
 
 class RefDesign:
@@ -421,28 +496,39 @@ class RefDesign:
         if not isdir(path):
             raise IOError("Following path must be a valid directory: %s" % path)
         self._path = path
-        self.image_files = {splitext(file_name)[0].strip('v'):realpath(join(self._path, file_name))
-                                    for file_name in listdir(self._path)}
-        self.hdk_versions = sorted(filter(lambda x: match(r'^\d+', x), self.image_files.keys()))
+        self.image_files = {}
+        for filename in listdir(self._path):
+            bname = splitext(filename)[0]
+            s = search(r'^v((\d+\.)+\d+)', bname)
+            if s:
+                self.image_files[s.group(1)] = realpath(join(self._path, filename))
+            else:
+                self.image_files[bname] = realpath(join(self._path, filename))
+        self.hdk_versions = sorted(filter(lambda x: match(r'^(\d+\.)+\d+$', x), self.image_files.keys()), key=lambda x: list(map(int, x.split('.'))))
 
     def get_image_id(self, hdk_version=None):
         if hdk_version is None:
             hdk_version = self.hdk_versions[-1]
         elif hdk_version not in self.image_files.keys():
             return None
-        filename = join(self._path, self.image_files[hdk_version])
+        filename = self.image_files[hdk_version]
         ext = splitext(filename)[1]
         try:
             if ext == '.json':
                 with open(filename, 'rt') as fp:
                     return load(fp)['FpgaImageGlobalId']
             elif ext == '.awsxclbin':
-                return self.image_files[hdk_version]
-                with open(filename, 'rb') as fp:
-                    return search(r'(agfi-[0-9a-fA-F]+)', str(fp.read())).group(1)
+                return filename
         except Exception as e:
             raise Exception('No FPGA image found for %s: %s' % (hdk_version, str(e)))
 
+
+def scanAllActivators(fpga_driver, actr_base_address):
+    # Define Activator access per slot
+    fpga_activators = list()
+    for driver in fpga_driver:
+        fpga_activators.append(scanActivatorsByCard(driver, actr_base_address))
+    return fpga_activators
 
 # Pytest Fixtures
 @pytest.fixture(scope='session')
@@ -478,25 +564,24 @@ def accelize_drm(pytestconfig):
     backend = pytestconfig.getoption("backend")
     if backend == 'c':
         environ['ACCELIZE_DRM_PYTHON_USE_C'] = '1'
-
     elif backend != 'c++':
         raise ValueError('Invalid value for "--backend"')
 
     # Get FPGA image
     fpga_image = pytestconfig.getoption("fpga_image")
     hdk_version = pytestconfig.getoption("hdk_version")
-    if hdk_version and fpga_image.lower() != 'default':
+    if hdk_version and fpga_image:
         raise ValueError(
             'Mutually exclusive options: Please set "hdk_version" or "fpga_image", but not both')
 
     # Get FPGA driver
     fpga_driver_name = pytestconfig.getoption("fpga_driver")
-    if fpga_driver_name and fpga_image.lower() != 'default':
+    if fpga_driver_name and fpga_image:
         raise ValueError(
             'Mutually exclusive options: Please set "fpga_driver" or "fpga_image", but not both')
-    if fpga_image.lower() != 'default':
+    if fpga_image:
         if fpga_image.endswith('.awsxclbin'):
-            fpga_driver_name = 'xilinx_xrt'
+            fpga_driver_name = 'aws_xrt'
         elif search(r'agfi-[0-9a-f]+', fpga_image, IGNORECASE):
             fpga_driver_name = 'aws_f1'
         else:
@@ -512,7 +597,7 @@ def accelize_drm(pytestconfig):
     # Get Ref Designs available
     ref_designs = RefDesign(join(build_source_dir, 'tests', 'refdesigns', fpga_driver_name))
 
-    if fpga_image.lower() == 'default' or hdk_version:
+    if fpga_image is None or hdk_version:
         # Use specified HDK version
         if hdk_version:
             hdk_version = hdk_version.strip('v')
@@ -533,7 +618,7 @@ def accelize_drm(pytestconfig):
         fpga_slot_id = [0, 1]
     elif environ.get('TOX_PARALLEL_ENV'):
         # Define FPGA slot for Tox parallel execution
-        fpga_slot_id = [0 if backend == 'c' else 1]
+        fpga_slot_id = [0 if backend == 'c++' else 1]
     else:
         # Use user defined slot
         fpga_slot_id = [pytestconfig.getoption("fpga_slot_id")]
@@ -546,7 +631,8 @@ def accelize_drm(pytestconfig):
     no_clear_fpga = pytestconfig.getoption("no_clear_fpga")
     drm_ctrl_base_addr = pytestconfig.getoption("drm_controller_base_address")
     print('FPGA SLOT ID:', fpga_slot_id)
-    print('FPGA IMAGE:', basename(fpga_image))
+    print('FPGA DRIVER:', fpga_driver_name)
+    print('FPGA IMAGE:', fpga_image)
     print('HDK VERSION:', hdk_version)
     fpga_driver = list()
     for slot_id in fpga_slot_id:
@@ -561,21 +647,11 @@ def accelize_drm(pytestconfig):
         except:
             raise IOError("Failed to load driver on slot %d" % slot_id)
 
-    # Define Activator access per slot
-    fpga_activators = list()
-    for driver in fpga_driver:
-        base_addr_list = []
-        base_address = pytestconfig.getoption("activator_base_address")
-        while True:
-            val = driver.read_register(base_address + INC_EVENT_REG_OFFSET)
-            if val != 0x600DC0DE:
-                break
-            base_addr_list.append(base_address)
-            base_address += 0x10000
-        fpga_activators.append(ActivatorsInFPGA(driver, base_addr_list))
-        if len(base_addr_list) == 0:
-            raise IOError('No activator found on slot #%d' % driver._fpga_slot_id)
-        print('Found %d activator(s) on slot #%d' % (len(base_addr_list), driver._fpga_slot_id))
+    actr_base_address = pytestconfig.getoption("activator_base_address")
+    fpga_activators = scanAllActivators(fpga_driver, actr_base_address)
+    def scan(self):
+        self.pytest_fpga_activators = scanAllActivators(
+                self.pytest_fpga_driver, self.pytest_actr_base_address)
 
     # Create pytest artifacts directory
     pytest_artifacts_dir = join(pytestconfig.getoption("artifacts_dir"), 'pytest_artifacts')
@@ -583,31 +659,13 @@ def accelize_drm(pytestconfig):
         makedirs(pytest_artifacts_dir)
     print('pytest artifacts directory: ', pytest_artifacts_dir)
 
-    # Define function to create log file path
-    def create_log_path(prefix=None):
-        if prefix is None:
-            prefix = "pytest_drmlib"
-        while True:
-            log_path = realpath(join(pytest_artifacts_dir, "%s.%s.%d.log" % (prefix, time(), getpid())))
-            if not isfile(log_path):
-                return log_path
-
-    # Define function to create log file verbosity with regard of --logfile
-    def create_log_level(verbosity):
-        if not pytestconfig.getoption("logfile"):
-            return verbosity
-        verb_option = int(pytestconfig.getoption("logfilelevel"))
-        if verbosity > verb_option:
-            return verb_option
-        else:
-           return verbosity
-
     # Get frequency detection version
-    freq_version = fpga_driver[0].read_register(drm_ctrl_base_addr + 0xFFF8)
+    freq_version = fpga_driver[0].read_register(drm_ctrl_base_addr + 0xFFF0)
+    print('Frequency detection version: 0x%08X' % freq_version)
 
     # Store some values for access in tests
     import accelize_drm as _accelize_drm
-    _accelize_drm.pytest_new_freq_method_supported = freq_version == 0x60DC0DE0
+    _accelize_drm.pytest_freq_detection_version = freq_version
     _accelize_drm.pytest_proxy_debug = pytestconfig.getoption("proxy_debug")
     _accelize_drm.pytest_server = pytestconfig.getoption("server")
     _accelize_drm.pytest_build_environment = build_environment
@@ -619,17 +677,16 @@ def accelize_drm(pytestconfig):
     _accelize_drm.pytest_fpga_slot_id = fpga_slot_id
     _accelize_drm.pytest_fpga_image = fpga_image
     _accelize_drm.pytest_hdk_version = hdk_version
+    _accelize_drm.pytest_actr_base_address = actr_base_address
     _accelize_drm.pytest_fpga_activators = fpga_activators
     _accelize_drm.pytest_ref_designs = ref_designs
     _accelize_drm.clean_nodelock_env = lambda *kargs, **kwargs: clean_nodelock_env(
         *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
     _accelize_drm.clean_metering_env = lambda *kargs, **kwargs: clean_metering_env(
         *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
+    _accelize_drm.scanActivators = types.MethodType( scan, _accelize_drm )
     _accelize_drm.pytest_params = param2dict(pytestconfig.getoption("params"))
     _accelize_drm.pytest_artifacts_dir = pytest_artifacts_dir
-    _accelize_drm.create_log_path = create_log_path
-    _accelize_drm.create_log_level = create_log_level
-
     return _accelize_drm
 
 
@@ -705,7 +762,6 @@ class ConfJson(_Json):
         self.save()
 
     def cleanNodelockDir(self):
-        from glob import glob
         file_list = glob(join(self._dirname, '*.req'))
         file_list.extend(glob(join(self._dirname, '*.lic')))
         for e in file_list:
@@ -1113,6 +1169,7 @@ class ExecFunctionFactory:
         except IOError:
             if self._is_release_build:
                 pytest.skip("No executable '%s' found: test skipped" % self._test_func_path)
+            raise
 
 
 @pytest.fixture
@@ -1139,44 +1196,92 @@ def app(pytestconfig):
 #-----------------
 
 
-class BasicLogFile:
+class LogFile:
 
-    def __init__(self, basepath=getcwd(), verbosity=None, append=False, keep=False):
-        self._basepath = basepath
-        self._path = None
-        self._verbosity = verbosity
-        self._append = append
-        self._keep = keep
+    def __init__(self, path, verbosity=2, type=1, format=LOG_FORMAT_LONG, append=False, rotating_size_kb=10*1024, rotating_num=3, keep=False):
+        self.path = path
+        self.verbosity = verbosity
+        self.type = type
+        self.append = append
+        self.keep = keep
+        self.format = format
+        self.rotating_size_kb = rotating_size_kb
+        self.rotating_num = rotating_num
 
-    def create(self, verbosity, format=LOG_FORMAT_LONG):
+    @property
+    def json(self):
         log_param =  dict()
-        while True:
-            self._path = '%s__%d__%s.log' % (self._basepath, getpid(), time())
-            if not isfile(self._path):
-                break
-        log_param['log_file_path'] = self._path
-        log_param['log_file_type'] = 1
-        log_param['log_file_append'] = self._append
-        log_param['log_file_format'] = format
-        if self._verbosity is not None and self._verbosity < verbosity:
-            log_param['log_file_verbosity'] = self._verbosity
-        else:
-            log_param['log_file_verbosity'] = verbosity
+        log_param['log_file_path'] = self.path
+        log_param['log_file_type'] = self.type
+        log_param['log_file_append'] = self.append
+        log_param['log_file_format'] = self.format
+        log_param['log_file_verbosity'] = self.verbosity
+        if self.type == 2:
+            log_param['log_file_rotating_size'] = self.rotating_size_kb
+            log_param['log_file_rotating_num'] = self.rotating_num
         return log_param
 
-    def read(self):
-        wait_func_true(lambda: not is_file_busy(self._path), 10)
-        with open(self._path, 'rt') as f:
-            log_content = f.read()
+    def read(self, index=0):
+        wait_func_true(lambda: not is_file_busy(self.path), 10)
+        if index == 0:
+            with open(self.path, 'rt') as f:
+                log_content = f.read()
+        elif self.type == 2:
+            fname, ext = splitext(self.path)
+            fpath = f'{fname}.{index}{ext}'
+            with open(fpath, 'rt') as f:
+                log_content = f.read()
         return log_content
 
-    def remove(self):
-        if not self._keep and isfile(self._path):
-            remove(self._path)
+    def remove(self, index=-1):
+        if self.keep:
+            return
+        if self.type == 1 or index == 0:
+            remove(self.path)
+        elif self.type == 2:
+            fname, ext = splitext(self.path)
+            fpath = f'{fname}.{index}{ext}'
+            for f in glob(f'{fname}*{ext}'):
+                if index == -1 or f == fpath:
+                    remove(f)
+
+
+
+class LogFileFactory:
+
+    def __init__(self, basepath=getcwd(), default_verbosity=2, default_type=1,
+                 default_format=LOG_FORMAT_SHORT, default_append=False, keep=False):
+        self.basepath = basepath
+        self.verbosity = default_verbosity
+        self.type = default_type
+        self.format = default_format
+        self.append = default_append
+        self.rotating_size_kb = 10*1024
+        self.rotating_num = 3
+        self.keep = keep
+
+    def create(self, verbosity, type=None, format=None, append=None, rotating_size_kb=None, rotating_num=None):
+        param = dict()
+        while True:
+            log_file_path = '%s__%d__%s.log' % (self.basepath, getpid(), time())
+            if not isfile(log_file_path):
+                break
+        param['path'] = log_file_path
+        if self.verbosity is None:
+            param['verbosity'] = verbosity
+        else:
+            param['verbosity'] = min(self.verbosity, verbosity)
+        param['type'] = type if type is not None else self.type
+        param['format'] = format if format is not None else self.format
+        param['append'] = append if append is not None else self.append
+        param['rotating_size_kb'] = rotating_size_kb if rotating_size_kb is not None else self.append
+        param['rotating_num'] = rotating_num if rotating_num is not None else self.rotating_num
+        param['keep'] = self.keep
+        return LogFile(**param)
 
 
 @pytest.fixture
-def basic_log_file(pytestconfig, request, accelize_drm):
+def log_file_factory(pytestconfig, request, accelize_drm):
     """
     Return an object to handle log file parameter and associated resources
     """
@@ -1201,6 +1306,7 @@ def basic_log_file(pytestconfig, request, accelize_drm):
     log_file_append = pytestconfig.getoption("logfileappend")
 
     # Determine keep argument
-    keep = pytestconfig.getoption("logfile") is not None
+    log_file_keep = pytestconfig.getoption("logfile") is not None
 
-    return BasicLogFile(log_file_basepath, log_file_verbosity, log_file_append, keep)
+    return LogFileFactory(basepath=log_file_basepath, default_verbosity=log_file_verbosity,
+                          default_append=log_file_append, keep=log_file_keep)

@@ -27,7 +27,7 @@ def get_driver(name):
     Args:
         name (str): Driver name. Possible values:
             `aws_f1` (AWS F1 instances types),
-            `xilinx_xrt` (Xilinx XRT).
+            `aws_xrt` (AWS XRT).
 
     Returns:
         FpgaDriverBase subclass: driver class.
@@ -193,6 +193,7 @@ class FpgaDriverBase:
         try:
             yield
         except RuntimeError as exception:
+            print('Caugth exception:\n>', '\n> '.join(str(exception).strip().split('\n')))
             exception.args = (
                 'Unable to %s FPGA: %s' % (action, exception.args[0].strip()),)
             raise

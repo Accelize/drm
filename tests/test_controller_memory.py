@@ -16,8 +16,7 @@ def test_wrong_drm_controller_address(accelize_drm, conf_json, cred_json, async_
     try:
         with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
             drm_manager = accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
+                conf_json.path, cred_json.path,
                 driver.read_register_callback,
                 driver.write_register_callback,
                 async_cb.callback
@@ -38,23 +37,21 @@ def test_mailbox_write_overflow(accelize_drm, conf_json, cred_json, async_handle
     async_cb.reset()
     cred_json.reset()
     conf_json.reset()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    mb_size = drm_manager.get('mailbox_size')
-    assert mb_size > 0
-
-    mb_data = sample(range(0xFFFFFFFF), mb_size + 1)
-    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        drm_manager.set(mailbox_data=mb_data)
-    assert 'Trying to write out of Mailbox memory space' in str(excinfo.value)
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
-    async_cb.assert_NoError()
+    with accelize_drm.DrmManager(
+            conf_json.path, cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        mb_size = drm_manager.get('mailbox_size')
+        assert mb_size > 0
+        mb_data = sample(range(0xFFFFFFFF), mb_size + 1)
+        with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+            drm_manager.set(mailbox_data=mb_data)
+        assert 'Trying to write out of Mailbox memory space' in str(excinfo.value)
+        err_code = async_handler.get_error_code(str(excinfo.value))
+        assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
+        async_cb.assert_NoError()
 
 
 def test_mailbox_type_error(accelize_drm, conf_json, cred_json, async_handler):
@@ -67,29 +64,29 @@ def test_mailbox_type_error(accelize_drm, conf_json, cred_json, async_handler):
     async_cb.reset()
     cred_json.reset()
     conf_json.reset()
-    drm_manager = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb.callback
-    )
-    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        drm_manager.set(mailbox_data='this is bad type')
-    assert 'Value must be an array of integers' in str(excinfo.value)
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
+    with accelize_drm.DrmManager(
+            conf_json.path, cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+            drm_manager.set(mailbox_data='this is bad type')
+        assert 'Value must be an array of integers' in str(excinfo.value)
+        err_code = async_handler.get_error_code(str(excinfo.value))
+        assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
     async_cb.assert_NoError()
 
 
-def test_empty_product_id(accelize_drm, conf_json, cred_json, async_handler, basic_log_file):
+def test_empty_product_id(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """Test error with a design having an empty Product ID"""
     refdesign = accelize_drm.pytest_ref_designs
     driver = accelize_drm.pytest_fpga_driver[0]
     fpga_image_bkp = driver.fpga_image
     async_cb = async_handler.create()
     cred_json.set_user('accelize_accelerator_test_02')
-    conf_json['settings'].update(basic_log_file.create(1))
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
     conf_json.save()
     empty_fpga_image = refdesign.get_image_id('empty_product_id')
     if empty_fpga_image is None:
@@ -100,20 +97,19 @@ def test_empty_product_id(accelize_drm, conf_json, cred_json, async_handler, bas
         async_cb.reset()
         with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
             drm_manager = accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
+                conf_json.path, cred_json.path,
                 driver.read_register_callback,
                 driver.write_register_callback,
                 async_cb.callback
             )
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
         assert search(r'UDID and Product ID cannot be both missing', str(excinfo.value), IGNORECASE)
-        assert search(r'Could not find Product ID information in DRM Controller Memory', basic_log_file.read(), IGNORECASE)
+        assert search(r'Could not find Product ID information in DRM Controller Memory', logfile.read(), IGNORECASE)
         async_cb.assert_NoError()
     finally:
         # Reprogram FPGA with original image
         driver.program_fpga(fpga_image_bkp)
-    basic_log_file.remove()
+    logfile.remove()
 
 
 def test_malformed_product_id(accelize_drm, conf_json, cred_json, async_handler):
@@ -132,8 +128,7 @@ def test_malformed_product_id(accelize_drm, conf_json, cred_json, async_handler)
         async_cb.reset()
         with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
             drm_manager = accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
+                conf_json.path, cred_json.path,
                 driver.read_register_callback,
                 driver.write_register_callback,
                 async_cb.callback
@@ -159,22 +154,20 @@ def test_2_drm_manager_concurrently(accelize_drm, conf_json, cred_json, async_ha
 
     cred_json.set_user('accelize_accelerator_test_02')
 
-    drm_manager1 = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver.read_register_callback,
-        driver.write_register_callback,
-        async_cb1.callback
-    )
-
-    with pytest.raises(accelize_drm.exceptions.DRMBadUsage) as excinfo:
-        drm_manager2 = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+    with accelize_drm.DrmManager(
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
-            async_cb2.callback
-        )
+            async_cb1.callback
+        ) as drm_manager1:
+
+        with pytest.raises(accelize_drm.exceptions.DRMBadUsage) as excinfo:
+            drm_manager2 = accelize_drm.DrmManager(
+                conf_json.path, cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb2.callback
+            )
     assert 'Another instance of the DRM Manager is currently owning the HW' in str(excinfo.value)
 
 
@@ -193,8 +186,7 @@ def test_drm_manager_bist(accelize_drm, conf_json, cred_json, async_handler):
         return driver.read_register_callback(addr, returned_data, driver)
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             my_wrong_read_callback,
             driver.write_register_callback,
             async_cb.callback
@@ -209,8 +201,7 @@ def test_drm_manager_bist(accelize_drm, conf_json, cred_json, async_handler):
         return driver.write_register_callback(register_offset*2, data_to_write, driver)
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
+            conf_json.path, cred_json.path,
             driver.read_register_callback,
             my_wrong_write_callback,
             async_cb.callback

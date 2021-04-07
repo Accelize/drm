@@ -161,6 +161,12 @@ cdef class DrmManager:
         if return_code:
             _raise_from_error(self._drm_manager.error_message, return_code)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.deactivate()
+
     def activate(self, const bint resume_session_request=False):
         """
         Activate DRM session.
