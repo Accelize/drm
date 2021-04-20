@@ -36,7 +36,8 @@ todo_emit_warnings = True
 html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
 html_theme_options = {
-    'prev_next_buttons_location': None
+    'prev_next_buttons_location': None,
+    'analytics_id': "UA-57534772-1"
 }
 
 # Enable Accelize Theme
