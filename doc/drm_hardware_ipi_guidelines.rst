@@ -27,8 +27,9 @@ Packaging the DRM Controller
 
      set path_to_hdl ./drm_gstarted/drm_hdk
      read_vhdl [ glob $path_to_hdl/common/vhdl/xilinx/*.vhdl ] -library drm_library
-     read_vhdl [ glob $path_to_hdl/controller/rtl/core/drm_ip_controller.vhdl ] -library drm_library
-     read_verilog [glob $path_to_hdl/controller/rtl/syn/*.sv]
+     read_vhdl $path_to_hdl/controller/rtl/core/drm_ip_controller.vhdl -library drm_library
+     read_verilog -sv [glob $path_to_hdl/controller/rtl/core/*.sv]
+     read_verilog -sv [glob $path_to_hdl/controller/rtl/syn/*.sv]
      set_property top top_drm_controller [current_fileset]
      update_compile_order -fileset sources_1
 
@@ -68,7 +69,7 @@ Packaging the DRM Activator
      read_vhdl [ glob $path_to_drm_hdk/common/vhdl/xilinx/*.vhdl ] -library drm_library
      read_vhdl [ glob $path_to_drm_hdk/activator0/core/*.vhdl ] -library drm_library
      read_vhdl [ glob $path_to_drm_hdk/activator0/syn/*.vhdl ] -library drm_library
-     read_verilog [ glob $path_to_drm_hdk/activator0/syn/*.sv ]
+     read_verilog -sv [ glob $path_to_drm_hdk/activator0/syn/*.sv ]
      set_property top top_drm_activator_0xVVVVLLLLNNNNVVVV [current_fileset]
 
 * Tools > Create and package New IP
