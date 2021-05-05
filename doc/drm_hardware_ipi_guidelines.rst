@@ -59,7 +59,7 @@ Packaging the DRM Activator
 * "Create project"
   * "RTL Project", "Do not specify sources at this time"
   * Select U200 board
-* TCL Console:
+* TCL Console (Note that 'VVVVLLLLNNNNVVVV' is specific to your DRM package and must be replaced by the appropriate value):
 
   .. code-block:: tcl
      :caption: In TCL
@@ -67,7 +67,6 @@ Packaging the DRM Activator
      set path_to_drm_hdk ./drm_gstarted/drm_hdk
      read_vhdl [ glob $path_to_drm_hdk/common/vhdl/xilinx/*.vhdl ] -library drm_library
      read_vhdl [ glob $path_to_drm_hdk/activator0/core/*.vhdl ] -library drm_library
-     read_verilog [ glob $path_to_drm_hdk/activator0/core/*.v ]
      read_vhdl [ glob $path_to_drm_hdk/activator0/syn/*.vhdl ] -library drm_library
      read_verilog [ glob $path_to_drm_hdk/activator0/syn/*.sv ]
      set_property top top_drm_activator_0xVVVVLLLLNNNNVVVV [current_fileset]
