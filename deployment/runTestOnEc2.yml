@@ -7,7 +7,7 @@ parameters:
   instance_type: 'f1.4xlarge'
   config_list:
   - os_distrib: 'centos_7'
-    tox_operation: 'aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug'
+    tox_operation: '-e aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug'
     tox_extra_option: ''
 
 jobs:

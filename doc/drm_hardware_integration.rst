@@ -11,8 +11,8 @@ controller and the protection blocks (DRM Activators) to integrate in the FPGA d
 
 More details about DRM Controller and Activator logics can be found here:
 
-* :doc:`drm_hardware_ip_controller`.
-* :doc:`drm_hardware_ip_activator`.
+- :doc:`drm_hardware_ip_controller`.
+- :doc:`drm_hardware_ip_activator`.
 
 You can also follow this :doc:`drm_hardware_ipi_guidelines`.
 
@@ -83,10 +83,10 @@ Request DRM HDK from Accelize
 Send a request for a DRM controller and DRM activators to Accelize, with the
 following information:
 
-* How many IP cores (including multiple instances of an IP core) must be
+- How many IP cores (including multiple instances of an IP core) must be
   protected
-* How many already protected IP cores (and what IP cores) you must reuse
-* For each IP core that must be protected and that is not already protected,
+- How many already protected IP cores (and what IP cores) you must reuse
+- For each IP core that must be protected and that is not already protected,
   provide a VLNV (Vendor name, Library name, design Name, Version number).
   For multiple instance IP cores, only one VLNV is required.
 
@@ -95,13 +95,13 @@ Receive DRM HDK from Accelize
 
 A zip file will be sent to you. It is containing the HDK sources with in 3 folders:
 
-* The ``common`` folder: contain the IP common structure for the activator and the controller.
+- The ``common`` folder: contain the IP common structure for the activator and the controller.
 
-* The ``controller`` folder: contain the controller VHDL top-level and the Verilog Wrapper.
+- The ``controller`` folder: contain the controller VHDL top-level and the Verilog Wrapper.
   The controller has the appropriate number of ports: a pair of AXI4-Stream interfaces for each
   IP instance in your design (already protected IPs and IPs to protect).
 
-* The ``activator`` folder: contain the activator VHDL core and various wrappers for simulation and synthesis.
+- The ``activator`` folder: contain the activator VHDL core and various wrappers for simulation and synthesis.
   A single DRM Activator is delivered per IP core type. Multiple instances of the same IP
   core shall instantiate the same activator as many times.
 
@@ -109,9 +109,9 @@ Contact the support to know how to get the Activation code for your IP. Make sur
 
 Considering the previous example, you will receive:
 
-* a DRM Controller IP with 7 ports,
-* 1 DRM Activator of IP core A
-* 1 DRM Activator of IP core B
+- a DRM Controller IP with 7 ports,
+- 1 DRM Activator of IP core A
+- 1 DRM Activator of IP core B
 
 
 Modify your design
@@ -222,15 +222,15 @@ The 128 bits of the activation code are used to create conditions for IP
 activation/deactivation. There are different techniques to instrument the IP code:
 individual bit, groups of bits, range of bits can be used in the code to:
 
-* Gate signals,
-* Switch FSM states,
-* Select functional parts.
+- Gate signals,
+- Switch FSM states,
+- Select functional parts.
 
 For instance, we propose to implement these 3 techniques on the 12 LSBs of
 the ACTIVATION_CODE signal as follows:
 
-* 8 bits are used to unlock FSMs transitions
-* 4 bits are used to control a Data Path
+- 8 bits are used to unlock FSMs transitions
+- 4 bits are used to control a Data Path
 
 .. image:: _static/Activation-code.png
    :target: _static/Activation-code.png
@@ -250,17 +250,17 @@ anonymously some statistics information about the IP usage: a better understandi
 the actual IP usage might help to propose future solutions that would better
 answer your customer needs.
 
-   a. First you need to determine which data metrics is the most relevant to count with regard
-      to the application domain.
-      Typically you would count the number of bytes processed for an encryption IP but
-      you would count the number of frames processed for a video rescaling IP.
+a. First you need to determine which data metrics is the most relevant to count with regard
+   to the application domain.
+   Typically you would count the number of bytes processed for an encryption IP but
+   you would count the number of frames processed for a video rescaling IP.
 
-   #. Then instrument your code to measure your metrics. For instance count the number of
-      bytes processed.
+#. Then instrument your code to measure your metrics. For instance count the number of
+   bytes processed.
 
-   #. When the metric unit is reached, generate a 1-clock cycle pulse (synchronized on
-      ``ip_core_aclk``) on the ``metering_event`` port of the DRM Activator.
-      For instance, generate a pulse every 100M bytes.
+#. When the metric unit is reached, generate a 1-clock cycle pulse (synchronized on
+   ``ip_core_aclk``) on the ``metering_event`` port of the DRM Activator.
+   For instance, generate a pulse every 100M bytes.
 
 Each pulse on ``metering_event`` increases the metering 64-bit counter by 1.
 The value of this counter is transmitted to the DRM Web Service which converts it
@@ -277,12 +277,12 @@ in number of usage units for this particular account.
 Instantiate the adapted IP core and DRM Activator in the wrapper and connect them
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* Instantiate the DRM Activator IP located in the DRM_HDK/v_l_n_v/syn.
-* Connect the signals of the DRM Activator listed by the table in section `Adapt the IP core`_
+- Instantiate the DRM Activator IP located in the DRM_HDK/v_l_n_v/syn.
+- Connect the signals of the DRM Activator listed by the table in section `Adapt the IP core`_
   to the adapted IP core.
-* Connect the DRM bus of the DRM Activator listed by the table in section `Create a wrapper`_
+- Connect the DRM bus of the DRM Activator listed by the table in section `Create a wrapper`_
   to the wrapper interface.
-* Connect the clock and reset of the adapted IP core to the wrapper interface.
+- Connect the clock and reset of the adapted IP core to the wrapper interface.
 
 
 Encrypt the Protected IPs
@@ -308,11 +308,11 @@ Instantiate the DRM Controller IP
 A single DRM Controller must be instantiated in FPGA to interact with multiple
 protected IP cores.
 
-* Instantiate the DRM controller IP (located in the DRM_HDK/controller/rtl/syn/) in the design top-level
-* Connect the DRM controller AXI4 lite interface to the AXI4 lite Control layer of the design
+- Instantiate the DRM controller IP (located in the DRM_HDK/controller/rtl/syn/) in the design top-level
+- Connect the DRM controller AXI4 lite interface to the AXI4 lite Control layer of the design
   top level
-* **Remember the offset address of the DRM controller IP in the Control layer of the design for the SW integration**
-* Connect each AXI4-stream interfaces of the DRM controller to an AXI4-stream interface of a
+- **Remember the offset address of the DRM controller IP in the Control layer of the design for the SW integration**
+- Connect each AXI4-stream interfaces of the DRM controller to an AXI4-stream interface of a
   protected IP core.
 
 .. image:: _static/DRM_ENVIRONMENT_TOPOLOGY.png
@@ -327,8 +327,8 @@ Simulate your design
 
 Requirements:
 
-* Modelsim 17.1
-* Vivado 2017.4
+- Modelsim >= 17.1
+- Vivado >= 2017.4
 
 
 The user can find a simulation model of the DRM Activator, top_drm_activator_0xVVVVLLLLNNNNVVVV_sim.(sv,vhdl),
@@ -342,10 +342,10 @@ design instantiate multiple Protected IPs. By this mean you can simulate each Pr
 
 In addition to the simulation top-level, you'll find in the ``sim`` folder the following files:
 
-* xilinx_sim, modelsim (with drm_controller_bfm)     : Each folder contains the BFM core encrypted for the specific tool. The BFM core is instantiated by the top_drm_activator_0xVVVVLLLLNNNNVVVV_sim.
-* drm_activator_0xVVVVLLLLNNNNVVVV_sim_pkg.(sv,vhdl) : Package containing simulation parameters (see details below)
-* drm_license_package.vhdl                           : Generic license file
-* drm_activator_0xVVVVLLLLNNNNVVVV_license_file.xml  : Specific license file
+- xilinx_sim, modelsim (with drm_controller_bfm)     : Each folder contains the BFM core encrypted for the specific tool. The BFM core is instantiated by the top_drm_activator_0xVVVVLLLLNNNNVVVV_sim.
+- drm_activator_0xVVVVLLLLNNNNVVVV_sim_pkg.(sv,vhdl) : Package containing simulation parameters (see details below)
+- drm_license_package.vhdl                           : Generic license file
+- drm_activator_0xVVVVLLLLNNNNVVVV_license_file.xml  : Specific license file
 
 .. image:: _static/RTL-simu.png
    :target: _static/RTL-simu.png
@@ -362,19 +362,19 @@ Create libraries
 
 Two libraries are required :
 
-  * Library **drm_library** for common part:
+- Library **drm_library** for common part:
 
-    .. code-block:: tcl
+  .. code-block:: tcl
 
-       vlib drm_library
-       vmap drm_library drm_library
+     vlib drm_library
+     vmap drm_library drm_library
 
-  * Library **drm_0xVVVVLLLLNNNNVVVV_library** for each different activator existing in the design:
+- Library **drm_0xVVVVLLLLNNNNVVVV_library** for each different activator existing in the design:
 
-    .. code-block:: tcl
+  .. code-block:: tcl
 
-       vlib drm_0xVVVVLLLLNNNNVVVV_library
-       vmap drm_0xVVVVLLLLNNNNVVVV_library drm_0xVVVVLLLLNNNNVVVV_library
+     vlib drm_0xVVVVLLLLNNNNVVVV_library
+     vmap drm_0xVVVVLLLLNNNNVVVV_library drm_0xVVVVLLLLNNNNVVVV_library
 
 
 Compile the files in the following order:
@@ -383,67 +383,70 @@ Compile the files in the following order:
 
    .. code-block:: tcl
 
-      vcom -93 -explicit -work drm_library drm_hdk/common/vhdl/modelsim/drm_all_components.vhdl
+      vcom -93 -work drm_library drm_hdk/common/vhdl/modelsim/drm_all_components.vhdl
 
 #. Compile drm_ip_activator_package_0xVVVVLLLLNNNNVVVV.vhdl under *drm_library* library:
 
    .. code-block:: tcl
 
-      vcom -93 -explicit -work drm_library drm_hdk/activator_VLNV/core/drm_ip_activator_package_0xVVVVLLLLNNNNVVVV.vhdl
+      vcom -93 -work drm_library drm_hdk/activator_VLNV/core/drm_ip_activator_package_0xVVVVLLLLNNNNVVVV.vhdl
 
 #. Compile drm_ip_activator_0xVVVVLLLLNNNNVVVV.vhdl under *drm_0xVVVVLLLLNNNNVVVV_library* library:
 
    .. code-block:: tcl
 
-      vcom -93 -explicit -work drm_0xVVVVLLLLNNNNVVVV_library drm_hdk/activator_VLNV/core/drm_ip_activator_0xVVVVLLLLNNNNVVVV.vhdl
+      vcom -93 -work drm_0xVVVVLLLLNNNNVVVV_library drm_hdk/activator_VLNV/core/drm_ip_activator_0xVVVVLLLLNNNNVVVV.vhdl
 
 #. Compile drm_license_package.vhdl under *drm_0xVVVVLLLLNNNNVVVV_library* library:
 
    .. code-block:: tcl
 
-      vcom -93 -explicit -work drm_0xVVVVLLLLNNNNVVVV_library drm_hdk/activator_VLNV/sim/drm_license_package.vhdl
+      vcom -93 -work drm_0xVVVVLLLLNNNNVVVV_library drm_hdk/activator_VLNV/sim/drm_license_package.vhdl
 
 #. Compile drm_controller_bfm.vhdl under *drm_0xVVVVLLLLNNNNVVVV_library* library:
 
    .. code-block:: tcl
 
-      vcom -93 -explicit -work drm_0xVVVVLLLLNNNNVVVV_library drm_hdk/activator_VLNV/sim/modelsim/drm_controller_bfm.vhdl
+      vcom -93 -work drm_0xVVVVLLLLNNNNVVVV_library drm_hdk/activator_VLNV/sim/modelsim/drm_controller_bfm.vhdl
 
 #. Compile drm_activator_0xVVVVLLLLNNNNVVVV_sim_pkg.vhdl:
 
    .. code-block:: tcl
 
-      vcom -93 -explicit -work work drm_hdk/activator_VLNV/sim/drm_activator_0xVVVVLLLLNNNNVVVV_sim_pkg.vhdl
+      vcom -93 -work work drm_hdk/activator_VLNV/sim/drm_activator_0xVVVVLLLLNNNNVVVV_sim_pkg.vhdl
       or
-      vlog -sv -explicit -work work drm_hdk/activator_VLNV/sim/drm_activator_0xVVVVLLLLNNNNVVVV_sim_pkg.sv
+      vlog -sv -work work drm_hdk/activator_VLNV/sim/drm_activator_0xVVVVLLLLNNNNVVVV_sim_pkg.sv
 
 #. Compile top_drm_activator_0xVVVVLLLLNNNNVVVV top-level:
 
    .. code-block:: tcl
 
-      vcom -93 -explicit -work work drm_hdk/activator_VLNV/sim/top_drm_activator_0xVVVVLLLLNNNNVVVV_sim.vhdl
+      vcom -93 -work work drm_hdk/activator_VLNV/sim/top_drm_activator_0xVVVVLLLLNNNNVVVV_sim.vhdl
       or:
-      vlog -sv -explicit -work work drm_hdk/activator_VLNV/sim/top_drm_activator_0xVVVVLLLLNNNNVVVV_sim.sv
+      vlog -sv -work work drm_hdk/activator_VLNV/sim/top_drm_activator_0xVVVVLLLLNNNNVVVV_sim.sv
 
 #. Compile drm_ip_controller.vhdl under *drm_library* library:
 
    .. code-block:: tcl
 
-      vcom -93 -explicit -work drm_library drm_hdk/controller/rtl/core/drm_ip_controller.vhdl
+      vcom -93 -work drm_library drm_hdk/controller/rtl/core/drm_ip_controller.vhdl
 
 #. Compile CDC bridge:
 
    .. code-block:: tcl
 
-      vlog -93 -explicit -work drm_library drm_hdk/controller/rtl/core/cdc_bridge.sv
+      vlog -93 drm_hdk/controller/rtl/core/cdc_bridge.sv
 
 #. Compile top_drm_controller top-level:
 
    .. code-block:: tcl
 
-      vcom -93 -explicit -work work drm_hdk/controller/rtl/sim/top_drm_controller_sim.vhdl
+      vcom -93 -work work drm_hdk/controller/rtl/sim/top_drm_controller_sim.vhdl
       or:
-      vlog -sv -explicit -work work drm_hdk/controller/rtl/sim/top_drm_controller_sim.sv
+      vlog -sv -work work drm_hdk/controller/rtl/sim/top_drm_controller_sim.sv
+
+#. Compile your_testbench and its dependencies:
+
 
 Run simulation
 ^^^^^^^^^^^^^^
@@ -452,7 +455,7 @@ Start the simulation :
 
 .. code-block:: tcl
 
-   vsim -L drm_library -L drm_0xVVVVLLLLNNNNVVVV_library -L work -t 1ps
+   vsim -L drm_library -L drm_0xVVVVLLLLNNNNVVVV_library -L work -t 1ps work.your_testbench
 
 Run the simulation:
 
@@ -461,8 +464,39 @@ Run the simulation:
    run -all
 
 .. warning:: Note that the BFM takes approximately 30 us to load the license file.
-             Make sure your stimuli signals start after the ``LICENSE_FILE_LOADED`` signal is
-             asserted.
+             Make sure your application stimuli starts to operate after the ``LICENSE_FILE_LOADED``
+             signal is asserted.
+
+
+Simulation configuration
+------------------------
+
+The `drm_activator_0xVVVVLLLLNNNNVVVV_sim_pkg.(vhdl|sv)` contains parameters used
+to tune the simulation behavior.
+
+- USE_BFM: It allows you to enable (TRUE) or disable (FALSE) the DRM Controller BFM.
+     This BFM is directly embedded in the DRM Activator to unlock the DRM Activator without the need
+     for an Internet connection to request the runtime licenses from Accelize's License Web Server.
+     It is then easier to keep it enabled, especially for a first simulation. At the opposite, it is
+     required to disable it when running co-simulation (using C application testbench) but then
+     the DRM software Library must also be included and linked in your host application. Refer to
+     :doc:`drm_library_integration` for more information the DRM library integration.
+
+.. warning:: To run a cosimulation, you will need to:
+
+             - Disable the BFM
+             - Set the environment variable `DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS` to
+               1000000000 because of the slowness of the simulation execution.
+
+- DRM_LICENSE_FILE: Specify the path to a fake DRM License file used by the Controller BFM
+      to unlock the activator. It is used only when the USE_BFM is TRUE. Otherwise the license
+      files must be request to Accelize's License Web Server.
+
+- ENABLE_DRM_MESSAGE: Enable/disable the DRM messaging system of the Controller BFM.
+      It is particularily useful when debugging to determine the states of DRM IP.
+
+.. warning:: ENABLE_DRM_MESSAGE = TRUE (1) is only supported on questasim/modelsim.
+             Otherwise keep it to FALSE (0).
 
 
 Expected Behavior
@@ -489,49 +523,41 @@ the error codes can help to debug (see error table below).
 .. image:: _static/behavior.png
    :target: _static/behavior.png
 
-The `drm_activator_0xVVVVLLLLNNNNVVVV_sim_pkg.(vhdl|sv)` contains parameters used
-to tune the simulation configuration and behavior. In particular, it allows you
-to use a DRM Controller BFM directly embedded in the DRM Activator to unlock the DRM Activator
-without the need for an Internet connection to the Accelize License Web Server.
-At the opposite, the BFM can be disabled, especially for co-simulation (using C application
-testbench).
-
-.. warning:: To run a cosimulation, you will need to:
-             - Disable the BFM
-             - Set the environment variable `DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS` to
-               1000000000 because of the slowness of the simulation execution.
 
 Signals for Debug
 -----------------
 
 Debug signals are all synchronized on the ``drm_aclk``.
 
-* LICENSE_FILE_LOADED
+- LICENSE_FILE_LOADED
 
   A '1' indicates that the License file is loaded in the DRM Controller
 
 
-* ACTIVATION_CYCLE_DONE
+- ACTIVATION_CYCLE_DONE
 
   '1' indicated that the DRM Controller has completed the first Activation
   cycle on the DRM Bus
 
-* ERROR_CODE: 8 bits error code
+- ERROR_CODE: 8 bits error code
 
-  * x"FF" : not ready ; the DRM Controller operations are in progress
-  * x"00" : no error ; the DRM Controller operations ran successfully
-  * x"0B" : the License file is not conformed ; please ask for a new license
+  - x"FF" : not ready ; the DRM Controller operations are in progress
+  - x"00" : no error ; the DRM Controller operations ran successfully
+  - x"0B" : the License file is not conformed ; please ask for a new license
     file
-  * x"0E" : the License File is corrupted ; please ask for a new license file
-  * x"09", x"0F", x"10", x"11" , x"12", x"13", x"14": The DRM Controller
+  - x"0E" : the License File is corrupted ; please ask for a new license file
+  - x"09", x"0F", x"10", x"11" , x"12", x"13", x"14": The DRM Controller
     cannot communicate with the IP Activator. Please check the DRM Bus
     connections, the DRM Clock generation
-  * x"0A" : the DRM Controller and IP Activator versions are not compatible;
+  - x"0A" : the DRM Controller and IP Activator versions are not compatible;
     please check that you are using the downloaded HDK without any
     modification
-  * x"0C" : the DRM Controller and License File versions are not compatible ;
+  - x"0C" : the DRM Controller and License File versions are not compatible ;
     please check that the right HDK version is used when asking for the
     Simulation License
+
+You can also enable the message from the DRM IP by setting ENABLE_DRM_MESSAGE = TRUE (1)
+in the `drm_activator_0xVVVVLLLLNNNNVVVV_sim_pkg` file.
 
 Please communicate this error code when you contact Accelize_ for assistance.
 
@@ -569,12 +595,12 @@ The DRM Controller top-level name is **top_drm_controller**.
 
 To add the DRM Controller source to your project, you can use:
 
-* the GUI during project wizard creation:
+- the GUI during project wizard creation:
 
 .. image:: _static/VHDL-ctrl-vivado.png
    :target: _static/VHDL-ctrl-vivado.png
 
-* Or a TCL script:
+- Or a TCL script:
 
 .. code-block:: tcl
 
@@ -593,12 +619,12 @@ The DRM Activator top-level name is **top_drm_activator_0xVVVVLLLLNNNNVVVV**.
 
 To add the DRM Activator source to your project, you can use:
 
-* the GUI during project wizard creation:
+- the GUI during project wizard creation:
 
 .. image:: _static/VHDL-Activator-vivado.png
    :target: _static/VHDL-Activator-vivado.png
 
-Or a TCL script:
+- Or a TCL script:
 
 .. code-block:: tcl
 
@@ -623,12 +649,12 @@ The DRM Controller top-level name is **top_drm_controller**.
 
 To add the DRM Controller sources to your project, you can use:
 
-* the GUI during project wizard creation:
+- the GUI during project wizard creation:
 
 .. image:: _static/Verilog-ctrl-vivado.png
    :target: _static/Verilog-ctrl-vivado.png
 
-Or a TCL script:
+- Or a TCL script:
 
 .. code-block:: tcl
 
@@ -653,12 +679,12 @@ The DRM Activator top-level name is **top_drm_activator_0xVVVVLLLLNNNNVVVV**.
 
 To add the DRM Activator sources to your project, you can use:
 
-* the GUI during project wizard creation:
+- the GUI during project wizard creation:
 
 .. image:: _static/Verilog-activator-vivado.png
    :target: _static/Verilog-activator-vivado.png
 
-Or via TCL script:
+- Or via TCL script:
 
 .. code-block:: tcl
 
@@ -678,7 +704,7 @@ Generated warnings
 
 While runing synthesis and implementation you may face the following warnings:
 
-* *CRITICAL WARNING: '[...]drm_controller_inst/DRM_DNA_INSTANCE/[...]' of type 'FDCPE'
+- *CRITICAL WARNING: '[...]drm_controller_inst/DRM_DNA_INSTANCE/[...]' of type 'FDCPE'
   cannot be timed accurately. Hardware behavior may be unpredictable* :
 
   The DRM Controller uses TRNGs for security reasons. The TRNGs are based on ring
@@ -687,7 +713,7 @@ While runing synthesis and implementation you may face the following warnings:
   You can safely ignore this message.
 
 
-* *WARNING: A LUT '[...]/drm_controller_inst/DRM_CONTROLLER_INSTANCE/[...]' is driving
+- *WARNING: A LUT '[...]/drm_controller_inst/DRM_CONTROLLER_INSTANCE/[...]' is driving
   clock pin of 32 registers. This could lead to large hold time violations* :
 
   Like the previous message, this warning occurs because of the TRNGs which is based on ring
@@ -751,12 +777,12 @@ The DRM Controller top-level name is **top_drm_controller**.
 
 To add the DRM Controller source to your project, you can use:
 
-* the GUI during project wizard creation:
+- the GUI during project wizard creation:
 
 .. image:: _static/VHDL-ctrl-quartus.png
    :target: _static/VHDL-ctrl-quartus.png
 
-Or a TCL script:
+- Or a TCL script:
 
 .. code-block:: tcl
 
@@ -774,12 +800,12 @@ The DRM Activator top-level name is **top_drm_activator_0xVVVVLLLLNNNNVVVV**.
 
 To add the DRM Activator sources to your project, you can use:
 
-* the GUI during project wizard creation:
+- the GUI during project wizard creation:
 
 .. image:: _static/VHDL-activator-quartus.png
    :target: _static/VHDL-activator-quartus.png
 
-* Or a TCL script:
+- Or a TCL script:
 
 .. code-block:: tcl
 
@@ -801,12 +827,12 @@ The DRM Controller top-level name is **top_drm_controller**.
 
 To add the DRM Controller sources to your project, you can use:
 
-* the GUI during project wizard creation:
+- the GUI during project wizard creation:
 
 .. image:: _static/Verilog-ctrl-quartus.png
    :target: _static/Verilog-ctrl-quartus.png
 
-* Or a TCL script:
+- Or a TCL script:
 
 .. code-block:: tcl
 
@@ -827,12 +853,12 @@ The DRM Activator top-level name is **top_drm_activator_0xVVVVLLLLNNNNVVVV**.
 
 To add the DRM Activator sources to your project, you can use:
 
-* the GUI during project wizard creation:
+- the GUI during project wizard creation:
 
 .. image:: _static/Verilog-activator-quartus.png
    :target: _static/Verilog-activator-quartus.png
 
-* Or a TCL script:
+- Or a TCL script:
 
 .. code-block:: tcl
 

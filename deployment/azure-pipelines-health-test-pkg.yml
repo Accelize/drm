@@ -30,10 +30,14 @@ variables:
 jobs:
   - template: runTestFromPkgOnEc2.yml
     parameters:
+      identifier: install_and_test_packages
+      description: Install and test packages
       instance_type: 'f1.4xlarge'
       config_list:
       - os_distrib: 'centos_7'
+        tox_operation: '-e cpp-install,c-install,integration-install'
         tox_extra_option: '-m minimum'
       - os_distrib: 'ubuntu_18_04'
+        tox_operation: '-e cpp-install,c-install,integration-install'
         tox_extra_option: '-m minimum'
         dependsOn: 'centos_7'

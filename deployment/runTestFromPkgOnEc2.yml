@@ -2,9 +2,12 @@
 # runTestFromPkgOnEc2.yml
 
 parameters:
+  identifier: 'test_on_aws'
+  description: 'Test on AWS'
   instance_type: 'f1.4xlarge'
   config_list:
   - os_distrib: 'centos_7'
+    tox_operation: '-e cpp-install,c-install,integration-install'
     tox_extra_option: ''
 
 jobs:
@@ -12,8 +15,8 @@ jobs:
   # Start AWS agents
   - template: agents/start.yml@acid
     parameters:
-      jobName: startAgent_Aws_${{ config.os_distrib }}
-      agentDescription: AWS ${{ config.os_distrib }}
+      jobName: startAgent_${{ parameters.identifier }}_on_${{ config.os_distrib }}
+      agentDescription: ${{ parameters.description }} on AWS ${{ config.os_distrib }}
       provider: awsEc2
       image: ${{ config.os_distrib }}
       instanceType: ${{ parameters.instance_type }}
@@ -22,18 +25,18 @@ jobs:
       ansibleRequirements: deployment/requirements.yml
       dependsOn:
       - ${{ if config.dependsOn }}:
-        - runTests_Aws_${{ config.dependsOn }}
+        - runTests_${{ parameters.identifier }}_on_${{ config.dependsOn }}
       condition: succeededOrFailed()
 
   # Install Package on AWS agent
-  - job: runTests_Aws_${{ config.os_distrib }}
-    displayName: Install and run tests on AWS ${{ config.os_distrib }}
-    dependsOn: startAgent_Aws_${{ config.os_distrib }}
+  - job: runTests_${{ parameters.identifier }}_on_${{ config.os_distrib }}
+    displayName: Install and test ${{ parameters.description }} on ${{ config.os_distrib }}
+    dependsOn: startAgent_${{ parameters.identifier }}_on_${{ config.os_distrib }}
     condition: succeededOrFailed()
     pool:
       name: Default
       demands:  # Use previously instantiated agent
-        - agent.Name -equals $(Build.BuildId) AWS ${{ config.os_distrib }}
+        - agent.Name -equals $(Build.BuildId) ${{ parameters.description }} on AWS ${{ config.os_distrib }}
     steps:
       - checkout: self
         submodules: true
@@ -101,21 +104,21 @@ jobs:
         displayName: Install drmlib from package on ubuntu
         condition: ${{ contains(config.os_distrib, 'ubuntu') }}
 
-      - script: sudo -E tox -e cpp-install,c-install,integration-install
+      - script: sudo -E tox ${{ config.tox_operation }}
                 -- --cred=$(Build.SourcesDirectory)/cred.json --server=prod --artifacts_dir=$(Build.SourcesDirectory)/artifacts -rxs ${{ config.tox_extra_option }}
         displayName: Run tests from package with Tox on ${{ config.os_distrib }}
         env:
           TOX_PARALLEL_NO_SPINNER: 1
 
       - publish: $(Build.SourcesDirectory)/artifacts
-        artifact: AWS_Artifacts_${{ config.os_distrib }}
-        displayName: Publish AWS Artifacts for ${{ config.os_distrib }} package tests
+        artifact: AWS_Artifacts_${{ parameters.identifier }}_on_${{ config.os_distrib }}
+        displayName: Publish AWS Artifacts for ${{ parameters.identifier }} on ${{ config.os_distrib }} package tests
         condition: always()
 
   # Stop AWS agent
   - template: agents/stop.yml@acid
     parameters:
-      jobName: stopAgent_Aws_${{ config.os_distrib }}
+      jobName: stopAgent_${{ parameters.identifier }}_on_${{ config.os_distrib }}
       provider: awsEc2
-      agentDescription: AWS ${{ config.os_distrib }}
-      dependsOn: runTests_Aws_${{ config.os_distrib }}
+      agentDescription: ${{ parameters.description }} on AWS ${{ config.os_distrib }}
+      dependsOn: runTests_${{ parameters.identifier }}_on_${{ config.os_distrib }}
