@@ -475,6 +475,8 @@ protected:
             getDrmController().readSecurityAlertStatusRegister( securityAlertBit );
             getDrmController().extractAdaptiveProportionTestFailures( adaptiveProportionTestError );
             getDrmController().extractRepetitionCountTestFailures( repetitionCountTestError );
+        } else {
+            Debug( "TRNG status bits are not supported in this HDK version." );
         }
     }
 
