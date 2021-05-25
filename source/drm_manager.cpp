@@ -472,9 +472,9 @@ protected:
         auto drmMajor = ( mDrmVersion >> 16 ) & 0xFF;
         auto drmMinor = ( mDrmVersion >> 8  ) & 0xFF;
         if ( ( drmMajor >= 4 ) && ( drmMinor >= 2 ) ) {
-            getDrmController().readSecurityAlertStatusRegister( securityAlertBit );
-            getDrmController().extractAdaptiveProportionTestFailures( adaptiveProportionTestError );
-            getDrmController().extractRepetitionCountTestFailures( repetitionCountTestError );
+            checkDRMCtlrRet( getDrmController().readSecurityAlertStatusRegister( securityAlertBit ) );
+            checkDRMCtlrRet( getDrmController().extractAdaptiveProportionTestFailures( adaptiveProportionTestError ) );
+            checkDRMCtlrRet( getDrmController().extractRepetitionCountTestFailures( repetitionCountTestError ) );
         } else {
             Debug( "TRNG status bits are not supported in this HDK version." );
         }
