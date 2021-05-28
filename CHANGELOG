@@ -1,3 +1,6 @@
+* Mon May 15 2021 Accelize v2.5.3-rc1
+- DOC: Update the HDK simulation page
+
 * Mon Apr 7 2021 Accelize v2.5.2
 - NEW: Support detection of both drm_aclk and axi_aclk frequences in the DRM Controller
 - NEW: Optimize gathering of CSP and Host/Card metadata
