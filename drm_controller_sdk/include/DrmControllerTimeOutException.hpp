@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerTimeOutException.hpp
-*  \version   4.2.1.0
-*  \date      July 2020
+*  \version   6.0.1.0
+*  \date      May 2021
 *  \brief     Class DrmControllerTimeOutException defines procedures
 *             for time out exceptions reporting, inherihts from std::exception.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");

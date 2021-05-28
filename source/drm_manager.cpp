@@ -58,6 +58,7 @@ limitations under the License.
 
 #define FREQ_DETECTION_VERSION_2	 0x60DC0DE0
 #define FREQ_DETECTION_VERSION_3	 0x60DC0DE1
+#define FREQ_DETECTION_VERSION_4	 0x60DC0DE2
 
 
 #define TRY try {
@@ -953,7 +954,9 @@ protected:
         // Determine frequency detection method if metering/floating mode is active
         if ( !isConfigInNodeLock() ) {
             determineFrequencyDetectionMethod();
-            if ( mFreqDetectionMethod == 3 ) {
+            if ( mFreqDetectionMethod == 4 ) {
+				detectDrmFrequencyMethod4();
+            } else if ( mFreqDetectionMethod == 3 ) {
                 detectDrmFrequencyMethod3();
             } else if ( mFreqDetectionMethod == 2 ) {
                 detectDrmFrequencyMethod2();
@@ -1695,11 +1698,17 @@ protected:
             Debug( "Frequency detection sequence is bypassed." );
             return;
         }
-        int ret = readDrmAddress( REG_FREQ_DETECTION_VERSION, reg );
+        int ret = writeDrmAddress(0, 0 );
+        ret |= readDrmAddress( REG_FREQ_DETECTION_VERSION, reg );
         if ( ret != 0 ) {
             Debug( "Failed to read DRM Ctrl frequency detection version register, errcode = {}. ", ret ); //LCOV_EXCL_LINE
         }
-        if ( reg == FREQ_DETECTION_VERSION_3 ) {
+        if ( reg == FREQ_DETECTION_VERSION_4 ) {
+			// Use Method 3
+            Debug( "SW DRM Controller: no frequency detection is performed (method 4)" );
+            mFreqDetectionMethod = 4;
+            mBypassFrequencyDetection = true;
+        } else if ( reg == FREQ_DETECTION_VERSION_3 ) {
             // Use Method 3
             Debug( "Use dedicated counter to compute DRM frequency (method 3)" );
             mFreqDetectionMethod = 3;
@@ -1815,6 +1824,12 @@ protected:
         checkDrmFrequency( measured_drmaclk ); // Only drm_aclk can be verified because provided in the config.json
     }
 
+    void detectDrmFrequencyMethod4() {
+		// DRM Controller is in SW: system time is used
+        mAxiFrequency = 100;
+        mFrequencyCurr = 100;
+    }
+    
     int32_t detectDrmFrequencyFromLicenseTimer() {
         TClock::time_point timeStart, timeEnd;
         uint64_t counterStart, counterEnd;
