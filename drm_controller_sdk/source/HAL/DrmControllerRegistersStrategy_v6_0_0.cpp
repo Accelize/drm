@@ -1,8 +1,8 @@
 /**
-*  \file      DrmControllerRegistersStrategy_v3_1_0.cpp
+*  \file      DrmControllerRegistersStrategy_v6_0_0.cpp
 *  \version   6.0.0.0
 *  \date      April 2021
-*  \brief     Class DrmControllerRegistersStrategy_v3_1_0 defines strategy for register access of drm controller v3.0.0.
+*  \brief     Class DrmControllerRegistersStrategy_v6_0_0 defines strategy for register access of drm controller v6.0.0.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License") {
 
 }
@@ -15,7 +15,7 @@
 *             limitations under the License.
 **/
 
-#include <HAL/DrmControllerRegistersStrategy_v3_1_0.hpp>
+#include <HAL/DrmControllerRegistersStrategy_v6_0_0.hpp>
 
 // name space usage
 using namespace DrmControllerLibrary;
@@ -24,30 +24,32 @@ using namespace DrmControllerLibrary;
 /**                  PUBLIC MEMBER FUNCTIONS               **/
 /************************************************************/
 
-/** DrmControllerRegistersStrategy_v3_1_0
+/** DrmControllerRegistersStrategy_v6_0_0
 *   \brief Class constructor.
 *   \param[in] readRegisterFunction function pointer to read 32 bits register.
 *              The function pointer shall have the following prototype "unsigned int f(const std::string&, unsigned int&)".
 *   \param[in] writeRegisterFunction function pointer to write 32 bits register.
 *              The function pointer shall have the following prototype "unsigned int f(const std::string&, unsigned int)".
 **/
-DrmControllerRegistersStrategy_v3_1_0::DrmControllerRegistersStrategy_v3_1_0(tDrmReadRegisterFunction readRegisterFunction,
+DrmControllerRegistersStrategy_v6_0_0::DrmControllerRegistersStrategy_v6_0_0(tDrmReadRegisterFunction readRegisterFunction,
                                                                              tDrmWriteRegisterFunction writeRegisterFunction)
 : DrmControllerRegistersStrategyInterface(readRegisterFunction, writeRegisterFunction),
-  mCommandRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V3_1_0_COMMAND_SIZE)),
-  mLicenseStartAddressRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V3_1_0_LICENSE_START_ADDRESS_SIZE)),
-  mLicenseTimerRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V3_1_0_LICENSE_TIMER_SIZE)),
-  mStatusRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V3_1_0_STATUS_SIZE)),
-  mErrorRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V3_1_0_ERROR_SIZE)),
-  mDnaRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V3_1_0_DEVICE_DNA_SIZE)),
-  mSaasChallengeRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V3_1_0_SAAS_CHALLENGE_SIZE)),
-  mSampledLicenseTimerCountRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V3_1_0_LICENSE_TIMER_COUNTER_SIZE)),
-  mVersionRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V3_1_0_VERSION_SIZE)),
-  mVlnvWordRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V3_1_0_VLNV_WORD_SIZE)),
-  mLicenseWordRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V3_1_0_LICENSE_WORD_SIZE)),
-  mTraceWordRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V3_1_0_TRACE_WORD_SIZE)),
-  mMeteringWordRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V3_1_0_METERING_WORD_SIZE)),
-  mMailboxWordRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V3_1_0_MAILBOX_WORD_SIZE)),
+  mCommandRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V6_0_0_COMMAND_SIZE)),
+  mLicenseStartAddressRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V6_0_0_LICENSE_START_ADDRESS_SIZE)),
+  mLicenseTimerRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V6_0_0_LICENSE_TIMER_SIZE)),
+  mStatusRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V6_0_0_STATUS_SIZE)),
+  mErrorRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V6_0_0_ERROR_SIZE)),
+  mDnaRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V6_0_0_DEVICE_DNA_SIZE)),
+  mSaasChallengeRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V6_0_0_SAAS_CHALLENGE_SIZE)),
+  mSampledLicenseTimerCountRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V6_0_0_LICENSE_TIMER_COUNTER_SIZE)),
+  mVersionRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V6_0_0_VERSION_SIZE)),
+  mAdaptiveProportionTestFailuresRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V6_0_0_ADAPTIVE_PROPORTION_TEST_FAILURES_SIZE)),
+  mRepetitionCountTestFailuresRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V6_0_0_REPETITION_COUNT_TEST_FAILURES_SIZE)),
+  mVlnvWordRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V6_0_0_VLNV_WORD_SIZE)),
+  mLicenseWordRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V6_0_0_LICENSE_WORD_SIZE)),
+  mTraceWordRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V6_0_0_TRACE_WORD_SIZE)),
+  mMeteringWordRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V6_0_0_METERING_WORD_SIZE)),
+  mMailboxWordRegisterWordNumber(numberOfWords(DRM_CONTROLLER_V6_0_0_MAILBOX_WORD_SIZE)),
   mCommandRegisterStartIndex(0),
   mLicenseStartAddressRegisterStartIndex(mCommandRegisterStartIndex+mCommandRegisterWordNumber),
   mLicenseTimerRegisterStartIndex(mLicenseStartAddressRegisterStartIndex+mLicenseStartAddressRegisterWordNumber),
@@ -57,20 +59,26 @@ DrmControllerRegistersStrategy_v3_1_0::DrmControllerRegistersStrategy_v3_1_0(tDr
   mSaasChallengeRegisterStartIndex(mDnaRegisterStartIndex+mDnaRegisterWordNumber),
   mSampledLicenseTimerCountRegisterStartIndex(mSaasChallengeRegisterStartIndex+mSaasChallengeRegisterWordNumber),
   mVersionRegisterStartIndex(mSampledLicenseTimerCountRegisterStartIndex+mSampledLicenseTimerCountRegisterWordNumber),
-  mLogsRegisterStartIndex(mVersionRegisterStartIndex+mVersionRegisterWordNumber),
+  mAdaptiveProportionTestFailuresRegisterStartIndex(mVersionRegisterStartIndex+mVersionRegisterWordNumber),
+  mRepetitionCountTestFailuresRegisterStartIndex(mAdaptiveProportionTestFailuresRegisterStartIndex+mAdaptiveProportionTestFailuresRegisterWordNumber),
+  mLogsRegisterStartIndex(mRepetitionCountTestFailuresRegisterStartIndex+mRepetitionCountTestFailuresRegisterWordNumber),
   mVlnvWordRegisterStartIndex(0),
   mLicenseWordRegisterStartIndex(0),
   mTraceWordRegisterStartIndex(0),
   mMeteringWordRegisterStartIndex(0),
   mMailboxWordRegisterStartIndex(0),
-  mNumberOfTracesPerIp(DRM_CONTROLLER_V3_1_0_NUMBER_OF_TRACES_PER_IP),
-  mVlnvNumberOfAdditionalWords(DRM_CONTROLLER_V3_1_0_VLNV_NUMBER_OF_ADDITIONAL_WORDS),
-  mMeteringNumberOfAdditionalWords(DRM_CONTROLLER_V3_1_0_METERING_NUMBER_OF_ADDITIONAL_WORDS),
-  mMailboxNumberOfAdditionalWords(DRM_CONTROLLER_V3_1_0_MAILBOX_NUMBER_OF_ADDITIONAL_WORDS),
-  mLicenseFileHeaderWordNumber(DRM_CONTROLLER_V3_1_0_LICENSE_HEADER_BLOCK_SIZE),
-  mLicenseFileIpBlockWordNumber(DRM_CONTROLLER_V3_1_0_LICENSE_IP_BLOCK_SIZE),
+  mNumberOfTracesPerIp(DRM_CONTROLLER_V6_0_0_NUMBER_OF_TRACES_PER_IP),
+  mVlnvNumberOfAdditionalWords(DRM_CONTROLLER_V6_0_0_VLNV_NUMBER_OF_ADDITIONAL_WORDS),
+  mMeteringNumberOfAdditionalWords(DRM_CONTROLLER_V6_0_0_METERING_NUMBER_OF_ADDITIONAL_WORDS),
+  mMailboxNumberOfAdditionalWords(DRM_CONTROLLER_V6_0_0_MAILBOX_NUMBER_OF_ADDITIONAL_WORDS),
+  mLicenseFileHeaderWordNumber(DRM_CONTROLLER_V6_0_0_LICENSE_HEADER_BLOCK_SIZE),
+  mLicenseFileIpBlockWordNumber(DRM_CONTROLLER_V6_0_0_LICENSE_IP_BLOCK_SIZE),
   mLicenseFileMinimumWordNumber((mLicenseFileHeaderWordNumber+mLicenseFileIpBlockWordNumber)*mLicenseWordRegisterWordNumber),
-  mDrmErrorRegisterMessagesArraySize(DRM_CONTROLLER_V3_1_0_NUMBER_OF_ERROR_CODES),
+  mMeteringFileHeaderWordPosition(DRM_CONTROLLER_V6_0_0_METERING_FILE_HEADER_POSITION),
+  mMeteringFileLicenseTimerCountWordPosition(DRM_CONTROLLER_V6_0_0_METERING_FILE_LICENSE_TIMER_COUNT_POSITION),
+  mMeteringFileFirstIpMeteringDataWordPosition(DRM_CONTROLLER_V6_0_0_METERING_FILE_FIRST_IP_METERING_DATA_POSITION),
+  mMeteringFileMacWordFromEndPosition(DRM_CONTROLLER_V6_0_0_METERING_FILE_MAC_FROM_END_POSITION),
+  mDrmErrorRegisterMessagesArraySize(DRM_CONTROLLER_V6_0_0_NUMBER_OF_ERROR_CODES),
   mDrmErrorRegisterMessagesArray({
     { mDrmErrorNotReady,                                   "Not ready" },
     { mDrmErrorNoError,                                    "No error"  },
@@ -96,13 +104,13 @@ DrmControllerRegistersStrategy_v3_1_0::DrmControllerRegistersStrategy_v3_1_0(tDr
     { mDrmErrorBusReadExpectedStatusError,                 "Bus read expected status error" }
   })
 {
-  setIndexedRegisterName(DRM_CONTROLLER_V3_1_0_INDEXED_REGISTER_NAME);
+  setIndexedRegisterName(DRM_CONTROLLER_V6_0_0_INDEXED_REGISTER_NAME);
 }
 
-/** ~DrmControllerRegistersStrategy_v3_1_0
+/** ~DrmControllerRegistersStrategy_v6_0_0
 *   \brief Class destructor.
 **/
-DrmControllerRegistersStrategy_v3_1_0::~DrmControllerRegistersStrategy_v3_1_0()
+DrmControllerRegistersStrategy_v6_0_0::~DrmControllerRegistersStrategy_v6_0_0()
 {}
 
 /** writeRegistersPageRegister
@@ -111,7 +119,7 @@ DrmControllerRegistersStrategy_v3_1_0::~DrmControllerRegistersStrategy_v3_1_0()
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::writeRegistersPageRegister() const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::writeRegistersPageRegister() const {
   return writePageRegister(mDrmPageRegisters);
 }
 
@@ -121,7 +129,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::writeRegistersPageRegister()
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::writeVlnvFilePageRegister() const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::writeVlnvFilePageRegister() const {
   return writePageRegister(mDrmPageVlnvFile);
 }
 
@@ -131,7 +139,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::writeVlnvFilePageRegister() 
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::writeLicenseFilePageRegister() const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::writeLicenseFilePageRegister() const {
   return writePageRegister(mDrmPageLicenseFile);
 }
 
@@ -141,7 +149,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::writeLicenseFilePageRegister
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::writeTraceFilePageRegister() const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::writeTraceFilePageRegister() const {
   return writePageRegister(mDrmPageTraceFile);
 }
 
@@ -151,7 +159,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::writeTraceFilePageRegister()
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::writeMeteringFilePageRegister() const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::writeMeteringFilePageRegister() const {
   return writePageRegister(mDrmPageMeteringFile);
 }
 
@@ -161,7 +169,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::writeMeteringFilePageRegiste
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::writeMailBoxFilePageRegister() const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::writeMailBoxFilePageRegister() const {
   return writePageRegister(mDrmPageMailboxFile);
 }
 
@@ -171,7 +179,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::writeMailBoxFilePageRegister
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::writeNopCommandRegister() const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::writeNopCommandRegister() const {
   return writeCommandRegister(mDrmCommandNop);
 }
 
@@ -181,7 +189,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::writeNopCommandRegister() co
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::writeDnaExtractCommandRegister() const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::writeDnaExtractCommandRegister() const {
   return writeCommandRegister(mDrmCommandExtractDna);
 }
 
@@ -191,7 +199,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::writeDnaExtractCommandRegist
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::writeVlnvExtractCommandRegister() const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::writeVlnvExtractCommandRegister() const {
   return writeCommandRegister(mDrmCommandExtractVlnv);
 }
 
@@ -201,7 +209,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::writeVlnvExtractCommandRegis
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::writeActivateCommandRegister() const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::writeActivateCommandRegister() const {
   return writeCommandRegister(mDrmCommandActivate);
 }
 
@@ -211,7 +219,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::writeActivateCommandRegister
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::writeEndSessionMeteringExtractCommandRegister() const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::writeEndSessionMeteringExtractCommandRegister() const {
   return writeCommandRegister(mDrmCommandEndSessionExtractMetering);
 }
 
@@ -221,7 +229,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::writeEndSessionMeteringExtra
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::writeMeteringExtractCommandRegister() const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::writeMeteringExtractCommandRegister() const {
   return writeCommandRegister(mDrmCommandExtractMetering);
 }
 
@@ -231,7 +239,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::writeMeteringExtractCommandR
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::writeSampleLicenseTimerCounterCommandRegister() const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::writeSampleLicenseTimerCounterCommandRegister() const {
   return writeCommandRegister(mDrmCommandSampleLicenseTimerCounter);
 }
 
@@ -242,7 +250,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::writeSampleLicenseTimerCount
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readLicenseStartAddressRegister(std::vector<unsigned int> &licenseStartAddress) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readLicenseStartAddressRegister(std::vector<unsigned int> &licenseStartAddress) const {
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return readRegisterListFromIndex(mLicenseStartAddressRegisterStartIndex, mLicenseStartAddressRegisterWordNumber, licenseStartAddress);
@@ -255,12 +263,9 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readLicenseStartAddressRegis
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::writeLicenseStartAddressRegister(const std::vector<unsigned int> &licenseStartAddress) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::writeLicenseStartAddressRegister(const std::vector<unsigned int> &licenseStartAddress) const {
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
-  std::vector<unsigned int> readLicenseStartAddress;
-  errorCode = readLicenseStartAddressRegister(readLicenseStartAddress);
-  if (errorCode != mDrmApi_NO_ERROR || readLicenseStartAddress == licenseStartAddress) return errorCode;
   return writeRegisterListFromIndex(mLicenseStartAddressRegisterStartIndex, mLicenseStartAddressRegisterWordNumber, licenseStartAddress);
 }
 
@@ -271,7 +276,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::writeLicenseStartAddressRegi
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readLicenseTimerInitRegister(std::vector<unsigned int> &licenseTimerInit) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readLicenseTimerInitRegister(std::vector<unsigned int> &licenseTimerInit) const {
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return readRegisterListFromIndex(mLicenseTimerRegisterStartIndex, mLicenseTimerRegisterWordNumber, licenseTimerInit);
@@ -284,12 +289,9 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readLicenseTimerInitRegister
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::writeLicenseTimerInitRegister(const std::vector<unsigned int> &licenseTimerInit) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::writeLicenseTimerInitRegister(const std::vector<unsigned int> &licenseTimerInit) const {
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
-  std::vector<unsigned int> readLicenseTimerInit;
-  errorCode = readLicenseTimerInitRegister(readLicenseTimerInit);
-  if (errorCode != mDrmApi_NO_ERROR || readLicenseTimerInit == licenseTimerInit) return errorCode;
   return writeRegisterListFromIndex(mLicenseTimerRegisterStartIndex, mLicenseTimerRegisterWordNumber, licenseTimerInit);
 }
 
@@ -300,7 +302,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::writeLicenseTimerInitRegiste
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readDnaReadyStatusRegister(bool &dnaReady) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readDnaReadyStatusRegister(bool &dnaReady) const {
   return DrmControllerRegistersStrategyInterface::readStatusRegister(mDrmStatusDnaReady, mDrmStatusMaskDnaReady, dnaReady);
 }
 
@@ -314,7 +316,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readDnaReadyStatusRegister(b
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 *   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::waitDnaReadyStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::waitDnaReadyStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
   unsigned int errorCode = DrmControllerRegistersStrategyInterface::waitStatusRegister(timeout, mDrmStatusDnaReady, mDrmStatusMaskDnaReady, expected, actual);
   if (errorCode == mDrmApi_HARDWARE_TIMEOUT_ERROR)
     throwTimeoutException("Wait Dna Ready Status is in timeout", "Expected Dna Ready Status", "Actual Dna Ready Status", expected, actual);
@@ -328,7 +330,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::waitDnaReadyStatusRegister(c
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readVlnvReadyStatusRegister(bool &vlnvReady) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readVlnvReadyStatusRegister(bool &vlnvReady) const {
   return DrmControllerRegistersStrategyInterface::readStatusRegister(mDrmStatusVlnvReady, mDrmStatusMaskVlnvReady, vlnvReady);
 }
 
@@ -342,7 +344,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readVlnvReadyStatusRegister(
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 *   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::waitVlnvReadyStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::waitVlnvReadyStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
   unsigned int errorCode = DrmControllerRegistersStrategyInterface::waitStatusRegister(timeout, mDrmStatusVlnvReady, mDrmStatusMaskVlnvReady, expected, actual);
   if (errorCode == mDrmApi_HARDWARE_TIMEOUT_ERROR)
     throwTimeoutException("Wait Vlnv Ready Status is in timeout", "Expected Vlnv Ready Status", "Actual Vlnv Ready Status", expected, actual);
@@ -356,7 +358,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::waitVlnvReadyStatusRegister(
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readActivationDoneStatusRegister(bool &activationDone) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readActivationDoneStatusRegister(bool &activationDone) const {
   return DrmControllerRegistersStrategyInterface::readStatusRegister(mDrmStatusActivationDone, mDrmStatusMaskActivationDone, activationDone);
 }
 
@@ -370,7 +372,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readActivationDoneStatusRegi
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 *   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::waitActivationDoneStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::waitActivationDoneStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
   unsigned int errorCode = DrmControllerRegistersStrategyInterface::waitStatusRegister(timeout, mDrmStatusActivationDone, mDrmStatusMaskActivationDone, expected, actual);
   if (errorCode == mDrmApi_HARDWARE_TIMEOUT_ERROR)
     throwTimeoutException("Wait Activation Done Status is in timeout", "Expected Activation Done Status", "Actual Activation Done Status", expected, actual);
@@ -384,7 +386,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::waitActivationDoneStatusRegi
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readAutonomousControllerEnabledStatusRegister(bool &autoEnabled) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readAutonomousControllerEnabledStatusRegister(bool &autoEnabled) const {
   return DrmControllerRegistersStrategyInterface::readStatusRegister(mDrmStatusAutoEnabled, mDrmStatusMaskAutoEnabled, autoEnabled);
 
 }
@@ -396,7 +398,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readAutonomousControllerEnab
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readAutonomousControllerBusyStatusRegister(bool &autoBusy) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readAutonomousControllerBusyStatusRegister(bool &autoBusy) const {
   return DrmControllerRegistersStrategyInterface::readStatusRegister(mDrmStatusAutoBusy, mDrmStatusMaskAutoBusy, autoBusy);
 }
 
@@ -410,7 +412,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readAutonomousControllerBusy
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 *   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::waitAutonomousControllerBusyStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::waitAutonomousControllerBusyStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
   unsigned int errorCode = DrmControllerRegistersStrategyInterface::waitStatusRegister(timeout, mDrmStatusAutoBusy, mDrmStatusMaskAutoBusy, expected, actual);
   if (errorCode == mDrmApi_HARDWARE_TIMEOUT_ERROR)
     throwTimeoutException("Wait Autonomous Controller Busy Status is in timeout", "Expected Autonomous Controller Busy Status", "Actual Autonomous Controller Busy Status", expected, actual);
@@ -424,7 +426,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::waitAutonomousControllerBusy
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readMeteringEnabledStatusRegister(bool &meteringEnabled) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readMeteringEnabledStatusRegister(bool &meteringEnabled) const {
   return DrmControllerRegistersStrategyInterface::readStatusRegister(mDrmStatusMeteringEnabled, mDrmStatusMaskMeteringEnabled, meteringEnabled);
 
 }
@@ -436,7 +438,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readMeteringEnabledStatusReg
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readMeteringReadyStatusRegister(bool &meteringReady) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readMeteringReadyStatusRegister(bool &meteringReady) const {
   return DrmControllerRegistersStrategyInterface::readStatusRegister(mDrmStatusMeteringReady, mDrmStatusMaskMeteringReady, meteringReady);
 }
 
@@ -450,7 +452,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readMeteringReadyStatusRegis
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 *   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::waitMeteringReadyStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::waitMeteringReadyStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
   unsigned int errorCode = DrmControllerRegistersStrategyInterface::waitStatusRegister(timeout, mDrmStatusMeteringReady, mDrmStatusMaskMeteringReady, expected, actual);
   if (errorCode == mDrmApi_HARDWARE_TIMEOUT_ERROR)
     throwTimeoutException("Wait Metering Ready Status is in timeout", "Expected Metering Ready Status", "Actual Metering Ready Status", expected, actual);
@@ -464,7 +466,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::waitMeteringReadyStatusRegis
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readSaasChallengeReadyStatusRegister(bool &saasChallengeReady) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readSaasChallengeReadyStatusRegister(bool &saasChallengeReady) const {
   return DrmControllerRegistersStrategyInterface::readStatusRegister(mDrmStatusSaasChallengeReady, mDrmStatusMaskSaasChallengeReady, saasChallengeReady);
 }
 
@@ -478,7 +480,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readSaasChallengeReadyStatus
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 *   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::waitSaasChallengeReadyStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::waitSaasChallengeReadyStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
   unsigned int errorCode = DrmControllerRegistersStrategyInterface::waitStatusRegister(timeout, mDrmStatusSaasChallengeReady, mDrmStatusMaskSaasChallengeReady, expected, actual);
   if (errorCode == mDrmApi_HARDWARE_TIMEOUT_ERROR)
     throwTimeoutException("Wait Saas Challenge Ready Status is in timeout", "Expected Saas Challenge Ready Status", "Actual Saas Challenge Ready Status", expected, actual);
@@ -492,7 +494,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::waitSaasChallengeReadyStatus
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readLicenseTimerEnabledStatusRegister(bool &licenseTimerEnabled) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readLicenseTimerEnabledStatusRegister(bool &licenseTimerEnabled) const {
   return DrmControllerRegistersStrategyInterface::readStatusRegister(mDrmStatusLicenseTimerEnabled, mDrmStatusMaskLicenseTimerEnabled, licenseTimerEnabled);
 }
 
@@ -503,7 +505,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readLicenseTimerEnabledStatu
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readLicenseTimerInitLoadedStatusRegister(bool &licenseTimerInitLoaded) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readLicenseTimerInitLoadedStatusRegister(bool &licenseTimerInitLoaded) const {
   return DrmControllerRegistersStrategyInterface::readStatusRegister(mDrmStatusLicenseTimerInitLoaded, mDrmStatusMaskLicenseTimerInitLoaded, licenseTimerInitLoaded);
 }
 
@@ -517,7 +519,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readLicenseTimerInitLoadedSt
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 *   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::waitLicenseTimerInitLoadedStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::waitLicenseTimerInitLoadedStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
   unsigned int errorCode = DrmControllerRegistersStrategyInterface::waitStatusRegister(timeout, mDrmStatusLicenseTimerInitLoaded, mDrmStatusMaskLicenseTimerInitLoaded, expected, actual);
   if (errorCode == mDrmApi_HARDWARE_TIMEOUT_ERROR)
     throwTimeoutException("Wait License Timer Init Loaded Status is in timeout", "Expected License Timer Init Loaded Status", "Actual License Timer Init Loaded Status", expected, actual);
@@ -531,7 +533,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::waitLicenseTimerInitLoadedSt
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readEndSessionMeteringReadyStatusRegister(bool &endSessionMeteringReady) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readEndSessionMeteringReadyStatusRegister(bool &endSessionMeteringReady) const {
   return DrmControllerRegistersStrategyInterface::readStatusRegister(mDrmStatusEndSessionMeteringReady, mDrmStatusMaskEndSessionMeteringReady, endSessionMeteringReady);
 }
 
@@ -545,7 +547,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readEndSessionMeteringReadyS
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 *   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::waitEndSessionMeteringReadyStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::waitEndSessionMeteringReadyStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
   unsigned int errorCode = DrmControllerRegistersStrategyInterface::waitStatusRegister(timeout, mDrmStatusEndSessionMeteringReady, mDrmStatusMaskEndSessionMeteringReady, expected, actual);
   if (errorCode == mDrmApi_HARDWARE_TIMEOUT_ERROR)
     throwTimeoutException("Wait End Session Metering Ready Status is in timeout", "Expected End Session Metering Ready Status", "Actual End Session Metering Ready Status", expected, actual);
@@ -559,7 +561,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::waitEndSessionMeteringReadyS
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readHeartBeatModeEnabledStatusRegister(bool &heartBeatModeEnabled) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readHeartBeatModeEnabledStatusRegister(bool &heartBeatModeEnabled) const {
   return DrmControllerRegistersStrategyInterface::readStatusRegister(mDrmStatusHeartBeatModeEnabled, mDrmStatusMaskHeartBeatModeEnabled, heartBeatModeEnabled);
 }
 
@@ -570,7 +572,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readHeartBeatModeEnabledStat
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readAsynchronousMeteringReadyStatusRegister(bool &asynchronousMeteringReady) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readAsynchronousMeteringReadyStatusRegister(bool &asynchronousMeteringReady) const {
   return DrmControllerRegistersStrategyInterface::readStatusRegister(mDrmStatusAsynchronousMeteringReady, mDrmStatusMaskAsynchronousMeteringReady, asynchronousMeteringReady);
 }
 
@@ -584,7 +586,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readAsynchronousMeteringRead
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 *   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::waitAsynchronousMeteringReadyStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::waitAsynchronousMeteringReadyStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
   unsigned int errorCode = DrmControllerRegistersStrategyInterface::waitStatusRegister(timeout, mDrmStatusAsynchronousMeteringReady, mDrmStatusMaskAsynchronousMeteringReady, expected, actual);
   if (errorCode == mDrmApi_HARDWARE_TIMEOUT_ERROR)
     throwTimeoutException("Wait Asynchronous Metering Ready Status is in timeout", "Expected Asynchronous Metering Ready Status", "Actual Asynchronous Metering Ready Status", expected, actual);
@@ -598,7 +600,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::waitAsynchronousMeteringRead
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readLicenseTimerSampleReadyStatusRegister(bool &licenseTimerSampleReady) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readLicenseTimerSampleReadyStatusRegister(bool &licenseTimerSampleReady) const {
   return DrmControllerRegistersStrategyInterface::readStatusRegister(mDrmStatusLicenseTimerSampleReady, mDrmStatusMaskLicenseTimerSampleReady, licenseTimerSampleReady);
 }
 
@@ -612,7 +614,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readLicenseTimerSampleReadyS
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 *   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::waitLicenseTimerSampleReadyStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::waitLicenseTimerSampleReadyStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
   unsigned int errorCode = DrmControllerRegistersStrategyInterface::waitStatusRegister(timeout, mDrmStatusLicenseTimerSampleReady, mDrmStatusMaskLicenseTimerSampleReady, expected, actual);
   if (errorCode == mDrmApi_HARDWARE_TIMEOUT_ERROR)
     throwTimeoutException("Wait License Timer Sample Ready Status is in timeout", "Expected License Timer Sample Ready Status", "Actual License Timer Sample Ready Status", expected, actual);
@@ -626,7 +628,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::waitLicenseTimerSampleReadyS
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readLicenseTimerCountEmptyStatusRegister(bool &licenseTimerCounterEmpty) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readLicenseTimerCountEmptyStatusRegister(bool &licenseTimerCounterEmpty) const {
   return DrmControllerRegistersStrategyInterface::readStatusRegister(mDrmStatusLicenseTimerCountEmpty, mDrmStatusMaskLicenseTimerCountEmpty, licenseTimerCounterEmpty);
 }
 
@@ -640,7 +642,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readLicenseTimerCountEmptySt
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 *   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::waitLicenseTimerCountEmptyStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::waitLicenseTimerCountEmptyStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
   unsigned int errorCode = DrmControllerRegistersStrategyInterface::waitStatusRegister(timeout, mDrmStatusLicenseTimerCountEmpty, mDrmStatusMaskLicenseTimerCountEmpty, expected, actual);
   if (errorCode == mDrmApi_HARDWARE_TIMEOUT_ERROR)
     throwTimeoutException("Wait License Timer Count Empty Status is in timeout", "Expected License Timer Count Empty Status", "Actual License Timer Count Empty Status", expected, actual);
@@ -654,7 +656,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::waitLicenseTimerCountEmptySt
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readSessionRunningStatusRegister(bool &sessionRunning) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readSessionRunningStatusRegister(bool &sessionRunning) const {
   return DrmControllerRegistersStrategyInterface::readStatusRegister(mDrmStatusSessionRunning, mDrmStatusMaskSessionRunning, sessionRunning);
 }
 
@@ -668,7 +670,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readSessionRunningStatusRegi
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 *   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::waitSessionRunningStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::waitSessionRunningStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
   unsigned int errorCode = DrmControllerRegistersStrategyInterface::waitStatusRegister(timeout, mDrmStatusSessionRunning, mDrmStatusMaskSessionRunning, expected, actual);
   if (errorCode == mDrmApi_HARDWARE_TIMEOUT_ERROR)
     throwTimeoutException("Wait Session Running Status is in timeout", "Expected Session Running Status", "Actual Session Running Status", expected, actual);
@@ -682,7 +684,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::waitSessionRunningStatusRegi
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readActivationCodesTransmittedStatusRegister(bool &activationCodeTransmitted) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readActivationCodesTransmittedStatusRegister(bool &activationCodeTransmitted) const {
   return DrmControllerRegistersStrategyInterface::readStatusRegister(mDrmStatusActivationCodesTransmitted, mDrmStatusMaskActivationCodesTransmitted, activationCodeTransmitted);
 }
 
@@ -696,7 +698,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readActivationCodesTransmitt
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 *   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::waitActivationCodesTransmittedStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::waitActivationCodesTransmittedStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
   unsigned int errorCode = DrmControllerRegistersStrategyInterface::waitStatusRegister(timeout, mDrmStatusActivationCodesTransmitted, mDrmStatusMaskActivationCodesTransmitted, expected, actual);
   if (errorCode == mDrmApi_HARDWARE_TIMEOUT_ERROR)
     throwTimeoutException("Wait Activation Codes Transmitted Status is in timeout", "Expected Activation Codes Transmitted Status", "Actual Activation Codes Transmitted Status", expected, actual);
@@ -710,7 +712,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::waitActivationCodesTransmitt
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readLicenseNodeLockStatusRegister(bool &licenseNodeLock) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readLicenseNodeLockStatusRegister(bool &licenseNodeLock) const {
   return DrmControllerRegistersStrategyInterface::readStatusRegister(mDrmStatusLicenseNodeLock, mDrmStatusMaskLicenseNodeLock, licenseNodeLock);
 }
 
@@ -724,7 +726,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readLicenseNodeLockStatusReg
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 *   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::waitLicenseNodeLockStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::waitLicenseNodeLockStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
   unsigned int errorCode = DrmControllerRegistersStrategyInterface::waitStatusRegister(timeout, mDrmStatusLicenseNodeLock, mDrmStatusMaskLicenseNodeLock, expected, actual);
   if (errorCode == mDrmApi_HARDWARE_TIMEOUT_ERROR)
     throwTimeoutException("Wait License Node Lock Status is in timeout", "Expected License Node Lock Status", "Actual License Node Lock Status", expected, actual);
@@ -738,7 +740,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::waitLicenseNodeLockStatusReg
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readLicenseMeteringStatusRegister(bool &licenseMetering) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readLicenseMeteringStatusRegister(bool &licenseMetering) const {
   return DrmControllerRegistersStrategyInterface::readStatusRegister(mDrmStatusLicenseMetering, mDrmStatusMaskLicenseMetering, licenseMetering);
 }
 
@@ -752,7 +754,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readLicenseMeteringStatusReg
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 *   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::waitLicenseMeteringStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::waitLicenseMeteringStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
   unsigned int errorCode = DrmControllerRegistersStrategyInterface::waitStatusRegister(timeout, mDrmStatusLicenseMetering, mDrmStatusMaskLicenseMetering, expected, actual);
   if (errorCode == mDrmApi_HARDWARE_TIMEOUT_ERROR)
     throwTimeoutException("Wait License Metering Status is in timeout", "Expected License Metering Status", "Actual License Metering Status", expected, actual);
@@ -766,9 +768,8 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::waitLicenseMeteringStatusReg
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readSecurityAlertStatusRegister(bool &securityAlert) const {
-  throwUnsupportedFeatureException("Security Alert status", DRM_CONTROLLER_V3_1_0_SUPPORTED_VERSION);
-  return mDrmApi_UNSUPPORTED_FEATURE_ERROR;
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readSecurityAlertStatusRegister(bool &securityAlert) const {
+    return DrmControllerRegistersStrategyInterface::readStatusRegister(mDrmStatusSecurityAlert, mDrmStatusMaskSecurityAlert, securityAlert);
 }
 
 /** waitSecurityAlertStatusRegister
@@ -781,11 +782,12 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readSecurityAlertStatusRegis
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 *   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::waitSecurityAlertStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
-  throwUnsupportedFeatureException("Security Alert status", DRM_CONTROLLER_V3_1_0_SUPPORTED_VERSION);
-  return mDrmApi_UNSUPPORTED_FEATURE_ERROR;
+unsigned int DrmControllerRegistersStrategy_v6_0_0::waitSecurityAlertStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
+  unsigned int errorCode = DrmControllerRegistersStrategyInterface::waitStatusRegister(timeout, mDrmStatusSecurityAlert, mDrmStatusMaskSecurityAlert, expected, actual);
+  if (errorCode == mDrmApi_HARDWARE_TIMEOUT_ERROR)
+    throwTimeoutException("Wait Security Alert Status is in timeout", "Expected Security Alert Status", "Actual Security Alert Status", expected, actual);
+  return errorCode;
 }
-
 
 /** readNumberOfLicenseTimerLoadedStatusRegister
 *   \brief Read the status register and get the number of license timer loaded.
@@ -794,7 +796,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::waitSecurityAlertStatusRegis
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readNumberOfLicenseTimerLoadedStatusRegister(unsigned int &numberOfLicenseTimerLoaded) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readNumberOfLicenseTimerLoadedStatusRegister(unsigned int &numberOfLicenseTimerLoaded) const {
   return DrmControllerRegistersStrategyInterface::readStatusRegister(mDrmStatusLicenseTimerLoadedNumberLsb, mDrmStatusMaskLicenseTimerLoadedNumber, numberOfLicenseTimerLoaded);
 }
 
@@ -808,7 +810,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readNumberOfLicenseTimerLoad
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 *   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::waitNumberOfLicenseTimerLoadedStatusRegister(const unsigned int &timeout, const unsigned int &expected, unsigned int &actual) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::waitNumberOfLicenseTimerLoadedStatusRegister(const unsigned int &timeout, const unsigned int &expected, unsigned int &actual) const {
   unsigned int errorCode = DrmControllerRegistersStrategyInterface::waitStatusRegister(timeout, mDrmStatusLicenseTimerLoadedNumberLsb, mDrmStatusMaskLicenseTimerLoadedNumber, expected, actual);
   if (errorCode == mDrmApi_HARDWARE_TIMEOUT_ERROR)
     throwTimeoutException("Wait Number Of License Timer Loaded Status is in timeout", "Expected Number Of License Timer Loaded Status", "Actual Number Of License Timer Loaded Status", expected, actual);
@@ -822,7 +824,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::waitNumberOfLicenseTimerLoad
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readNumberOfDetectedIpsStatusRegister(unsigned int &numberOfDetectedIps) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readNumberOfDetectedIpsStatusRegister(unsigned int &numberOfDetectedIps) const {
   return DrmControllerRegistersStrategyInterface::readStatusRegister(mDrmStatusIpActivatorNumberLsb, mDrmStatusMaskIpActivatorNumber, numberOfDetectedIps);
 }
 
@@ -833,7 +835,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readNumberOfDetectedIpsStatu
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readExtractDnaErrorRegister(unsigned char &dnaExtractError) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readExtractDnaErrorRegister(unsigned char &dnaExtractError) const {
   return DrmControllerRegistersStrategyInterface::readErrorRegister(mDrmDnaExtractErrorPosition, mDrmDnaExtractErrorMask, dnaExtractError);
 }
 
@@ -846,7 +848,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readExtractDnaErrorRegister(
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_HARDWARE_TIMEOUT_ERROR if a timeout occured, errors from read/write register functions otherwize.
 *   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::waitExtractDnaErrorRegister(const unsigned int &timeout, const unsigned char &expected, unsigned char &actual) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::waitExtractDnaErrorRegister(const unsigned int &timeout, const unsigned char &expected, unsigned char &actual) const {
   unsigned int errorCode = DrmControllerRegistersStrategyInterface::waitErrorRegister(timeout, mDrmDnaExtractErrorPosition, mDrmDnaExtractErrorMask, expected, actual);
   if (errorCode == mDrmApi_HARDWARE_TIMEOUT_ERROR)
     throwTimeoutException("Wait Extract Dna Error is in timeout", "Expected Extract Dna Error", "Actual Extract Dna Error", expected, actual, getDrmErrorRegisterMessage(expected), getDrmErrorRegisterMessage(actual));
@@ -860,7 +862,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::waitExtractDnaErrorRegister(
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readExtractVlnvErrorRegister(unsigned char &vlnvExtractError) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readExtractVlnvErrorRegister(unsigned char &vlnvExtractError) const {
   return DrmControllerRegistersStrategyInterface::readErrorRegister(mDrmVlnvExtractErrorPosition, mDrmVlnvExtractErrorMask, vlnvExtractError);
 }
 
@@ -873,7 +875,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readExtractVlnvErrorRegister
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_HARDWARE_TIMEOUT_ERROR if a timeout occured, errors from read/write register functions otherwize.
 *   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::waitExtractVlnvErrorRegister(const unsigned int &timeout, const unsigned char &expected, unsigned char &actual) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::waitExtractVlnvErrorRegister(const unsigned int &timeout, const unsigned char &expected, unsigned char &actual) const {
   unsigned int errorCode = DrmControllerRegistersStrategyInterface::waitErrorRegister(timeout, mDrmVlnvExtractErrorPosition, mDrmVlnvExtractErrorMask, expected, actual);
   if (errorCode == mDrmApi_HARDWARE_TIMEOUT_ERROR)
     throwTimeoutException("Wait Extract Vlnv Error is in timeout", "Expected Extract Vlnv Error", "Actual Extract Vlnv Error", expected, actual, getDrmErrorRegisterMessage(expected), getDrmErrorRegisterMessage(actual));
@@ -887,7 +889,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::waitExtractVlnvErrorRegister
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readActivationErrorRegister(unsigned char &activationError) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readActivationErrorRegister(unsigned char &activationError) const {
   return DrmControllerRegistersStrategyInterface::readErrorRegister(mDrmActivationErrorPosition, mDrmActivationErrorMask, activationError);
 }
 
@@ -900,7 +902,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readActivationErrorRegister(
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_HARDWARE_TIMEOUT_ERROR if a timeout occured, errors from read/write register functions otherwize.
 *   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::waitActivationErrorRegister(const unsigned int &timeout, const unsigned char &expected, unsigned char &actual) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::waitActivationErrorRegister(const unsigned int &timeout, const unsigned char &expected, unsigned char &actual) const {
   unsigned int errorCode = DrmControllerRegistersStrategyInterface::waitErrorRegister(timeout, mDrmActivationErrorPosition, mDrmActivationErrorMask, expected, actual);
   if (errorCode == mDrmApi_HARDWARE_TIMEOUT_ERROR)
     throwTimeoutException("Wait Activation Error is in timeout", "Expected Activation Error", "Actual Activation Error", expected, actual, getDrmErrorRegisterMessage(expected), getDrmErrorRegisterMessage(actual));
@@ -914,7 +916,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::waitActivationErrorRegister(
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readLicenseTimerLoadErrorRegister(unsigned char &licenseTimerLoadError) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readLicenseTimerLoadErrorRegister(unsigned char &licenseTimerLoadError) const {
   return DrmControllerRegistersStrategyInterface::readErrorRegister(mDrmLicenseTimerLoadErrorPosition, mDrmLicenseTimerLoadErrorMask, licenseTimerLoadError);
 }
 
@@ -927,7 +929,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readLicenseTimerLoadErrorReg
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_HARDWARE_TIMEOUT_ERROR if a timeout occured, errors from read/write register functions otherwize.
 *   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::waitLicenseTimerLoadErrorRegister(const unsigned int &timeout, const unsigned char &expected, unsigned char &actual) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::waitLicenseTimerLoadErrorRegister(const unsigned int &timeout, const unsigned char &expected, unsigned char &actual) const {
   unsigned int errorCode = DrmControllerRegistersStrategyInterface::waitErrorRegister(timeout, mDrmLicenseTimerLoadErrorPosition, mDrmLicenseTimerLoadErrorMask, expected, actual);
   if (errorCode == mDrmApi_HARDWARE_TIMEOUT_ERROR)
     throwTimeoutException("Wait License Timer Load Error is in timeout", "Expected License Timer Load Error", "Actual License Timer Load Error", expected, actual, getDrmErrorRegisterMessage(expected), getDrmErrorRegisterMessage(actual));
@@ -941,7 +943,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::waitLicenseTimerLoadErrorReg
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readDnaRegister(std::vector<unsigned int> &dna) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readDnaRegister(std::vector<unsigned int> &dna) const {
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return readRegisterListFromIndex(mDnaRegisterStartIndex, mDnaRegisterWordNumber, dna);
@@ -954,7 +956,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readDnaRegister(std::vector<
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readSaasChallengeRegister(std::vector<unsigned int> &saasChallenge) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readSaasChallengeRegister(std::vector<unsigned int> &saasChallenge) const {
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return readRegisterListFromIndex(mSaasChallengeRegisterStartIndex, mSaasChallengeRegisterWordNumber, saasChallenge);
@@ -967,7 +969,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readSaasChallengeRegister(st
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readLicenseTimerCounterRegister(std::vector<unsigned int> &licenseTimerCounter) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readLicenseTimerCounterRegister(std::vector<unsigned int> &licenseTimerCounter) const {
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return readRegisterListFromIndex(mSampledLicenseTimerCountRegisterStartIndex, mSampledLicenseTimerCountRegisterWordNumber, licenseTimerCounter);
@@ -980,10 +982,36 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readLicenseTimerCounterRegis
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readDrmVersionRegister(unsigned int &drmVersion) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readDrmVersionRegister(unsigned int &drmVersion) const {
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return readRegisterAtIndex(mVersionRegisterStartIndex, drmVersion);
+}
+
+/** readAdaptiveProportionTestFailuresRegister
+*   \brief Read the Adaptive Proportion Test Failures register and get the value.
+*   This method will access to the system bus to read the Adaptive Proportion Test Failures register.
+*   \param[out] adaptiveProportionTestFailures is the Adaptive Proportion Test Failures value.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readAdaptiveProportionTestFailuresRegister(std::vector<unsigned int> &adaptiveProportionTestFailures) const {
+  unsigned int errorCode = writeRegistersPageRegister();
+  if (errorCode != mDrmApi_NO_ERROR) return errorCode;
+  return readRegisterListFromIndex(mAdaptiveProportionTestFailuresRegisterStartIndex, mAdaptiveProportionTestFailuresRegisterWordNumber, adaptiveProportionTestFailures);
+}
+
+/** readRepetitionCountTestFailuresRegister
+*   \brief Read the Repetition Count Test Failures register and get the value.
+*   This method will access to the system bus to read the Repetition Count Test Failures register.
+*   \param[out] repetitionCountTestFailures is the Repetition Count Test Failures value.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readRepetitionCountTestFailuresRegister(std::vector<unsigned int> &repetitionCountTestFailures) const {
+  unsigned int errorCode = writeRegistersPageRegister();
+  if (errorCode != mDrmApi_NO_ERROR) return errorCode;
+  return readRegisterListFromIndex(mRepetitionCountTestFailuresRegisterStartIndex, mRepetitionCountTestFailuresRegisterWordNumber, repetitionCountTestFailures);
 }
 
 /** readLogsRegister
@@ -994,7 +1022,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readDrmVersionRegister(unsig
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readLogsRegister(const unsigned int &numberOfIps, std::vector<unsigned int> &logs) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readLogsRegister(const unsigned int &numberOfIps, std::vector<unsigned int> &logs) const {
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return readRegisterListFromIndex(mLogsRegisterStartIndex, numberOfWords(numberOfIps), logs);
@@ -1011,7 +1039,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readLogsRegister(const unsig
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readVlnvFileRegister(const unsigned int &numberOfIps, std::vector<unsigned int> &vlnvFile) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readVlnvFileRegister(const unsigned int &numberOfIps, std::vector<unsigned int> &vlnvFile) const {
   unsigned int errorCode = writeVlnvFilePageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return readRegisterListFromIndex(mVlnvWordRegisterStartIndex, mVlnvWordRegisterWordNumber*(numberOfIps+mVlnvNumberOfAdditionalWords), vlnvFile);
@@ -1028,7 +1056,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readVlnvFileRegister(const u
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readVlnvFileRegister(const unsigned int &numberOfIPs, std::vector<std::string> &vlnvFile) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readVlnvFileRegister(const unsigned int &numberOfIPs, std::vector<std::string> &vlnvFile) const {
   std::vector<unsigned int> tmpVlnvFile;
   unsigned int errorCode = readVlnvFileRegister(numberOfIPs, tmpVlnvFile);
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
@@ -1044,7 +1072,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readVlnvFileRegister(const u
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readLicenseFileRegister(const unsigned int &licenseFileSize, std::vector<unsigned int> &licenseFile) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readLicenseFileRegister(const unsigned int &licenseFileSize, std::vector<unsigned int> &licenseFile) const {
   unsigned int errorCode = writeLicenseFilePageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return readRegisterListFromIndex(mLicenseWordRegisterStartIndex, mLicenseWordRegisterWordNumber*licenseFileSize, licenseFile);
@@ -1059,7 +1087,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readLicenseFileRegister(cons
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readLicenseFileRegister(const unsigned int &licenseFileSize, std::string &licenseFile) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readLicenseFileRegister(const unsigned int &licenseFileSize, std::string &licenseFile) const {
   std::vector<unsigned int> tmpLicense;
   unsigned int errorCode = readLicenseFileRegister(licenseFileSize, tmpLicense);
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
@@ -1075,12 +1103,9 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readLicenseFileRegister(cons
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::writeLicenseFileRegister(const unsigned int &licenseFileSize, const std::vector<unsigned int> &licenseFile) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::writeLicenseFileRegister(const unsigned int &licenseFileSize, const std::vector<unsigned int> &licenseFile) const {
   unsigned int errorCode = writeLicenseFilePageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
-  std::vector<unsigned int> readLicenseFile;
-  errorCode = readLicenseFileRegister(licenseFileSize, readLicenseFile);
-  if (errorCode != mDrmApi_NO_ERROR || readLicenseFile == licenseFile) return errorCode;
   return writeRegisterListFromIndex(mLicenseWordRegisterStartIndex, mLicenseWordRegisterWordNumber*licenseFileSize, licenseFile);
 }
 
@@ -1095,7 +1120,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::writeLicenseFileRegister(con
 *   \throw DrmControllerLicenseFileSizeException whenever a check on license file size is bad. DrmControllerLicenseFileSizeException::what()
 *          should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::writeLicenseFileRegister(const std::string &licenseFile) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::writeLicenseFileRegister(const std::string &licenseFile) const {
   std::vector<unsigned int> tmpLicenseFile = DrmControllerDataConverter::hexStringToBinary(licenseFile);
   if (checkLicenseFileSize(tmpLicenseFile) == false) return mDrmApi_LICENSE_FILE_SIZE_ERROR;
   unsigned int licenseFileSize = tmpLicenseFile.size()/mLicenseWordRegisterWordNumber;
@@ -1110,7 +1135,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::writeLicenseFileRegister(con
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readTraceFileRegister(const unsigned int &numberOfIps, std::vector<unsigned int> &traceFile) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readTraceFileRegister(const unsigned int &numberOfIps, std::vector<unsigned int> &traceFile) const {
   unsigned int errorCode = writeTraceFilePageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return readRegisterListFromIndex(mTraceWordRegisterStartIndex, mTraceWordRegisterWordNumber*numberOfIps*mNumberOfTracesPerIp, traceFile);
@@ -1124,7 +1149,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readTraceFileRegister(const 
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readTraceFileRegister(const unsigned int &numberOfIPs, std::vector<std::string> &traceFile) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readTraceFileRegister(const unsigned int &numberOfIPs, std::vector<std::string> &traceFile) const {
   std::vector<unsigned int> tmpTraceFile;
   unsigned int errorCode = readTraceFileRegister(numberOfIPs, tmpTraceFile);
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
@@ -1140,7 +1165,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readTraceFileRegister(const 
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readMeteringFileRegister(const unsigned int &numberOfIps, std::vector<unsigned int> &meteringFile) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readMeteringFileRegister(const unsigned int &numberOfIps, std::vector<unsigned int> &meteringFile) const {
   unsigned int errorCode = writeMeteringFilePageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return readRegisterListFromIndex(mMeteringWordRegisterStartIndex, mMeteringWordRegisterWordNumber*(numberOfIps+mMeteringNumberOfAdditionalWords), meteringFile);
@@ -1154,7 +1179,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readMeteringFileRegister(con
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readMeteringFileRegister(const unsigned int &numberOfIPs, std::vector<std::string> &meteringFile) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readMeteringFileRegister(const unsigned int &numberOfIPs, std::vector<std::string> &meteringFile) const {
   std::vector<unsigned int> tmpMeteringFile;
   unsigned int errorCode = readMeteringFileRegister(numberOfIPs, tmpMeteringFile);
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
@@ -1170,7 +1195,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readMeteringFileRegister(con
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readMailboxFileSizeRegister(unsigned int &readOnlyMailboxWordNumber, unsigned int &readWriteMailboxWordNumber) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readMailboxFileSizeRegister(unsigned int &readOnlyMailboxWordNumber, unsigned int &readWriteMailboxWordNumber) const {
   unsigned int errorCode = writeMailBoxFilePageRegister();
   // read data at file start index
   unsigned int mailboxSize;
@@ -1193,7 +1218,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readMailboxFileSizeRegister(
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readMailboxFileRegister(unsigned int &readOnlyMailboxWordNumber, unsigned int &readWriteMailboxWordNumber,
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readMailboxFileRegister(unsigned int &readOnlyMailboxWordNumber, unsigned int &readWriteMailboxWordNumber,
                                                                             std::vector<unsigned int> &readOnlyMailboxData, std::vector<unsigned int> &readWriteMailboxData) const {
   // get mailbox sizes
   unsigned int errorCode = readMailboxFileSizeRegister(readOnlyMailboxWordNumber, readWriteMailboxWordNumber);
@@ -1216,7 +1241,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readMailboxFileRegister(unsi
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readMailboxFileRegister(unsigned int &readOnlyMailboxWordNumber, unsigned int &readWriteMailboxWordNumber,
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readMailboxFileRegister(unsigned int &readOnlyMailboxWordNumber, unsigned int &readWriteMailboxWordNumber,
                                                                             std::vector<std::string> &readOnlyMailboxData, std::vector<std::string> &readWriteMailboxData) const {
   std::vector<unsigned int> tmpReadOnlyMailboxData, tmpReadWriteMailboxData;
   unsigned int errorCode = readMailboxFileRegister(readOnlyMailboxWordNumber, readWriteMailboxWordNumber, tmpReadOnlyMailboxData, tmpReadWriteMailboxData);
@@ -1224,30 +1249,6 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readMailboxFileRegister(unsi
   readOnlyMailboxData  = DrmControllerDataConverter::binaryToHexStringList(tmpReadOnlyMailboxData,  mMailboxWordRegisterWordNumber);
   readWriteMailboxData = DrmControllerDataConverter::binaryToHexStringList(tmpReadWriteMailboxData, mMailboxWordRegisterWordNumber);
   return errorCode;
-}
-
-/** readAdaptiveProportionTestFailuresRegister
-*   \brief Read the Adaptive Proportion Test Failures register and get the value.
-*   This method will access to the system bus to read the Adaptive Proportion Test Failures register.
-*   \param[out] adaptiveProportionTestFailures is the Adaptive Proportion Test Failures value.
-*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
-*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
-**/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readAdaptiveProportionTestFailuresRegister(std::vector<unsigned int> &adaptiveProportionTestFailures) const {
- throwUnsupportedFeatureException("Adaptive Proportion Test Failures Registers", DRM_CONTROLLER_V3_1_0_SUPPORTED_VERSION);
-  return mDrmApi_UNSUPPORTED_FEATURE_ERROR;
-}
-
-/** readRepetitionCountTestFailuresRegister
-*   \brief Read the Repetition Count Test Failures register and get the value.
-*   This method will access to the system bus to read the Repetition Count Test Failures register.
-*   \param[out] repetitionCountTestFailures is the Repetition Count Test Failures value.
-*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
-*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
-**/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readRepetitionCountTestFailuresRegister(std::vector<unsigned int> &repetitionCountTestFailures) const {
-  throwUnsupportedFeatureException("Repetition Count Test Failures Registers", DRM_CONTROLLER_V3_1_0_SUPPORTED_VERSION);
-  return mDrmApi_UNSUPPORTED_FEATURE_ERROR;
 }
 
 /** writeMailboxFileRegister
@@ -1258,7 +1259,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readRepetitionCountTestFailu
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::writeMailboxFileRegister(const std::vector <unsigned int> &readWriteMailboxData, unsigned int &readWriteMailboxWordNumber) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::writeMailboxFileRegister(const std::vector <unsigned int> &readWriteMailboxData, unsigned int &readWriteMailboxWordNumber) const {
   // read mailbox
   unsigned int tmpReadOnlyMailboxWordNumber;
   std::vector<unsigned int> tmpReadOnlyMailboxData, tmpReadWriteMailboxData;
@@ -1277,7 +1278,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::writeMailboxFileRegister(con
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::writeMailboxFileRegister(const std::vector<std::string> &readWriteMailboxData, unsigned int &readWriteMailboxWordNumber) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::writeMailboxFileRegister(const std::vector<std::string> &readWriteMailboxData, unsigned int &readWriteMailboxWordNumber) const {
   return writeMailboxFileRegister(DrmControllerDataConverter::hexStringListToBinary(readWriteMailboxData), readWriteMailboxWordNumber);
 }
 
@@ -1285,13 +1286,36 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::writeMailboxFileRegister(con
 *   \brief Display the value of the metering file.
 *   \param[in] file is the stream to use for the data print.
 **/
-void DrmControllerRegistersStrategy_v3_1_0::printMeteringFileHwReport(std::ostream &file) const {
+void DrmControllerRegistersStrategy_v6_0_0::printMeteringFileHwReport(std::ostream &file) const {
   unsigned int numberOfDetectedIps;
-  std::vector<std::string> meteringFile;
+  std::vector<unsigned int> meteringFile;
   if (readNumberOfDetectedIpsStatusRegister(numberOfDetectedIps) != mDrmApi_NO_ERROR) return;
   if (readMeteringFileRegister(numberOfDetectedIps, meteringFile) != mDrmApi_NO_ERROR) return;
-  file << fileName("ENCRYPTED METERING") << std::endl;
-  file << registerValue(meteringFile, "METERING", 0) << std::endl;
+  bool meteringFileEncrypted(getMeteringFileHeaderEncryptedMeteringFlag(getMeteringFileHeader(meteringFile)));
+  std::string environmentId(DrmControllerDataConverter::binaryToHexString(getMeteringFileHeaderEnvironmentId(getMeteringFileHeader(meteringFile))));
+  if (meteringFileEncrypted == true)
+    file << fileName("ENCRYPTED METERING") << std::endl;
+  else
+    file << fileName("PLAIN METERING") << std::endl;
+  file << registerValue(DrmControllerDataConverter::binaryToHexString(getMeteringFileHeaderSessionId(getMeteringFileHeader(meteringFile))), "SESSION ID") << std::endl;
+  file << registerValue(meteringFileEncrypted, "ENCRYPTED METERING FLAG") << std::endl;
+  file << registerValue(getMeteringFileHeaderEndSessionMeteringFlag(getMeteringFileHeader(meteringFile)), "END SESSION METERING FLAG") << std::endl;
+  file << registerValue(environmentId.substr(4), "ENVIRONMENT ID") << std::endl;
+  file << registerValue(DrmControllerDataConverter::binaryToHexString(getMeteringFileHeaderSegmentIndex(getMeteringFileHeader(meteringFile))), "SEGMENT INDEX") << std::endl;
+  file << registerValue(DrmControllerDataConverter::binaryToHexString(getMeteringFileLicenseTimer(meteringFile)), "LICENSE TIMER COUNT") << std::endl;
+  if (meteringFileEncrypted == false) {
+    std::vector<unsigned int> ipMeteringData(getMeteringFileIpMeteringData(meteringFile));
+    for (unsigned int ii = 0; ii < numberOfDetectedIps; ii++) {
+      std::vector<unsigned int> ipIndex(next(ipMeteringData.begin(),ii*mMeteringWordRegisterWordNumber),next(ipMeteringData.begin(),ii*mMeteringWordRegisterWordNumber+mMeteringWordRegisterWordNumber/2));
+      std::vector<unsigned int> ipMetering(next(ipMeteringData.begin(),ii*mMeteringWordRegisterWordNumber+mMeteringWordRegisterWordNumber/2),next(ipMeteringData.begin(),(ii+1)*mMeteringWordRegisterWordNumber));
+      std::ostringstream writter;
+      writter << "IP INDEX 0x" << DrmControllerDataConverter::binaryToHexString(ipIndex) << " PLAIN METERING";
+      file << registerValue(DrmControllerDataConverter::binaryToHexString(ipMetering), writter.str()) << std::endl;
+    }
+  }    
+  else
+    file << registerValue(DrmControllerDataConverter::binaryToHexStringList(getMeteringFileIpMeteringData(meteringFile),mMeteringWordRegisterWordNumber), "ENCRYPTED IP METERING DATA", 0) << std::endl;
+  file << registerValue(DrmControllerDataConverter::binaryToHexString(getMeteringFileMac(meteringFile)), "MAC") << std::endl;
 }
 
 /** getDrmErrorRegisterMessage
@@ -1299,7 +1323,7 @@ void DrmControllerRegistersStrategy_v3_1_0::printMeteringFileHwReport(std::ostre
 *   \param[in] errorRegister is the value of the error register.
 *   \return Returns the error message.
 **/
-const char* DrmControllerRegistersStrategy_v3_1_0::getDrmErrorRegisterMessage(const unsigned char &errorRegister) const {
+const char* DrmControllerRegistersStrategy_v6_0_0::getDrmErrorRegisterMessage(const unsigned char &errorRegister) const {
   for (unsigned int ii = 0; ii < mDrmErrorRegisterMessagesArraySize; ii++) {
     if (mDrmErrorRegisterMessagesArray[ii].mDrmErrorCode == errorRegister) {
       return mDrmErrorRegisterMessagesArray[ii].mDrmErrorMessage.c_str();
@@ -1319,8 +1343,8 @@ const char* DrmControllerRegistersStrategy_v3_1_0::getDrmErrorRegisterMessage(co
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readPageRegister(unsigned int &page) const {
-  return readRegister(DRM_CONTROLLER_V3_1_0_PAGE_REGISTER_NAME, page);
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readPageRegister(unsigned int &page) const {
+  return readRegister(DRM_CONTROLLER_V6_0_0_PAGE_REGISTER_NAME, page);
 }
 
 /** writePageRegister
@@ -1330,11 +1354,8 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readPageRegister(unsigned in
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::writePageRegister(const unsigned int &page) const {
-  unsigned int readPage;
-  unsigned int errorCode = readPageRegister(readPage);
-  if (errorCode != mDrmApi_NO_ERROR || readPage == page) return errorCode;
-  return writeRegister(DRM_CONTROLLER_V3_1_0_PAGE_REGISTER_NAME, page);
+unsigned int DrmControllerRegistersStrategy_v6_0_0::writePageRegister(const unsigned int &page) const {
+  return writeRegister(DRM_CONTROLLER_V6_0_0_PAGE_REGISTER_NAME, page);
 }
 
 /** readCommandRegister
@@ -1344,7 +1365,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::writePageRegister(const unsi
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readCommandRegister(unsigned int &command) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readCommandRegister(unsigned int &command) const {
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return readRegisterAtIndex(mCommandRegisterStartIndex, command);
@@ -1357,12 +1378,9 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readCommandRegister(unsigned
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::writeCommandRegister(const unsigned int &command) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::writeCommandRegister(const unsigned int &command) const {
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
-  unsigned int readCommand;
-  errorCode = readCommandRegister(readCommand);
-  if (errorCode != mDrmApi_NO_ERROR || readCommand == command) return errorCode;
   return writeRegisterAtIndex(mCommandRegisterStartIndex, command);
 }
 
@@ -1373,7 +1391,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::writeCommandRegister(const u
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readStatusRegister(unsigned int &status) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readStatusRegister(unsigned int &status) const {
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return readRegisterAtIndex(mStatusRegisterStartIndex, status);
@@ -1386,7 +1404,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readStatusRegister(unsigned 
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwize.
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
-unsigned int DrmControllerRegistersStrategy_v3_1_0::readErrorRegister(unsigned int &error) const {
+unsigned int DrmControllerRegistersStrategy_v6_0_0::readErrorRegister(unsigned int &error) const {
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return readRegisterAtIndex(mErrorRegisterStartIndex, error);
@@ -1402,7 +1420,7 @@ unsigned int DrmControllerRegistersStrategy_v3_1_0::readErrorRegister(unsigned i
 *   \return Returns true if license file size is correct, false otherwize.
 *   \throw DrmControllerLicenseFileSizeException whenever a check on license file size is bad. DrmControllerLicenseFileSizeException::what() should be called to get the exception description.
 **/
-bool DrmControllerRegistersStrategy_v3_1_0::checkLicenseFileSize(const std::vector<unsigned int> &licenseFile) const {
+bool DrmControllerRegistersStrategy_v6_0_0::checkLicenseFileSize(const std::vector<unsigned int> &licenseFile) const {
   if (licenseFile.size() >= mLicenseFileMinimumWordNumber) return true;
   throwLicenseFileSizeException(mLicenseFileMinimumWordNumber, licenseFile.size());
   return false;
@@ -1412,7 +1430,7 @@ bool DrmControllerRegistersStrategy_v3_1_0::checkLicenseFileSize(const std::vect
 *   \brief Display the value of the page register.
 *   \param[in] file is the stream to use for the data print.
 **/
-void DrmControllerRegistersStrategy_v3_1_0::printPageHwReport(std::ostream &file) const {
+void DrmControllerRegistersStrategy_v6_0_0::printPageHwReport(std::ostream &file) const {
   unsigned int page(0);
   if (readPageRegister(page) != mDrmApi_NO_ERROR) return;
   file << registerName("PAGE") << std::endl;
@@ -1423,7 +1441,7 @@ void DrmControllerRegistersStrategy_v3_1_0::printPageHwReport(std::ostream &file
 *   \brief Display the value of the command register.
 *   \param[in] file is the stream to use for the data print.
 **/
-void DrmControllerRegistersStrategy_v3_1_0::printCommandHwReport(std::ostream &file) const {
+void DrmControllerRegistersStrategy_v6_0_0::printCommandHwReport(std::ostream &file) const {
   unsigned int command(0);
   if (readCommandRegister(command) != mDrmApi_NO_ERROR) return;
   file << registerName("COMMAND") << std::endl;
@@ -1434,7 +1452,7 @@ void DrmControllerRegistersStrategy_v3_1_0::printCommandHwReport(std::ostream &f
 *   \brief Display the value of the license start address register.
 *   \param[in] file is the stream to use for the data print.
 **/
-void DrmControllerRegistersStrategy_v3_1_0::printLicenseStartAddressHwReport(std::ostream &file) const {
+void DrmControllerRegistersStrategy_v6_0_0::printLicenseStartAddressHwReport(std::ostream &file) const {
   std::string licenseStartAddress("");
   if (DrmControllerRegistersStrategyInterface::readLicenseStartAddressRegister(licenseStartAddress) != mDrmApi_NO_ERROR) return;
   file << registerName("LICENSE START ADDRESS") << std::endl;
@@ -1445,7 +1463,7 @@ void DrmControllerRegistersStrategy_v3_1_0::printLicenseStartAddressHwReport(std
 *   \brief Display the value of the license timer register.
 *   \param[in] file is the stream to use for the data print.
 **/
-void DrmControllerRegistersStrategy_v3_1_0::printLicenseTimerHwReport(std::ostream &file) const {
+void DrmControllerRegistersStrategy_v6_0_0::printLicenseTimerHwReport(std::ostream &file) const {
   std::string licenseTimerInit("");
   if (DrmControllerRegistersStrategyInterface::readLicenseTimerInitRegister(licenseTimerInit) != mDrmApi_NO_ERROR) return;
   file << registerName("LICENSE TIMER INIT") << std::endl;
@@ -1458,7 +1476,7 @@ void DrmControllerRegistersStrategy_v3_1_0::printLicenseTimerHwReport(std::ostre
 *   \brief Display the value of the status register.
 *   \param[in] file is the stream to use for the data print.
 **/
-void DrmControllerRegistersStrategy_v3_1_0::printStatusHwReport(std::ostream &file) const {
+void DrmControllerRegistersStrategy_v6_0_0::printStatusHwReport(std::ostream &file) const {
   bool bitStatus(false);
   unsigned int intStatus(0);
   file << registerName("STATUS") << std::endl;
@@ -1531,7 +1549,7 @@ void DrmControllerRegistersStrategy_v3_1_0::printStatusHwReport(std::ostream &fi
 *   \brief Display the value of the error register.
 *   \param[in] file is the stream to use for the data print.
 **/
-void DrmControllerRegistersStrategy_v3_1_0::printErrorHwReport(std::ostream &file) const {
+void DrmControllerRegistersStrategy_v6_0_0::printErrorHwReport(std::ostream &file) const {
   unsigned char errorCode(0);
   file << registerName("STATUS") << std::endl;
   //
@@ -1555,7 +1573,7 @@ void DrmControllerRegistersStrategy_v3_1_0::printErrorHwReport(std::ostream &fil
 /** printDrmVersion
 *   \brief Display the value of the drm version.
 **/
-void DrmControllerRegistersStrategy_v3_1_0::printDrmVersionHwReport(std::ostream &file) const {
+void DrmControllerRegistersStrategy_v6_0_0::printDrmVersionHwReport(std::ostream &file) const {
   std::string drmVersion;
   if (DrmControllerRegistersStrategyInterface::readDrmVersionRegister(drmVersion) != mDrmApi_NO_ERROR) return;
   file << versionName("SOFTWARE") << std::endl;
@@ -1570,7 +1588,7 @@ void DrmControllerRegistersStrategy_v3_1_0::printDrmVersionHwReport(std::ostream
 *   \brief Display the value of the dna.
 *   \param[in] file is the stream to use for the data print.
 **/
-void DrmControllerRegistersStrategy_v3_1_0::printDnaHwReport(std::ostream &file) const {
+void DrmControllerRegistersStrategy_v6_0_0::printDnaHwReport(std::ostream &file) const {
   std::string dna;
   if (DrmControllerRegistersStrategyInterface::readDnaRegister(dna) != mDrmApi_NO_ERROR) return;
   file << registerName("DNA") << std::endl;
@@ -1581,18 +1599,40 @@ void DrmControllerRegistersStrategy_v3_1_0::printDnaHwReport(std::ostream &file)
 *   \brief Display the value of the saas challenge.
 *   \param[in] file is the stream to use for the data print.
 **/
-void DrmControllerRegistersStrategy_v3_1_0::printSaasChallengeHwReport(std::ostream &file) const {
+void DrmControllerRegistersStrategy_v6_0_0::printSaasChallengeHwReport(std::ostream &file) const {
   std::string saasChallenge;
   if (DrmControllerRegistersStrategyInterface::readSaasChallengeRegister(saasChallenge) != mDrmApi_NO_ERROR) return;
   file << registerName("SAAS CHALLENGE") << std::endl;
   file << registerValue(saasChallenge, "SAAS CHALLENGE") << std::endl;
 }
 
+/** printAdaptiveProportionTestFailures
+*   \brief Display the value of the Adaptive Proportion Test Failures.
+*   \param[in] file is the stream to use for the data print.
+**/
+void DrmControllerRegistersStrategy_v6_0_0::printAdaptiveProportionTestFailuresHwReport(std::ostream &file) const {
+  std::string adaptiveProportionTestFailures;
+  if (DrmControllerRegistersStrategyInterface::readAdaptiveProportionTestFailuresRegister(adaptiveProportionTestFailures) != mDrmApi_NO_ERROR) return;
+  file << registerName("ADAPTIVE PROPORTION TEST FAILURES") << std::endl;
+  file << registerValue(adaptiveProportionTestFailures, "ADAPTIVE PROPORTION TEST FAILURES") << std::endl;
+}
+
+/** printRepetitionCountTestFailures
+*   \brief Display the value of the Repetition Count Test Failures.
+*   \param[in] file is the stream to use for the data print.
+**/
+void DrmControllerRegistersStrategy_v6_0_0::printRepetitionCountTestFailuresHwReport(std::ostream &file) const {
+  std::string repetitionCountTestFailures;
+  if (DrmControllerRegistersStrategyInterface::readRepetitionCountTestFailuresRegister(repetitionCountTestFailures) != mDrmApi_NO_ERROR) return;
+  file << registerName("REPETITION COUNT TEST FAILURES") << std::endl;
+  file << registerValue(repetitionCountTestFailures, "REPETITION COUNT TEST FAILURES") << std::endl;
+}
+
 /** printLicenseTimerCounter
 *   \brief Display the value of the license timer counter.
 *   \param[in] file is the stream to use for the data print.
 **/
-void DrmControllerRegistersStrategy_v3_1_0::printLicenseTimerCounterHwReport(std::ostream &file) const {
+void DrmControllerRegistersStrategy_v6_0_0::printLicenseTimerCounterHwReport(std::ostream &file) const {
   std::string licenseTimerCounter;
   if (DrmControllerRegistersStrategyInterface::readLicenseTimerCounterRegister(licenseTimerCounter) != mDrmApi_NO_ERROR) return;
   file << registerName("LICENSE TIMER COUNTER") << std::endl;
@@ -1603,7 +1643,7 @@ void DrmControllerRegistersStrategy_v3_1_0::printLicenseTimerCounterHwReport(std
 *   \brief Display the value of the logs register.
 *   \param[in] file is the stream to use for the data print.
 **/
-void DrmControllerRegistersStrategy_v3_1_0::printLogsHwReport(std::ostream &file) const {
+void DrmControllerRegistersStrategy_v6_0_0::printLogsHwReport(std::ostream &file) const {
   unsigned int numberOfDetectedIps;
   std::string logs;
   if (readNumberOfDetectedIpsStatusRegister(numberOfDetectedIps) != mDrmApi_NO_ERROR) return;
@@ -1616,7 +1656,7 @@ void DrmControllerRegistersStrategy_v3_1_0::printLogsHwReport(std::ostream &file
 *   \brief Display the value of the vlnv file.
 *   \param[in] file is the stream to use for the data print.
 **/
-void DrmControllerRegistersStrategy_v3_1_0::printVlnvFileHwReport(std::ostream &file) const {
+void DrmControllerRegistersStrategy_v6_0_0::printVlnvFileHwReport(std::ostream &file) const {
   unsigned int numberOfDetectedIps;
   std::vector<std::string> vlnvFile;
   if (readNumberOfDetectedIpsStatusRegister(numberOfDetectedIps) != mDrmApi_NO_ERROR) return;
@@ -1629,7 +1669,7 @@ void DrmControllerRegistersStrategy_v3_1_0::printVlnvFileHwReport(std::ostream &
 *   \brief Display the license file.
 *   \param[in] file is the stream to use for the data print.
 **/
-void DrmControllerRegistersStrategy_v3_1_0::printLicenseFileHwReport(std::ostream &file) const {
+void DrmControllerRegistersStrategy_v6_0_0::printLicenseFileHwReport(std::ostream &file) const {
   unsigned int numberOfDetectedIps;
   std::string licenseFile;
   unsigned int licenseFileSize = mLicenseFileHeaderWordNumber;
@@ -1644,7 +1684,7 @@ void DrmControllerRegistersStrategy_v3_1_0::printLicenseFileHwReport(std::ostrea
 *   \brief Display the trace file.
 *   \param[in] file is the stream to use for the data print.
 **/
-void DrmControllerRegistersStrategy_v3_1_0::printTraceFileHwReport(std::ostream &file) const {
+void DrmControllerRegistersStrategy_v6_0_0::printTraceFileHwReport(std::ostream &file) const {
   unsigned int numberOfDetectedIps;
   std::vector<std::string> traceFile;
   if (readNumberOfDetectedIpsStatusRegister(numberOfDetectedIps) != mDrmApi_NO_ERROR) return;
@@ -1665,7 +1705,7 @@ void DrmControllerRegistersStrategy_v3_1_0::printTraceFileHwReport(std::ostream 
 *   \brief Display the value of the mailbox file.
 *   \param[in] file is the stream to use for the data print.
 **/
-void DrmControllerRegistersStrategy_v3_1_0::printMailBoxFileHwReport(std::ostream &file) const {
+void DrmControllerRegistersStrategy_v6_0_0::printMailBoxFileHwReport(std::ostream &file) const {
   // read mailbox file
   unsigned int readOnlyMailboxWordNumber, readWriteMailboxWordNumber;
   std::vector<std::string> readOnlyMailboxData, readWriteMailboxData;
@@ -1677,15 +1717,87 @@ void DrmControllerRegistersStrategy_v3_1_0::printMailBoxFileHwReport(std::ostrea
   file << registerValue(readWriteMailboxData, "READ-WRITE MAILBOX", 0) << std::endl;
 }
 
-/** printAdaptiveProportionTestFailures
-*   \brief Display the value of the Adaptive Proportion Test Failures.
-*   \param[in] file is the stream to use for the data print.
+/** getMeteringFileHeader
+*   \brief Get the header of the metering file.
+*   \param[in] meteringFile is a list containing the metering file to retrieve the header from.
+*   \return Returns a list containing the metering file header.
 **/
-void DrmControllerRegistersStrategy_v3_1_0::printAdaptiveProportionTestFailuresHwReport(std::ostream &file) const { }
-  
-/** printRepetitionCountTestFailures
-*   \brief Display the value of the Repetition Count Test Failures.
-*   \param[in] file is the stream to use for the data print.
+std::vector<unsigned int> DrmControllerRegistersStrategy_v6_0_0::getMeteringFileHeader(const std::vector<unsigned int> &meteringFile) const {
+  return std::vector<unsigned int>(next(meteringFile.begin(),mMeteringFileHeaderWordPosition*mMeteringWordRegisterWordNumber),
+                                   next(meteringFile.begin(),(mMeteringFileHeaderWordPosition+1)*mMeteringWordRegisterWordNumber));
+}
+
+/** getMeteringFileHeaderSessionId
+*   \brief Get the session id from the metering file header.
+*   \param[in] meteringFileHeader is a list containing the metering file header to retrieve the session id from.
+*   \return Returns a list containing the metering file session id.
 **/
-void DrmControllerRegistersStrategy_v3_1_0::printRepetitionCountTestFailuresHwReport(std::ostream &file) const { }
-  
+std::vector<unsigned int> DrmControllerRegistersStrategy_v6_0_0::getMeteringFileHeaderSessionId(const std::vector<unsigned int> &meteringFileHeader) const {
+  return std::vector<unsigned int>(meteringFileHeader.begin(), next(meteringFileHeader.begin(), 2));
+}
+
+/** getMeteringFileHeaderEncryptedMeteringFlag
+*   \brief Get the encrypted metering flag from the metering file header.
+*   \param[in] meteringFileHeader is a list containing the metering file header to retrieve the encrypted metering flag from.
+*   \return Returns true if the metering file is encrypted, false otherwize.
+**/
+bool DrmControllerRegistersStrategy_v6_0_0::getMeteringFileHeaderEncryptedMeteringFlag(const std::vector<unsigned int> &meteringFileHeader) const {
+  return (bits(17,0x00020000,*(prev(meteringFileHeader.end(),2))) == 1 ? true : false);
+}
+
+/** getMeteringFileHeaderEndSessionMeteringFlag
+*   \brief Get the end session metering flag from the metering file header.
+*   \param[in] meteringFileHeader is a list containing the metering file header to retrieve the end session metering flag from.
+*   \return Returns true if the metering file is for an end session, false otherwize.
+**/
+bool DrmControllerRegistersStrategy_v6_0_0::getMeteringFileHeaderEndSessionMeteringFlag(const std::vector<unsigned int> &meteringFileHeader) const {
+  return (bits(16,0x00010000,*(prev(meteringFileHeader.end(),2))) == 1 ? true : false);
+}
+
+/** getMeteringFileHeaderEnvironmentId
+*   \brief Get the environment id from the metering file header.
+*   \param[in] meteringFileHeader is a list containing the metering file header to retrieve the environment id from.
+*   \return Returns the environment id.
+**/
+unsigned int DrmControllerRegistersStrategy_v6_0_0::getMeteringFileHeaderEnvironmentId(const std::vector<unsigned int> &meteringFileHeader) const {
+  return bits(0,0x0000FFFF,*(prev(meteringFileHeader.end(),2)));
+}
+
+/** getMeteringFileHeaderSegmentIndex
+*   \brief Get the segment index from the metering file header.
+*   \param[in] meteringFileHeader is a list containing the metering file header to retrieve the segment index from.
+*   \return Returns the segment index.
+**/
+unsigned int DrmControllerRegistersStrategy_v6_0_0::getMeteringFileHeaderSegmentIndex(const std::vector<unsigned int> &meteringFileHeader) const {
+  return *(prev(meteringFileHeader.end(),1));
+}
+
+/** getMeteringFileLicenseTimer
+*   \brief Get the license timer from the metering file.
+*   \param[in] meteringFile is a list containing the metering file to retrieve the license timer from.
+*   \return Returns a list containing the license timer retrieved from metering file.
+**/
+std::vector<unsigned int> DrmControllerRegistersStrategy_v6_0_0::getMeteringFileLicenseTimer(const std::vector<unsigned int> &meteringFile) const {
+  return std::vector<unsigned int>(next(meteringFile.begin(),mMeteringFileLicenseTimerCountWordPosition*mMeteringWordRegisterWordNumber+mSampledLicenseTimerCountRegisterWordNumber),
+                                   next(meteringFile.begin(),(mMeteringFileLicenseTimerCountWordPosition+1)*mMeteringWordRegisterWordNumber));
+}
+
+/** getMeteringFileIpMeteringData
+*   \brief Get the ip metering data from the metering file.
+*   \param[in] meteringFile is a list containing the metering file to retrieve the ip metering data from.
+*   \return Returns a list containing the ip metering retrieved from metering file.
+**/
+std::vector<unsigned int> DrmControllerRegistersStrategy_v6_0_0::getMeteringFileIpMeteringData(const std::vector<unsigned int> &meteringFile) const {
+  return std::vector<unsigned int>(next(meteringFile.begin(),mMeteringFileFirstIpMeteringDataWordPosition*mMeteringWordRegisterWordNumber),
+                                   prev(meteringFile.end(),  (mMeteringFileMacWordFromEndPosition+1)*mMeteringWordRegisterWordNumber));
+}
+
+/** getMeteringFileMac
+*   \brief Get the mac from the metering file.
+*   \param[in] meteringFile is a list containing the metering file to retrieve the mac from.
+*   \return Returns a list containing the mac retrieved from metering file.
+**/
+std::vector<unsigned int> DrmControllerRegistersStrategy_v6_0_0::getMeteringFileMac(const std::vector<unsigned int> &meteringFile) const {
+  return std::vector<unsigned int>(prev(meteringFile.end(),(mMeteringFileMacWordFromEndPosition+1)*mMeteringWordRegisterWordNumber),
+                                   prev(meteringFile.end(),mMeteringFileMacWordFromEndPosition*mMeteringWordRegisterWordNumber));
+}
