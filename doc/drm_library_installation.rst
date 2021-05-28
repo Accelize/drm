@@ -36,7 +36,7 @@ Software requirements
 ---------------------
 
 * The Accelize DRM C/C++ library requires a compiler with full C++11 support.
-* The Accelize DRM Python library requires Python >= 3.5.
+* The Accelize DRM Python library requires Python >= 3.6.
 
 
 Installation from packages
@@ -244,7 +244,7 @@ Minimal requirements:
 
 Python library requirements:
 
- * Python >= 3.5
+ * Python >= 3.6
  * Python-devel
  * setuptools
  * wheel

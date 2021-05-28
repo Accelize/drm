@@ -16,12 +16,12 @@ jobs:
         Debian 10:
           osName: debian
           osVersion: "10"
-        Fedora 32:
-          osName: fedora
-          osVersion: "32"
         Fedora 33:
           osName: fedora
           osVersion: "33"
+        Fedora 34:
+          osName: fedora
+          osVersion: "34"
         Ubuntu LTS 18.04:
           osName: ubuntu
           osVersion: "18.04"
@@ -31,6 +31,9 @@ jobs:
         Ubuntu 20.10:
           osName: ubuntu
           osVersion:  "20.10"
+        Ubuntu 21.04:
+          osName: ubuntu
+          osVersion:  "21.04"
 
     variables:
       # File that store release number for each version
