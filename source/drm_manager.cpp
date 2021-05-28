@@ -62,23 +62,31 @@ limitations under the License.
 
 #define TRY try {
 
-#define CATCH_AND_THROW                   \
-        sLogger->flush();                 \
-    }                                     \
-    catch( const std::exception &e ) {    \
-        Fatal( e.what() );                \
-        sLogger->flush();                 \
-        throw;                            \
-    }
-
-#define CATCH                             \
-    catch( const std::exception &e ) {    \
-        Fatal( e.what() );                \
-        sLogger->flush();                 \
+#define CATCH_AND_THROW                                   \
+        sLogger->flush();                                 \
+    } catch( const Exception& e ) {                       \
+        DRM_ErrorCode errcode = e.getErrCode();           \
+        if ( errcode != DRM_Exit ) {                      \
+            std::string errmsg = std::string( e.what() ); \
+            if ( ( errcode >= DRM_WSReqError ) && ( errcode <= DRM_WSTimedOut ) ) \
+                errmsg += "\nThe issue could be caused by a networking problem: Please verify your internet access."; \
+            Fatal( errmsg );                   \
+            sLogger->flush();                  \
+            f_asynch_error( errmsg );          \
+        }                                      \
+    } catch( const std::exception &e ) {       \
+        Fatal( e.what() );                     \
+        sLogger->flush();                      \
+        f_asynch_error( e.what() );            \
+        throw;                                 \
     }
 
 
 static const std::string DRM_SELF_TEST_ERROR_MESSAGE( "Could not access DRM Controller registers.\nPlease verify:\n"
+                        "\t-The read/write callbacks implementation in the SW application: verify it uses the correct offset address of DRM Controller IP in the design address space.\n"
+                        "\t-The DRM Controller IP instantiation in the FPGA design: verify the correctness of 16-bit address received by the AXI-Lite port of the DRM Controller." );
+
+static const std::string DRM_CONNECTION_ERROR_MESSAGE( "Could not access DRM Controller registers.\nPlease verify:\n"
                         "\t-The read/write callbacks implementation in the SW application: verify it uses the correct offset address of DRM Controller IP in the design address space.\n"
                         "\t-The DRM Controller IP instantiation in the FPGA design: verify the correctness of 16-bit address received by the AXI-Lite port of the DRM Controller." );
 
@@ -471,7 +479,7 @@ protected:
                         std::string& repetitionCountTestError ) const {
         auto drmMajor = ( mDrmVersion >> 16 ) & 0xFF;
         auto drmMinor = ( mDrmVersion >> 8  ) & 0xFF;
-        if ( ( drmMajor >= 4 ) && ( drmMinor >= 2 ) ) {
+        if ( ( drmMajor > 4 ) || ( ( drmMajor == 4 ) && ( drmMinor >= 2 ) ) ) {
             checkDRMCtlrRet( getDrmController().readSecurityAlertStatusRegister( securityAlertBit ) );
             checkDRMCtlrRet( getDrmController().extractAdaptiveProportionTestFailures( adaptiveProportionTestError ) );
             checkDRMCtlrRet( getDrmController().extractRepetitionCountTestFailures( repetitionCountTestError ) );
@@ -1970,9 +1978,14 @@ protected:
                 }
 
             } catch( const Exception& e ) {
-                if ( e.getErrCode() != DRM_Exit ) {
-                    Error( e.what() );
-                    f_asynch_error( std::string( e.what() ) );
+                DRM_ErrorCode errcode = e.getErrCode();
+                if ( errcode != DRM_Exit ) {
+                    std::string errmsg = std::string( e.what() );
+                    if ( ( errcode >= DRM_WSReqError ) && ( errcode <= DRM_WSTimedOut ) ) {
+                        errmsg += "\nThe issue could be caused by a networking problem: Please verify your internet access.";
+                    }
+                    Error( errmsg );
+                    f_asynch_error( errmsg );
                 }
             } catch( const std::exception &e ) {
                 std::string errmsg = fmt::format( "[errCode={}] Unexpected error: {}", DRM_ExternFail, e.what() );
@@ -1982,6 +1995,7 @@ protected:
             logDrmCtrlError();
             logDrmCtrlTrngStatus();
             Debug( "Exiting background thread which maintains licensing" );
+            sLogger->flush();
         });
     }
 
@@ -2049,15 +2063,23 @@ protected:
                     }
                 }
             } catch( const Exception& e ) {
-                if ( e.getErrCode() != DRM_Exit ) {
-                    Error( e.what() );
-                    f_asynch_error( std::string( e.what() ) );
+                DRM_ErrorCode errcode = e.getErrCode();
+                if ( errcode != DRM_Exit ) {
+                    if ( errcode != DRM_Exit ) {
+                        std::string errmsg = std::string( e.what() );
+                        if ( ( errcode >= DRM_WSReqError ) && ( errcode <= DRM_WSTimedOut ) ) {
+                            errmsg += "\nThe issue could be caused by a networking problem: Please verify your internet access.";
+                        }
+                        Error( errmsg );
+                        f_asynch_error( errmsg );
+                    }
                 }
             } catch( const std::exception &e ) {
                 Error( e.what() );
-                f_asynch_error( std::string( e.what() ) );
+                f_asynch_error( e.what() );
             }
             Debug( "Exiting background thread which checks health" );
+            sLogger->flush();
         });
     }
 
@@ -2851,6 +2873,7 @@ public:
                         std::string custom_msg = (*it).asString();
                         Exception e( DRM_Debug, custom_msg );
                         f_asynch_error( e.what() );
+                        sLogger->flush();
                         Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
                                custom_msg );
                         break;
