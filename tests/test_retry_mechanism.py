@@ -53,7 +53,9 @@ def test_api_retry_disabled(accelize_drm, conf_json, cred_json, async_handler,
     assert search(r'\[\s*critical\s*\]\s*\d+\s*,\s*\[errCode=\d+\]\s*Metering Web Service error 408',
             log_content, IGNORECASE)
     assert not search(r'attempt', log_content, IGNORECASE)
-    async_cb.assert_NoError()
+    assert search(r'The issue could be caused by a networking problem: please verify your internet access', log_content, IGNORECASE)
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code,
+        	r'The issue could be caused by a networking problem: please verify your internet access')
     logfile.remove()
 
 
@@ -78,7 +80,10 @@ def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler,
         driver.write_register_callback,
         async_cb.callback
     )
+    api_retry_duration = 10
+    drm_manager.set(ws_api_retry_duration=api_retry_duration)
     retry_duration = drm_manager.get('ws_api_retry_duration')
+    assert retry_duration == api_retry_duration
     assert not drm_manager.get('license_status')
     retry_sleep = drm_manager.get('ws_retry_period_short')
     nb_attempts_expected = retry_duration / retry_sleep
@@ -89,15 +94,18 @@ def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler,
     end = datetime.now()
     del drm_manager
     total_seconds = int((end - start).total_seconds())
-    assert retry_duration - 1 <= total_seconds <= retry_duration
+    assert retry_duration - 1 <= total_seconds <= retry_duration + 1
     log_content = logfile.read()
+    assert search(r'The issue could be caused by a networking problem: please verify your internet access', log_content, IGNORECASE)
     m = search(r'\[\s*critical\s*\]\s*\d+\s*,\s*\[errCode=\d+\]\s*Timeout on License request after (\d+) attempts',
             log_content, IGNORECASE)
     assert m is not None
     nb_attempts = int(m.group(1))
     assert nb_attempts > 1
-    assert nb_attempts_expected - 1 <= nb_attempts <= nb_attempts_expected
-    async_cb.assert_NoError()
+    assert nb_attempts_expected - 1 <= nb_attempts <= nb_attempts_expected + 1
+    err_msg_list = [r'The issue could be caused by a networking problem: please verify your internet access',
+                    r'Timeout on License request after']
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSError.error_code, err_msg_list)
     logfile.remove()
 
 
@@ -289,7 +297,8 @@ def test_api_retry_on_lost_connection(accelize_drm, conf_json, cred_json, async_
         delta = int((parser.parse(time) - prev_time).total_seconds())
         assert retry_timeout + retry_sleep - 1 <= delta <= retry_timeout + retry_sleep
         prev_time = parser.parse(time)
-    async_cb.assert_NoError()
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSError.error_code,
+            r'The issue could be caused by a networking problem: please verify your internet access')
     logfile.remove()
 
 

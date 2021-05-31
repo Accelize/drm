@@ -88,7 +88,7 @@ uint32_t CurlEasyPost::perform( const std::string url, std::string* response, co
     uint32_t resp_code;
 
     if ( timeout_msec <= 0 )
-        Throw( DRM_WSTimedOut, "Did not perform HTTP request to Accelize webservice because timeout is reached." );
+        Throw( DRM_WSTimedOut, "Did not perform HTTP request to Accelize webservice because timeout is reached. " );
 
     // Configure and execute CURL command
     curl_easy_setopt( mCurl, CURLOPT_URL, url.c_str() );
@@ -106,15 +106,15 @@ uint32_t CurlEasyPost::perform( const std::string url, std::string* response, co
           || res == CURLE_COULDNT_RESOLVE_HOST
           || res == CURLE_COULDNT_CONNECT
           || res == CURLE_OPERATION_TIMEDOUT ) {
-            Throw( DRM_WSMayRetry, "Failed to perform HTTP request to Accelize webservice ({}) : {}",
+            Throw( DRM_WSMayRetry, "Failed to perform HTTP request to Accelize webservice ({}) : {}. ",
                     curl_easy_strerror( res ), mErrBuff.data() );
         } else {
-            Throw( DRM_ExternFail, "Failed to perform HTTP request to Accelize webservice ({}) : {}",
+            Throw( DRM_ExternFail, "Failed to perform HTTP request to Accelize webservice ({}) : {}. ",
                     curl_easy_strerror( res ), mErrBuff.data() );
         }
     }
     curl_easy_getinfo( mCurl, CURLINFO_RESPONSE_CODE, &resp_code );
-    Debug( "Received code {} from {} in {} ms", resp_code, url, getTotalTime() * 1000 );
+    Debug( "Received code {} from {} in {} ms. ", resp_code, url, getTotalTime() * 1000 );
     return resp_code;
 }
 
@@ -150,18 +150,18 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
         mRequestTimeoutMS = JVgetOptional( settings, "ws_request_timeout",
                         Json::intValue, cRequestTimeout).asInt() * 1000;
         if ( mRequestTimeoutMS == 0 )
-            Throw( DRM_BadArg, "ws_request_timeout must not be 0");
+            Throw( DRM_BadArg, "ws_request_timeout must not be 0. ");
 
         mConnectionTimeoutMS = JVgetOptional( settings, "ws_connection_timeout",
                         Json::intValue, cConnectionTimeout).asInt() * 1000;
         if ( mConnectionTimeoutMS == 0 )
-            Throw( DRM_BadArg, "ws_connection_timeout must not be 0");
+            Throw( DRM_BadArg, "ws_connection_timeout must not be 0. ");
 
         mVerbosity = JVgetOptional( settings, "ws_verbosity",
                         Json::uintValue, 0).asUInt();
 
     } catch( Exception &e ) {
-        Throw( e.getErrCode(), "Error with service configuration file '{}': {}",
+        Throw( e.getErrCode(), "Error with service configuration file '{}': {}. ",
                 conf_file_path, e.what() );
     }
 
@@ -177,7 +177,7 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
         Json::Value client_secret_json = JVgetRequired( cred_json, "client_secret", Json::stringValue );
         mClientSecret = client_secret_json.asString();
     } catch( Exception &e ) {
-        Throw( e.getErrCode(), "Error with credential file '{}': {}", cred_file_path, e.what() );
+        Throw( e.getErrCode(), "Error with credential file '{}': {}. ", cred_file_path, e.what() );
     }
     // Restore original file log level
     if ( logFileLevel <= spdlog::level::debug )
@@ -266,11 +266,11 @@ void DrmWSClient::requestOAuth2token( int32_t timeout_msec ) {
     // Analyze response
     DRM_ErrorCode drm_error = CurlEasyPost::httpCode2DrmCode( resp_code );
     if ( drm_error != DRM_OK )
-        Throw( drm_error, "OAuth2 Web Service error {}: {}", resp_code, response );
+        Throw( drm_error, "OAuth2 Web Service error {}: {}. ", resp_code, response );
 
     // Verify response parsing
     if ( json_resp == Json::nullValue )
-        Throw( DRM_WSRespError, "Failed to parse response from OAuth2 Web Service because {}: {}",
+        Throw( DRM_WSRespError, "Failed to parse response from OAuth2 Web Service because {}: {}. ",
                 error_msg, response);
 
     mOAuth2Token = JVgetRequired( json_resp, "access_token", Json::stringValue ).asString();
@@ -315,11 +315,11 @@ Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Val
         drm_error = DRM_WSMayRetry;
     // An error occurred
     if ( drm_error != DRM_OK )
-        Throw( drm_error, "Metering Web Service error {}: {}", resp_code, response );
+        Throw( drm_error, "Metering Web Service error {}: {}. ", resp_code, response );
 
     // Verify response parsing
     if ( json_resp == Json::nullValue )
-        Throw( DRM_WSRespError, "Failed to parse response from Metering Web Service because {}: {}",
+        Throw( DRM_WSRespError, "Failed to parse response from Metering Web Service because {}: {}. ",
                error_msg, response);
 
     // No error: return the response as JSON object
