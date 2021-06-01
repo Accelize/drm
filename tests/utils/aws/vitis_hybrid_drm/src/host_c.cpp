@@ -66,12 +66,12 @@ using std::vector;
            __LINE__, error);                                                   \
     return EXIT_FAILURE;                                                       \
   }
-  
+
 #define EXIT_SAFELY_IF_FAIL(call)                                              \
   if (call) {                                                                  \
     printf("%s:%d Error calling " #call "\n", __FILE__, __LINE__);             \
     goto EXIT_SAFELY;                                                          \
-  }  
+  }
 
 
 SharedMemoryManagerLibrary::SharedMemoryManager gSharedMemoryManager;
@@ -81,14 +81,14 @@ SharedMemoryManagerLibrary::SharedMemoryManager gSharedMemoryManager;
  * DRMLib Read Callback Function
  */
 int32_t drm_read_callback(uint32_t addr, uint32_t* value, void* context) {
-	return gSharedMemoryManager.readSharedMemory(addr, value);
+    return gSharedMemoryManager.readSharedMemory(addr, value);
 }
 
 /*
  * DRMLib Write Callback Function
  */
 int32_t drm_write_callback(uint32_t addr, uint32_t value, void* context) {
-	return(gSharedMemoryManager.writeSharedMemory(addr, value));
+    return(gSharedMemoryManager.writeSharedMemory(addr, value));
 }
 
 /*
@@ -108,51 +108,51 @@ cl::Kernel KrnlOutputStage;
 
 
 int pl_load(const char* bin_file) {
-	std::string binaryFile(bin_file);
+    std::string binaryFile(bin_file);
 
-	// OPENCL HOST CODE AREA START
-	cl_int err;
+    // OPENCL HOST CODE AREA START
+    cl_int err;
 
-	// Create Program and Kernels.
-	auto devices = xcl::get_xil_devices();
+    // Create Program and Kernels.
+    auto devices = xcl::get_xil_devices();
 
-	// read_binary_file() is a utility API which will load the binaryFile
-	// and will return the pointer to file buffer.
-	auto fileBuf = xcl::read_binary_file(binaryFile);
-	cl::Program::Binaries bins{{fileBuf.data(), fileBuf.size()}};
-	bool valid_device = false;
-	for (unsigned int i = 0; i < devices.size(); i++) {
-		auto device = devices[i];
-		// Creating Context and Command Queue for selected Device
-		EXIT_FUNC_IF_FAIL(err, Context = cl::Context(device, nullptr, nullptr, nullptr, &err));
-		EXIT_FUNC_IF_FAIL(err, CmdQ = cl::CommandQueue(Context, device,
-											CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_PROFILING_ENABLE, &err));
+    // read_binary_file() is a utility API which will load the binaryFile
+    // and will return the pointer to file buffer.
+    auto fileBuf = xcl::read_binary_file(binaryFile);
+    cl::Program::Binaries bins{{fileBuf.data(), fileBuf.size()}};
+    bool valid_device = false;
+    for (unsigned int i = 0; i < devices.size(); i++) {
+        auto device = devices[i];
+        // Creating Context and Command Queue for selected Device
+        EXIT_FUNC_IF_FAIL(err, Context = cl::Context(device, nullptr, nullptr, nullptr, &err));
+        EXIT_FUNC_IF_FAIL(err, CmdQ = cl::CommandQueue(Context, device,
+                                            CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_PROFILING_ENABLE, &err));
 
-		std::cout << "Trying to program device[" << i << "]: " << device.getInfo<CL_DEVICE_NAME>() << std::endl;
-		Program = cl::Program(Context, {device}, bins, nullptr, &err);
-		if (err != CL_SUCCESS) {
-			std::cout << "Failed to program device[" << i << "] with xclbin file!\n";
-		} else {
-			std::cout << "Device[" << i << "]: program successful!\n";
-			valid_device = true;
-			break; // we break because we found a valid device
-		}
-	}
-	if (!valid_device) {
-		std::cout << "Failed to program any device found, exit!\n";
-		exit(EXIT_FAILURE);
-	}
+        std::cout << "Trying to program device[" << i << "]: " << device.getInfo<CL_DEVICE_NAME>() << std::endl;
+        Program = cl::Program(Context, {device}, bins, nullptr, &err);
+        if (err != CL_SUCCESS) {
+            std::cout << "Failed to program device[" << i << "] with xclbin file!\n";
+        } else {
+            std::cout << "Device[" << i << "]: program successful!\n";
+            valid_device = true;
+            break; // we break because we found a valid device
+        }
+    }
+    if (!valid_device) {
+        std::cout << "Failed to program any device found, exit!\n";
+        exit(EXIT_FAILURE);
+    }
 
-	// Create kernels
-	EXIT_FUNC_IF_FAIL(err, KrnlInputStage = cl::Kernel(Program, "krnl_input_stage_rtl", &err));
-	EXIT_FUNC_IF_FAIL(err, KrnlOutputStage = cl::Kernel(Program, "krnl_output_stage_rtl", &err));
+    // Create kernels
+    EXIT_FUNC_IF_FAIL(err, KrnlInputStage = cl::Kernel(Program, "krnl_input_stage_rtl", &err));
+    EXIT_FUNC_IF_FAIL(err, KrnlOutputStage = cl::Kernel(Program, "krnl_output_stage_rtl", &err));
 
-	return 0;
+    return 0;
 }
 
 int pl_unload() {
-	// Xilinx API does not require explicit releasing of resources
-	return 0;
+    // Xilinx API does not require explicit releasing of resources
+    return 0;
 }
 
 
@@ -178,14 +178,14 @@ int32_t write_register(uint32_t addr, uint32_t value)
  * Entry point
  */
 int main(int argc, char **argv) {
-	
+
     if (argc != 2) {
         printf("Usage: %s  <XCLBIN File>", argv[0]);
         return EXIT_FAILURE;
     }
-    
-	std::string binaryFile = argv[1];
-    
+
+    std::string binaryFile = argv[1];
+
     //Allocate Memory in Host Memory
     auto vector_size_bytes = sizeof(int) * DATA_SIZE;
 
@@ -200,28 +200,28 @@ int main(int argc, char **argv) {
         source_hw_results[i] = 0;
     }
     unsigned int reg = 0;
-    
+
     drm_write_callback(0, 0, NULL);
-    
+
     drm_read_callback(0x70, &reg, NULL);
     printf("DRM version: 0x%08X\n", reg);
-    
+
     drm_read_callback(0xFFF0, &reg, NULL);
     printf("Freq detection version: 0x%08X\n", reg);
-    
+
     drm_write_callback(0, 0, NULL);
     drm_read_callback(0, &reg, NULL);
     if (reg != 0)
-		printf("Unexpected read value: got %d, exp %d\n", reg, 0);
+        printf("Unexpected read value: got %d, exp %d\n", reg, 0);
     drm_write_callback(0, 1, NULL);
     drm_read_callback(0, &reg, NULL);
     if (reg != 1)
-		printf("Unexpected read value: got %d, exp %d\n", reg, 1);
-		
-	DrmManager *pDrmManager = NULL;
+        printf("Unexpected read value: got %d, exp %d\n", reg, 1);
+
+    DrmManager *pDrmManager = NULL;
 
 //    EXIT_SAFELY_IF_FAIL(pl_load(binaryFile.c_str()))
-/*        
+/*
     // Read DRM Controller version register
     uint32_t reg;
     write_register(DRM_CTRL_ADDRESS + 0x0, 0);
@@ -270,13 +270,12 @@ int main(int argc, char **argv) {
 /*    // Check DRM Activator status
     read_register(DRM_ACTR_ADDRESS + 0x38, &reg);
     if (reg != 3) {
-		printf("Error: DRM Activator status should be 3, not %d\n", reg);
+        printf("Error: DRM Activator status should be 3, not %d\n", reg);
         DrmManager_free(&pDrmManager);
         return -1;
     }*/
-	printf("[DRMLIB] Design unlocked\n");
+    printf("[DRMLIB] Design unlocked\n");
     //ACCELIZE DRMLIB CODE AREA STOP
-
 
     //ACCELIZE DRMLIB CODE AREA START
     if (DRM_OK != DrmManager_deactivate(pDrmManager, false))

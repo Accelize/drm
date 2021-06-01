@@ -68,14 +68,13 @@ namespace SharedMemoryManagerLibrary {
     protected:
 
     private:
-    
+
       static const int cSharedMemorySize = 6;
-      
+
       static const std::map<int, int> cShmMemKey;
-	  
-      //volatile unsigned int *mSharedMemoryPages[cSharedMemorySize];
-      unsigned int *mSharedMemoryPages[cSharedMemorySize];
-      
+
+      volatile unsigned int *mSharedMemoryPages[cSharedMemorySize];
+
       /** getSharedMemorySegment
       *   \brief Creates and returns a pointer to the shared memory segment with the given key
       *   on the currently selected page.
@@ -84,15 +83,7 @@ namespace SharedMemoryManagerLibrary {
       unsigned int * createSharedMemorySegment(const key_t key);
 
   }; // class SharedMemoryManager
-  /*
-  const std::map<int, int> SharedMemoryManager::cShmMemKey = {
-	{0, PDRM_SHARED_MEMORY_KEY_REGISTERS_PAGE},
-	{1, PDRM_SHARED_MEMORY_KEY_VLNV_FILE_PAGE},
-	{2, PDRM_SHARED_MEMORY_KEY_LICENSE_FILE_PAGE},
-	{3, PDRM_SHARED_MEMORY_KEY_TRACE_FILE_PAGE},
-	{4, PDRM_SHARED_MEMORY_KEY_METERING_FILE_PAGE},
-	{5, PDRM_SHARED_MEMORY_KEY_MAILBOX_FILE_PAGE}
-  };*/
+
 
 } // namespace SharedMemoryManagerLibrary
 

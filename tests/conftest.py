@@ -10,7 +10,7 @@ from os import environ, getpid, listdir, remove, makedirs, getcwd, urandom, rena
 from os.path import basename, dirname, expanduser, isdir, isfile, join, \
     realpath, splitext, exists
 from random import randint
-from re import IGNORECASE, match, search
+from re import IGNORECASE, match, search, findall
 from datetime import datetime
 from time import time, sleep
 from shutil import rmtree
@@ -208,6 +208,10 @@ def pytest_addoption(parser):
     parser.addoption(
         "--artifacts_dir", action="store", default=getcwd(),
         help='Specify pytest artifacts directory')
+    parser.addoption(
+        "--fpga_driver_extra", action="store", default=None,
+        help='Specify extra option to the fpga driver')
+
 
 
 def pytest_runtest_setup(item):
@@ -580,7 +584,9 @@ def accelize_drm(pytestconfig):
         raise ValueError(
             'Mutually exclusive options: Please set "fpga_driver" or "fpga_image", but not both')
     if fpga_image:
-        if fpga_image.endswith('.awsxclbin'):
+        if fpga_image.endswith('som.awsxclbin'):
+            fpga_driver_name = 'som_vitis'
+        elif fpga_image.endswith('.awsxclbin'):
             fpga_driver_name = 'aws_xrt'
         elif search(r'agfi-[0-9a-f]+', fpga_image, IGNORECASE):
             fpga_driver_name = 'aws_f1'
@@ -595,7 +601,12 @@ def accelize_drm(pytestconfig):
         build_source_dir = realpath('.')
 
     # Get Ref Designs available
-    ref_designs = RefDesign(join(build_source_dir, 'tests', 'refdesigns', fpga_driver_name))
+    refdesign_path = join(build_source_dir, 'tests', 'refdesigns', fpga_driver_name)
+    if isdir(refdesign_path):
+        ref_designs = RefDesign(refdesign_path)
+    else:
+        ref_designs = None
+        print('No ref design available for this FPGA driver: %s' % fpga_driver_name)
 
     if fpga_image is None or hdk_version:
         # Use specified HDK version
@@ -630,10 +641,13 @@ def accelize_drm(pytestconfig):
     # Initialize FPGA
     no_clear_fpga = pytestconfig.getoption("no_clear_fpga")
     drm_ctrl_base_addr = pytestconfig.getoption("drm_controller_base_address")
+    fpga_driver_extra_str = pytestconfig.getoption("fpga_driver_extra")
+    fpga_driver_extra = dict(findall(r'([^;]+):([^;]+)', fpga_driver_extra_str))
     print('FPGA SLOT ID:', fpga_slot_id)
     print('FPGA DRIVER:', fpga_driver_name)
     print('FPGA IMAGE:', fpga_image)
     print('HDK VERSION:', hdk_version)
+    print('DRIVER EXTRA:', fpga_driver_extra)
     fpga_driver = list()
     for slot_id in fpga_slot_id:
         try:
@@ -641,7 +655,8 @@ def accelize_drm(pytestconfig):
                 fpga_driver_cls( fpga_slot_id=slot_id,
                     fpga_image=fpga_image,
                     drm_ctrl_base_addr=drm_ctrl_base_addr,
-                    no_clear_fpga=no_clear_fpga
+                    no_clear_fpga=no_clear_fpga,
+                    **fpga_driver_extra
                 )
             )
         except:

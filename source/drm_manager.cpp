@@ -955,7 +955,7 @@ protected:
         if ( !isConfigInNodeLock() ) {
             determineFrequencyDetectionMethod();
             if ( mFreqDetectionMethod == 4 ) {
-				detectDrmFrequencyMethod4();
+                detectDrmFrequencyMethod4();
             } else if ( mFreqDetectionMethod == 3 ) {
                 detectDrmFrequencyMethod3();
             } else if ( mFreqDetectionMethod == 2 ) {
@@ -1486,7 +1486,7 @@ protected:
         TClock::duration timeSpan;
         double mseconds( 0.0 );
         TClock::time_point timeStart = TClock::now();
-        uint32_t sleep_period = 50;
+        uint32_t sleep_period = 10000;
         if ( mSimulationFlag )
             sleep_period *= 1000;
 
@@ -1704,7 +1704,7 @@ protected:
             Debug( "Failed to read DRM Ctrl frequency detection version register, errcode = {}. ", ret ); //LCOV_EXCL_LINE
         }
         if ( reg == FREQ_DETECTION_VERSION_4 ) {
-			// Use Method 3
+            // Use Method 3
             Debug( "SW DRM Controller: no frequency detection is performed (method 4)" );
             mFreqDetectionMethod = 4;
             mBypassFrequencyDetection = true;
@@ -1825,11 +1825,11 @@ protected:
     }
 
     void detectDrmFrequencyMethod4() {
-		// DRM Controller is in SW: system time is used
+        // DRM Controller is in SW: system time is used
         mAxiFrequency = 100;
         mFrequencyCurr = 100;
     }
-    
+
     int32_t detectDrmFrequencyFromLicenseTimer() {
         TClock::time_point timeStart, timeEnd;
         uint64_t counterStart, counterEnd;
