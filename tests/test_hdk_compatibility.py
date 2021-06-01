@@ -134,7 +134,7 @@ def test_compatibilities(accelize_drm, conf_json, cred_json, async_handler):
     tested = False
     try:
         for num, versions in groupby(refdesignByMajor, lambda x: x[0]):
-            if num < HDK_Limit or num > current_num:
+            if num < HDK_Limit or num >= current_num:
                 print('Test compatible HDK: HDK version %s is not in the range ]%s : %s[: skip version' % (num, HDK_Limit, current_num))
                 continue
             tested = True

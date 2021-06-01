@@ -41,7 +41,8 @@ def test_improve_coverage_ws_client(accelize_drm, conf_json, cred_json,
             drm_manager.activate()
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
         assert get_proxy_error() is None
-    async_cb.assert_NoError()
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSError.error_code, 'Metering Web Service error 600')
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSError.error_code, 'The issue could be caused by a networking problem: please verify your internet access')
 
 
 def test_improve_coverage_getHostAndCardInfo(accelize_drm, conf_json, cred_json, async_handler,
@@ -97,7 +98,7 @@ def test_improve_coverage_readDrmAddress(accelize_drm, conf_json, cred_json, asy
         )
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
     assert search(r'Error in read register callback, errcode = 123: failed to read address', logfile.read(), IGNORECASE)
-    async_cb.assert_NoError()
+    async_cb.assert_Error(accelize_drm.exceptions.DRMCtlrError.error_code, 'Unable to find DRM Controller registers')
     logfile.remove()
 
 
@@ -126,7 +127,7 @@ def test_improve_coverage_writeDrmAddress(accelize_drm, conf_json, cred_json, as
         )
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
     assert search(r'Error in write register callback, errcode = 123: failed to write', logfile.read(), IGNORECASE)
-    async_cb.assert_NoError()
+    async_cb.assert_Error(accelize_drm.exceptions.DRMCtlrError.error_code, 'Unable to find DRM Controller registers')
     logfile.remove()
 
 
@@ -165,7 +166,7 @@ def test_improve_coverage_runBistLevel2_bad_size(accelize_drm, conf_json, cred_j
         )
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
     assert search(r'DRM Communication Self-Test 2 failed: bad size', logfile.read(), IGNORECASE)
-    async_cb.assert_NoError()
+    async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, 'DRM Communication Self-Test 2 failed')
     logfile.remove()
 
 
@@ -210,7 +211,7 @@ def test_improve_coverage_runBistLevel2_bad_data(accelize_drm, conf_json, cred_j
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
     assert len(findall(r'Mailbox\[\d+\]=0x[0-9A-F]{8} != 0x[0-9A-F]{8}', content, IGNORECASE)) == 1
     assert search(r'DRM Communication Self-Test 2 failed: random test failed.', content, IGNORECASE)
-    async_cb.assert_NoError()
+    async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, 'DRM Communication Self-Test 2 failed: random test failed')
     logfile.remove()
 
 
@@ -281,7 +282,7 @@ def test_improve_coverage_getDesignInfo(accelize_drm, conf_json, cred_json, asyn
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
     assert search(r'UDID and Product ID cannot be both missing', str(excinfo.value), IGNORECASE)
     assert search(r'Mailbox sizes: read-only=0', logfile.read(), IGNORECASE)
-    async_cb.assert_NoError()
+    async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, 'UDID and Product ID cannot be both missing')
     logfile.remove()
 
 
@@ -365,5 +366,6 @@ def test_improve_coverage_perform(accelize_drm, conf_json, cred_json, async_hand
         drm_manager.deactivate()
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
     assert search(r'Failed to perform HTTP request to Accelize webservice', str(excinfo.value), IGNORECASE)
-    async_cb.assert_NoError()
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, 'The issue could be caused by a networking problem: please verify your internet access')
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, 'Failed to perform HTTP request to Accelize webservice')
 

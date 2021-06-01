@@ -236,4 +236,5 @@ def test_derived_product_during_running_session(accelize_drm, conf_json, cred_js
         # new derived product can now be loaded
         drm_manager.set(derived_product=new_deriv_prod)
         assert drm_manager.get('derived_product') == new_deriv_prod
-    async_cb.assert_NoError()
+        async_cb.assert_Error(accelize_drm.exceptions.DRMBadUsage.error_code, 'Derived product cannot be loaded if a session is still running')
+

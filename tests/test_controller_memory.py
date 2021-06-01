@@ -51,7 +51,7 @@ def test_mailbox_write_overflow(accelize_drm, conf_json, cred_json, async_handle
         assert 'Trying to write out of Mailbox memory space' in str(excinfo.value)
         err_code = async_handler.get_error_code(str(excinfo.value))
         assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
-        async_cb.assert_NoError()
+        async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, 'Trying to write out of Mailbox memory space')
 
 
 def test_mailbox_type_error(accelize_drm, conf_json, cred_json, async_handler):
@@ -75,7 +75,7 @@ def test_mailbox_type_error(accelize_drm, conf_json, cred_json, async_handler):
         assert 'Value must be an array of integers' in str(excinfo.value)
         err_code = async_handler.get_error_code(str(excinfo.value))
         assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
-    async_cb.assert_NoError()
+    async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, 'Value must be an array of integers')
 
 
 def test_empty_product_id(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
@@ -105,7 +105,7 @@ def test_empty_product_id(accelize_drm, conf_json, cred_json, async_handler, log
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
         assert search(r'UDID and Product ID cannot be both missing', str(excinfo.value), IGNORECASE)
         assert search(r'Could not find Product ID information in DRM Controller Memory', logfile.read(), IGNORECASE)
-        async_cb.assert_NoError()
+        async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, 'UDID and Product ID cannot be both missing')
     finally:
         # Reprogram FPGA with original image
         driver.program_fpga(fpga_image_bkp)
@@ -136,7 +136,7 @@ def test_malformed_product_id(accelize_drm, conf_json, cred_json, async_handler)
         assert 'Failed to parse Read-Only Mailbox in DRM Controller:' in str(excinfo.value)
         assert search(r'Cannot parse JSON string ', str(excinfo.value))
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadFormat.error_code
-        async_cb.assert_NoError()
+        async_cb.assert_Error(accelize_drm.exceptions.DRMBadFormat.error_code, 'Failed to parse Read-Only Mailbox in DRM Controller')
         print('Test Web Service when a misformatted product ID is provided: PASS')
     finally:
         # Reprogram FPGA with original image
@@ -194,7 +194,7 @@ def test_drm_manager_bist(accelize_drm, conf_json, cred_json, async_handler):
     assert 'DRM Communication Self-Test 2 failed' in str(excinfo.value)
     assert 'Please verify' in str(excinfo.value)
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
-    async_cb.assert_NoError()
+    async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, 'DRM Communication Self-Test 2 failed')
 
     # Test write callback error
     def my_wrong_write_callback(register_offset, data_to_write):
@@ -209,4 +209,4 @@ def test_drm_manager_bist(accelize_drm, conf_json, cred_json, async_handler):
     assert 'DRM Communication Self-Test 2 failed' in str(excinfo.value)
     assert 'Please verify' in str(excinfo.value)
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
-    async_cb.assert_NoError()
+    async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, 'DRM Communication Self-Test 2 failed')

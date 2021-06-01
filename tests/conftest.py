@@ -1057,11 +1057,7 @@ class AsyncErrorHandler:
         if error_code:
             assert self.errcode == error_code
         if error_msg:
-            if isinstance(error_msg, str):
-                assert search(error_msg, self.message, IGNORECASE)
-            elif isinstance(error_msg, list):
-                for msg in error_msg:
-                    assert search(msg, self.message, IGNORECASE)
+            assert search(error_msg, self.message, IGNORECASE)
 
 
 class AsyncErrorHandlerList(list):

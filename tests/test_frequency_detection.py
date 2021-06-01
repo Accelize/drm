@@ -281,7 +281,7 @@ def test_drm_manager_frequency_detection_method_2_and_3_exception(accelize_drm, 
     assert search(r'Frequency auto-detection .*? failed: frequency_detection_period parameter \([^)]+\) is too long',
                   str(excinfo.value)) is not None
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadFrequency.error_code
-    async_cb.assert_NoError()
+    async_cb.assert_Error(accelize_drm.exceptions.DRMBadFrequency.error_code, 'Frequency auto-detection of drm_aclk failed')
 
 
 def test_drm_manager_frequency_detection_bypass(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):

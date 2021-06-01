@@ -439,7 +439,7 @@ def test_drm_manager_with_bad_credential_file(accelize_drm, conf_json, cred_json
     assert search(r'JSON file .* is empty', str(excinfo.value)) is not None
     errcode = async_handler.get_error_code(str(excinfo.value))
     assert errcode == accelize_drm.exceptions.DRMBadArg.error_code
-    async_cb.assert_NoError()
+    async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, 'Error with credential file')
     print('Test empty crendential file: PASS')
 
     # Test with an invalid crendential file
@@ -461,7 +461,7 @@ def test_drm_manager_with_bad_credential_file(accelize_drm, conf_json, cred_json
     assert search(r'Cannot parse ', str(excinfo.value)) is not None
     errcode = async_handler.get_error_code(str(excinfo.value))
     assert errcode == accelize_drm.exceptions.DRMBadFormat.error_code
-    async_cb.assert_NoError()
+    async_cb.assert_Error(accelize_drm.exceptions.DRMBadFormat.error_code, 'Error with credential file')
     print('Test invalid crendential file: PASS')
 
     # Test when no Client ID is specified in credential file
@@ -592,10 +592,10 @@ def test_c_unittests(accelize_drm, exec_func):
     exec_lib.run('test_get_json_string_with_bad_format')
     assert exec_lib.returncode == accelize_drm.exceptions.DRMBadFormat.error_code
     assert 'Cannot parse JSON string ' in exec_lib.stdout
-    assert exec_lib.asyncmsg is None
+    assert 'Cannot parse JSON string ' in exec_lib.asyncmsg
 
     # Test get_json_string with empty string
     exec_lib.run('test_get_json_string_with_empty_string')
     assert exec_lib.returncode == accelize_drm.exceptions.DRMBadFormat.error_code
     assert 'Cannot parse an empty JSON string' in exec_lib.stdout
-    assert exec_lib.asyncmsg is None
+    assert 'Cannot parse an empty JSON string' in exec_lib.asyncmsg
