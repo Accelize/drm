@@ -56,6 +56,7 @@ def test_api_retry_disabled(accelize_drm, conf_json, cred_json, async_handler,
     assert search(r'The issue could be caused by a networking problem: please verify your internet access', log_content, IGNORECASE)
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code,
             r'The issue could be caused by a networking problem: please verify your internet access')
+    async_cb.reset()
     logfile.remove()
 
 
@@ -105,6 +106,7 @@ def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler,
     assert nb_attempts_expected - 1 <= nb_attempts <= nb_attempts_expected + 1
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSError.error_code, 'The issue could be caused by a networking problem: please verify your internet access')
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSError.error_code, 'Timeout on License request after')
+    async_cb.reset()
     logfile.remove()
 
 
@@ -298,6 +300,7 @@ def test_api_retry_on_lost_connection(accelize_drm, conf_json, cred_json, async_
         prev_time = parser.parse(time)
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSError.error_code,
             r'The issue could be caused by a networking problem: please verify your internet access')
+    async_cb.reset()
     logfile.remove()
 
 

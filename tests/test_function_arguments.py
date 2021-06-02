@@ -440,6 +440,7 @@ def test_drm_manager_with_bad_credential_file(accelize_drm, conf_json, cred_json
     errcode = async_handler.get_error_code(str(excinfo.value))
     assert errcode == accelize_drm.exceptions.DRMBadArg.error_code
     async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, 'Error with credential file')
+    async_cb.reset()
     print('Test empty crendential file: PASS')
 
     # Test with an invalid crendential file
@@ -462,6 +463,7 @@ def test_drm_manager_with_bad_credential_file(accelize_drm, conf_json, cred_json
     errcode = async_handler.get_error_code(str(excinfo.value))
     assert errcode == accelize_drm.exceptions.DRMBadFormat.error_code
     async_cb.assert_Error(accelize_drm.exceptions.DRMBadFormat.error_code, 'Error with credential file')
+    async_cb.reset()
     print('Test invalid crendential file: PASS')
 
     # Test when no Client ID is specified in credential file
