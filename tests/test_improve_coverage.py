@@ -42,7 +42,6 @@ def test_improve_coverage_ws_client(accelize_drm, conf_json, cred_json,
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
         assert get_proxy_error() is None
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSError.error_code, 'Metering Web Service error 600')
-    async_cb.assert_Error(accelize_drm.exceptions.DRMWSError.error_code, 'The issue could be caused by a networking problem: please verify your internet access')
     async_cb.reset()
 
 

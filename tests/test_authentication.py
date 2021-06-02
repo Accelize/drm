@@ -48,12 +48,12 @@ def test_authentication_bad_token(accelize_drm, conf_json, cred_json,
         ) as drm_manager:
         with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
             drm_manager.activate()
-        assert search(r'Timeout on License request after \d+ attempts', str(excinfo.value))
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
         assert drm_manager.get('token_string') == access_token
     file_log_content = logfile.read()
     assert search(r'\bAuthentication credentials were not provided\b', file_log_content)
-    async_cb.assert_NoError()
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSError.error_code, 'Authentication credentials were not provided')
+    async_cb.reset()
     logfile.remove()
 
 

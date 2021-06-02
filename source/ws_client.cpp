@@ -312,7 +312,7 @@ Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Val
     // Analyze response
     DRM_ErrorCode drm_error = CurlEasyPost::httpCode2DrmCode( resp_code );
     if ( resp_code == 401 )
-        drm_error = DRM_WSMayRetry;
+        drm_error = DRM_WSError;
     // An error occurred
     if ( drm_error != DRM_OK )
         Throw( drm_error, "Metering Web Service error {}: {}. ", resp_code, response );

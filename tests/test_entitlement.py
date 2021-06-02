@@ -39,7 +39,8 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
         assert search(r'\\"No Entitlement\\" with .+ for \S+_test_01@accelize.com', str(excinfo.value))
         assert "User account has no entitlement. Purchase additional licenses via your portal" in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
-        async_cb.assert_NoError()
+        async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'User account has no entitlement. Purchase additional licenses via your portal')
+        async_cb.reset()
     # Request nodelock license
     try:
         async_cb.reset()
@@ -62,7 +63,8 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
             assert search(r'\\"No Entitlement\\" with .+ for \S+_test_01@accelize.com', str(excinfo.value))
             assert "User account has no entitlement. Purchase additional licenses via your portal" in str(excinfo.value)
             assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
-        async_cb.assert_NoError()
+        async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'User account has no entitlement. Purchase additional licenses via your portal')
+        async_cb.reset()
     finally:
         accelize_drm.clean_nodelock_env(conf_json=conf_json)
     print('Test user-01 entitlements: PASS')
@@ -106,7 +108,8 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
             assert search(r'\\"No Entitlement\\" with .+ for \S+_test_02@accelize.com', str(excinfo.value))
             assert 'No valid NodeLocked entitlement found for your account' in str(excinfo.value)
             assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
-        async_cb.assert_NoError()
+        async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'No valid NodeLocked entitlement found for your account')
+        async_cb.reset()
     finally:
         accelize_drm.clean_nodelock_env(conf_json=conf_json)
     print('Test user-02 entitlements: PASS')
@@ -194,7 +197,8 @@ def test_users_entitlements(accelize_drm, conf_json, cred_json, async_handler, w
             assert search(r'\\"No Entitlement\\" with .+ for \S+_test_04@accelize.com', str(excinfo.value))
             assert 'No valid NodeLocked entitlement found for your account' in str(excinfo.value)
             assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
-        async_cb.assert_NoError()
+        async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'No valid NodeLocked entitlement found for your account')
+        async_cb.reset()
     finally:
         accelize_drm.clean_nodelock_env(conf_json=conf_json)
     print('Test user-04 entitlements: PASS')

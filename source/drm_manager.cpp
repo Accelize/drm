@@ -68,7 +68,7 @@ limitations under the License.
         DRM_ErrorCode errcode = e.getErrCode();                                   \
         if ( errcode != DRM_Exit ) {                                              \
             std::string errmsg = std::string( e.what() );                         \
-            if ( ( errcode >= DRM_WSReqError ) && ( errcode <= DRM_WSTimedOut ) ) \
+            if ( ( errcode == DRM_WSMayRetry ) || ( errcode == DRM_WSTimedOut ) ) \
                 errmsg += DRM_CONNECTION_ERROR_MESSAGE;                           \
             Fatal( errmsg );                                                      \
             sLogger->flush();                                                     \
@@ -1361,7 +1361,7 @@ protected:
                 lic_attempt = 0;
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
                     // Reached timeout
-                    Throw( DRM_WSError, "Timeout on Authentication request after {} attempts", oauth_attempt );
+                    Throw( DRM_WSTimedOut, "Timeout on Authentication request after {} attempts", oauth_attempt );
                 }
                 if ( e.getErrCode() != DRM_WSMayRetry ) {
                     throw;
@@ -1402,7 +1402,7 @@ protected:
                 oauth_attempt = 0;
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
                     // Reached timeout
-                    Throw( DRM_WSError, "Timeout on License request after {} attempts. ", lic_attempt );
+                    Throw( DRM_WSTimedOut, "Timeout on License request after {} attempts. ", lic_attempt );
                 }
                 if ( e.getErrCode() != DRM_WSMayRetry ) {
                     throw;
