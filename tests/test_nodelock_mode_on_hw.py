@@ -86,7 +86,6 @@ def test_nodelock_license_is_not_given_to_inactive_user(accelize_drm, conf_json,
             err_code = async_handler.get_error_code(str(excinfo.value))
             assert err_code == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Metering Web Service error 400')
-        async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'The issue could be caused by a networking problem: please verify your internet access')
         async_cb.reset()
     finally:
         accelize_drm.clean_nodelock_env(None, driver, conf_json, cred_json, ws_admin)
@@ -330,8 +329,7 @@ def test_nodelock_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
             err_code = async_handler.get_error_code(str(excinfo.value))
             assert err_code == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb1.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'You have reached the maximum quantity')
-        async_cb1.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'The issue could be caused by a networking problem: please verify your internet access')
-        async_cb.reset()
+        async_cb1.reset()
 
     finally:
         accelize_drm.clean_nodelock_env(None, driver0, conf_json, cred_json, ws_admin)
