@@ -46,7 +46,6 @@ def test_env_var_ONEPORTAL_URL(accelize_drm, conf_json, cred_json, async_handler
         assert "OAuth2 Web Service error 404" in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'OAuth2 Web Service error 404')
-    async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'The issue could be caused by a networking problem: please verify your internet access')
     async_cb.reset()
 
 
@@ -91,6 +90,5 @@ def test_env_var_ONEPORTAL_CLIENT_ID(accelize_drm, conf_json, cred_json, async_h
         assert "invalid_client" in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'OAuth2 Web Service error 401')
-    async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'The issue could be caused by a networking problem: please verify your internet access')
     async_cb.reset()
 
