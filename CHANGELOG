@@ -1,4 +1,7 @@
-* Mon May 15 2021 Accelize v2.5.3-rc1
+* Mon Jun 04 2021 Accelize v2.5.3-rc1
+- NEW: Add message to check networking connection in case of Timeout or Retry errors on HTTP request.
+- NEW: Call the asynchronous error callback also when an error occurred on an API function call
+- NEW: Support new HDK version v6.0.0
 - DOC: Update the HDK simulation page
 
 * Mon Apr 7 2021 Accelize v2.5.2

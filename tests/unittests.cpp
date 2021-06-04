@@ -479,7 +479,7 @@ static DrmManagerMaker* sDrm = nullptr;
 
 // Test null callback pointers
 int test_null_read_callback() {
-    int ret;
+    int ret = -1;
     if (sDrm->mIsCpp) {
         cpp::DrmManager* drm = nullptr;
         try {
@@ -496,6 +496,8 @@ int test_null_read_callback() {
             ret = DRM_ErrorCode::DRM_OK;
         } catch( const cpp::Exception& e ) {
             ret = e.getErrCode();
+            std::cerr << "EXCEPTION (" << ret << "): " << e.what() << std::endl;
+
         }
         if (drm)
             delete drm;
