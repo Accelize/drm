@@ -240,7 +240,6 @@ def test_vitis_5activator_high_density(accelize_drm, conf_json, cred_json, async
                                     log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
 
 
-@pytest.mark.skip(reason='No design yet available')
 @pytest.mark.awsxrt
 def test_vitis_30activator(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
