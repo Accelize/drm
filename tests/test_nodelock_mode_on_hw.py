@@ -85,7 +85,8 @@ def test_nodelock_license_is_not_given_to_inactive_user(accelize_drm, conf_json,
             assert 'User account has no entitlement. Purchase additional licenses via your portal.' in str(excinfo.value)
             err_code = async_handler.get_error_code(str(excinfo.value))
             assert err_code == accelize_drm.exceptions.DRMWSReqError.error_code
-        async_cb.assert_NoError()
+        async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Metering Web Service error 400')
+        async_cb.reset()
     finally:
         accelize_drm.clean_nodelock_env(None, driver, conf_json, cred_json, ws_admin)
 
@@ -228,7 +229,8 @@ def test_nodelock_without_server_access(accelize_drm, conf_json, cred_json, asyn
                   str(excinfo.value))
     err_code = async_handler.get_error_code(str(excinfo.value))
     assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
-    async_cb.assert_NoError()
+    async_cb.assert_Error(accelize_drm.exceptions.DRMBadFormat.error_code, "Missing parameter 'url' of type String")
+    async_cb.reset()
 
 
 @pytest.mark.no_parallel
@@ -269,7 +271,8 @@ def test_nodelock_without_malformed_license_file(accelize_drm, conf_json, cred_j
             drm_manager.activate()
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadFormat.error_code
         assert search(r'Invalid local license file', str(excinfo.value))
-    async_cb.assert_NoError()
+    async_cb.assert_Error(accelize_drm.exceptions.DRMBadFormat.error_code, 'Invalid local license file')
+    async_cb.reset()
 
 
 @pytest.mark.on_2_fpga
@@ -325,7 +328,8 @@ def test_nodelock_limits(accelize_drm, conf_json, cred_json, async_handler, ws_a
             assert 'You have reached the maximum quantity of 1 nodes for Nodelocked entitlement' in str(excinfo.value)
             err_code = async_handler.get_error_code(str(excinfo.value))
             assert err_code == accelize_drm.exceptions.DRMWSReqError.error_code
-        async_cb1.assert_NoError()
+        async_cb1.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'You have reached the maximum quantity')
+        async_cb1.reset()
 
     finally:
         accelize_drm.clean_nodelock_env(None, driver0, conf_json, cred_json, ws_admin)
@@ -377,7 +381,8 @@ def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, c
                    "To use other modes you must reprogram the FPGA device" in str(excinfo.value)
             err_code = async_handler.get_error_code(str(excinfo.value))
             assert err_code == accelize_drm.exceptions.DRMBadUsage.error_code
-        async_cb.assert_NoError()
+        async_cb.assert_Error(accelize_drm.exceptions.DRMBadUsage.error_code, 'DRM Controller is locked in Node-Locked licensing mode')
+        async_cb.reset()
 
         # Reprogram FPGA
         accelize_drm.clean_nodelock_env(None, driver, conf_json, cred_json, ws_admin)
@@ -399,7 +404,6 @@ def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, c
             assert drm_manager.get('drm_license_type') == 'Floating/Metering'
             drm_manager.deactivate()
             assert not drm_manager.get('license_status')
-        async_cb.assert_NoError()
 
     finally:
         accelize_drm.clean_nodelock_env(None, driver, conf_json, cred_json, ws_admin)
@@ -502,7 +506,8 @@ def test_parsing_of_nodelock_files(accelize_drm, conf_json, cred_json, async_han
             assert 'Path is not a valid file' in str(excinfo.value)
             err_code = async_handler.get_error_code(str(excinfo.value))
             assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
-            async_cb.assert_NoError()
+            async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, 'Path is not a valid file')
+            async_cb.reset()
             move(req_file_path_bad, req_file_path)
             print('Test nodelocked license request file not found: PASS')
 
@@ -518,7 +523,8 @@ def test_parsing_of_nodelock_files(accelize_drm, conf_json, cred_json, async_han
             assert 'Cannot parse JSON string ' in str(excinfo.value)
             err_code = async_handler.get_error_code(str(excinfo.value))
             assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
-            async_cb.assert_NoError()
+            async_cb.assert_Error(accelize_drm.exceptions.DRMBadFormat.error_code, 'Cannot parse JSON string')
+            async_cb.reset()
             move(req_file_path_cpy, req_file_path)
         print('Test nodelocked license request file with bad format: PASS')
 

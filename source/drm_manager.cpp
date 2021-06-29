@@ -62,25 +62,32 @@ limitations under the License.
 
 #define TRY try {
 
-#define CATCH_AND_THROW                   \
-        sLogger->flush();                 \
-    }                                     \
-    catch( const std::exception &e ) {    \
-        Fatal( e.what() );                \
-        sLogger->flush();                 \
-        throw;                            \
-    }
-
-#define CATCH                             \
-    catch( const std::exception &e ) {    \
-        Fatal( e.what() );                \
-        sLogger->flush();                 \
+#define CATCH_AND_THROW                                                           \
+        sLogger->flush();                                                         \
+    } catch( const Exception& e ) {                                               \
+        DRM_ErrorCode errcode = e.getErrCode();                                   \
+        if ( errcode != DRM_Exit ) {                                              \
+            std::string errmsg = std::string( e.what() );                         \
+            if ( ( errcode == DRM_WSMayRetry ) || ( errcode == DRM_WSTimedOut ) ) \
+                errmsg += DRM_CONNECTION_ERROR_MESSAGE;                           \
+            Fatal( errmsg );                                                      \
+            sLogger->flush();                                                     \
+            f_asynch_error( errmsg );                                             \
+        }                                                                         \
+        throw;                                                                    \
+    } catch( const std::exception &e ) {                                          \
+        Fatal( e.what() );                                                        \
+        sLogger->flush();                                                         \
+        f_asynch_error( e.what() );                                               \
+        throw;                                                                    \
     }
 
 
 static const std::string DRM_SELF_TEST_ERROR_MESSAGE( "Could not access DRM Controller registers.\nPlease verify:\n"
                         "\t-The read/write callbacks implementation in the SW application: verify it uses the correct offset address of DRM Controller IP in the design address space.\n"
                         "\t-The DRM Controller IP instantiation in the FPGA design: verify the correctness of 16-bit address received by the AXI-Lite port of the DRM Controller." );
+
+static const std::string DRM_CONNECTION_ERROR_MESSAGE( "\n!!! The issue could be caused by a networking problem: please verify your internet access !!!\n" );
 
 
 namespace Accelize {
@@ -244,7 +251,7 @@ protected:
                 logDrmCtrlError();                                                              \
                 logDrmCtrlTrngStatus();                                                         \
                 Error( "{} failed with error code {}", #func, errcode );                        \
-                Throw( DRM_CtlrError, "{} failed with error code {}", #func, errcode );         \
+                Throw( DRM_CtlrError, "{} failed with error code {}. ", #func, errcode );       \
             }                                                                                   \
         } catch( const std::exception &e ) {                                                    \
             logDrmCtrlError();                                                                  \
@@ -333,7 +340,7 @@ protected:
             updateLog();
 
             if ( mWSRetryPeriodLong <= mWSRetryPeriodShort )
-                Throw( DRM_BadArg, "ws_retry_period_long ({} sec) must be greater than ws_retry_period_short ({} sec)",
+                Throw( DRM_BadArg, "ws_retry_period_long ({} sec) must be greater than ws_retry_period_short ({} sec). ",
                         mWSRetryPeriodLong, mWSRetryPeriodShort );
 
             // Design configuration
@@ -378,7 +385,7 @@ protected:
         } catch( const Exception &e ) {
             if ( e.getErrCode() != DRM_BadFormat )
                 throw;
-            Throw( DRM_BadFormat, "Error in configuration file '{}: {}", conf_file_path, e.what() );
+            Throw( DRM_BadFormat, "Error in configuration file '{}: {}. ", conf_file_path, e.what() );
         }
     }
 
@@ -414,7 +421,7 @@ protected:
             // Check if parent directory exists
             std::string parentDir = getDirName( file_path );
             if ( !makeDirs( parentDir ) ) {
-                Throw( DRM_ExternFail, "Failed to create log file {}", file_path );
+                Throw( DRM_ExternFail, "Failed to create log file {}. ", file_path );
             }
             if ( type == eLogFileType::BASIC )
                 log_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(
@@ -471,10 +478,12 @@ protected:
                         std::string& repetitionCountTestError ) const {
         auto drmMajor = ( mDrmVersion >> 16 ) & 0xFF;
         auto drmMinor = ( mDrmVersion >> 8  ) & 0xFF;
-        if ( ( drmMajor >= 4 ) && ( drmMinor >= 2 ) ) {
-            getDrmController().readSecurityAlertStatusRegister( securityAlertBit );
-            getDrmController().extractAdaptiveProportionTestFailures( adaptiveProportionTestError );
-            getDrmController().extractRepetitionCountTestFailures( repetitionCountTestError );
+        if ( ( drmMajor > 4 ) || ( ( drmMajor == 4 ) && ( drmMinor >= 2 ) ) ) {
+            checkDRMCtlrRet( getDrmController().readSecurityAlertStatusRegister( securityAlertBit ) );
+            checkDRMCtlrRet( getDrmController().extractAdaptiveProportionTestFailures( adaptiveProportionTestError ) );
+            checkDRMCtlrRet( getDrmController().extractRepetitionCountTestFailures( repetitionCountTestError ) );
+        } else {
+            Debug( "TRNG status bits are not supported in this HDK version." );
         }
     }
 
@@ -532,7 +541,7 @@ protected:
                 try {
                     xbutil_node = parseJsonString( cmd_out );
                 } catch( const std::exception & ) {
-                    Throw( DRM_ExternFail, "Unexpected result from xbutil: {}", cmd_out );
+                    Throw( DRM_ExternFail, "Unexpected result from xbutil: {}. ", cmd_out );
                 }
 
                 if ( mHostDataVerbosity == eHostDataVerbosity::FULL ) {
@@ -694,7 +703,7 @@ protected:
         if ( index >= rwData.size() )
             Unreachable( "Index {} overflows the Mailbox memory: max index is {}. ", index, rwData.size()-1 ); //LCOV_EXCL_LINE
         if ( index + value_vec.size() > rwData.size() )
-            Throw( DRM_BadArg, "Trying to write out of Mailbox memory space: {}", rwData.size() );
+            Throw( DRM_BadArg, "Trying to write out of Mailbox memory space: {}. ", rwData.size() );
 
         std::copy( std::begin( value_vec ), std::end( value_vec ), std::begin( rwData ) + index );
         checkDRMCtlrRet( getDrmController().writeMailboxFileRegister( rwData, rwSize ) );
@@ -720,7 +729,7 @@ protected:
         if ( index >= rwData.size() )
             Unreachable( "Index {} overflows the Mailbox memory: max index is {}. ", index, rwData.size()-1 ); //LCOV_EXCL_LINE
         if ( index + value_vec.size() > rwData.size() )
-            Throw( DRM_BadArg, "Trying to write out of Mailbox memory space: {}", rwData.size() );
+            Throw( DRM_BadArg, "Trying to write out of Mailbox memory space: {}. ", rwData.size() );
 
         std::copy( std::begin( value_vec ), std::end( value_vec ), std::begin( rwData ) + index );
         checkDRMCtlrRet( getDrmController().writeMailboxFileRegister( rwData, rwSize ) );
@@ -780,7 +789,7 @@ protected:
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
         uint32_t isLocked = readMailbox<uint32_t>( eMailboxOffset::MB_LOCK_DRM );
         if ( isLocked )
-            Throw( DRM_BadUsage, "Another instance of the DRM Manager is currently owning the HW" );
+            Throw( DRM_BadUsage, "Another instance of the DRM Manager is currently owning the HW. " );
         writeMailbox<uint32_t>( eMailboxOffset::MB_LOCK_DRM, 1 );
         mIsLockedToDrm = true;
         Debug( "DRM Controller is now locked to this object instance" );
@@ -811,11 +820,11 @@ protected:
 
         if ( drmMajor < HDK_COMPATIBILITY_LIMIT_MAJOR ) {
             Throw( DRM_CtlrError,
-                    "This DRM Library version {} is not compatible with the DRM HDK version {}: To be compatible HDK version shall be > or equal to {}.{}.x",
+                    "This DRM Library version {} is not compatible with the DRM HDK version {}: To be compatible HDK version shall be > or equal to {}.{}.x ",
                     DRMLIB_VERSION, drmVersionDot, HDK_COMPATIBILITY_LIMIT_MAJOR, HDK_COMPATIBILITY_LIMIT_MINOR );
         } else if ( ( drmMajor == HDK_COMPATIBILITY_LIMIT_MAJOR ) && ( drmMinor < HDK_COMPATIBILITY_LIMIT_MINOR ) ) {
             Throw( DRM_CtlrError,
-                    "This DRM Library version {} is not compatible with the DRM HDK version {}: To be compatible HDK version shall be > or equal to {}.{}.x",
+                    "This DRM Library version {} is not compatible with the DRM HDK version {}: To be compatible HDK version shall be > or equal to {}.{}.x ",
                     DRMLIB_VERSION, drmVersionDot, HDK_COMPATIBILITY_LIMIT_MAJOR, HDK_COMPATIBILITY_LIMIT_MINOR );
         }
         Debug( "DRM HDK Version: {}", drmVersionDot );
@@ -1352,7 +1361,7 @@ protected:
                 lic_attempt = 0;
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
                     // Reached timeout
-                    Throw( DRM_WSError, "Timeout on Authentication request after {} attempts", oauth_attempt );
+                    Throw( DRM_WSTimedOut, "Timeout on Authentication request after {} attempts", oauth_attempt );
                 }
                 if ( e.getErrCode() != DRM_WSMayRetry ) {
                     throw;
@@ -1393,7 +1402,7 @@ protected:
                 oauth_attempt = 0;
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
                     // Reached timeout
-                    Throw( DRM_WSError, "Timeout on License request after {} attempts", lic_attempt );
+                    Throw( DRM_WSTimedOut, "Timeout on License request after {} attempts. ", lic_attempt );
                 }
                 if ( e.getErrCode() != DRM_WSMayRetry ) {
                     throw;
@@ -1483,7 +1492,7 @@ protected:
         TClock::duration timeSpan;
         double mseconds( 0.0 );
         TClock::time_point timeStart = TClock::now();
-        uint32_t sleep_period = 50;
+        uint32_t sleep_period = 10000;
         if ( mSimulationFlag )
             sleep_period *= 1000;
 
@@ -1659,7 +1668,7 @@ protected:
             } catch( const Exception& e ) {
                 Throw( e.getErrCode(), "Invalid local license file {} because {}. "
                      "If this machine is connected to the License server network, rename the file and retry. "
-                     "Otherwise request a new Node-Locked license from your supplier.",
+                     "Otherwise request a new Node-Locked license from your supplier. ",
                      mNodeLockLicenseFilePath, e.what() );
             }
         } else {
@@ -1680,7 +1689,7 @@ protected:
                 saveJsonToFile( mNodeLockLicenseFilePath, license_json );
                 Debug( "Requested and saved new node-locked license file: {}", mNodeLockLicenseFilePath );
             } catch( const Exception& e ) {
-                Throw( e.getErrCode(), "Failed to request license file: {}", e.what() );
+                Throw( e.getErrCode(), "Failed to request license file: {}. ", e.what() );
             }
         }
         /// Install the license
@@ -1756,7 +1765,7 @@ protected:
         }
 
         if ( counter == 0xFFFFFFFF )
-            Throw( DRM_BadFrequency, "Frequency auto-detection failed: frequency_detection_period parameter ({} ms) is too long.",
+            Throw( DRM_BadFrequency, "Frequency auto-detection failed: frequency_detection_period parameter ({} ms) is too long. ",
                    mFrequencyDetectionPeriod );
 
         // Compute estimated DRM frequency
@@ -1797,10 +1806,10 @@ protected:
         }
 
         if ( counter_drmaclk == 0xFFFFFFFF )
-            Throw( DRM_BadFrequency, "Frequency auto-detection of drm_aclk failed: frequency_detection_period parameter ({} ms) is too long.",
+            Throw( DRM_BadFrequency, "Frequency auto-detection of drm_aclk failed: frequency_detection_period parameter ({} ms) is too long. ",
                    mFrequencyDetectionPeriod );
         if ( counter_axiaclk == 0xFFFFFFFF )
-            Throw( DRM_BadFrequency, "Frequency auto-detection of s_axi_aclk failed: frequency_detection_period parameter ({} ms) is too long.",
+            Throw( DRM_BadFrequency, "Frequency auto-detection of s_axi_aclk failed: frequency_detection_period parameter ({} ms) is too long. ",
                    mFrequencyDetectionPeriod );
 
         // Compute estimated DRM frequency for s_axi_aclk
@@ -1887,7 +1896,7 @@ protected:
         bool isExitRequested = mThreadExitCondVar.wait_until( lock, timeout_time,
                 [ this ]{ return mThreadExit; } );
         if ( isExitRequested )
-            Throw( DRM_Exit, "Exit requested" );
+            Throw( DRM_Exit, "Exit requested. " );
     }
 
     template< class Rep, class Period >
@@ -1896,7 +1905,7 @@ protected:
         bool isExitRequested = mThreadExitCondVar.wait_for( lock, rel_time,
                 [ this ]{ return mThreadExit; } );
         if ( isExitRequested )
-            Throw( DRM_Exit, "Exit requested" );
+            Throw( DRM_Exit, "Exit requested. " );
     }
 
     bool isStopRequested() {
@@ -1968,9 +1977,14 @@ protected:
                 }
 
             } catch( const Exception& e ) {
-                if ( e.getErrCode() != DRM_Exit ) {
-                    Error( e.what() );
-                    f_asynch_error( std::string( e.what() ) );
+                DRM_ErrorCode errcode = e.getErrCode();
+                if ( errcode != DRM_Exit ) {
+                    std::string errmsg = std::string( e.what() );
+                    if ( ( errcode >= DRM_WSReqError ) && ( errcode <= DRM_WSTimedOut ) ) {
+                        errmsg += "\nThe issue could be caused by a networking problem: Please verify your internet access.";
+                    }
+                    Error( errmsg );
+                    f_asynch_error( errmsg );
                 }
             } catch( const std::exception &e ) {
                 std::string errmsg = fmt::format( "[errCode={}] Unexpected error: {}", DRM_ExternFail, e.what() );
@@ -1980,6 +1994,7 @@ protected:
             logDrmCtrlError();
             logDrmCtrlTrngStatus();
             Debug( "Exiting background thread which maintains licensing" );
+            sLogger->flush();
         });
     }
 
@@ -2047,15 +2062,23 @@ protected:
                     }
                 }
             } catch( const Exception& e ) {
-                if ( e.getErrCode() != DRM_Exit ) {
-                    Error( e.what() );
-                    f_asynch_error( std::string( e.what() ) );
+                DRM_ErrorCode errcode = e.getErrCode();
+                if ( errcode != DRM_Exit ) {
+                    if ( errcode != DRM_Exit ) {
+                        std::string errmsg = std::string( e.what() );
+                        if ( ( errcode >= DRM_WSReqError ) && ( errcode <= DRM_WSTimedOut ) ) {
+                            errmsg += "\nThe issue could be caused by a networking problem: Please verify your internet access.";
+                        }
+                        Error( errmsg );
+                        f_asynch_error( errmsg );
+                    }
                 }
             } catch( const std::exception &e ) {
                 Error( e.what() );
-                f_asynch_error( std::string( e.what() ) );
+                f_asynch_error( e.what() );
             }
             Debug( "Exiting background thread which checks health" );
+            sLogger->flush();
         });
     }
 
@@ -2191,14 +2214,14 @@ protected:
                 return it.first;
             }
         }
-        Throw( DRM_BadArg, "Cannot find parameter: {}", key_string );
+        Throw( DRM_BadArg, "Cannot find parameter: {}. ", key_string );
     }
 
     std::string findParameterString( const ParameterKey key_id ) const {
         std::map<ParameterKey, std::string>::const_iterator it;
         it = mParameterKeyMap.find( key_id );
         if ( it == mParameterKeyMap.end() )
-            Throw( DRM_BadArg, "Cannot find parameter with ID: {}", key_id );
+            Throw( DRM_BadArg, "Cannot find parameter with ID: {}. ", key_id );
         return it->second;
     }
 
@@ -2240,11 +2263,11 @@ public:
         TRY
             Debug( "Calling Impl public constructor" );
             if ( !f_user_read_register )
-                Throw( DRM_BadArg, "Read register callback function must not be NULL" );
+                Throw( DRM_BadArg, "Read register callback function must not be NULL. " );
             if ( !f_user_write_register )
-                Throw( DRM_BadArg, "Write register callback function must not be NULL" );
+                Throw( DRM_BadArg, "Write register callback function must not be NULL. " );
             if ( !f_user_asynch_error )
-                Throw( DRM_BadArg, "Asynchronous error callback function must not be NULL" );
+                Throw( DRM_BadArg, "Asynchronous error callback function must not be NULL. " );
             f_read_register = f_user_read_register;
             f_write_register = f_user_write_register;
             f_asynch_error = f_user_asynch_error;
@@ -2281,7 +2304,7 @@ public:
             }
             if ( isDrmCtrlInNodelock() ) {
                 Throw( DRM_BadUsage, "DRM Controller is locked in Node-Locked licensing mode: "
-                                    "To use other modes you must reprogram the FPGA device." );
+                                    "To use other modes you must reprogram the FPGA device. " );
             }
 
             // Load derived product if any
@@ -2723,7 +2746,7 @@ public:
                         break;
                     }
                     default: {
-                        Throw( DRM_BadArg, "Parameter '{}' cannot be read", key_str );
+                        Throw( DRM_BadArg, "Parameter '{}' cannot be read. ", key_str );
                         break;
                     }
                 }
@@ -2808,7 +2831,7 @@ public:
                     }
                     case ParameterKey::mailbox_data: {
                         if ( !(*it).isArray() )
-                            Throw( DRM_BadArg, "Value must be an array of integers" );
+                            Throw( DRM_BadArg, "Value must be an array of integers. " );
                         std::vector<uint32_t> data_array;
                         for( Json::ValueConstIterator itr = (*it).begin(); itr != (*it).end(); itr++ )
                             data_array.push_back( (*itr).asUInt() );
@@ -2821,7 +2844,7 @@ public:
                         uint32_t retry_period = (*it).asUInt();
                         if ( retry_period <= mWSRetryPeriodShort )
                             Throw( DRM_BadArg,
-                                    "ws_retry_period_long ({}) must be greater than ws_retry_period_short ({})",
+                                    "ws_retry_period_long ({}) must be greater than ws_retry_period_short ({}). ",
                                     retry_period, mWSRetryPeriodShort );
                         mWSRetryPeriodLong = retry_period;
                         Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
@@ -2832,7 +2855,7 @@ public:
                         uint32_t retry_period = (*it).asUInt();
                         if ( mWSRetryPeriodLong <= retry_period )
                             Throw( DRM_BadArg,
-                                    "ws_retry_period_long ({}) must be greater than ws_retry_period_short ({})",
+                                    "ws_retry_period_long ({}) must be greater than ws_retry_period_short ({}). ",
                                     mWSRetryPeriodLong, retry_period );
                         mWSRetryPeriodShort = retry_period;
                         Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
@@ -2849,6 +2872,7 @@ public:
                         std::string custom_msg = (*it).asString();
                         Exception e( DRM_Debug, custom_msg );
                         f_asynch_error( e.what() );
+                        sLogger->flush();
                         Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
                                custom_msg );
                         break;
@@ -2857,7 +2881,7 @@ public:
                         int32_t message_level = (*it).asInt();
                         if ( ( message_level < spdlog::level::trace)
                           || ( message_level > spdlog::level::off) )
-                            Throw( DRM_BadArg, "log_message_level ({}) is out of range [{:d}:{:d}]",
+                            Throw( DRM_BadArg, "log_message_level ({}) is out of range [{:d}:{:d}] ",
                                     message_level, (int32_t)spdlog::level::trace, (int32_t)spdlog::level::off );
                         mDebugMessageLevel = static_cast<spdlog::level::level_enum>( message_level );
                         Debug( "Set parameter '{}' (ID={}) to value {}", key_str, key_id,
@@ -2872,13 +2896,13 @@ public:
                     case ParameterKey::derived_product: {
                         std::string vln_str = (*it).asString();
                         if ( isSessionRunning() )
-                            Throw( DRM_BadUsage, "Derived product cannot be loaded if a session is still running" );
+                            Throw( DRM_BadUsage, "Derived product cannot be loaded if a session is still running. " );
                         loadDerivedProduct( vln_str );
                         Debug( "Set parameter '{}' (ID={}) to value {}", key_str, key_id, vln_str );
                         break;
                     }
                     default:
-                        Throw( DRM_BadArg, "Parameter '{}' cannot be overwritten", key_str );
+                        Throw( DRM_BadArg, "Parameter '{}' cannot be overwritten. ", key_str );
                 }
             }
         CATCH_AND_THROW

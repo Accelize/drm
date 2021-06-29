@@ -363,7 +363,8 @@ def test_log_file_parameters_modifiability(accelize_drm, conf_json, cred_json, a
     log_content = logfile.read()
     critical_list = findall(r'\[\s*critical\s*\].* Parameter \S* cannot be overwritten', log_content)
     assert len(critical_list) == 3
-    async_cb.assert_NoError()
+    async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, 'cannot be overwritten')
+    async_cb.reset()
     logfile.remove()
 
 

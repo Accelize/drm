@@ -21,7 +21,7 @@ cmake_minimum_required(VERSION 3.12)
 # - Alpha             : 1.0.0-alpha.1
 # - Beta              : 1.0.0-beta.1
 # - Release candidate : 1.0.0-rc.1
-set(ACCELIZEDRM_VERSION 2.5.2)
+set(ACCELIZEDRM_VERSION 2.5.3)
 
 ## Define package release number (Number of time this version was packaged)
 if (NOT CPACK_PACKAGE_RELEASE)
@@ -157,6 +157,7 @@ set(DRM_CONTROLLER_SDK_SOURCES
 	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v4_1_0.cpp
 	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v4_2_0.cpp
 	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v4_2_1.cpp
+	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v6_0_0.cpp
 )
 include_directories(drm_controller_sdk/include)
 set_source_files_properties(${DRM_CONTROLLER_SDK_SOURCES} PROPERTIES COMPILE_FLAGS "-Wno-unused-parameter")

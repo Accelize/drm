@@ -48,7 +48,9 @@ def test_connection_timeout(accelize_drm, conf_json, cred_json, async_handler,
     assert connection_timeout - 1 <= int((end - start).total_seconds()) <= connection_timeout
     assert search(r'\[errCode=\d+\]\s*Failed to perform HTTP request to Accelize webservice \(Timeout was reached\) : Connection timed out after [%d%d]\d{3} milliseconds' % (connection_timeout-1,connection_timeout),
             str(excinfo.value), IGNORECASE)
-    async_cb.assert_NoError()
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, '')
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, 'The issue could be caused by a networking problem: please verify your internet access')
+    async_cb.reset()
 
 
 def test_request_timeout(accelize_drm, conf_json, cred_json, async_handler,
@@ -89,5 +91,6 @@ def test_request_timeout(accelize_drm, conf_json, cred_json, async_handler,
     assert request_timeout - 1 <= int((end - start).total_seconds()) <= request_timeout
     assert search(r'\[errCode=\d+\]\s*Failed to perform HTTP request to Accelize webservice \(Timeout was reached\) : Operation timed out after [%d%d]\d+ milliseconds' % (request_timeout-1,request_timeout),
             str(excinfo.value), IGNORECASE)
-    async_cb.assert_NoError()
-
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, 'Failed to perform HTTP request to Accelize webservice')
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, 'The issue could be caused by a networking problem: please verify your internet access')
+    async_cb.reset()
