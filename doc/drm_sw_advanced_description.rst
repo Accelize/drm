@@ -52,11 +52,11 @@ There are 2 ways to overwrite the default value of parameters:
   .. code-block:: c
         :caption: C get/set functions
 
-        if ( DrmManager_set_int( drm_manager_ptr, Accelize::DRM::DRMParameterKey::custom_field, 0x12345678 ) )
+        if ( DrmManager_set_int( drm_manager_ptr, DRM__custom_field, 0x12345678 ) )
             fprintf( stderr, drm_manager.error_message );
 
         int32_t value;
-        if ( DrmManager_get_int( drm_manager_ptr, Accelize::DRM::DRMParameterKey::custom_field, &value ) )
+        if ( DrmManager_get_int( drm_manager_ptr, DRM__custom_field, &value ) )
             fprintf( stderr, drm_manager.error_message );
 
 
@@ -128,6 +128,8 @@ ws_verbosity                   uint32_t  Read-(write)  -                       r
 trng_status                    string    Read-only     -                       read the TRNG related status registers
 num_license_loaded             uint32_t  Read-only     -                       read the number of licenses provisioned in the DRM Controller
 =============================  ========  ============  ======================  =============================================
+
+.. note:: With the C API, the parameter name shall be prepended with DRM__ (double underscore).
 
 
 Detailed explanation

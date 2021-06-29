@@ -19,7 +19,6 @@ tests:
 Following OS are minimally tested only (without hardware):
 
 * RHEL/Centos 8
-* Ubuntu 16.04 LTS Xenial
 * Ubuntu 20.04 LTS Focal
 * Fedora (2 latest stable versions)
 * Ubuntu (2 latest stable versions)
