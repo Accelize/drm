@@ -11,12 +11,13 @@
 
 #define PDRM_REGISTER_INDEX_PAGE     0
 
-#define PDRM_SHARED_MEMORY_KEY_REGISTERS_PAGE     1234
-#define PDRM_SHARED_MEMORY_KEY_VLNV_FILE_PAGE     1235
-#define PDRM_SHARED_MEMORY_KEY_LICENSE_FILE_PAGE  1236
-#define PDRM_SHARED_MEMORY_KEY_TRACE_FILE_PAGE    1237
-#define PDRM_SHARED_MEMORY_KEY_METERING_FILE_PAGE 1238
-#define PDRM_SHARED_MEMORY_KEY_MAILBOX_FILE_PAGE  1239
+#define PDRM_SHARED_MEMORY_KEY_FILE_PATH             "/usr/lib/drm-controller/shared-memory-file"
+#define PDRM_SHARED_MEMORY_KEY_ID_REGISTERS_PAGE     1
+#define PDRM_SHARED_MEMORY_KEY_ID_VLNV_FILE_PAGE     2
+#define PDRM_SHARED_MEMORY_KEY_ID_LICENSE_FILE_PAGE  3
+#define PDRM_SHARED_MEMORY_KEY_ID_TRACE_FILE_PAGE    4
+#define PDRM_SHARED_MEMORY_KEY_ID_METERING_FILE_PAGE 5
+#define PDRM_SHARED_MEMORY_KEY_ID_MAILBOX_FILE_PAGE  6
 
 /**
 *   \enum tSharedMemoryManagerErrorCode
@@ -78,12 +79,11 @@ namespace SharedMemoryManagerLibrary {
       /** getSharedMemorySegment
       *   \brief Creates and returns a pointer to the shared memory segment with the given key
       *   on the currently selected page.
-      *   \param[in] key is the key used to connect to the shared memory segment
+      *   \param[in] key is the ID of the key used to connect to the shared memory segment
       **/
-      unsigned int * createSharedMemorySegment(const key_t key);
+      unsigned int * createSharedMemorySegment(const int keyId);
 
   }; // class SharedMemoryManager
-
 
 } // namespace SharedMemoryManagerLibrary
 

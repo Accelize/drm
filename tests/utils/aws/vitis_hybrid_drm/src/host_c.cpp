@@ -209,15 +209,18 @@ int main(int argc, char **argv) {
     drm_read_callback(0xFFF0, &reg, NULL);
     printf("Freq detection version: 0x%08X\n", reg);
 
-    drm_write_callback(0, 0, NULL);
-    drm_read_callback(0, &reg, NULL);
-    if (reg != 0)
+    drm_write_callback(0x0, 5, NULL);
+    drm_read_callback(0x0, &reg, NULL);
+    drm_read_callback(0x4, &reg, NULL);
+    drm_read_callback(0x8, &reg, NULL);
+    drm_read_callback(0xC, &reg, NULL);
+    /*if (reg != 0)
         printf("Unexpected read value: got %d, exp %d\n", reg, 0);
     drm_write_callback(0, 1, NULL);
     drm_read_callback(0, &reg, NULL);
     if (reg != 1)
         printf("Unexpected read value: got %d, exp %d\n", reg, 1);
-
+*/
     DrmManager *pDrmManager = NULL;
 
 //    EXIT_SAFELY_IF_FAIL(pl_load(binaryFile.c_str()))
