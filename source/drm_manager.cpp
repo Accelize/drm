@@ -2287,10 +2287,12 @@ public:
                 } else {
                     stopThread();
                 }
-                Debug( "Exiting Impl destructor" );
+
             CATCH_AND_THROW
         } catch(...) {}
         unlockDrmToInstance();
+        Debug( "Exiting Impl destructor" );
+        sLogger->flush();
     }
 
     void activate( const bool& resume_session_request = false ) {
