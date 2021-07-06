@@ -2278,8 +2278,8 @@ public:
     }
 
     ~Impl() {
-        TRY
-            try {
+        try {
+            TRY
                 Debug( "Calling Impl destructor" );
                 if ( mSecurityStop && isSessionRunning() ) {
                     Debug( "Security stop triggered: stopping current session" );
@@ -2287,10 +2287,10 @@ public:
                 } else {
                     stopThread();
                 }
-            } catch( ... ) {}
-            unlockDrmToInstance();
-            Debug( "Exiting Impl destructor" );
-        CATCH_AND_THROW
+                Debug( "Exiting Impl destructor" );
+            CATCH_AND_THROW
+        } catch(...) {}
+        unlockDrmToInstance();
     }
 
     void activate( const bool& resume_session_request = false ) {
