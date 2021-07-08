@@ -447,7 +447,7 @@ namespace DrmControllerLibrary {
       *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
       **/
       virtual unsigned int readAsynchronousMeteringReadyStatusRegister(bool &asynchronousMeteringReady) const;
-
+    
       /** waitAsynchronousMeteringReadyStatusRegister
       *   \brief Wait asynchronous metering ready status register to reach specified value.
       *   This method will access to the system bus to read the status register.

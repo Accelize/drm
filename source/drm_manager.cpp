@@ -88,7 +88,8 @@ static const std::string DRM_SELF_TEST_ERROR_MESSAGE( "Could not access DRM Cont
                         "\t-The read/write callbacks implementation in the SW application: verify it uses the correct offset address of DRM Controller IP in the design address space.\n"
                         "\t-The DRM Controller IP instantiation in the FPGA design: verify the correctness of 16-bit address received by the AXI-Lite port of the DRM Controller." );
 
-static const std::string DRM_CONNECTION_ERROR_MESSAGE( "\n!!! The issue could be caused by a networking problem: please verify your internet access !!!\n" );
+static const std::string DRM_CONNECTION_ERROR_MESSAGE( "\n!!! The issue could either be caused by a networking problem, by a firewall or NAT blocking incoming traffic or by a wrong server address. "
+                        "Please verify your configuration and try again !!!\n" );
 
 
 namespace Accelize {
