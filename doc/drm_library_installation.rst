@@ -19,7 +19,6 @@ tests:
 Following OS are minimally tested only (without hardware):
 
 * RHEL/Centos 8
-* Ubuntu 16.04 LTS Xenial
 * Ubuntu 20.04 LTS Focal
 * Fedora (2 latest stable versions)
 * Ubuntu (2 latest stable versions)
@@ -36,7 +35,7 @@ Software requirements
 ---------------------
 
 * The Accelize DRM C/C++ library requires a compiler with full C++11 support.
-* The Accelize DRM Python library requires Python >= 3.5.
+* The Accelize DRM Python library requires Python >= 3.6.
 
 
 Installation from packages
@@ -244,7 +243,7 @@ Minimal requirements:
 
 Python library requirements:
 
- * Python >= 3.5
+ * Python >= 3.6
  * Python-devel
  * setuptools
  * wheel

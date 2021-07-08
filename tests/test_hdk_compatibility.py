@@ -143,6 +143,9 @@ def test_compatibilities(accelize_drm, conf_json, cred_json, async_handler):
             hdks = [e[1] for e in versions]
             if hdk_version in hdks:
                 hdks.remove(hdk_version)
+            if len(hdks) == 0:
+                # The current version is the only version with this major number
+                continue
             hdk = sorted(hdks, key=lambda x: list(map(int, x.split('.'))))[-1]
             print('Testing HDK version %s is compatible ...' % hdk)
             image_id = refdesign.get_image_id(hdk)

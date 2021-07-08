@@ -2,3 +2,4 @@
 roles:
   - name: accelize.xilinx_xrt
   - name: accelize.accelize_drm
+  - name: accelize.linux_kernel

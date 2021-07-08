@@ -1389,8 +1389,6 @@ DrmControllerRegisters::tDrmControllerRegistersStrategyDictionary DrmControllerR
   strategies[DRM_CONTROLLER_V4_1_0_SUPPORTED_VERSION] = new DrmControllerRegistersStrategy_v4_1_0(readRegisterFunction, writeRegisterFunction);
   strategies[DRM_CONTROLLER_V4_2_0_SUPPORTED_VERSION] = new DrmControllerRegistersStrategy_v4_2_0(readRegisterFunction, writeRegisterFunction);
   strategies[DRM_CONTROLLER_V4_2_1_SUPPORTED_VERSION] = new DrmControllerRegistersStrategy_v4_2_1(readRegisterFunction, writeRegisterFunction);
-  strategies[DRM_CONTROLLER_V6_0_0_SUPPORTED_VERSION] = new DrmControllerRegistersStrategy_v6_0_0(readRegisterFunction, writeRegisterFunction);
-  strategies[DRM_CONTROLLER_V6_0_1_SUPPORTED_VERSION] = new DrmControllerRegistersStrategy_v6_0_1(readRegisterFunction, writeRegisterFunction);
   return strategies;
 }
 
