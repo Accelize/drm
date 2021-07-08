@@ -39,6 +39,10 @@ html_theme_options = {
     'prev_next_buttons_location': None,
     'analytics_id': "UA-57534772-1"
 }
+html_js_files = [
+    "https://tarteaucitron.io/load.js?domain=tech.accelize.com"
+    "&uuid=e50ee418db5ba272d7d27d488abd9692353b1c47"
+]
 
 # Enable Accelize Theme
 html_favicon = '_static/Accelize_logo-150x150.png'
