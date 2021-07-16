@@ -1132,13 +1132,13 @@ class ExecFunction:
         self._cmd_line += '%s -s %d -f %s -d %s' % (test_func_path, slot_id, conf_path, cred_path)
         if not is_cpp:
             self._cmd_line += ' -c'
+
+    def run(self, test_name=None, param_path=None):
+        from subprocess import run, PIPE
         self.returncode = None
         self.stdout = None
         self.stderr = None
         self.asyncmsg = None
-
-    def run(self, test_name=None, param_path=None):
-        from subprocess import run, PIPE
         cmdline = self._cmd_line
         if test_name is not None:
             cmdline += ' -t %s' % test_name
