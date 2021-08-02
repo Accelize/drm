@@ -1515,24 +1515,6 @@ protected:
             Throw( DRM_CtlrError, "DRM Controller could not transmit Licence #{} to activators after {:f} ms. ", mLicenseCounter, mseconds ); //LCOV_EXCL_LINE
         }
 
-        // Wait until session is running
-        mseconds = 0.0;
-        bool is_running(false);
-        while( mseconds < mActivationTransmissionTimeoutMS ) {
-            is_running = isSessionRunning();
-            timeSpan = TClock::now() - timeStart;
-            mseconds = 1000.0 * double( timeSpan.count() ) * TClock::period::num / TClock::period::den;
-            if ( is_running ) {
-                Debug( "Session ID {} is now running after {:f} ms", mSessionID, mseconds );
-                break;
-            }
-            Debug2( "Session ID {} is not running yet after {:f} ms", mSessionID, mseconds );
-            usleep(sleep_period);
-        }
-        if ( !is_running ) {
-            Throw( DRM_CtlrError, "DRM Controller could not run Session ID {} after {:f} ms. ", mSessionID, mseconds ); //LCOV_EXCL_LINE
-        }
-
         // Check DRM Controller has switched to the right license mode
         bool is_nodelocked = isDrmCtrlInNodelock();
         bool is_metered = isDrmCtrlInMetering();
@@ -1547,6 +1529,27 @@ protected:
                 Unreachable( "DRM Controller failed to switch to Node-Locked license mode" ); //LCOV_EXCL_LINE
             Debug( "DRM Controller is in Node-Locked license mode" );
         }
+
+        // Wait until session is running if license is metering
+        if (is_metered) {
+            mseconds = 0.0;
+            bool is_running(false);
+            while( mseconds < mActivationTransmissionTimeoutMS ) {
+                is_running = isSessionRunning();
+                timeSpan = TClock::now() - timeStart;
+                mseconds = 1000.0 * double( timeSpan.count() ) * TClock::period::num / TClock::period::den;
+                if ( is_running ) {
+                    Debug( "Session ID {} is now running after {:f} ms", mSessionID, mseconds );
+                    break;
+                }
+                Debug2( "Session ID {} is not running yet after {:f} ms", mSessionID, mseconds );
+                usleep(sleep_period);
+            }
+            if ( !is_running ) {
+                Throw( DRM_CtlrError, "DRM Controller could not run Session ID {} after {:f} ms. ", mSessionID, mseconds ); //LCOV_EXCL_LINE
+            }
+        }
+
         Debug( "Provisioned license #{} for session {} on DRM controller", mLicenseCounter, mSessionID );
         mLicenseCounter ++;
     }
