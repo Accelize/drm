@@ -330,8 +330,8 @@ protected IP cores.
 Simulate your design
 ====================
 
-.. important:: For SoM platform simulation, there is no model for the Controller SW normally running in the TEE.
-               Don't use the Controller SW bridge IP but use the Controller HW IP instead with the BFM mode enabled (USE_BFM=TRUE).
+.. important:: For SoM platform, there is no simulation application of the SW Controller normally running in the TEE.
+               So don't use the Controller SW bridge IP but use the Controller HW IP instead with the BFM enabled (USE_BFM=TRUE, more details below).
 
 Requirements:
 
