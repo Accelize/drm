@@ -736,6 +736,8 @@ before and after your own code.
         return ret;
     }
 
+Then you can build your petalinux project as usual.
+
 
 Full API documentation
 ----------------------
