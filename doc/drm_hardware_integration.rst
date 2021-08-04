@@ -95,13 +95,16 @@ Receive DRM HDK from Accelize
 
 A zip file will be sent to you. It is containing the HDK sources with in 3 folders:
 
-- The ``common`` folder: contain the IP common structure for the activator and the controller.
+- The ``common`` folder: contains the IP common structure for the activator and the controller.
 
-- The ``controller`` folder: contain the controller VHDL top-level and the Verilog Wrapper.
+- The ``controller`` folder: contains the controller VHDL top-level and the Verilog Wrapper.
   The controller has the appropriate number of ports: a pair of AXI4-Stream interfaces for each
   IP instance in your design (already protected IPs and IPs to protect).
 
-- The ``activator`` folder: contain the activator VHDL core and various wrappers for simulation and synthesis.
+- The ``controller_sw`` folder: contains the DRM bridge that must be instantited in the Fabric
+  when the SW controller application is running on the process core.
+
+- The ``activator`` folder: contains the activator VHDL core and various wrappers for simulation and synthesis.
   A single DRM Activator is delivered per IP core type. Multiple instances of the same IP
   core shall instantiate the same activator as many times.
 
