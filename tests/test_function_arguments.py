@@ -554,7 +554,6 @@ def test_drm_manager_get_and_set_bad_arguments(accelize_drm, conf_json, cred_jso
 
 @pytest.mark.no_parallel
 @pytest.mark.aws
-#@pytest.mark.skip(reason='To be fixed')
 def test_c_unittests(accelize_drm, exec_func):
     """Test errors when missing arguments are given to DRM Controller Constructor"""
     if 'aws' not in accelize_drm.pytest_fpga_driver_name:
@@ -567,19 +566,13 @@ def test_c_unittests(accelize_drm, exec_func):
     exec_lib.run('test_null_read_callback')
     assert exec_lib.returncode == accelize_drm.exceptions.DRMBadArg.error_code
     assert 'Read register callback function must not be NULL' in exec_lib.stdout
-    assert exec_lib.asyncmsg is None
+    assert 'Read register callback function must not be NULL' in exec_lib.asyncmsg
 
     # Test when write register callback is null
     exec_lib.run('test_null_write_callback')
     assert exec_lib.returncode == accelize_drm.exceptions.DRMBadArg.error_code
     assert 'Write register callback function must not be NULL' in exec_lib.stdout
-    assert exec_lib.asyncmsg is None
-
-    # Test when asynchronous error callback is null
-    exec_lib.run('test_null_error_callback')
-    assert exec_lib.returncode == accelize_drm.exceptions.DRMBadArg.error_code
-    assert 'Asynchronous error callback function must not be NULL' in exec_lib.stdout
-    assert exec_lib.asyncmsg is None
+    assert 'Write register callback function must not be NULL' in exec_lib.asyncmsg
 
     # Test various types of get and set functions
     exec_lib.run('test_types_of_get_and_set_functions')
@@ -590,7 +583,7 @@ def test_c_unittests(accelize_drm, exec_func):
     exec_lib.run('test_get_function_out_of_range')
     assert exec_lib.returncode == accelize_drm.exceptions.DRMBadArg.error_code
     assert 'Cannot find parameter with ID: ' in exec_lib.stdout
-    assert exec_lib.asyncmsg is None
+    assert 'Cannot find parameter with ID: ' in exec_lib.asyncmsg
 
     # Test get_json_string with bad format
     exec_lib.run('test_get_json_string_with_bad_format')

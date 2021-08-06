@@ -152,9 +152,9 @@ protected:
     size_t       sLogFileRotatingNum  = 3;
 
     // Function callbacks
-    DrmManager::ReadRegisterCallback  f_read_register;
-    DrmManager::WriteRegisterCallback f_write_register;
-    DrmManager::AsynchErrorCallback   f_asynch_error;
+    DrmManager::ReadRegisterCallback  f_read_register = nullptr;
+    DrmManager::WriteRegisterCallback f_write_register = nullptr;
+    DrmManager::AsynchErrorCallback   f_asynch_error = nullptr;
 
     // Derived product
     std::string mDerivedProduct;
@@ -285,6 +285,9 @@ protected:
         mSimulationFlag = false;
 
         mDebugMessageLevel = spdlog::level::trace;
+
+        // Define default asynchronous error callback
+        f_asynch_error = [](std::string msg) { std::cout << "ERROR: " << msg << std::endl; };
 
         // Parse configuration file
         conf_json = parseJsonFile( conf_file_path );
@@ -2262,15 +2265,14 @@ public:
     {
         TRY
             Debug( "Calling Impl public constructor" );
+            if ( f_user_asynch_error )
+                f_asynch_error = f_user_asynch_error;
             if ( !f_user_read_register )
                 Throw( DRM_BadArg, "Read register callback function must not be NULL. " );
+            f_read_register = f_user_read_register;
             if ( !f_user_write_register )
                 Throw( DRM_BadArg, "Write register callback function must not be NULL. " );
-            if ( !f_user_asynch_error )
-                Throw( DRM_BadArg, "Asynchronous error callback function must not be NULL. " );
-            f_read_register = f_user_read_register;
             f_write_register = f_user_write_register;
-            f_asynch_error = f_user_asynch_error;
             initDrmInterface();
             getHostAndCardInfo();
             Debug( "Exiting Impl public constructor" );
@@ -2930,46 +2932,63 @@ public:
     json_value[key_str] = Json::nullValue; \
     get( json_value );
 
+
 template<> std::string DrmManager::Impl::get( const ParameterKey key_id ) const {
-    IMPL_GET_BODY
-    if ( json_value[key_str].isString() )
-        return json_value[key_str].asString();
-    return json_value[key_str].toStyledString();
+    TRY
+		IMPL_GET_BODY
+		if ( json_value[key_str].isString() )
+		    return json_value[key_str].asString();
+		return json_value[key_str].toStyledString();
+    CATCH_AND_THROW
 }
 
 template<> bool DrmManager::Impl::get( const ParameterKey key_id ) const {
-    IMPL_GET_BODY
-    return json_value[key_str].asBool();
+	TRY
+		IMPL_GET_BODY
+		return json_value[key_str].asBool();
+	CATCH_AND_THROW
 }
 
 template<> int32_t DrmManager::Impl::get( const ParameterKey key_id ) const {
-    IMPL_GET_BODY
-    return json_value[key_str].asInt();
+	TRY
+		IMPL_GET_BODY
+		return json_value[key_str].asInt();
+	CATCH_AND_THROW
 }
 
 template<> uint32_t DrmManager::Impl::get( const ParameterKey key_id ) const {
-    IMPL_GET_BODY
-    return json_value[key_str].asUInt();
+	TRY
+		IMPL_GET_BODY
+		return json_value[key_str].asUInt();
+	CATCH_AND_THROW
 }
 
 template<> int64_t DrmManager::Impl::get( const ParameterKey key_id ) const {
-    IMPL_GET_BODY
-    return json_value[key_str].asInt64();
+	TRY
+		IMPL_GET_BODY
+		return json_value[key_str].asInt64();
+	CATCH_AND_THROW
 }
 
 template<> uint64_t DrmManager::Impl::get( const ParameterKey key_id ) const {
-    IMPL_GET_BODY
-    return json_value[key_str].asUInt64();
+	TRY
+		IMPL_GET_BODY
+		return json_value[key_str].asUInt64();
+	CATCH_AND_THROW
 }
 
 template<> float DrmManager::Impl::get( const ParameterKey key_id ) const {
-    IMPL_GET_BODY
-    return json_value[key_str].asFloat();
+	TRY
+		IMPL_GET_BODY
+		return json_value[key_str].asFloat();
+	CATCH_AND_THROW
 }
 
 template<> double DrmManager::Impl::get( const ParameterKey key_id ) const {
-    IMPL_GET_BODY
-    return json_value[key_str].asDouble();
+	TRY
+		IMPL_GET_BODY
+		return json_value[key_str].asDouble();
+	CATCH_AND_THROW
 }
 
 #define IMPL_SET_BODY \
@@ -2980,41 +2999,57 @@ template<> double DrmManager::Impl::get( const ParameterKey key_id ) const {
 
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const std::string& value ) {
-    IMPL_SET_BODY
+	TRY
+		IMPL_SET_BODY
+	CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const bool& value ) {
-    IMPL_SET_BODY
+	TRY
+		IMPL_SET_BODY
+	CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const int32_t& value ) {
-    IMPL_SET_BODY
+	TRY
+		IMPL_SET_BODY
+	CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const uint32_t& value ) {
-    IMPL_SET_BODY
+	TRY
+		IMPL_SET_BODY
+	CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const int64_t& value ) {
-    Json::Value json_value;
-    std::string key_str = findParameterString( key_id );
-    json_value[key_str] = Json::Int64( value );
-    set( json_value );
+	TRY
+		Json::Value json_value;
+		std::string key_str = findParameterString( key_id );
+		json_value[key_str] = Json::Int64( value );
+		set( json_value );
+	CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const uint64_t& value ) {
-    Json::Value json_value;
-    std::string key_str = findParameterString( key_id );
-    json_value[key_str] = Json::UInt64( value );
-    set( json_value );
+	TRY
+		Json::Value json_value;
+		std::string key_str = findParameterString( key_id );
+		json_value[key_str] = Json::UInt64( value );
+		set( json_value );
+	CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const float& value ) {
-    IMPL_SET_BODY
+	TRY
+		IMPL_SET_BODY
+	CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const double& value ) {
-    IMPL_SET_BODY
+	TRY
+		IMPL_SET_BODY
+	CATCH_AND_THROW
 }
 
 
