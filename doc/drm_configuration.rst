@@ -188,3 +188,16 @@ running the DRM protected application.
 
 .. _Accelize portal registration: https://portal.accelize.com/user/register
 .. _Accelize portal account: https://portal.accelize.com/front/customer/apicredential
+
+
+Webserver access configuration when using firewall
+--------------------------------------------------
+
+If you are using a firewall to restrict the egress internet access, you must allow
+your FPGA host to access the following IP addresses on port 443/TCP:
+
+* 15.197.128.83
+* 3.33.128.162
+
+.. note:: The Node-locked licensing model does not require Webserver access once the
+          license file is generated.
