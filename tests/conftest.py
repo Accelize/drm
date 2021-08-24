@@ -744,7 +744,8 @@ class ConfJson(_Json):
         content = get_default_conf_json(url)
         for k, v in kwargs.items():
             content[k] = v
-        _Json.__init__(self, tmpdir, 'conf.json', content)
+        filename = 'conf%f.json' % time()
+        _Json.__init__(self, tmpdir, filename, content)
 
     def addNodelock(self):
         self['licensing']['nodelocked'] = True
@@ -882,6 +883,8 @@ def conf_json(request, pytestconfig, tmpdir):
     json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param, design=design_param)
     json_conf.save()
     return json_conf
+
+conf_json_second = conf_json
 
 
 @pytest.fixture
