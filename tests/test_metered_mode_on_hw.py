@@ -628,7 +628,7 @@ def test_metering_limits_on_licensing_thread(accelize_drm, conf_json, cred_json,
 @pytest.mark.on_2_fpga
 @pytest.mark.minimum
 @pytest.mark.hwtst
-def test_floating_limits(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
+def test_floating_limits(accelize_drm, conf_json, conf_json_second, cred_json, async_handler, log_file_factory):
     """
     Test an error is returned when the floating limit is reached
     """
@@ -639,27 +639,27 @@ def test_floating_limits(accelize_drm, conf_json, cred_json, async_handler, log_
     async_cb1 = async_handler.create()
     async_cb1.reset()
     cred_json.set_user('accelize_accelerator_test_04')
-    conf_json.reset()
-    conf_json['settings']['ws_api_retry_duration'] = 3
-    conf_json.save()
 
-    drm_manager0 = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver0.read_register_callback,
-        driver0.write_register_callback,
-        async_cb0.callback
-    )
-    drm_manager1 = accelize_drm.DrmManager(
-        conf_json.path,
-        cred_json.path,
-        driver1.read_register_callback,
-        driver1.write_register_callback,
-        async_cb1.callback
-    )
-    assert not drm_manager0.get('license_status')
-    assert not drm_manager1.get('license_status')
-    try:
+    # Get floating license for drm_manager0 and check drm_manager1 fails
+    conf_json.reset()
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver0.read_register_callback,
+            driver0.write_register_callback,
+            async_cb0.callback
+        ) as drm_manager0:
+        conf_json_second['settings']['ws_api_retry_duration'] = 4
+        conf_json_second.save()
+        drm_manager1 = accelize_drm.DrmManager(
+            conf_json_second.path,
+            cred_json.path,
+            driver1.read_register_callback,
+            driver1.write_register_callback,
+            async_cb1.callback
+        )
+        assert not drm_manager0.get('license_status')
+        assert not drm_manager1.get('license_status')
         drm_manager0.activate()
         assert drm_manager0.get('license_status')
         with pytest.raises(accelize_drm.exceptions.DRMWSTimedOut) as excinfo:
@@ -668,11 +668,26 @@ def test_floating_limits(accelize_drm, conf_json, cred_json, async_handler, log_
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSTimedOut.error_code
         async_cb1.assert_Error(accelize_drm.exceptions.DRMWSTimedOut.error_code, 'Timeout on License request after')
         async_cb1.reset()
-    finally:
-        drm_manager0.deactivate()
-        assert not drm_manager0.get('license_status')
-        async_cb0.assert_NoError()
-    try:
+    async_cb0.assert_NoError()
+
+    # Get floating license for drm_manager1 and check drm_manager0 fails
+    conf_json_second.reset()
+    with accelize_drm.DrmManager(
+            conf_json_second.path,
+            cred_json.path,
+            driver1.read_register_callback,
+            driver1.write_register_callback,
+            async_cb1.callback
+        ) as drm_manager1:
+        conf_json['settings']['ws_api_retry_duration'] = 4
+        conf_json.save()
+        drm_manager0 = accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver0.read_register_callback,
+            driver0.write_register_callback,
+            async_cb0.callback
+        )
         drm_manager1.activate()
         assert drm_manager1.get('license_status')
         with pytest.raises(accelize_drm.exceptions.DRMWSTimedOut) as excinfo:
@@ -681,10 +696,7 @@ def test_floating_limits(accelize_drm, conf_json, cred_json, async_handler, log_
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSTimedOut.error_code
         async_cb0.assert_Error(accelize_drm.exceptions.DRMWSTimedOut.error_code, 'Timeout on License request after')
         async_cb0.reset()
-    finally:
-        drm_manager1.deactivate()
-        assert not drm_manager1.get('license_status')
-        async_cb1.assert_NoError()
+    async_cb1.assert_NoError()
 
 
 def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handler, log_file_factory, request):
