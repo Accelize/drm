@@ -168,6 +168,7 @@ def test_2activator_axi4_swap_activator(accelize_drm, conf_json, cred_json, asyn
                                     log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
 
 
+@pytest.mark.skip(reason='Manual test')
 @pytest.mark.awsf1
 def test_2activator_2clk_missing_1activator(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
