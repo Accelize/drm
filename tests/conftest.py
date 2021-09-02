@@ -868,11 +868,12 @@ def conf_json(request, pytestconfig, tmpdir):
     # Build config content
     log_param = {'log_verbosity': pytestconfig.getoption("library_verbosity")}
     if pytestconfig.getoption("library_format") == 1:
-        log_param['log_format'] = '%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v'
+        log_param['log_format'] = LOG_FORMAT_LONG
     else:
-        log_param['log_format'] = '[%^%=8l%$] %-6t, %v'
+        log_param['log_format'] = LOG_FORMAT_SHORT
     if pytestconfig.getoption("logfile") is not None:
         log_param['log_file_type'] = 1
+        log_param['log_format'] = LOG_FORMAT_LONG
         if len(pytestconfig.getoption("logfile")) != 0:
             log_param['log_file_path'] = pytestconfig.getoption("logfile")
         else:
