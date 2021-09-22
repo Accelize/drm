@@ -741,6 +741,10 @@ To work properly, this DRM Controller Bridge IP must be specified the fixed addr
 
 There are multiple possiblities to do this:
 - from Vitis GUI, you assign this address through the Assignment Editor in your project
+
+.. image:: _static/address_editor_som.png
+   :target: _static/address_editor_som.png
+
 - or from Vitis GUI, you execute the following tcl command directly form the tcl prompt:
 
 .. code-block:: tcl
