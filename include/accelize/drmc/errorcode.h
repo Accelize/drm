@@ -49,6 +49,9 @@ typedef enum {
 
     DRM_Debug               = 40001, /**< Generated for debug and testing only */
 
+    DRM_PncInitError        = 50001, /**< Error from ProvenCore initialization */
+    DRM_PncShmError         = 50002, /**< Error from ProvenCore to access shared memory */
+
     DRM_Exit                = 99999  /**< Generated for debug and testing only */
 
 } DRM_ErrorCode;

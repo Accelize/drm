@@ -60,6 +60,11 @@ limitations under the License.
 #define FREQ_DETECTION_VERSION_3	 0x60DC0DE1
 #define FREQ_DETECTION_VERSION_4	 0x60DC0DE2
 
+#define PNC_PAGE_SIZE               4096
+#define PNC_ALLOC_SIZE              (PNC_PAGE_SIZE * 24)
+#define PNC_DRM_INIT_SHM            11
+#define PNC_DRM_READ_DNA            12
+
 
 #define TRY try {
 
@@ -91,6 +96,10 @@ static const std::string DRM_SELF_TEST_ERROR_MESSAGE( "Could not access DRM Cont
 static const std::string DRM_CONNECTION_ERROR_MESSAGE( "\n!!! The issue could either be caused by a networking problem, by a firewall or NAT blocking incoming traffic or by a wrong server address. "
                         "Please verify your configuration and try again !!!\n" );
 
+pnc_session_t *Accelize::DRM::DrmManager::s_pnc_session = nullptr;
+uint32_t *Accelize::DRM::DrmManager::s_pnc_tzvaddr = nullptr;
+size_t Accelize::DRM::DrmManager::s_pnc_tzsize = 0;
+uint32_t Accelize::DRM::DrmManager::s_pnc_page_offset = 0;
 
 namespace Accelize {
 namespace DRM {
@@ -102,6 +111,85 @@ const char* getApiVersion() {
 
 
 class DRM_LOCAL DrmManager::Impl {
+
+private:
+
+    // DRM Controller TA communication callbacks
+
+    // Read Callback Function
+    int32_t pnc_read_drm_ctrl_ta( uint32_t addr, uint32_t *value ) {
+        *value = *(s_pnc_tzvaddr + s_pnc_page_offset + (addr >> 2));
+        return 0;
+    }
+
+    // Write Callback Function
+    int32_t pnc_write_drm_ctrl_ta( uint32_t addr, uint32_t value ) {
+        if (addr == 0) {
+            if (value > 5)
+                Throw( DRM_Fatal, "Invalid DRM Controller page index {}. ", value );                
+            s_pnc_page_offset = s_pnc_tzvaddr[value];
+        }
+        *(s_pnc_tzvaddr + s_pnc_page_offset + (addr >> 2)) = value;
+        return 0;
+    }
+    
+    void pnc_initialize_drm_ctrl_ta() {
+        if ( pnc_session_new(PNC_ALLOC_SIZE, &s_pnc_session) < 0 ) {
+            Throw( DRM_PncInitError, "Failed to open TrustZone module: {}. ", strerror(errno) );
+        }
+        Debug( "ProvenCore session created. " );
+        try {
+            int ret = 0;
+            for (int timeout = 10; timeout > 0; timeout--) {
+                ret = pnc_session_config_by_name(s_pnc_session, "drm_controller_rs");
+                if (ret < 0) {
+                    if (errno == EAGAIN) {
+                        sleep(1);
+                        continue;
+                    }
+                    Throw( DRM_PncInitError, "Failed to configure ProvenCore for DRM Controller TA: {}. ", 
+                        strerror(errno) );
+                }
+                break;
+            }
+            if (ret < 0) {
+                Throw( DRM_PncInitError, "Failed to allocate resource for DRM Controller TA: Timeout. " );
+            }
+            Debug( "ProvenCore session configured for DRM Controller TA. " );
+
+            // get virtual address and size of shared memory region
+            if ( pnc_session_getinfo(s_pnc_session, (void**)&s_pnc_tzvaddr, &s_pnc_tzsize) < 0) {
+                Throw( DRM_PncInitError, "Failed to get information from DRM Controller TA: {}. ", 
+                    strerror(errno) );
+            }
+            if (s_pnc_tzvaddr == NULL) {
+                Throw( DRM_PncInitError, "Failed to create shared memory for DRM Controller TA: {}. ", 
+                    strerror(errno) );
+            }
+            Debug( "DRM Controller TA information collected. " );
+
+            // Ask drm controller app to initialize shared memory
+            if ( pnc_session_request(s_pnc_session, PNC_DRM_INIT_SHM, 0) < 0) {
+                Throw( DRM_PncInitError, "Failed to initialize shared memory for DRM Controller TA: {}. ", 
+                    strerror(errno) );
+            }
+            Debug( "DRM Controller TA initialized. " );
+            
+            Debug( "DRM Controller TA ready to operate. " );
+        }
+        catch( const Exception &e ) {
+            pnc_session_destroy(s_pnc_session);
+            s_pnc_session = nullptr;
+            throw;
+        }
+    }
+    
+    void pnc_uninitialize_drm_ctrl_ta() {
+        pnc_session_destroy( s_pnc_session );
+        s_pnc_session = nullptr;
+        Debug( "Provencore session closed. " );
+    }
+
 
 protected:
 
@@ -154,9 +242,9 @@ protected:
     size_t       sLogFileRotatingNum  = 3;
 
     // Function callbacks
-    DrmManager::ReadRegisterCallback  f_read_register;
-    DrmManager::WriteRegisterCallback f_write_register;
-    DrmManager::AsynchErrorCallback   f_asynch_error;
+    DrmManager::ReadRegisterCallback  f_read_register = nullptr;
+    DrmManager::WriteRegisterCallback f_write_register = nullptr;
+    DrmManager::AsynchErrorCallback   f_asynch_error = nullptr;
 
     // Derived product
     std::string mDerivedProduct;
@@ -2298,15 +2386,20 @@ public:
     {
         TRY
             Debug( "Calling Impl public constructor" );
-            if ( !f_user_read_register )
-                Throw( DRM_BadArg, "Read register callback function must not be NULL. " );
-            if ( !f_user_write_register )
-                Throw( DRM_BadArg, "Write register callback function must not be NULL. " );
-            if ( !f_user_asynch_error )
-                Throw( DRM_BadArg, "Asynchronous error callback function must not be NULL. " );
-            f_read_register = f_user_read_register;
-            f_write_register = f_user_write_register;
+            f_read_register = [&]( uint32_t  offset, uint32_t *value ) {
+                return pnc_read_drm_ctrl_ta( offset, value );
+            };
+            f_write_register = [&]( uint32_t  offset, uint32_t value ) {
+                return pnc_write_drm_ctrl_ta(offset, value );
+            };
             f_asynch_error = f_user_asynch_error;
+            if ( !f_read_register )
+                Throw( DRM_BadArg, "Read register callback function must not be NULL. " );
+            if ( !f_write_register )
+                Throw( DRM_BadArg, "Write register callback function must not be NULL. " );
+            if ( !f_asynch_error )
+                Throw( DRM_BadArg, "Asynchronous error callback function must not be NULL. " );
+            pnc_initialize_drm_ctrl_ta();
             initDrmInterface();
             getHostAndCardInfo();
             Debug( "Exiting Impl public constructor" );
@@ -2327,6 +2420,7 @@ public:
             CATCH_AND_THROW
         } catch(...) {}
         unlockDrmToInstance();
+        pnc_uninitialize_drm_ctrl_ta();
         Debug( "Exiting Impl destructor" );
         sLogger->flush();
     }
