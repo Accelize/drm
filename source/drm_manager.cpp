@@ -134,7 +134,13 @@ private:
     }
     
     void pnc_initialize_drm_ctrl_ta() {
-        if ( pnc_session_new(PNC_ALLOC_SIZE, &s_pnc_session) < 0 ) {
+        int err = 0;
+        err = pnc_session_new(PNC_ALLOC_SIZE, &s_pnc_session); 
+        if ( err == -ENODEV ) {
+            Debug( "No provencecore driver loaded" );
+            return;
+        }
+        if ( err < 0 ) {
             Throw( DRM_PncInitError, "Failed to open TrustZone module: {}. ", strerror(errno) );
         }
         Debug( "ProvenCore session created. " );
