@@ -133,12 +133,12 @@ private:
         return 0;
     }
     
-    void pnc_initialize_drm_ctrl_ta() {
+    bool pnc_initialize_drm_ctrl_ta() {
         int err = 0;
         err = pnc_session_new(PNC_ALLOC_SIZE, &s_pnc_session); 
         if ( err == -ENODEV ) {
             Debug( "No provencecore driver loaded" );
-            return;
+            return false;
         }
         if ( err < 0 ) {
             Throw( DRM_PncInitError, "Failed to open TrustZone module: {}. ", strerror(errno) );
@@ -180,8 +180,9 @@ private:
                     strerror(errno) );
             }
             Debug( "DRM Controller TA initialized. " );
-            
+ 
             Debug( "DRM Controller TA ready to operate. " );
+            return true;
         }
         catch( const Exception &e ) {
             pnc_session_destroy(s_pnc_session);
@@ -2392,12 +2393,17 @@ public:
     {
         TRY
             Debug( "Calling Impl public constructor" );
-            f_read_register = [&]( uint32_t  offset, uint32_t *value ) {
-                return pnc_read_drm_ctrl_ta( offset, value );
-            };
-            f_write_register = [&]( uint32_t  offset, uint32_t value ) {
-                return pnc_write_drm_ctrl_ta(offset, value );
-            };
+            if ( pnc_initialize_drm_ctrl_ta() ) {
+                f_read_register = [&]( uint32_t  offset, uint32_t *value ) {
+                    return pnc_read_drm_ctrl_ta( offset, value );
+                };
+                f_write_register = [&]( uint32_t  offset, uint32_t value ) {
+                    return pnc_write_drm_ctrl_ta(offset, value );
+                };
+            } else {
+                f_read_register = f_user_read_register;
+                f_write_register = f_user_write_register;
+            }
             f_asynch_error = f_user_asynch_error;
             if ( !f_read_register )
                 Throw( DRM_BadArg, "Read register callback function must not be NULL. " );
@@ -2405,7 +2411,6 @@ public:
                 Throw( DRM_BadArg, "Write register callback function must not be NULL. " );
             if ( !f_asynch_error )
                 Throw( DRM_BadArg, "Asynchronous error callback function must not be NULL. " );
-            pnc_initialize_drm_ctrl_ta();
             initDrmInterface();
             getHostAndCardInfo();
             Debug( "Exiting Impl public constructor" );
