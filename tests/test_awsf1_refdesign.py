@@ -4,8 +4,6 @@ Test all other vitis reference designs
 """
 import pytest
 from datetime import datetime
-from os.path import join, dirname, realpath
-from random import choices
 from re import search, IGNORECASE
 
 import tests.conftest as conftest
