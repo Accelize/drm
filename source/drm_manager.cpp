@@ -137,7 +137,7 @@ private:
         int err = 0;
         err = pnc_session_new(PNC_ALLOC_SIZE, &s_pnc_session); 
         if ( err == -ENODEV ) {
-            Debug( "No provencecore driver loaded" );
+            Info( "Provencecore driver is not loaded" );
             return false;
         }
         if ( err < 0 ) {
