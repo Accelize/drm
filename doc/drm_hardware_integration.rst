@@ -750,7 +750,8 @@ There are multiple possiblities to do this:
 .. code-block:: tcl
     :caption: Assign DRM Controller Bridge specific address from vivado GUI tcl prompt
 
-    assign_bd_address -offset 0xA0010000 -range 0x00010000 -target_address_space [get_bd_addr_spaces PS_0/Data] [get_bd_addr_segs kernel_drm_controller_1/s_axi_control/reg0] -force
+    set ctrl_if_name [get_bd_addr_segs -addressables -of [get_bd_intf_pins kernel_drm_controller_1/s_axi_control]]
+    assign_bd_address -offset 0xA0010000 -range 0x00010000 -target_address_space [get_bd_addr_spaces PS_0/Data] [get_bd_addr_segs $ctrl_if_name] -force
 
 - or from your makfile, you create a post_syslink.tcl file and copy the above tcl command in.
   Then add the '--xp param:compiler.userPostSysLinkOverlayTcl' option to the vitis link command like in the example below:
