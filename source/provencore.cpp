@@ -21,6 +21,7 @@
 #include <unistd.h>
 
 #include "pnr/provencore.h"
+#include "log.h"
 
 #define TZ_IOCTL_ALLOC          1
 #define TZ_IOCTL_FREE           2
@@ -92,8 +93,7 @@ static int _pnc_open(pnc_session_t *session, size_t size)
 
     session->fd = open(devname, O_RDWR);
     if (session->fd == -1) {
-        fprintf(stderr, "failed to open device file %s: %s\n",
-                devname, strerror(errno));
+        Error( "PNC: Failed to open device file {}: {}", devname, strerror(errno) );
         return -ENODEV;
     }
 
@@ -197,7 +197,7 @@ int pnc_session_config_by_name(pnc_session_t *session, const char *name)
     pnc_session_get_version(session, &version);
     if (version < 0x302) {
         /* Avoid forwarding config request, as not supported by driver */
-        fprintf(stderr, "config failure: configuring session by name requires REE>=3.2\n");
+        Error( "PNC: configuring session by name requires REE>=3.2" );
         return -ENOTSUP;
     }
 
@@ -230,7 +230,7 @@ int pnc_session_config(pnc_session_t *session, uint64_t id, _Bool is_sid)
         /* Avoid forwarding config request if is_sid is not true since this 
          * feature is not supported anymore.
          */
-        fprintf(stderr, "config failure: REE version requires a valid SID\n");
+        Error( "PNC: REE version requires a valid SID" );
         return -EINVAL;
     }
 
@@ -304,11 +304,10 @@ int pnc_session_request_ext(pnc_session_t *session, uint32_t type,
         return -EINVAL;
     }
 
-    pnc_send_params_t params = {
-        .type = type,
-        .flags = flags,
-        .timeout = timeout,
-    };
+    pnc_send_params_t params;
+    params.type = type;
+    params.flags = flags;
+    params.timeout = timeout;
     int ret = ioctl(session->fd, TZ_IOCTL_SEND_EXT, &params);
     if (ret != 0) {
         return ret;
@@ -383,9 +382,8 @@ int pnc_session_wait_response(pnc_session_t *session, uint32_t *response,
         return -EINVAL;
     }
 
-    pnc_ioctl_params_t params = {
-        .timeout = timeout,
-    };
+    pnc_ioctl_params_t params;
+    params.timeout = timeout;
 
     ret = ioctl(session->fd, TZ_IOCTL_WAIT_RESP, &params);
     if (ret == 0) {
@@ -445,9 +443,8 @@ int pnc_session_wait_request(pnc_session_t *session, uint32_t *request,
         return -EINVAL;
     }
 
-    pnc_ioctl_params_t params = {
-        .timeout = timeout,
-    };
+    pnc_ioctl_params_t params;
+    params.timeout = timeout;
 
     ret = ioctl(session->fd, TZ_IOCTL_WAIT_REQ, &params);
     if (ret == 0) {
@@ -471,9 +468,8 @@ int pnc_session_cancel_request(pnc_session_t *session, uint32_t *response,
         return -EINVAL;
     }
 
-    pnc_ioctl_params_t params = {
-        .timeout = timeout,
-    };
+    pnc_ioctl_params_t params;
+    params.timeout = timeout;
 
     ret = ioctl(session->fd, TZ_IOCTL_CANCEL_REQ, &params);
     if (ret == (int)REQUEST_CANCEL_RESPONSE) {
@@ -553,9 +549,8 @@ int pnc_session_wait_signal(pnc_session_t *session, uint32_t *signals,
         return -EINVAL;
     }
 
-    pnc_ioctl_params_t params = {
-        .timeout = timeout,
-    };
+    pnc_ioctl_params_t params;
+    params.timeout = timeout;
 
     ret = ioctl(session->fd, TZ_IOCTL_WAIT_SIGNAL, &params);
     if (ret == 0) {
@@ -579,10 +574,9 @@ int pnc_session_wait_event(pnc_session_t *session, uint32_t *events,
         return -EINVAL;
     }
 
-    pnc_ioctl_params_t params = {
-        .sent = mask,
-        .timeout = timeout,
-    };
+    pnc_ioctl_params_t params;
+    params.sent = mask;
+    params.timeout = timeout;
 
     ret = ioctl(session->fd, TZ_IOCTL_WAIT_EVENT, &params);
     if (ret == 0) {

@@ -213,7 +213,7 @@ set(TARGET_SOURCES
     source/utils.cpp
     source/error.cpp
     source/log.cpp
-    source/provencore.c
+    source/provencore.cpp
 )
 add_library(accelize_drm SHARED ${TARGET_SOURCES})
 target_compile_options(accelize_drm PRIVATE -DSPDLOG_COMPILED_LIB)
