@@ -35,6 +35,10 @@ CNT_EVENT_REG_OFFSET = 0x44
 LOG_FORMAT_SHORT = "[%^%=8l%$] %-6t, %v"
 LOG_FORMAT_LONG = "%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v"
 
+HTTP_TIMEOUT_ERR_MSG = (r"The issue could either be caused by a networking problem, "
+    r"by a firewall or NAT blocking incoming traffic or by a wrong server address")
+
+
 HASH_FUNTION_TABLE = {}
 
 
