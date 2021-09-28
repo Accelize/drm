@@ -8,6 +8,7 @@ from flask import request as _request
 from re import search, findall, IGNORECASE
 from ctypes import c_uint, byref
 
+from tests.conftest import HTTP_TIMEOUT_ERR_MSG
 from tests.proxy import get_context, set_context, get_proxy_error
 
 
@@ -371,6 +372,7 @@ def test_improve_coverage_perform(accelize_drm, conf_json, cred_json, async_hand
         drm_manager.deactivate()
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
     assert search(r'Failed to perform HTTP request to Accelize webservice', str(excinfo.value), IGNORECASE)
-    async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, 'The issue could be caused by a networking problem: please verify your internet access')
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, HTTP_TIMEOUT_ERR_MSG)
+
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, 'Failed to perform HTTP request to Accelize webservice')
     async_cb.reset()

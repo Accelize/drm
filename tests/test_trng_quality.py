@@ -192,7 +192,7 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
     async_cb.reset()
     cred_json.set_user(access_key)
     conf_json.reset()
-    logfile = log_file_factory.create(1, LOG_FORMAT_LONG)
+    logfile = log_file_factory.create(1, format=LOG_FORMAT_LONG)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
     test_file_path = 'test_dna_and_challenge_duplication.%d.%d.json' % (time(), randrange(0xFFFFFFFF))

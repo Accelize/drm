@@ -497,7 +497,6 @@ int test_null_read_callback() {
         } catch( const cpp::Exception& e ) {
             ret = e.getErrCode();
             std::cerr << "EXCEPTION (" << ret << "): " << e.what() << std::endl;
-
         }
         if (drm)
             delete drm;

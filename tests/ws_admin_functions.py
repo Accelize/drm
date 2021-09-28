@@ -61,7 +61,6 @@ class WSListFunction(object):
 
     def application_create(self, data):
         #    url(r'^auth/createapplication/', APIMetering.create_application),
-
         response, status = self._authentifed_call("POST", "/auth/createapplication/", data=data)
         return response, status
 
@@ -195,6 +194,13 @@ class WSListFunction(object):
 
     def remove_product_information(self, data):
         # url(r'^auth/metering/rmthissession/', APIMetering.remove_product_information),
+        """
+        print('[remove_product_information] data=', data)
+        print('[remove_product_information] url=', self.url)
+        print('[remove_product_information] login=', self.login)
+        print('[remove_product_information] password=', self.password)
+        print('[remove_product_information] self=', self.__dict__)
+        """
         response, status = self._authentifed_call("POST", "/auth/metering/archiveduserproductinfo/", data=data)
         return response, status
 

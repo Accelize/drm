@@ -95,13 +95,16 @@ Receive DRM HDK from Accelize
 
 A zip file will be sent to you. It is containing the HDK sources with in 3 folders:
 
-- The ``common`` folder: contain the IP common structure for the activator and the controller.
+- The ``common`` folder: contains the IP common structure for the activator and the controller.
 
-- The ``controller`` folder: contain the controller VHDL top-level and the Verilog Wrapper.
+- The ``controller`` folder: contains the controller VHDL top-level and the Verilog Wrapper.
   The controller has the appropriate number of ports: a pair of AXI4-Stream interfaces for each
   IP instance in your design (already protected IPs and IPs to protect).
 
-- The ``activator`` folder: contain the activator VHDL core and various wrappers for simulation and synthesis.
+- The ``controller_sw`` folder: contains the DRM bridge that must be instantited in the Fabric
+  when the SW controller application is running on the process core.
+
+- The ``activator`` folder: contains the activator VHDL core and various wrappers for simulation and synthesis.
   A single DRM Activator is delivered per IP core type. Multiple instances of the same IP
   core shall instantiate the same activator as many times.
 
@@ -321,9 +324,17 @@ protected IP cores.
 .. warning:: The ``drm_aclk`` clock of the DRM Controller and the DRM Activators
              MUST be the same clock.
 
+.. note:: For SoM platforms, the controller IP is indeed a liteweight bridge IP which has the exact same
+          interfaces and is responsible for translating the requests from the SW Controller
+          running on the TEE of the processor core to the Activators on the Fabrics.
+          To get the SW Controller application, please contact `Accelize Support Team <mailto:support@accelize.com>`_.
+
 
 Simulate your design
 ====================
+
+.. important:: For SoM platform, there is no simulation application of the SW Controller normally running in the TEE.
+               So don't use the Controller SW bridge IP but use the Controller HW IP instead with the BFM enabled (USE_BFM=TRUE, more details below).
 
 Requirements:
 
@@ -578,12 +589,12 @@ For Vivado, GUI or TCL script can be used to synthesize the DRM controller and
 the DRM Activator.
 The DRM IPs are in VHDL but the DRM HDK also contains a Verilog wrapper.
 
-.. important:: The DRM Controller IP instantiates the DNA_PORTE2 primitive.
+.. important:: The DRM Controller IP instantiates the DNA primitive.
                We thus strongly recommend against floorplanning/placement constraints
-               on the DRM Controller IP: this could prevent physical access to the DNA_PORTE2
+               on the DRM Controller IP: this could prevent physical access to the DNA
                primitive and result in a Vivado placement error.
                If your design requires floorplanning the DRM Controller, you must then ensure
-               the assigned region encompasses the physical location of one DNA_PORTE2 primitive.
+               the assigned region encompasses the physical location of one DNA primitive.
 
 VHDL
 ^^^^
@@ -720,16 +731,46 @@ While runing synthesis and implementation you may face the following warnings:
   oscillators driving a LFSR clock.
   You can safely ignore this message.
 
+Xilinx(R) SoM boards
+--------------------
 
-Xilinx(R) SDAccel/Vitis
------------------------
+For the SoM boards, the DRM Controller is moved in the `ARM's TrustZone <https://developer.arm.com/ip-products/security-ip/trustzone>`_
+in order to save resources in the PL. Still a lightweight DRM Controller IP is to instantiate in the PL to ensure the communication
+with the Activators in the PL.
+To work properly, this DRM Controller Bridge IP must be specified the fixed address: 0xA0010000.
+
+There are multiple possiblities to do this:
+- from Vitis GUI, you assign this address through the Assignment Editor in your project
+
+.. image:: _static/address_editor_som.png
+   :target: _static/address_editor_som.png
+
+- or from Vitis GUI, you execute the following tcl command directly form the tcl prompt:
+
+.. code-block:: tcl
+    :caption: Assign DRM Controller Bridge specific address from vivado GUI tcl prompt
+
+    set ctrl_if_name [get_bd_addr_segs -addressables -of [get_bd_intf_pins kernel_drm_controller_1/s_axi_control]]
+    assign_bd_address -offset 0xA0010000 -range 0x00010000 -target_address_space [get_bd_addr_spaces PS_0/Data] [get_bd_addr_segs $ctrl_if_name] -force
+
+- or from your makfile, you create a post_syslink.tcl file and copy the above tcl command in.
+  Then add the '--xp param:compiler.userPostSysLinkOverlayTcl' option to the vitis link command like in the example below:
+
+.. code-block:: makefile
+    :caption: Assign DRM Controller Bridge specific address from makefile
+
+    v++ -l -t hw --platform ${VITIS_PLATFORM} --config ${VTS_CFG_FILE} --xp param:compiler.userPostSysLinkOverlayTcl=${ABSOLUTE_PATH_TO/post_syslink.tcl} -s -o ${DESIGN_OUT} $(VITIS_KERNELS_OBJS)
+
+
+Xilinx(R) Vitis
+---------------
 
 Below is an overview of the interaction between Sw and Hw layers when desiging with SDAccel.
 
 .. image:: _static/DRM_Sw_and_Hw_interactions_under_SDAccel.png
    :target: _static/DRM_Sw_and_Hw_interactions_under_SDAccel.png
 
-In this description, the DRM Controller has its own kernel and the DRM ACtivator is instantiated
+In this description, the DRM Controller has its own kernel and the DRM Activator is instantiated
 with the User's logic in a separate kernel. But the user may prefer to group all together the
 DRM Controller and Activator into the same SDAccel kernel.
 However,to simply the integration, Accelize provides in the DRM HDK a makefile that generates
@@ -738,7 +779,7 @@ automatically the .XO package for the DRM Controller kernel.
 DRM Controller Kernel
 ^^^^^^^^^^^^^^^^^^^^^
 
-To generate the DRM Controller kernel for SDAccel:
+To generate the DRM Controller kernel for Vitis:
 
 .. code-block:: bash
     :caption: Generate DRM Controller XO package
@@ -746,7 +787,7 @@ To generate the DRM Controller kernel for SDAccel:
     cd drm_hdk/controller/sdaccel
     make
 
-You can now include the .xo file in your SDAccel project.
+You can now include the .xo file in your Vitis project.
 
 DRM Activator Kernel
 ^^^^^^^^^^^^^^^^^^^^

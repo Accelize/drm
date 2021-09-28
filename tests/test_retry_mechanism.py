@@ -15,7 +15,7 @@ from flask import request as _request
 from dateutil import parser
 from math import ceil
 
-from tests.conftest import wait_func_true
+from tests.conftest import wait_func_true, HTTP_TIMEOUT_ERR_MSG
 from tests.proxy import get_context, set_context
 
 
@@ -53,9 +53,8 @@ def test_api_retry_disabled(accelize_drm, conf_json, cred_json, async_handler,
     assert search(r'\[\s*critical\s*\]\s*\d+\s*,\s*\[errCode=\d+\]\s*Metering Web Service error 408',
             log_content, IGNORECASE)
     assert not search(r'attempt', log_content, IGNORECASE)
-    assert search(r'The issue could be caused by a networking problem: please verify your internet access', log_content, IGNORECASE)
-    async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code,
-            r'The issue could be caused by a networking problem: please verify your internet access')
+    assert search(HTTP_TIMEOUT_ERR_MSG, log_content, IGNORECASE)
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, HTTP_TIMEOUT_ERR_MSG)
     async_cb.reset()
     logfile.remove()
 
@@ -97,7 +96,7 @@ def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler,
     total_seconds = int((end - start).total_seconds())
     assert retry_duration - 1 <= total_seconds <= retry_duration + 1
     log_content = logfile.read()
-    assert search(r'The issue could be caused by a networking problem: please verify your internet access', log_content, IGNORECASE)
+    assert search(HTTP_TIMEOUT_ERR_MSG, log_content, IGNORECASE)
     m = search(r'\[\s*critical\s*\]\s*\d+\s*,\s*\[errCode=\d+\]\s*Timeout on License request after (\d+) attempts',
             log_content, IGNORECASE)
     assert m is not None
@@ -105,7 +104,7 @@ def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler,
     assert nb_attempts > 1
     assert nb_attempts_expected - 1 <= nb_attempts <= nb_attempts_expected + 1
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSTimedOut.error_code, 'Timeout on License request after')
-    async_cb.assert_Error(accelize_drm.exceptions.DRMWSTimedOut.error_code, 'The issue could be caused by a networking problem: please verify your internet access')
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSTimedOut.error_code, HTTP_TIMEOUT_ERR_MSG)
     async_cb.reset()
     logfile.remove()
 
@@ -295,8 +294,7 @@ def test_api_retry_on_lost_connection(accelize_drm, conf_json, cred_json, async_
         delta = int((parser.parse(time) - prev_time).total_seconds())
         assert retry_timeout + retry_sleep - 1 <= delta <= retry_timeout + retry_sleep
         prev_time = parser.parse(time)
-    async_cb.assert_Error(accelize_drm.exceptions.DRMWSTimedOut.error_code,
-            r'The issue could be caused by a networking problem: please verify your internet access')
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSTimedOut.error_code, HTTP_TIMEOUT_ERR_MSG)
     async_cb.reset()
     logfile.remove()
 
@@ -362,6 +360,5 @@ def test_thread_retry_on_lost_connection(accelize_drm, conf_json, cred_json, asy
     assert len(attempts_list) == nb_retry
     assert sorted(list(attempts_list)) == list(range(1,nb_retry+1))
     logfile.remove()
-    async_cb.assert_Error(accelize_drm.exceptions.DRMWSTimedOut.error_code,
-            r'The issue could be caused by a networking problem: please verify your internet access')
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSTimedOut.error_code, HTTP_TIMEOUT_ERR_MSG)
     async_cb.reset()

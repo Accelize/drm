@@ -383,6 +383,9 @@ protected:
 
         mDebugMessageLevel = spdlog::level::trace;
 
+        // Define default asynchronous error callback
+        f_asynch_error = [](std::string msg) { std::cout << "ERROR: " << msg << std::endl; };
+
         // Parse configuration file
         conf_json = parseJsonFile( conf_file_path );
 
@@ -1594,6 +1597,7 @@ protected:
         uint32_t sleep_period = 10000;
         if ( mSimulationFlag )
             sleep_period *= 1000;
+
         while( mseconds < mActivationTransmissionTimeoutMS ) {
             checkDRMCtlrRet( getDrmController().readActivationCodesTransmittedStatusRegister(
                     activationCodesTransmitted ) );
@@ -2112,7 +2116,7 @@ protected:
                 if ( errcode != DRM_Exit ) {
                     std::string errmsg = std::string( e.what() );
                     if ( ( errcode >= DRM_WSReqError ) && ( errcode <= DRM_WSTimedOut ) ) {
-                        errmsg += "\nThe issue could be caused by a networking problem: Please verify your internet access.";
+                        errmsg += DRM_CONNECTION_ERROR_MESSAGE;
                     }
                     Error( errmsg );
                     f_asynch_error( errmsg );
@@ -2198,7 +2202,7 @@ protected:
                     if ( errcode != DRM_Exit ) {
                         std::string errmsg = std::string( e.what() );
                         if ( ( errcode >= DRM_WSReqError ) && ( errcode <= DRM_WSTimedOut ) ) {
-                            errmsg += "\nThe issue could be caused by a networking problem: Please verify your internet access.";
+                            errmsg += DRM_CONNECTION_ERROR_MESSAGE;
                         }
                         Error( errmsg );
                         f_asynch_error( errmsg );
@@ -3071,46 +3075,63 @@ public:
     json_value[key_str] = Json::nullValue; \
     get( json_value );
 
+
 template<> std::string DrmManager::Impl::get( const ParameterKey key_id ) const {
+    TRY
     IMPL_GET_BODY
     if ( json_value[key_str].isString() )
         return json_value[key_str].asString();
     return json_value[key_str].toStyledString();
+    CATCH_AND_THROW
 }
 
 template<> bool DrmManager::Impl::get( const ParameterKey key_id ) const {
+	TRY
     IMPL_GET_BODY
     return json_value[key_str].asBool();
+	CATCH_AND_THROW
 }
 
 template<> int32_t DrmManager::Impl::get( const ParameterKey key_id ) const {
+	TRY
     IMPL_GET_BODY
     return json_value[key_str].asInt();
+	CATCH_AND_THROW
 }
 
 template<> uint32_t DrmManager::Impl::get( const ParameterKey key_id ) const {
+	TRY
     IMPL_GET_BODY
     return json_value[key_str].asUInt();
+	CATCH_AND_THROW
 }
 
 template<> int64_t DrmManager::Impl::get( const ParameterKey key_id ) const {
+	TRY
     IMPL_GET_BODY
     return json_value[key_str].asInt64();
+	CATCH_AND_THROW
 }
 
 template<> uint64_t DrmManager::Impl::get( const ParameterKey key_id ) const {
+	TRY
     IMPL_GET_BODY
     return json_value[key_str].asUInt64();
+	CATCH_AND_THROW
 }
 
 template<> float DrmManager::Impl::get( const ParameterKey key_id ) const {
+	TRY
     IMPL_GET_BODY
     return json_value[key_str].asFloat();
+	CATCH_AND_THROW
 }
 
 template<> double DrmManager::Impl::get( const ParameterKey key_id ) const {
+	TRY
     IMPL_GET_BODY
     return json_value[key_str].asDouble();
+	CATCH_AND_THROW
 }
 
 #define IMPL_SET_BODY \
@@ -3121,41 +3142,57 @@ template<> double DrmManager::Impl::get( const ParameterKey key_id ) const {
 
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const std::string& value ) {
+	TRY
     IMPL_SET_BODY
+	CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const bool& value ) {
+	TRY
     IMPL_SET_BODY
+	CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const int32_t& value ) {
+	TRY
     IMPL_SET_BODY
+	CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const uint32_t& value ) {
+	TRY
     IMPL_SET_BODY
+	CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const int64_t& value ) {
+	TRY
     Json::Value json_value;
     std::string key_str = findParameterString( key_id );
     json_value[key_str] = Json::Int64( value );
     set( json_value );
+	CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const uint64_t& value ) {
+	TRY
     Json::Value json_value;
     std::string key_str = findParameterString( key_id );
     json_value[key_str] = Json::UInt64( value );
     set( json_value );
+	CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const float& value ) {
+	TRY
     IMPL_SET_BODY
+	CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const double& value ) {
+	TRY
     IMPL_SET_BODY
+	CATCH_AND_THROW
 }
 
 

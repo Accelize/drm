@@ -35,6 +35,10 @@ CNT_EVENT_REG_OFFSET = 0x44
 LOG_FORMAT_SHORT = "[%^%=8l%$] %-6t, %v"
 LOG_FORMAT_LONG = "%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v"
 
+HTTP_TIMEOUT_ERR_MSG = (r"The issue could either be caused by a networking problem, "
+    r"by a firewall or NAT blocking incoming traffic or by a wrong server address")
+
+
 HASH_FUNTION_TABLE = {}
 
 
@@ -763,7 +767,8 @@ class ConfJson(_Json):
         content = get_default_conf_json(url)
         for k, v in kwargs.items():
             content[k] = v
-        _Json.__init__(self, tmpdir, 'conf.json', content)
+        filename = 'conf%f.json' % time()
+        _Json.__init__(self, tmpdir, filename, content)
 
     def addNodelock(self):
         self['licensing']['nodelocked'] = True
@@ -886,11 +891,12 @@ def conf_json(request, pytestconfig, tmpdir):
     # Build config content
     log_param = {'log_verbosity': pytestconfig.getoption("library_verbosity")}
     if pytestconfig.getoption("library_format") == 1:
-        log_param['log_format'] = '%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v'
+        log_param['log_format'] = LOG_FORMAT_LONG
     else:
-        log_param['log_format'] = '[%^%=8l%$] %-6t, %v'
+        log_param['log_format'] = LOG_FORMAT_SHORT
     if pytestconfig.getoption("logfile") is not None:
         log_param['log_file_type'] = 1
+        log_param['log_format'] = LOG_FORMAT_LONG
         if len(pytestconfig.getoption("logfile")) != 0:
             log_param['log_file_path'] = pytestconfig.getoption("logfile")
         else:
@@ -901,6 +907,8 @@ def conf_json(request, pytestconfig, tmpdir):
     json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param, design=design_param)
     json_conf.save()
     return json_conf
+
+conf_json_second = conf_json
 
 
 @pytest.fixture
@@ -1151,13 +1159,13 @@ class ExecFunction:
         self._cmd_line += '%s -s %d -f %s -d %s' % (test_func_path, slot_id, conf_path, cred_path)
         if not is_cpp:
             self._cmd_line += ' -c'
+
+    def run(self, test_name=None, param_path=None):
+        from subprocess import run, PIPE
         self.returncode = None
         self.stdout = None
         self.stderr = None
         self.asyncmsg = None
-
-    def run(self, test_name=None, param_path=None):
-        from subprocess import run, PIPE
         cmdline = self._cmd_line
         if test_name is not None:
             cmdline += ' -t %s' % test_name

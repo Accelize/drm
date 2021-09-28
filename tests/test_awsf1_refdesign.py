@@ -4,8 +4,6 @@ Test all other vitis reference designs
 """
 import pytest
 from datetime import datetime
-from os.path import join, dirname, realpath
-from random import choices
 from re import search, IGNORECASE
 
 import tests.conftest as conftest
@@ -117,9 +115,22 @@ def run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_ha
 
 
 @pytest.mark.awsf1
+def test_2activator_axi4(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
+    """
+    Test a RTL vivado configuration: single clock kernels with Verilog source
+    """
+    # Run test
+    design_name = '2activator_axi4'
+    axiclk_freq_ref = 125
+    drmclk_freq_ref = 125
+    log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
+                                    log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
+
+
+@pytest.mark.awsf1
 def test_2activator_axi4_2clk(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
-    Test a vivado configuration: dual clock kernels
+    Test a RTL vivado configuration: dual clock kernels with Verilog source
     """
     # Run test
     design_name = '2activator_axi4_2clk'
@@ -130,12 +141,40 @@ def test_2activator_axi4_2clk(accelize_drm, conf_json, cred_json, async_handler,
 
 
 @pytest.mark.awsf1
+def test_2activator_axi4_vhdl(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
+    """
+    Test a RTL vivado configuration: single clock kernels with VHDL source
+    """
+    # Run test
+    design_name = '2activator_axi4_vhdl'
+    axiclk_freq_ref = 125
+    drmclk_freq_ref = 125
+    log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
+                                    log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
+
+
+@pytest.mark.awsf1
 def test_2activator_axi4_swap_activator(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
-    Test a vivado configuration: dual clock kernels with activators inverted on LGDN bus
+    Test a RTL vivado configuration: dual clock kernels with activators inverted on LGDN bus
     """
     # Run test
     design_name = '2activator_axi4_swap_activator'
+    axiclk_freq_ref = 250
+    drmclk_freq_ref = 125
+    log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
+                                    log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
+
+
+@pytest.mark.skip(reason='Manual execution: only used to check the behavior of the DMR Controller IP when 1 activator is missing')
+@pytest.mark.awsf1
+def test_2activator_2clk_missing_1activator(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
+    """
+    Test a RTL vivado configuration: dual clock kernels with one missing activator
+    Verify that is works as expected
+    """
+    # Run test
+    design_name = '2activator_2clk_missing_1activator'
     axiclk_freq_ref = 250
     drmclk_freq_ref = 125
     log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,

@@ -1,5 +1,6 @@
-* Mon Jun 29 2021 Accelize v2.5.4-rc.1
-- NEW:
+* Mon Jun 29 2021 Accelize v2.5.4
+- NEW: Define a default asynchronous error callback.
+- NEW: Support DRM Hybrid Solution for SoM boards
 
 * Mon Jun 29 2021 Accelize v2.5.3
 - NEW: Add message to check networking connection in case of Timeout or Retry errors on HTTP request.

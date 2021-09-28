@@ -278,7 +278,7 @@ def test_nodelock_without_malformed_license_file(accelize_drm, conf_json, cred_j
 @pytest.mark.on_2_fpga
 @pytest.mark.minimum
 @pytest.mark.hwtst
-def test_nodelock_limits(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
+def test_nodelock_limits(accelize_drm, conf_json, conf_json_second, cred_json, async_handler, ws_admin):
     """
     Test behavior when limits are reached. 2 FPGA are required.
     """
