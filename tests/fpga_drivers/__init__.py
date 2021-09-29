@@ -48,11 +48,13 @@ class FpgaDriverBase:
     """
 
     def __init__(self, fpga_slot_id=0, fpga_image=None, drm_ctrl_base_addr=0,
-                 log_dir='.', no_clear_fpga=False):
+                 log_dir='.', no_clear_fpga=False, **kwargs):
         self._fpga_slot_id = fpga_slot_id
         self._fpga_image = fpga_image
         self._drm_ctrl_base_addr = drm_ctrl_base_addr
         self._log_dir = _realpath(_fsdecode(log_dir))
+        for k,v in kwargs.items():
+            setattr(self, k, v)
 
         # FPGA read/write low level functions ans associated locks
         self._fpga_read_register = None
@@ -77,6 +79,10 @@ class FpgaDriverBase:
         # Call backs
         self._read_register_callback = self._get_read_register_callback()
         self._write_register_callback = self._get_write_register_callback()
+
+    def __del__(self,):
+        self._uninit_fpga()
+
 
     @property
     def fpga_image(self):
@@ -241,6 +247,12 @@ class FpgaDriverBase:
     def _init_fpga(self):
         """
         Initialize FPGA handle with driver library.
+        """
+
+    @_abstractmethod
+    def _uninit_fpga(self):
+        """
+        Release resource
         """
 
     @_abstractmethod

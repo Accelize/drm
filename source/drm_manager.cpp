@@ -58,6 +58,12 @@ limitations under the License.
 
 #define FREQ_DETECTION_VERSION_2	 0x60DC0DE0
 #define FREQ_DETECTION_VERSION_3	 0x60DC0DE1
+#define FREQ_DETECTION_VERSION_4	 0x60DC0DE2
+
+#define PNC_PAGE_SIZE               4096
+#define PNC_ALLOC_SIZE              (PNC_PAGE_SIZE * 24)
+#define PNC_DRM_INIT_SHM            11
+#define PNC_DRM_READ_DNA            12
 
 
 #define TRY try {
@@ -90,6 +96,10 @@ static const std::string DRM_SELF_TEST_ERROR_MESSAGE( "Could not access DRM Cont
 static const std::string DRM_CONNECTION_ERROR_MESSAGE( "\n!!! The issue could either be caused by a networking problem, by a firewall or NAT blocking incoming traffic or by a wrong server address. "
                         "Please verify your configuration and try again !!!\n" );
 
+pnc_session_t *Accelize::DRM::DrmManager::s_pnc_session = nullptr;
+uint32_t *Accelize::DRM::DrmManager::s_pnc_tzvaddr = nullptr;
+size_t Accelize::DRM::DrmManager::s_pnc_tzsize = 0;
+uint32_t Accelize::DRM::DrmManager::s_pnc_page_offset = 0;
 
 namespace Accelize {
 namespace DRM {
@@ -101,6 +111,92 @@ const char* getApiVersion() {
 
 
 class DRM_LOCAL DrmManager::Impl {
+
+private:
+
+    // DRM Controller TA communication callbacks
+
+    // Read Callback Function
+    int32_t pnc_read_drm_ctrl_ta( uint32_t addr, uint32_t *value ) {
+        *value = *(s_pnc_tzvaddr + s_pnc_page_offset + (addr >> 2));
+        return 0;
+    }
+
+    // Write Callback Function
+    int32_t pnc_write_drm_ctrl_ta( uint32_t addr, uint32_t value ) {
+        if (addr == 0) {
+            if (value > 5)
+                Throw( DRM_Fatal, "Invalid DRM Controller page index {}. ", value );                
+            s_pnc_page_offset = s_pnc_tzvaddr[value];
+        }
+        *(s_pnc_tzvaddr + s_pnc_page_offset + (addr >> 2)) = value;
+        return 0;
+    }
+    
+    bool pnc_initialize_drm_ctrl_ta() {
+        int err = 0;
+        err = pnc_session_new(PNC_ALLOC_SIZE, &s_pnc_session); 
+        if ( err == -ENODEV ) {
+            Info( "Provencecore driver is not loaded" );
+            return false;
+        }
+        if ( err < 0 ) {
+            Throw( DRM_PncInitError, "Failed to open TrustZone module: {}. ", strerror(errno) );
+        }
+        Debug( "ProvenCore session created. " );
+        try {
+            int ret = 0;
+            for (int timeout = 10; timeout > 0; timeout--) {
+                ret = pnc_session_config_by_name(s_pnc_session, "drm_controller_rs");
+                if (ret < 0) {
+                    if (errno == EAGAIN) {
+                        sleep(1);
+                        continue;
+                    }
+                    Throw( DRM_PncInitError, "Failed to configure ProvenCore for DRM Controller TA: {}. ", 
+                        strerror(errno) );
+                }
+                break;
+            }
+            if (ret < 0) {
+                Throw( DRM_PncInitError, "Failed to allocate resource for DRM Controller TA: Timeout. " );
+            }
+            Debug( "ProvenCore session configured for DRM Controller TA. " );
+
+            // get virtual address and size of shared memory region
+            if ( pnc_session_getinfo(s_pnc_session, (void**)&s_pnc_tzvaddr, &s_pnc_tzsize) < 0) {
+                Throw( DRM_PncInitError, "Failed to get information from DRM Controller TA: {}. ", 
+                    strerror(errno) );
+            }
+            if (s_pnc_tzvaddr == NULL) {
+                Throw( DRM_PncInitError, "Failed to create shared memory for DRM Controller TA: {}. ", 
+                    strerror(errno) );
+            }
+            Debug( "DRM Controller TA information collected. " );
+
+            // Ask drm controller app to initialize shared memory
+            if ( pnc_session_request(s_pnc_session, PNC_DRM_INIT_SHM, 0) < 0) {
+                Throw( DRM_PncInitError, "Failed to initialize shared memory for DRM Controller TA: {}. ", 
+                    strerror(errno) );
+            }
+            Debug( "DRM Controller TA initialized. " );
+ 
+            Debug( "DRM Controller TA ready to operate. " );
+            return true;
+        }
+        catch( const Exception &e ) {
+            pnc_session_destroy(s_pnc_session);
+            s_pnc_session = nullptr;
+            throw;
+        }
+    }
+    
+    void pnc_uninitialize_drm_ctrl_ta() {
+        pnc_session_destroy( s_pnc_session );
+        s_pnc_session = nullptr;
+        Debug( "Provencore session closed. " );
+    }
+
 
 protected:
 
@@ -966,7 +1062,9 @@ protected:
         // Determine frequency detection method if metering/floating mode is active
         if ( !isConfigInNodeLock() ) {
             determineFrequencyDetectionMethod();
-            if ( mFreqDetectionMethod == 3 ) {
+            if ( mFreqDetectionMethod == 4 ) {
+                detectDrmFrequencyMethod4();
+            } else if ( mFreqDetectionMethod == 3 ) {
                 detectDrmFrequencyMethod3();
             } else if ( mFreqDetectionMethod == 2 ) {
                 detectDrmFrequencyMethod2();
@@ -1461,7 +1559,7 @@ protected:
             if ( !isConfigInNodeLock() )
                 licenseTimer = JVgetRequired( dna_node, "licenseTimer", Json::stringValue ).asString();
             mLicenseDuration = JVgetRequired( metering_node, "timeoutSecond", Json::uintValue ).asUInt();
-            if ( mLicenseDuration == 0 )
+            if ( ( mLicenseDuration == 0 ) && ( mLicenseType == eLicenseType::NODE_LOCKED ) )
                 Warning( "'timeoutSecond' field sent by License WS must not be 0" );
 
         } catch( const Exception &e ) {
@@ -1530,6 +1628,27 @@ protected:
                 Unreachable( "DRM Controller failed to switch to Node-Locked license mode" ); //LCOV_EXCL_LINE
             Debug( "DRM Controller is in Node-Locked license mode" );
         }
+
+        // Wait until session is running if license is metering
+        if (is_metered) {
+            mseconds = 0.0;
+            bool is_running(false);
+            while( mseconds < mActivationTransmissionTimeoutMS ) {
+                is_running = isSessionRunning();
+                timeSpan = TClock::now() - timeStart;
+                mseconds = 1000.0 * double( timeSpan.count() ) * TClock::period::num / TClock::period::den;
+                if ( is_running ) {
+                    Debug( "Session ID {} is now running after {:f} ms", mSessionID, mseconds );
+                    break;
+                }
+                Debug2( "Session ID {} is not running yet after {:f} ms", mSessionID, mseconds );
+                usleep(sleep_period);
+            }
+            if ( !is_running ) {
+                Throw( DRM_CtlrError, "DRM Controller could not run Session ID {} after {:f} ms. ", mSessionID, mseconds ); //LCOV_EXCL_LINE
+            }
+        }
+
         Debug( "Provisioned license #{} for session {} on DRM controller", mLicenseCounter, mSessionID );
         mLicenseCounter ++;
     }
@@ -1708,11 +1827,17 @@ protected:
             Debug( "Frequency detection sequence is bypassed." );
             return;
         }
-        int ret = readDrmAddress( REG_FREQ_DETECTION_VERSION, reg );
+        int ret = writeDrmAddress(0, 0 );
+        ret |= readDrmAddress( REG_FREQ_DETECTION_VERSION, reg );
         if ( ret != 0 ) {
             Debug( "Failed to read DRM Ctrl frequency detection version register, errcode = {}. ", ret ); //LCOV_EXCL_LINE
         }
-        if ( reg == FREQ_DETECTION_VERSION_3 ) {
+        if ( reg == FREQ_DETECTION_VERSION_4 ) {
+            // Use Method 3
+            Debug( "SW DRM Controller: no frequency detection is performed (method 4)" );
+            mFreqDetectionMethod = 4;
+            mBypassFrequencyDetection = true;
+        } else if ( reg == FREQ_DETECTION_VERSION_3 ) {
             // Use Method 3
             Debug( "Use dedicated counter to compute DRM frequency (method 3)" );
             mFreqDetectionMethod = 3;
@@ -1826,6 +1951,12 @@ protected:
         Debug( "Frequency detection of drm_aclk counter after {:f} ms is 0x{:08x}  => estimated frequency = {} MHz",
             (double)mFrequencyDetectionPeriod/1000, counter_drmaclk, measured_drmaclk );
         checkDrmFrequency( measured_drmaclk ); // Only drm_aclk can be verified because provided in the config.json
+    }
+
+    void detectDrmFrequencyMethod4() {
+        // DRM Controller is in SW: system time is used
+        mAxiFrequency = 100;
+        mFrequencyCurr = 100;
     }
 
     int32_t detectDrmFrequencyFromLicenseTimer() {
@@ -2266,14 +2397,24 @@ public:
     {
         TRY
             Debug( "Calling Impl public constructor" );
-            if ( f_user_asynch_error )
+            if ( pnc_initialize_drm_ctrl_ta() ) {
+                f_read_register = [&]( uint32_t  offset, uint32_t *value ) {
+                    return pnc_read_drm_ctrl_ta( offset, value );
+                };
+                f_write_register = [&]( uint32_t  offset, uint32_t value ) {
+                    return pnc_write_drm_ctrl_ta(offset, value );
+                };
+            } else {
+                f_read_register = f_user_read_register;
+                f_write_register = f_user_write_register;
+            }
                 f_asynch_error = f_user_asynch_error;
-            if ( !f_user_read_register )
+            if ( !f_read_register )
                 Throw( DRM_BadArg, "Read register callback function must not be NULL. " );
-            f_read_register = f_user_read_register;
-            if ( !f_user_write_register )
+            if ( !f_write_register )
                 Throw( DRM_BadArg, "Write register callback function must not be NULL. " );
-            f_write_register = f_user_write_register;
+            if ( !f_asynch_error )
+                Throw( DRM_BadArg, "Asynchronous error callback function must not be NULL. " );
             initDrmInterface();
             getHostAndCardInfo();
             Debug( "Exiting Impl public constructor" );
@@ -2294,6 +2435,7 @@ public:
             CATCH_AND_THROW
         } catch(...) {}
         unlockDrmToInstance();
+        pnc_uninitialize_drm_ctrl_ta();
         Debug( "Exiting Impl destructor" );
         sLogger->flush();
     }
@@ -2936,60 +3078,60 @@ public:
 
 template<> std::string DrmManager::Impl::get( const ParameterKey key_id ) const {
     TRY
-        IMPL_GET_BODY
-        if ( json_value[key_str].isString() )
-            return json_value[key_str].asString();
-        return json_value[key_str].toStyledString();
+		IMPL_GET_BODY
+		if ( json_value[key_str].isString() )
+		    return json_value[key_str].asString();
+		return json_value[key_str].toStyledString();
     CATCH_AND_THROW
 }
 
 template<> bool DrmManager::Impl::get( const ParameterKey key_id ) const {
-    TRY
-        IMPL_GET_BODY
-        return json_value[key_str].asBool();
-    CATCH_AND_THROW
+	TRY
+		IMPL_GET_BODY
+		return json_value[key_str].asBool();
+	CATCH_AND_THROW
 }
 
 template<> int32_t DrmManager::Impl::get( const ParameterKey key_id ) const {
-    TRY
-        IMPL_GET_BODY
-        return json_value[key_str].asInt();
-    CATCH_AND_THROW
+	TRY
+		IMPL_GET_BODY
+		return json_value[key_str].asInt();
+	CATCH_AND_THROW
 }
 
 template<> uint32_t DrmManager::Impl::get( const ParameterKey key_id ) const {
-    TRY
-        IMPL_GET_BODY
-        return json_value[key_str].asUInt();
-    CATCH_AND_THROW
+	TRY
+		IMPL_GET_BODY
+		return json_value[key_str].asUInt();
+	CATCH_AND_THROW
 }
 
 template<> int64_t DrmManager::Impl::get( const ParameterKey key_id ) const {
-    TRY
-        IMPL_GET_BODY
-        return json_value[key_str].asInt64();
-    CATCH_AND_THROW
+	TRY
+		IMPL_GET_BODY
+		return json_value[key_str].asInt64();
+	CATCH_AND_THROW
 }
 
 template<> uint64_t DrmManager::Impl::get( const ParameterKey key_id ) const {
-    TRY
-        IMPL_GET_BODY
-        return json_value[key_str].asUInt64();
-    CATCH_AND_THROW
+	TRY
+		IMPL_GET_BODY
+		return json_value[key_str].asUInt64();
+	CATCH_AND_THROW
 }
 
 template<> float DrmManager::Impl::get( const ParameterKey key_id ) const {
-    TRY
-        IMPL_GET_BODY
-        return json_value[key_str].asFloat();
-    CATCH_AND_THROW
+	TRY
+		IMPL_GET_BODY
+		return json_value[key_str].asFloat();
+	CATCH_AND_THROW
 }
 
 template<> double DrmManager::Impl::get( const ParameterKey key_id ) const {
-    TRY
-        IMPL_GET_BODY
-        return json_value[key_str].asDouble();
-    CATCH_AND_THROW
+	TRY
+		IMPL_GET_BODY
+		return json_value[key_str].asDouble();
+	CATCH_AND_THROW
 }
 
 #define IMPL_SET_BODY \
@@ -3000,57 +3142,57 @@ template<> double DrmManager::Impl::get( const ParameterKey key_id ) const {
 
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const std::string& value ) {
-    TRY
-        IMPL_SET_BODY
-    CATCH_AND_THROW
+	TRY
+		IMPL_SET_BODY
+	CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const bool& value ) {
-    TRY
-        IMPL_SET_BODY
-    CATCH_AND_THROW
+	TRY
+		IMPL_SET_BODY
+	CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const int32_t& value ) {
-    TRY
-        IMPL_SET_BODY
-    CATCH_AND_THROW
+	TRY
+		IMPL_SET_BODY
+	CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const uint32_t& value ) {
-    TRY
-        IMPL_SET_BODY
-    CATCH_AND_THROW
+	TRY
+		IMPL_SET_BODY
+	CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const int64_t& value ) {
-    TRY
-        Json::Value json_value;
-        std::string key_str = findParameterString( key_id );
-        json_value[key_str] = Json::Int64( value );
-        set( json_value );
-    CATCH_AND_THROW
+	TRY
+		Json::Value json_value;
+		std::string key_str = findParameterString( key_id );
+		json_value[key_str] = Json::Int64( value );
+		set( json_value );
+	CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const uint64_t& value ) {
-    TRY
-        Json::Value json_value;
-        std::string key_str = findParameterString( key_id );
-        json_value[key_str] = Json::UInt64( value );
-        set( json_value );
-    CATCH_AND_THROW
+	TRY
+		Json::Value json_value;
+		std::string key_str = findParameterString( key_id );
+		json_value[key_str] = Json::UInt64( value );
+		set( json_value );
+	CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const float& value ) {
-    TRY
-        IMPL_SET_BODY
-    CATCH_AND_THROW
+	TRY
+		IMPL_SET_BODY
+	CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const double& value ) {
-    TRY
-        IMPL_SET_BODY
-    CATCH_AND_THROW
+	TRY
+		IMPL_SET_BODY
+	CATCH_AND_THROW
 }
 
 

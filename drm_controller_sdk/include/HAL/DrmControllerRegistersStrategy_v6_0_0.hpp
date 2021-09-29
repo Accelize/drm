@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegistersStrategy_v6_0_0.hpp
-*  \version   6.0.0.0
-*  \date      April 2021
+*  \version   6.0.1.0
+*  \date      May 2021
 *  \brief     Class DrmControllerRegistersStrategy_v6_0_0 defines strategy for register access of drm controller v6.0.0.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.
@@ -501,7 +501,7 @@ namespace DrmControllerLibrary {
       *   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
       **/
       virtual unsigned int waitLicenseTimerCountEmptyStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const;
-    
+
       /** readSessionRunningStatusRegister
       *   \brief Read the status register and get the session running status bit.
       *   This method will access to the system bus to read the status register.
@@ -510,7 +510,7 @@ namespace DrmControllerLibrary {
       *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
       **/
       virtual unsigned int readSessionRunningStatusRegister(bool &sessionRunning) const;
-    
+
       /** waitSessionRunningStatusRegister
       *   \brief Wait session running status register to reach specified value.
       *   This method will access to the system bus to read the status register.
@@ -942,7 +942,7 @@ namespace DrmControllerLibrary {
       *   \return Returns the error message.
       **/
       virtual const char* getDrmErrorRegisterMessage(const unsigned char &errorRegister) const;
-      
+
       /** readAdaptiveProportionTestFailuresRegister
       *   \brief Read the Adaptive Proportion Test Failures register and get the value.
       *   This method will access to the system bus to read the Adaptive Proportion Test Failures register.
@@ -951,7 +951,7 @@ namespace DrmControllerLibrary {
       *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
       **/
       virtual unsigned int readAdaptiveProportionTestFailuresRegister(std::vector<unsigned int> &adaptiveProportionTestFailures) const;
-      
+
       /** readRepetitionCountTestFailuresRegister
       *   \brief Read the Repetition Count Test Failures register and get the value.
       *   This method will access to the system bus to read the Repetition Count Test Failures register.
@@ -1117,13 +1117,13 @@ namespace DrmControllerLibrary {
       *   \param[in] file is the stream to use for the data print.
       **/
       virtual void printMailBoxFileHwReport(std::ostream &file) const;
-      
+
       /** printAdaptiveProportionTestFailures
       *   \brief Display the value of the Adaptive Proportion Test Failures.
       *   \param[in] file is the stream to use for the data print.
       **/
       virtual void printAdaptiveProportionTestFailuresHwReport(std::ostream &file) const;
-      
+
       /** printRepetitionCountTestFailures
       *   \brief Display the value of the Repetition Count Test Failures.
       *   \param[in] file is the stream to use for the data print.
@@ -1210,7 +1210,7 @@ namespace DrmControllerLibrary {
       const unsigned int mTraceWordRegisterWordNumber;
       const unsigned int mMeteringWordRegisterWordNumber;
       const unsigned int mMailboxWordRegisterWordNumber;
-      
+
 
       // start index of each registers
       const unsigned int mCommandRegisterStartIndex;
@@ -1230,7 +1230,7 @@ namespace DrmControllerLibrary {
       const unsigned int mTraceWordRegisterStartIndex;
       const unsigned int mMeteringWordRegisterStartIndex;
       const unsigned int mMailboxWordRegisterStartIndex;
-      
+
       // number of traces per ip
       const unsigned int mNumberOfTracesPerIp;
 
@@ -1239,7 +1239,7 @@ namespace DrmControllerLibrary {
       const unsigned int mMeteringNumberOfAdditionalWords;
       const unsigned int mMailboxNumberOfAdditionalWords;
 
-      // number of words in license 
+      // number of words in license
       const unsigned int mLicenseFileHeaderWordNumber;
       const unsigned int mLicenseFileIpBlockWordNumber;
       const unsigned int mLicenseFileMinimumWordNumber;

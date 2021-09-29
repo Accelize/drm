@@ -158,6 +158,7 @@ set(DRM_CONTROLLER_SDK_SOURCES
 	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v4_2_0.cpp
 	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v4_2_1.cpp
 	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v6_0_0.cpp
+	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v6_0_1.cpp
 )
 include_directories(drm_controller_sdk/include)
 set_source_files_properties(${DRM_CONTROLLER_SDK_SOURCES} PROPERTIES COMPILE_FLAGS "-Wno-unused-parameter")
@@ -177,6 +178,7 @@ set(API_HEADERS
     include/accelize/drmc/errorcode.h
     include/accelize/drmc/wrapper.h
     include/accelize/drmc.h
+    include/pnr/provencore.h
 )
 
 set(API_PUBLIC_HEADERS)
@@ -211,6 +213,7 @@ set(TARGET_SOURCES
     source/utils.cpp
     source/error.cpp
     source/log.cpp
+    source/provencore.cpp
 )
 add_library(accelize_drm SHARED ${TARGET_SOURCES})
 target_compile_options(accelize_drm PRIVATE -DSPDLOG_COMPILED_LIB)

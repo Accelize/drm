@@ -76,12 +76,6 @@ DRM_ErrorCode DrmManager_alloc( DrmManager **p_m,
     m->drm = NULL;
     *p_m = m;
     TRY
-        if (read_register == NULL)
-            Throw( DRM_BadArg, "Read register callback function must not be NULL" );
-        if (write_register == NULL)
-            Throw( DRM_BadArg, "Write register callback function must not be NULL" );
-        if (async_error == NULL)
-            Throw( DRM_BadArg, "Asynchronous error callback function must not be NULL" );
         m->drm = (decltype(m->drm))malloc(sizeof(*(m->drm)));
         m->drm->obj = NULL;
         m->drm->obj = new cpp::DrmManager(conf_file_path, cred_file_path,
