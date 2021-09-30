@@ -78,8 +78,7 @@ def test_vitis_1activator_125_som(accelize_drm, async_handler, log_file_factory)
     ref_list = []
     for i in range(mailbox_rw_size):
         ref = randint(1,0xFFFFFFFF)
-        reg.value == ref
-        assert driver.write_register_callback(driver._drm_ctrl_base_addr + 0xc + 4*mailbox_ro_size + 4*i, reg) == 0
+        assert driver.write_register_callback(driver._drm_ctrl_base_addr + 0xc + 4*mailbox_ro_size + 4*i, ref) == 0
         ref_list.append(ref)
     for i in range(mailbox_rw_size):
         assert driver.read_register_callback(driver._drm_ctrl_base_addr + 0xc + 4*mailbox_ro_size + 4*i, byref(reg)) == 0
