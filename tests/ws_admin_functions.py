@@ -13,6 +13,9 @@ limitations under the License.
 import json
 import requests
 
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+
 
 class WSListFunction(object):
 
@@ -43,8 +46,11 @@ class WSListFunction(object):
     def _authentifed_call(self, method, url, data=None, headers={}):
         headers['Authorization'] = "Bearer " + str(self.token)
         headers['Content-Type'] = "application/json"
-        r = requests.request(method, self.url + url, data=json.dumps(data), headers=headers)
-#        json_acceptable_string = r.content.replace("'", "\"")
+        s = requests.Session()
+        retries = Retry(total=10, backoff_factor=1, status_forcelist=[ 502, 503, 504 ])
+        s.mount('http://', HTTPAdapter(max_retries=retries))
+        s.mount('https://', HTTPAdapter(max_retries=retries))
+        r = s.request(method, self.url + url, data=json.dumps(data), headers=headers)
         try:
             text = json.loads(r.content)
         except:

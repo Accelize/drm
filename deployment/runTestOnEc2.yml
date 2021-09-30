@@ -30,6 +30,7 @@ jobs:
 
   # Run tests on AWS agent
   - job: runTests_${{ parameters.identifier }}_on_${{ config.os_distrib }}
+    timeoutInMinutes: 120
     displayName: Test ${{ parameters.description }} on ${{ config.os_distrib }}
     dependsOn: startAgent_${{ parameters.identifier }}_on_${{ config.os_distrib }}
     condition: succeededOrFailed()
