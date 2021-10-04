@@ -115,6 +115,19 @@ def run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_ha
 
 
 @pytest.mark.awsf1
+def test_1activator_axi4(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
+    """
+    Test a RTL vivado configuration: 1 single clock kernels with Verilog source
+    """
+    # Run test
+    design_name = '1activator_axi4'
+    axiclk_freq_ref = 125
+    drmclk_freq_ref = 125
+    log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
+                                    log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
+
+
+@pytest.mark.awsf1
 def test_2activator_axi4(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test a RTL vivado configuration: single clock kernels with Verilog source
