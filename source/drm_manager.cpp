@@ -95,6 +95,8 @@ static const std::string DRM_SELF_TEST_ERROR_MESSAGE( "Could not access DRM Cont
 
 static const std::string DRM_CONNECTION_ERROR_MESSAGE( "\n!!! The issue could either be caused by a networking problem, by a firewall or NAT blocking incoming traffic or by a wrong server address. "
                         "Please verify your configuration and try again !!!\n" );
+                        
+static const std::string DRM_DOC_LINK("https://tech.accelize.com/documentation/stable");
 
 pnc_session_t *Accelize::DRM::DrmManager::s_pnc_session = nullptr;
 uint32_t *Accelize::DRM::DrmManager::s_pnc_tzvaddr = nullptr;
@@ -176,10 +178,10 @@ private:
 
             // Request initialization of the Drm Controller Trusted App
             if ( pnc_session_request(s_pnc_session, PNC_DRM_INIT_SHM, 0) < 0) {
-                Throw( DRM_PncInitError, "Failed to initialize DRM Controller TA: {}. {} {}", 
-                    strerror(errno),
-                    "Please verify the DRM Controller kernel in the PL is at the right offset address.",
-                    "For more details refer to the online documentation: https://tech.accelize.com/documentation/stable/drm_hardware_integration.html#xilinx-r-som-boards" );
+                std::string msg = fmt::format( "Failed to initialize DRM Controller TA: {}. ", strerror(errno) );
+                msg += fmt::format( "Please verify the DRM Controller instance in the PL is at the right offset address. " );
+                msg += fmt::format( "For more details refer to the online documentation: {}/drm_hardware_integration.html#xilinx-r-som-boards", DRM_DOC_LINK );
+                Throw( DRM_PncInitError, msg );
             }
             Debug( "DRM Controller TA initialized. " );
  
