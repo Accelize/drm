@@ -174,10 +174,12 @@ private:
             }
             Debug( "DRM Controller TA information collected. " );
 
-            // Ask drm controller app to initialize shared memory
+            // Request initialization of the Drm Controller Trusted App
             if ( pnc_session_request(s_pnc_session, PNC_DRM_INIT_SHM, 0) < 0) {
-                Throw( DRM_PncInitError, "Failed to initialize shared memory for DRM Controller TA: {}. ", 
-                    strerror(errno) );
+                Throw( DRM_PncInitError, "Failed to initialize DRM Controller TA: {}. {} {}", 
+                    strerror(errno),
+                    "Please verify the DRM Controller kernel in the PL is at the right offset address.",
+                    "For more details refer to the online documentation: https://tech.accelize.com/documentation/stable/drm_hardware_integration.html#xilinx-r-som-boards" );
             }
             Debug( "DRM Controller TA initialized. " );
  
