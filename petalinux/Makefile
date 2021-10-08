@@ -17,9 +17,10 @@ check:
 ifndef PETALINUX_VER
 	$(error You have to source Petalinux settings)
 endif
-ifneq ($(PETALINUX_VER),2020.2.2)
-	$(error This makefile only support Petalinux 2020.2.2)
+ifneq PYTHON3
+	$(error PYTHON3 must be defined)
 endif
+
 
 petalinux-create: check
 	@# create project
@@ -29,7 +30,7 @@ petalinux-config: check petalinux-create
 	@petalinux-config -p $(PROJECT_PATH) --silentconfig
 	@# ============= Add accelize drm library =============
 	@petalinux-create -p $(PROJECT_PATH) -t apps --template install -n libaccelize-drm --enable
-	@python $(ROOT)/prepare.py $(PL_VERSION) -o $(ROOT)/libaccelize-drm/
+	@$PYTHON3 $(ROOT)/prepare.py $(PL_VERSION) -o $(ROOT)/libaccelize-drm/
 	@cp -r $(ROOT)/libaccelize-drm/libaccelize-drm.bb \
 			$(PROJECT_PATH)/project-spec/meta-user/recipes-apps/libaccelize-drm/
 	#@# ============= fix initramfs problem of KV260 build =============
