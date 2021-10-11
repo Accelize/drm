@@ -19,7 +19,7 @@ S = "$${WORKDIR}/git"
 
 PV = "${TMPL_PV}"
 
-PR = "1.pl${TMPL_PL_VERSION}"
+PR = "${TMPL_PR}"
 
 DEPENDS += " \
     curl \
