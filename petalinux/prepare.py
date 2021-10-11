@@ -70,7 +70,7 @@ if __name__ == '__main__':
     print('GIT commit =', git_commit)
     
     # Check if working tree is dirty
-    result = run(['git', 'diff-index', '--quiet'], **run_args)
+    result = run(['git', 'diff-index', '--quiet', 'HEAD'], **run_args)
     dirty = result.returncode != 0
     print('dirty=', dirty)
     
