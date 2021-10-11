@@ -5,15 +5,25 @@ Prepare the petalinux recipe used to generate the package of the DRM Library pac
 """
 
 from argparse import ArgumentParser
-from os import pardir, makedirs
-from os.path import realpath, dirname, join, isdir
-from subprocess import run, PIPE
+from os import pardir, makedirs, getcwd
+from os.path import abspath, realpath, dirname, join, isdir
+from subprocess import run, PIPE, CalledProcessError
 from string import Template
+import shlex
 import hashlib
 import re
 
 
 SCRIPT_DIR = dirname(realpath(__file__))
+
+run_args = dict(stdout=PIPE, stderr=PIPE, universal_newlines=True)
+
+def run_git(git_cmd, from_dir=None):
+    if from_dir:
+        git_cmd = git_cmd.replace('git', f'git -C {from_dir}')
+    result = run(shlex.split(git_cmd), **run_args)
+    result.check_returncode()
+    return result.stdout.strip()
 
 
 if __name__ == '__main__':    
@@ -33,8 +43,12 @@ if __name__ == '__main__':
         help='Specify output directory.')
     args = parser.parse_args()
     
-    run_args = dict(stdout=PIPE, stderr=PIPE, universal_newlines=True)
     git_options = ''
+    
+    # Check git version if -C option is given
+    from_dir = None
+    if abspath(SCRIPT_DIR) != abspath(getcwd()):
+        from_dir = abspath(SCRIPT_DIR)
     
     # Get Version in CMakeLists.txt
     cmake_file = join(SCRIPT_DIR, pardir, 'CMakeLists.txt')
@@ -56,28 +70,25 @@ if __name__ == '__main__':
     print('LICENSE MD5 =', md5)
 
     # Get current branch
-    result = run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], **run_args)
-    result.check_returncode()
-    git_branch = result.stdout.strip()
+    git_branch = run_git('git rev-parse --abbrev-ref HEAD', from_dir=from_dir)
     git_options += f';branch={git_branch}'
     print('GIT branch =', git_branch)
 
     # Get current commit
-    result = run(['git', 'rev-parse', 'HEAD'], **run_args)
-    result.check_returncode()
-    git_commit = result.stdout.strip()
+    git_commit = run_git('git rev-parse HEAD', from_dir=from_dir)
     git_commit_short = git_commit[:7]
     print('GIT commit =', git_commit)
     
     # Check if working tree is dirty
-    result = run(['git', 'diff-index', '--quiet', 'HEAD'], **run_args)
-    dirty = result.returncode != 0
+    try:
+        run_git('git diff-index --quiet HEAD', from_dir=from_dir)
+        dirty = False
+    except CalledProcessError:
+        dirty = True
     print('dirty=', dirty)
     
     # Get current tag if any
-    result = run(['git', 'tag', '--points-at', 'HEAD'], **run_args)
-    result.check_returncode()
-    git_tag = result.stdout.strip()
+    git_tag = run_git('git tag --points-a HEAD', from_dir=from_dir)
     if git_tag:
         print('GIT tag =', git_tag)
         assert cmake_version_str == git_tag, 'Tag must match version in CMakeLists.txt'
@@ -116,7 +127,3 @@ if __name__ == '__main__':
         f.write(dst_str)
     
     print('Done')
-    
-    
-
-
