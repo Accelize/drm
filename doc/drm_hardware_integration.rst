@@ -324,10 +324,11 @@ protected IP cores.
 .. warning:: The ``drm_aclk`` clock of the DRM Controller and the DRM Activators
              MUST be the same clock.
 
-.. note:: For SoM platforms, the controller IP is indeed a liteweight bridge IP which has the exact same
-          interfaces and is responsible for translating the requests from the SW Controller
-          running on the TEE of the processor core to the Activators on the Fabrics.
-          To get the SW Controller application, please contact `Accelize Support Team <mailto:support@accelize.com>`_.
+.. note:: For SoM platforms, the controller IP is a lightweight bridge IP which has the exact same
+          interfaces as the full Controller IP and is responsible for translating the requests from the SW Controller
+          running on the TEE of the processor core to the Activator IP in the Fabrics.
+
+.. note:: For SoM platforms, contact `Accelize Support Team <mailto:support@accelize.com>`_ to get the SW Controller Trusted Application.
 
 
 Simulate your design
