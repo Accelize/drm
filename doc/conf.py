@@ -49,7 +49,7 @@ html_favicon = '_static/Accelize_logo-150x150.png'
 html_logo = '_static/logo.png'
 html_show_sourcelink = False
 html_show_sphinx = False
-html_context = {'css_files': ['_static/accelize.css']}
+#html_context = {'css_files': ['_static/accelize.css']}
 
 
 # -- Options for HTMLHelp output ---------------------------------------------
