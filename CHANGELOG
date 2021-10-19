@@ -1,4 +1,5 @@
-* Mon Jun 29 2021 Accelize v2.5.4
+* Mon Oct 19 2021 Accelize v2.5.4-rc.1
+- NEW: Support of HDK v7.0.0.0.
 - NEW: Support DRM Hybrid Solution for SoM boards
 - NEW: Define a default asynchronous error callback.
 
