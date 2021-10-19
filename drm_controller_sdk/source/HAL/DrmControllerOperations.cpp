@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerOperations.cpp
-*  \version   6.0.1.0
-*  \date      May 2021
+*  \version   7.0.0.0
+*  \date      October 2021
 *  \brief     Class DrmControllerOperations is an abstraction level to execute operations.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.
@@ -156,8 +156,28 @@ unsigned int DrmControllerOperations::extractDrmVersion(std::string &drmVersion)
 *   \param[out] adaptiveProportionTestFailures is the value of the Adaptive Proportion Test Failures.
 *   \return Returns the error code produced by the read/write register function.
 **/
+unsigned int DrmControllerOperations::extractAdaptiveProportionTestFailures(std::vector<unsigned int> &adaptiveProportionTestFailures) const {
+  return readAdaptiveProportionTestFailuresRegister(adaptiveProportionTestFailures);
+}
+
+/** extractAdaptiveProportionTestFailures
+*   \brief Extract the Adaptive Proportion Test Failures of the DRM controller.
+*   This method will access to the system bus to extract the Adaptive Proportion Test Failures.
+*   \param[out] adaptiveProportionTestFailures is the value of the Adaptive Proportion Test Failures.
+*   \return Returns the error code produced by the read/write register function.
+**/
 unsigned int DrmControllerOperations::extractAdaptiveProportionTestFailures(std::string &adaptiveProportionTestFailures) const {
   return readAdaptiveProportionTestFailuresRegister(adaptiveProportionTestFailures);
+}
+
+/** extractRepetitionCountTestFailures
+*   \brief Extract the Repetition Count Test Failures of the DRM controller.
+*   This method will access to the system bus to extract the Repetition Count Test Failures.
+*   \param[out] repetitionCountTestFailures is the value of the Repetition Count Test Failures.
+*   \return Returns the error code produced by the read/write register function.
+**/
+unsigned int DrmControllerOperations::extractRepetitionCountTestFailures(std::vector<unsigned int> &repetitionCountTestFailures) const {
+  return readRepetitionCountTestFailuresRegister(repetitionCountTestFailures);
 }
 
 /** extractRepetitionCountTestFailures

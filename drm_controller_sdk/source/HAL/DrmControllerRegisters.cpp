@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegisters.cpp
-*  \version   6.0.1.0
-*  \date      May 2021
+*  \version   7.0.0.0
+*  \date      October 2021
 *  \brief     Class DrmControllerRegisters defines low level procedures
 *             for access to all registers.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
@@ -1391,6 +1391,7 @@ DrmControllerRegisters::tDrmControllerRegistersStrategyDictionary DrmControllerR
   strategies[DRM_CONTROLLER_V4_2_1_SUPPORTED_VERSION] = new DrmControllerRegistersStrategy_v4_2_1(readRegisterFunction, writeRegisterFunction);
   strategies[DRM_CONTROLLER_V6_0_0_SUPPORTED_VERSION] = new DrmControllerRegistersStrategy_v6_0_0(readRegisterFunction, writeRegisterFunction);
   strategies[DRM_CONTROLLER_V6_0_1_SUPPORTED_VERSION] = new DrmControllerRegistersStrategy_v6_0_1(readRegisterFunction, writeRegisterFunction);
+  strategies[DRM_CONTROLLER_V7_0_0_SUPPORTED_VERSION] = new DrmControllerRegistersStrategy_v7_0_0(readRegisterFunction, writeRegisterFunction);
   return strategies;
 }
 
