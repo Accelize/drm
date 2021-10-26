@@ -2249,10 +2249,7 @@ protected:
         TClock::duration timeSpan;
         double mseconds( 0.0 );
         TClock::time_point timeStart = TClock::now();
-        uint32_t sleep_period = 10000;
-        if ( mSimulationFlag )
-            sleep_period *= 1000;
-
+        uint32_t sleep_period = mSimulationFlag? 10000000 : 10000;
         while( mseconds < mActivationTransmissionTimeoutMS ) {
             checkDRMCtlrRet( getDrmController().readActivationCodesTransmittedStatusRegister(
                     activationCodesTransmitted ) );
@@ -2270,7 +2267,7 @@ protected:
         }
     }
 
-    checkDRMControllerLicenseType() {
+    void checkDRMControllerLicenseType() {
         bool is_nodelocked = isDrmCtrlInNodelock();
         bool is_metered = isDrmCtrlInMetering();
         if ( is_nodelocked && is_metered )
@@ -2286,9 +2283,16 @@ protected:
         }
     }
 
-    waitUntilSessionIsRunning() {
+    void waitUntilSessionIsRunning() {
+        if ( !isDrmCtrlInMetering() ) {
+            Debug( "There is no session in Node-Locked licensing mode" );
+            return;
+        }
         double mseconds( 0.0 );
         bool is_running(false);
+        TClock::duration timeSpan;
+        uint32_t sleep_period = mSimulationFlag? 10000000 : 10000;
+        TClock::time_point timeStart = TClock::now();
         while( mseconds < mActivationTransmissionTimeoutMS ) {
             is_running = isSessionRunning();
             timeSpan = TClock::now() - timeStart;
@@ -2330,9 +2334,7 @@ protected:
             checkDRMControllerLicenseType();
 
             // Wait until session is running if license is metering
-            if (is_metered) {
-                waitUntilSessionIsRunning();
-            }
+            waitUntilSessionIsRunning();
 
             // Check if an error occurred
             checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 5 ) );
