@@ -95,7 +95,7 @@ static const std::string DRM_SELF_TEST_ERROR_MESSAGE( "Could not access DRM Cont
 
 static const std::string DRM_CONNECTION_ERROR_MESSAGE( "\n!!! The issue could either be caused by a networking problem, by a firewall or NAT blocking incoming traffic or by a wrong server address. "
                         "Please verify your configuration and try again !!!\n" );
-                        
+
 static const std::string DRM_DOC_LINK("https://tech.accelize.com/documentation/stable");
 
 pnc_session_t *Accelize::DRM::DrmManager::s_pnc_session = nullptr;
@@ -128,16 +128,16 @@ private:
     int32_t pnc_write_drm_ctrl_ta( uint32_t addr, uint32_t value ) {
         if (addr == 0) {
             if (value > 5)
-                Throw( DRM_Fatal, "Invalid DRM Controller page index {}. ", value );                
+                Throw( DRM_Fatal, "Invalid DRM Controller page index {}. ", value );
             s_pnc_page_offset = s_pnc_tzvaddr[value];
         }
         *(s_pnc_tzvaddr + s_pnc_page_offset + (addr >> 2)) = value;
         return 0;
     }
-    
+
     bool pnc_initialize_drm_ctrl_ta() {
         int err = 0;
-        err = pnc_session_new(PNC_ALLOC_SIZE, &s_pnc_session); 
+        err = pnc_session_new(PNC_ALLOC_SIZE, &s_pnc_session);
         if ( err == -ENODEV ) {
             Info( "Provencecore driver is not loaded" );
             return false;
@@ -155,7 +155,7 @@ private:
                         sleep(1);
                         continue;
                     }
-                    Throw( DRM_PncInitError, "Failed to configure ProvenCore for DRM Controller TA: {}. ", 
+                    Throw( DRM_PncInitError, "Failed to configure ProvenCore for DRM Controller TA: {}. ",
                         strerror(errno) );
                 }
                 break;
@@ -167,11 +167,11 @@ private:
 
             // get virtual address and size of shared memory region
             if ( pnc_session_getinfo(s_pnc_session, (void**)&s_pnc_tzvaddr, &s_pnc_tzsize) < 0) {
-                Throw( DRM_PncInitError, "Failed to get information from DRM Controller TA: {}. ", 
+                Throw( DRM_PncInitError, "Failed to get information from DRM Controller TA: {}. ",
                     strerror(errno) );
             }
             if (s_pnc_tzvaddr == NULL) {
-                Throw( DRM_PncInitError, "Failed to create shared memory for DRM Controller TA: {}. ", 
+                Throw( DRM_PncInitError, "Failed to create shared memory for DRM Controller TA: {}. ",
                     strerror(errno) );
             }
             Debug( "DRM Controller TA information collected. " );
@@ -184,7 +184,7 @@ private:
                 Throw( DRM_PncInitError, msg );
             }
             Debug( "DRM Controller TA initialized. " );
- 
+
             Debug( "DRM Controller TA ready to operate. " );
             return true;
         }
@@ -194,7 +194,7 @@ private:
             throw;
         }
     }
-    
+
     void pnc_uninitialize_drm_ctrl_ta() {
         pnc_session_destroy( s_pnc_session );
         s_pnc_session = nullptr;
@@ -1592,7 +1592,7 @@ protected:
         }
         mExpirationTime += std::chrono::seconds( mLicenseDuration );
         Debug( "Update expiration time to {}", time_t_to_string( steady_clock_to_time_t( mExpirationTime ) ) );
-
+/*
         // Wait until license has been pushed to Activator's port
         bool activationCodesTransmitted( false );
         TClock::duration timeSpan;
@@ -1652,7 +1652,7 @@ protected:
                 Throw( DRM_CtlrError, "DRM Controller could not run Session ID {} after {:f} ms. ", mSessionID, mseconds ); //LCOV_EXCL_LINE
             }
         }
-
+*/
         Debug( "Provisioned license #{} for session {} on DRM controller", mLicenseCounter, mSessionID );
         mLicenseCounter ++;
     }
@@ -2244,6 +2244,67 @@ protected:
         }
     }
 
+    void waitActivationCodeTransmitted() {
+        bool activationCodesTransmitted( false );
+        TClock::duration timeSpan;
+        double mseconds( 0.0 );
+        TClock::time_point timeStart = TClock::now();
+        uint32_t sleep_period = 10000;
+        if ( mSimulationFlag )
+            sleep_period *= 1000;
+
+        while( mseconds < mActivationTransmissionTimeoutMS ) {
+            checkDRMCtlrRet( getDrmController().readActivationCodesTransmittedStatusRegister(
+                    activationCodesTransmitted ) );
+            timeSpan = TClock::now() - timeStart;
+            mseconds = 1000.0 * double( timeSpan.count() ) * TClock::period::num / TClock::period::den;
+            if ( activationCodesTransmitted ) {
+                Debug( "License #{} transmitted after {:f} ms", mLicenseCounter, mseconds );
+                break;
+            }
+            Debug2( "License #{} not transmitted yet after {:f} ms", mLicenseCounter, mseconds );
+            usleep(sleep_period);
+        }
+        if ( !activationCodesTransmitted ) {
+            Throw( DRM_CtlrError, "DRM Controller could not transmit Licence #{} to activators after {:f} ms. ", mLicenseCounter, mseconds ); //LCOV_EXCL_LINE
+        }
+    }
+
+    checkDRMControllerLicenseType() {
+        bool is_nodelocked = isDrmCtrlInNodelock();
+        bool is_metered = isDrmCtrlInMetering();
+        if ( is_nodelocked && is_metered )
+            Unreachable( "DRM Controller cannot be in both Node-Locked and Metering/Floating license modes. " ); //LCOV_EXCL_LINE
+        if ( !isConfigInNodeLock() ) {
+            if ( !is_metered )
+                Unreachable( "DRM Controller failed to switch to Metering license mode" ); //LCOV_EXCL_LINE
+            Debug( "DRM Controller is in Metering license mode" );
+        } else {
+            if ( !is_nodelocked )
+                Unreachable( "DRM Controller failed to switch to Node-Locked license mode" ); //LCOV_EXCL_LINE
+            Debug( "DRM Controller is in Node-Locked license mode" );
+        }
+    }
+
+    waitUntilSessionIsRunning() {
+        double mseconds( 0.0 );
+        bool is_running(false);
+        while( mseconds < mActivationTransmissionTimeoutMS ) {
+            is_running = isSessionRunning();
+            timeSpan = TClock::now() - timeStart;
+            mseconds = 1000.0 * double( timeSpan.count() ) * TClock::period::num / TClock::period::den;
+            if ( is_running ) {
+                Debug( "Session ID {} is now running after {:f} ms", mSessionID, mseconds );
+                break;
+            }
+            Debug2( "Session ID {} is not running yet after {:f} ms", mSessionID, mseconds );
+            usleep(sleep_period);
+        }
+        if ( !is_running ) {
+            Throw( DRM_CtlrError, "DRM Controller could not run Session ID {} after {:f} ms. ", mSessionID, mseconds ); //LCOV_EXCL_LINE
+        }
+    }
+
     void startSession() {
         {
             Debug( "Waiting metering access mutex from startSession" );
@@ -2261,6 +2322,18 @@ protected:
             // Send request and receive new license
             Json::Value license_json = getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
             setLicense( license_json );
+
+            // Wait until license has been pushed to Activator's port
+            waitActivationCodeTransmitted();
+
+            // Check DRM Controller has switched to the right license mode
+            checkDRMControllerLicenseType();
+
+            // Wait until session is running if license is metering
+            if (is_metered) {
+                waitUntilSessionIsRunning();
+            }
+
             // Check if an error occurred
             checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 5 ) );
 
@@ -3082,60 +3155,60 @@ public:
 
 template<> std::string DrmManager::Impl::get( const ParameterKey key_id ) const {
     TRY
-		IMPL_GET_BODY
-		if ( json_value[key_str].isString() )
-		    return json_value[key_str].asString();
-		return json_value[key_str].toStyledString();
+        IMPL_GET_BODY
+        if ( json_value[key_str].isString() )
+            return json_value[key_str].asString();
+        return json_value[key_str].toStyledString();
     CATCH_AND_THROW
 }
 
 template<> bool DrmManager::Impl::get( const ParameterKey key_id ) const {
-	TRY
-		IMPL_GET_BODY
-		return json_value[key_str].asBool();
-	CATCH_AND_THROW
+    TRY
+        IMPL_GET_BODY
+        return json_value[key_str].asBool();
+    CATCH_AND_THROW
 }
 
 template<> int32_t DrmManager::Impl::get( const ParameterKey key_id ) const {
-	TRY
-		IMPL_GET_BODY
-		return json_value[key_str].asInt();
-	CATCH_AND_THROW
+    TRY
+        IMPL_GET_BODY
+        return json_value[key_str].asInt();
+    CATCH_AND_THROW
 }
 
 template<> uint32_t DrmManager::Impl::get( const ParameterKey key_id ) const {
-	TRY
-		IMPL_GET_BODY
-		return json_value[key_str].asUInt();
-	CATCH_AND_THROW
+    TRY
+        IMPL_GET_BODY
+        return json_value[key_str].asUInt();
+    CATCH_AND_THROW
 }
 
 template<> int64_t DrmManager::Impl::get( const ParameterKey key_id ) const {
-	TRY
-		IMPL_GET_BODY
-		return json_value[key_str].asInt64();
-	CATCH_AND_THROW
+    TRY
+        IMPL_GET_BODY
+        return json_value[key_str].asInt64();
+    CATCH_AND_THROW
 }
 
 template<> uint64_t DrmManager::Impl::get( const ParameterKey key_id ) const {
-	TRY
-		IMPL_GET_BODY
-		return json_value[key_str].asUInt64();
-	CATCH_AND_THROW
+    TRY
+        IMPL_GET_BODY
+        return json_value[key_str].asUInt64();
+    CATCH_AND_THROW
 }
 
 template<> float DrmManager::Impl::get( const ParameterKey key_id ) const {
-	TRY
-		IMPL_GET_BODY
-		return json_value[key_str].asFloat();
-	CATCH_AND_THROW
+    TRY
+        IMPL_GET_BODY
+        return json_value[key_str].asFloat();
+    CATCH_AND_THROW
 }
 
 template<> double DrmManager::Impl::get( const ParameterKey key_id ) const {
-	TRY
-		IMPL_GET_BODY
-		return json_value[key_str].asDouble();
-	CATCH_AND_THROW
+    TRY
+        IMPL_GET_BODY
+        return json_value[key_str].asDouble();
+    CATCH_AND_THROW
 }
 
 #define IMPL_SET_BODY \
@@ -3146,57 +3219,57 @@ template<> double DrmManager::Impl::get( const ParameterKey key_id ) const {
 
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const std::string& value ) {
-	TRY
-		IMPL_SET_BODY
-	CATCH_AND_THROW
+    TRY
+        IMPL_SET_BODY
+    CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const bool& value ) {
-	TRY
-		IMPL_SET_BODY
-	CATCH_AND_THROW
+    TRY
+        IMPL_SET_BODY
+    CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const int32_t& value ) {
-	TRY
-		IMPL_SET_BODY
-	CATCH_AND_THROW
+    TRY
+        IMPL_SET_BODY
+    CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const uint32_t& value ) {
-	TRY
-		IMPL_SET_BODY
-	CATCH_AND_THROW
+    TRY
+        IMPL_SET_BODY
+    CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const int64_t& value ) {
-	TRY
-		Json::Value json_value;
-		std::string key_str = findParameterString( key_id );
-		json_value[key_str] = Json::Int64( value );
-		set( json_value );
-	CATCH_AND_THROW
+    TRY
+        Json::Value json_value;
+        std::string key_str = findParameterString( key_id );
+        json_value[key_str] = Json::Int64( value );
+        set( json_value );
+    CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const uint64_t& value ) {
-	TRY
-		Json::Value json_value;
-		std::string key_str = findParameterString( key_id );
-		json_value[key_str] = Json::UInt64( value );
-		set( json_value );
-	CATCH_AND_THROW
+    TRY
+        Json::Value json_value;
+        std::string key_str = findParameterString( key_id );
+        json_value[key_str] = Json::UInt64( value );
+        set( json_value );
+    CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const float& value ) {
-	TRY
-		IMPL_SET_BODY
-	CATCH_AND_THROW
+    TRY
+        IMPL_SET_BODY
+    CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const double& value ) {
-	TRY
-		IMPL_SET_BODY
-	CATCH_AND_THROW
+    TRY
+        IMPL_SET_BODY
+    CATCH_AND_THROW
 }
 
 
