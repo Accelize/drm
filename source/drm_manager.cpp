@@ -1585,28 +1585,8 @@ protected:
 
         // Load license timer
         if ( !isConfigInNodeLock() ) {
-            checkDRMCtlrRet( getDrmController().loadLicenseTimerInit( licenseTimer ) );
-            if (mIsHybrid) {
-                // Assert License Timer Init Semaphore Request bit
-                writeDrmAddress(0, 0);
-                writeDrmAddress(0x8, 0x80000000);
-                Debug( "Assert the Semaphore Request bit" );
-                // Wait until License Timer Init Semaphore Acknowledge bit is asserted
-                unsigned int semaphore_ack = 0;
-                while(true) {
-                    Debug( "Wait until the Semaphore Ack bit is asserted" );
-                    writeDrmAddress(0, 0);
-                    readDrmAddress(0x48, semaphore_ack);
-                    if (semaphore_ack) 
-                        break;
-                    usleep(10000);
-                }
-                Debug( "The Semaphore Ack bit is asserted" );
-                // Deassert License Timer Init Semaphore Request bit
-                writeDrmAddress(0, 0);
-                writeDrmAddress(0x8, 0);
-                Debug( "Deassert the Semaphore Request bit" );
-            }
+            uint32_t timeout = 5;
+            checkDRMCtlrRet( getDrmController().loadLicenseTimerInit( licenseTimer, mIsHybrid, timeout ) );
             Debug( "Wrote license timer #{} of session ID {} for a duration of {} seconds",
                     mLicenseCounter, mSessionID, mLicenseDuration );
         }
