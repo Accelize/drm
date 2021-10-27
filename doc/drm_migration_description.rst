@@ -180,7 +180,7 @@ From v3.x to 4.x
 
 - `activator` folder:
 
-  - DRM Activator top-level files (VHDL and Verilog) have been prefixed with 'top_' and have been moved
+  - DRM Activator top-level files (VHDL and Verilog) have been prefixed with top_ and have been moved
     to the `sim` et `syn` folder for the simulation and synthesis respectively.
   - `simu` folder name has been replaced by `sim` and `rtl` has been replace by `core`.
   - A DRM Controller BFM has been embedded directly in the Activator simulation model to unlock the IP without
@@ -194,7 +194,7 @@ From v3.x to 4.x
 
   - RTL source files have been moved to a `rtl` folder and split in 3 different sub-folders: `core` contains
     the core of the IP, `sim` and `syn` contains the top level of the Controller IP in VHDL and SystemVerilog for
-    the simulation and synthesis respectively. Top level files are prefixed with 'top_'.
+    the simulation and synthesis respectively. Top level files are prefixed with top_.
   - `sdaccel` and `vitis` folders has been create: they contains the scirpt and makefile to generate the kernel
     for those specific flows.
 

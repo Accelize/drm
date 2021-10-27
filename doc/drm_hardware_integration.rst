@@ -281,7 +281,7 @@ Instantiate the adapted IP core and DRM Activator in the wrapper and connect the
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Instantiate the DRM Activator IP located in the DRM_HDK/v_l_n_v/syn.
-- Connect the signals of the DRM Activator listed by the table in section `Adapt the IP core`_
+- Connect the signals of the DRM Activator listed by the table in section `Adapt the original IP`_
   to the adapted IP core.
 - Connect the DRM bus of the DRM Activator listed by the table in section `Create a wrapper`_
   to the wrapper interface.
@@ -582,7 +582,7 @@ Synthesize and implement your design
                See examples below.
 
 Xilinx(R) Vivado
--------------
+----------------
 
 Refer to `Supported hardware`_ for more information on supported Vivado versions.
 
