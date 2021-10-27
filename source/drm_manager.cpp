@@ -58,7 +58,6 @@ limitations under the License.
 
 #define FREQ_DETECTION_VERSION_2	 0x60DC0DE0
 #define FREQ_DETECTION_VERSION_3	 0x60DC0DE1
-#define FREQ_DETECTION_VERSION_4	 0x60DC0DE2
 
 #define PNC_PAGE_SIZE               4096
 #define PNC_ALLOC_SIZE              (PNC_PAGE_SIZE * 24)
@@ -282,6 +281,9 @@ protected:
 
     // To protect access to the metering data (to securize the segment ID check in HW)
     mutable std::mutex mMeteringAccessMutex;
+    
+    // Operating mode
+    bool mIsHybrid = false;
 
     // DRM Frequency parameters
     int32_t mFrequencyInit = 0;
@@ -383,10 +385,13 @@ protected:
         mFrequencyInit = 0;
         mFrequencyCurr = 0;
 
+        mIsHybrid = false;
+
         mSimulationFlag = false;
 
         mDebugMessageLevel = spdlog::level::trace;
-
+        
+        
         // Define default asynchronous error callback
         f_asynch_error = [](std::string msg) { std::cout << "ERROR: " << msg << std::endl; };
 
@@ -1066,13 +1071,11 @@ protected:
         // Determine frequency detection method if metering/floating mode is active
         if ( !isConfigInNodeLock() ) {
             determineFrequencyDetectionMethod();
-            if ( mFreqDetectionMethod == 4 ) {
-                detectDrmFrequencyMethod4();
-            } else if ( mFreqDetectionMethod == 3 ) {
+            if ( mFreqDetectionMethod == 3 ) {
                 detectDrmFrequencyMethod3();
             } else if ( mFreqDetectionMethod == 2 ) {
                 detectDrmFrequencyMethod2();
-            } else if ( mFreqDetectionMethod == 1 ) {
+            } else if ( ( mFreqDetectionMethod == 1 ) || ( mFreqDetectionMethod == 0 ) ) {
             } else {
                 Warning( "DRM frequency auto-detection is disabled: {} will be used to compute license timers", mFrequencyCurr );
             }
@@ -1384,8 +1387,10 @@ protected:
         checkDRMCtlrRet( getDrmController().extractDrmVersion( drmVersion ) );
         checkDRMCtlrRet( getDrmController().extractDna( dna ) );
         checkDRMCtlrRet( getDrmController().extractVlnvFile( nbOfDetectedIps, vlnvFile ) );
+        Debug( "Number of detected activators: {}", nbOfDetectedIps );
         checkDRMCtlrRet( getDrmController().readMailboxFileRegister( readOnlyMailboxSize, readWriteMailboxSize,
                                                                      readOnlyMailboxData, readWriteMailboxData ) );
+                                            
         Debug( "Mailbox sizes: read-only={}, read-write={}", readOnlyMailboxSize, readWriteMailboxSize );
         readOnlyMailboxData.push_back( 0 );
         mailboxReadOnly = std::string( (char*)readOnlyMailboxData.data() );
@@ -1581,6 +1586,27 @@ protected:
         // Load license timer
         if ( !isConfigInNodeLock() ) {
             checkDRMCtlrRet( getDrmController().loadLicenseTimerInit( licenseTimer ) );
+            if (mIsHybrid) {
+                // Assert License Timer Init Semaphore Request bit
+                writeDrmAddress(0, 0);
+                writeDrmAddress(0x8, 0x80000000);
+                Debug( "Assert the Semaphore Request bit" );
+                // Wait until License Timer Init Semaphore Acknowledge bit is asserted
+                unsigned int semaphore_ack = 0;
+                while(true) {
+                    Debug( "Wait until the Semaphore Ack bit is asserted" );
+                    writeDrmAddress(0, 0);
+                    readDrmAddress(0x48, semaphore_ack);
+                    if (semaphore_ack) 
+                        break;
+                    usleep(10000);
+                }
+                Debug( "The Semaphore Ack bit is asserted" );
+                // Deassert License Timer Init Semaphore Request bit
+                writeDrmAddress(0, 0);
+                writeDrmAddress(0x8, 0);
+                Debug( "Deassert the Semaphore Request bit" );
+            }
             Debug( "Wrote license timer #{} of session ID {} for a duration of {} seconds",
                     mLicenseCounter, mSessionID, mLicenseDuration );
         }
@@ -1831,17 +1857,20 @@ protected:
             Debug( "Frequency detection sequence is bypassed." );
             return;
         }
+        
+        if ( mIsHybrid ){
+            Debug( "SW DRM Controller: no frequency detection is performed (method 4)" );
+            mFreqDetectionMethod = 0;
+            mBypassFrequencyDetection = true;
+            return;
+        }
+        
         int ret = writeDrmAddress(0, 0 );
         ret |= readDrmAddress( REG_FREQ_DETECTION_VERSION, reg );
         if ( ret != 0 ) {
             Debug( "Failed to read DRM Ctrl frequency detection version register, errcode = {}. ", ret ); //LCOV_EXCL_LINE
         }
-        if ( reg == FREQ_DETECTION_VERSION_4 ) {
-            // Use Method 3
-            Debug( "SW DRM Controller: no frequency detection is performed (method 4)" );
-            mFreqDetectionMethod = 4;
-            mBypassFrequencyDetection = true;
-        } else if ( reg == FREQ_DETECTION_VERSION_3 ) {
+        if ( reg == FREQ_DETECTION_VERSION_3 ) {
             // Use Method 3
             Debug( "Use dedicated counter to compute DRM frequency (method 3)" );
             mFreqDetectionMethod = 3;
@@ -2401,7 +2430,8 @@ public:
     {
         TRY
             Debug( "Calling Impl public constructor" );
-            if ( pnc_initialize_drm_ctrl_ta() ) {
+            mIsHybrid = pnc_initialize_drm_ctrl_ta();
+            if ( mIsHybrid ) {
                 f_read_register = [&]( uint32_t  offset, uint32_t *value ) {
                     return pnc_read_drm_ctrl_ta( offset, value );
                 };

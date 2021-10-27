@@ -25,10 +25,6 @@ config: check
 	@# ============= Add accelize drm library =============
 	@petalinux-create -p $(PROJECT_PATH) -t apps --template install -n libaccelize-drm --enable --force
 	@$(PYTHON3) $(SELF_DIR)/prepare.py $(PETALINUX_VER) -o $(PROJECT_PATH)/project-spec/meta-user/recipes-apps/libaccelize-drm/
-	#@# ============= fix initramfs problem of KV260 build =============
-	#@mkdir -p $(PROJECT_PATH)/project-spec/meta-user/recipes-apps/som-carrier-autoload
-	#@cp -r $(ROOT)/petalinux/som-carrier-autoload/ \
-	#		$(PROJECT_PATH)/project-spec/meta-user/recipes-apps
 
 build: check
 	@petalinux-build -p $(PROJECT_PATH)
