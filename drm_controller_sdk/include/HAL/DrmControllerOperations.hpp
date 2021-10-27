@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerOperations.hpp
-*  \version   6.0.1.0
-*  \date      May 2021
+*  \version   7.0.0.0
+*  \date      October 2021
 *  \brief     Class DrmControllerOperations is an abstraction level to execute operations.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.
@@ -96,7 +96,23 @@ namespace DrmControllerLibrary {
       *   \param[out] adaptiveProportionTestFailures is the value of the Adaptive Proportion Test Failures.
       *   \return Returns the error code produced by the read/write register function.
       **/
+      unsigned int extractAdaptiveProportionTestFailures(std::vector<unsigned int> &adaptiveProportionTestFailures) const;
+
+      /** extractAdaptiveProportionTestFailures
+      *   \brief Extract the Adaptive Proportion Test Failures of the DRM controller.
+      *   This method will access to the system bus to extract the Adaptive Proportion Test Failures.
+      *   \param[out] adaptiveProportionTestFailures is the value of the Adaptive Proportion Test Failures.
+      *   \return Returns the error code produced by the read/write register function.
+      **/
       unsigned int extractAdaptiveProportionTestFailures(std::string &adaptiveProportionTestFailures) const;
+
+      /** extractRepetitionCountTestFailures
+      *   \brief Extract the Repetition Count Test Failures of the DRM controller.
+      *   This method will access to the system bus to extract the Repetition Count Test Failures.
+      *   \param[out] repetitionCountTestFailures is the value of the Repetition Count Test Failures.
+      *   \return Returns the error code produced by the read/write register function.
+      **/
+      unsigned int extractRepetitionCountTestFailures(std::vector<unsigned int> &repetitionCountTestFailures) const;
 
       /** extractRepetitionCountTestFailures
       *   \brief Extract the Repetition Count Test Failures of the DRM controller.
@@ -196,6 +212,10 @@ namespace DrmControllerLibrary {
       *   This method will access to the system bus to read the status and the error, and write the license timer.
       *   \param[in] licenseTimerInit is the value of the license timer.
       *   \param[out] licenseTimerEnabled is the value of the status bit license timer enabled.
+      *   \param[in] useLicenseTimerInitSemaphore (default value is false) is a boolean indicating whether we should use the license timer init semaphore to
+      *              synchronize operations with the DRM Controller (required for the SW DRM Controller only).
+      *   \param[in] licenseTimerInitSemaphoreTimeout (default value 0) is the timeout value in seconds used to wait for the license timer init semaphore
+      *              to be at the expected value.
       *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_LICENSE_TIMER_RESETED_ERROR if the DRM Controller has been reseted,
       *           mDrmApi_LICENSE_TIMER_DISABLED_ERROR if the license timer is disabled or the error code produced by the read/write register function.
       *   \throw DrmControllerLicenseTimerResetedException whenever the license timer has been reseted. DrmControllerLicenseTimerResetedException::what()
@@ -203,12 +223,17 @@ namespace DrmControllerLibrary {
       *   \throw DrmControllerFunctionalityDisabledException whenever the license timer is disabled. DrmControllerFunctionalityDisabledException::what()
       *          should be called to get the exception description.
       **/
-      unsigned int loadLicenseTimerInit(const std::string &licenseTimerInit, bool &licenseTimerEnabled);
+      unsigned int loadLicenseTimerInit(const std::string &licenseTimerInit, bool &licenseTimerEnabled, const bool useLicenseTimerInitSemaphore=false,
+          const unsigned int &licenseTimerInitSemaphoreTimeout=0);
 
       /** loadLicenseTimerInit
       **  \brief Load the license timer value
       *   This method will access to the system bus to read the status and the error, and write the license timer.
       *   \param[in] licenseTimerInit is the value of the license timer.
+      *   \param[in] useLicenseTimerInitSemaphore (default value is false) is a boolean indicating whether we should use the license timer init semaphore to
+      *              synchronize operations with the DRM Controller (required for the SW DRM Controller only).
+      *   \param[in] licenseTimerInitSemaphoreTimeout (default value 0) is the timeout value in seconds used to wait for the license timer init semaphore
+      *              to be at the expected value.
       *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_LICENSE_TIMER_RESETED_ERROR if the DRM Controller has been reseted,
       *           mDrmApi_LICENSE_TIMER_DISABLED_ERROR if the license timer is disabled or the error code produced by the read/write register function.
       *   \throw DrmControllerLicenseTimerResetedException whenever the license timer has been reseted. DrmControllerLicenseTimerResetedException::what()
@@ -216,7 +241,8 @@ namespace DrmControllerLibrary {
       *   \throw DrmControllerFunctionalityDisabledException whenever the license timer is disabled. DrmControllerFunctionalityDisabledException::what()
       *          should be called to get the exception description.
       **/
-      unsigned int loadLicenseTimerInit(const std::string &licenseTimerInit);
+      unsigned int loadLicenseTimerInit(const std::string &licenseTimerInit, const bool useLicenseTimerInitSemaphore=false,
+          const unsigned int &licenseTimerInitSemaphoreTimeout=0);
 
       /** activate
       *   \brief Launch the activation procedure.

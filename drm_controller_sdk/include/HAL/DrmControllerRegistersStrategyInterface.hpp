@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegistersStrategyInterface.hpp
-*  \version   6.0.1.0
-*  \date      May 2021
+*  \version   7.0.0.0
+*  \date      October 2021
 *  \brief     Class DrmControllerRegistersStrategyInterface defines strategy interface for register access.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.
@@ -160,6 +160,15 @@ namespace DrmControllerLibrary {
       *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
       **/
       virtual unsigned int writeSampleLicenseTimerCounterCommandRegister() const = 0;
+
+      /** writeLicenseTimerInitSemaphoreRequestCommandRegister
+      *   \brief Write the LicenseTimerInitSemaphoreRequest bit in the command register to the given value (do not modify the other bits of the command register).
+      *   This method will access to the system bus to write into the command register.
+      *   \param[in] licenseTimerInitSemaphoreRequest is the value of the LicenseTimerInitSemaphoreRequest bit to write in the command register.
+      *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwise.
+      *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+      **/
+      virtual unsigned int writeLicenseTimerInitSemaphoreRequestCommandRegister(bool &licenseTimerInitSemaphoreRequest) const = 0;
 
       /** readLicenseStartAddressRegister
       *   \brief Read the license start address register.
@@ -625,6 +634,26 @@ namespace DrmControllerLibrary {
       **/
       virtual unsigned int waitSecurityAlertStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const = 0;
 
+      /** readLicenseTimerInitSemaphoreAcknowledgeStatusRegister
+      *   \brief Read the status register and get the License Timer Init Semaphore Acknowledge status bit.
+      *   This method will access to the system bus to read the status register.
+      *   \param[out] licenseTimerInitSemaphoreAcknowledge is the value of the status bit License Timer Init Semaphore Acknowledge.
+      *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwise.
+      *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+      **/
+      virtual unsigned int readLicenseTimerInitSemaphoreAcknowledgeStatusRegister(bool &licenseTimerInitSemaphoreAcknowledge) const = 0;
+
+      /** waitLicenseTimerInitSemaphoreAcknowledgeStatusRegister
+      *   \brief Wait License Timer Init Semaphore Acknowledge status register to reach specified value.
+      *   This method will access to the system bus to read the status register.
+      *   \param[in]  timeout is the timeout value in micro seconds.
+      *   \param[in]  expected is the value of the status to be expected.
+      *   \param[out] actual is the value of the status bit read.
+      *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, mDrmApi_HARDWARE_TIMEOUT_ERROR if a timeout occurred, errors from read/write register functions otherwise.
+      *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+      *   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
+      **/
+      virtual unsigned int waitLicenseTimerInitSemaphoreAcknowledgeStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const = 0;
 
       /** readNumberOfLicenseTimerLoadedStatusRegister
       *   \brief Read the status register and get the number of license timer loaded.
@@ -1051,6 +1080,16 @@ namespace DrmControllerLibrary {
 
     // protected members, functions ...
     protected:
+
+      /** readModifyWriteCommandRegister
+      *   \brief Read, modify then write the command register to the given Command value. The value of the licenseTimerInitSemaphoreRequest bit is not modified
+      *   This method will access to the system bus to read and write into the command register.
+      *   \param[in] commandValue is the value of the command to write
+      *   \param[in] licenseTimerInitSemaphoreRequestMask is the mask of the licenseTimerInitSemaphoreRequest bit which must be kept.
+      *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwise.
+      *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+      **/
+      unsigned int readModifyWriteCommandRegister(const unsigned int &commandValue, const unsigned int &licenseTimerInitSemaphoreRequestMask) const;
 
       /** readPageRegister
       *   \brief Read and get the value of the page register from the hardware.
