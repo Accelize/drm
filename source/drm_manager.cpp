@@ -97,6 +97,9 @@ static const std::string DRM_CONNECTION_ERROR_MESSAGE( "\n!!! The issue could ei
                         
 static const std::string DRM_DOC_LINK("https://tech.accelize.com/documentation/stable");
 
+static const char* SDK_SLEEP_IN_MICRO_SECONDS = "10000";
+
+
 pnc_session_t *Accelize::DRM::DrmManager::s_pnc_session = nullptr;
 uint32_t *Accelize::DRM::DrmManager::s_pnc_tzvaddr = nullptr;
 size_t Accelize::DRM::DrmManager::s_pnc_tzsize = 0;
@@ -105,11 +108,9 @@ uint32_t Accelize::DRM::DrmManager::s_pnc_page_offset = 0;
 namespace Accelize {
 namespace DRM {
 
-
 const char* getApiVersion() {
     return DRMLIB_VERSION;
 }
-
 
 class DRM_LOCAL DrmManager::Impl {
 
@@ -347,19 +348,15 @@ protected:
     #define checkDRMCtlrRet( func ) {                                                           \
         unsigned int errcode = DRM_OK;                                                          \
         try {                                                                                   \
-            Debug( "Request mutex" ); \
             std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );                  \
-            Debug( "Acquire mutex: mLicenseCounter={}", mLicenseCounter );\
             errcode = func;                                                                     \
             Debug( "{} returned {}", #func, errcode );                                          \
             if ( errcode ) {                                                                    \
                 logDrmCtrlError();                                                              \
                 logDrmCtrlTrngStatus();                                                         \
                 Error( "{} failed with error code {}", #func, errcode );                        \
-                Debug( "Release mutex" ); \
                 Throw( DRM_CtlrError, "{} failed with error code {}. ", #func, errcode );       \
             }                                                                                   \
-            Debug( "Release mutex" ); \
         } catch( const std::exception &e ) {                                                    \
             logDrmCtrlError();                                                                  \
             logDrmCtrlTrngStatus();                                                             \
@@ -394,7 +391,6 @@ protected:
         mSimulationFlag = false;
 
         mDebugMessageLevel = spdlog::level::trace;
-        
         
         // Define default asynchronous error callback
         f_asynch_error = [](std::string msg) { std::cout << "ERROR: " << msg << std::endl; };
@@ -1394,7 +1390,6 @@ protected:
         Debug( "Number of detected activators: {}", nbOfDetectedIps );
         checkDRMCtlrRet( getDrmController().readMailboxFileRegister( readOnlyMailboxSize, readWriteMailboxSize,
                                                                      readOnlyMailboxData, readWriteMailboxData ) );
-                                            
         Debug( "Mailbox sizes: read-only={}, read-write={}", readOnlyMailboxSize, readWriteMailboxSize );
         readOnlyMailboxData.push_back( 0 );
         mailboxReadOnly = std::string( (char*)readOnlyMailboxData.data() );
@@ -1579,9 +1574,7 @@ protected:
             Throw( DRM_WSRespError, "Malformed response from License Web Service: {}", e.what() );
         }
 
-        Debug( "Requesting mutex" );
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        Debug( "Acquire mutex: mLicenseCounter={}", mLicenseCounter );
 
         if ( mLicenseCounter == 0 ) {
             // Load key
@@ -1666,7 +1659,6 @@ protected:
 
         Debug( "Provisioned license #{} for session {} on DRM controller", mLicenseCounter, mSessionID );
         mLicenseCounter ++;
-        Debug( "Release mutex" );
     }
 
     Json::Value postHealth( const Json::Value& request_json, const TClock::time_point& deadline,
@@ -1896,10 +1888,8 @@ protected:
             return;
         }
 
-        Debug( "Request mutex");
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        Debug( "Acquire mutex: mLicenseCounter={}", mLicenseCounter );
-
+        
         // Reset detection counter by writing drm_aclk counter register
         ret = writeDrmAddress( REG_FREQ_DETECTION_VERSION, 0 );
         if ( ret != 0 )
@@ -1924,7 +1914,6 @@ protected:
             (double)mFrequencyDetectionPeriod/1000, counter, measured_frequency );
 
         checkDrmFrequency( measured_frequency );
-        Debug( "Release mutex");
     }
 
     void detectDrmFrequencyMethod3() {
@@ -1935,9 +1924,8 @@ protected:
         if ( mBypassFrequencyDetection ) {
             return;
         }
-        Debug( "Request mutex" );
+
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        Debug( "Acquire mutex: mLicenseCounter={}", mLicenseCounter );
 
         // Reset detection counter by writing drm_aclk counter register
         ret = writeDrmAddress( REG_FREQ_DETECTION_VERSION, 0 );
@@ -1974,14 +1962,6 @@ protected:
         Debug( "Frequency detection of drm_aclk counter after {:f} ms is 0x{:08x}  => estimated frequency = {} MHz",
             (double)mFrequencyDetectionPeriod/1000, counter_drmaclk, measured_drmaclk );
         checkDrmFrequency( measured_drmaclk ); // Only drm_aclk can be verified because provided in the config.json
-        
-        Debug( "Release mutex" );
-    }
-
-    void detectDrmFrequencyMethod4() {
-        // DRM Controller is in SW: system time is used
-        mAxiFrequency = 100;
-        mFrequencyCurr = 100;
     }
 
     int32_t detectDrmFrequencyFromLicenseTimer() {
@@ -1992,9 +1972,7 @@ protected:
 
         Debug( "Detecting DRM frequency in {} ms", mFrequencyDetectionPeriod );
 
-        Debug( "Request mutex" );
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        Debug( "Acquire mutex: mLicenseCounter={}", mLicenseCounter );
 
         while ( max_attempts > 0 ) {
 
@@ -2036,7 +2014,6 @@ protected:
         auto measuredFrequency = (int32_t)(std::ceil((double)ticks / seconds / 1000000));
         Debug( "Duration = {} s   /   ticks = {}   =>   estimated frequency = {} MHz", seconds, ticks, measuredFrequency );
 
-        Debug( "Release mutex" );
         return measuredFrequency;
     }
 
@@ -2433,6 +2410,9 @@ public:
                 f_write_register = [&]( uint32_t  offset, uint32_t value ) {
                     return pnc_write_drm_ctrl_ta(offset, value );
                 };
+                // Increase sleep period because SW Controller is slower
+                setenv("DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS", SDK_SLEEP_IN_MICRO_SECONDS, 0); // does not overwrite if already existing
+                Debug("If not defined, set DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS environment variable to {}", SDK_SLEEP_IN_MICRO_SECONDS);
             } else {
                 f_read_register = f_user_read_register;
                 f_write_register = f_user_write_register;

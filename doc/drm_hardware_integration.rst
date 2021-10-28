@@ -35,6 +35,9 @@ currently supported by the DRM HDK:
        * Vivado 2018.3
        * Vivado 2019.1
        * Vivado 2019.2
+       * Vivado 2020.1
+       * Vivado 2020.2
+       * Vivado 2021.1
      - * Ultrascale+
        * Ultrascale
        * Virtex 7
@@ -100,9 +103,6 @@ A zip file will be sent to you. It is containing the HDK sources with in 3 folde
 - The ``controller`` folder: contains the controller VHDL top-level and the Verilog Wrapper.
   The controller has the appropriate number of ports: a pair of AXI4-Stream interfaces for each
   IP instance in your design (already protected IPs and IPs to protect).
-
-- The ``controller_sw`` folder: contains the DRM bridge that must be instantited in the Fabric
-  when the SW controller application is running on the process core.
 
 - The ``activator`` folder: contains the activator VHDL core and various wrappers for simulation and synthesis.
   A single DRM Activator is delivered per IP core type. Multiple instances of the same IP

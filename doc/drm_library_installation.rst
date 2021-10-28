@@ -13,16 +13,17 @@ Accelize provides the DRM library packages for a wide variety of Linux OS.
 Following OS are fully tested, including FPGA based hardware and end to end
 tests:
 
-* RHEL/Centos 7
+* RHEL/CentOS 7
 * Ubuntu 18.04 LTS Bionic
 
 Following OS are minimally tested only (without hardware):
 
-* RHEL/Centos 8
+* RHEL/CentOS 8
 * Ubuntu 20.04 LTS Focal
 * Fedora (2 latest stable versions)
 * Ubuntu (2 latest stable versions)
 * Debian 10 Buster
+* Debian 11 Bullseye
 
 .. note:: We limit hardware tested OS to those which are supported by FPGA
           vendors. But, we do minimal tests on more OS to ensure to our
