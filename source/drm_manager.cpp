@@ -1659,7 +1659,7 @@ protected:
             }
         }
 
-        Debug( "Provisioned license #{} for session {} on DRM controller", mLicenseCounter, mSessionID );
+        Info( "Provisioned license #{} for session {} on DRM controller", mLicenseCounter, mSessionID );
         mLicenseCounter ++;
     }
 
