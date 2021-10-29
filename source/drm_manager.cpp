@@ -714,6 +714,7 @@ protected:
 
     Json::Value buildSettingsNode() {
         Json::Value settings;
+        settings["ctrl_sw"] = mIsHybrid;
         settings["frequency_detection_method"] = mFreqDetectionMethod;
         settings["bypass_frequency_detection"] = mBypassFrequencyDetection;
         settings["frequency_detection_threshold"] = mFrequencyDetectionThreshold;
@@ -1303,7 +1304,7 @@ protected:
         Debug( "Build license request #{} to maintain current session", mLicenseCounter );
 
         // Check if an error occurred
-        checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 5 ) );
+//        checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 5 ) );
         // Request challenge and metering info for new request
         checkDRMCtlrRet( getDrmController().synchronousExtractMeteringFile( numberOfDetectedIps, saasChallenge, meteringFile ) );
         json_request["saasChallenge"] = saasChallenge;
