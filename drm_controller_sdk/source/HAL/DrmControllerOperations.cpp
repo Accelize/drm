@@ -463,7 +463,6 @@ unsigned int DrmControllerOperations::activate(const std::string &licenseFile, b
   errorCode = writeLicenseStartAddressRegister(licenseStartAddress);
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   // check heart beat mode is disabled
-  printf("==================================> mHeartBeatModeEnabled = %d\n", mHeartBeatModeEnabled);
   if (mHeartBeatModeEnabled == false) {
     // set nop command
     errorCode = writeNopCommandRegister();
