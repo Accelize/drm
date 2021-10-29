@@ -71,6 +71,12 @@ private:
     
     /* DRM Controller page offset in shared memory */
     static uint32_t s_pnc_page_offset;
+    
+    static const std::string DRM_SELF_TEST_ERROR_MESSAGE;
+    static const std::string DRM_CONNECTION_ERROR_MESSAGE;                        
+    static const std::string DRM_DOC_LINK;
+
+    static const char* SDK_SLEEP_IN_MICRO_SECONDS;
 
 public:
 

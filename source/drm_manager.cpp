@@ -88,22 +88,23 @@ limitations under the License.
     }
 
 
-static const std::string DRM_SELF_TEST_ERROR_MESSAGE( "Could not access DRM Controller registers.\nPlease verify:\n"
-                        "\t-The read/write callbacks implementation in the SW application: verify it uses the correct offset address of DRM Controller IP in the design address space.\n"
-                        "\t-The DRM Controller IP instantiation in the FPGA design: verify the correctness of 16-bit address received by the AXI-Lite port of the DRM Controller." );
-
-static const std::string DRM_CONNECTION_ERROR_MESSAGE( "\n!!! The issue could either be caused by a networking problem, by a firewall or NAT blocking incoming traffic or by a wrong server address. "
-                        "Please verify your configuration and try again !!!\n" );
-                        
-static const std::string DRM_DOC_LINK("https://tech.accelize.com/documentation/stable");
-
-static const char* SDK_SLEEP_IN_MICRO_SECONDS = "10000";
-
-
 pnc_session_t *Accelize::DRM::DrmManager::s_pnc_session = nullptr;
 uint32_t *Accelize::DRM::DrmManager::s_pnc_tzvaddr = nullptr;
 size_t Accelize::DRM::DrmManager::s_pnc_tzsize = 0;
 uint32_t Accelize::DRM::DrmManager::s_pnc_page_offset = 0;
+const char* Accelize::DRM::DrmManager::SDK_SLEEP_IN_MICRO_SECONDS = "10000";
+const std::string Accelize::DRM::DrmManager::DRM_SELF_TEST_ERROR_MESSAGE = std::string( 
+        "Could not access DRM Controller registers.\nPlease verify:\n"
+        "\t-The read/write callbacks implementation in the SW application: verify it uses the correct offset address of DRM Controller IP in the design address space.\n"
+        "\t-The DRM Controller IP instantiation in the FPGA design: verify the correctness of 16-bit address received by the AXI-Lite port of the DRM Controller." );
+
+const std::string Accelize::DRM::DrmManager::DRM_CONNECTION_ERROR_MESSAGE = std::string( 
+        "\n!!! The issue could either be caused by a networking problem, by a firewall or NAT blocking incoming traffic or by a wrong server address. "
+        "Please verify your configuration and try again !!!\n" );
+                        
+const std::string Accelize::DRM::DrmManager::DRM_DOC_LINK = std::string(
+        "https://tech.accelize.com/documentation/stable");
+
 
 namespace Accelize {
 namespace DRM {
