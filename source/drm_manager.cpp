@@ -359,9 +359,9 @@ protected:
                 Throw( DRM_CtlrError, "{} failed with error code {}. ", #func, errcode );       \
             }                                                                                   \
         } catch( const std::exception &e ) {                                                    \
+            Error( "{} threw an exception: {}", #func, e.what() );                              \
             logDrmCtrlError();                                                                  \
             logDrmCtrlTrngStatus();                                                             \
-            Error( "{} threw an exception: {}", #func, e.what() );                              \
             Throw( DRM_CtlrError, e.what() );                                                   \
         }                                                                                       \
     }
