@@ -1288,8 +1288,12 @@ protected:
         json_request["saasChallenge"] = saasChallenge;
         json_request["meteringFile"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
         json_request["request"] = "open";
-        if ( !isConfigInNodeLock() && !mIsHybrid)
-            json_request["drm_frequency"] = mFrequencyCurr;
+        if ( !isConfigInNodeLock() ) {
+            if  ( mIsHybrid )
+                json_request["drm_frequency"] = 100;
+            else
+                json_request["drm_frequency"] = mFrequencyCurr;
+        }
         json_request["mode"] = (uint8_t)mLicenseType;
 
         return json_request;
