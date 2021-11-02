@@ -1288,11 +1288,8 @@ protected:
         json_request["saasChallenge"] = saasChallenge;
         json_request["meteringFile"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
         json_request["request"] = "open";
-        if ( !isConfigInNodeLock() ) {
-            if  ( mIsHybrid )
-                json_request["drm_frequency"] = 100;
-            else
-                json_request["drm_frequency"] = mFrequencyCurr;
+        if ( !isConfigInNodeLock() && !mIsHybrid ) {
+            json_request["drm_frequency"] = mFrequencyCurr;
         }
         json_request["mode"] = (uint8_t)mLicenseType;
 
@@ -1315,7 +1312,7 @@ protected:
         json_request["sessionId"] = meteringFile[0].substr( 0, 16 );
         checkSessionIDFromDRM( json_request );
 
-        if ( !isConfigInNodeLock() )
+        if ( !isConfigInNodeLock() && !mIsHybrid )
             json_request["drm_frequency"] = mFrequencyCurr;
         json_request["meteringFile"] = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
         json_request["request"] = "running";
@@ -1337,7 +1334,7 @@ protected:
         json_request["sessionId"] = meteringFile[0].substr( 0, 16 );
         checkSessionIDFromDRM( json_request );
 
-        if ( !isConfigInNodeLock() )
+        if ( !isConfigInNodeLock() && !mIsHybrid )
             json_request["drm_frequency"] = mFrequencyCurr;
         json_request["meteringFile"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
         json_request["request"] = "close";
@@ -1374,7 +1371,8 @@ protected:
         }
         // Finalize the request with the collected data
         json_request["meteringFile"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
-        json_request["drm_frequency"] = mFrequencyCurr;
+        if ( !mIsHybrid )
+            json_request["drm_frequency"] = mFrequencyCurr;
         json_request["request"] = "health";
         json_request["health_id"] = mHealthCounter++;
         return json_request;
