@@ -289,7 +289,7 @@ protected:
 
     // DRM Frequency parameters
     int32_t mFrequencyInit = 0;
-    int32_t mFrequencyCurr = 0;
+    double mFrequencyCurr = 0.0;
     uint32_t mFrequencyDetectionPeriod = 100;       // in milliseconds
     double mFrequencyDetectionThreshold = 12.0;     // Error in percentage
     uint8_t mFreqDetectionMethod = 0;
@@ -385,7 +385,7 @@ protected:
         mCredFilePath = cred_file_path;
 
         mFrequencyInit = 0;
-        mFrequencyCurr = 0;
+        mFrequencyCurr = 0.0;
 
         mIsHybrid = false;
 
@@ -474,7 +474,7 @@ protected:
                 // Get DRM frequency related parameters
                 Json::Value conf_drm = JVgetRequired( conf_json, "drm", Json::objectValue );
                 mFrequencyInit = JVgetRequired( conf_drm, "frequency_mhz", Json::intValue ).asUInt();
-                mFrequencyCurr = mFrequencyInit;
+                mFrequencyCurr = double(mFrequencyInit);
                 mBypassFrequencyDetection = JVgetOptional( conf_drm, "bypass_frequency_detection", Json::booleanValue,
                         mBypassFrequencyDetection ).asBool();
             }
@@ -1079,7 +1079,7 @@ protected:
                 detectDrmFrequencyMethod2();
             } else if ( ( mFreqDetectionMethod == 1 ) || ( mFreqDetectionMethod == 0 ) ) {
             } else {
-                Warning( "DRM frequency auto-detection is disabled: {} will be used to compute license timers", mFrequencyCurr );
+                Warning( "DRM frequency auto-detection is disabled: {:0.1f} will be used to compute license timers", mFrequencyCurr );
             }
         }
 
@@ -1288,7 +1288,7 @@ protected:
         json_request["saasChallenge"] = saasChallenge;
         json_request["meteringFile"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
         json_request["request"] = "open";
-        if ( !isConfigInNodeLock() )
+        if ( !isConfigInNodeLock())
             json_request["drm_frequency"] = mFrequencyCurr;
         json_request["mode"] = (uint8_t)mLicenseType;
 
@@ -1842,6 +1842,7 @@ protected:
             Debug( "SW DRM Controller: no frequency detection is performed (method 4)" );
             mFreqDetectionMethod = 0;
             mBypassFrequencyDetection = true;
+            mFrequencyCurr = 0.001;
             return;
         }
         
