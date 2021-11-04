@@ -266,6 +266,26 @@ void DrmControllerRegistersStrategyInterface::printHwReport(std::ostream &file) 
 /**                  PROTECTED MEMBER FUNCTIONS            **/
 /************************************************************/
 
+/** readModifyWriteCommandRegister
+*   \brief Read, modify then write the command register to the given Command value. The bits at value 1 in the notModifiedBitsMask are not modified
+*   This method will access to the system bus to read and write into the command register.
+*   \param[in] commandValue is the value of the command to write
+*   \param[in] notModifiedBitsMask is a mask indicating which bits must not be modified (bits at value 1 are not modified).
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwise.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegistersStrategyInterface::readModifyWriteCommandRegister(const unsigned int &commandValue, const unsigned int &notModifiedBitsMask) const {
+  unsigned int command;
+  // Read the command register
+  unsigned int errorCode = readCommandRegister(command);
+  if (errorCode != mDrmApi_NO_ERROR) return errorCode;
+  // Keep the LicenseTimerInitSemaphoreRequest bit and add the command value
+  command = ((notModifiedBitsMask & command) + commandValue);
+  // Write the command register
+  errorCode = writeCommandRegister(command);
+  return errorCode;
+}
+
 /** readStatusRegister
 *   \brief Read the value of a several and contigous status bits.
 *   This method will access to the system bus to read the status register.

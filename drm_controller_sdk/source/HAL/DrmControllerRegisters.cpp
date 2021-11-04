@@ -174,6 +174,17 @@ unsigned int DrmControllerRegisters::writeSampleLicenseTimerCounterCommandRegist
   return mDrmControllerRegistersStrategyInterface->writeSampleLicenseTimerCounterCommandRegister();
 }
 
+/** writeLicenseTimerInitSemaphoreRequestCommandRegister
+*   \brief Write the LicenseTimerInitSemaphoreRequest bit in the command register to the given value (do not modify the other bits of the command register).
+*   This method will access to the system bus to write into the command register.
+*   \param[in] licenseTimerInitSemaphoreRequest is the value of the LicenseTimerInitSemaphoreRequest bit to write in the command register.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwise.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegisters::writeLicenseTimerInitSemaphoreRequestCommandRegister(bool &licenseTimerInitSemaphoreRequest) const {
+  return mDrmControllerRegistersStrategyInterface->writeLicenseTimerInitSemaphoreRequestCommandRegister(licenseTimerInitSemaphoreRequest);
+}
+
 /** readLicenseStartAddressRegister
 *   \brief Read the license start address register.
 *   This method will access to the system bus to read the license start address.
@@ -728,6 +739,31 @@ unsigned int DrmControllerRegisters::readSecurityAlertStatusRegister(bool &secur
 **/
 unsigned int DrmControllerRegisters::waitSecurityAlertStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
   return mDrmControllerRegistersStrategyInterface->waitSecurityAlertStatusRegister(timeout, expected, actual);
+}
+
+/** readLicenseTimerInitSemaphoreAcknowledgeStatusRegister
+*   \brief Read the status register and get the License Timer Init Semaphore Acknowledge status bit.
+*   This method will access to the system bus to read the status register.
+*   \param[out] licenseTimerInitSemaphoreAcknowledge is the value of the status bit License Timer Init Semaphore Acknowledge.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwise.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegisters::readLicenseTimerInitSemaphoreAcknowledgeStatusRegister(bool &licenseTimerInitSemaphoreAcknowledge) const {
+  return mDrmControllerRegistersStrategyInterface->readLicenseTimerInitSemaphoreAcknowledgeStatusRegister(licenseTimerInitSemaphoreAcknowledge);
+}
+
+/** waitLicenseTimerInitSemaphoreAcknowledgeStatusRegister
+*   \brief Wait License Timer Init Semaphore Acknowledge status register to reach specified value.
+*   This method will access to the system bus to read the status register.
+*   \param[in]  timeout is the timeout value in micro seconds.
+*   \param[in]  expected is the value of the status to be expected.
+*   \param[out] actual is the value of the status bit read.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, mDrmApi_HARDWARE_TIMEOUT_ERROR if a timeout occurred, errors from read/write register functions otherwise.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+*   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegisters::waitLicenseTimerInitSemaphoreAcknowledgeStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
+  return mDrmControllerRegistersStrategyInterface->waitLicenseTimerInitSemaphoreAcknowledgeStatusRegister(timeout, expected, actual);
 }
 
 /** readNumberOfLicenseTimerLoadedStatusRegister

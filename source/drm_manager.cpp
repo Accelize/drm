@@ -1580,7 +1580,7 @@ protected:
 
         // Load license timer
         if ( !isConfigInNodeLock() ) {
-            checkDRMCtlrRet( getDrmController().loadLicenseTimerInit( licenseTimer ) );
+            checkDRMCtlrRet( getDrmController().loadLicenseTimerInit( licenseTimer, false, 5 ) );
             Debug( "Wrote license timer #{} of session ID {} for a duration of {} seconds",
                     mLicenseCounter, mSessionID, mLicenseDuration );
         }

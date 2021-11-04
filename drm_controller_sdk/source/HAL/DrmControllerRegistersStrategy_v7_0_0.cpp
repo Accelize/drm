@@ -180,7 +180,7 @@ unsigned int DrmControllerRegistersStrategy_v7_0_0::writeMailBoxFilePageRegister
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerRegistersStrategy_v7_0_0::writeNopCommandRegister() const {
-  return writeCommandRegister(mDrmCommandNop);
+  return readModifyWriteCommandRegister(mDrmCommandNop, mDrmCommandLicenseTimerInitSemaphoreRequest);
 }
 
 /** writeDnaExtractCommandRegister
@@ -190,7 +190,7 @@ unsigned int DrmControllerRegistersStrategy_v7_0_0::writeNopCommandRegister() co
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerRegistersStrategy_v7_0_0::writeDnaExtractCommandRegister() const {
-  return writeCommandRegister(mDrmCommandExtractDna);
+  return readModifyWriteCommandRegister(mDrmCommandExtractDna, mDrmCommandLicenseTimerInitSemaphoreRequest);
 }
 
 /** writeVlnvExtractCommandRegister
@@ -200,7 +200,7 @@ unsigned int DrmControllerRegistersStrategy_v7_0_0::writeDnaExtractCommandRegist
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerRegistersStrategy_v7_0_0::writeVlnvExtractCommandRegister() const {
-  return writeCommandRegister(mDrmCommandExtractVlnv);
+  return readModifyWriteCommandRegister(mDrmCommandExtractVlnv, mDrmCommandLicenseTimerInitSemaphoreRequest);
 }
 
 /** writeActivateCommandRegister
@@ -210,7 +210,7 @@ unsigned int DrmControllerRegistersStrategy_v7_0_0::writeVlnvExtractCommandRegis
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerRegistersStrategy_v7_0_0::writeActivateCommandRegister() const {
-  return writeCommandRegister(mDrmCommandActivate);
+  return readModifyWriteCommandRegister(mDrmCommandActivate, mDrmCommandLicenseTimerInitSemaphoreRequest);
 }
 
 /** writeEndSessionMeteringExtractCommandRegister
@@ -220,7 +220,7 @@ unsigned int DrmControllerRegistersStrategy_v7_0_0::writeActivateCommandRegister
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerRegistersStrategy_v7_0_0::writeEndSessionMeteringExtractCommandRegister() const {
-  return writeCommandRegister(mDrmCommandEndSessionExtractMetering);
+  return readModifyWriteCommandRegister(mDrmCommandEndSessionExtractMetering, mDrmCommandLicenseTimerInitSemaphoreRequest);
 }
 
 /** writeMeteringExtractCommandRegister
@@ -230,7 +230,7 @@ unsigned int DrmControllerRegistersStrategy_v7_0_0::writeEndSessionMeteringExtra
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerRegistersStrategy_v7_0_0::writeMeteringExtractCommandRegister() const {
-  return writeCommandRegister(mDrmCommandExtractMetering);
+  return readModifyWriteCommandRegister(mDrmCommandExtractMetering, mDrmCommandLicenseTimerInitSemaphoreRequest);
 }
 
 /** writeSampleLicenseTimerCounterCommandRegister
@@ -240,7 +240,23 @@ unsigned int DrmControllerRegistersStrategy_v7_0_0::writeMeteringExtractCommandR
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerRegistersStrategy_v7_0_0::writeSampleLicenseTimerCounterCommandRegister() const {
-  return writeCommandRegister(mDrmCommandSampleLicenseTimerCounter);
+  return readModifyWriteCommandRegister(mDrmCommandSampleLicenseTimerCounter, mDrmCommandLicenseTimerInitSemaphoreRequest);
+}
+
+/** writeLicenseTimerInitSemaphoreRequestCommandRegister
+*   \brief Write the LicenseTimerInitSemaphoreRequest bit in the command register to the given value (do not modify the other bits of the command register).
+*   This method will access to the system bus to write into the command register.
+*   \param[in] licenseTimerInitSemaphoreRequest is the value of the LicenseTimerInitSemaphoreRequest bit to write in the command register.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwise.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegistersStrategy_v7_0_0::writeLicenseTimerInitSemaphoreRequestCommandRegister(bool &licenseTimerInitSemaphoreRequest) const {
+  if (licenseTimerInitSemaphoreRequest) {
+    return readModifyWriteCommandRegister(mDrmCommandLicenseTimerInitSemaphoreRequest, ~mDrmCommandLicenseTimerInitSemaphoreRequest);
+  }
+  else {
+    return readModifyWriteCommandRegister(0, ~mDrmCommandLicenseTimerInitSemaphoreRequest);
+  }
 }
 
 /** readLicenseStartAddressRegister
@@ -786,6 +802,37 @@ unsigned int DrmControllerRegistersStrategy_v7_0_0::waitSecurityAlertStatusRegis
   unsigned int errorCode = DrmControllerRegistersStrategyInterface::waitStatusRegister(timeout, mDrmStatusSecurityAlert, mDrmStatusMaskSecurityAlert, expected, actual);
   if (errorCode == mDrmApi_HARDWARE_TIMEOUT_ERROR)
     throwTimeoutException("Wait Security Alert Status is in timeout", "Expected Security Alert Status", "Actual Security Alert Status", expected, actual);
+  return errorCode;
+}
+
+/** readLicenseTimerInitSemaphoreAcknowledgeStatusRegister
+*   \brief Read the status register and get the License Timer Init Semaphore Acknowledge status bit.
+*   This method will access to the system bus to read the status register.
+*   \param[out] licenseTimerInitSemaphoreAcknowledge is the value of the status bit License Timer Init Semaphore Acknowledge.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwise.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegistersStrategy_v7_0_0::readLicenseTimerInitSemaphoreAcknowledgeStatusRegister(bool &licenseTimerInitSemaphoreAcknowledge) const {
+    return DrmControllerRegistersStrategyInterface::readStatusRegister(mDrmStatusLicenseTimerInitSemaphoreAcknowledge,
+        mDrmStatusMaskLicenseTimerInitSemaphoreAcknowledge, licenseTimerInitSemaphoreAcknowledge);
+}
+
+/** waitLicenseTimerInitSemaphoreAcknowledgeStatusRegister
+*   \brief Wait License Timer Init Semaphore Acknowledge status register to reach specified value.
+*   This method will access to the system bus to read the status register.
+*   \param[in]  timeout is the timeout value in micro seconds.
+*   \param[in]  expected is the value of the status to be expected.
+*   \param[out] actual is the value of the status bit read.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, mDrmApi_HARDWARE_TIMEOUT_ERROR if a timeout occurred, errors from read/write register functions otherwise.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+*   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegistersStrategy_v7_0_0::waitLicenseTimerInitSemaphoreAcknowledgeStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
+  unsigned int errorCode = DrmControllerRegistersStrategyInterface::waitStatusRegister(timeout, mDrmStatusLicenseTimerInitSemaphoreAcknowledge,
+      mDrmStatusMaskLicenseTimerInitSemaphoreAcknowledge, expected, actual);
+  if (errorCode == mDrmApi_HARDWARE_TIMEOUT_ERROR)
+    throwTimeoutException("Wait License Timer Init Semaphore Acknowledge Status is in timeout", "Expected License Timer Init Semaphore Acknowledge Status",
+        "Actual License Timer Init Semaphore Acknowledge Status", expected, actual);
   return errorCode;
 }
 
