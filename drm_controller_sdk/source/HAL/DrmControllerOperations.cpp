@@ -156,8 +156,12 @@ unsigned int DrmControllerOperations::extractDrmVersion(std::string &drmVersion)
 *   \param[out] adaptiveProportionTestFailures is the value of the Adaptive Proportion Test Failures.
 *   \return Returns the error code produced by the read/write register function.
 **/
-unsigned int DrmControllerOperations::extractAdaptiveProportionTestFailures(std::vector<unsigned int> &adaptiveProportionTestFailures) const {
-  return readAdaptiveProportionTestFailuresRegister(adaptiveProportionTestFailures);
+unsigned int DrmControllerOperations::extractAdaptiveProportionTestFailures(unsigned int &adaptiveProportionTestFailures) const {
+  std::vector<unsigned int> vec;
+  unsigned int ret = readAdaptiveProportionTestFailuresRegister(vec);
+  if (!ret)
+      adaptiveProportionTestFailures = vec[0];
+  return ret;
 }
 
 /** extractAdaptiveProportionTestFailures
@@ -176,8 +180,12 @@ unsigned int DrmControllerOperations::extractAdaptiveProportionTestFailures(std:
 *   \param[out] repetitionCountTestFailures is the value of the Repetition Count Test Failures.
 *   \return Returns the error code produced by the read/write register function.
 **/
-unsigned int DrmControllerOperations::extractRepetitionCountTestFailures(std::vector<unsigned int> &repetitionCountTestFailures) const {
-  return readRepetitionCountTestFailuresRegister(repetitionCountTestFailures);
+unsigned int DrmControllerOperations::extractRepetitionCountTestFailures(unsigned int &repetitionCountTestFailures) const {
+  std::vector<unsigned int> vec;
+  unsigned int ret = readRepetitionCountTestFailuresRegister(vec);
+  if (!ret)
+      repetitionCountTestFailures = vec[0];
+  return ret;
 }
 
 /** extractRepetitionCountTestFailures

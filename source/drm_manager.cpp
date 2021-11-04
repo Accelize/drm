@@ -578,8 +578,8 @@ protected:
         Debug( "Controller License Timer error register: 0x{:02x}", license_error );
     }
 
-    void getTrngStatus( bool securityAlertBit, std::string& adaptiveProportionTestError,
-                        std::string& repetitionCountTestError ) const {
+    void getTrngStatus( bool securityAlertBit, uint32_t& adaptiveProportionTestError,
+                        uint32_t& repetitionCountTestError ) const {
         auto drmMajor = ( mDrmVersion >> 16 ) & 0xFF;
         auto drmMinor = ( mDrmVersion >> 8  ) & 0xFF;
         if ( ( drmMajor > 4 ) || ( ( drmMajor == 4 ) && ( drmMinor >= 2 ) ) ) {
@@ -593,7 +593,7 @@ protected:
 
     void logDrmCtrlTrngStatus() const {
         bool securityAlertBit( false );
-        std::string adaptiveProportionTestError, repetitionCountTestError;
+        uint32_t adaptiveProportionTestError, repetitionCountTestError;
         getTrngStatus( securityAlertBit, adaptiveProportionTestError, repetitionCountTestError );
         Debug( "Controller TRNG status: security alert bit = {}, adaptative proportion test error = {}, repetition count test error = {}",
                 securityAlertBit, adaptiveProportionTestError, repetitionCountTestError );
@@ -2933,7 +2933,7 @@ public:
                     case ParameterKey::trng_status: {
                         Json::Value trng_status_json;
                         bool securityAlertBit( false );
-                        std::string adaptiveProportionTestError, repetitionCountTestError;
+                        uint32_t adaptiveProportionTestError, repetitionCountTestError;
                         getTrngStatus( securityAlertBit, adaptiveProportionTestError, repetitionCountTestError );
                         trng_status_json["security_alert_bit"] = securityAlertBit;
                         trng_status_json["adaptive_proportion_test_error"] = adaptiveProportionTestError;

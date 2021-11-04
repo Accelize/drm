@@ -89,14 +89,14 @@ namespace DrmControllerLibrary {
       *   \return Returns the error code produced by the read/write register function.
       **/
       unsigned int extractDrmVersion(std::string &drmVersion) const;
-      
+
       /** extractAdaptiveProportionTestFailures
       *   \brief Extract the Adaptive Proportion Test Failures of the DRM controller.
       *   This method will access to the system bus to extract the Adaptive Proportion Test Failures.
       *   \param[out] adaptiveProportionTestFailures is the value of the Adaptive Proportion Test Failures.
       *   \return Returns the error code produced by the read/write register function.
       **/
-      unsigned int extractAdaptiveProportionTestFailures(std::vector<unsigned int> &adaptiveProportionTestFailures) const;
+      unsigned int extractAdaptiveProportionTestFailures(unsigned int &adaptiveProportionTestFailures) const;
 
       /** extractAdaptiveProportionTestFailures
       *   \brief Extract the Adaptive Proportion Test Failures of the DRM controller.
@@ -112,7 +112,7 @@ namespace DrmControllerLibrary {
       *   \param[out] repetitionCountTestFailures is the value of the Repetition Count Test Failures.
       *   \return Returns the error code produced by the read/write register function.
       **/
-      unsigned int extractRepetitionCountTestFailures(std::vector<unsigned int> &repetitionCountTestFailures) const;
+      unsigned int extractRepetitionCountTestFailures(unsigned int &repetitionCountTestFailures) const;
 
       /** extractRepetitionCountTestFailures
       *   \brief Extract the Repetition Count Test Failures of the DRM controller.
@@ -530,7 +530,7 @@ namespace DrmControllerLibrary {
       bool mHeartBeatModeEnabled; /**<Tell wether the heart beat mode is enabled on hardware**/
       // we suppose the heart beat mode to be disabled by default
       // it will be set if it is not the case during the wait auto controller function
-      
+
       bool mLicenseTimerWasLoaded; /**<Tell wether the license timer was loaded at least one time.**/
 
       unsigned int mTimeoutInMicroSeconds; /**<Store the timeout in microseconds to complete internal operation.**/
