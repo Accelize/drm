@@ -62,7 +62,11 @@ limitations under the License.
 #define PNC_PAGE_SIZE               4096
 #define PNC_ALLOC_SIZE              (PNC_PAGE_SIZE * 24)
 #define PNC_DRM_INIT_SHM            11
-#define PNC_DRM_LOG_LEVEL           12
+#define PNC_DRM_LOG_TRACE           12
+#define PNC_DRM_LOG_DEBUG           13
+#define PNC_DRM_LOG_INFO            14
+#define PNC_DRM_LOG_WARN            15
+#define PNC_DRM_LOG_ERROR           16
 
 
 #define TRY try {
@@ -3130,7 +3134,6 @@ template<> int64_t DrmManager::Impl::get( const ParameterKey key_id ) const {
 template<> uint64_t DrmManager::Impl::get( const ParameterKey key_id ) const {
 	TRY
 		IMPL_GET_BODY
-        printf("Key=%s: json_value=%s\n", key_str.c_str(), json_value.toStyledString().c_str());
 		return json_value[key_str].asUInt64();
 	CATCH_AND_THROW
 }
