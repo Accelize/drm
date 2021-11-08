@@ -229,6 +229,14 @@ protected:
     };
 
     const double ACTIVATIONCODE_TRANSMISSION_TIMEOUT_MS = 2000.0;
+    
+    const std::map<spdlog::level::level_enum, uint32_t> LogCtrlLevelMap = {
+            {spdlog::level::trace , PNC_DRM_LOG_TRACE},
+            {spdlog::level::debug , PNC_DRM_LOG_DEBUG},
+            {spdlog::level::info  , PNC_DRM_LOG_INFO},
+            {spdlog::level::warn  , PNC_DRM_LOG_WARN},
+            {spdlog::level::err   , PNC_DRM_LOG_ERROR}
+    };
 
 #ifdef _WIN32
     const char path_sep = '\\';
@@ -256,6 +264,8 @@ protected:
     bool         sLogFileAppend       = false;
     size_t       sLogFileRotatingSize = 100*1024; ///< Size max in KBytes of the log roating file
     size_t       sLogFileRotatingNum  = 3;
+    
+    spdlog::level::level_enum sLogCtrlVerbosity = spdlog::level::warn;
 
     // Function callbacks
     DrmManager::ReadRegisterCallback  f_read_register = nullptr;
@@ -427,6 +437,10 @@ protected:
                         Json::uintValue, (uint32_t)sLogFileRotatingSize ).asUInt();
                 sLogFileRotatingNum = JVgetOptional( param_lib, "log_file_rotating_num",
                         Json::uintValue, (uint32_t)sLogFileRotatingNum ).asUInt();
+                
+                // Software Controller logging
+                sLogCtrlVerbosity = static_cast<spdlog::level::level_enum>( JVgetOptional(
+                        param_lib, "log_ctrl_verbosity", Json::uintValue, (uint32_t)sLogFileVerbosity ).asUInt() );
 
                 // Frequency detection
                 mFrequencyDetectionPeriod = JVgetOptional( param_lib, "frequency_detection_period",
@@ -571,7 +585,30 @@ protected:
             std::cout << "Failed to update logging settings: " << ex.what() << std::endl; //LCOV_EXCL_LINE
         }
     }
-
+    
+    void checkCtrlLogLevel( spdlog::level::level_enum level_e ) {
+        if ( level_e >= spdlog::level::critical) {
+            Throw( DRM_BadArg, "Invalid log level for SW controller: %d", level_e );
+        }
+    }
+    
+    void updateCtrlLogLevel( uint32_t level ) {
+        spdlog::level::level_enum level_e = static_cast<spdlog::level::level_enum>( level );
+        checkCtrlLogLevel( level_e );
+        if ( level_e != sLogCtrlVerbosity ) {
+            if ( pnc_session_request(s_pnc_session, LogCtrlLevelMap.find( level_e )->second, 0) < 0) {
+                Throw( DRM_PncInitError, "Failed to set the log level of the DRM Controller TA to {}: {}. ", 
+                        level, strerror(errno) );
+            }
+            Debug( "Updating log level for SW Controller from %d to %d", 
+                sLogCtrlVerbosity, level );
+            sLogCtrlVerbosity = level_e;
+        } else {
+            Debug( "Log level for SW Controller is already set to %d", 
+                sLogCtrlVerbosity );
+        }
+    }
+    
     void getDrmCtrlError( uint8_t& activation_error, uint8_t& dna_error, uint8_t& vlnv_error, uint8_t& license_error ) const {
         getDrmController().readActivationErrorRegister( activation_error );
         getDrmController().readExtractDnaErrorRegister( dna_error );
@@ -729,6 +766,7 @@ protected:
         settings["log_file_rotating_num"] = static_cast<uint32_t>( sLogFileRotatingNum );
         settings["log_file_verbosity"] = static_cast<uint32_t>( sLogFileVerbosity );
         settings["log_verbosity"] = static_cast<uint32_t>( sLogConsoleVerbosity );
+        settings["log_ctrl_verbosity"] = static_cast<uint32_t>( sLogCtrlVerbosity );
         settings["ws_retry_period_long"] = mWSRetryPeriodLong;
         settings["ws_retry_period_short"] = mWSRetryPeriodShort;
         settings["ws_request_timeout"] = (int32_t)(getDrmWSClient().getRequestTimeoutMS() / 1000);
@@ -2413,6 +2451,9 @@ public:
             Debug( "Calling Impl public constructor" );
             mIsHybrid = pnc_initialize_drm_ctrl_ta();
             if ( mIsHybrid ) {
+                //  Set logging
+                updateCtrlLogLevel( sLogCtrlVerbosity );
+                //  Set callbacks
                 f_read_register = [&]( uint32_t  offset, uint32_t *value ) {
                     return pnc_read_drm_ctrl_ta( offset, value );
                 };
@@ -2903,6 +2944,13 @@ public:
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id, con_timeout_sec );
                         break;
                     }
+                    case ParameterKey::log_ctrl_verbosity: {
+                        uint32_t logVerbosity = static_cast<uint32_t>( sLogCtrlVerbosity );
+                        json_value[key_str] = logVerbosity;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                                logVerbosity );
+                        break;
+                    }
                     case ParameterKey::ParameterKeyCount: {
                         uint32_t count = static_cast<uint32_t>( ParameterKeyCount );
                         json_value[key_str] = count;
@@ -3064,6 +3112,13 @@ public:
                             Throw( DRM_BadUsage, "Derived product cannot be loaded if a session is still running. " );
                         loadDerivedProduct( vln_str );
                         Debug( "Set parameter '{}' (ID={}) to value {}", key_str, key_id, vln_str );
+                        break;
+                    }
+                    case ParameterKey::log_ctrl_verbosity: {
+                        int32_t verbosityInt = (*it).asInt();
+                        updateCtrlLogLevel( verbosityInt );
+                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
+                               verbosityInt);
                         break;
                     }
                     default:
