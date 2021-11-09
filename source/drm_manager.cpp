@@ -588,7 +588,7 @@ protected:
     
     void checkCtrlLogLevel( spdlog::level::level_enum level_e ) {
         if ( level_e >= spdlog::level::critical) {
-            Throw( DRM_BadArg, "Invalid log level for SW controller: %d", level_e );
+            Throw( DRM_BadArg, "Invalid log level for SW controller: {}", level_e );
         }
     }
     
@@ -601,10 +601,10 @@ protected:
                 Throw( DRM_PncInitError, "Failed to set the log level of the DRM Controller TA to {}: {}. ", 
                         level_i, strerror(errno) );
             }
-            Debug( "Updating log level for SW Controller from %d to %d", sLogCtrlVerbosity, level );
+            Debug( "Updating log level for SW Controller from {} to {}", sLogCtrlVerbosity, level );
             sLogCtrlVerbosity = level_e;
         } else {
-            Debug( "Log level for SW Controller is already set to %d", 
+            Debug( "Log level for SW Controller is already set to {}", 
                 sLogCtrlVerbosity );
         }
     }
