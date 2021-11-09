@@ -257,7 +257,7 @@ protected:
     spdlog::level::level_enum sLogConsoleVerbosity = spdlog::level::err;
     std::string sLogConsoleFormat = std::string("[%^%=8l%$] %-6t, %v");
 
-    spdlog::level::level_enum sLogFileVerbosity = spdlog::level::info;
+    spdlog::level::level_enum sLogFileVerbosity = spdlog::level::warn;
     std::string  sLogFilePath         = fmt::format( "accelize_drmlib_{}.log", getpid() );
     std::string  sLogFileFormat       = std::string("%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v");
     eLogFileType sLogFileType         = eLogFileType::NONE;
@@ -440,7 +440,7 @@ protected:
                 
                 // Software Controller logging
                 sLogCtrlVerbosity = static_cast<spdlog::level::level_enum>( JVgetOptional(
-                        param_lib, "log_ctrl_verbosity", Json::uintValue, (uint32_t)sLogFileVerbosity ).asUInt() );
+                        param_lib, "log_ctrl_verbosity", Json::uintValue, (uint32_t)sLogCtrlVerbosity ).asUInt() );
 
                 // Frequency detection
                 mFrequencyDetectionPeriod = JVgetOptional( param_lib, "frequency_detection_period",
@@ -596,12 +596,12 @@ protected:
         spdlog::level::level_enum level_e = static_cast<spdlog::level::level_enum>( level );
         checkCtrlLogLevel( level_e );
         if ( level_e != sLogCtrlVerbosity ) {
-            if ( pnc_session_request(s_pnc_session, LogCtrlLevelMap.find( level_e )->second, 0) < 0) {
+            uint32_t level_i = LogCtrlLevelMap.find( level_e )->second;
+            if ( pnc_session_request(s_pnc_session, level_i, 0) < 0) {
                 Throw( DRM_PncInitError, "Failed to set the log level of the DRM Controller TA to {}: {}. ", 
-                        level, strerror(errno) );
+                        level_i, strerror(errno) );
             }
-            Debug( "Updating log level for SW Controller from %d to %d", 
-                sLogCtrlVerbosity, level );
+            Debug( "Updating log level for SW Controller from %d to %d", sLogCtrlVerbosity, level );
             sLogCtrlVerbosity = level_e;
         } else {
             Debug( "Log level for SW Controller is already set to %d", 
