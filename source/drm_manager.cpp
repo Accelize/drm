@@ -100,7 +100,7 @@ const char* Accelize::DRM::DrmManager::SDK_SLEEP_IN_MICRO_SECONDS = "10000";
 const std::string Accelize::DRM::DrmManager::DRM_SELF_TEST_ERROR_MESSAGE = std::string( 
         "Could not access DRM Controller registers.\nPlease verify:\n"
         "\t-The read/write callbacks implementation in the SW application: verify it uses the correct offset address of DRM Controller IP in the design address space.\n"
-        "\t-The DRM Controller IP instantiation in the FPGA design: verify the correctness of 16-bit address received by the AXI-Lite port of the DRM Controller." );
+        "\t-The DRM Controller IP instantiation in the FPGA design: verify the correctness of 16-bit address received by the AXI-Lite port of the DRM Controller.\n" );
 
 const std::string Accelize::DRM::DrmManager::DRM_CONNECTION_ERROR_MESSAGE = std::string( 
         "\n!!! The issue could either be caused by a networking problem, by a firewall or NAT blocking incoming traffic or by a wrong server address. "
@@ -108,8 +108,8 @@ const std::string Accelize::DRM::DrmManager::DRM_CONNECTION_ERROR_MESSAGE = std:
         
 const std::string Accelize::DRM::DrmManager::DRM_CTRL_TA_INIT_ERROR_MESSAGE = std::string(
         "Please verify:\n" 
-        "\t- the DRM Controller instance in the PL is at the right offset address. "
-        "\t- the PUF has been registered. " );
+        "\t- the DRM Controller instance in the PL is at the right offset address.\n"
+        "\t- the PUF has been registered.\n" );
                         
 const std::string Accelize::DRM::DrmManager::DRM_DOC_LINK = std::string(
         "https://tech.accelize.com/documentation/stable");
