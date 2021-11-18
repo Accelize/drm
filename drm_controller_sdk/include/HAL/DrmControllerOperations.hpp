@@ -97,7 +97,7 @@ namespace DrmControllerLibrary {
       *   \return Returns the error code produced by the read/write register function.
       **/
       unsigned int extractAdaptiveProportionTestFailures(unsigned int &adaptiveProportionTestFailures) const;
-
+      
       /** extractAdaptiveProportionTestFailures
       *   \brief Extract the Adaptive Proportion Test Failures of the DRM controller.
       *   This method will access to the system bus to extract the Adaptive Proportion Test Failures.
@@ -540,7 +540,7 @@ namespace DrmControllerLibrary {
       bool mHeartBeatModeEnabled; /**<Tell wether the heart beat mode is enabled on hardware**/
       // we suppose the heart beat mode to be disabled by default
       // it will be set if it is not the case during the wait auto controller function
-
+      
       bool mLicenseTimerWasLoaded; /**<Tell wether the license timer was loaded at least one time.**/
 
       unsigned int mTimeoutInMicroSeconds; /**<Store the timeout in microseconds to complete internal operation.**/

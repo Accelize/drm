@@ -55,3 +55,4 @@ PARAMETERKEY_ITEM( trng_status )                    ///< Read-only, read the TRN
 PARAMETERKEY_ITEM( num_license_loaded )             ///< Read-only, read the number of licenses provisioned in the DRM Controller
 PARAMETERKEY_ITEM( derived_product )                ///< Read-write, read and write the derived product information with the format: "vendor/library/name"
 PARAMETERKEY_ITEM( ws_connection_timeout )          ///< Read-(write), read (and write) the maximum period of time in seconds for the client to connect to the server. Can be set only from configuration file (no override from user's code)
+PARAMETERKEY_ITEM( log_ctrl_verbosity )             ///< Read-write, read and write the logging verbosity on the stdout/stderr: 0=trace, 4=error

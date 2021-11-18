@@ -242,7 +242,7 @@ unsigned int DrmControllerRegistersStrategy_v3_0_0::writeSampleLicenseTimerCount
 **/
 unsigned int DrmControllerRegistersStrategy_v3_0_0::writeLicenseTimerInitSemaphoreRequestCommandRegister(bool &licenseTimerInitSemaphoreRequest) const {
   throwUnsupportedFeatureException("License Timer Init Semaphore Request command", DRM_CONTROLLER_V3_0_0_SUPPORTED_VERSION);
-      return mDrmApi_UNSUPPORTED_FEATURE_ERROR;
+  return mDrmApi_UNSUPPORTED_FEATURE_ERROR;
 }
 
 /** readLicenseStartAddressRegister
