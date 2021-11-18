@@ -73,7 +73,8 @@ _PARAM_LIST = ('license_type',
                'trng_status',
                'num_license_loaded',
                'derived_product',
-               'ws_connection_timeout'
+               'ws_connection_timeout',
+               'log_ctrl_verbosity'
 )
 
 
@@ -570,6 +571,22 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     async_cb.assert_NoError()
     print("Test parameter 'ws_connection_timeout': PASS")
 
+    # Test parameter: log_ctrl_verbosity
+    async_cb.reset()
+    conf_json.reset()
+    exp_value = 0
+    conf_json['settings']['log_ctrl_verbosity'] = exp_value
+    conf_json.save()
+    with accelize_drm.DrmManager(
+            conf_json.path, cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        assert drm_manager.get('log_ctrl_verbosity') == exp_value
+    async_cb.assert_NoError()
+    print("Test parameter 'log_ctrl_verbosity': PASS")
+
     # Test unsupported parameter
     async_cb.reset()
     conf_json.reset()
@@ -970,6 +987,15 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code,"Parameter 'trigger_async_callback' cannot be read")
         async_cb.reset()
         print("Test parameter 'trigger_async_callback': PASS")
+
+        # Test parameter: log_ctrl_verbosity
+        orig_val = drm_manager.get('log_ctrl_verbosity')
+        exp_val = 1 if orig_val == 0 else 0
+        drm_manager.set(log_ctrl_verbosity=exp_val)
+        assert drm_manager.get('log_ctrl_verbosity') == exp_val
+        drm_manager.set(log_ctrl_verbosity=orig_val)
+        async_cb.assert_NoError()
+        print("Test parameter 'log_ctrl_verbosity': PASS")
 
         # Test parameter: ParameterKeyCount
         assert drm_manager.get('ParameterKeyCount') == len(_PARAM_LIST)
