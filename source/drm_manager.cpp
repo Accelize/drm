@@ -762,7 +762,7 @@ protected:
 
     Json::Value buildSettingsNode() {
         Json::Value settings;
-        settings["ctrl_sw"] = mIsHybrid;
+        settings["drm_software"] = mIsHybrid;
         settings["frequency_detection_method"] = mFreqDetectionMethod;
         settings["bypass_frequency_detection"] = mBypassFrequencyDetection;
         settings["frequency_detection_threshold"] = mFrequencyDetectionThreshold;
