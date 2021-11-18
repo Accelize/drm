@@ -1,3 +1,6 @@
+# Xilinx generated files
+*.bsp
+
 # Tests generated files
 .cache/
 .coverage
