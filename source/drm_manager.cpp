@@ -1650,6 +1650,15 @@ protected:
         mExpirationTime += std::chrono::seconds( mLicenseDuration );
         Debug( "Update expiration time to {}", time_t_to_string( steady_clock_to_time_t( mExpirationTime ) ) );
 
+        // Wait until license has been pushed to Activator's port
+        waitActivationCodeTransmitted();
+
+        // Check DRM Controller has switched to the right license mode
+        checkDRMControllerLicenseType();
+
+        // Wait until session is running if license is metering
+        waitUntilSessionIsRunning();
+
         Info( "Provisioned license #{} for session {} on DRM controller", mLicenseCounter, mSessionID );
         mLicenseCounter ++;
     }
@@ -2321,15 +2330,6 @@ protected:
             // Send request and receive new license
             Json::Value license_json = getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
             setLicense( license_json );
-
-            // Wait until license has been pushed to Activator's port
-            waitActivationCodeTransmitted();
-
-            // Check DRM Controller has switched to the right license mode
-            checkDRMControllerLicenseType();
-
-            // Wait until session is running if license is metering
-            waitUntilSessionIsRunning();
 
             // Check if an error occurred
             checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 5 ) );
