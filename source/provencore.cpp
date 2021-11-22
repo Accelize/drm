@@ -286,13 +286,12 @@ struct pnc_send_params {
 typedef struct pnc_send_params pnc_send_params_t;
 
 
-int pnc_session_request(pnc_session_t *session, uint32_t type,
-                        uint32_t flags)
+int pnc_session_request(pnc_session_t *session, uint32_t type, uint32_t flags)
 {
     if (session == NULL || !session->configured || (flags & ~UINT32_C(0xffff)) != 0) {
         return -EINVAL;
     }
-
+    printf("pnc_session_t=%p, type=%d\n", session, type);
     return ioctl(session->fd, TZ_IOCTL(TZ_IOCTL_SEND, flags), type);
 }
 
