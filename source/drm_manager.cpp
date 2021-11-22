@@ -594,25 +594,24 @@ protected:
     }
     
     void checkCtrlLogLevel( spdlog::level::level_enum level_e ) {
-        if ( level_e >= spdlog::level::critical) {
-            Throw( DRM_BadArg, "Invalid log level for SW controller: {}", level_e );
+        if ( LogCtrlLevelMap.find( level_e ) == LogCtrlLevelMap.end() ) {
+            Throw( DRM_BadArg, "Invalid log level for SW Controller: {}", level_e );
         }
     }
     
-    void updateCtrlLogLevel( uint32_t level ) {
-        spdlog::level::level_enum level_e = static_cast<spdlog::level::level_enum>( level );
+    void updateCtrlLogLevel( spdlog::level::level_enum level_e ) {
         checkCtrlLogLevel( level_e );
         if ( level_e != sLogCtrlVerbosity ) {
-            uint32_t level_i = LogCtrlLevelMap.find( level_e )->second;
-            if ( pnc_session_request(s_pnc_session, level_i, 0) < 0) {
+            uint32_t level_id = LogCtrlLevelMap.find( level_e )->second;
+            Debug( "Updating log level for SW Controller with ID {} ({})", level_id, level_e );
+            if ( pnc_session_request(s_pnc_session, level_id, 0) < 0) {
                 Throw( DRM_PncInitError, "Failed to set the log level of the DRM Controller TA to {}: {}. ", 
-                        level_i, strerror(errno) );
+                        level_id, strerror(errno) );
             }
-            Debug( "Updating log level for SW Controller from {} to {}", sLogCtrlVerbosity, level );
+            Debug( "Updating log level for SW Controller from {} to {}", sLogCtrlVerbosity, level_e );
             sLogCtrlVerbosity = level_e;
         } else {
-            Debug( "Log level for SW Controller is already set to {}", 
-                sLogCtrlVerbosity );
+            Debug( "Log level for SW Controller is already set to {}", sLogCtrlVerbosity );
         }
     }
 
@@ -3138,7 +3137,8 @@ public:
                     }
                     case ParameterKey::log_ctrl_verbosity: {
                         int32_t verbosityInt = (*it).asInt();
-                        updateCtrlLogLevel( verbosityInt );
+                        spdlog::level::level_enum level_e = static_cast<spdlog::level::level_enum>( verbosityInt );
+                        updateCtrlLogLevel( level_e );
                         Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
                                verbosityInt);
                         break;
