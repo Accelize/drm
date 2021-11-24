@@ -599,9 +599,9 @@ protected:
         }
     }
     
-    void updateCtrlLogLevel( spdlog::level::level_enum level_e ) {
+    void updateCtrlLogLevel( spdlog::level::level_enum level_e, bool force = false ) {
         checkCtrlLogLevel( level_e );
-        if ( level_e != sLogCtrlVerbosity ) {
+        if ( force || ( level_e != sLogCtrlVerbosity ) ) {
             uint32_t level_id = LogCtrlLevelMap.find( level_e )->second;
             Debug( "Updating log level for SW Controller with ID {} ({})", level_id, level_e );
             if ( pnc_session_request(s_pnc_session, level_id, 0) < 0) {
@@ -2473,7 +2473,7 @@ public:
             mIsHybrid = pnc_initialize_drm_ctrl_ta();
             if ( mIsHybrid ) {
                 //  Set logging
-                updateCtrlLogLevel( sLogCtrlVerbosity );
+                updateCtrlLogLevel( sLogCtrlVerbosity, true );
                 //  Set callbacks
                 f_read_register = [&]( uint32_t  offset, uint32_t *value ) {
                     return pnc_read_drm_ctrl_ta( offset, value );
