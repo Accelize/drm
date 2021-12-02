@@ -204,3 +204,8 @@ From v4.1 to 4.2
 - The file `drm_ip_activator_package_0xVVVVLLLLNNNNVVVV.vhdl` has been added and must be compiled under `drm_library`.
 - The file `controller/rtl/core/cdc_bridge.sv` has been added and must be compiled under the default working folder.
 
+From v4.2 to 6.0
+~~~~~~~~~~~~~~~~
+
+- Nothing to do.
+
