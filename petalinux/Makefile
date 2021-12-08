@@ -1,7 +1,6 @@
 ROOT			     = $(PWD)
 PROJECT_NAME        ?= build
 PROJECT_PATH         = $(ROOT)/$(PROJECT_NAME)
-K26_BSP_PATH        ?= ${ROOT}/xilinx-k26-starterkit-v2020.2.2-final.bsp
 PYTHON3             ?= /usr/bin/python3
 
 SELF_DIR            := $(dir $(lastword $(MAKEFILE_LIST)))
@@ -14,6 +13,9 @@ all: create config build
 check:
 ifndef PETALINUX_VER
 	$(error You have to source Petalinux settings)
+endif
+ifndef K26_BSP_PATH
+	$(error You have to define K26_BSP_PATH with the path to BSP)
 endif
 
 create: check
