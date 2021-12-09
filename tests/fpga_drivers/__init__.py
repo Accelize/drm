@@ -110,7 +110,7 @@ class FpgaDriverBase:
         """
         register_value = _c_uint32(0)
         if self._read_register_callback(register_offset, _byref(register_value)):
-            raise RuntimeError('Failed to read register at offset %08X' % register_offset)
+            raise RuntimeError('Failed to read register at offset 0x%08X' % register_offset)
         return register_value.value
 
     @property
@@ -139,7 +139,7 @@ class FpgaDriverBase:
             register_value (int): 32 bits register value to write.
         """
         if self.write_register_callback(register_offset, register_value):
-            raise RuntimeError('Failed to write register at offset %08X' % register_offset)
+            raise RuntimeError('Failed to write register at offset 0x%08X' % register_offset)
 
     @property
     def write_register_callback(self):
