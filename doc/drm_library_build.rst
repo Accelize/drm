@@ -59,7 +59,7 @@ Run following commands to install requirements:
     sudo pip3 install -U cmake
 
 .. code-block:: bash
-    :caption: On RHEL 8, CentOS 8
+    :caption: On RHEL 8, CentOS 8, CentOS Stream 8
 
     # Ensure EPEL repository is installed
     sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
@@ -121,7 +121,7 @@ Run following command to install requirements:
     sudo pip3 install -U setuptools wheel cython
 
 .. code-block:: bash
-    :caption: On Fedora, RHEL 8, CentOS 8
+    :caption: On Fedora, RHEL 8, CentOS 8, CentOS Stream 8
 
     sudo dnf install -y python3-devel python3-pip
     sudo pip3 install -U setuptools wheel cython
@@ -159,7 +159,7 @@ Run following command to install requirements:
     sudo pip3 install -U sphinx breathe sphinx_rtd_theme
 
 .. code-block:: bash
-    :caption: On CentOS 8
+    :caption: On CentOS 8, CentOS Stream 8
 
     sudo dnf config-manager --set-enabled PowerTools
     sudo dnf install -y doxygen
@@ -234,7 +234,7 @@ Required to sign packages:
 To install the required utilities, run the following command:
 
 .. code-block:: bash
-    :caption: On Fedora, RHEL 8, CentOS 8
+    :caption: On Fedora, RHEL 8, CentOS 8, CentOS Stream 8
 
     sudo dnf install -y rpm-build rpm-sign gnupg
 
@@ -298,7 +298,7 @@ To install requirements run the following command:
     cd ..
 
 .. code-block:: bash
-    :caption: On Fedora, RHEL 8, CentOS 8
+    :caption: On Fedora, RHEL 8, CentOS 8, CentOS Stream 8
 
     sudo dnf install -y abi-compliance-checker
 
@@ -333,7 +333,7 @@ Run following command to install requirements:
     sudo pip3 install -U pytest-cov
 
 .. code-block:: bash
-    :caption: On Fedora, RHEL 8, CentOS 8
+    :caption: On Fedora, RHEL 8, CentOS 8, CentOS Stream 8
 
     sudo dnf install -y lcov
     sudo pip3 install -U pytest-cov

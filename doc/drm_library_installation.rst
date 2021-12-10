@@ -13,17 +13,19 @@ Accelize provides the DRM library packages for a wide variety of Linux OS.
 Following OS are fully tested, including FPGA based hardware and end to end
 tests:
 
-* RHEL/CentOS 7
+* CentOS 7
 * Ubuntu 18.04 LTS Bionic
 
 Following OS are minimally tested only (without hardware):
 
-* RHEL/CentOS 8
-* Ubuntu 20.04 LTS Focal
-* Fedora (2 latest stable versions)
-* Ubuntu (2 latest stable versions)
+* CentOS Stream 8
 * Debian 10 Buster
 * Debian 11 Bullseye
+* Fedora (2 latest stable versions)
+* Ubuntu 20.04 LTS Focal
+* Ubuntu (2 latest stable versions)
+* Red Hat Enterprise Linux 7
+* Red Hat Enterprise Linux 8
 
 .. note:: We limit hardware tested OS to those which are supported by FPGA
           vendors. But, we do minimal tests on more OS to ensure to our
@@ -78,7 +80,7 @@ RHEL, CentOS, Fedora: RPM repository
 To install the Accelize repository, run the following commands:
 
 .. code-block:: bash
-    :caption: On Fedora, RHEL 8, CentOS 8
+    :caption: On Fedora, RHEL/CentOS/CentOS Stream >= 8
 
     # Ensure config manager is installed
     sudo dnf install -y 'dnf-command(config-manager)'
@@ -115,7 +117,7 @@ Depending on your OS, use the following command to install the Python package:
     sudo apt install -y python3-accelize-drm
 
 .. code-block:: bash
-    :caption: On RHEL 8, CentOS 8
+    :caption: On RHEL 8, CentOS 8, CentOS Stream 8
 
     # Ensure EPEL repository is installed
     sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
@@ -156,7 +158,7 @@ Run the following command:
     sudo apt install -y libaccelize-drm
 
 .. code-block:: bash
-    :caption: On RHEL 8, CentOS 8
+    :caption: On RHEL 8, CentOS 8, CentOS Stream 8
 
     # Ensure EPEL repository is installed
     sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
@@ -193,7 +195,7 @@ Run the following command:
     sudo apt install -y libaccelize-drm-dev
 
 .. code-block:: bash
-    :caption: On RHEL 8, CentOS 8
+    :caption: On RHEL 8, CentOS 8, CentOS Stream 8
 
     # Ensure EPEL repository is installed
     sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
@@ -276,7 +278,7 @@ Run following commands to install all requirements:
     pip3 install --user -U cython
 
 .. code-block:: bash
-    :caption: On RHEL 8, CentOS 8
+    :caption: On RHEL 8, CentOS 8, CentOS Stream 8
 
     # Ensure EPEL repository is installed
     sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
@@ -351,7 +353,7 @@ Run following commands to install requirements:
     sudo apt install -y dpkg-dev file
 
 .. code-block:: bash
-    :caption: On Fedora, RHEL 8, CentOS 8
+    :caption: On Fedora, RHEL 8, CentOS 8, CentOS Stream 8
 
     sudo dnf install -y rpm-build
 
@@ -415,7 +417,7 @@ simply run the following commands:
     sudo apt-get purge --auto-remove -y libaccelize-drm libaccelize-drm-dev python3-accelize-drm
 
 .. code-block:: bash
-    :caption: On Fedora, RHEL 8, CentOS 8
+    :caption: On Fedora, RHEL 8, CentOS 8, CentOS Stream 8
 
     sudo dnf erase -y libaccelize-drm libaccelize-drm-devel python3-accelize-drm
 
