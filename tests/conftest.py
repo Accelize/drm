@@ -42,6 +42,10 @@ HTTP_TIMEOUT_ERR_MSG = (r"The issue could either be caused by a networking probl
 HASH_FUNTION_TABLE = {}
 
 
+def auto_int(x):
+    return int(x, 0)
+
+
 def bit_not(n, numbits=32):
     return (1 << numbits) - 1 - n
 
@@ -161,7 +165,7 @@ def pytest_addoption(parser):
         "--fpga_slot_id", action="store", default=0, type=int,
         help='Specify the FPGA slot to use')
     parser.addoption(
-        "--drm_controller_base_address", action="store", default=0, type=int,
+        "--drm_controller_base_address", action="store", default=0, type=auto_int,
         help='Specify the DRM controller base address')
     parser.addoption(
         "--cred", action="store", default="./cred.json",
@@ -200,7 +204,7 @@ def pytest_addoption(parser):
         "--integration", action="store_true",
         help='Run integration tests. Theses tests may needs two FPGAs.')
     parser.addoption(
-        "--activator_base_address", action="store", default=0x10000, type=int,
+        "--activator_base_address", action="store", default=0x10000, type=auto_int,
         help=('Specify the base address of the 1st activator. '
               'The other activators shall be separated by an address gap of '
               '0x10000'))
