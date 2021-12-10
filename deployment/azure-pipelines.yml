@@ -219,7 +219,7 @@ stages:
                     awsCommand: s3
                     awsSubCommand: sync
                     awsArguments: $(rpmRepo) $(rpmS3)
-                                  --no-progress --delete --acl public-read
+                                  --no-progress --delete
 
                 - task: AWSCLI@1
                   displayName: Publish DEB repository
@@ -229,7 +229,7 @@ stages:
                     awsCommand: s3
                     awsSubCommand: sync
                     awsArguments: $(debRepo) $(debS3)
-                                  --no-progress --delete --acl public-read
+                                  --no-progress --delete
 
                 # Publish the release on GitHub
                 - task: PythonScript@0
