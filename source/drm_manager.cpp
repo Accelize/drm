@@ -97,17 +97,17 @@ uint32_t *Accelize::DRM::DrmManager::s_pnc_tzvaddr = nullptr;
 size_t Accelize::DRM::DrmManager::s_pnc_tzsize = 0;
 uint32_t Accelize::DRM::DrmManager::s_pnc_page_offset = 0;
 const char* Accelize::DRM::DrmManager::SDK_SLEEP_IN_MICRO_SECONDS = "10000";
-const std::string Accelize::DRM::DrmManager::DRM_SELF_TEST_ERROR_MESSAGE = std::string( 
+const std::string Accelize::DRM::DrmManager::DRM_SELF_TEST_ERROR_MESSAGE = std::string(
         "Could not access DRM Controller registers.\nPlease verify:\n"
                         "\t-The read/write callbacks implementation in the SW application: verify it uses the correct offset address of DRM Controller IP in the design address space.\n"
         "\t-The DRM Controller IP instantiation in the FPGA design: verify the correctness of 16-bit address received by the AXI-Lite port of the DRM Controller.\n" );
 
-const std::string Accelize::DRM::DrmManager::DRM_CONNECTION_ERROR_MESSAGE = std::string( 
+const std::string Accelize::DRM::DrmManager::DRM_CONNECTION_ERROR_MESSAGE = std::string(
         "\n!!! The issue could either be caused by a networking problem, by a firewall or NAT blocking incoming traffic or by a wrong server address. "
                         "Please verify your configuration and try again !!!\n" );
-                        
+
 const std::string Accelize::DRM::DrmManager::DRM_CTRL_TA_INIT_ERROR_MESSAGE = std::string(
-        "Please verify:\n" 
+        "Please verify:\n"
         "\t- the DRM Controller instance in the PL is at the right offset address.\n"
         "\t- the PUF has been registered.\n" );
 
@@ -138,16 +138,16 @@ private:
     int32_t pnc_write_drm_ctrl_ta( uint32_t addr, uint32_t value ) {
         if (addr == 0) {
             if (value > 5)
-                Throw( DRM_Fatal, "Invalid DRM Controller page index {}. ", value );                
+                Throw( DRM_Fatal, "Invalid DRM Controller page index {}. ", value );
             s_pnc_page_offset = s_pnc_tzvaddr[value];
         }
         *(s_pnc_tzvaddr + s_pnc_page_offset + (addr >> 2)) = value;
         return 0;
     }
-    
+
     bool pnc_initialize_drm_ctrl_ta() {
         int err = 0;
-        err = pnc_session_new(PNC_ALLOC_SIZE, &s_pnc_session); 
+        err = pnc_session_new(PNC_ALLOC_SIZE, &s_pnc_session);
         if ( err == -ENODEV ) {
             Info( "Provencecore driver is not loaded" );
             return false;
@@ -165,7 +165,7 @@ private:
                         sleep(1);
                         continue;
                     }
-                    Throw( DRM_PncInitError, "Failed to configure ProvenCore for DRM Controller TA: {}. ", 
+                    Throw( DRM_PncInitError, "Failed to configure ProvenCore for DRM Controller TA: {}. ",
                         strerror(errno) );
                 }
                 break;
@@ -177,11 +177,11 @@ private:
 
             // get virtual address and size of shared memory region
             if ( pnc_session_getinfo(s_pnc_session, (void**)&s_pnc_tzvaddr, &s_pnc_tzsize) < 0) {
-                Throw( DRM_PncInitError, "Failed to get information from DRM Controller TA: {}. ", 
+                Throw( DRM_PncInitError, "Failed to get information from DRM Controller TA: {}. ",
                     strerror(errno) );
             }
             if (s_pnc_tzvaddr == NULL) {
-                Throw( DRM_PncInitError, "Failed to create shared memory for DRM Controller TA: {}. ", 
+                Throw( DRM_PncInitError, "Failed to create shared memory for DRM Controller TA: {}. ",
                     strerror(errno) );
             }
             Debug( "DRM Controller TA information collected. " );
@@ -190,13 +190,13 @@ private:
             if ( pnc_session_request(s_pnc_session, PNC_DRM_INIT_SHM, 0) < 0) {
                 std::string msg = fmt::format( "Failed to initialize DRM Controller TA: {}. ", strerror(errno) );
                 msg += DRM_CTRL_TA_INIT_ERROR_MESSAGE;
-                msg += fmt::format( 
-                    "For more details refer to the online documentation: {}/drm_hardware_integration.html#xilinx-r-som-boards", 
+                msg += fmt::format(
+                    "For more details refer to the online documentation: {}/drm_hardware_integration.html#xilinx-r-som-boards",
                     DRM_DOC_LINK );
                 Throw( DRM_PncInitError, msg );
             }
             Debug( "DRM Controller TA initialized. " );
- 
+
             Debug( "DRM Controller TA ready to operate. " );
             return true;
         }
@@ -206,7 +206,7 @@ private:
             throw;
         }
     }
-    
+
     void pnc_uninitialize_drm_ctrl_ta() {
         pnc_session_destroy( s_pnc_session );
         s_pnc_session = nullptr;
@@ -236,7 +236,7 @@ protected:
     };
 
     const double ACTIVATIONCODE_TRANSMISSION_TIMEOUT_MS = 2000.0;
-    
+
     const std::map<spdlog::level::level_enum, uint32_t> LogCtrlLevelMap = {
             {spdlog::level::trace , PNC_DRM_LOG_TRACE},
             {spdlog::level::debug , PNC_DRM_LOG_DEBUG},
@@ -271,7 +271,7 @@ protected:
     bool         sLogFileAppend       = false;
     size_t       sLogFileRotatingSize = 100*1024; ///< Size max in KBytes of the log roating file
     size_t       sLogFileRotatingNum  = 3;
-    
+
     spdlog::level::level_enum sLogCtrlVerbosity = spdlog::level::warn;
 
     // Function callbacks
@@ -444,7 +444,7 @@ protected:
                         Json::uintValue, (uint32_t)sLogFileRotatingSize ).asUInt();
                 sLogFileRotatingNum = JVgetOptional( param_lib, "log_file_rotating_num",
                         Json::uintValue, (uint32_t)sLogFileRotatingNum ).asUInt();
-                
+
                 // Software Controller logging
                 sLogCtrlVerbosity = static_cast<spdlog::level::level_enum>( JVgetOptional(
                         param_lib, "log_ctrl_verbosity", Json::uintValue, (uint32_t)sLogCtrlVerbosity ).asUInt() );
@@ -592,26 +592,30 @@ protected:
             std::cout << "Failed to update logging settings: " << ex.what() << std::endl; //LCOV_EXCL_LINE
         }
     }
-    
+
     void checkCtrlLogLevel( spdlog::level::level_enum level_e ) {
         if ( level_e >= spdlog::level::critical) {
             Throw( DRM_BadArg, "Invalid log level for SW controller: {}", level_e );
         }
     }
-    
+
     void updateCtrlLogLevel( uint32_t level ) {
         spdlog::level::level_enum level_e = static_cast<spdlog::level::level_enum>( level );
+        if ( !mIsHybrid ) {
+            sLogCtrlVerbosity = level_e;
+            return;
+        }
         checkCtrlLogLevel( level_e );
         if ( level_e != sLogCtrlVerbosity ) {
             uint32_t level_i = LogCtrlLevelMap.find( level_e )->second;
             if ( pnc_session_request(s_pnc_session, level_i, 0) < 0) {
-                Throw( DRM_PncInitError, "Failed to set the log level of the DRM Controller TA to {}: {}. ", 
+                Throw( DRM_PncInitError, "Failed to set the log level of the DRM Controller TA to {}: {}. ",
                         level_i, strerror(errno) );
             }
             Debug( "Updating log level for SW Controller from {} to {}", sLogCtrlVerbosity, level );
             sLogCtrlVerbosity = level_e;
         } else {
-            Debug( "Log level for SW Controller is already set to {}", 
+            Debug( "Log level for SW Controller is already set to {}",
                 sLogCtrlVerbosity );
         }
     }
@@ -1828,7 +1832,7 @@ protected:
             Debug( "Frequency detection sequence is bypassed." );
             return;
         }
-        
+
         if ( mIsHybrid ){
             Debug( "SW DRM Controller: no frequency detection is performed (method 4)" );
             mFreqDetectionMethod = 0;
@@ -1836,7 +1840,7 @@ protected:
             mFrequencyCurr = 0.001;
             return;
         }
-        
+
         int ret = writeDrmAddress(0, 0 );
         ret |= readDrmAddress( REG_FREQ_DETECTION_VERSION, reg );
         if ( ret != 0 ) {
@@ -3173,60 +3177,60 @@ public:
 
 template<> std::string DrmManager::Impl::get( const ParameterKey key_id ) const {
     TRY
-		IMPL_GET_BODY
-		if ( json_value[key_str].isString() )
-		    return json_value[key_str].asString();
-		return json_value[key_str].toStyledString();
+        IMPL_GET_BODY
+        if ( json_value[key_str].isString() )
+            return json_value[key_str].asString();
+        return json_value[key_str].toStyledString();
     CATCH_AND_THROW
 }
 
 template<> bool DrmManager::Impl::get( const ParameterKey key_id ) const {
-	TRY
-		IMPL_GET_BODY
-		return json_value[key_str].asBool();
-	CATCH_AND_THROW
+    TRY
+        IMPL_GET_BODY
+        return json_value[key_str].asBool();
+    CATCH_AND_THROW
 }
 
 template<> int32_t DrmManager::Impl::get( const ParameterKey key_id ) const {
-	TRY
-		IMPL_GET_BODY
-		return json_value[key_str].asInt();
-	CATCH_AND_THROW
+    TRY
+        IMPL_GET_BODY
+        return json_value[key_str].asInt();
+    CATCH_AND_THROW
 }
 
 template<> uint32_t DrmManager::Impl::get( const ParameterKey key_id ) const {
-	TRY
-		IMPL_GET_BODY
-		return json_value[key_str].asUInt();
-	CATCH_AND_THROW
+    TRY
+        IMPL_GET_BODY
+        return json_value[key_str].asUInt();
+    CATCH_AND_THROW
 }
 
 template<> int64_t DrmManager::Impl::get( const ParameterKey key_id ) const {
-	TRY
-		IMPL_GET_BODY
-		return json_value[key_str].asInt64();
-	CATCH_AND_THROW
+    TRY
+        IMPL_GET_BODY
+        return json_value[key_str].asInt64();
+    CATCH_AND_THROW
 }
 
 template<> uint64_t DrmManager::Impl::get( const ParameterKey key_id ) const {
-	TRY
-		IMPL_GET_BODY
-		return json_value[key_str].asUInt64();
-	CATCH_AND_THROW
+    TRY
+        IMPL_GET_BODY
+        return json_value[key_str].asUInt64();
+    CATCH_AND_THROW
 }
 
 template<> float DrmManager::Impl::get( const ParameterKey key_id ) const {
-	TRY
-		IMPL_GET_BODY
-		return json_value[key_str].asFloat();
-	CATCH_AND_THROW
+    TRY
+        IMPL_GET_BODY
+        return json_value[key_str].asFloat();
+    CATCH_AND_THROW
 }
 
 template<> double DrmManager::Impl::get( const ParameterKey key_id ) const {
-	TRY
-		IMPL_GET_BODY
-		return json_value[key_str].asDouble();
-	CATCH_AND_THROW
+    TRY
+        IMPL_GET_BODY
+        return json_value[key_str].asDouble();
+    CATCH_AND_THROW
 }
 
 #define IMPL_SET_BODY \
@@ -3237,57 +3241,57 @@ template<> double DrmManager::Impl::get( const ParameterKey key_id ) const {
 
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const std::string& value ) {
-	TRY
-		IMPL_SET_BODY
-	CATCH_AND_THROW
+    TRY
+        IMPL_SET_BODY
+    CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const bool& value ) {
-	TRY
-		IMPL_SET_BODY
-	CATCH_AND_THROW
+    TRY
+        IMPL_SET_BODY
+    CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const int32_t& value ) {
-	TRY
-		IMPL_SET_BODY
-	CATCH_AND_THROW
+    TRY
+        IMPL_SET_BODY
+    CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const uint32_t& value ) {
-	TRY
-		IMPL_SET_BODY
-	CATCH_AND_THROW
+    TRY
+        IMPL_SET_BODY
+    CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const int64_t& value ) {
-	TRY
-		Json::Value json_value;
-		std::string key_str = findParameterString( key_id );
-		json_value[key_str] = Json::Int64( value );
-		set( json_value );
-	CATCH_AND_THROW
+    TRY
+        Json::Value json_value;
+        std::string key_str = findParameterString( key_id );
+        json_value[key_str] = Json::Int64( value );
+        set( json_value );
+    CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const uint64_t& value ) {
-	TRY
-		Json::Value json_value;
-		std::string key_str = findParameterString( key_id );
-		json_value[key_str] = Json::UInt64( value );
-		set( json_value );
-	CATCH_AND_THROW
+    TRY
+        Json::Value json_value;
+        std::string key_str = findParameterString( key_id );
+        json_value[key_str] = Json::UInt64( value );
+        set( json_value );
+    CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const float& value ) {
-	TRY
-		IMPL_SET_BODY
-	CATCH_AND_THROW
+    TRY
+        IMPL_SET_BODY
+    CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const double& value ) {
-	TRY
-		IMPL_SET_BODY
-	CATCH_AND_THROW
+    TRY
+        IMPL_SET_BODY
+    CATCH_AND_THROW
 }
 
 
