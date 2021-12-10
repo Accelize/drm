@@ -208,8 +208,7 @@ stages:
                     regionName: eu-west-1
                     awsCommand: s3
                     awsSubCommand: cp
-                    awsArguments: $(versionsJson) $(versionsJsonS3)
-                                  --no-progress
+                    awsArguments: $(versionsJson) $(versionsJsonS3) --no-progress
 
                 - task: AWSCLI@1
                   displayName: Publish RPM repository
@@ -218,8 +217,7 @@ stages:
                     regionName: eu-west-1
                     awsCommand: s3
                     awsSubCommand: sync
-                    awsArguments: $(rpmRepo) $(rpmS3)
-                                  --no-progress --delete --acl public-read
+                    awsArguments: $(rpmRepo) $(rpmS3) --no-progress --delete
 
                 - task: AWSCLI@1
                   displayName: Publish DEB repository
@@ -228,8 +226,7 @@ stages:
                     regionName: eu-west-1
                     awsCommand: s3
                     awsSubCommand: sync
-                    awsArguments: $(debRepo) $(debS3)
-                                  --no-progress --delete --acl public-read
+                    awsArguments: $(debRepo) $(debS3) --no-progress --delete
 
                 # Publish the release on GitHub
                 - task: PythonScript@0

@@ -64,4 +64,4 @@ stages:
             awsSubCommand: sync
             awsArguments: build_doc/doc_html
                           s3://accelize/documentation/$(releaseChannel)/
-                          --no-progress --delete --acl public-read --size-only
+                          --no-progress --delete --size-only
