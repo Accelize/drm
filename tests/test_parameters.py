@@ -1152,8 +1152,8 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         assert 'adaptive_proportion_test_error' in trng_status.keys()
         assert 'repetition_count_test_error' in trng_status.keys()
         assert isinstance(trng_status['security_alert_bit'], bool)
-        assert match(r'[0-9A-F]{8}', trng_status['adaptive_proportion_test_error'], IGNORECASE)
-        assert match(r'[0-9A-F]{8}', trng_status['repetition_count_test_error'], IGNORECASE)
+        assert isinstance(trng_status['adaptive_proportion_test_error'], int)
+        assert isinstance(trng_status['repetition_count_test_error'], int)
         with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
             drm_manager.set(trng_status={'security_alert_bit':1})
         async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code," cannot be overwritten")
