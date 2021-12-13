@@ -81,7 +81,7 @@ class FpgaDriver(_FpgaDriverBase):
         """
         xrt_path = FpgaDriver._get_xrt_lib()
         if _isfile(_join(xrt_path, 'lib','libxrt_core.so')):
-            print('Loading XRT API library for Xilinx targets')
+            print('Loading XRT API library for SoM targets')
             fpga_library = _cdll.LoadLibrary(_join(xrt_path, 'lib','libxrt_core.so'))
         else:
             raise RuntimeError('Unable to find Xilinx XRT Library')
@@ -90,13 +90,13 @@ class FpgaDriver(_FpgaDriverBase):
     @staticmethod
     def _get_xbutil():
         xrt_path = FpgaDriver._get_xrt_lib()
-        _xbutil_path = _join(xrt_path, 'bin','xbutil')
+        _xbutil_path = _join(xrt_path, 'bin','xmutil')
         if not _isfile(_xbutil_path):
             raise RuntimeError('Unable to find Xilinx XRT Board Utility')
         return _xbutil_path
 
     @property
-    def _xbutil(self):
+    def _xmutil(self):
         return self._get_xbutil()
 
     def _get_lock(self):
@@ -112,7 +112,7 @@ class FpgaDriver(_FpgaDriverBase):
         Clear FPGA
         """
         clear_fpga = _run(
-            ['xmutil', 'unloadapp'],
+            [self._xmutil, 'unloadapp'],
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if clear_fpga.returncode:
             raise RuntimeError(clear_fpga.stdout)
@@ -131,7 +131,7 @@ class FpgaDriver(_FpgaDriverBase):
         # Now load the bitstream
         image_name = splitext(fpga_image)[0]
         load_image = _run(
-            ['xmutil', 'loadapp', image_name],
+            [self._xmutil, 'loadapp', image_name],
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if load_image.returncode or search(r'error', load_image.stdout):
             raise RuntimeError(load_image.stdout)
@@ -142,7 +142,7 @@ class FpgaDriver(_FpgaDriverBase):
         Reset FPGA including FPGA image.
         """
         list_apps = _run(
-            ['xmutil', 'listapps'],
+            [self._xmutil, 'listapps'],
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if list_apps.returncode or search(r'error', list_apps.stdout):
             raise RuntimeError(list_apps.stdout)
@@ -156,11 +156,29 @@ class FpgaDriver(_FpgaDriverBase):
             return
         self._program_fpga(image_name + ".som")
         
+    def _init_opencl(self):
+        # Load xilinxopencl.so library
+        xrt_path = FpgaDriver._get_xrt_lib()
+        if not _isfile(_join(xrt_path, 'lib','libxilinxopencl.so')):
+            raise RuntimeError('Unable to find Xilinx OpenCL Library')
+        print('Loading Xilinx OpenCL API library for SoM targets')
+        self.opencl_library = _cdll.LoadLibrary(_join(xrt_path, 'lib','libxilinxopencl.so'))
+        image_name = splitext(self._fpga_image)[0]
+        bitstream_path = _join('/lib','firmware','xilinx', image_name, image_name+'.xclbin')
+        print("bitsream_path = ", bitstream_path) 
+        """
+        cl_getplatformids = self.opencl_library.clGetPlatformIDs
+        cl_getplatformids.restype = _c_uint  # Devices count
+        """
+        
 
     def _init_fpga(self):
         """
         Initialize FPGA handle with driver library.
         """
+        # Init OpenCL
+        self._init_opencl()
+
         # Find all devices
         xcl_probe = self._fpga_library.xclProbe
         xcl_probe.restype = _c_uint  # Devices count
