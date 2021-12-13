@@ -75,7 +75,7 @@ DrmControllerRegistersStrategy_v3_2_1::DrmControllerRegistersStrategy_v3_2_1(tDr
   mMeteringFileFirstIpMeteringDataWordPosition(DRM_CONTROLLER_V3_2_1_METERING_FILE_FIRST_IP_METERING_DATA_POSITION),
   mMeteringFileMacWordFromEndPosition(DRM_CONTROLLER_V3_2_1_METERING_FILE_MAC_FROM_END_POSITION),
   mDrmErrorRegisterMessagesArraySize(DRM_CONTROLLER_V3_2_1_NUMBER_OF_ERROR_CODES),
-  mDrmErrorRegisterMessagesArray({
+  mDrmErrorRegisterMessagesArray{
     { mDrmErrorNotReady,                                   "Not ready" },
     { mDrmErrorNoError,                                    "No error"  },
     { mDrmErrorBusReadAuthenticatorDrmVersionTimeOutError, "Bus read authenticator drm version timeout error" },
@@ -98,7 +98,7 @@ DrmControllerRegistersStrategy_v3_2_1::DrmControllerRegistersStrategy_v3_2_1(tDr
     { mDrmErrorBusWriteActivatorResponseTimeOutError,      "Bus write activator response timeout error" },
     { mDrmErrorBusReadInterruptTimeOutError,               "Bus read interrupt timeout error" },
     { mDrmErrorBusReadExpectedStatusError,                 "Bus read expected status error" }
-  })
+  }
 {
   setIndexedRegisterName(DRM_CONTROLLER_V3_2_1_INDEXED_REGISTER_NAME);
 }
@@ -1353,7 +1353,7 @@ void DrmControllerRegistersStrategy_v3_2_1::printMeteringFileHwReport(std::ostre
       writter << "IP INDEX 0x" << DrmControllerDataConverter::binaryToHexString(ipIndex) << " PLAIN METERING";
       file << registerValue(DrmControllerDataConverter::binaryToHexString(ipMetering), writter.str()) << std::endl;
     }
-  }    
+  }
   else
     file << registerValue(DrmControllerDataConverter::binaryToHexStringList(getMeteringFileIpMeteringData(meteringFile),mMeteringWordRegisterWordNumber), "ENCRYPTED IP METERING DATA", 0) << std::endl;
   file << registerValue(DrmControllerDataConverter::binaryToHexString(getMeteringFileMac(meteringFile)), "MAC") << std::endl;
@@ -1832,10 +1832,10 @@ std::vector<unsigned int> DrmControllerRegistersStrategy_v3_2_1::getMeteringFile
 *   \param[in] file is the stream to use for the data print.
 **/
 void DrmControllerRegistersStrategy_v3_2_1::printAdaptiveProportionTestFailuresHwReport(std::ostream &file) const { }
-  
+
 /** printRepetitionCountTestFailures
 *   \brief Display the value of the Repetition Count Test Failures.
 *   \param[in] file is the stream to use for the data print.
 **/
 void DrmControllerRegistersStrategy_v3_2_1::printRepetitionCountTestFailuresHwReport(std::ostream &file) const { }
-  
+
