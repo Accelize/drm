@@ -8,10 +8,10 @@ from json import loads
 from random import randint
 
 
-REG_BRIDGE_VERSION         0x0
-REG_BRIDGE_STREAM          0x4
-REG_BRIDGE_MAILBOX_SIZE    0x8
-REG_BRIDGE_MAILBOX_RO      0xC
+REG_BRIDGE_VERSION       =  0x0
+REG_BRIDGE_STREAM        =  0x4
+REG_BRIDGE_MAILBOX_SIZE  =  0x8
+REG_BRIDGE_MAILBOX_RO    =  0xC
 
 
 def reverse_string(x):
