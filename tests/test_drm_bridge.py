@@ -8,6 +8,12 @@ from json import loads
 from random import randint
 
 
+REG_BRIDGE_VERSION         0x0
+REG_BRIDGE_STREAM          0x4
+REG_BRIDGE_MAILBOX_SIZE    0x8
+REG_BRIDGE_MAILBOX_RO      0xC
+
+
 def reverse_string(x):
     y=list(x)
     y.reverse()
@@ -24,13 +30,9 @@ def stringify(h):
     return ''.join(h_list)
 
 
-@pytest.mark.awsxrt
-def test_vitis_1activator_som_125(accelize_drm, async_handler, log_file_factory):
-    """
-    Test drm controller bridge used for SoM projects: single clock at 125MHz
-    """
+def run_test_on_design(accelize_drm, design_name ):
+
     # Program board with design
-    design_name = 'vitis_1activator_som_125'
     ref_designs = accelize_drm.pytest_ref_designs
     try:
         fpga_image = ref_designs.get_image_id(design_name)
@@ -40,20 +42,18 @@ def test_vitis_1activator_som_125(accelize_drm, async_handler, log_file_factory)
     driver.program_fpga(fpga_image)
     accelize_drm.scanActivators()
 
-    # Test activator
-    async_cb = async_handler.create()
-    async_cb.reset()
+    # Prepare tests
     activators = accelize_drm.pytest_fpga_activators[0]
     activators.reset_coin()
     activators.autotest()
 
     # Test controller bridge version
     reg = c_uint(0)
-    assert driver.read_register_callback(driver._drm_ctrl_base_addr, byref(reg)) == 0
+    assert driver.read_register_callback(driver._drm_ctrl_base_addr + REG_BRIDGE_VERSION, byref(reg)) == 0
     assert reg.value == 0x01000000
 
     # Test controller bridge mailbox size
-    assert driver.read_register_callback(driver._drm_ctrl_base_addr + 0x8, byref(reg)) == 0
+    assert driver.read_register_callback(driver._drm_ctrl_base_addr + REG_BRIDGE_MAILBOX_SIZE, byref(reg)) == 0
     mailbox_ro_size = reg.value >> 16
     mailbox_rw_size = reg.value & 0xFFFF
     assert mailbox_ro_size > 0x10
@@ -62,7 +62,7 @@ def test_vitis_1activator_som_125(accelize_drm, async_handler, log_file_factory)
     # Test controller bridge mailbox read-only content
     hex_str = ''
     for i in range(mailbox_ro_size):
-        assert driver.read_register_callback(driver._drm_ctrl_base_addr + 0xc + 4*i, byref(reg)) == 0
+        assert driver.read_register_callback(driver._drm_ctrl_base_addr + REG_BRIDGE_MAILBOX_RO + 4*i, byref(reg)) == 0
         hex_str += '%08X' % reg.value
     text_str = stringify(hex_str)
     text_json = loads(text_str)
@@ -72,76 +72,41 @@ def test_vitis_1activator_som_125(accelize_drm, async_handler, log_file_factory)
     assert text_json['product_id']['library'] == 'refdesign'
     assert text_json['product_id']['name'] == 'drm_1activator'
     assert text_json['extra']['csp'] == 'aws-f1'
-    #assert not text_json['extra']['dualclk']
+    assert not text_json['extra']['dualclk']
 
     # Test controller bridge mailbox read-write content
     ref_list = []
     for i in range(mailbox_rw_size):
         ref = randint(1,0xFFFFFFFF)
-        assert driver.write_register_callback(driver._drm_ctrl_base_addr + 0xc + 4*mailbox_ro_size + 4*i, ref) == 0
+        assert driver.write_register_callback(driver._drm_ctrl_base_addr + REG_BRIDGE_MAILBOX_RO + 4*mailbox_ro_size + 4*i, ref) == 0
         ref_list.append(ref)
     for i in range(mailbox_rw_size):
-        assert driver.read_register_callback(driver._drm_ctrl_base_addr + 0xc + 4*mailbox_ro_size + 4*i, byref(reg)) == 0
+        assert driver.read_register_callback(driver._drm_ctrl_base_addr + REG_BRIDGE_MAILBOX_RO + 4*mailbox_ro_size + 4*i, byref(reg)) == 0
         assert reg.value == ref_list[i]
+
+    # Test read of activator VLNV from bridge
+    assert driver.write_register_callback(driver._drm_ctrl_base_addr + REG_BRIDGE_STREAM, 0x23020001) == 0
+    assert driver.read_register_callback(driver._drm_ctrl_base_addr + REG_BRIDGE_STREAM, byref(reg)) == 0
+    assert reg.value == 0x1003000B
+    assert driver.read_register_callback(driver._drm_ctrl_base_addr + REG_BRIDGE_STREAM, byref(reg)) == 0
+    assert reg.value == 0x00010001
+
+
+@pytest.mark.awsxrt
+def test_vitis_1activator_som_125(accelize_drm, async_handler, log_file_factory):
+    """
+    Test drm controller bridge used for SoM projects: single clock
+    """
+    # Program board with design
+    design_name = 'vitis_1activator_som_125'
+    run_test_on_design(accelize_drm, design_name)
 
 
 @pytest.mark.awsxrt
 def test_vitis_1activator_som_200_125(accelize_drm, async_handler, log_file_factory):
     """
-    Test drm controller bridge used for SoM projects: single clock at 125MHz
+    Test drm controller bridge used for SoM projects: dual clock
     """
     # Program board with design
     design_name = 'vitis_1activator_som_200_125'
-    ref_designs = accelize_drm.pytest_ref_designs
-    try:
-        fpga_image = ref_designs.get_image_id(design_name)
-    except:
-        pytest.skip(f"Could not find refesign name '{design_name}' for driver '{accelize_drm.pytest_fpga_driver_name}'")
-    driver = accelize_drm.pytest_fpga_driver[0]
-    driver.program_fpga(fpga_image)
-    accelize_drm.scanActivators()
-
-    # Test activator
-    async_cb = async_handler.create()
-    async_cb.reset()
-    activators = accelize_drm.pytest_fpga_activators[0]
-    activators.reset_coin()
-    activators.autotest()
-
-    # Test controller bridge version
-    reg = c_uint(0)
-    assert driver.read_register_callback(driver._drm_ctrl_base_addr, byref(reg)) == 0
-    assert reg.value == 0x01000000
-
-    # Test controller bridge mailbox size
-    assert driver.read_register_callback(driver._drm_ctrl_base_addr + 0x8, byref(reg)) == 0
-    mailbox_ro_size = reg.value >> 16
-    mailbox_rw_size = reg.value & 0xFFFF
-    assert mailbox_ro_size > 0x10
-    assert mailbox_rw_size > 0
-
-    # Test controller bridge mailbox read-only content
-    hex_str = ''
-    for i in range(mailbox_ro_size):
-        assert driver.read_register_callback(driver._drm_ctrl_base_addr + 0xc + 4*i, byref(reg)) == 0
-        hex_str += '%08X' % reg.value
-    text_str = stringify(hex_str)
-    text_json = loads(text_str)
-    assert text_json['fpga_family'] == 'random_id'
-    assert text_json['fpga_vendor'] == 'xilinx'
-    assert text_json['product_id']['vendor'] == 'accelize.com'
-    assert text_json['product_id']['library'] == 'refdesign'
-    assert text_json['product_id']['name'] == 'drm_1activator'
-    assert text_json['extra']['csp'] == 'aws-f1'
-    #assert not text_json['extra']['dualclk']
-
-    # Test controller bridge mailbox read-write content
-    ref_list = []
-    for i in range(mailbox_rw_size):
-        ref = randint(1,0xFFFFFFFF)
-        assert driver.write_register_callback(driver._drm_ctrl_base_addr + 0xc + 4*mailbox_ro_size + 4*i, ref) == 0
-        ref_list.append(ref)
-    for i in range(mailbox_rw_size):
-        assert driver.read_register_callback(driver._drm_ctrl_base_addr + 0xc + 4*mailbox_ro_size + 4*i, byref(reg)) == 0
-        assert reg.value == ref_list[i]
-
+    run_test_on_design(accelize_drm, design_name)
