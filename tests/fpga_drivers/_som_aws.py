@@ -4,14 +4,13 @@ Xilinx XRT driver for Accelize DRM Python library
 
 Requires XRT: https://github.com/Xilinx/XRT
 """
-import pyopencl as cl
 from ctypes import (
     cdll as _cdll, POINTER as _POINTER, c_char_p as _c_char_p,
     c_uint as _c_uint, c_uint64 as _c_uint64, c_int as _c_int,
     c_void_p as _c_void_p, c_size_t as _c_size_t)
 from os import environ as _environ, fsdecode as _fsdecode
-from os.path import isfile as _isfile, join as _join, realpath as _realpath, basename as _basename, dirname as _dirname, splitext
-from re import match as _match, search
+from os.path import isfile as _isfile, join as _join, realpath as _realpath, basename as _basename, dirname as _dirname
+from re import match as _match
 from subprocess import run as _run, PIPE as _PIPE, STDOUT as _STDOUT, Popen
 from threading import Lock as _Lock
 
@@ -67,9 +66,10 @@ class FpgaDriver(_FpgaDriverBase):
         """
         Detect XRT installation path:
         """
-        prefix = '/usr'
-        if _isfile(_join(prefix, 'bin','xbutil')):
-            return prefix
+        for prefix in (_environ.get("XILINX_XRT", "/opt/xilinx/xrt"),
+                       '/usr', '/usr/local'):
+            if _isfile(_join(prefix, 'bin','xbutil')):
+                return prefix
         raise RuntimeError('Unable to find Xilinx XRT')
 
     @staticmethod
@@ -81,8 +81,11 @@ class FpgaDriver(_FpgaDriverBase):
             ctypes.CDLL: FPGA driver.
         """
         xrt_path = FpgaDriver._get_xrt_lib()
-        if _isfile(_join(xrt_path, 'lib','libxrt_core.so')):
-            print('Loading XRT API library for SoM targets')
+        if _isfile(_join(xrt_path, 'lib','libxrt_aws.so')):
+            print('Loading XRT API library for AWS targets')
+            fpga_library = _cdll.LoadLibrary(_join(xrt_path, 'lib','libxrt_aws.so'))
+        elif _isfile(_join(xrt_path, 'lib','libxrt_core.so')):
+            print('Loading XRT API library for Xilinx targets')
             fpga_library = _cdll.LoadLibrary(_join(xrt_path, 'lib','libxrt_core.so'))
         else:
             raise RuntimeError('Unable to find Xilinx XRT Library')
@@ -91,13 +94,15 @@ class FpgaDriver(_FpgaDriverBase):
     @staticmethod
     def _get_xbutil():
         xrt_path = FpgaDriver._get_xrt_lib()
-        _xbutil_path = _join(xrt_path, 'bin','xmutil')
+        _xbutil_path = _join(xrt_path,'bin','awssak')
+        if not _isfile(_xbutil_path):
+            _xbutil_path = _join(xrt_path, 'bin','xbutil')
         if not _isfile(_xbutil_path):
             raise RuntimeError('Unable to find Xilinx XRT Board Utility')
         return _xbutil_path
 
     @property
-    def _xmutil(self):
+    def _xbutil(self):
         return self._get_xbutil()
 
     def _get_lock(self):
@@ -113,7 +118,7 @@ class FpgaDriver(_FpgaDriverBase):
         Clear FPGA
         """
         clear_fpga = _run(
-            [self._xmutil, 'unloadapp'],
+            ['fpga-clear-local-image', '-S', str(self._fpga_slot_id)],
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if clear_fpga.returncode:
             raise RuntimeError(clear_fpga.stdout)
@@ -126,48 +131,41 @@ class FpgaDriver(_FpgaDriverBase):
         Args:
             fpga_image (str): FPGA image.
         """
-        # Must clear the FPGA first
-        #self._clear_fpga()
-
-        # Now load the bitstream
-        image_name = splitext(fpga_image)[0]
+        # Vitis does not reprogram a FPGA that has already the bitstream.
+        # So to force it we write another bitstream first.
+        clear_image = _join(SCRIPT_DIR, 'clear.awsxclbin')
         load_image = _run(
-            [self._xmutil, 'loadapp', image_name],
+            [self._xbutil, 'program',
+             '-d', str(self._fpga_slot_id), '-p', clear_image],
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
-        if load_image.returncode or search(r'error', load_image.stdout):
+        if load_image.returncode:
             raise RuntimeError(load_image.stdout)
-        print('Programmed SoM XRT with FPGA image %s' % fpga_image)
+
+        # Now load the real image
+        fpga_image = _realpath(_fsdecode(fpga_image))
+        load_image = _run(
+            [self._xbutil, 'program',
+             '-d', str(self._fpga_slot_id), '-p', fpga_image],
+            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
+        if load_image.returncode:
+            raise RuntimeError(load_image.stdout)
+        print('Programmed AWS F1 slot #%d with FPGA image %s' % (self._fpga_slot_id, fpga_image))
 
     def _reset_fpga(self):
         """
         Reset FPGA including FPGA image.
         """
-        list_apps = _run(
-            [self._xmutil, 'listapps'],
+        reset_image = _run(
+            [self._xbutil, 'reset', '-d',
+             str(self._fpga_slot_id)],
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
-        if list_apps.returncode or search(r'error', list_apps.stdout):
-            raise RuntimeError(list_apps.stdout)
-        image_name = ''
-        for line in list_apps.stdout.splitlines():
-            m = _match(r'\s*(.+?)\s+', line)
-            if m:
-                image_name = m.group(1)
-        if not image_name:
-            print('No loaded bitstream to reset')
-            return
-        self._program_fpga(image_name + ".som")
-        
+        if reset_image.returncode:
+            raise RuntimeError(reset_image.stdout)
+
     def _init_fpga(self):
         """
-        Initialize FPGA handle with XRT and OpenCL libraries.
+        Initialize FPGA handle with driver library.
         """
-        image_name = splitext(self._fpga_image)[0]
-        dev =cl.get_platforms()[0].get_devices()
-        binary = open(_join('/lib','firmware','xilinx',image_name,image_name+'.xclbin'), 'rb').read()
-        ctx = cl.Context(dev_type=cl.device_type.ALL)
-        prg = cl.Program(ctx,dev,[binary])
-        prg.build()
-
         # Find all devices
         xcl_probe = self._fpga_library.xclProbe
         xcl_probe.restype = _c_uint  # Devices count
@@ -193,9 +191,17 @@ class FpgaDriver(_FpgaDriverBase):
             raise RuntimeError("xclOpen failed to open device")
         self._fpga_handle = device_handle
 
+        # Start Controller SW
+        if not _isfile(self.ctrl_sw_exec):
+            raise RuntimeError('Controller SW executable path is invald: ', self.ctrl_sw_exec)
+        self._ctrl_sw_proc = Popen([self.ctrl_sw_exec, self._fpga_image], shell=False, stdout=_PIPE, stderr=_STDOUT)
+        print('Started CTRL SW')
 
     def _uninit_fpga(self):
-        pass
+        import signal
+        self._ctrl_sw_proc.send_signal(signal.SIGINT)
+        self._ctrl_sw_proc.wait()
+        print('Termiante CTRL SW')
 
     def _get_read_register_callback(self):
         """

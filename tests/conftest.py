@@ -591,13 +591,17 @@ def accelize_drm(pytestconfig):
     if fpga_driver_name and fpga_image:
         raise ValueError(
             'Mutually exclusive options: Please set "fpga_driver" or "fpga_image", but not both')
+    is_ctrl_sw = False
     if fpga_image:
-        if fpga_image.endswith('.som'):
-            fpga_driver_name = 'som_xrt'
+        if fpga_image.endswith('som.awsxclbin'):
+            fpga_driver_name = 'som_aws'
         elif fpga_image.endswith('.awsxclbin'):
             fpga_driver_name = 'aws_xrt'
         elif search(r'agfi-[0-9a-f]+', fpga_image, IGNORECASE):
             fpga_driver_name = 'aws_f1'
+        elif fpga_image.endswith('.som'):
+            fpga_driver_name = 'som_xrt'
+            is_ctrl_sw = True
         else:
             raise ValueError("Unsupported 'fpga_image' option")
     elif fpga_driver_name is None:
@@ -655,6 +659,7 @@ def accelize_drm(pytestconfig):
     print('FPGA DRIVER:', fpga_driver_name)
     print('FPGA IMAGE:', fpga_image)
     print('HDK VERSION:', hdk_version)
+    print('CONTROLLER SW:', is_ctrl_sw)
     if fpga_driver_extra_str:
         fpga_driver_extra = dict(findall(r'([^;]+):([^;]+)', fpga_driver_extra_str))
         print('DRIVER EXTRA:', fpga_driver_extra)
@@ -686,9 +691,11 @@ def accelize_drm(pytestconfig):
         makedirs(pytest_artifacts_dir)
     print('pytest artifacts directory: ', pytest_artifacts_dir)
 
-    # Get frequency detection version
-    freq_version = fpga_driver[0].read_register(drm_ctrl_base_addr + 0xFFF0)
-    print('Frequency detection version: 0x%08X' % freq_version)
+    freq_version = 0
+    if not is_ctrl_sw:
+        # Get frequency detection version
+        freq_version = fpga_driver[0].read_register(drm_ctrl_base_addr + 0xFFF0)
+        print('Frequency detection version: 0x%08X' % freq_version)
 
     # Store some values for access in tests
     import accelize_drm as _accelize_drm
@@ -714,6 +721,7 @@ def accelize_drm(pytestconfig):
     _accelize_drm.scanActivators = types.MethodType( scan, _accelize_drm )
     _accelize_drm.pytest_params = param2dict(pytestconfig.getoption("params"))
     _accelize_drm.pytest_artifacts_dir = pytest_artifacts_dir
+    _accelize_drm.is_ctrl_sw = is_ctrl_sw
     return _accelize_drm
 
 
