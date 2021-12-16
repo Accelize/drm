@@ -125,7 +125,6 @@ def test_metered_start_stop_short_time_in_debug(accelize_drm, conf_json, cred_js
         activators.autotest(is_activated=False)
         assert sum(drm_manager.get('metered_data')) == 0
         async_cb.assert_NoError()
-        drm_manager.deactivate()
     logfile.remove()
 
 

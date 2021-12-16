@@ -72,7 +72,8 @@ def run_test_on_design(accelize_drm, design_name ):
     assert text_json['product_id']['library'] == 'refdesign'
     assert text_json['product_id']['name'] == 'drm_1activator'
     assert text_json['extra']['csp'] == 'aws-f1'
-    assert text_json['extra']['dualclk']
+    assert 'dualclk' in text_json['extra'], "text_json=%s" % str(text_json)
+    assert text_json['drm_software'], "text_json=%s" % str(text_json)
 
     # Test controller bridge mailbox read-write content
     ref_list = []
