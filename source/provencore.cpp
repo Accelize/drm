@@ -147,6 +147,7 @@ int pnc_session_new(size_t size, pnc_session_t **session)
     pnc_session_t *pnc_new;
     
     printf("pnc_session_new: ENTRY session=%p\n", session);
+    printf("pnc_session_new: ENTRY *session=%p\n", *session);
 
     /* If we configure the session with a string rather than
      * a 64 bits id, we need more room in shared memory
@@ -174,6 +175,7 @@ int pnc_session_new(size_t size, pnc_session_t **session)
     *session = pnc_new;
     
     printf("pnc_session_new: EXIT session=%p\n", session);
+    printf("pnc_session_new: EXIT *session=%p\n", *session);
     return 0;
 }
 

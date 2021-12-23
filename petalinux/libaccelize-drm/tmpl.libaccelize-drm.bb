@@ -28,6 +28,8 @@ DEPENDS += " \
 
 RM_WORK_EXCLUDE += "$${PN}"
 
+EXTRA_OECMAKE+=" -DCMAKE_BUILD_TYPE=Debug"
+
 inherit pkgconfig cmake
 
 FILES_$${PN} += "$${libdir}/*"
