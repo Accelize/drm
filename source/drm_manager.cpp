@@ -2483,12 +2483,12 @@ public:
                 };
                 // Increase sleep period because SW Controller is slower
                 setenv("DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS", SDK_SLEEP_IN_MICRO_SECONDS, 0); // does not overwrite if already existing
-                Debug("If not defined, set DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS environment variable to {}", SDK_SLEEP_IN_MICRO_SECONDS);
+                Debug("Set DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS environment variable to {}", SDK_SLEEP_IN_MICRO_SECONDS);
             } else {
                 f_read_register = f_user_read_register;
                 f_write_register = f_user_write_register;
             }
-                f_asynch_error = f_user_asynch_error;
+            f_asynch_error = f_user_asynch_error;
             if ( !f_read_register )
                 Throw( DRM_BadArg, "Read register callback function must not be NULL. " );
             if ( !f_write_register )

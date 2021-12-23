@@ -201,6 +201,9 @@ def pytest_addoption(parser):
              'use default FPGA image for the selected driver and last HDK '
              'version.')
     parser.addoption(
+        "--singleton", action="store_true",
+        help='Run singleton tests. Theses tests must NOT be run in parallel.')
+    parser.addoption(
         "--integration", action="store_true",
         help='Run integration tests. Theses tests may needs two FPGAs.')
     parser.addoption(
@@ -246,9 +249,15 @@ def pytest_runtest_setup(item):
     if skip_awsxrt and markers:
         pytest.skip("Don't run XRT (Vitis) tests.")
 
-    # Check integration tests
+    # Check singleton tests
     markers = tuple(item.iter_markers(name='no_parallel'))
-    markers += tuple(item.iter_markers(name='on_2_fpga'))
+    if not item.config.getoption("singleton") and markers:
+        pytest.skip("Don't run singleton tests.")
+    elif item.config.getoption("singleton") and not markers:
+        pytest.skip("Run only singleton tests.")
+
+    # Check integration tests
+    markers = tuple(item.iter_markers(name='on_2_fpga'))
     if not item.config.getoption("integration") and markers:
         pytest.skip("Don't run integration tests.")
     elif item.config.getoption("integration") and not markers:
@@ -691,8 +700,9 @@ def accelize_drm(pytestconfig):
         makedirs(pytest_artifacts_dir)
     print('pytest artifacts directory: ', pytest_artifacts_dir)
 
-    freq_version = 0
-    if not is_ctrl_sw:
+    if is_ctrl_sw:
+        freq_version = 0
+    else:
         # Get frequency detection version
         freq_version = fpga_driver[0].read_register(drm_ctrl_base_addr + 0xFFF0)
         print('Frequency detection version: 0x%08X' % freq_version)

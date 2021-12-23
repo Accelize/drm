@@ -17,13 +17,17 @@ from tests.conftest import wait_func_true
 from tests.proxy import get_context, set_context, get_proxy_error
 
 
-def test_invalid_derived_product_vendor(accelize_drm, conf_json, cred_json, async_handler):
+def test_invalid_derived_product_vendor(accelize_drm, conf_json, cred_json, async_handler,
+                    log_file_factory):
     """
     Test a invalid derived product vendor returns an error
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-
+    conf_json.reset()
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
+    conf_json.save()
     with accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
