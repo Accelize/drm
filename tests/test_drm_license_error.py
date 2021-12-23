@@ -13,7 +13,7 @@ from requests import get, post
 from tests.proxy import get_context, set_context
 
 
-@pytest.mark.skip(reason='Waiting a fix from LGDN')
+#@pytest.mark.skip(reason='Waiting a fix from LGDN')
 @pytest.mark.no_parallel
 def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler,
                     live_server, request):

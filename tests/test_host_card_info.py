@@ -98,12 +98,17 @@ def test_host_format(accelize_drm, conf_json, cred_json, async_handler):
     assert board
     system = host_card.get('system')
     assert system
-    error = board.get('error')
-    assert error
+    version = host_card.get('version')
+    assert version
+    compute_unit = board.get('compute_unit')
+    assert compute_unit
     xclbin = board.get('xclbin')
     assert xclbin
     info = board.get('info')
     assert info
+    if not accelize_drm.is_ctrl_sw:
+        error = board.get('error')
+        assert error
     dsa_name = info.get('dsa_name')
     assert dsa_name is not None
     async_cb.assert_NoError()
@@ -115,6 +120,8 @@ def test_csp_format(accelize_drm, conf_json, cred_json, async_handler):
     """
     if 'XILINX_XRT' not in environ:
         pytest.skip("XILINX_XRT is not defined: skip host and card data tests")
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip("Skip CSP data verification for SoM target")
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -134,23 +141,6 @@ def test_csp_format(accelize_drm, conf_json, cred_json, async_handler):
         assert drm_manager.get('host_data_verbosity') == 0
         data = drm_manager.get('host_data')
         drm_manager.deactivate()
-    # Check host info
-    host_card = data['host_card']
-    assert host_card
-    runtime = host_card.get('runtime')
-    assert runtime
-    board = host_card.get('board')
-    assert board
-    system = host_card.get('system')
-    assert system
-    error = board.get('error')
-    assert error
-    xclbin = board.get('xclbin')
-    assert xclbin
-    info = board.get('info')
-    assert info
-    dsa_name = info.get('dsa_name')
-    assert dsa_name is not None
     # Check CSP info
     csp = data['csp']
     assert host_card
