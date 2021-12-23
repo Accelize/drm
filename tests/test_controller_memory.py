@@ -6,13 +6,19 @@ import pytest
 from re import search, IGNORECASE
 
 
-def test_wrong_drm_controller_address(accelize_drm, conf_json, cred_json, async_handler):
+@pytest.mark.nosom
+def test_wrong_drm_controller_address(accelize_drm, conf_json, cred_json, async_handle,
+                log_file_factory):
     """Test when a wrong DRM Controller offset is given"""
     async_cb = async_handler.create()
     async_cb.reset()
     driver = accelize_drm.pytest_fpga_driver[0]
     ctrl_base_addr_backup = driver._drm_ctrl_base_addr
     driver._drm_ctrl_base_addr += 0x10000
+    conf_json.reset()
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
+    conf_json.save()
     try:
         with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
             drm_manager = accelize_drm.DrmManager(
@@ -27,7 +33,8 @@ def test_wrong_drm_controller_address(accelize_drm, conf_json, cred_json, async_
         driver._drm_ctrl_base_addr = ctrl_base_addr_backup
 
 
-def test_mailbox_write_overflow(accelize_drm, conf_json, cred_json, async_handler):
+def test_mailbox_write_overflow(accelize_drm, conf_json, cred_json, async_handler,
+                log_file_factory):
     from random import sample
 
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -37,6 +44,9 @@ def test_mailbox_write_overflow(accelize_drm, conf_json, cred_json, async_handle
     async_cb.reset()
     cred_json.reset()
     conf_json.reset()
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
+    conf_json.save()
     with accelize_drm.DrmManager(
             conf_json.path, cred_json.path,
             driver.read_register_callback,
@@ -55,7 +65,8 @@ def test_mailbox_write_overflow(accelize_drm, conf_json, cred_json, async_handle
         async_cb.reset()
 
 
-def test_mailbox_type_error(accelize_drm, conf_json, cred_json, async_handler):
+def test_mailbox_type_error(accelize_drm, conf_json, cred_json, async_handler,
+                log_file_factory):):
     from random import sample
 
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -65,6 +76,9 @@ def test_mailbox_type_error(accelize_drm, conf_json, cred_json, async_handler):
     async_cb.reset()
     cred_json.reset()
     conf_json.reset()
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
+    conf_json.save()
     with accelize_drm.DrmManager(
             conf_json.path, cred_json.path,
             driver.read_register_callback,
@@ -80,6 +94,7 @@ def test_mailbox_type_error(accelize_drm, conf_json, cred_json, async_handler):
     async_cb.reset()
 
 
+@pytest.mark.nosom
 def test_empty_product_id(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """Test error with a design having an empty Product ID"""
     refdesign = accelize_drm.pytest_ref_designs
@@ -115,6 +130,7 @@ def test_empty_product_id(accelize_drm, conf_json, cred_json, async_handler, log
     logfile.remove()
 
 
+@pytest.mark.nosom
 def test_malformed_product_id(accelize_drm, conf_json, cred_json, async_handler):
     """Test error with a design having a malformed Product ID"""
     refdesign = accelize_drm.pytest_ref_designs
@@ -176,6 +192,7 @@ def test_2_drm_manager_concurrently(accelize_drm, conf_json, cred_json, async_ha
 
 
 @pytest.mark.hwtst
+@pytest.mark.nosom
 def test_drm_manager_bist(accelize_drm, conf_json, cred_json, async_handler):
     """Test register access BIST"""
 

@@ -73,7 +73,8 @@ _PARAM_LIST = ('license_type',
                'trng_status',
                'num_license_loaded',
                'derived_product',
-               'ws_connection_timeout'
+               'ws_connection_timeout',
+               'log_ctrl_verbosity'
 )
 
 
@@ -807,7 +808,10 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         drm_manager.activate()
         freq_drm = drm_manager.get('drm_frequency')
         drm_manager.deactivate()
-        assert 125 <= freq_drm <= 126, 'Unexpected frequency gap threshold'
+        if accelize_drm.is_ctrl_sw:
+            assert freq_drm == 0.001
+        else:
+            assert 125 <= freq_drm <= 126, 'Unexpected frequency gap threshold'
         async_cb.assert_NoError()
         print("Test parameter 'drm_frequency': PASS")
 
