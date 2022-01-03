@@ -96,18 +96,18 @@ pnc_session_t *Accelize::DRM::DrmManager::s_pnc_session = nullptr;
 uint32_t *Accelize::DRM::DrmManager::s_pnc_tzvaddr = nullptr;
 size_t Accelize::DRM::DrmManager::s_pnc_tzsize = 0;
 uint32_t Accelize::DRM::DrmManager::s_pnc_page_offset = 0;
-const char* Accelize::DRM::DrmManager::SDK_SLEEP_IN_MICRO_SECONDS = "10000";
-const std::string Accelize::DRM::DrmManager::DRM_SELF_TEST_ERROR_MESSAGE = std::string( 
+
+const std::string Accelize::DRM::DrmManager::DRM_SELF_TEST_ERROR_MESSAGE = std::string(
         "Could not access DRM Controller registers.\nPlease verify:\n"
                         "\t-The read/write callbacks implementation in the SW application: verify it uses the correct offset address of DRM Controller IP in the design address space.\n"
         "\t-The DRM Controller IP instantiation in the FPGA design: verify the correctness of 16-bit address received by the AXI-Lite port of the DRM Controller.\n" );
 
-const std::string Accelize::DRM::DrmManager::DRM_CONNECTION_ERROR_MESSAGE = std::string( 
+const std::string Accelize::DRM::DrmManager::DRM_CONNECTION_ERROR_MESSAGE = std::string(
         "\n!!! The issue could either be caused by a networking problem, by a firewall or NAT blocking incoming traffic or by a wrong server address. "
                         "Please verify your configuration and try again !!!\n" );
-                        
+
 const std::string Accelize::DRM::DrmManager::DRM_CTRL_TA_INIT_ERROR_MESSAGE = std::string(
-        "Please verify:\n" 
+        "Please verify:\n"
         "\t- the DRM Controller instance in the PL is at the right offset address.\n"
         "\t- the PUF has been registered.\n" );
 
@@ -138,16 +138,16 @@ private:
     int32_t pnc_write_drm_ctrl_ta( uint32_t addr, uint32_t value ) {
         if (addr == 0) {
             if (value > 5)
-                Throw( DRM_Fatal, "Invalid DRM Controller page index {}. ", value );                
+                Throw( DRM_Fatal, "Invalid DRM Controller page index {}. ", value );
             s_pnc_page_offset = s_pnc_tzvaddr[value];
         }
         *(s_pnc_tzvaddr + s_pnc_page_offset + (addr >> 2)) = value;
         return 0;
     }
-    
+
     bool pnc_initialize_drm_ctrl_ta() {
         int err = 0;
-        err = pnc_session_new(PNC_ALLOC_SIZE, &s_pnc_session); 
+        err = pnc_session_new(PNC_ALLOC_SIZE, &s_pnc_session);
         if ( err == -ENODEV ) {
             Info( "Provencecore driver is not loaded" );
             return false;
@@ -165,7 +165,7 @@ private:
                         sleep(1);
                         continue;
                     }
-                    Throw( DRM_PncInitError, "Failed to configure ProvenCore for DRM Controller TA: {}. ", 
+                    Throw( DRM_PncInitError, "Failed to configure ProvenCore for DRM Controller TA: {}. ",
                         strerror(errno) );
                 }
                 break;
@@ -177,11 +177,11 @@ private:
 
             // get virtual address and size of shared memory region
             if ( pnc_session_getinfo(s_pnc_session, (void**)&s_pnc_tzvaddr, &s_pnc_tzsize) < 0) {
-                Throw( DRM_PncInitError, "Failed to get information from DRM Controller TA: {}. ", 
+                Throw( DRM_PncInitError, "Failed to get information from DRM Controller TA: {}. ",
                     strerror(errno) );
             }
             if (s_pnc_tzvaddr == NULL) {
-                Throw( DRM_PncInitError, "Failed to create shared memory for DRM Controller TA: {}. ", 
+                Throw( DRM_PncInitError, "Failed to create shared memory for DRM Controller TA: {}. ",
                     strerror(errno) );
             }
             Debug( "DRM Controller TA information collected. " );
@@ -190,13 +190,13 @@ private:
             if ( pnc_session_request(s_pnc_session, PNC_DRM_INIT_SHM, 0) < 0) {
                 std::string msg = fmt::format( "Failed to initialize DRM Controller TA: {}. ", strerror(errno) );
                 msg += DRM_CTRL_TA_INIT_ERROR_MESSAGE;
-                msg += fmt::format( 
-                    "For more details refer to the online documentation: {}/drm_hardware_integration.html#xilinx-r-som-boards", 
+                msg += fmt::format(
+                    "For more details refer to the online documentation: {}/drm_hardware_integration.html#xilinx-r-som-boards",
                     DRM_DOC_LINK );
                 Throw( DRM_PncInitError, msg );
             }
             Debug( "DRM Controller TA initialized. " );
- 
+
             Debug( "DRM Controller TA ready to operate. " );
             return true;
         }
@@ -206,7 +206,7 @@ private:
             throw;
         }
     }
-    
+
     void pnc_uninitialize_drm_ctrl_ta() {
         pnc_session_destroy( s_pnc_session );
         s_pnc_session = nullptr;
@@ -235,8 +235,12 @@ protected:
             {eLicenseType::NODE_LOCKED, "Node-Locked"}
     };
 
-    const double ACTIVATIONCODE_TRANSMISSION_TIMEOUT_MS = 2000.0;
-    
+    const char* SDK_CTRL_HW_SLEEP_IN_US = "100";
+    const char* SDK_CTRL_SW_SLEEP_IN_US = "10000";
+
+    const char* SDK_CTRL_SW_TIMEOUT_IN_US = "1000000000";
+    const char* SDK_CTRL_HW_TIMEOUT_IN_US = "10000000";
+
     const std::map<spdlog::level::level_enum, uint32_t> LogCtrlLevelMap = {
             {spdlog::level::trace , PNC_DRM_LOG_TRACE},
             {spdlog::level::debug , PNC_DRM_LOG_DEBUG},
@@ -271,7 +275,7 @@ protected:
     bool         sLogFileAppend       = false;
     size_t       sLogFileRotatingSize = 100*1024; ///< Size max in KBytes of the log roating file
     size_t       sLogFileRotatingNum  = 3;
-    
+
     spdlog::level::level_enum sLogCtrlVerbosity = spdlog::level::warn;
 
     // Function callbacks
@@ -300,7 +304,10 @@ protected:
     eLicenseType mLicenseType = eLicenseType::METERED;
     uint32_t mLicenseDuration = 0;        ///< Time duration in seconds of the license
 
-    double mActivationTransmissionTimeoutMS = ACTIVATIONCODE_TRANSMISSION_TIMEOUT_MS;  ///< Timeout in milliseconds to complete the transmission of the activation code to the Activator's interface
+    double mActivationTransmissionTimeoutMS = 0;  ///< Timeout in milliseconds to complete the transmission of the activation code to the Activator's interface
+
+    uint32_t mCtrlTimeoutInUS = 0;
+    uint32_t mCtrlSleepInUS = 0;
 
     // To protect access to the metering data (to securize the segment ID check in HW)
     mutable std::mutex mMeteringAccessMutex;
@@ -351,9 +358,6 @@ protected:
     Json::Value mHostConfigData;
     eHostDataVerbosity mHostDataVerbosity = eHostDataVerbosity::PARTIAL;
     Json::Value mSettings;
-
-    // Simulation flag
-    bool mSimulationFlag{false};
 
     // Debug parameters
     spdlog::level::level_enum mDebugMessageLevel;
@@ -410,8 +414,6 @@ protected:
 
         mIsHybrid = false;
 
-        mSimulationFlag = false;
-
         mDebugMessageLevel = spdlog::level::trace;
 
         // Define default asynchronous error callback
@@ -444,7 +446,7 @@ protected:
                         Json::uintValue, (uint32_t)sLogFileRotatingSize ).asUInt();
                 sLogFileRotatingNum = JVgetOptional( param_lib, "log_file_rotating_num",
                         Json::uintValue, (uint32_t)sLogFileRotatingNum ).asUInt();
-                
+
                 // Software Controller logging
                 sLogCtrlVerbosity = static_cast<spdlog::level::level_enum>( JVgetOptional(
                         param_lib, "log_ctrl_verbosity", Json::uintValue, (uint32_t)sLogCtrlVerbosity ).asUInt() );
@@ -506,16 +508,6 @@ protected:
 
             // Optionally, check derived product
             mDerivedProductFromConf = JVgetOptional( conf_json, "derived_product", Json::stringValue, "" ).asString();
-
-            // Check DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS variable exists
-            char* env_val = getenv( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS" );
-            if (env_val == NULL) {
-                Debug( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS variable is not defined" );
-            } else {
-                Warning( "Accelize DRM Library is configured to run for simulation only" );
-                mSimulationFlag = true;
-                mActivationTransmissionTimeoutMS *= 1000;
-            }
 
         } catch( const Exception &e ) {
             if ( e.getErrCode() != DRM_BadFormat )
@@ -592,20 +584,20 @@ protected:
             std::cout << "Failed to update logging settings: " << ex.what() << std::endl; //LCOV_EXCL_LINE
         }
     }
-    
+
     void checkCtrlLogLevel( spdlog::level::level_enum level_e ) {
         if ( LogCtrlLevelMap.find( level_e ) == LogCtrlLevelMap.end() ) {
             Throw( DRM_BadArg, "Invalid log level for SW Controller: {}", level_e );
         }
     }
-    
+
     void updateCtrlLogLevel( spdlog::level::level_enum level_e, bool force = false ) {
         checkCtrlLogLevel( level_e );
         if ( force || ( level_e != sLogCtrlVerbosity ) ) {
             uint32_t level_id = LogCtrlLevelMap.find( level_e )->second;
             Debug( "Updating log level for SW Controller with ID {} ({})", level_id, level_e );
             if ( pnc_session_request(s_pnc_session, level_id, 0) < 0) {
-                Throw( DRM_PncInitError, "Failed to set the log level of the DRM Controller TA to {}: {}. ", 
+                Throw( DRM_PncInitError, "Failed to set the log level of the DRM Controller TA to {}: {}. ",
                         level_id, strerror(errno) );
             }
             Debug( "Updating log level for SW Controller from {} to {}", sLogCtrlVerbosity, level_e );
@@ -781,7 +773,8 @@ protected:
         settings["health_retry_sleep"] = mHealthRetrySleep;
         settings["ws_api_retry_duration"] = mWSApiRetryDuration;
         settings["host_data_verbosity"] = static_cast<uint32_t>( mHostDataVerbosity );
-        settings["simulation_flag"] = mSimulationFlag;
+        settings["drm_ctrl_timeout_us"] = mCtrlTimeoutInUS;
+        settings["drm_ctrl_sleep_us"] = mCtrlSleepInUS;
         settings["axi_frequency"] = mAxiFrequency;
         return settings;
     }
@@ -1083,6 +1076,16 @@ protected:
 
         if ( mDrmController )
             return;
+
+        // Check DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS variable exists
+        const char* ctrl_timeout = getenv( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS" );
+        mCtrlTimeoutInUS = std::stoul(std::string(ctrl_timeout));
+        Debug("DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS environment variable is {}", mCtrlTimeoutInUS);
+        mActivationTransmissionTimeoutMS = 20.0 * mCtrlTimeoutInUS;
+
+        const char* ctrl_sleep = getenv( "DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS" );
+        mCtrlSleepInUS = std::stoul(std::string(ctrl_sleep));
+        Debug("DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS environment variable is {}", mCtrlSleepInUS);
 
         // create instance
         try {
@@ -1836,7 +1839,7 @@ protected:
             Debug( "Frequency detection sequence is bypassed." );
             return;
         }
-        
+
         if ( mIsHybrid ){
             Debug( "SW DRM Controller: no frequency detection is performed (method 4)" );
             mFreqDetectionMethod = 0;
@@ -1844,7 +1847,7 @@ protected:
             mFrequencyCurr = 0.001;
             return;
         }
-        
+
         int ret = writeDrmAddress(0, 0 );
         ret |= readDrmAddress( REG_FREQ_DETECTION_VERSION, reg );
         if ( ret != 0 ) {
@@ -2251,8 +2254,8 @@ protected:
         bool activationCodesTransmitted( false );
         TClock::duration timeSpan;
         double mseconds( 0.0 );
+        uint32_t sleep_period = mCtrlSleepInUS * 100;
         TClock::time_point timeStart = TClock::now();
-        uint32_t sleep_period = mSimulationFlag? 10000000 : 10000;
         while( mseconds < mActivationTransmissionTimeoutMS ) {
             checkDRMCtlrRet( getDrmController().readActivationCodesTransmittedStatusRegister(
                     activationCodesTransmitted ) );
@@ -2294,7 +2297,7 @@ protected:
         double mseconds( 0.0 );
         bool is_running(false);
         TClock::duration timeSpan;
-        uint32_t sleep_period = mSimulationFlag? 10000000 : 10000;
+        uint32_t sleep_period = mCtrlSleepInUS * 100;
         TClock::time_point timeStart = TClock::now();
         while( mseconds < mActivationTransmissionTimeoutMS ) {
             is_running = isSessionRunning();
@@ -2470,6 +2473,8 @@ public:
     {
         TRY
             Debug( "Calling Impl public constructor" );
+            const char* ctrl_timeout = getenv( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS" );
+            const char* ctrl_sleep = getenv( "DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS" );
             mIsHybrid = pnc_initialize_drm_ctrl_ta();
             if ( mIsHybrid ) {
                 //  Set logging
@@ -2481,12 +2486,26 @@ public:
                 f_write_register = [&]( uint32_t  offset, uint32_t value ) {
                     return pnc_write_drm_ctrl_ta(offset, value );
                 };
-                // Increase sleep period because SW Controller is slower
-                setenv("DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS", SDK_SLEEP_IN_MICRO_SECONDS, 0); // does not overwrite if already existing
-                Debug("Set DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS environment variable to {}", SDK_SLEEP_IN_MICRO_SECONDS);
+                // Set sleep period because SW Controller is slower
+                if (ctrl_timeout == NULL) {
+                    Debug( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS variable is not defined" );
+                    setenv("DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS", SDK_CTRL_SW_TIMEOUT_IN_US, 0);
+                }
+                if (ctrl_sleep == NULL) {
+                    Debug( "DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS variable is not defined" );
+                    setenv("DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS", SDK_CTRL_SW_SLEEP_IN_US, 0);
+                }
             } else {
                 f_read_register = f_user_read_register;
                 f_write_register = f_user_write_register;
+                if (ctrl_timeout == NULL) {
+                    Debug( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS variable is not defined" );
+                    setenv("DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS", SDK_CTRL_HW_TIMEOUT_IN_US, 0);
+                }
+                if (ctrl_sleep == NULL) {
+                    Debug( "DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS variable is not defined" );
+                    setenv("DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS", SDK_CTRL_HW_SLEEP_IN_US, 0);
+                }
             }
             f_asynch_error = f_user_asynch_error;
             if ( !f_read_register )
@@ -2495,6 +2514,7 @@ public:
                 Throw( DRM_BadArg, "Write register callback function must not be NULL. " );
             if ( !f_asynch_error )
                 Throw( DRM_BadArg, "Asynchronous error callback function must not be NULL. " );
+
             initDrmInterface();
             getHostAndCardInfo();
             Debug( "Exiting Impl public constructor" );
@@ -3173,60 +3193,60 @@ public:
 
 template<> std::string DrmManager::Impl::get( const ParameterKey key_id ) const {
     TRY
-		IMPL_GET_BODY
-		if ( json_value[key_str].isString() )
-		    return json_value[key_str].asString();
-		return json_value[key_str].toStyledString();
+        IMPL_GET_BODY
+        if ( json_value[key_str].isString() )
+            return json_value[key_str].asString();
+        return json_value[key_str].toStyledString();
     CATCH_AND_THROW
 }
 
 template<> bool DrmManager::Impl::get( const ParameterKey key_id ) const {
-	TRY
-		IMPL_GET_BODY
-		return json_value[key_str].asBool();
-	CATCH_AND_THROW
+    TRY
+        IMPL_GET_BODY
+        return json_value[key_str].asBool();
+    CATCH_AND_THROW
 }
 
 template<> int32_t DrmManager::Impl::get( const ParameterKey key_id ) const {
-	TRY
-		IMPL_GET_BODY
-		return json_value[key_str].asInt();
-	CATCH_AND_THROW
+    TRY
+        IMPL_GET_BODY
+        return json_value[key_str].asInt();
+    CATCH_AND_THROW
 }
 
 template<> uint32_t DrmManager::Impl::get( const ParameterKey key_id ) const {
-	TRY
-		IMPL_GET_BODY
-		return json_value[key_str].asUInt();
-	CATCH_AND_THROW
+    TRY
+        IMPL_GET_BODY
+        return json_value[key_str].asUInt();
+    CATCH_AND_THROW
 }
 
 template<> int64_t DrmManager::Impl::get( const ParameterKey key_id ) const {
-	TRY
-		IMPL_GET_BODY
-		return json_value[key_str].asInt64();
-	CATCH_AND_THROW
+    TRY
+        IMPL_GET_BODY
+        return json_value[key_str].asInt64();
+    CATCH_AND_THROW
 }
 
 template<> uint64_t DrmManager::Impl::get( const ParameterKey key_id ) const {
-	TRY
-		IMPL_GET_BODY
-		return json_value[key_str].asUInt64();
-	CATCH_AND_THROW
+    TRY
+        IMPL_GET_BODY
+        return json_value[key_str].asUInt64();
+    CATCH_AND_THROW
 }
 
 template<> float DrmManager::Impl::get( const ParameterKey key_id ) const {
-	TRY
-		IMPL_GET_BODY
-		return json_value[key_str].asFloat();
-	CATCH_AND_THROW
+    TRY
+        IMPL_GET_BODY
+        return json_value[key_str].asFloat();
+    CATCH_AND_THROW
 }
 
 template<> double DrmManager::Impl::get( const ParameterKey key_id ) const {
-	TRY
-		IMPL_GET_BODY
-		return json_value[key_str].asDouble();
-	CATCH_AND_THROW
+    TRY
+        IMPL_GET_BODY
+        return json_value[key_str].asDouble();
+    CATCH_AND_THROW
 }
 
 #define IMPL_SET_BODY \
@@ -3237,57 +3257,57 @@ template<> double DrmManager::Impl::get( const ParameterKey key_id ) const {
 
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const std::string& value ) {
-	TRY
-		IMPL_SET_BODY
-	CATCH_AND_THROW
+    TRY
+        IMPL_SET_BODY
+    CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const bool& value ) {
-	TRY
-		IMPL_SET_BODY
-	CATCH_AND_THROW
+    TRY
+        IMPL_SET_BODY
+    CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const int32_t& value ) {
-	TRY
-		IMPL_SET_BODY
-	CATCH_AND_THROW
+    TRY
+        IMPL_SET_BODY
+    CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const uint32_t& value ) {
-	TRY
-		IMPL_SET_BODY
-	CATCH_AND_THROW
+    TRY
+        IMPL_SET_BODY
+    CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const int64_t& value ) {
-	TRY
-		Json::Value json_value;
-		std::string key_str = findParameterString( key_id );
-		json_value[key_str] = Json::Int64( value );
-		set( json_value );
-	CATCH_AND_THROW
+    TRY
+        Json::Value json_value;
+        std::string key_str = findParameterString( key_id );
+        json_value[key_str] = Json::Int64( value );
+        set( json_value );
+    CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const uint64_t& value ) {
-	TRY
-		Json::Value json_value;
-		std::string key_str = findParameterString( key_id );
-		json_value[key_str] = Json::UInt64( value );
-		set( json_value );
-	CATCH_AND_THROW
+    TRY
+        Json::Value json_value;
+        std::string key_str = findParameterString( key_id );
+        json_value[key_str] = Json::UInt64( value );
+        set( json_value );
+    CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const float& value ) {
-	TRY
-		IMPL_SET_BODY
-	CATCH_AND_THROW
+    TRY
+        IMPL_SET_BODY
+    CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const double& value ) {
-	TRY
-		IMPL_SET_BODY
-	CATCH_AND_THROW
+    TRY
+        IMPL_SET_BODY
+    CATCH_AND_THROW
 }
 
 
