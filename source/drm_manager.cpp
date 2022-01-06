@@ -279,7 +279,7 @@ protected:
     size_t       sLogFileRotatingSize = 100*1024; ///< Size max in KBytes of the log roating file
     size_t       sLogFileRotatingNum  = 3;
 
-    eCtrlLogVerbosity sLogCtrlVerbosity = eCtrlLogVerbosity::WARN;
+    eCtrlLogVerbosity sLogCtrlVerbosity = eCtrlLogVerbosity::ERROR;
 
     // Function callbacks
     DrmManager::ReadRegisterCallback  f_read_register = nullptr;
@@ -2520,6 +2520,7 @@ public:
 
             initDrmInterface();
             getHostAndCardInfo();
+            pnc_uninitialize_drm_ctrl_ta();
             Debug( "Exiting Impl public constructor" );
         CATCH_AND_THROW
     }
@@ -2546,6 +2547,7 @@ public:
     void activate( const bool& resume_session_request = false ) {
         TRY
             Debug( "Calling 'activate' with 'resume_session_request'={}", resume_session_request );
+            pnc_initialize_drm_ctrl_ta();
 
             if ( isConfigInNodeLock() ) {
                 // Install the node-locked license
@@ -2605,6 +2607,7 @@ public:
                 pauseSession();
             else
                 stopSession();
+            pnc_uninitialize_drm_ctrl_ta();
         CATCH_AND_THROW
     }
 
