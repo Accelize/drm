@@ -131,12 +131,14 @@ private:
 
     // Read Callback Function
     int32_t pnc_read_drm_ctrl_ta( uint32_t addr, uint32_t *value ) {
+        std::cout << "Read shm: s_pnc_tzvaddr = " << std::hex << s_pnc_tzvaddr << std::dec << std::endl;
         *value = *(s_pnc_tzvaddr + s_pnc_page_offset + (addr >> 2));
         return 0;
     }
 
     // Write Callback Function
     int32_t pnc_write_drm_ctrl_ta( uint32_t addr, uint32_t value ) {
+        std::cout << "Write shm: s_pnc_tzvaddr = " << std::hex << s_pnc_tzvaddr << std::dec << std::endl;
         if (addr == 0) {
             if (value > 5)
                 Throw( DRM_Fatal, "Invalid DRM Controller page index {}. ", value );
