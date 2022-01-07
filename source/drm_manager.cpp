@@ -2514,6 +2514,7 @@ public:
     }
 
     ~Impl() {
+        pnc_initialize_drm_ctrl_ta();
         try {
             TRY
                 Debug( "Calling Impl destructor" );
@@ -2527,7 +2528,7 @@ public:
             CATCH_AND_THROW
         } catch(...) {}
         unlockDrmToInstance();
-        //pnc_uninitialize_drm_ctrl_ta();
+        pnc_uninitialize_drm_ctrl_ta();
         Debug( "Exiting Impl destructor" );
         sLogger->flush();
     }
