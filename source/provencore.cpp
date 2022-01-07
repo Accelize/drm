@@ -145,8 +145,8 @@ release_fd:
 int pnc_session_new(size_t size, pnc_session_t **session)
 {
     pnc_session_t *pnc_new;
-    
-    printf("pnc_session_new: ENTRY *session=%p, session=%p, size=%d\n", *session, session, size);
+
+    printf("pnc_session_new: ENTRY *session=%p, session=%p, size=%ld\n", (void*)*session, (void*)session, size);
 
     /* If we configure the session with a string rather than
      * a 64 bits id, we need more room in shared memory
@@ -172,14 +172,14 @@ int pnc_session_new(size_t size, pnc_session_t **session)
     }
 
     *session = pnc_new;
-    
-    printf("pnc_session_new: EXIT *session=%, session=%p\n", *session, session);
+
+    printf("pnc_session_new: EXIT *session=%p, session=%p\n", (void*)*session, (void*)session);
     return 0;
 }
 
 void pnc_session_destroy(pnc_session_t *session)
 {
-    printf("pnc_session_destroy: ENTRY session=%p\n", session);
+    printf("pnc_session_destroy: ENTRY session=%p\n", (void*)session);
     if (session == NULL || session->fd == -1) {
         return;
     }
@@ -188,7 +188,7 @@ void pnc_session_destroy(pnc_session_t *session)
     munmap(session->ptr, session->size);
     memset(session, 0, sizeof(pnc_session_t));
     free(session);
-    printf("pnc_session_destroy: EXIT session=%p\n", session);
+    printf("pnc_session_destroy: EXIT session=%p\n", (void*)session);
 }
 
 int pnc_session_config_by_name(pnc_session_t *session, const char *name)
@@ -233,7 +233,7 @@ int pnc_session_config(pnc_session_t *session, uint64_t id, _Bool is_sid)
     /* Get REE version */
     pnc_session_get_version(session, &version);
     if ((is_sid == 0) && (version >= 0x300)) {
-        /* Avoid forwarding config request if is_sid is not true since this 
+        /* Avoid forwarding config request if is_sid is not true since this
          * feature is not supported anymore.
          */
         Error( "PNC: REE version requires a valid SID" );

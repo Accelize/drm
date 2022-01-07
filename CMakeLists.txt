@@ -185,7 +185,7 @@ set(API_HEADERS
 set(API_PUBLIC_HEADERS)
 foreach(_header_file ${API_HEADERS})
   get_filename_component(_header_file_path ${_header_file} DIRECTORY)
-  add_custom_command(OUTPUT ${_header_file}
+  add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/${_header_file}
 		     COMMAND mkdir -p ${_header_file_path}
 		     COMMAND cp ${CMAKE_SOURCE_DIR}/${_header_file} ${_header_file}
 		     DEPENDS ${CMAKE_SOURCE_DIR}/${_header_file})
@@ -288,6 +288,7 @@ if (PYTHON3)
 						  build_ext -I ${CMAKE_INCLUDE_DIR}:${JSONCPP_INCLUDEDIR} -L ${CMAKE_BINARY_DIR} ${BUILD_EXT_EXTRA} -j ${CPU_COUNT}
 	    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 	    COMMENT "Building accelize_drm Python 3 (With wheel Package)"
+	    DEPENDS ${API_PUBLIC_HEADERS}
 	    VERBATIM
     )
     if (PKG)
