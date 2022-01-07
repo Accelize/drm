@@ -62,11 +62,12 @@ limitations under the License.
 #define PNC_PAGE_SIZE               4096
 #define PNC_ALLOC_SIZE              (PNC_PAGE_SIZE * 24)
 #define PNC_DRM_INIT_SHM            11
-#define PNC_DRM_LOG_TRACE           12
-#define PNC_DRM_LOG_DEBUG           13
+#define PNC_DRM_LOG_ERROR           12
+#define PNC_DRM_LOG_WARN            13
 #define PNC_DRM_LOG_INFO            14
-#define PNC_DRM_LOG_WARN            15
-#define PNC_DRM_LOG_ERROR           16
+#define PNC_DRM_LOG_DEBUG           15
+#define PNC_DRM_LOG_TRACE1          16
+#define PNC_DRM_LOG_TRACE2          17
 
 
 #define TRY try {
@@ -147,7 +148,8 @@ private:
     
     bool pnc_initialize_drm_ctrl_ta() {
         int err = 0;
-        err = pnc_session_new(PNC_ALLOC_SIZE, &s_pnc_session); 
+        err = pnc_session_new(PNC_ALLOC_SIZE, &s_pnc_session);
+        std::cout << "pnc_session_new ret = " << err << std::endl;
         if ( err == -ENODEV ) {
             Info( "Provencecore driver is not loaded" );
             return false;
@@ -160,6 +162,7 @@ private:
             int ret = 0;
             for (int timeout = 10; timeout > 0; timeout--) {
                 ret = pnc_session_config_by_name(s_pnc_session, "drm_controller_rs");
+        std::cout << "pnc_session_config_by_name ret = " << ret << std::endl;
                 if (ret < 0) {
                     if (errno == EAGAIN) {
                         sleep(1);
@@ -176,7 +179,9 @@ private:
             Debug( "ProvenCore session configured for DRM Controller TA. " );
 
             // get virtual address and size of shared memory region
-            if ( pnc_session_getinfo(s_pnc_session, (void**)&s_pnc_tzvaddr, &s_pnc_tzsize) < 0) {
+            ret = pnc_session_getinfo(s_pnc_session, (void**)&s_pnc_tzvaddr, &s_pnc_tzsize);
+std::cout << "pnc_session_getinfo ret = " << ret << ", s_pnc_tzvaddr = " << s_pnc_tzvaddr << ", s_pnc_tzsize = " << s_pnc_tzsize << std::endl;
+            if ( ret < 0) {
                 Throw( DRM_PncInitError, "Failed to get information from DRM Controller TA: {}. ", 
                     strerror(errno) );
             }
@@ -187,7 +192,9 @@ private:
             Debug( "DRM Controller TA information collected. " );
 
             // Request initialization of the Drm Controller Trusted App
-            if ( pnc_session_request(s_pnc_session, PNC_DRM_INIT_SHM, 0) < 0) {
+            ret = pnc_session_request(s_pnc_session, PNC_DRM_INIT_SHM, 0);
+std::cout << "pnc_session_request ret = " << ret << std::endl;
+            if ( ret < 0) {
                 std::string msg = fmt::format( "Failed to initialize DRM Controller TA: {}. ", strerror(errno) );
                 msg += DRM_CTRL_TA_INIT_ERROR_MESSAGE;
                 msg += fmt::format( 
@@ -224,6 +231,7 @@ protected:
     enum class eLicenseType: uint8_t {METERED, NODE_LOCKED, NONE};
     enum class eMailboxOffset: uint8_t {MB_LOCK_DRM=0, MB_CUSTOM_FIELD, MB_SESSION_0, MB_SESSION_1, MB_LIC_EXP_0, MB_LIC_EXP_1, MB_USER};
     enum class eHostDataVerbosity: uint8_t {FULL=0, PARTIAL, NONE};
+    enum class eCtrlLogVerbosity: uint8_t {ERROR=0, WARN, INFO, DEBUG, TRACE1, TRACE2};
 
     // Design constants
     const uint32_t HDK_COMPATIBILITY_LIMIT_MAJOR = 3;
@@ -237,12 +245,13 @@ protected:
 
     const double ACTIVATIONCODE_TRANSMISSION_TIMEOUT_MS = 2000.0;
     
-    const std::map<spdlog::level::level_enum, uint32_t> LogCtrlLevelMap = {
-            {spdlog::level::trace , PNC_DRM_LOG_TRACE},
-            {spdlog::level::debug , PNC_DRM_LOG_DEBUG},
-            {spdlog::level::info  , PNC_DRM_LOG_INFO},
-            {spdlog::level::warn  , PNC_DRM_LOG_WARN},
-            {spdlog::level::err   , PNC_DRM_LOG_ERROR}
+    const std::map<eCtrlLogVerbosity, uint32_t> LogCtrlLevelMap = {
+            {eCtrlLogVerbosity::ERROR  , PNC_DRM_LOG_ERROR},
+            {eCtrlLogVerbosity::WARN   , PNC_DRM_LOG_WARN},
+            {eCtrlLogVerbosity::INFO   , PNC_DRM_LOG_INFO},
+            {eCtrlLogVerbosity::DEBUG  , PNC_DRM_LOG_DEBUG},
+            {eCtrlLogVerbosity::TRACE1 , PNC_DRM_LOG_TRACE1},
+            {eCtrlLogVerbosity::TRACE2 , PNC_DRM_LOG_TRACE2}
     };
 
 #ifdef _WIN32
@@ -272,7 +281,7 @@ protected:
     size_t       sLogFileRotatingSize = 100*1024; ///< Size max in KBytes of the log roating file
     size_t       sLogFileRotatingNum  = 3;
     
-    spdlog::level::level_enum sLogCtrlVerbosity = spdlog::level::warn;
+    eCtrlLogVerbosity sLogCtrlVerbosity = eCtrlLogVerbosity::ERROR;
 
     // Function callbacks
     DrmManager::ReadRegisterCallback  f_read_register = nullptr;
@@ -446,7 +455,7 @@ protected:
                         Json::uintValue, (uint32_t)sLogFileRotatingNum ).asUInt();
                 
                 // Software Controller logging
-                sLogCtrlVerbosity = static_cast<spdlog::level::level_enum>( JVgetOptional(
+                sLogCtrlVerbosity = static_cast<eCtrlLogVerbosity>( JVgetOptional(
                         param_lib, "log_ctrl_verbosity", Json::uintValue, (uint32_t)sLogCtrlVerbosity ).asUInt() );
 
                 // Frequency detection
@@ -593,13 +602,13 @@ protected:
         }
     }
     
-    void checkCtrlLogLevel( spdlog::level::level_enum level_e ) {
+    void checkCtrlLogLevel( eCtrlLogVerbosity level_e ) {
         if ( LogCtrlLevelMap.find( level_e ) == LogCtrlLevelMap.end() ) {
             Throw( DRM_BadArg, "Invalid log level for SW Controller: {}", level_e );
         }
     }
     
-    void updateCtrlLogLevel( spdlog::level::level_enum level_e, bool force = false ) {
+    void updateCtrlLogLevel( eCtrlLogVerbosity level_e, bool force = false ) {
         checkCtrlLogLevel( level_e );
         if ( force || ( level_e != sLogCtrlVerbosity ) ) {
             uint32_t level_id = LogCtrlLevelMap.find( level_e )->second;
@@ -3137,7 +3146,7 @@ public:
                     }
                     case ParameterKey::log_ctrl_verbosity: {
                         int32_t verbosityInt = (*it).asInt();
-                        spdlog::level::level_enum level_e = static_cast<spdlog::level::level_enum>( verbosityInt );
+                        eCtrlLogVerbosity level_e = static_cast<eCtrlLogVerbosity>( verbosityInt );
                         updateCtrlLogLevel( level_e );
                         Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
                                verbosityInt);

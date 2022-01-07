@@ -66,7 +66,7 @@ def test_mailbox_write_overflow(accelize_drm, conf_json, cred_json, async_handle
 
 
 def test_mailbox_type_error(accelize_drm, conf_json, cred_json, async_handler,
-                log_file_factory):):
+                log_file_factory):
     from random import sample
 
     driver = accelize_drm.pytest_fpga_driver[0]
