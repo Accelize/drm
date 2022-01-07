@@ -148,7 +148,7 @@ private:
         return 0;
     }
 
-    bool pnc_initialize_drm_ctrl_ta() {
+    bool pnc_initialize_drm_ctrl_ta() const {
         int err = 0;
         err = pnc_session_new(PNC_ALLOC_SIZE, &s_pnc_session);
         std::cout << "pnc_session_new ret = " << err << std::endl;
@@ -216,7 +216,7 @@ std::cout << "pnc_session_request ret = " << ret << std::endl;
         }
     }
 
-    void pnc_uninitialize_drm_ctrl_ta() {
+    void pnc_uninitialize_drm_ctrl_ta() const {
         pnc_session_destroy( s_pnc_session );
         s_pnc_session = nullptr;
         Debug( "Provencore session closed. " );
@@ -2601,6 +2601,7 @@ public:
 
     void get( Json::Value& json_value ) const {
         TRY
+            pnc_initialize_drm_ctrl_ta();
             for( const std::string& key_str : json_value.getMemberNames() ) {
                 const ParameterKey key_id = findParameterKey( key_str );
                 Debug2( "Getting parameter '{}'", key_str );
@@ -2999,6 +3000,7 @@ public:
                     }
                 }
             }
+            pnc_uninitialize_drm_ctrl_ta();
         CATCH_AND_THROW
     }
 
@@ -3017,6 +3019,7 @@ public:
 
     void set( const Json::Value& json_value ) {
         TRY
+            pnc_initialize_drm_ctrl_ta();
             for( Json::ValueConstIterator it = json_value.begin() ; it != json_value.end() ; it++ ) {
                 std::string key_str = it.key().asString();
                 const ParameterKey key_id = findParameterKey( key_str );
@@ -3161,6 +3164,7 @@ public:
                         Throw( DRM_BadArg, "Parameter '{}' cannot be overwritten. ", key_str );
                 }
             }
+            pnc_uninitialize_drm_ctrl_ta();
         CATCH_AND_THROW
     }
 
