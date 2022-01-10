@@ -172,6 +172,8 @@ def test_file_types(accelize_drm, conf_json, cred_json, async_handler, request,
             assert drm_manager.get('log_message_level') == logfile.verbosity
             for _ in range(2 * int(size / len(msg)) + 1):
                 drm_manager.set(log_message=msg)
+            rotating_size == drm_manager.get('log_file_rotating_size')
+            rotating_num == drm_manager.get('log_file_rotating_num')
         if log_type == 0:
             assert not isfile(logfile.path)
         elif log_type == 1:
@@ -180,8 +182,6 @@ def test_file_types(accelize_drm, conf_json, cred_json, async_handler, request,
             assert len(log_content) >= 2 * size
         else:
             # Rotating file
-            assert rotating_size == drm_manager.get('log_file_rotating_size')
-            assert rotating_num == drm_manager.get('log_file_rotating_num')
             for i in range(rotating_num+1):
                 log_content = logfile.read(i)
                 if i == 0:
@@ -571,9 +571,9 @@ def test_log_ctrl_verbosity_from_config_with_bad_value(accelize_drm, conf_json, 
                     async_cb.callback
                 )
         assert "Invalid log level for SW Controller" in str(excinfo.value)
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
-    async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, "Invalid log level for SW Controller")
-    async_cb.reset()
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+        async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, "Invalid log level for SW Controller")
+        async_cb.reset()
 
 
 def test_log_ctrl_verbosity_from_api_with_bad_value(accelize_drm, conf_json, cred_json, async_handler):
@@ -591,7 +591,7 @@ def test_log_ctrl_verbosity_from_api_with_bad_value(accelize_drm, conf_json, cre
         with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
             drm_manager.set(log_ctrl_verbosity = 6)
         assert "Invalid log level for SW Controller" in str(excinfo.value)
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
-    async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, "Invalid log level for SW Controller")
-    async_cb.reset()
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+        async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, "Invalid log level for SW Controller")
+        async_cb.reset()
 

@@ -214,6 +214,7 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json,
             wait_func_true(lambda: get_context()['exit'],
                 timeout=(retry_timeout+3) * 2)
             drm_manager.deactivate()
+            error_gap = drm_manager.get('health_retry_sleep') + 1
 
         async_cb.assert_NoError()
         data_list = get_context()['data']
@@ -226,7 +227,6 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json,
         start = data_list[0][1]
         end = data_list[-1][2]
         delta = parser.parse(end) - parser.parse(start)
-        error_gap = drm_manager.get('health_retry_sleep') + 1
         assert retry_timeout - error_gap <= int(delta.total_seconds()) <= retry_timeout + error_gap
         assert get_proxy_error() is None
 

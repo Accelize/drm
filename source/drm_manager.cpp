@@ -1849,7 +1849,7 @@ protected:
         }
 
         if ( mIsHybrid ){
-            Debug( "SW DRM Controller: no frequency detection is performed (method 4)" );
+            Debug( "SW DRM Controller: no frequency detection is performed" );
             mFreqDetectionMethod = 0;
             mBypassFrequencyDetection = true;
             mFrequencyCurr = 0.001;
@@ -2481,6 +2481,8 @@ public:
     {
         TRY
             Debug( "Calling Impl public constructor" );
+            if ( f_user_asynch_error )
+                f_asynch_error = f_user_asynch_error;
             mIsHybrid = pnc_initialize_drm_ctrl_ta();
             if ( mIsHybrid ) {
                 //  Set logging
@@ -2499,7 +2501,6 @@ public:
                 f_read_register = f_user_read_register;
                 f_write_register = f_user_write_register;
             }
-            f_asynch_error = f_user_asynch_error;
             if ( !f_read_register )
                 Throw( DRM_BadArg, "Read register callback function must not be NULL. " );
             if ( !f_write_register )
@@ -2986,6 +2987,13 @@ public:
                         json_value[key_str] = logVerbosity;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
                                 logVerbosity );
+                        break;
+                    }
+                    case ParameterKey::is_drm_software: {
+                        bool is_drm_sw = mIsHybrid;
+                        json_value[key_str] = is_drm_sw;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                                is_drm_sw );
                         break;
                     }
                     case ParameterKey::ParameterKeyCount: {

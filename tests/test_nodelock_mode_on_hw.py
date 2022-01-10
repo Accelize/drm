@@ -53,7 +53,8 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
             drm_manager.deactivate()
         async_cb.assert_NoError()
     finally:
-        accelize_drm.clean_nodelock_env(drm_manager, driver, conf_json, cred_json, ws_admin)
+        accelize_drm.clean_nodelock_env(None, driver, conf_json, cred_json, ws_admin)
+        driver.program_fpga()
 
 
 @pytest.mark.minimum
@@ -424,45 +425,45 @@ def test_nodelock_after_metering_mode(accelize_drm, conf_json, cred_json, async_
                                         ws_admin=ws_admin)
         # Set metering configuration
         conf_json.reset()
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        assert drm_manager.get('license_type') == 'Floating/Metering'
-        assert not drm_manager.get('license_status')
-        assert not drm_manager.get('session_status')
-        drm_manager.activate()
-        assert drm_manager.get('license_status')
-        assert drm_manager.get('drm_license_type') == 'Floating/Metering'
-        assert drm_manager.get('session_status')
-        session_id = drm_manager.get('session_id')
-        assert len(session_id) > 0
-        activators[0].generate_coin()
-        drm_manager.deactivate(True)    # Pause session
-        assert drm_manager.get('session_status')
-        assert session_id == drm_manager.get('session_id')
+        with accelize_drm.DrmManager(
+                    conf_json.path,
+                    cred_json.path,
+                    driver.read_register_callback,
+                    driver.write_register_callback,
+                    async_cb.callback
+                ) as drm_manager:
+            assert drm_manager.get('license_type') == 'Floating/Metering'
+            assert not drm_manager.get('license_status')
+            assert not drm_manager.get('session_status')
+            drm_manager.activate()
+            assert drm_manager.get('license_status')
+            assert drm_manager.get('drm_license_type') == 'Floating/Metering'
+            assert drm_manager.get('session_status')
+            session_id = drm_manager.get('session_id')
+            assert len(session_id) > 0
+            activators[0].generate_coin()
+            drm_manager.deactivate(True)    # Pause session
+            assert drm_manager.get('session_status')
+            assert session_id == drm_manager.get('session_id')
 
         # Switch to nodelock
         conf_json.reset()
         conf_json.addNodelock()
-        drm_manager = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-        assert drm_manager.get('drm_license_type') == 'Floating/Metering'
-        assert drm_manager.get('license_type') == 'Node-Locked'
-        assert session_id != drm_manager.get('session_id')
-        assert not drm_manager.get('session_status')
-        drm_manager.activate()
-        assert not drm_manager.get('session_status')
-        assert drm_manager.get('drm_license_type') == 'Node-Locked'
-        drm_manager.deactivate()
+        with accelize_drm.DrmManager(
+                    conf_json.path,
+                    cred_json.path,
+                    driver.read_register_callback,
+                    driver.write_register_callback,
+                    async_cb.callback
+                ) as drm_manager:
+            assert drm_manager.get('drm_license_type') == 'Floating/Metering'
+            assert drm_manager.get('license_type') == 'Node-Locked'
+            assert session_id != drm_manager.get('session_id')
+            assert not drm_manager.get('session_status')
+            drm_manager.activate()
+            assert not drm_manager.get('session_status')
+            assert drm_manager.get('drm_license_type') == 'Node-Locked'
+            drm_manager.deactivate()
         async_cb.assert_NoError()
 
     finally:

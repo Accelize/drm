@@ -74,12 +74,14 @@ def test_improve_coverage_getHostAndCardInfo(accelize_drm, conf_json, cred_json,
     async_cb.assert_NoError()
 
 
-@pytest.mark.nosom
 def test_improve_coverage_readDrmAddress(accelize_drm, conf_json, cred_json, async_handler,
                                          log_file_factory):
     """
     Improve coverage of the readDrmAddress function
     """
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip("Test skipped on SoM target")
+
     def my_bad_read_register(register_offset, returned_data):
         return 123
 
@@ -105,12 +107,14 @@ def test_improve_coverage_readDrmAddress(accelize_drm, conf_json, cred_json, asy
     logfile.remove()
 
 
-@pytest.mark.nosom
 def test_improve_coverage_writeDrmAddress(accelize_drm, conf_json, cred_json, async_handler,
                                          log_file_factory):
     """
     Improve coverage of the writeDrmAddress function
     """
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip("Test skipped on SoM target")
+
     def my_bad_write_register(register_offset, data_to_write):
         return 123
 
@@ -136,12 +140,14 @@ def test_improve_coverage_writeDrmAddress(accelize_drm, conf_json, cred_json, as
     logfile.remove()
 
 
-@pytest.mark.nosom
 def test_improve_coverage_runBistLevel2_bad_size(accelize_drm, conf_json, cred_json, async_handler,
                                          log_file_factory):
     """
     Improve coverage of the runBistLevel2 function: generate bad mailbox size
     """
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip("Test skipped on SoM target")
+
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
@@ -177,12 +183,14 @@ def test_improve_coverage_runBistLevel2_bad_size(accelize_drm, conf_json, cred_j
     logfile.remove()
 
 
-@pytest.mark.nosom
 def test_improve_coverage_runBistLevel2_bad_data(accelize_drm, conf_json, cred_json, async_handler,
                                          log_file_factory):
     """
     Improve coverage of the runBistLevel2 function: generate bad data
     """
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip("Test skipped on SoM target")
+
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
@@ -253,12 +261,14 @@ def test_improve_coverage_getMeteringHeader(accelize_drm, conf_json, cred_json, 
     logfile.remove()
 
 
-@pytest.mark.nosom
 def test_improve_coverage_getDesignInfo(accelize_drm, conf_json, cred_json, async_handler,
                                         log_file_factory):
     """
     Improve coverage of the getDesignInfo function
     """
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip("Test skipped on SoM target")
+
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
@@ -323,12 +333,14 @@ def test_improve_coverage_setLicense(accelize_drm, conf_json, cred_json, async_h
     assert 'Malformed response from License Web Service:' in async_cb.message
 
 
-@pytest.mark.nosom
 def test_improve_coverage_detectDrmFrequencyMethod1(accelize_drm, conf_json, cred_json, async_handler,
                                                     log_file_factory):
     """
     Improve coverage of the detectDrmFrequencyMethod1 function
     """
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip("Test skipped on SoM target")
+
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()

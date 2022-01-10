@@ -25,11 +25,12 @@ def stringify(h):
 
 
 @pytest.mark.awsxrt
-@pytest.mark.nosom
 def test_vitis_1activator_125_som(accelize_drm, async_handler, log_file_factory):
     """
     Test drm controller bridge used for SoM projects: single clock at 125MHz
     """
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip("Test skipped on SoM target")
     # Program board with design
     design_name = 'vitis_1activator_125_som'
     ref_designs = accelize_drm.pytest_ref_designs
