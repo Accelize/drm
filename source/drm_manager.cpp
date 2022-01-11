@@ -131,14 +131,12 @@ private:
 
     // Read Callback Function
     int32_t pnc_read_drm_ctrl_ta( uint32_t addr, uint32_t *value ) {
-        std::cout << "Read shm: s_pnc_tzvaddr = " << std::hex << s_pnc_tzvaddr << std::dec << std::endl;
         *value = *(s_pnc_tzvaddr + s_pnc_page_offset + (addr >> 2));
         return 0;
     }
 
     // Write Callback Function
     int32_t pnc_write_drm_ctrl_ta( uint32_t addr, uint32_t value ) {
-        std::cout << "Write shm: s_pnc_tzvaddr = " << std::hex << s_pnc_tzvaddr << std::dec << std::endl;
         if (addr == 0) {
             if (value > 5)
                 Throw( DRM_Fatal, "Invalid DRM Controller page index {}. ", value );
@@ -150,21 +148,23 @@ private:
 
     bool pnc_initialize_drm_ctrl_ta() const {
         int err = 0;
-        err = pnc_session_new(PNC_ALLOC_SIZE, &s_pnc_session);
-        std::cout << "pnc_session_new ret = " << err << std::endl;
-        if ( err == -ENODEV ) {
-            Info( "Provencecore driver is not loaded" );
-            return false;
+        if ( s_pnc_session == nullptr) {
+            err = pnc_session_new(PNC_ALLOC_SIZE, &s_pnc_session);
+            if ( err == -ENODEV ) {
+                Info( "Provencecore driver is not loaded" );
+                return false;
+            }
+            if ( err < 0 ) {
+                Throw( DRM_PncInitError, "Failed to open TrustZone module: {}. ", strerror(errno) );
+            }
+            Debug( "ProvenCore session created. " );
+        } else {
+            Debug( "Found and reuse an existing ProvenCore session. " );
         }
-        if ( err < 0 ) {
-            Throw( DRM_PncInitError, "Failed to open TrustZone module: {}. ", strerror(errno) );
-        }
-        Debug( "ProvenCore session created. " );
         try {
             int ret = 0;
             for (int timeout = 10; timeout > 0; timeout--) {
                 ret = pnc_session_config_by_name(s_pnc_session, "drm_controller_rs");
-        std::cout << "pnc_session_config_by_name ret = " << ret << std::endl;
                 if (ret < 0) {
                     if (errno == EAGAIN) {
                         sleep(1);
@@ -182,7 +182,6 @@ private:
 
             // get virtual address and size of shared memory region
             ret = pnc_session_getinfo(s_pnc_session, (void**)&s_pnc_tzvaddr, &s_pnc_tzsize);
-std::cout << "pnc_session_getinfo ret = " << ret << ", s_pnc_tzvaddr = " << s_pnc_tzvaddr << ", s_pnc_tzsize = " << s_pnc_tzsize << std::endl;
             if ( ret < 0) {
                 Throw( DRM_PncInitError, "Failed to get information from DRM Controller TA: {}. ",
                     strerror(errno) );
@@ -194,19 +193,17 @@ std::cout << "pnc_session_getinfo ret = " << ret << ", s_pnc_tzvaddr = " << s_pn
             Debug( "DRM Controller TA information collected. " );
 
             // Request initialization of the Drm Controller Trusted App
-            ret = pnc_session_request(s_pnc_session, PNC_DRM_INIT_SHM, 0);
-std::cout << "pnc_session_request ret = " << ret << std::endl;
-            if ( ret < 0) {
-                std::string msg = fmt::format( "Failed to initialize DRM Controller TA: {}. ", strerror(errno) );
+            uint32_t response = 0;
+            ret = pnc_session_send_request_and_wait_response(s_pnc_session, PNC_DRM_INIT_SHM, 0, &response);
+            if ( (ret < 0) || (response != 0) ) {
+                std::string msg = fmt::format( "Failed to initialize DRM Controller TA: retcode={} / response={}. ", strerror(errno), response );
                 msg += DRM_CTRL_TA_INIT_ERROR_MESSAGE;
                 msg += fmt::format(
                     "For more details refer to the online documentation: {}/drm_hardware_integration.html#xilinx-r-som-boards",
                     DRM_DOC_LINK );
                 Throw( DRM_PncInitError, msg );
             }
-            Debug( "DRM Controller TA initialized. " );
-
-            Debug( "DRM Controller TA ready to operate. " );
+            Debug( "DRM Controller TA initialized and ready to operate." );
             return true;
         }
         catch( const Exception &e ) {
@@ -2509,13 +2506,13 @@ public:
                 Throw( DRM_BadArg, "Asynchronous error callback function must not be NULL. " );
             initDrmInterface();
             getHostAndCardInfo();
-            pnc_uninitialize_drm_ctrl_ta();
+//            pnc_uninitialize_drm_ctrl_ta();
             Debug( "Exiting Impl public constructor" );
         CATCH_AND_THROW
     }
 
     ~Impl() {
-        pnc_initialize_drm_ctrl_ta();
+//        pnc_initialize_drm_ctrl_ta();
         try {
             TRY
                 Debug( "Calling Impl destructor" );
@@ -2537,7 +2534,7 @@ public:
     void activate( const bool& resume_session_request = false ) {
         TRY
             Debug( "Calling 'activate' with 'resume_session_request'={}", resume_session_request );
-            pnc_initialize_drm_ctrl_ta();
+//            pnc_initialize_drm_ctrl_ta();
 
             if ( isConfigInNodeLock() ) {
                 // Install the node-locked license
@@ -2597,13 +2594,13 @@ public:
                 pauseSession();
             else
                 stopSession();
-            pnc_uninitialize_drm_ctrl_ta();
+//            pnc_uninitialize_drm_ctrl_ta();
         CATCH_AND_THROW
     }
 
     void get( Json::Value& json_value ) const {
         TRY
-            pnc_initialize_drm_ctrl_ta();
+//            pnc_initialize_drm_ctrl_ta();
             for( const std::string& key_str : json_value.getMemberNames() ) {
                 const ParameterKey key_id = findParameterKey( key_str );
                 Debug2( "Getting parameter '{}'", key_str );
@@ -3009,7 +3006,7 @@ public:
                     }
                 }
             }
-            pnc_uninitialize_drm_ctrl_ta();
+//            pnc_uninitialize_drm_ctrl_ta();
         CATCH_AND_THROW
     }
 
@@ -3028,7 +3025,7 @@ public:
 
     void set( const Json::Value& json_value ) {
         TRY
-            pnc_initialize_drm_ctrl_ta();
+//            pnc_initialize_drm_ctrl_ta();
             for( Json::ValueConstIterator it = json_value.begin() ; it != json_value.end() ; it++ ) {
                 std::string key_str = it.key().asString();
                 const ParameterKey key_id = findParameterKey( key_str );
@@ -3173,7 +3170,7 @@ public:
                         Throw( DRM_BadArg, "Parameter '{}' cannot be overwritten. ", key_str );
                 }
             }
-            pnc_uninitialize_drm_ctrl_ta();
+//            pnc_uninitialize_drm_ctrl_ta();
         CATCH_AND_THROW
     }
 
