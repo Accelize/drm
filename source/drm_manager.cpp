@@ -2506,13 +2506,11 @@ public:
                 Throw( DRM_BadArg, "Asynchronous error callback function must not be NULL. " );
             initDrmInterface();
             getHostAndCardInfo();
-//            pnc_uninitialize_drm_ctrl_ta();
             Debug( "Exiting Impl public constructor" );
         CATCH_AND_THROW
     }
 
     ~Impl() {
-//        pnc_initialize_drm_ctrl_ta();
         try {
             TRY
                 Debug( "Calling Impl destructor" );
@@ -2534,7 +2532,6 @@ public:
     void activate( const bool& resume_session_request = false ) {
         TRY
             Debug( "Calling 'activate' with 'resume_session_request'={}", resume_session_request );
-//            pnc_initialize_drm_ctrl_ta();
 
             if ( isConfigInNodeLock() ) {
                 // Install the node-locked license
@@ -2594,13 +2591,11 @@ public:
                 pauseSession();
             else
                 stopSession();
-//            pnc_uninitialize_drm_ctrl_ta();
         CATCH_AND_THROW
     }
 
     void get( Json::Value& json_value ) const {
         TRY
-//            pnc_initialize_drm_ctrl_ta();
             for( const std::string& key_str : json_value.getMemberNames() ) {
                 const ParameterKey key_id = findParameterKey( key_str );
                 Debug2( "Getting parameter '{}'", key_str );
@@ -3006,7 +3001,6 @@ public:
                     }
                 }
             }
-//            pnc_uninitialize_drm_ctrl_ta();
         CATCH_AND_THROW
     }
 
@@ -3025,7 +3019,6 @@ public:
 
     void set( const Json::Value& json_value ) {
         TRY
-//            pnc_initialize_drm_ctrl_ta();
             for( Json::ValueConstIterator it = json_value.begin() ; it != json_value.end() ; it++ ) {
                 std::string key_str = it.key().asString();
                 const ParameterKey key_id = findParameterKey( key_str );
@@ -3170,7 +3163,6 @@ public:
                         Throw( DRM_BadArg, "Parameter '{}' cannot be overwritten. ", key_str );
                 }
             }
-//            pnc_uninitialize_drm_ctrl_ta();
         CATCH_AND_THROW
     }
 
