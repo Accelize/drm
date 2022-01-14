@@ -272,3 +272,38 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
     if dna_score:
         assert dna_score < DUPLICATE_THRESHOLD
 
+
+@pytest.mark.no_parallel
+def test_saas_challenge_quality(accelize_drm, conf_json, cred_json, async_handler,
+                    log_file_factory):
+    nb_loop = 5
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    async_cb.reset()
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
+    conf_json.save()
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+        for i in range(nb_loop):
+            drm_manager.activate()
+            drm_manager.deactivate()
+    log_content = logfile.read()
+    challenge_list = list(findall(r'"saasChallenge" : "([a-fA-F0-9]{32})",', log_content))
+    challenge_set = set(challenge_list)
+    try:
+        assert len(challenge_list) == len( challenge_set), "Found duplicate saas challenge"
+    except AssertionError as e:
+        dupl_dict = {}
+        for e in challenge_set:
+            nb = challenge_list.count(e)
+            if nb > 1:
+                print(f'challenge {e} appears {nb} times')
+        raise
+    logfile.remove()
+    async_cb.assert_NoError()
