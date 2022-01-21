@@ -125,7 +125,7 @@ def test_drm_bridge_on_kria(accelize_drm, async_handler, log_file_factory):
     assert text_json['product_id']['name'] == 'drm_1activator'
     assert text_json['extra']['csp'] == 'aws-f1'
     assert 'dualclk' in text_json['extra']
-    assert text_json['drm_software']
+    assert text_json['extra']['hybrid']
 
     # Test controller bridge mailbox read-write content
     ref_list = []

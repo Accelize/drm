@@ -146,8 +146,6 @@ int pnc_session_new(size_t size, pnc_session_t **session)
 {
     pnc_session_t *pnc_new;
 
-    printf("pnc_session_new: ENTRY *session=%p, session=%p, size=%ld\n", (void*)*session, (void*)session, size);
-
     /* If we configure the session with a string rather than
      * a 64 bits id, we need more room in shared memory
      * to be able to store that string.
@@ -173,13 +171,11 @@ int pnc_session_new(size_t size, pnc_session_t **session)
 
     *session = pnc_new;
 
-    printf("pnc_session_new: EXIT *session=%p, session=%p\n", (void*)*session, (void*)session);
     return 0;
 }
 
 void pnc_session_destroy(pnc_session_t *session)
 {
-    printf("pnc_session_destroy: ENTRY session=%p\n", (void*)session);
     if (session == NULL || session->fd == -1) {
         return;
     }
@@ -188,7 +184,6 @@ void pnc_session_destroy(pnc_session_t *session)
     munmap(session->ptr, session->size);
     memset(session, 0, sizeof(pnc_session_t));
     free(session);
-    printf("pnc_session_destroy: EXIT session=%p\n", (void*)session);
 }
 
 int pnc_session_config_by_name(pnc_session_t *session, const char *name)

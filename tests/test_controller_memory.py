@@ -6,7 +6,7 @@ import pytest
 from re import search, IGNORECASE
 
 
-def test_wrong_drm_controller_address(accelize_drm, conf_json, cred_json, async_handle,
+def test_wrong_drm_controller_address(accelize_drm, conf_json, cred_json, async_handler,
                 log_file_factory):
     """Test when a wrong DRM Controller offset is given"""
     if accelize_drm.is_ctrl_sw:

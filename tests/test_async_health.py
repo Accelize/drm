@@ -449,28 +449,26 @@ def test_async_call_on_pause_when_health_is_enabled(accelize_drm, conf_json, cre
 
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + 'test_async_call_on_pause_depending_on_health_status'
-    logfile = log_file_factory.create(2)
+    logfile = log_file_factory.create(1)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
+    # Set initial context on the live server
+    context = {'healthPeriod':300,
+               'healthRetry':0,
+               'health_cnt':0
+    }
+    set_context(context)
+    assert get_context() == context
+
     with accelize_drm.DrmManager(
-            conf_json.path, cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        ) as drm_manager:
-
-        # Set initial context on the live server
-        context = {'healthPeriod':300,
-                   'healthRetry':0,
-                   'health_cnt':0
-        }
-        set_context(context)
-        assert get_context() == context
-
+                conf_json.path, cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         # First, get license duration to align health period on it
         drm_manager.activate()
-        lic_dur = drm_manager.get('license_duration')
         drm_manager.deactivate(True) # Pause session
         drm_manager.deactivate()
 
@@ -511,21 +509,20 @@ def test_no_async_call_on_pause_when_health_is_disabled(accelize_drm, conf_json,
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
+    # Set initial context on the live server
+    context = {'healthPeriod':0,
+               'healthRetry':0,
+               'health_cnt':0
+    }
+    set_context(context)
+    assert get_context() == context
+
     with accelize_drm.DrmManager(
             conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
         ) as drm_manager:
-
-        # Set initial context on the live server
-        context = {'healthPeriod':0,
-                   'healthRetry':0,
-                   'health_cnt':0
-        }
-        set_context(context)
-        assert get_context() == context
-
         # First, get license duration to align health period on it
         drm_manager.activate()
         lic_dur = drm_manager.get('license_duration')

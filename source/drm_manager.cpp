@@ -148,19 +148,19 @@ private:
 
     bool pnc_initialize_drm_ctrl_ta() const {
         int err = 0;
-        if ( s_pnc_session == nullptr) {
-            err = pnc_session_new(PNC_ALLOC_SIZE, &s_pnc_session);
-            if ( err == -ENODEV ) {
-                Info( "Provencecore driver is not loaded" );
-                return false;
-            }
-            if ( err < 0 ) {
-                Throw( DRM_PncInitError, "Failed to open TrustZone module: {}. ", strerror(errno) );
-            }
-            Debug( "ProvenCore session created. " );
-        } else {
+        if ( s_pnc_session != nullptr) {
             Debug( "Found and reuse an existing ProvenCore session. " );
+            return true;
         }
+        err = pnc_session_new(PNC_ALLOC_SIZE, &s_pnc_session);
+        if ( err == -ENODEV ) {
+            Info( "Provencecore driver is not loaded" );
+            return false;
+        }
+        if ( err < 0 ) {
+            Throw( DRM_PncInitError, "Failed to open TrustZone module: {}. ", strerror(errno) );
+        }
+        Debug( "ProvenCore session created. " );
         try {
             int ret = 0;
             for (int timeout = 10; timeout > 0; timeout--) {
@@ -1361,7 +1361,7 @@ protected:
         Debug( "Build license request #{} to maintain current session", mLicenseCounter );
 
         // Check if an error occurred
-//        checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 5 ) );
+        checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 5 ) );
         // Request challenge and metering info for new request
         checkDRMCtlrRet( getDrmController().synchronousExtractMeteringFile( numberOfDetectedIps, saasChallenge, meteringFile ) );
         json_request["saasChallenge"] = saasChallenge;
@@ -2339,7 +2339,7 @@ protected:
             setLicense( license_json );
 
             // Check if an error occurred
-            checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 5 ) );
+            //checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 5 ) );
 
             // Extract asynchronous health parameters from response
             Json::Value metering_node = JVgetOptional( license_json, "metering", Json::objectValue, Json::nullValue );

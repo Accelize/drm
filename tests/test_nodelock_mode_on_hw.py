@@ -167,9 +167,6 @@ def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, asy
             assert not drm_manager.get('license_status')
             assert drm_manager.get('drm_license_type') == 'Node-Locked'
             assert drm_manager.get('license_duration') == 0
-            activators.check_coin(drm_manager.get('metered_data'))
-            activators[0].generate_coin()
-            activators.check_coin(drm_manager.get('metered_data'))
             # Stop application
             drm_manager.deactivate()
         async_cb.assert_NoError()
@@ -191,8 +188,6 @@ def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, asy
             assert not drm_manager.get('license_status')
             assert drm_manager.get('drm_license_type') == 'Node-Locked'
             assert drm_manager.get('license_duration') == 0
-            activators[0].generate_coin()
-            activators.check_coin(drm_manager.get('metered_data'))
             # Stop application
             drm_manager.deactivate()
         async_cb.assert_NoError()
@@ -339,14 +334,19 @@ def test_nodelock_limits(accelize_drm, conf_json, conf_json_second, cred_json, a
 @pytest.mark.no_parallel
 @pytest.mark.hwtst
 def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, cred_json,
-                                                      async_handler, ws_admin):
+                                  async_handler, ws_admin, log_file_factory):
     """
     Test we cannot switch to metering mode when nodelock is already set.
     Board needs to be reprogramed
     """
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip('Not to execute on SoM target')
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     cred_json.set_user('accelize_accelerator_test_03')        # User with a single nodelock license
+    logfile = log_file_factory.create(2)
+    conf_json['settings'].update(logfile.json)
+    conf_json.save()
 
     try:
         # Set nodelock configuration
@@ -367,6 +367,9 @@ def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, c
 
         # Set metering configuration
         conf_json.reset()
+        conf_json['settings'].update(logfile.json)
+        conf_json['settings']['log_file_append'] = True
+        conf_json.save()
         with accelize_drm.DrmManager(
                     conf_json.path,
                     cred_json.path,

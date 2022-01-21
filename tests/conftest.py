@@ -89,7 +89,8 @@ def get_default_conf_json(licensing_server_url):
         },
         "settings": {
             "ws_connection_timeout": 3,
-            "ws_request_timeout": 5
+            "ws_request_timeout": 5,
+            "ws_api_retry_duration": 5
         }
     }
 
@@ -229,7 +230,7 @@ def pytest_runtest_setup(item):
     """
     Configure test initialization
     """
-    # Check awsxrt tests
+    # Check awsf1 tests
     m_option = item.config.getoption('-m')
     if search(r'\bawsf1\b', m_option) and not search(r'\nnot\n\s+\bawsf1\b', m_option):
         skip_awsf1 = False
@@ -249,12 +250,21 @@ def pytest_runtest_setup(item):
     if skip_awsxrt and markers:
         pytest.skip("Don't run XRT (Vitis) tests.")
 
-    # Check singleton tests
-    markers = tuple(item.iter_markers(name='no_parallel'))
-    if not item.config.getoption("singleton") and markers:
-        pytest.skip("Don't run singleton tests.")
-    elif item.config.getoption("singleton") and not markers:
-        pytest.skip("Run only singleton tests.")
+    # Determine if DRM Ctrl SW is under test
+    fpga_image = item.config.getoption('--fpga_image')
+    if fpga_image and fpga_image.endswith(".som"):
+        hybrid_test = True
+    fpga_driver = item.config.getoption('--fpga_driver')
+    if fpga_driver and fpga_driver == 'som_xrt':
+        hybrid_test = True
+
+    if not hybrid_test:
+        # Check singleton tests
+        markers = tuple(item.iter_markers(name='no_parallel'))
+        if not item.config.getoption("singleton") and markers:
+            pytest.skip("Don't run singleton tests.")
+        elif item.config.getoption("singleton") and not markers:
+            pytest.skip("Run only singleton tests.")
 
     # Check integration tests
     markers = tuple(item.iter_markers(name='on_2_fpga'))
