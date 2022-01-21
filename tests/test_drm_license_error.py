@@ -158,4 +158,4 @@ def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler,
     assert async_cb.was_called
     assert async_cb.message is not None
     assert async_cb.errcode == accelize_drm.exceptions.DRMCtlrError.error_code
-    assert "License header check error" in async_cb.message
+    assert search(r"License (header|MAC) check error", async_cb.message)
