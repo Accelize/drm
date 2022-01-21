@@ -132,7 +132,7 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
     with accelize_drm.DrmManager(
                 conf_json.path,
                 cred_json.path,
-                driver.:read_register_callback,
+                driver.read_register_callback,
                 driver.write_register_callback,
                 async_cb.callback
             ) as drm_manager:
