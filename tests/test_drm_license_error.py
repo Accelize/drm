@@ -102,7 +102,7 @@ def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_
     activators.autotest(is_activated=False)
     assert async_cb.was_called
     assert async_cb.errcode == accelize_drm.exceptions.DRMCtlrError.error_code
-    assert "License MAC check error" in async_cb.message
+    assert search(r"License (header|MAC) check error", async_cb.message)
 
 
 @pytest.mark.no_parallel
@@ -163,4 +163,4 @@ def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler,
         drm_manager.deactivate()
     assert async_cb.was_called
     assert async_cb.errcode == accelize_drm.exceptions.DRMCtlrError.error_code
-    assert "License header check error" in async_cb.message
+    assert search(r"License (header|MAC) check error", async_cb.message)
