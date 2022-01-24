@@ -714,7 +714,7 @@ def accelize_drm(pytestconfig):
     print('pytest artifacts directory: ', pytest_artifacts_dir)
 
     if is_ctrl_sw:
-    freq_version = 0
+        freq_version = 0
     else:
         # Get frequency detection version
         freq_version = fpga_driver[0].read_register(drm_ctrl_base_addr + 0xFFF0)
