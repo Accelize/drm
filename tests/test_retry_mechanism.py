@@ -347,3 +347,4 @@ def test_thread_retry_on_lost_connection(accelize_drm, conf_json, cred_json, asy
     logfile.remove()
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSTimedOut.error_code, HTTP_TIMEOUT_ERR_MSG)
     async_cb.reset()
+

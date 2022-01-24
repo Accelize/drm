@@ -435,6 +435,10 @@ def test_nodelock_after_metering_mode(accelize_drm, conf_json, cred_json, async_
                     driver.write_register_callback,
                     async_cb.callback
                 ) as drm_manager:
+            if accelize_drm.is_ctrl_sw:
+                assert drm_manager.get('drm_license_type') == 'Idle'
+            else:
+                assert drm_manager.get('drm_license_type') == 'Floating/Metering'
             assert drm_manager.get('license_type') == 'Floating/Metering'
             assert not drm_manager.get('license_status')
             assert not drm_manager.get('session_status')
@@ -459,7 +463,10 @@ def test_nodelock_after_metering_mode(accelize_drm, conf_json, cred_json, async_
                     driver.write_register_callback,
                     async_cb.callback
                 ) as drm_manager:
-            assert drm_manager.get('drm_license_type') == 'Floating/Metering'
+            if accelize_drm.is_ctrl_sw:
+                assert drm_manager.get('drm_license_type') == 'Idle'
+            else:
+                assert drm_manager.get('drm_license_type') == 'Floating/Metering'
             assert drm_manager.get('license_type') == 'Node-Locked'
             assert session_id != drm_manager.get('session_id')
             assert not drm_manager.get('session_status')
