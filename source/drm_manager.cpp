@@ -97,7 +97,7 @@ pnc_session_t *Accelize::DRM::DrmManager::s_pnc_session = nullptr;
 uint32_t *Accelize::DRM::DrmManager::s_pnc_tzvaddr = nullptr;
 size_t Accelize::DRM::DrmManager::s_pnc_tzsize = 0;
 uint32_t Accelize::DRM::DrmManager::s_pnc_page_offset = 0;
-const char* Accelize::DRM::DrmManager::SDK_SLEEP_IN_MICRO_SECONDS = "10000";
+
 const std::string Accelize::DRM::DrmManager::DRM_SELF_TEST_ERROR_MESSAGE = std::string(
         "Could not access DRM Controller registers.\nPlease verify:\n"
                         "\t-The read/write callbacks implementation in the SW application: verify it uses the correct offset address of DRM Controller IP in the design address space.\n"
@@ -242,7 +242,11 @@ protected:
             {eLicenseType::NODE_LOCKED, "Node-Locked"}
     };
 
-    const double ACTIVATIONCODE_TRANSMISSION_TIMEOUT_MS = 2000.0;
+    const char* SDK_CTRL_HW_SLEEP_IN_US = "100";
+    const char* SDK_CTRL_SW_SLEEP_IN_US = "10000";
+
+    const char* SDK_CTRL_SW_TIMEOUT_IN_US = "1000000000";
+    const char* SDK_CTRL_HW_TIMEOUT_IN_US = "10000000";
 
     const std::map<eCtrlLogVerbosity, uint32_t> LogCtrlLevelMap = {
             {eCtrlLogVerbosity::ERROR  , PNC_DRM_LOG_ERROR},
@@ -308,7 +312,10 @@ protected:
     eLicenseType mLicenseType = eLicenseType::METERED;
     uint32_t mLicenseDuration = 0;        ///< Time duration in seconds of the license
 
-    double mActivationTransmissionTimeoutMS = ACTIVATIONCODE_TRANSMISSION_TIMEOUT_MS;  ///< Timeout in milliseconds to complete the transmission of the activation code to the Activator's interface
+    double mActivationTransmissionTimeoutMS = 0;  ///< Timeout in milliseconds to complete the transmission of the activation code to the Activator's interface
+
+    uint32_t mCtrlTimeoutInUS = 0;
+    uint32_t mCtrlSleepInUS = 0;
 
     // To protect access to the metering data (to securize the segment ID check in HW)
     mutable std::mutex mMeteringAccessMutex;
@@ -359,9 +366,6 @@ protected:
     Json::Value mHostConfigData;
     eHostDataVerbosity mHostDataVerbosity = eHostDataVerbosity::PARTIAL;
     Json::Value mSettings;
-
-    // Simulation flag
-    bool mSimulationFlag{false};
 
     // Debug parameters
     spdlog::level::level_enum mDebugMessageLevel;
@@ -417,8 +421,6 @@ protected:
         mFrequencyCurr = 0.0;
 
         mIsHybrid = false;
-
-        mSimulationFlag = false;
 
         mDebugMessageLevel = spdlog::level::trace;
 
@@ -514,16 +516,6 @@ protected:
 
             // Optionally, check derived product
             mDerivedProductFromConf = JVgetOptional( conf_json, "derived_product", Json::stringValue, "" ).asString();
-
-            // Check DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS variable exists
-            char* env_val = getenv( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS" );
-            if (env_val == NULL) {
-                Debug( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS variable is not defined" );
-            } else {
-                Warning( "Accelize DRM Library is configured to run for simulation only" );
-                mSimulationFlag = true;
-                mActivationTransmissionTimeoutMS *= 1000;
-            }
 
         } catch( const Exception &e ) {
             if ( e.getErrCode() != DRM_BadFormat )
@@ -789,7 +781,8 @@ protected:
         settings["health_retry_sleep"] = mHealthRetrySleep;
         settings["ws_api_retry_duration"] = mWSApiRetryDuration;
         settings["host_data_verbosity"] = static_cast<uint32_t>( mHostDataVerbosity );
-        settings["simulation_flag"] = mSimulationFlag;
+        settings["drm_ctrl_timeout_us"] = mCtrlTimeoutInUS;
+        settings["drm_ctrl_sleep_us"] = mCtrlSleepInUS;
         settings["axi_frequency"] = mAxiFrequency;
         return settings;
     }
@@ -1091,6 +1084,16 @@ protected:
 
         if ( mDrmController )
             return;
+
+        // Check DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS variable exists
+        const char* ctrl_timeout = getenv( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS" );
+        mCtrlTimeoutInUS = std::stoul(std::string(ctrl_timeout));
+        Debug("DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS environment variable is {}", mCtrlTimeoutInUS);
+        mActivationTransmissionTimeoutMS = 20.0 * mCtrlTimeoutInUS;
+
+        const char* ctrl_sleep = getenv( "DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS" );
+        mCtrlSleepInUS = std::stoul(std::string(ctrl_sleep));
+        Debug("DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS environment variable is {}", mCtrlSleepInUS);
 
         // create instance
         try {
@@ -2259,8 +2262,8 @@ protected:
         bool activationCodesTransmitted( false );
         TClock::duration timeSpan;
         double mseconds( 0.0 );
+        uint32_t sleep_period = mCtrlSleepInUS * 100;
         TClock::time_point timeStart = TClock::now();
-        uint32_t sleep_period = mSimulationFlag? 10000000 : 10000;
         while( mseconds < mActivationTransmissionTimeoutMS ) {
             checkDRMCtlrRet( getDrmController().readActivationCodesTransmittedStatusRegister(
                     activationCodesTransmitted ) );
@@ -2302,7 +2305,7 @@ protected:
         double mseconds( 0.0 );
         bool is_running(false);
         TClock::duration timeSpan;
-        uint32_t sleep_period = mSimulationFlag? 10000000 : 10000;
+        uint32_t sleep_period = mCtrlSleepInUS * 100;
         TClock::time_point timeStart = TClock::now();
         while( mseconds < mActivationTransmissionTimeoutMS ) {
             is_running = isSessionRunning();
@@ -2337,9 +2340,6 @@ protected:
             // Send request and receive new license
             Json::Value license_json = getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
             setLicense( license_json );
-
-            // Check if an error occurred
-            //checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 5 ) );
 
             // Extract asynchronous health parameters from response
             Json::Value metering_node = JVgetOptional( license_json, "metering", Json::objectValue, Json::nullValue );
@@ -2478,6 +2478,8 @@ public:
     {
         TRY
             Debug( "Calling Impl public constructor" );
+            const char* ctrl_timeout = getenv( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS" );
+            const char* ctrl_sleep = getenv( "DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS" );
             if ( f_user_asynch_error )
                 f_asynch_error = f_user_asynch_error;
             mIsHybrid = pnc_initialize_drm_ctrl_ta();
@@ -2491,12 +2493,26 @@ public:
                 f_write_register = [&]( uint32_t  offset, uint32_t value ) {
                     return pnc_write_drm_ctrl_ta(offset, value );
                 };
-                // Increase sleep period because SW Controller is slower
-                setenv("DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS", SDK_SLEEP_IN_MICRO_SECONDS, 0); // does not overwrite if already existing
-                Debug("Set DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS environment variable to {}", SDK_SLEEP_IN_MICRO_SECONDS);
+                // Set sleep period because SW Controller is slower
+                if (ctrl_timeout == NULL) {
+                    Debug( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS variable is not defined" );
+                    setenv("DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS", SDK_CTRL_SW_TIMEOUT_IN_US, 0);
+                }
+                if (ctrl_sleep == NULL) {
+                    Debug( "DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS variable is not defined" );
+                    setenv("DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS", SDK_CTRL_SW_SLEEP_IN_US, 0);
+                }
             } else {
                 f_read_register = f_user_read_register;
                 f_write_register = f_user_write_register;
+                if (ctrl_timeout == NULL) {
+                    Debug( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS variable is not defined" );
+                    setenv("DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS", SDK_CTRL_HW_TIMEOUT_IN_US, 0);
+                }
+                if (ctrl_sleep == NULL) {
+                    Debug( "DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS variable is not defined" );
+                    setenv("DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS", SDK_CTRL_HW_SLEEP_IN_US, 0);
+                }
             }
             if ( !f_read_register )
                 Throw( DRM_BadArg, "Read register callback function must not be NULL. " );
