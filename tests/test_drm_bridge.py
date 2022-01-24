@@ -25,11 +25,13 @@ def stringify(h):
 
 
 @pytest.mark.awsxrt
-@pytest.mark.nosom
 def test_vitis_1activator_125_som(accelize_drm, async_handler, log_file_factory):
     """
     Test drm controller bridge used for SoM projects: single clock at 125MHz
     """
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip("Test skipped on SoM target because it's meant to test the DRM bridge only on AWS (without DRM Sw)")
+
     # Program board with design
     design_name = 'vitis_1activator_125_som'
     ref_designs = accelize_drm.pytest_ref_designs
@@ -124,7 +126,7 @@ def test_drm_bridge_on_kria(accelize_drm, async_handler, log_file_factory):
     assert text_json['product_id']['name'] == 'drm_1activator'
     assert text_json['extra']['csp'] == 'aws-f1'
     assert 'dualclk' in text_json['extra']
-    assert text_json['drm_software']
+    assert text_json['extra']['hybrid']
 
     # Test controller bridge mailbox read-write content
     ref_list = []

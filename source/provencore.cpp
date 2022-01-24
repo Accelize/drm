@@ -170,6 +170,7 @@ int pnc_session_new(size_t size, pnc_session_t **session)
     }
 
     *session = pnc_new;
+
     return 0;
 }
 
@@ -227,7 +228,7 @@ int pnc_session_config(pnc_session_t *session, uint64_t id, _Bool is_sid)
     /* Get REE version */
     pnc_session_get_version(session, &version);
     if ((is_sid == 0) && (version >= 0x300)) {
-        /* Avoid forwarding config request if is_sid is not true since this 
+        /* Avoid forwarding config request if is_sid is not true since this
          * feature is not supported anymore.
          */
         Error( "PNC: REE version requires a valid SID" );

@@ -7,6 +7,7 @@ import re
 import pytest
 from shutil import copy
 from os.path import join, isdir, basename, splitext
+from subprocess import run, CalledProcessError, PIPE
 
 from tests.conftest import perform_once
 
@@ -22,7 +23,6 @@ def _run(*command, **kwargs):
     Returns:
         subprocess.CompletedProcess
     """
-    from subprocess import run, CalledProcessError, PIPE
     result = run(*command, stdout=PIPE, stderr=PIPE,
                  universal_newlines=True, **kwargs)
     try:
@@ -41,6 +41,21 @@ def make(path, target=None):
     """
     _run(['make', '-j', str(os.cpu_count())] + ([target] if target else []),
          cwd=path)
+
+
+def check_dump_abi():
+    """
+    Check ABI Dumper app is installed.
+    Returns:
+        True: ABI Dumper app is available
+        False: ABI Dumper app is not available
+    """
+    try:
+        res = _run(['abi-dumper', '-v'])
+        res.check_returncode()
+        return True
+    except (FileNotFoundError, CalledProcessError):
+        return False
 
 
 def dump_abi(dump_file, so_file, include, version, name):
@@ -122,12 +137,14 @@ def test_abi_compliance(tmpdir, accelize_drm):
     """
     Test the ABI/API compliance of the lib_name.
     """
-    perform_once(__name__ + '.test_abi_compliance')
-
     if not accelize_drm.pytest_build_environment:
         pytest.skip('This test is only performed on build environment.')
     elif not accelize_drm.pytest_build_type == 'debug':
         pytest.xfail('This test needs libraries compiled in debug mode.')
+    elif not check_dump_abi():
+        pytest.xfail('This test cannot be performed because ABI-Dumper app is not usable.')
+
+    perform_once(__name__ + '.test_abi_compliance')
 
     # Initialize test
     from concurrent.futures import ThreadPoolExecutor, as_completed

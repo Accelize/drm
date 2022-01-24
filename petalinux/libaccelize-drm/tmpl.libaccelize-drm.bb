@@ -26,7 +26,11 @@ DEPENDS += " \
     jsoncpp \
 "
 
+INHIBIT_SYSROOT_STRIP = "1"
+
 RM_WORK_EXCLUDE += "$${PN}"
+
+EXTRA_OECMAKE+=" -DCMAKE_BUILD_TYPE=Debug"
 
 inherit pkgconfig cmake
 

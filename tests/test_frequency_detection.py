@@ -13,6 +13,8 @@ from tests.conftest import wait_func_true
 def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_json, async_handler):
     """Test errors when wrong frequency is given to DRM Controller Constructor"""
     from math import ceil, floor
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip("Test involves DRM frequency: skipped on SoM target (no clock on DRM Ctrl Sw)")
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -145,6 +147,8 @@ def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_jso
 @pytest.mark.nosom
 def test_drm_manager_frequency_detection_method1(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """Test method 1 (based on license timer) to estimate drm frequency is still working"""
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip("Test involves DRM frequency: skipped on SoM target (no clock on DRM Ctrl Sw)")
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -189,6 +193,8 @@ def test_drm_manager_frequency_detection_method1(accelize_drm, conf_json, cred_j
 @pytest.mark.nosom
 def test_drm_manager_frequency_detection_method2(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """Test method2 (based on dedicated counter in AXI wrapper) to estimate drm_aclk frequency is working"""
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip("Test involves DRM frequency: skipped on SoM target (no clock on DRM Ctrl Sw)")
     if accelize_drm.pytest_freq_detection_version != 0x60DC0DE0:
         pytest.skip("Frequency detection method 2 is not implemented in this design: test skipped")
 
@@ -219,6 +225,8 @@ def test_drm_manager_frequency_detection_method2(accelize_drm, conf_json, cred_j
 @pytest.mark.nosom
 def test_drm_manager_frequency_detection_method3(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """Test method 3 (based on dedicated counter in AXI wrapper) to estimate drm_aclk and s_axi_aclk frequencies is working"""
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip("Test involves DRM frequency: skipped on SoM target (no clock on DRM Ctrl Sw)")
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -265,7 +273,8 @@ def test_drm_manager_frequency_detection_method3(accelize_drm, conf_json, cred_j
 @pytest.mark.nosom
 def test_drm_manager_frequency_detection_method_2_and_3_exception(accelize_drm, conf_json, cred_json, async_handler):
     """Test method 2 and 3 (based on dedicated counter in AXI wrapper) to estimate drm aclk frequency is working"""
-
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip("Test involves DRM frequency: skipped on SoM target (no clock on DRM Ctrl Sw)")
     if accelize_drm.pytest_freq_detection_version == 0xFFFFFFFF:
         pytest.skip("Frequency detection method 2 and 3 are not implemented in this design: test skipped")
 
@@ -292,6 +301,9 @@ def test_drm_manager_frequency_detection_method_2_and_3_exception(accelize_drm, 
 
 def test_drm_manager_frequency_detection_bypass(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """Test bypass of frequency detection"""
+
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip("Test involves DRM frequency: skipped on SoM target (no clock on DRM Ctrl Sw)")
 
     if accelize_drm.pytest_freq_detection_version != 0xFFFFFFFF:
         pytest.skip("New frequency detection method is not supported: test skipped")

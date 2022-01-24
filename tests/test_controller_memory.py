@@ -6,10 +6,12 @@ import pytest
 from re import search, IGNORECASE
 
 
-@pytest.mark.nosom
-def test_wrong_drm_controller_address(accelize_drm, conf_json, cred_json, async_handle,
+def test_wrong_drm_controller_address(accelize_drm, conf_json, cred_json, async_handler,
                 log_file_factory):
     """Test when a wrong DRM Controller offset is given"""
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip("Test involves callbacks modification: skipped on SoM target (no callback provided for SoM)")
+
     async_cb = async_handler.create()
     async_cb.reset()
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -94,9 +96,11 @@ def test_mailbox_type_error(accelize_drm, conf_json, cred_json, async_handler,
     async_cb.reset()
 
 
-@pytest.mark.nosom
 def test_empty_product_id(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """Test error with a design having an empty Product ID"""
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip("Test skipped on SoM target: no empty RO Mailbox bitstream available")
+
     refdesign = accelize_drm.pytest_ref_designs
     driver = accelize_drm.pytest_fpga_driver[0]
     fpga_image_bkp = driver.fpga_image
@@ -130,9 +134,11 @@ def test_empty_product_id(accelize_drm, conf_json, cred_json, async_handler, log
     logfile.remove()
 
 
-@pytest.mark.nosom
 def test_malformed_product_id(accelize_drm, conf_json, cred_json, async_handler):
     """Test error with a design having a malformed Product ID"""
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip("Test skipped on SoM target: no corrupted RO Mailbox bitstream available")
+
     refdesign = accelize_drm.pytest_ref_designs
     driver = accelize_drm.pytest_fpga_driver[0]
     fpga_image_bkp = driver.fpga_image
@@ -192,9 +198,10 @@ def test_2_drm_manager_concurrently(accelize_drm, conf_json, cred_json, async_ha
 
 
 @pytest.mark.hwtst
-@pytest.mark.nosom
 def test_drm_manager_bist(accelize_drm, conf_json, cred_json, async_handler):
     """Test register access BIST"""
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip("Test involves callbacks modification: skipped on SoM target (no callback provided for SoM)")
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()

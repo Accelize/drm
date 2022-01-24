@@ -16,7 +16,7 @@ from tests.proxy import get_context, set_context
 @pytest.mark.skip(reason='Waiting a fix from LGDN')
 @pytest.mark.no_parallel
 def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler,
-                    live_server, request):
+                    live_server, request, log_file_factory):
     """
     Test a MAC error is returned if the key value in the response has been modified
     """
@@ -31,7 +31,14 @@ def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler,
 
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + request.function.__name__
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
     conf_json.save()
+
+    # Set initial context on the live server
+    context = {'cnt':0}
+    set_context(context)
+    assert get_context() == context
 
     with accelize_drm.DrmManager(
             conf_json.path, cred_json.path,
@@ -39,10 +46,6 @@ def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler,
             driver.write_register_callback,
             async_cb.callback
         ) as drm_manager:
-        # Set initial context on the live server
-        context = {'cnt':0}
-        set_context(context)
-        assert get_context() == context
         # Check failure is detected
         with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
             drm_manager.activate()
@@ -53,7 +56,7 @@ def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler,
 
 @pytest.mark.no_parallel
 def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_handler,
-                        live_server, request):
+                        live_server, request, log_file_factory):
     """
     Test a MAC error is returned if the licenseTimer value in the response has been modified
     """
@@ -72,7 +75,14 @@ def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_
 
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + request.function.__name__
+    logfile = log_file_factory.create(2)
+    conf_json['settings'].update(logfile.json)
     conf_json.save()
+
+    # Set initial context on the live server
+    context = {'cnt':0}
+    set_context(context)
+    assert get_context() == context
 
     with accelize_drm.DrmManager(
             conf_json.path, cred_json.path,
@@ -80,10 +90,6 @@ def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_
             driver.write_register_callback,
             async_cb.callback
         ) as drm_manager:
-        # Set initial context on the live server
-        context = {'cnt':0}
-        set_context(context)
-        assert get_context() == context
         drm_manager.activate()
         start = datetime.now()
         lic_duration = drm_manager.get('license_duration')
@@ -95,14 +101,13 @@ def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_
         activators.autotest(is_activated=False)
     activators.autotest(is_activated=False)
     assert async_cb.was_called
-    assert async_cb.message is not None
     assert async_cb.errcode == accelize_drm.exceptions.DRMCtlrError.error_code
-    assert "License header check error" in async_cb.message
+    assert search(r"License (header|MAC) check error", async_cb.message)
 
 
 @pytest.mark.no_parallel
 def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler,
-                    live_server, request):
+                    live_server, request, log_file_factory):
     """
     Test an error is returned if a wrong session id is provided
     """
@@ -116,7 +121,14 @@ def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler,
 
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + request.function.__name__
+    logfile = log_file_factory.create(2)
+    conf_json['settings'].update(logfile.json)
     conf_json.save()
+
+    # Set initial context on the live server
+    context = {'session_id':'0', 'session_cnt':0, 'request_cnt':0}
+    set_context(context)
+    assert get_context() == context
 
     with accelize_drm.DrmManager(
             conf_json.path, cred_json.path,
@@ -124,12 +136,6 @@ def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler,
             driver.write_register_callback,
             async_cb.callback
         ) as drm_manager:
-
-        # Set initial context on the live server
-        context = {'session_id':'0', 'session_cnt':0, 'request_cnt':0}
-        set_context(context)
-        assert get_context() == context
-
         # Start session #1 to record
         drm_manager.activate()
         start = datetime.now()
@@ -156,6 +162,6 @@ def test_session_id_error(accelize_drm, conf_json, cred_json, async_handler,
         activators.autotest(is_activated=False)
         drm_manager.deactivate()
     assert async_cb.was_called
-    assert async_cb.message is not None
     assert async_cb.errcode == accelize_drm.exceptions.DRMCtlrError.error_code
     assert search(r"License (header|MAC) check error", async_cb.message)
+
