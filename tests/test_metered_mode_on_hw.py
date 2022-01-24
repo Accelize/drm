@@ -385,35 +385,35 @@ def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, conf_json
         conf_json_second['settings'].update(logfile2.json)
         conf_json_second.save()
 
-        with accelize_drm.DrmManager(
+        drm_manager2 = accelize_drm.DrmManager(
                     conf_json_second.path,
                     cred_json.path,
                     driver.read_register_callback,
                     driver.write_register_callback,
                     async_cb.callback
-                ) as drm_manager2:
-            assert drm_manager1 != drm_manager2
-            assert drm_manager2.get('session_status')
-            assert drm_manager2.get('license_status')
-            activators.autotest(is_activated=True)
-            assert drm_manager2.get('session_id') == ''
-            # Resume session
-            drm_manager2.activate(True)
-            assert drm_manager2.get('session_status')
-            assert drm_manager2.get('license_status')
-            activators.autotest(is_activated=True)
-            activators.check_coin(drm_manager2.get('metered_data'))
-            # Wait for license renewal
-            sleep(lic_duration+2)
-            assert drm_manager2.get('session_id') == session_id
-            assert drm_manager2.get('license_duration') == lic_duration
-            activators.generate_coin()
-            activators.check_coin(drm_manager2.get('metered_data'))
-            drm_manager2.deactivate()
-            assert not drm_manager2.get('session_status')
-            assert not drm_manager2.get('license_status')
-            assert drm_manager2.get('session_id') == ''
-            activators.autotest(is_activated=False)
+                )
+        assert drm_manager1 != drm_manager2
+        assert drm_manager2.get('session_status')
+        assert drm_manager2.get('license_status')
+        activators.autotest(is_activated=True)
+        assert drm_manager2.get('session_id') == ''
+        # Resume session
+        drm_manager2.activate(True)
+        assert drm_manager2.get('session_status')
+        assert drm_manager2.get('license_status')
+        activators.autotest(is_activated=True)
+        activators.check_coin(drm_manager2.get('metered_data'))
+        # Wait for license renewal
+        sleep(lic_duration+2)
+        assert drm_manager2.get('session_id') == session_id
+        assert drm_manager2.get('license_duration') == lic_duration
+        activators.generate_coin()
+        activators.check_coin(drm_manager2.get('metered_data'))
+        drm_manager2.deactivate()
+        assert not drm_manager2.get('session_status')
+        assert not drm_manager2.get('license_status')
+        assert drm_manager2.get('session_id') == ''
+        activators.autotest(is_activated=False)
         logfile2.remove()
     logfile1.remove()
     async_cb.assert_NoError()

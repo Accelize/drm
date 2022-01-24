@@ -137,16 +137,14 @@ def test_abi_compliance(tmpdir, accelize_drm):
     """
     Test the ABI/API compliance of the lib_name.
     """
-    perform_once(__name__ + '.test_abi_compliance')
-
-
-
     if not accelize_drm.pytest_build_environment:
         pytest.skip('This test is only performed on build environment.')
     elif not accelize_drm.pytest_build_type == 'debug':
         pytest.xfail('This test needs libraries compiled in debug mode.')
     elif not check_dump_abi():
         pytest.xfail('This test cannot be performed because ABI-Dumper app is not usable.')
+
+    perform_once(__name__ + '.test_abi_compliance')
 
     # Initialize test
     from concurrent.futures import ThreadPoolExecutor, as_completed
