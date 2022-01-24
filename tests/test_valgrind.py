@@ -14,9 +14,6 @@ from tests.proxy import get_context, set_context
 def test_normal_usage(accelize_drm, request, exec_func, live_server, tmpdir,
                       log_file_factory):
     """Check memory leak with valgrind"""
-    if accelize_drm.is_ctrl_sw:
-        pytest.skip("Test skipped on SoM target")
-
     if 'aws' not in accelize_drm.pytest_fpga_driver_name:
         pytest.skip("C unit-tests are only supported with AWS driver.")
 

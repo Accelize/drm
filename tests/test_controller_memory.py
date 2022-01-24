@@ -10,7 +10,7 @@ def test_wrong_drm_controller_address(accelize_drm, conf_json, cred_json, async_
                 log_file_factory):
     """Test when a wrong DRM Controller offset is given"""
     if accelize_drm.is_ctrl_sw:
-        pytest.skip("Test skipped on SoM target")
+        pytest.skip("Test involves callbacks modification: skipped on SoM target (no callback provided for SoM)")
 
     async_cb = async_handler.create()
     async_cb.reset()

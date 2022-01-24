@@ -340,7 +340,7 @@ def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, c
     Board needs to be reprogramed
     """
     if accelize_drm.is_ctrl_sw:
-        pytest.skip('Not to execute on SoM target')
+        pytest.skip('Nodelock to Metering license switch a actually supported on SoM target')
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     cred_json.set_user('accelize_accelerator_test_03')        # User with a single nodelock license

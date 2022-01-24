@@ -80,7 +80,7 @@ def test_improve_coverage_readDrmAddress(accelize_drm, conf_json, cred_json, asy
     Improve coverage of the readDrmAddress function
     """
     if accelize_drm.is_ctrl_sw:
-        pytest.skip("Test skipped on SoM target")
+        pytest.skip("Test involves callbacks modification: skipped on SoM target (no callback provided for SoM)")
 
     def my_bad_read_register(register_offset, returned_data):
         return 123
@@ -113,7 +113,7 @@ def test_improve_coverage_writeDrmAddress(accelize_drm, conf_json, cred_json, as
     Improve coverage of the writeDrmAddress function
     """
     if accelize_drm.is_ctrl_sw:
-        pytest.skip("Test skipped on SoM target")
+        pytest.skip("Test involves callbacks modification: skipped on SoM target (no callback provided for SoM)")
 
     def my_bad_write_register(register_offset, data_to_write):
         return 123
@@ -146,7 +146,7 @@ def test_improve_coverage_runBistLevel2_bad_size(accelize_drm, conf_json, cred_j
     Improve coverage of the runBistLevel2 function: generate bad mailbox size
     """
     if accelize_drm.is_ctrl_sw:
-        pytest.skip("Test skipped on SoM target")
+        pytest.skip("Test involves callbacks modification: skipped on SoM target (no callback provided for SoM)")
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -189,7 +189,7 @@ def test_improve_coverage_runBistLevel2_bad_data(accelize_drm, conf_json, cred_j
     Improve coverage of the runBistLevel2 function: generate bad data
     """
     if accelize_drm.is_ctrl_sw:
-        pytest.skip("Test skipped on SoM target")
+        pytest.skip("Test involves callbacks modification: skipped on SoM target (no callback provided for SoM)")
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -267,7 +267,7 @@ def test_improve_coverage_getDesignInfo(accelize_drm, conf_json, cred_json, asyn
     Improve coverage of the getDesignInfo function
     """
     if accelize_drm.is_ctrl_sw:
-        pytest.skip("Test skipped on SoM target")
+        pytest.skip("Test involves callbacks modification: skipped on SoM target (no callback provided for SoM)")
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -339,7 +339,7 @@ def test_improve_coverage_detectDrmFrequencyMethod1(accelize_drm, conf_json, cre
     Improve coverage of the detectDrmFrequencyMethod1 function
     """
     if accelize_drm.is_ctrl_sw:
-        pytest.skip("Test skipped on SoM target")
+        pytest.skip("Test involves DRM frequency: skipped on SoM target (no clock on DRM Ctrl Sw)")
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
