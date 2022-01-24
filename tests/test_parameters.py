@@ -1018,7 +1018,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
                 driver.write_register_callback,
                 async_cb.callback
             ) as drm_manager:
-        drm_manager.set(log_message_level=logfile.verbosity)
+        drm_manager.set(log_message_level=5)
         msg = 'This line should appear in log file'
         drm_manager.set(log_message=msg)
     log_content = logfile.read()

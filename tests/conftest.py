@@ -251,6 +251,7 @@ def pytest_runtest_setup(item):
         pytest.skip("Don't run XRT (Vitis) tests.")
 
     # Determine if DRM Ctrl SW is under test
+    hybrid_test = False
     fpga_image = item.config.getoption('--fpga_image')
     if fpga_image and fpga_image.endswith(".som"):
         hybrid_test = True

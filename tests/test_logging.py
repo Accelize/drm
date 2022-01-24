@@ -555,12 +555,15 @@ def test_log_ctrl_from_config_file(accelize_drm, conf_json, cred_json, async_han
         async_cb.assert_NoError()
 
 
-def test_log_ctrl_verbosity_from_config_with_bad_value(accelize_drm, conf_json, cred_json, async_handler):
+def test_log_ctrl_verbosity_from_config_with_bad_value(accelize_drm, conf_json, cred_json, async_handler,
+                                        log_file_factory):
     """ Test error is returned when a bad value is passed to log_ctrl_verbosity from config file """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
     conf_json.reset()
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
     conf_json['settings']['log_ctrl_verbosity'] = 6
     conf_json.save()
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
@@ -570,10 +573,10 @@ def test_log_ctrl_verbosity_from_config_with_bad_value(accelize_drm, conf_json, 
                     driver.write_register_callback,
                     async_cb.callback
                 )
-        assert "Invalid log level for SW Controller" in str(excinfo.value)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
-        async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, "Invalid log level for SW Controller")
-        async_cb.reset()
+    assert "Invalid log level for SW Controller" in str(excinfo.value)
+    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+    async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, "Invalid log level for SW Controller")
+    async_cb.reset()
 
 
 def test_log_ctrl_verbosity_from_api_with_bad_value(accelize_drm, conf_json, cred_json, async_handler):
