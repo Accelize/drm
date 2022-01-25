@@ -24,6 +24,8 @@ def stringify(h):
     return ''.join(h_list)
 
 
+@pytest.mark.minimum
+@pytest.mark.hwtst
 @pytest.mark.awsxrt
 def test_vitis_1activator_125_som(accelize_drm, async_handler, log_file_factory):
     """
@@ -87,6 +89,7 @@ def test_vitis_1activator_125_som(accelize_drm, async_handler, log_file_factory)
         assert driver.read_register_callback(driver._drm_ctrl_base_addr + 0xc + 4*mailbox_ro_size + 4*i, byref(reg)) == 0
         assert reg.value == ref_list[i]
 
+
 @pytest.mark.som
 def test_drm_bridge_on_kria(accelize_drm, async_handler, log_file_factory):
     """
@@ -137,4 +140,3 @@ def test_drm_bridge_on_kria(accelize_drm, async_handler, log_file_factory):
     for i in range(mailbox_rw_size):
         assert driver.read_register_callback(0xc + 4*mailbox_ro_size + 4*i, byref(reg)) == 0
         assert reg.value == ref_list[i]
-

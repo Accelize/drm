@@ -582,20 +582,21 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     print("Test parameter 'ws_connection_timeout': PASS")
 
     # Test parameter: log_ctrl_verbosity
-    async_cb.reset()
-    conf_json.reset()
-    expect_value = 5
-    conf_json['settings']['log_ctrl_verbosity'] = expect_value
-    conf_json.save()
-    with accelize_drm.DrmManager(
-            conf_json.path, cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        ) as drm_manager:
-        assert drm_manager.get('log_ctrl_verbosity') == expect_value
-    async_cb.assert_NoError()
-    print("Test parameter 'log_ctrl_verbosity': PASS")
+    if accelize_drm.is_ctrl_sw:
+        async_cb.reset()
+        conf_json.reset()
+        expect_value = 5
+        conf_json['settings']['log_ctrl_verbosity'] = expect_value
+        conf_json.save()
+        with accelize_drm.DrmManager(
+                conf_json.path, cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+            assert drm_manager.get('log_ctrl_verbosity') == expect_value
+        async_cb.assert_NoError()
+        print("Test parameter 'log_ctrl_verbosity': PASS")
 
     # Test unsupported parameter
     async_cb.reset()
@@ -1193,18 +1194,19 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         print("Test parameter 'ws_connection_timeout': PASS")
 
         # Test parameter: log_ctrl_verbosity
-        orig_val = drm_manager.get('log_ctrl_verbosity')
-        exp_val = 1 if orig_val == 0 else 0
-        drm_manager.set(log_ctrl_verbosity=exp_val)
-        assert drm_manager.get('log_ctrl_verbosity') == exp_val
-        drm_manager.set(log_ctrl_verbosity=orig_val)
-        async_cb.assert_NoError()
-        print("Test parameter 'log_ctrl_verbosity': PASS")
+        if accelize_drm.is_ctrl_sw:
+            orig_val = drm_manager.get('log_ctrl_verbosity')
+            exp_val = 1 if orig_val == 0 else 0
+            drm_manager.set(log_ctrl_verbosity=exp_val)
+            assert drm_manager.get('log_ctrl_verbosity') == exp_val
+            drm_manager.set(log_ctrl_verbosity=orig_val)
+            async_cb.assert_NoError()
+            print("Test parameter 'log_ctrl_verbosity': PASS")
 
-        # Test parameter: is_drm_software
-        drm_manager.get('is_drm_software')
-        async_cb.assert_NoError()
-        print("Test parameter 'is_drm_software': PASS")
+            # Test parameter: is_drm_software
+            assert accelize_drm_is_ctrl_sw == drm_manager.get('is_drm_software')
+            async_cb.assert_NoError()
+            print("Test parameter 'is_drm_software': PASS")
 
 
 def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cred_json,
