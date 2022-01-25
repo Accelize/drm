@@ -600,18 +600,18 @@ protected:
     }
 
     void updateCtrlLogLevel( eCtrlLogVerbosity level_e, bool force = false ) {
+        if ( !mIsHybrid ) {
+            Warning( "This command has no effect on HW DRM Controller IP" );
+            return;
+        }
         checkCtrlLogLevel( level_e );
         if ( force || ( level_e != sLogCtrlVerbosity ) ) {
             uint32_t level_id = LogCtrlLevelMap.find( level_e )->second;
-            if ( !mIsHybrid ) {
-                Warning( "This command has no effect on HW DRM Controller IP" );
-            } else {
-                if ( pnc_session_request(s_pnc_session, level_id, 0) < 0) {
-                    Throw( DRM_PncInitError, "Failed to set the log level of the DRM Controller TA to {}: {}. ",
-                            level_id, strerror(errno) );
-                }
-                Debug( "Updated log level for SW Controller from {} to {}", sLogCtrlVerbosity, level_e );
+            if ( pnc_session_request(s_pnc_session, level_id, 0) < 0) {
+                Throw( DRM_PncInitError, "Failed to set the log level of the DRM Controller TA to {}: {}. ",
+                        level_id, strerror(errno) );
             }
+            Debug( "Updated log level for SW Controller from {} to {}", sLogCtrlVerbosity, level_e );
             sLogCtrlVerbosity = level_e;
         } else {
             Debug( "Log level for SW Controller is already set to {}", sLogCtrlVerbosity );
@@ -2485,12 +2485,12 @@ public:
             const char* ctrl_sleep = getenv( "DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS" );
             if ( f_user_asynch_error )
                 f_asynch_error = f_user_asynch_error;
-            //  Set Ctrl TA logging
-            updateCtrlLogLevel( sLogCtrlVerbosity, true );
-            //  Set callbacks
+            // Determine DRM Ctrl TA existance by trying to initialize it
             mIsHybrid = pnc_initialize_drm_ctrl_ta();
             if ( mIsHybrid ) {
-
+                //  Set Ctrl TA logging
+                updateCtrlLogLevel( sLogCtrlVerbosity, true );
+                //  Set callbacks
                 f_read_register = [&]( uint32_t  offset, uint32_t *value ) {
                     return pnc_read_drm_ctrl_ta( offset, value );
                 };

@@ -202,11 +202,8 @@ def pytest_addoption(parser):
              'use default FPGA image for the selected driver and last HDK '
              'version.')
     parser.addoption(
-        "--singleton", action="store_true",
-        help='Run singleton tests. Theses tests must NOT be run in parallel.')
-    parser.addoption(
-        "--integration", action="store_true",
-        help='Run integration tests. Theses tests may needs two FPGAs.')
+        "--noparallel", action="store_true",
+        help='Run tests that cannot be run in parallel or need 2 FPGA')
     parser.addoption(
         "--activator_base_address", action="store", default=0x10000, type=auto_int,
         help=('Specify the base address of the 1st activator. '
@@ -260,23 +257,24 @@ def pytest_runtest_setup(item):
         hybrid_test = True
 
     if not hybrid_test:
-        # Check singleton tests
+        # Check noparallel tests
         markers = tuple(item.iter_markers(name='no_parallel'))
-        if not item.config.getoption("singleton") and markers:
-            pytest.skip("Don't run singleton tests.")
-        elif item.config.getoption("singleton") and not markers:
-            pytest.skip("Run only singleton tests.")
+        markers += tuple(item.iter_markers(name='on_2_fpga'))
+        if not item.config.getoption("noparallel") and markers:
+            pytest.skip("Don't run 'noparallel' tests.")
+        elif item.config.getoption("noparallel") and not markers:
+            pytest.skip("Run only 'noparallel' tests.")
         # Check som tests
         if tuple(item.iter_markers(name='som')):
             pytest.skip("Don't run SoM specific tests.")
-
-    # Check integration tests
+    '''
+    # Check twofpga tests
     markers = tuple(item.iter_markers(name='on_2_fpga'))
-    if not item.config.getoption("integration") and markers:
-        pytest.skip("Don't run integration tests.")
-    elif item.config.getoption("integration") and not markers:
-        pytest.skip("Run only integration tests.")
-
+    if not item.config.getoption("twofpga") and markers:
+        pytest.skip("Don't run 'twofpga' tests.")
+    elif item.config.getoption("twofpga") and not markers:
+        pytest.skip("Run only 'twofpga' tests.")
+    '''
     # Check endurance tests
     m_option = item.config.getoption('-m')
     if search(r'\bendurance\b', m_option) and not search(r'\nnot\n\s+\bendurance\b', m_option):
@@ -659,8 +657,8 @@ def accelize_drm(pytestconfig):
         fpga_image = ref_designs.get_image_id(hdk_version)
 
     # Define or get FPGA Slot
-    if pytestconfig.getoption('integration'):
-        # Integration tests requires 2 slots
+    if pytestconfig.getoption('noparallel'):
+        # noparallel tests requires 2 slots
         fpga_slot_id = [0, 1]
     elif environ.get('TOX_PARALLEL_ENV'):
         # Define FPGA slot for Tox parallel execution

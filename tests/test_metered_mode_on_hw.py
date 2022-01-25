@@ -639,6 +639,8 @@ def test_floating_limits(accelize_drm, conf_json, conf_json_second, cred_json, a
     """
     Test an error is returned when the floating limit is reached
     """
+    if len(accelize_drm.pytest_fpga_driver) < 2:
+        pytest.skip('Skip test because 2 FPGA are needed but only 1 is found')
     driver0 = accelize_drm.pytest_fpga_driver[0]
     driver1 = accelize_drm.pytest_fpga_driver[1]
     async_cb0 = async_handler.create()

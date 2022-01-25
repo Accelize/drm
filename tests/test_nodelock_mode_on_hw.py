@@ -278,6 +278,8 @@ def test_nodelock_limits(accelize_drm, conf_json, conf_json_second, cred_json, a
     """
     Test behavior when limits are reached. 2 FPGA are required.
     """
+    if len(accelize_drm.pytest_fpga_driver) < 2:
+        pytest.skip('Skip test because 2 FPGA are needed but only 1 is found')
     driver0 = accelize_drm.pytest_fpga_driver[0]
     driver1 = accelize_drm.pytest_fpga_driver[1]
     async_cb0 = async_handler.create()
@@ -435,10 +437,6 @@ def test_nodelock_after_metering_mode(accelize_drm, conf_json, cred_json, async_
                     driver.write_register_callback,
                     async_cb.callback
                 ) as drm_manager:
-            if accelize_drm.is_ctrl_sw:
-                assert drm_manager.get('drm_license_type') == 'Idle'
-            else:
-                assert drm_manager.get('drm_license_type') == 'Floating/Metering'
             assert drm_manager.get('license_type') == 'Floating/Metering'
             assert not drm_manager.get('license_status')
             assert not drm_manager.get('session_status')
@@ -463,10 +461,6 @@ def test_nodelock_after_metering_mode(accelize_drm, conf_json, cred_json, async_
                     driver.write_register_callback,
                     async_cb.callback
                 ) as drm_manager:
-            if accelize_drm.is_ctrl_sw:
-                assert drm_manager.get('drm_license_type') == 'Idle'
-            else:
-                assert drm_manager.get('drm_license_type') == 'Floating/Metering'
             assert drm_manager.get('license_type') == 'Node-Locked'
             assert session_id != drm_manager.get('session_id')
             assert not drm_manager.get('session_status')

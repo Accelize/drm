@@ -30,7 +30,6 @@ def test_entitlement_user1_metering(accelize_drm, conf_json, cred_json, async_ha
             async_cb.callback
         ) as drm_manager:
         assert drm_manager.get('license_type') == 'Floating/Metering'
-        assert drm_manager.get('drm_license_type') == 'Idle'
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
         assert "Metering Web Service error 400" in str(excinfo.value)
@@ -71,7 +70,6 @@ def test_entitlement_user1_nodelock(accelize_drm, conf_json, cred_json, async_ha
                 async_cb.callback
             ) as drm_manager:
             assert drm_manager.get('license_type') == 'Node-Locked'
-            assert drm_manager.get('drm_license_type') == 'Idle'
             with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
                 drm_manager.activate()
             assert "Metering Web Service error 400" in str(excinfo.value)
@@ -113,7 +111,6 @@ def test_entitlement_user2_metering(accelize_drm, conf_json, cred_json, async_ha
             async_cb.callback
         ) as drm_manager:
         assert drm_manager.get('license_type') == 'Floating/Metering'
-        assert drm_manager.get('drm_license_type') == 'Idle'
         drm_manager.activate()
         assert drm_manager.get('drm_license_type') == 'Floating/Metering'
         drm_manager.deactivate()
@@ -149,7 +146,6 @@ def test_entitlement_user2_nodelock(accelize_drm, conf_json, cred_json, async_ha
                 async_cb.callback
             ) as drm_manager:
             assert drm_manager.get('license_type') == 'Node-Locked'
-            assert drm_manager.get('drm_license_type') == 'Idle'
             with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
                 drm_manager.activate()
             assert "Metering Web Service error 400" in str(excinfo.value)
@@ -192,7 +188,6 @@ def test_entitlement_user3_metering(accelize_drm, conf_json, cred_json, async_ha
             async_cb.callback
         ) as drm_manager:
         assert drm_manager.get('license_type') == 'Floating/Metering'
-        assert drm_manager.get('drm_license_type') == 'Idle'
         drm_manager.activate()
         assert drm_manager.get('drm_license_type') == 'Floating/Metering'
         drm_manager.deactivate()
@@ -229,8 +224,6 @@ def test_entitlement_user3_nodelock(accelize_drm, conf_json, cred_json, async_ha
                 async_cb.callback
             ) as drm_manager:
             assert drm_manager.get('license_type') == 'Node-Locked'
-            # Start application
-            assert drm_manager.get('drm_license_type') == 'Idle'
             drm_manager.activate()
             assert drm_manager.get('drm_license_type') == 'Node-Locked'
             drm_manager.deactivate()
@@ -267,7 +260,6 @@ def test_entitlement_user4_metering(accelize_drm, conf_json, cred_json, async_ha
             async_cb.callback
         ) as drm_manager:
         assert drm_manager.get('license_type') == 'Floating/Metering'
-        assert drm_manager.get('drm_license_type') == 'Idle'
         drm_manager.activate()
         assert drm_manager.get('drm_license_type') == 'Floating/Metering'
         drm_manager.deactivate()
@@ -303,7 +295,6 @@ def test_entitlement_user4_nodelock(accelize_drm, conf_json, cred_json, async_ha
                 async_cb.callback
             ) as drm_manager:
             assert drm_manager.get('license_type') == 'Node-Locked'
-            assert drm_manager.get('drm_license_type') == 'Idle'
             with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
                 drm_manager.activate()
             assert "Metering Web Service error 400" in str(excinfo.value)
