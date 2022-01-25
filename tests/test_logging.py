@@ -518,16 +518,12 @@ def test_log_file_without_credential_data_in_debug2(accelize_drm, conf_json, cre
     logfile.remove()
 
 
-def test_log_ctrl_from_api(accelize_drm, conf_json, cred_json, async_handler,
-                        log_file_factory):
+def test_log_ctrl_from_api(accelize_drm, conf_json, cred_json, async_handler):
     """ Test log_ctrl_verbosity passed through get/set functions """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
     conf_json.reset()
-    logfile = log_file_factory.create(3)
-    conf_json['settings'].update(logfile.json)
-    conf_json.save()
     with accelize_drm.DrmManager(
                 conf_json.path, cred_json.path,
                 driver.read_register_callback,
@@ -542,19 +538,14 @@ def test_log_ctrl_from_api(accelize_drm, conf_json, cred_json, async_handler,
     if not accelize_drm.is_ctrl_sw:
         content = logfile.read()
         assert search(r'warning .*This command has no effect on HW DRM Controller IP', content)
-    logfile.remove()
 
 
-def test_log_ctrl_from_config_file(accelize_drm, conf_json, cred_json, async_handler,
-                                log_file_factory):
+def test_log_ctrl_from_config_file(accelize_drm, conf_json, cred_json, async_handler):
     """ Test log_ctrl_verbosity passed through config file """
     if not accelize_drm.is_ctrl_sw:
         pytest.skip('Skip test on log_ctrl_verbosity if not on SoM target')
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-    logfile = log_file_factory.create(2)
-    conf_json['settings'].update(logfile.json)
-    conf_json.save()
     for i in range(6):
         async_cb.reset()
         conf_json.reset()
@@ -568,7 +559,6 @@ def test_log_ctrl_from_config_file(accelize_drm, conf_json, cred_json, async_han
                 ) as drm_manager:
             assert drm_manager.get('log_ctrl_verbosity') == i
         async_cb.assert_NoError()
-    logfile.remove()
 
 
 def test_log_ctrl_verbosity_from_api_with_bad_value(accelize_drm, conf_json, cred_json, async_handler):

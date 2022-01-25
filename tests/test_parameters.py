@@ -1203,10 +1203,10 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
             async_cb.assert_NoError()
             print("Test parameter 'log_ctrl_verbosity': PASS")
 
-            # Test parameter: is_drm_software
-            assert accelize_drm_is_ctrl_sw == drm_manager.get('is_drm_software')
-            async_cb.assert_NoError()
-            print("Test parameter 'is_drm_software': PASS")
+        # Test parameter: is_drm_software
+        assert accelize_drm.is_ctrl_sw == drm_manager.get('is_drm_software')
+        async_cb.assert_NoError()
+        print("Test parameter 'is_drm_software': PASS")
 
 
 def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cred_json,
