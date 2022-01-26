@@ -109,6 +109,7 @@ def run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_ha
     axiclk_match = search(r'Frequency detection of s_axi_aclk counter after .+ => estimated frequency = (\d+) MHz', log_content)
     axiclk_freq_measure = int(axiclk_match.group(1))
     assert axiclk_freq_ref*0.9 < axiclk_freq_measure < axiclk_freq_ref*1.1
+    async_cb.assert_NoError()
     # Return logfile handler for more specific verification
     logfile.remove()
     return log_content
@@ -132,18 +133,6 @@ def test_vitis_2activator_125(accelize_drm, conf_json, cred_json, async_handler,
     Test a vitis configuration: single clock kernels with AXI clock = DRM clock
     """
     design_name = 'vitis_2activator_125'
-    axiclk_freq_ref = 125
-    drmclk_freq_ref = 125
-    log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
-                                    log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
-
-
-@pytest.mark.awsxrt
-def test_vitis_2activator_125_125(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
-    """
-    Test a vitis configuration: dual clock kernels with AXI clock = DRM clock
-    """
-    design_name = 'vitis_2activator_125_125'
     axiclk_freq_ref = 125
     drmclk_freq_ref = 125
     log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
