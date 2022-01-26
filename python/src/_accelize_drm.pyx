@@ -152,15 +152,22 @@ cdef class DrmManager:
         except RuntimeError as exception:
             _handle_exceptions(exception)
 
-    def __dealloc__(self):
+    def free(self):
+        if self._drm_manager is NULL:
+            return
         with nogil:
             del self._drm_manager
+        self._drm_manager = NULL
+
+    def __dealloc__(self):
+        self.free()
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.deactivate()
+        self.free()
 
     def activate(self, const bool resume_session_request=False):
         """

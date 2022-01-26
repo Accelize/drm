@@ -16,9 +16,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import datetime
 
 __version__ = "@ACCELIZEDRM_LONG_VERSION@"
-__copyright__ = "Copyright 2018 Accelize"
+__copyright__ = "Copyright %s Accelize" % datetime.date.today().year
 __licence__ = "Apache 2.0"
 __all__ = ['DrmManager', 'exceptions', 'get_api_version']
 

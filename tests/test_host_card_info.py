@@ -67,7 +67,8 @@ def test_host_data_verbosity(accelize_drm, conf_json, cred_json, async_handler):
         assert type(data_none) == type(None)
 
 
-def test_host_format(accelize_drm, conf_json, cred_json, async_handler):
+def test_host_format(accelize_drm, conf_json, cred_json, async_handler,
+                     log_file_factory):
     """
     Test the format in the request is as expected
     """
@@ -78,6 +79,8 @@ def test_host_format(accelize_drm, conf_json, cred_json, async_handler):
     async_cb = async_handler.create()
     async_cb.reset()
     conf_json.reset()
+    logfile = log_file_factory.create(2)
+    conf_json['settings'].update(logfile.json)
     conf_json['settings']['host_data_verbosity'] = 0
     conf_json.save()
     with accelize_drm.DrmManager(
@@ -92,24 +95,21 @@ def test_host_format(accelize_drm, conf_json, cred_json, async_handler):
     assert data.get('csp') is None
     host_card = data['host_card']
     assert host_card
-    runtime = host_card.get('runtime')
-    assert runtime
+    assert host_card.get('runtime')
+    assert host_card.get('system')
     board = host_card.get('board')
     assert board
-    system = host_card.get('system')
-    assert system
-    error = board.get('error')
-    assert error
-    xclbin = board.get('xclbin')
-    assert xclbin
+    if not accelize_drm.is_ctrl_sw:
+        assert board.get('error')
+    assert board.get('xclbin')
     info = board.get('info')
     assert info
-    dsa_name = info.get('dsa_name')
-    assert dsa_name is not None
+    assert info.get('dsa_name') is not None
     async_cb.assert_NoError()
 
 
-def test_csp_format(accelize_drm, conf_json, cred_json, async_handler):
+def test_csp_format(accelize_drm, conf_json, cred_json, async_handler,
+                    log_file_factory):
     """
     Test the format in the request is as expected
     """
@@ -120,6 +120,8 @@ def test_csp_format(accelize_drm, conf_json, cred_json, async_handler):
     async_cb = async_handler.create()
     async_cb.reset()
     conf_json.reset()
+    logfile = log_file_factory.create(2)
+    conf_json['settings'].update(logfile.json)
     conf_json['settings']['host_data_verbosity'] = 0
     conf_json.save()
     with accelize_drm.DrmManager(
@@ -134,32 +136,14 @@ def test_csp_format(accelize_drm, conf_json, cred_json, async_handler):
         assert drm_manager.get('host_data_verbosity') == 0
         data = drm_manager.get('host_data')
         drm_manager.deactivate()
-    # Check host info
-    host_card = data['host_card']
-    assert host_card
-    runtime = host_card.get('runtime')
-    assert runtime
-    board = host_card.get('board')
-    assert board
-    system = host_card.get('system')
-    assert system
-    error = board.get('error')
-    assert error
-    xclbin = board.get('xclbin')
-    assert xclbin
-    info = board.get('info')
-    assert info
-    dsa_name = info.get('dsa_name')
-    assert dsa_name is not None
     # Check CSP info
-    csp = data['csp']
-    assert host_card
-    ami_id = csp.get('ami_id')
-    assert match(r'ami-.*', ami_id)
-    instance_id = csp.get('instance_id')
-    assert match(r'i-.*', instance_id)
-    instance_type = csp.get('instance_type')
-    assert match(r'f1.\dxlarge', instance_type)
-    region = csp.get('region')
-    assert region
+    if accelize_drm.is_ctrl_sw:
+        assert not data.get('csp')
+    else:
+        csp = data['csp']
+        assert csp
+        assert match(r'ami-.*', csp.get('ami_id'))
+        assert match(r'i-.*', csp.get('instance_id'))
+        assert match(r'f1.\dxlarge', csp.get('instance_type'))
+        assert csp.get('region')
     async_cb.assert_NoError()

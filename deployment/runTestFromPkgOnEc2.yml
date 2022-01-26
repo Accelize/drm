@@ -7,7 +7,7 @@ parameters:
   instance_type: 'f1.4xlarge'
   config_list:
   - os_distrib: 'centos_7'
-    tox_operation: '-e cpp-install,c-install,integration-install'
+    tox_operation: '-e cpp-install,c-install,noparallel-install'
     tox_extra_option: ''
 
 jobs:

@@ -61,23 +61,21 @@ private:
     class Impl; //!< Internal representation
     //std::unique_ptr<Impl> pImpl; //!< Internal representation
     Impl* pImpl; //!< Internal representation
-    
+
     /* File descriptor attached to device /dev/trustzone */
     static pnc_session_t *s_pnc_session;
 
     /* Virtual address and size of the mapped [tzfd] file */
     static uint32_t *s_pnc_tzvaddr;
     static size_t s_pnc_tzsize;
-    
+
     /* DRM Controller page offset in shared memory */
     static uint32_t s_pnc_page_offset;
-    
+
     static const std::string DRM_SELF_TEST_ERROR_MESSAGE;
-    static const std::string DRM_CONNECTION_ERROR_MESSAGE;                        
+    static const std::string DRM_CONNECTION_ERROR_MESSAGE;
     static const std::string DRM_DOC_LINK;
     static const std::string DRM_CTRL_TA_INIT_ERROR_MESSAGE;
-
-    static const char* SDK_SLEEP_IN_MICRO_SECONDS;
 
 public:
 

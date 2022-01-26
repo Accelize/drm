@@ -179,7 +179,7 @@ def test_2activator_axi4_2clk_swap_activator(accelize_drm, conf_json, cred_json,
                                     log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
 
 
-@pytest.mark.skip(reason='Manual execution: only used to check the behavior of the DRM Controller IP when 1 activator is missing  out of 2')
+@pytest.mark.skip(reason='To be manually executed: only used to check the behavior of the DRM Controller IP when 1 activator is missing out of 2')
 @pytest.mark.awsf1
 def test_2activator_2clk_missing_1activator(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """

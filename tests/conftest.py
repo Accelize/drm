@@ -89,7 +89,8 @@ def get_default_conf_json(licensing_server_url):
         },
         "settings": {
             "ws_connection_timeout": 3,
-            "ws_request_timeout": 5
+            "ws_request_timeout": 5,
+            "ws_api_retry_duration": 5
         }
     }
 
@@ -201,8 +202,8 @@ def pytest_addoption(parser):
              'use default FPGA image for the selected driver and last HDK '
              'version.')
     parser.addoption(
-        "--integration", action="store_true",
-        help='Run integration tests. Theses tests may needs two FPGAs.')
+        "--noparallel", action="store_true",
+        help='Run tests that cannot be run in parallel or need 2 FPGA')
     parser.addoption(
         "--activator_base_address", action="store", default=0x10000, type=auto_int,
         help=('Specify the base address of the 1st activator. '
@@ -226,7 +227,7 @@ def pytest_runtest_setup(item):
     """
     Configure test initialization
     """
-    # Check awsxrt tests
+    # Check awsf1 tests
     m_option = item.config.getoption('-m')
     if search(r'\bawsf1\b', m_option) and not search(r'\nnot\n\s+\bawsf1\b', m_option):
         skip_awsf1 = False
@@ -246,14 +247,34 @@ def pytest_runtest_setup(item):
     if skip_awsxrt and markers:
         pytest.skip("Don't run XRT (Vitis) tests.")
 
-    # Check integration tests
-    markers = tuple(item.iter_markers(name='no_parallel'))
-    markers += tuple(item.iter_markers(name='on_2_fpga'))
-    if not item.config.getoption("integration") and markers:
-        pytest.skip("Don't run integration tests.")
-    elif item.config.getoption("integration") and not markers:
-        pytest.skip("Run only integration tests.")
+    # Determine if DRM Ctrl SW is under test
+    hybrid_test = False
+    fpga_image = item.config.getoption('--fpga_image')
+    if fpga_image and fpga_image.endswith(".som"):
+        hybrid_test = True
+    fpga_driver = item.config.getoption('--fpga_driver')
+    if fpga_driver and fpga_driver == 'som_xrt':
+        hybrid_test = True
 
+    if not hybrid_test:
+        # Check noparallel tests
+        markers = tuple(item.iter_markers(name='no_parallel'))
+        markers += tuple(item.iter_markers(name='on_2_fpga'))
+        if not item.config.getoption("noparallel") and markers:
+            pytest.skip("Don't run 'noparallel' tests.")
+        elif item.config.getoption("noparallel") and not markers:
+            pytest.skip("Run only 'noparallel' tests.")
+        # Check som tests
+        if tuple(item.iter_markers(name='som')):
+            pytest.skip("Don't run SoM specific tests.")
+    '''
+    # Check twofpga tests
+    markers = tuple(item.iter_markers(name='on_2_fpga'))
+    if not item.config.getoption("twofpga") and markers:
+        pytest.skip("Don't run 'twofpga' tests.")
+    elif item.config.getoption("twofpga") and not markers:
+        pytest.skip("Run only 'twofpga' tests.")
+    '''
     # Check endurance tests
     m_option = item.config.getoption('-m')
     if search(r'\bendurance\b', m_option) and not search(r'\nnot\n\s+\bendurance\b', m_option):
@@ -591,13 +612,17 @@ def accelize_drm(pytestconfig):
     if fpga_driver_name and fpga_image:
         raise ValueError(
             'Mutually exclusive options: Please set "fpga_driver" or "fpga_image", but not both')
+    is_ctrl_sw = False
     if fpga_image:
         if fpga_image.endswith('som.awsxclbin'):
-            fpga_driver_name = 'som_vitis'
+            fpga_driver_name = 'som_aws'
         elif fpga_image.endswith('.awsxclbin'):
             fpga_driver_name = 'aws_xrt'
         elif search(r'agfi-[0-9a-f]+', fpga_image, IGNORECASE):
             fpga_driver_name = 'aws_f1'
+        elif fpga_image.endswith('.som'):
+            fpga_driver_name = 'som_xrt'
+            is_ctrl_sw = True
         else:
             raise ValueError("Unsupported 'fpga_image' option")
     elif fpga_driver_name is None:
@@ -632,8 +657,8 @@ def accelize_drm(pytestconfig):
         fpga_image = ref_designs.get_image_id(hdk_version)
 
     # Define or get FPGA Slot
-    if pytestconfig.getoption('integration'):
-        # Integration tests requires 2 slots
+    if pytestconfig.getoption('noparallel'):
+        # noparallel tests requires 2 slots
         fpga_slot_id = [0, 1]
     elif environ.get('TOX_PARALLEL_ENV'):
         # Define FPGA slot for Tox parallel execution
@@ -655,6 +680,7 @@ def accelize_drm(pytestconfig):
     print('FPGA DRIVER:', fpga_driver_name)
     print('FPGA IMAGE:', fpga_image)
     print('HDK VERSION:', hdk_version)
+    print('CONTROLLER SW:', is_ctrl_sw)
     if fpga_driver_extra_str:
         fpga_driver_extra = dict(findall(r'([^;]+):([^;]+)', fpga_driver_extra_str))
         print('DRIVER EXTRA:', fpga_driver_extra)
@@ -686,9 +712,12 @@ def accelize_drm(pytestconfig):
         makedirs(pytest_artifacts_dir)
     print('pytest artifacts directory: ', pytest_artifacts_dir)
 
-    # Get frequency detection version
-    freq_version = fpga_driver[0].read_register(drm_ctrl_base_addr + 0xFFF0)
-    print('Frequency detection version: 0x%08X' % freq_version)
+    if is_ctrl_sw:
+        freq_version = 0
+    else:
+        # Get frequency detection version
+        freq_version = fpga_driver[0].read_register(drm_ctrl_base_addr + 0xFFF0)
+        print('Frequency detection version: 0x%08X' % freq_version)
 
     # Store some values for access in tests
     import accelize_drm as _accelize_drm
@@ -714,6 +743,7 @@ def accelize_drm(pytestconfig):
     _accelize_drm.scanActivators = types.MethodType( scan, _accelize_drm )
     _accelize_drm.pytest_params = param2dict(pytestconfig.getoption("params"))
     _accelize_drm.pytest_artifacts_dir = pytest_artifacts_dir
+    _accelize_drm.is_ctrl_sw = is_ctrl_sw
     return _accelize_drm
 
 

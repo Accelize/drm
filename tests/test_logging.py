@@ -172,6 +172,8 @@ def test_file_types(accelize_drm, conf_json, cred_json, async_handler, request,
             assert drm_manager.get('log_message_level') == logfile.verbosity
             for _ in range(2 * int(size / len(msg)) + 1):
                 drm_manager.set(log_message=msg)
+            rotating_size == drm_manager.get('log_file_rotating_size')
+            rotating_num == drm_manager.get('log_file_rotating_num')
         if log_type == 0:
             assert not isfile(logfile.path)
         elif log_type == 1:
@@ -180,8 +182,6 @@ def test_file_types(accelize_drm, conf_json, cred_json, async_handler, request,
             assert len(log_content) >= 2 * size
         else:
             # Rotating file
-            assert rotating_size == drm_manager.get('log_file_rotating_size')
-            assert rotating_num == drm_manager.get('log_file_rotating_num')
             for i in range(rotating_num+1):
                 log_content = logfile.read(i)
                 if i == 0:
@@ -489,6 +489,7 @@ def test_log_file_without_credential_data_in_debug(accelize_drm, conf_json, cred
     log_content = logfile.read()
     assert not search(cred_json['client_id'], log_content)
     assert not search(cred_json['client_secret'], log_content)
+    async_cb.assert_NoError()
     logfile.remove()
 
 
@@ -515,4 +516,99 @@ def test_log_file_without_credential_data_in_debug2(accelize_drm, conf_json, cre
     log_content = logfile.read()
     assert not search(cred_json['client_id'], log_content)
     assert not search(cred_json['client_secret'], log_content)
+    async_cb.assert_NoError()
     logfile.remove()
+
+
+def test_log_ctrl_from_api(accelize_drm, conf_json, cred_json, async_handler,
+                            log_file_factory):
+    """ Test log_ctrl_verbosity passed through get/set functions """
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    async_cb.reset()
+    logfile = log_file_factory.create(2)
+    conf_json.reset()
+    conf_json['settings'].update(logfile.json)
+    conf_json.save()
+    with accelize_drm.DrmManager(
+                conf_json.path, cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+        for i in range(6):
+            drm_manager.set(log_ctrl_verbosity=i)
+            if accelize_drm.is_ctrl_sw:
+                assert drm_manager.get('log_ctrl_verbosity') == i
+    if not accelize_drm.is_ctrl_sw:
+        log_content = logfile.read()
+        assert search(r'warning .*This command has no effect on HW DRM Controller IP', log_content)
+    async_cb.assert_NoError()
+    logfile.remove()
+
+
+def test_log_ctrl_from_config_file(accelize_drm, conf_json, cred_json, async_handler):
+    """ Test log_ctrl_verbosity passed through config file """
+    if not accelize_drm.is_ctrl_sw:
+        pytest.skip('Skip test on log_ctrl_verbosity if not on SoM target')
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    for i in range(6):
+        async_cb.reset()
+        conf_json.reset()
+        conf_json['settings']['log_ctrl_verbosity'] = i
+        conf_json.save()
+        with accelize_drm.DrmManager(
+                    conf_json.path, cred_json.path,
+                    driver.read_register_callback,
+                    driver.write_register_callback,
+                    async_cb.callback
+                ) as drm_manager:
+            assert drm_manager.get('log_ctrl_verbosity') == i
+        async_cb.assert_NoError()
+
+
+def test_log_ctrl_verbosity_from_api_with_bad_value(accelize_drm, conf_json, cred_json, async_handler):
+    """ Test error is returned when a bad value is passed to log_ctrl_verbosity from API functions """
+    if not accelize_drm.is_ctrl_sw:
+        pytest.skip('Skip test on log_ctrl_verbosity if not on SoM target')
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    async_cb.reset()
+    conf_json.reset()
+    with accelize_drm.DrmManager(
+                conf_json.path, cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+        with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+            drm_manager.set(log_ctrl_verbosity = 6)
+        assert "Invalid log level for SW Controller" in str(excinfo.value)
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+        async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, "Invalid log level for SW Controller")
+        async_cb.reset()
+
+
+def test_log_ctrl_verbosity_from_config_with_bad_value(accelize_drm, conf_json, cred_json,
+                                async_handler):
+    """ Test error is returned when a bad value is passed to log_ctrl_verbosity from config file """
+    if not accelize_drm.is_ctrl_sw:
+        pytest.skip('Skip test on log_ctrl_verbosity if not on SoM target')
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    async_cb.reset()
+    conf_json.reset()
+    conf_json['settings']['log_ctrl_verbosity'] = 6
+    conf_json.save()
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+        drm_manager = accelize_drm.DrmManager(
+                    conf_json.path, cred_json.path,
+                    driver.read_register_callback,
+                    driver.write_register_callback,
+                    async_cb.callback
+                )
+    assert "Invalid log level for SW Controller" in str(excinfo.value)
+    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+    async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, "Invalid log level for SW Controller")
+    async_cb.reset()

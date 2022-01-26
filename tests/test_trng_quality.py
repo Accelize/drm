@@ -8,7 +8,7 @@ import re
 from glob import glob
 from os import remove
 from os.path import getsize, isfile, dirname, join, realpath, basename
-from re import search, findall, finditer, MULTILINE
+from re import finditer
 from time import sleep, time
 from json import loads, dumps
 from datetime import datetime, timedelta
@@ -23,12 +23,11 @@ DISPERSION_THRESHOLD = 0.1
 
 LOG_FORMAT_LONG = "%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v"
 
-REGEX_PATTERN = r'Starting license request to \S+ with request:\n(^{.+?\n}$)'
+REGEX_PATTERN = r'Starting (?:license|Health) request to \S+ with data:\n(^{.+?\n}$)'
 
 
 def parse_and_save_challenge(text, pattern, save_path=None):
     # Parse log file
-    print('Parsing requests from log file: %s' % logpath)
     request_list = list()
     for challenge in finditer(pattern, text, re.I | re.MULTILINE | re.DOTALL):
         request_list.append(loads(challenge.group(1)))
@@ -271,4 +270,105 @@ def test_dna_and_challenge_duplication(accelize_drm, conf_json, cred_json, async
         assert challenge_score < DUPLICATE_THRESHOLD
     if dna_score:
         assert dna_score < DUPLICATE_THRESHOLD
+
+
+@pytest.mark.no_parallel
+def test_saas_challenge_quality_through_activates(accelize_drm, conf_json,
+            cred_json, async_handler, log_file_factory):
+    nb_loop = 3
+    nb_req = 2
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    async_cb.reset()
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
+    conf_json.save()
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+        for i in range(nb_loop):
+            drm_manager.activate()
+            lic_period = drm_manager.get('license_duration')
+            if accelize_drm.is_ctrl_sw:
+                health_period = drm_manager.get('health_period')
+            else:
+                health_period = lic_period
+            max_period = max(lic_period, health_period)
+            while True:
+                if drm_manager.get('num_license_loaded') == 2:
+                    sleep(nb_req*max_period + 2)
+                    break
+                sleep(0.1)
+            drm_manager.deactivate()
+    log_content = logfile.read()
+    # Parse log file
+    challenge_list = parse_and_save_challenge(log_content, REGEX_PATTERN)
+    ratio = int(max_period / min(lic_period, health_period))
+    assert len(challenge_list) >= nb_loop * (nb_req + ratio + 2)
+    if accelize_drm.is_ctrl_sw:
+        challenge_list = list(map(lambda x: x['saasChallenge'], challenge_list))
+    else:
+        # Remove close & health requests (that are duplicate of latest sync request)
+        challenge_list = list(filter(lambda x: x['request'] not in ['close','health'], challenge_list))
+        challenge_list = list(map(lambda x: x['saasChallenge'], challenge_list))
+    challenge_set = set(challenge_list)
+    try:
+        assert len(challenge_list) == len( challenge_set), "Found duplicate saas challenge"
+    except AssertionError as e:
+        dupl_dict = {}
+        for e in challenge_set:
+            nb = challenge_list.count(e)
+            if nb > 1:
+                print(f'challenge {e} appears {nb} times')
+        raise
+    logfile.remove()
+    async_cb.assert_NoError()
+
+
+@pytest.mark.no_parallel
+def test_saas_challenge_quality_through_instances(accelize_drm, conf_json,
+            cred_json, async_handler, log_file_factory):
+    nb_loop = 5
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    async_cb.reset()
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
+    conf_json['settings']['log_file_append'] = True
+    conf_json.save()
+    for i in range(nb_loop):
+        with accelize_drm.DrmManager(
+                    conf_json.path,
+                    cred_json.path,
+                    driver.read_register_callback,
+                    driver.write_register_callback,
+                    async_cb.callback
+                ) as drm_manager:
+            drm_manager.activate()
+            drm_manager.deactivate()
+    log_content = logfile.read()
+    challenge_list = parse_and_save_challenge(log_content, REGEX_PATTERN)
+    assert len(challenge_list) >= nb_loop * 2
+    if accelize_drm.is_ctrl_sw:
+        challenge_list = list(map(lambda x: x['saasChallenge'], challenge_list))
+    else:
+        # Remove close & health requests (that are duplicate of latest sync request)
+        challenge_list = list(filter(lambda x: x['request'] not in ['close','health'], challenge_list))
+        challenge_list = list(map(lambda x: x['saasChallenge'], challenge_list))
+    challenge_set = set(challenge_list)
+    try:
+        assert len(challenge_list) == len( challenge_set), "Found duplicate saas challenge"
+    except AssertionError as e:
+        dupl_dict = {}
+        for e in challenge_set:
+            nb = challenge_list.count(e)
+            if nb > 1:
+                print(f'challenge {e} appears {nb} times')
+        raise
+    logfile.remove()
+    async_cb.assert_NoError()
 

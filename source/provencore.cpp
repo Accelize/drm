@@ -170,6 +170,7 @@ int pnc_session_new(size_t size, pnc_session_t **session)
     }
 
     *session = pnc_new;
+
     return 0;
 }
 
@@ -227,7 +228,7 @@ int pnc_session_config(pnc_session_t *session, uint64_t id, _Bool is_sid)
     /* Get REE version */
     pnc_session_get_version(session, &version);
     if ((is_sid == 0) && (version >= 0x300)) {
-        /* Avoid forwarding config request if is_sid is not true since this 
+        /* Avoid forwarding config request if is_sid is not true since this
          * feature is not supported anymore.
          */
         Error( "PNC: REE version requires a valid SID" );
@@ -286,13 +287,11 @@ struct pnc_send_params {
 typedef struct pnc_send_params pnc_send_params_t;
 
 
-int pnc_session_request(pnc_session_t *session, uint32_t type,
-                        uint32_t flags)
+int pnc_session_request(pnc_session_t *session, uint32_t type, uint32_t flags)
 {
     if (session == NULL || !session->configured || (flags & ~UINT32_C(0xffff)) != 0) {
         return -EINVAL;
     }
-
     return ioctl(session->fd, TZ_IOCTL(TZ_IOCTL_SEND, flags), type);
 }
 

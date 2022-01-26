@@ -8,10 +8,10 @@ from json import loads
 from random import randint
 
 
-REG_BRIDGE_VERSION       =  0x0
-REG_BRIDGE_STREAM        =  0x4
-REG_BRIDGE_MAILBOX_SIZE  =  0x8
-REG_BRIDGE_MAILBOX_RO    =  0xC
+RegBridgeVersion = 0x0
+RegBridgeStream = 0x4
+RegBridgeMailboxSize = 0x8
+RegBridgeMailboxRoData = 0xC
 
 
 def reverse_string(x):
@@ -31,6 +31,8 @@ def stringify(h):
 
 
 def run_test_on_design(accelize_drm, design_name ):
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip("Test skipped on SoM target because it's meant to test the DRM bridge only on AWS (without DRM Sw)")
 
     # Program board with design
     ref_designs = accelize_drm.pytest_ref_designs
@@ -49,11 +51,11 @@ def run_test_on_design(accelize_drm, design_name ):
 
     # Test controller bridge version
     reg = c_uint(0)
-    assert driver.read_register_callback(driver._drm_ctrl_base_addr + REG_BRIDGE_VERSION, byref(reg)) == 0
+    assert driver.read_register_callback(driver._drm_ctrl_base_addr + RegBridgeVersion, byref(reg)) == 0
     assert reg.value == 0x01000000
 
     # Test controller bridge mailbox size
-    assert driver.read_register_callback(driver._drm_ctrl_base_addr + REG_BRIDGE_MAILBOX_SIZE, byref(reg)) == 0
+    assert driver.read_register_callback(driver._drm_ctrl_base_addr + RegBridgeMailboxSize, byref(reg)) == 0
     mailbox_ro_size = reg.value >> 16
     mailbox_rw_size = reg.value & 0xFFFF
     assert mailbox_ro_size > 0x10
@@ -62,34 +64,47 @@ def run_test_on_design(accelize_drm, design_name ):
     # Test controller bridge mailbox read-only content
     hex_str = ''
     for i in range(mailbox_ro_size):
-        assert driver.read_register_callback(driver._drm_ctrl_base_addr + REG_BRIDGE_MAILBOX_RO + 4*i, byref(reg)) == 0
+        assert driver.read_register_callback(driver._drm_ctrl_base_addr + RegBridgeMailboxRoData + 4*i, byref(reg)) == 0
         hex_str += '%08X' % reg.value
     text_str = stringify(hex_str)
     text_json = loads(text_str)
-    assert text_json['fpga_family'] == 'random_id'
-    assert text_json['fpga_vendor'] == 'xilinx'
     assert text_json['product_id']['vendor'] == 'accelize.com'
     assert text_json['product_id']['library'] == 'refdesign'
-    assert text_json['product_id']['name'] == 'drm_1activator'
-    assert text_json['extra']['csp'] == 'aws-f1'
-    assert 'dualclk' in text_json['extra'], "text_json=%s" % str(text_json)
-    assert text_json['drm_software'], "text_json=%s" % str(text_json)
+    assert text_json['pkg_version']
+    assert text_json['drm_software']
+    assert text_json['extra']['product_id']['name'] == 'drm_1activator'
+    assert text_json['extra']['fpga_family'] == 'random_id'
+    assert text_json['extra']['fpga_vendor'] == 'xilinx'
+    assert text_json['extra']['csp'].lower() == 'som'
+    assert not text_json['extra']['dualclk']
+    rom_version_str = text_json['extra']['lgdn_full_version']
+    assert rom_version_str
+
+    # Compute hex version to be later used
+    rom_version_match = match(r'(\d+)\.(\d+)\.(\d+)\.\d+', rom_version_str)
+    rom_version = ''.join(map(lambda x: '%02X' % int(x,16), rom_version_match.groups()))
 
     # Test controller bridge mailbox read-write content
+    regBridgeMailboxRWData = RegBridgeMailboxRoData + 4*mailbox_ro_size
     ref_list = []
     for i in range(mailbox_rw_size):
         ref = randint(1,0xFFFFFFFF)
-        assert driver.write_register_callback(driver._drm_ctrl_base_addr + REG_BRIDGE_MAILBOX_RO + 4*mailbox_ro_size + 4*i, ref) == 0
+        assert driver.write_register_callback(driver._drm_ctrl_base_addr + regBridgeMailboxRWData + 4*i, ref) == 0
         ref_list.append(ref)
     for i in range(mailbox_rw_size):
-        assert driver.read_register_callback(driver._drm_ctrl_base_addr + REG_BRIDGE_MAILBOX_RO + 4*mailbox_ro_size + 4*i, byref(reg)) == 0
+        assert driver.read_register_callback(driver._drm_ctrl_base_addr + regBridgeMailboxRWData + 4*i, byref(reg)) == 0
         assert reg.value == ref_list[i]
 
-    # Test read of activator VLNV from bridge
-    assert driver.write_register_callback(driver._drm_ctrl_base_addr + REG_BRIDGE_STREAM, 0x23020001) == 0
-    assert driver.read_register_callback(driver._drm_ctrl_base_addr + REG_BRIDGE_STREAM, byref(reg)) == 0
-    assert reg.value == 0x1003000B
-    assert driver.read_register_callback(driver._drm_ctrl_base_addr + REG_BRIDGE_STREAM, byref(reg)) == 0
+    # Get Activator's LGDN version through bridge
+    assert driver.write_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, 0x22010001) == 0
+    assert driver.read_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, byref(reg)) == 0
+    assert reg.value == int(rom_version,16) << 8
+
+    # Get Activator's VLNV through Bridge:
+    assert driver.write_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, 0x23020001) == 0
+    assert driver.read_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, byref(reg)) == 0
+    assert reg.value == 0x1003000b
+    assert driver.read_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, byref(reg2)) == 0
     assert reg.value == 0x00010001
 
 
@@ -111,3 +126,4 @@ def test_vitis_1activator_som_200_125(accelize_drm, async_handler, log_file_fact
     # Program board with design
     design_name = 'vitis_1activator_som_200_125'
     run_test_on_design(accelize_drm, design_name)
+
