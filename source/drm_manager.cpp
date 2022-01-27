@@ -3017,7 +3017,7 @@ public:
                     case ParameterKey::controller_rom: {
                         json_value[key_str] = mMailboxRoData;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
-                                mMailboxRoData );
+                                mMailboxRoData.toStyledString() );
                         break;
                     }
                     case ParameterKey::ParameterKeyCount: {
