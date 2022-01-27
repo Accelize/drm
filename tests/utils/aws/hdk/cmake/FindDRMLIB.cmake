@@ -1,45 +1,45 @@
 
 set(DRMLIB_FOUND false)
 
-if(NOT DEFINED DRMLIB_DIR)
+if(NOT DEFINED ENV{DRMLIB_DIR})
   message(STATUS "Searching for DRMLib")
 
   find_path(DRMLIB_INCLUDE_DIRS
-          NAMES accelize/drm.h
-          )
+	  NAMES accelize/drm.h
+	  )
 
   find_library(DRMLIB_LIBRARIES
-          NAMES accelize_drm
-          )
+	  NAMES accelize_drm
+	  )
 
   find_library(DRMLIB_C_LIBRARIES
-          NAMES accelize_drmc
-          )
+	  NAMES accelize_drmc
+	  )
 
 else()
-  message(STATUS "Searching for DRMLib using ${DRMLIB_DIR}")
+  message(STATUS "Searching for DRMLib using $ENV{DRMLIB_DIR}")
 
   find_path(DRMLIB_INCLUDE_DIRS
-          NAMES accelize/drm.h
-          PATHS ${DRMLIB_DIR}/include/
-          NO_DEFAULT_PATH
-          )
+	  NAMES accelize/drm.h
+	  PATHS $ENV{DRMLIB_DIR}/include/
+	  NO_DEFAULT_PATH
+	  )
 
   find_library(DRMLIB_LIBRARIES
-          NAMES accelize_drm
-          PATHS ${DRMLIB_DIR}
-          ${DRMLIB_DIR}/lib
-          ${DRMLIB_DIR}/build
-          NO_DEFAULT_PATH
-          )
+	  NAMES accelize_drm
+	  PATHS $ENV{DRMLIB_DIR}
+	  $ENV{DRMLIB_DIR}/lib
+	  $ENV{DRMLIB_DIR}/build
+	  NO_DEFAULT_PATH
+	  )
 
   find_library(DRMLIB_C_LIBRARIES
-          NAMES accelize_drmc
-          PATHS ${DRMLIB_DIR}
-          ${DRMLIB_DIR}/lib
-          ${DRMLIB_DIR}/build
-          NO_DEFAULT_PATH
-          )
+	  NAMES accelize_drmc
+	  PATHS $ENV{DRMLIB_DIR}
+	  $ENV{DRMLIB_DIR}/lib
+	  $ENV{DRMLIB_DIR}/build
+	  NO_DEFAULT_PATH
+	  )
 
 endif()
 
