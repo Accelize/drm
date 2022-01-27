@@ -365,8 +365,8 @@ protected:
     std::string mXbutil;
     Json::Value mHostConfigData = Json::nullValue;
     eHostDataVerbosity mHostDataVerbosity = eHostDataVerbosity::PARTIAL;
-    Json::Value mSettings = Json::nullValue;;
-    Json::Value mMailboxRoData = Json::nullValue;;
+    Json::Value mSettings = Json::nullValue;
+    Json::Value mMailboxRoData = Json::nullValue;
 
     // Debug parameters
     spdlog::level::level_enum mDebugMessageLevel;
