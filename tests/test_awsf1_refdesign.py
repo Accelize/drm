@@ -115,12 +115,12 @@ def run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_ha
 
 
 @pytest.mark.awsf1
-def test_1activator_axi4_1clk(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
+def test_1activator_axi4_125(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test a RTL vivado configuration: 1 single clock kernels with Verilog source
     """
     # Run test
-    design_name = '1activator_axi4_1clk'
+    design_name = '1activator_axi4_125'
     axiclk_freq_ref = 125
     drmclk_freq_ref = 125
     log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
@@ -128,12 +128,12 @@ def test_1activator_axi4_1clk(accelize_drm, conf_json, cred_json, async_handler,
 
 
 @pytest.mark.awsf1
-def test_2activator_axi4_1clk(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
+def test_2activator_axi4_125(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test a RTL vivado configuration: single clock kernels with Verilog source
     """
     # Run test
-    design_name = '2activator_axi4_1clk'
+    design_name = '2activator_axi4_125'
     axiclk_freq_ref = 125
     drmclk_freq_ref = 125
     log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
@@ -141,12 +141,12 @@ def test_2activator_axi4_1clk(accelize_drm, conf_json, cred_json, async_handler,
 
 
 @pytest.mark.awsf1
-def test_2activator_axi4_2clk(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
+def test_2activator_axi4_250_125(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test a RTL vivado configuration: dual clock kernels with Verilog source
     """
     # Run test
-    design_name = '2activator_axi4_2clk'
+    design_name = '2activator_axi4_250_125'
     axiclk_freq_ref = 250
     drmclk_freq_ref = 125
     log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
@@ -154,12 +154,12 @@ def test_2activator_axi4_2clk(accelize_drm, conf_json, cred_json, async_handler,
 
 
 @pytest.mark.awsf1
-def test_2activator_axi4_vhdl_1clk(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
+def test_2activator_axi4_vhdl_125(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test a RTL vivado configuration: single clock kernels with VHDL source
     """
     # Run test
-    design_name = '2activator_axi4_vhdl_1clk'
+    design_name = '2activator_axi4_vhdl_125'
     axiclk_freq_ref = 125
     drmclk_freq_ref = 125
     log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
@@ -167,12 +167,12 @@ def test_2activator_axi4_vhdl_1clk(accelize_drm, conf_json, cred_json, async_han
 
 
 @pytest.mark.awsf1
-def test_2activator_axi4_2clk_swap_activator(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
+def test_2activator_axi4_swap_activator_250_125(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test a RTL vivado configuration: dual clock kernels with activators inverted on LGDN bus
     """
     # Run test
-    design_name = '2activator_axi4_2clk_swap_activator'
+    design_name = '2activator_axi4_swap_activator_250_125'
     axiclk_freq_ref = 250
     drmclk_freq_ref = 125
     log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
