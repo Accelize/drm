@@ -1210,7 +1210,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
             drm_manager.set(is_drm_software=True)
         async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code," cannot be overwritten")
         async_cb.reset()
-        assert drm_manager.get('is_drm_software') == ref_timeout
+        assert drm_manager.get('is_drm_software') == accelize_drm.is_ctrl_sw
         async_cb.assert_NoError()
         print("Test parameter 'is_drm_software': PASS")
 
@@ -1219,7 +1219,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
             drm_manager.set(controller_version=1)
         async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code," cannot be overwritten")
         async_cb.reset()
-        assert match(r'00[0-9A-F]{6}', str(drm_manager.get('controller_version')).upper())
+        assert match(r'\d+\.\d+\.\d+', drm_manager.get('controller_version'))
         async_cb.assert_NoError()
         print("Test parameter 'controller_version': PASS")
 
@@ -1228,12 +1228,12 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
             drm_manager.set(controller_rom="{}")
         async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code," cannot be overwritten")
         async_cb.reset()
-        rom = loads(drm_manager.get('controller_rom'))
+        rom = drm_manager.get('controller_rom')
         assert rom
         assert rom.get('extra')
         assert rom.get('product_id')
         assert rom.get('pkg_version')
-        assert rom.get('drm_software')
+        assert rom.get('drm_software') == accelize_drm.is_ctrl_sw
         async_cb.assert_NoError()
         print("Test parameter 'controller_version': PASS")
 

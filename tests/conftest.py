@@ -440,8 +440,7 @@ class ActivatorsInFPGA:
         self.product_id = {
             "vendor": "accelize.com",
             "library": "refdesign",
-            "name": "drm_%dactivator" % len(base_address_list),
-            "sign": ""
+            "name": "drm_%dactivator" % len(base_address_list)
         }
 
     def __getitem__(self, index):
