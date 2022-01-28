@@ -6,6 +6,7 @@ import pytest
 from ctypes import c_uint, byref
 from json import loads
 from random import randint
+from re import match
 
 
 RegBridgeVersion = 0x0
@@ -30,7 +31,7 @@ def stringify(h):
     return ''.join(h_list)
 
 
-def run_test_on_design(accelize_drm, design_name ):
+def run_test_on_design(accelize_drm, design_name, is_dual_clk):
     if accelize_drm.is_ctrl_sw:
         pytest.skip("Test skipped on SoM target because it's meant to test the DRM bridge only on AWS (without DRM Sw)")
 
@@ -76,13 +77,13 @@ def run_test_on_design(accelize_drm, design_name ):
     assert text_json['extra']['fpga_family'] == 'random_id'
     assert text_json['extra']['fpga_vendor'] == 'xilinx'
     assert text_json['extra']['csp'].lower() == 'som'
-    assert not text_json['extra']['dualclk']
+    assert text_json['extra']['dualclk'] == is_dual_clk
     rom_version_str = text_json['extra']['lgdn_full_version']
     assert rom_version_str
 
     # Compute hex version to be later used
     rom_version_match = match(r'(\d+)\.(\d+)\.(\d+)\.\d+', rom_version_str)
-    rom_version = ''.join(map(lambda x: '%02X' % int(x,16), rom_version_match.groups()))
+    rom_version = ''.join(map(lambda x: '%02X' % int(x), rom_version_match.groups()))
 
     # Test controller bridge mailbox read-write content
     regBridgeMailboxRWData = RegBridgeMailboxRoData + 4*mailbox_ro_size
@@ -115,7 +116,7 @@ def test_vitis_1activator_som_125(accelize_drm, async_handler, log_file_factory)
     """
     # Program board with design
     design_name = 'vitis_1activator_som_125'
-    run_test_on_design(accelize_drm, design_name)
+    run_test_on_design(accelize_drm, design_name, False)
 
 
 @pytest.mark.awsxrt
@@ -125,5 +126,5 @@ def test_vitis_1activator_som_200_125(accelize_drm, async_handler, log_file_fact
     """
     # Program board with design
     design_name = 'vitis_1activator_som_200_125'
-    run_test_on_design(accelize_drm, design_name)
+    run_test_on_design(accelize_drm, design_name, True)
 
