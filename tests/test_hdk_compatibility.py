@@ -185,11 +185,13 @@ def test_ctrl_version_match_mailbox_version(accelize_drm, conf_json, cred_json, 
             driver.write_register_callback,
             async_cb.callback
         ) as drm_manager:
-        ctrl_version = drm_manager.get('controller_version')
+        ctrl_version_str = drm_manager.get('controller_version')
         ctrl_rom = drm_manager.get('controller_rom')
+    ctrl_version_match = match(r'(\d+)\.(\d+)\.(\d+)\.\d+', ctrl_version_str)
     rom_version_match = match(r'(\d+)\.(\d+)\.(\d+)\.\d+', ctrl_rom['extra']['lgdn_full_version'])
+    ctrl_version = ''.join(map(lambda x: '%02X' % int(x,16), rom_version_match.groups()))
     rom_version = ''.join(map(lambda x: '%02X' % int(x,16), rom_version_match.groups()))
-    assert rom_version = ctrl_version
+    assert rom_version == ctrl_version
     async_cb.assert_NoError()
 
 

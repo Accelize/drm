@@ -264,7 +264,8 @@ protected:
 #endif
 
     // HDK version
-    uint32_t mDrmVersion = 0;
+    uint32_t mDrmVersionNum = 0;
+    std::string mDrmVersionStr;
 
     // Composition
     std::unique_ptr<DrmWSClient> mWsClient;
@@ -637,8 +638,8 @@ protected:
 
     void getTrngStatus( bool securityAlertBit, uint32_t& adaptiveProportionTestError,
                         uint32_t& repetitionCountTestError ) const {
-        auto drmMajor = ( mDrmVersion >> 16 ) & 0xFF;
-        auto drmMinor = ( mDrmVersion >> 8  ) & 0xFF;
+        auto drmMajor = ( mDrmVersionNum >> 16 ) & 0xFF;
+        auto drmMinor = ( mDrmVersionNum >> 8  ) & 0xFF;
         if ( ( drmMajor > 4 ) || ( ( drmMajor == 4 ) && ( drmMinor >= 2 ) ) ) {
             checkDRMCtlrRet( getDrmController().readSecurityAlertStatusRegister( securityAlertBit ) );
             checkDRMCtlrRet( getDrmController().extractAdaptiveProportionTestFailures( adaptiveProportionTestError ) );
@@ -800,7 +801,7 @@ protected:
 
     uint32_t getUserMailboxSize() const {
         uint32_t mbSize = getMailboxSize() - (uint32_t)eMailboxOffset::MB_USER;
-        auto drmMajor = ( mDrmVersion >> 16 ) & 0xFF;
+        auto drmMajor = ( mDrmVersionNum >> 16 ) & 0xFF;
         if ( (drmMajor <= 3) && (mbSize >= 4) )
             // Used to compensate the bug in the HDK that prevent any access to the highest addresses of the mailbox
             mbSize -= 4;
@@ -973,25 +974,23 @@ protected:
 
     // Check compatibility of the DRM Version with Algodone version
     void checkHdkCompatibility() {
-        std::string drmVersionDot;
-
         std::string drmVersion = getDrmCtrlVersion();
-        mDrmVersion = DrmControllerLibrary::DrmControllerDataConverter::hexStringToBinary( drmVersion )[0];
-        drmVersionDot = DrmControllerLibrary::DrmControllerDataConverter::binaryToVersionString( mDrmVersion );
+        mDrmVersionNum = DrmControllerLibrary::DrmControllerDataConverter::hexStringToBinary( drmVersion )[0];
+        mDrmVersionStr = DrmControllerLibrary::DrmControllerDataConverter::binaryToVersionString( mDrmVersionNum );
 
-        auto drmMajor = ( mDrmVersion >> 16 ) & 0xFF;
-        auto drmMinor = ( mDrmVersion >> 8  ) & 0xFF;
+        auto drmMajor = ( mDrmVersionNum >> 16 ) & 0xFF;
+        auto drmMinor = ( mDrmVersionNum >> 8  ) & 0xFF;
 
         if ( drmMajor < HDK_COMPATIBILITY_LIMIT_MAJOR ) {
             Throw( DRM_CtlrError,
                     "This DRM Library version {} is not compatible with the DRM HDK version {}: To be compatible HDK version shall be > or equal to {}.{}.x ",
-                    DRMLIB_VERSION, drmVersionDot, HDK_COMPATIBILITY_LIMIT_MAJOR, HDK_COMPATIBILITY_LIMIT_MINOR );
+                    DRMLIB_VERSION, mDrmVersionStr, HDK_COMPATIBILITY_LIMIT_MAJOR, HDK_COMPATIBILITY_LIMIT_MINOR );
         } else if ( ( drmMajor == HDK_COMPATIBILITY_LIMIT_MAJOR ) && ( drmMinor < HDK_COMPATIBILITY_LIMIT_MINOR ) ) {
             Throw( DRM_CtlrError,
                     "This DRM Library version {} is not compatible with the DRM HDK version {}: To be compatible HDK version shall be > or equal to {}.{}.x ",
-                    DRMLIB_VERSION, drmVersionDot, HDK_COMPATIBILITY_LIMIT_MAJOR, HDK_COMPATIBILITY_LIMIT_MINOR );
+                    DRMLIB_VERSION, mDrmVersionStr, HDK_COMPATIBILITY_LIMIT_MAJOR, HDK_COMPATIBILITY_LIMIT_MINOR );
         }
-        Debug( "DRM HDK Version: {}", drmVersionDot );
+        Debug( "DRM HDK Version: {}", mDrmVersionStr );
     }
 
     /* Run BIST to check Page register access
@@ -3009,9 +3008,9 @@ public:
                         break;
                     }
                     case ParameterKey::controller_version: {
-                        json_value[key_str] = mDrmVersion;
+                        json_value[key_str] = mDrmVersionStr;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
-                                mDrmVersion );
+                                mDrmVersionStr );
                         break;
                     }
                     case ParameterKey::controller_rom: {
