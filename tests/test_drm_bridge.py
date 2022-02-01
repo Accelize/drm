@@ -108,7 +108,7 @@ def run_test_on_design(accelize_drm, design_name, is_dual_clk):
     assert driver.write_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, 0x23020001) == 0
     assert driver.read_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, byref(reg)) == 0
     assert reg.value == 0x1003000b
-    assert driver.read_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, byref(reg2)) == 0
+    assert driver.read_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, byref(reg)) == 0
     assert reg.value == 0x00010001
 
 
