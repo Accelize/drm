@@ -96,6 +96,9 @@ def run_test_on_design(accelize_drm, design_name, is_dual_clk):
         assert driver.read_register_callback(driver._drm_ctrl_base_addr + regBridgeMailboxRWData + 4*i, byref(reg)) == 0
         assert reg.value == ref_list[i]
 
+    # Reset stream counter
+    assert driver.write_register_callback(driver._drm_ctrl_base_addr + RegBridgeVersion, 1) == 0
+
     # Get Activator's LGDN version through bridge
     assert driver.write_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, 0x22010001) == 0
     assert driver.read_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, byref(reg)) == 0

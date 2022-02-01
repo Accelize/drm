@@ -674,7 +674,6 @@ def accelize_drm(pytestconfig):
     no_clear_fpga = pytestconfig.getoption("no_clear_fpga")
     drm_ctrl_base_addr = pytestconfig.getoption("drm_controller_base_address")
     fpga_driver_extra_str = pytestconfig.getoption("fpga_driver_extra")
-    print("fpga_driver_extra_str=", fpga_driver_extra_str)
     print('FPGA SLOT ID:', fpga_slot_id)
     print('FPGA DRIVER:', fpga_driver_name)
     print('FPGA IMAGE:', fpga_image)
