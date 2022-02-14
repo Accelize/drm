@@ -516,7 +516,7 @@ protected:
                 mFrequencyCurr = double(mFrequencyInit);
                 mBypassFrequencyDetection = JVgetOptional( conf_drm, "bypass_frequency_detection", Json::booleanValue,
                         mBypassFrequencyDetection ).asBool();
-                mIsHybrid = JVgetOptional( conf_drm, "drm_software", Json::booleanValue, false ).asBool();        
+                mIsHybrid = JVgetOptional( conf_drm, "drm_software", Json::booleanValue, false ).asBool();
             }
 
             // Optionally, check derived product

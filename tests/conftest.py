@@ -318,9 +318,10 @@ def scanActivatorsByCard(driver, base_addr):
             break
         base_addr_list.append(base_addr)
         base_addr += 0x10000
-#    if len(base_addr_list) == 0:
-#        raise IOError('No activator found on slot #%d' % driver._fpga_slot_id)
-    activators = ActivatorsInFPGA(driver, base_addr_list)
+    if len(base_addr_list):
+        activators = ActivatorsInFPGA(driver, base_addr_list)
+    else:
+        activators = ActivatorsInFPGA(None, base_addr_list)
     print('Found %d activator(s) on slot #%d' % (len(base_addr_list), driver._fpga_slot_id))
     return activators
 
@@ -340,7 +341,7 @@ class SingleActivator:
         """
         Verify IP works as expected
         """
-        if self.base_address is None:
+        if self.driver is None:
             return
         # Test IP mailbox depending on activation status
         activated = self.get_status()
@@ -380,7 +381,7 @@ class SingleActivator:
         Args:
             coins (int): Number of coins to generate.
         """
-        if self.base_address is None:
+        if self.driver is None:
             return 0
         if coins is None:
             coins = randint(1,10)
@@ -394,7 +395,7 @@ class SingleActivator:
         """
         Reset the coins counter
         """
-        if self.base_address is None:
+        if self.driver is None:
             return
         self.metering_data = 0
         if self.event_cnt_flag:
@@ -408,7 +409,7 @@ class SingleActivator:
         Args:
             coins (int): Number of coins to compare to.
         """
-        if self.base_address is None:
+        if self.driver is None:
             return 0
         # Read counter in Activation's registry
         if self.event_cnt_flag:
@@ -443,8 +444,8 @@ class ActivatorsInFPGA:
     """
     def __init__(self, driver, base_address_list):
         self.activators = list()
-        if base_address_list is None:
-            self.activators.append(SingleActivator(driver, None))
+        if driver is None:
+            self.activators.append(SingleActivator(None, None))
         else:
             for addr in base_address_list:
                 self.activators.append(SingleActivator(driver, addr))
@@ -813,7 +814,7 @@ class ConfJson(_Json):
         for k, v in kwargs.items():
             if isinstance(v, dict):
                 content[k].update(v)
-            else:    
+            else:
                 content[k] = v
         filename = 'conf%f.json' % time()
         _Json.__init__(self, tmpdir, filename, content)
@@ -938,7 +939,6 @@ def conf_json(request, pytestconfig, tmpdir):
     design_param = {'boardType': hash_value}
     # Build config content
     log_param = {'log_verbosity': pytestconfig.getoption("loglevel")}
-    print('pytestconfig.getoption("logformat")=', pytestconfig.getoption("logformat"))
     if pytestconfig.getoption("logformat") == 1:
         log_param['log_format'] = LOG_FORMAT_LONG
     else:
@@ -1390,7 +1390,7 @@ def log_file_factory(pytestconfig, request, accelize_drm):
 
     # Determine log file format
     log_file_format = LOG_FORMAT_LONG if pytestconfig.getoption("logfile") is not None else LOG_FORMAT_LONG
-    
+
     # Determine log file append mode
     log_file_append = pytestconfig.getoption("logfileappend")
 

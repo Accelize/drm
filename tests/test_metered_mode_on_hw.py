@@ -43,7 +43,6 @@ def test_fast_start_stop(accelize_drm, conf_json, cred_json, async_handler, log_
         activators.autotest(is_activated=False)
         assert sum(drm_manager.get('metered_data')) == 0
         async_cb.assert_NoError()
-        drm_manager.deactivate()
     logfile.remove()
 
 
@@ -85,7 +84,6 @@ def test_metered_start_stop_short_time(accelize_drm, conf_json, cred_json, async
         activators.autotest(is_activated=False)
         activators.check_coin()
         async_cb.assert_NoError()
-        drm_manager.deactivate()
     logfile.remove()
 
 
@@ -175,7 +173,6 @@ def test_metered_start_stop_long_time(accelize_drm, conf_json, cred_json, async_
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
         async_cb.assert_NoError()
-        drm_manager.deactivate()
     logfile.remove()
 
 
@@ -249,7 +246,6 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
         activators.autotest(is_activated=False)
         assert drm_manager.get('session_id') != session_id
         async_cb.assert_NoError()
-        drm_manager.deactivate()
     logfile.remove()
 
 

@@ -35,13 +35,10 @@ def test_hybrid_fast_start_stop(accelize_drm, conf_json, cred_json, async_handle
                 driver.write_register_callback,
                 async_cb.callback
             ) as drm_manager:
-        #assert not drm_manager.get('license_status')
-        #activators.autotest(is_activated=False)
+        assert not drm_manager.get('license_status')
         drm_manager.activate()
         drm_manager.deactivate()
-        #assert not drm_manager.get('license_status')
-        #activators.autotest(is_activated=False)
-        #assert sum(drm_manager.get('metered_data')) == 0
-        #async_cb.assert_NoError()        
+        assert not drm_manager.get('license_status')
+        async_cb.assert_NoError()        
     logfile.remove()
 

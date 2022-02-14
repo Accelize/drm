@@ -967,7 +967,7 @@ unsigned int DrmControllerRegistersStrategy_v7_0_0::readLicenseTimerLoadErrorReg
   return DrmControllerRegistersStrategyInterface::readErrorRegister(mDrmLicenseTimerLoadErrorPosition, mDrmLicenseTimerLoadErrorMask, licenseTimerLoadError);
 }
 
-/** waitActivationErrorRegister
+/** waitLicenseTimerLoadErrorRegister
 *   \brief Wait error to reach specified value.
 *   This method will access to the system bus to read the error register.
 *   \param[in]  timeout is the timeout value in micro seconds.
