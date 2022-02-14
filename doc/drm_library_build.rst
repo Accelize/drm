@@ -515,10 +515,10 @@ Command options are:
 --server=url                Specify metering server URL.
                             Default: ``https://master.metering.accelize.com``
 
---library_verbosity=<0..4>  Specify Accelize DRM library verbosity.
+--loglevel=<0..4>           Specify Accelize DRM library verbosity.
                             Possibles values: ``0`` to ``5``. Default: ``4``.
 
---library_log_format=<0|1>  Specify library log format: 0=short format, 1=long format.
+--logformat=<0|1>           Specify library log format: 0=short format, 1=long format.
 
 --fpga_image=image          Select FPGA image to use for program the FPGA. By default,
                             use default FPGA image for the selected driver and last HDK version.

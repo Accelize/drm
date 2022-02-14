@@ -13,6 +13,7 @@ from os.path import isfile as _isfile, join as _join, realpath as _realpath, bas
 from re import match as _match
 from subprocess import run as _run, PIPE as _PIPE, STDOUT as _STDOUT, Popen
 from threading import Lock as _Lock
+import sysv_ipc as ipc
 
 from tests.fpga_drivers import FpgaDriverBase as _FpgaDriverBase
 
@@ -21,31 +22,14 @@ __all__ = ['FpgaDriver']
 
 SCRIPT_DIR = _dirname(_realpath(__file__))
 
+SHM_PATH = "/usr/lib/drm-controller/shared-memory-file"
 
-class XrtLock():
-    def __init__(self, driver):
-        self.driver = driver
-        # Define Lock function
-        self.xcl_lock = driver._fpga_library.xclLockDevice
-        self.xcl_lock.restype = _c_int
-        self.xcl_lock.argtype = _c_void_p
-        # Define Unlock function
-        self.xcl_unlock = driver._fpga_library.xclLockDevice
-        self.xcl_unlock.restype = _c_int
-        self.xcl_unlock.argtype = _c_void_p
 
-    def __enter__(self):
-        if self.driver._fpga_handle is None:
-            raise RuntimeError('Null device handle')
-        self.driver._reglock.acquire()
-        self.xcl_lock(self.driver._fpga_handle)
-        return
-
-    def __exit__(self, *kargs):
-        if self.driver._fpga_handle is None:
-            raise RuntimeError('Null device handle')
-        self.xcl_unlock(self.driver._fpga_handle)
-        self.driver._reglock.release()
+def int_to_bytes(x: int) -> bytes:
+    return x.to_bytes(4, 'little', signed=False)
+    
+def bytes_to_int(xbytes: bytes) -> int:
+    return int.from_bytes(xbytes, 'little', signed=False)
 
 
 class FpgaDriver(_FpgaDriverBase):
@@ -60,7 +44,7 @@ class FpgaDriver(_FpgaDriverBase):
     """
     _name = _match(r'_(.+)\.py', _basename(__file__)).group(1)
     _reglock = _Lock()
-
+    
     @staticmethod
     def _get_xrt_lib():
         """
@@ -71,7 +55,7 @@ class FpgaDriver(_FpgaDriverBase):
             if _isfile(_join(prefix, 'bin','xbutil')):
                 return prefix
         raise RuntimeError('Unable to find Xilinx XRT')
-
+    
     @staticmethod
     def _get_driver():
         """
@@ -90,7 +74,7 @@ class FpgaDriver(_FpgaDriverBase):
         else:
             raise RuntimeError('Unable to find Xilinx XRT Library')
         return fpga_library
-
+    
     @staticmethod
     def _get_xbutil():
         xrt_path = FpgaDriver._get_xrt_lib()
@@ -109,19 +93,19 @@ class FpgaDriver(_FpgaDriverBase):
         """
         Get a lock on the FPGA driver
         """
-        def create_lock():
-            return XrtLock(self)
-        return create_lock
-
+        return _Lock
+    
     def _clear_fpga(self):
         """
         Clear FPGA
         """
+        '''
         clear_fpga = _run(
             ['fpga-clear-local-image', '-S', str(self._fpga_slot_id)],
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if clear_fpga.returncode:
             raise RuntimeError(clear_fpga.stdout)
+        '''
         print('FPGA cleared')
 
     def _program_fpga(self, fpga_image):
@@ -131,6 +115,7 @@ class FpgaDriver(_FpgaDriverBase):
         Args:
             fpga_image (str): FPGA image.
         """
+        '''
         # Vitis does not reprogram a FPGA that has already the bitstream.
         # So to force it we write another bitstream first.
         clear_image = _join(SCRIPT_DIR, 'clear.awsxclbin')
@@ -149,23 +134,38 @@ class FpgaDriver(_FpgaDriverBase):
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if load_image.returncode:
             raise RuntimeError(load_image.stdout)
-        print('Programmed AWS F1 slot #%d with FPGA image %s' % (self._fpga_slot_id, fpga_image))
+        '''
+        # Init global specific variables
+        self.shm_pages = list()
+        self.ctrl_sw_exec = None
+        
+        # Start Controller SW
+        fpga_image = ''
+        if not _isfile(fpga_image):
+            pass
+#            raise RuntimeError('Controller SW executable path is invald: ', fpga_image)
+#        self.ctrl_sw_exec = Popen([self.ctrl_sw_exec, self._fpga_image], shell=False, stdout=_PIPE, stderr=_STDOUT)
+        print('Programmed AWS SoM with', self.ctrl_sw_exec)
 
     def _reset_fpga(self):
         """
         Reset FPGA including FPGA image.
         """
+        '''
         reset_image = _run(
             [self._xbutil, 'reset', '-d',
              str(self._fpga_slot_id)],
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if reset_image.returncode:
             raise RuntimeError(reset_image.stdout)
+        '''
+        pass
 
     def _init_fpga(self):
         """
         Initialize FPGA handle with driver library.
         """
+        '''
         # Find all devices
         xcl_probe = self._fpga_library.xclProbe
         xcl_probe.restype = _c_uint  # Devices count
@@ -190,18 +190,32 @@ class FpgaDriver(_FpgaDriverBase):
         if not device_handle:
             raise RuntimeError("xclOpen failed to open device")
         self._fpga_handle = device_handle
-
-        # Start Controller SW
-        if not _isfile(self.ctrl_sw_exec):
-            raise RuntimeError('Controller SW executable path is invald: ', self.ctrl_sw_exec)
-        self._ctrl_sw_proc = Popen([self.ctrl_sw_exec, self._fpga_image], shell=False, stdout=_PIPE, stderr=_STDOUT)
-        print('Started CTRL SW')
+        '''
+        # Connect to Shared Memory
+        self.shm_pages = list()
+        for i in range(1,7):
+            key = ipc.ftok(SHM_PATH, i)
+            shm = ipc.SharedMemory(key, 0, 0)
+            shm.attach(0, 0)
+            self.shm_pages.append(shm)
+        print('Connected to Shared Memory')
 
     def _uninit_fpga(self):
         import signal
-        self._ctrl_sw_proc.send_signal(signal.SIGINT)
-        self._ctrl_sw_proc.wait()
-        print('Termiante CTRL SW')
+        # Release access to shared memory
+        for shm in self.shm_pages:
+            shm.detach()
+        print('Disconnected from Shared Memory')
+        if self.ctrl_sw_exec:
+            self.ctrl_sw_exec.send_signal(signal.SIGINT)
+            self.ctrl_sw_exec.wait()
+        print('Terminate DRM')
+        
+    def int_to_bytes(x: int) -> bytes:
+        return x.to_bytes((x.bit_length() + 7) // 8, 'little', signed=False)
+		
+    def int_from_bytes(xbytes: bytes) -> int:
+        return int.from_bytes(xbytes, 'big')
 
     def _get_read_register_callback(self):
         """
@@ -210,6 +224,7 @@ class FpgaDriver(_FpgaDriverBase):
         Returns:
             function: Read register callback
         """
+        '''
         xcl_read = self._fpga_library.xclRead
         xcl_read.restype = _c_size_t  # read size or error code
         xcl_read.argtypes = (
@@ -220,7 +235,7 @@ class FpgaDriver(_FpgaDriverBase):
             _c_size_t  # size
         )
         self._fpga_read_register = xcl_read
-
+        '''
         def read_register(register_offset, returned_data, driver=self):
             """
             Read register.
@@ -232,16 +247,30 @@ class FpgaDriver(_FpgaDriverBase):
                     Keep a reference to driver.
             """
             with driver._fpga_read_register_lock():
-                size_or_error = driver._fpga_read_register(
-                    driver._fpga_handle,
-                    2,  # XCL_ADDR_KERNEL_CTRL
-                    driver._drm_ctrl_base_addr + register_offset,
-                    returned_data,
-                    4  # 4 bytes
-                )
-
-            # Return 0 return code if read size else return error code
-            return size_or_error if size_or_error != 4 else 0
+                if register_offset >= 0x10000:
+                    '''
+                    size_or_error = driver._fpga_read_register(
+                        driver._fpga_handle,
+                        2,  # XCL_ADDR_KERNEL_CTRL
+                        driver._drm_ctrl_base_addr + register_offset,
+                        returned_data,
+                        4  # 4 bytes
+                    )
+                    ret = size_or_error if size_or_error != 4 else 0
+                    '''
+                    return 0
+                    raise RuntimeError('Reading from Activator is not supported in Emu-HW')
+                else:
+                    page_index = bytes_to_int(driver.shm_pages[0].read(4, 0))
+                    if register_offset == 0:
+                        reg_value = page_index
+                    else:
+                        shm = driver.shm_pages[page_index]
+                        reg_value = bytes_to_int(shm.read(4, register_offset))                        
+#                    print('Read @%08X: 0x%08X' % (register_offset, reg_value))
+                    returned_data.contents.value = reg_value
+                    ret = 0
+            return ret
 
         return read_register
 
@@ -262,7 +291,7 @@ class FpgaDriver(_FpgaDriverBase):
             _c_size_t  # size
         )
         self._fpga_write_register = xcl_write
-
+        
         def write_register(register_offset, data_to_write, driver=self):
             """
             Write register.
@@ -273,16 +302,30 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (accelize_drm.fpga_drivers._aws_xrt.FpgaDriver):
                     Keep a reference to driver.
             """
-            with driver._fpga_write_register_lock():
-                size_or_error = driver._fpga_write_register(
-                    driver._fpga_handle,
-                    2,  # XCL_ADDR_KERNEL_CTRL
-                    driver._drm_ctrl_base_addr + register_offset,
-                    data_to_write.to_bytes(4, byteorder="little"),
-                    4  # 4 bytes
-                )
-
+            with driver._fpga_read_register_lock():
+                if register_offset >= 0x10000:
+                    '''
+                    size_or_error = driver._fpga_write_register(
+                        driver._fpga_handle,
+                        2,  # XCL_ADDR_KERNEL_CTRL
+                        driver._drm_ctrl_base_addr + register_offset,
+                        data_to_write.to_bytes(4, byteorder="little"),
+                        4  # 4 bytes
+                    )
+                    ret = size_or_error if size_or_error != 4 else 0
+                    '''
+                    return 0
+                    raise RuntimeError('Writing to Activator is not supported in Emu-HW')
+                else:
+                    page_index = bytes_to_int(driver.shm_pages[0].read(4, 0))
+                    if register_offset == 0:
+                        driver.shm_pages[0].write(int_to_bytes(data_to_write), 0)
+                    else:
+                        shm = driver.shm_pages[page_index]
+                        shm.write(int_to_bytes(data_to_write), register_offset)
+#                    print('Wrote @%08X: 0x%08X' % (register_offset, data_to_write))
+                    ret = 0
             # Return 0 return code if written size else return error code
-            return size_or_error if size_or_error != 4 else 0
+            return ret
 
         return write_register

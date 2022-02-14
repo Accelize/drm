@@ -59,8 +59,9 @@ class FpgaDriverBase:
         # FPGA read/write low level functions ans associated locks
         self._fpga_read_register = None
         self._fpga_write_register = None
-        self._fpga_read_register_lock = self._get_lock()
-        self._fpga_write_register_lock = self._get_lock()
+        self._fpga_register_lock = self._get_lock()
+        self._fpga_read_register_lock = self._fpga_register_lock
+        self._fpga_write_register_lock = self._fpga_register_lock
 
         if not no_clear_fpga:
            self.clear_fpga()

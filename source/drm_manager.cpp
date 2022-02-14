@@ -323,6 +323,7 @@ protected:
 
     // Operating mode
     bool mIsHybrid = false;
+    bool mIsPnR = false;
 
     // DRM Frequency parameters
     int32_t mFrequencyInit = 0;
@@ -423,6 +424,7 @@ protected:
         mFrequencyCurr = 0.0;
 
         mIsHybrid = false;
+        mIsPnR = false;
 
         mDebugMessageLevel = spdlog::level::trace;
 
@@ -514,6 +516,7 @@ protected:
                 mFrequencyCurr = double(mFrequencyInit);
                 mBypassFrequencyDetection = JVgetOptional( conf_drm, "bypass_frequency_detection", Json::booleanValue,
                         mBypassFrequencyDetection ).asBool();
+                mIsHybrid = JVgetOptional( conf_drm, "drm_software", Json::booleanValue, false ).asBool();        
             }
 
             // Optionally, check derived product
@@ -602,7 +605,7 @@ protected:
     }
 
     void updateCtrlLogLevel( eCtrlLogVerbosity level_e, bool force = false ) {
-        if ( !mIsHybrid ) {
+        if ( !mIsPnR ) {
             Warning( "This command has no effect on HW DRM Controller IP" );
             return;
         }
@@ -767,6 +770,7 @@ protected:
     Json::Value buildSettingsNode() {
         Json::Value settings;
         settings["drm_software"] = mIsHybrid;
+        settings["drm_pnr"] = mIsPnR;
         settings["frequency_detection_method"] = mFreqDetectionMethod;
         settings["bypass_frequency_detection"] = mBypassFrequencyDetection;
         settings["frequency_detection_threshold"] = mFrequencyDetectionThreshold;
@@ -1014,14 +1018,18 @@ protected:
      * This test write and read mailbox registers to verify the read and write callbacks are working correctly.
      */
     void runBistLevel2() const {
-        // Get mailbox size
+        // Check mailbox size
+        uint32_t mb_full_size = getMailboxSize();
+        if ( mb_full_size < (uint32_t)eMailboxOffset::MB_USER ) {
+            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Unexpected mailbox size {}: Must be > {}.\n{}", mb_full_size, eMailboxOffset::MB_USER, DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
+        }
         uint32_t mbSize = getUserMailboxSize();
 
         // Check mailbox size
         uint32_t mbSizeMax = 0x8000;
         if ( mbSize >= mbSizeMax ) {
             Debug( "DRM Communication Self-Test 2 failed: bad size {}", mbSize );
-            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Unexpected mailbox size ({} > {}).\n{}", mbSize, mbSizeMax, DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
+            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Unexpected mailbox size ({} > {}).\n{}", mbSize, mbSizeMax, DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
         }
         Debug( "DRM Communication Self-Test 2: test size of mailbox passed" );
 
@@ -2486,8 +2494,9 @@ public:
             if ( f_user_asynch_error )
                 f_asynch_error = f_user_asynch_error;
             // Determine DRM Ctrl TA existance by trying to initialize it
-            mIsHybrid = pnc_initialize_drm_ctrl_ta();
-            if ( mIsHybrid ) {
+            mIsPnR = pnc_initialize_drm_ctrl_ta();
+            if ( mIsPnR ) {
+                mIsHybrid = true;
                 //  Set Ctrl TA logging
                 updateCtrlLogLevel( sLogCtrlVerbosity, true );
                 //  Set callbacks
@@ -2497,6 +2506,15 @@ public:
                 f_write_register = [&]( uint32_t  offset, uint32_t value ) {
                     return pnc_write_drm_ctrl_ta(offset, value );
                 };
+            } else {
+                f_read_register = f_user_read_register;
+                f_write_register = f_user_write_register;
+            }
+            if ( mIsHybrid ) {
+                if ( mIsPnR )
+                    Debug( "DRM Controller is a PnR Trusted Application" );
+                else
+                    Debug( "DRM Controller is a Software Application" );
                 // Set sleep period because SW Controller is slower
                 if (ctrl_timeout == NULL) {
                     Debug( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS variable is not defined" );
@@ -2507,8 +2525,7 @@ public:
                     setenv("DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS", SDK_CTRL_SW_SLEEP_IN_US, 0);
                 }
             } else {
-                f_read_register = f_user_read_register;
-                f_write_register = f_user_write_register;
+                Debug( "DRM Controller is a FPGA IP" );
                 if (ctrl_timeout == NULL) {
                     Debug( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS variable is not defined" );
                     setenv("DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS", SDK_CTRL_HW_TIMEOUT_IN_US, 0);

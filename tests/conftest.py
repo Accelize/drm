@@ -175,10 +175,10 @@ def pytest_addoption(parser):
         "--server", action="store",
         default="prod", help='Specify the metering server to use')
     parser.addoption(
-        "--library_verbosity", action="store", type=int, choices=list(range(7)),
+        "--loglevel", action="store", type=int, choices=list(range(7)),
         default=2, help='Specify "libaccelize_drm" verbosity level')
     parser.addoption(
-        "--library_format", action="store", type=int, choices=(0, 1), default=0,
+        "--logformat", action="store", type=int, choices=(0, 1), default=0,
         help='Specify "libaccelize_drm" logging format: 0=short, 1=long')
     parser.addoption(
         "--no_clear_fpga", action="store_true", help='Bypass clearing of FPGA at start-up')
@@ -318,8 +318,8 @@ def scanActivatorsByCard(driver, base_addr):
             break
         base_addr_list.append(base_addr)
         base_addr += 0x10000
-    if len(base_addr_list) == 0:
-        raise IOError('No activator found on slot #%d' % driver._fpga_slot_id)
+#    if len(base_addr_list) == 0:
+#        raise IOError('No activator found on slot #%d' % driver._fpga_slot_id)
     activators = ActivatorsInFPGA(driver, base_addr_list)
     print('Found %d activator(s) on slot #%d' % (len(base_addr_list), driver._fpga_slot_id))
     return activators
@@ -340,6 +340,8 @@ class SingleActivator:
         """
         Verify IP works as expected
         """
+        if self.base_address is None:
+            return
         # Test IP mailbox depending on activation status
         activated = self.get_status()
         if is_activated is not None:
@@ -378,6 +380,8 @@ class SingleActivator:
         Args:
             coins (int): Number of coins to generate.
         """
+        if self.base_address is None:
+            return 0
         if coins is None:
             coins = randint(1,10)
         for _ in range(coins):
@@ -390,6 +394,8 @@ class SingleActivator:
         """
         Reset the coins counter
         """
+        if self.base_address is None:
+            return
         self.metering_data = 0
         if self.event_cnt_flag:
             self.driver.write_register(self.base_address + CNT_EVENT_REG_OFFSET, 0)
@@ -402,6 +408,8 @@ class SingleActivator:
         Args:
             coins (int): Number of coins to compare to.
         """
+        if self.base_address is None:
+            return 0
         # Read counter in Activation's registry
         if self.event_cnt_flag:
             metering_data_from_activator = self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET)
@@ -435,12 +443,15 @@ class ActivatorsInFPGA:
     """
     def __init__(self, driver, base_address_list):
         self.activators = list()
-        for addr in base_address_list:
-            self.activators.append(SingleActivator(driver, addr))
+        if base_address_list is None:
+            self.activators.append(SingleActivator(driver, None))
+        else:
+            for addr in base_address_list:
+                self.activators.append(SingleActivator(driver, addr))
         self.product_id = {
             "vendor": "accelize.com",
             "library": "refdesign",
-            "name": "drm_%dactivator" % len(base_address_list)
+            "name": "drm_%dactivator" % len(self.activators)
         }
 
     def __getitem__(self, index):
@@ -613,8 +624,9 @@ def accelize_drm(pytestconfig):
             'Mutually exclusive options: Please set "fpga_driver" or "fpga_image", but not both')
     is_ctrl_sw = False
     if fpga_image:
-        if fpga_image.endswith('som.awsxclbin'):
-            fpga_driver_name = 'som_aws'
+        if fpga_image.endswith('awsxclbin.som'):
+            fpga_driver_name = 'aws_som'
+            is_ctrl_sw = True
         elif fpga_image.endswith('.awsxclbin'):
             fpga_driver_name = 'aws_xrt'
         elif search(r'agfi-[0-9a-f]+', fpga_image, IGNORECASE):
@@ -712,6 +724,7 @@ def accelize_drm(pytestconfig):
 
     if is_ctrl_sw:
         freq_version = 0
+        print('No frequency detection on DRM Controller SW')
     else:
         # Get frequency detection version
         freq_version = fpga_driver[0].read_register(drm_ctrl_base_addr + 0xFFF0)
@@ -798,7 +811,10 @@ class ConfJson(_Json):
     def __init__(self, tmpdir, url, **kwargs):
         content = get_default_conf_json(url)
         for k, v in kwargs.items():
-            content[k] = v
+            if isinstance(v, dict):
+                content[k].update(v)
+            else:    
+                content[k] = v
         filename = 'conf%f.json' % time()
         _Json.__init__(self, tmpdir, filename, content)
 
@@ -921,8 +937,9 @@ def conf_json(request, pytestconfig, tmpdir):
             f.write(dumps(HASH_FUNTION_TABLE, indent=4, sort_keys=True))
     design_param = {'boardType': hash_value}
     # Build config content
-    log_param = {'log_verbosity': pytestconfig.getoption("library_verbosity")}
-    if pytestconfig.getoption("library_format") == 1:
+    log_param = {'log_verbosity': pytestconfig.getoption("loglevel")}
+    print('pytestconfig.getoption("logformat")=', pytestconfig.getoption("logformat"))
+    if pytestconfig.getoption("logformat") == 1:
         log_param['log_format'] = LOG_FORMAT_LONG
     else:
         log_param['log_format'] = LOG_FORMAT_SHORT
@@ -936,7 +953,10 @@ def conf_json(request, pytestconfig, tmpdir):
         log_param['log_file_verbosity'] = pytestconfig.getoption("logfilelevel")
         log_param['log_file_append'] = pytestconfig.getoption("logfileappend")
     # Save config to JSON file
-    json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param, design=design_param)
+    drm_param = {}
+    if 'som' in pytestconfig.getoption("fpga_image"):
+        drm_param.update({'drm_software': True, 'bypass_frequency_detection':True})        
+    json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param, design=design_param, drm=drm_param)
     json_conf.save()
     return json_conf
 
@@ -1368,6 +1388,9 @@ def log_file_factory(pytestconfig, request, accelize_drm):
     else:
         log_file_verbosity = None
 
+    # Determine log file format
+    log_file_format = LOG_FORMAT_LONG if pytestconfig.getoption("logfile") is not None else LOG_FORMAT_LONG
+    
     # Determine log file append mode
     log_file_append = pytestconfig.getoption("logfileappend")
 
@@ -1375,4 +1398,4 @@ def log_file_factory(pytestconfig, request, accelize_drm):
     log_file_keep = pytestconfig.getoption("logfile") is not None
 
     return LogFileFactory(basepath=log_file_basepath, default_verbosity=log_file_verbosity,
-                          default_append=log_file_append, keep=log_file_keep)
+            default_format=log_file_format, default_append=log_file_append, keep=log_file_keep)
