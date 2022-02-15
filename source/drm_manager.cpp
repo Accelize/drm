@@ -242,12 +242,9 @@ protected:
             {eLicenseType::NODE_LOCKED, "Node-Locked"}
     };
 
-    const char* SDK_CTRL_HW_SLEEP_IN_US = "100";
-    const char* SDK_CTRL_SW_SLEEP_IN_US = "10000";
-
-    const char* SDK_CTRL_SW_TIMEOUT_IN_US = "1000000000";
-    const char* SDK_CTRL_HW_TIMEOUT_IN_US = "10000000";
-
+    uint32_t SDK_CTRL_TIMEOUT_IN_US = 10000000;
+    uint32_t SDK_CTRL_SLEEP_IN_US = 100;
+    
     const std::map<eCtrlLogVerbosity, uint32_t> LogCtrlLevelMap = {
             {eCtrlLogVerbosity::ERROR  , PNC_DRM_LOG_ERROR},
             {eCtrlLogVerbosity::WARN   , PNC_DRM_LOG_WARN},
@@ -317,6 +314,7 @@ protected:
 
     uint32_t mCtrlTimeoutInUS = 0;
     uint32_t mCtrlSleepInUS = 0;
+    uint32_t mCtrlTimeFactor = 1;
 
     // To protect access to the metering data (to securize the segment ID check in HW)
     mutable std::mutex mMeteringAccessMutex;
@@ -790,6 +788,7 @@ protected:
         settings["health_retry_sleep"] = mHealthRetrySleep;
         settings["ws_api_retry_duration"] = mWSApiRetryDuration;
         settings["host_data_verbosity"] = static_cast<uint32_t>( mHostDataVerbosity );
+        settings["drm_ctrl_time_factor"] = mCtrlTimeFactor;
         settings["drm_ctrl_timeout_us"] = mCtrlTimeoutInUS;
         settings["drm_ctrl_sleep_us"] = mCtrlSleepInUS;
         settings["axi_frequency"] = mAxiFrequency;
@@ -1375,7 +1374,8 @@ protected:
         Debug( "Build license request #{} to maintain current session", mLicenseCounter );
 
         // Check if an error occurred
-        checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 5 ) );
+        uint32_t timeout = 5 * mCtrlTimeFactor;
+        checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( timeout ) );
         // Request challenge and metering info for new request
         checkDRMCtlrRet( getDrmController().synchronousExtractMeteringFile( numberOfDetectedIps, saasChallenge, meteringFile ) );
         json_request["saasChallenge"] = saasChallenge;
@@ -1658,7 +1658,8 @@ protected:
 
         // Load license timer
         if ( !isConfigInNodeLock() ) {
-            checkDRMCtlrRet( getDrmController().loadLicenseTimerInit( licenseTimer, mIsHybrid, (uint32_t)5 ) );
+            uint32_t timeout = 5 * mCtrlTimeFactor;
+            checkDRMCtlrRet( getDrmController().loadLicenseTimerInit( licenseTimer, mIsHybrid, timeout ) );
             Debug( "Wrote license timer #{} of session ID {} for a duration of {} seconds",
                     mLicenseCounter, mSessionID, mLicenseDuration );
         }
@@ -2516,24 +2517,22 @@ public:
                 else
                     Debug( "DRM Controller is a Software Application" );
                 // Set sleep period because SW Controller is slower
-                if (ctrl_timeout == NULL) {
-                    Debug( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS variable is not defined" );
-                    setenv("DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS", SDK_CTRL_SW_TIMEOUT_IN_US, 0);
-                }
-                if (ctrl_sleep == NULL) {
-                    Debug( "DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS variable is not defined" );
-                    setenv("DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS", SDK_CTRL_SW_SLEEP_IN_US, 0);
-                }
+                mCtrlTimeFactor = 100;                
             } else {
                 Debug( "DRM Controller is a FPGA IP" );
-                if (ctrl_timeout == NULL) {
-                    Debug( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS variable is not defined" );
-                    setenv("DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS", SDK_CTRL_HW_TIMEOUT_IN_US, 0);
-                }
-                if (ctrl_sleep == NULL) {
-                    Debug( "DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS variable is not defined" );
-                    setenv("DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS", SDK_CTRL_HW_SLEEP_IN_US, 0);
-                }
+                mCtrlTimeFactor = 1;                
+            }
+            uint32_t timeout_period = SDK_CTRL_TIMEOUT_IN_US * mCtrlTimeFactor;
+            uint32_t sleep_period = SDK_CTRL_SLEEP_IN_US * mCtrlTimeFactor;
+            std::string s_timeout_period = std::to_string(timeout_period);
+            std::string s_sleep_period = std::to_string(sleep_period);
+            if (ctrl_timeout == NULL) {
+                Debug( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS variable is not defined" );
+                setenv("DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS", s_timeout_period.c_str() , 0);
+            }
+            if (ctrl_sleep == NULL) {
+                Debug( "DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS variable is not defined" );
+                setenv("DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS", s_sleep_period.c_str(), 0);
             }
             if ( !f_read_register )
                 Throw( DRM_BadArg, "Read register callback function must not be NULL. " );
