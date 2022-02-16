@@ -12,6 +12,7 @@ from os.path import realpath, isfile
 from tests.conftest import wait_deadline, wait_func_true
 
 
+@pytest.mark.cosim
 def test_hybrid_fast_start_stop(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test no error occurs witha quick start/stop
@@ -39,6 +40,6 @@ def test_hybrid_fast_start_stop(accelize_drm, conf_json, cred_json, async_handle
         drm_manager.activate()
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
-        async_cb.assert_NoError()        
+        async_cb.assert_NoError()
     logfile.remove()
 
