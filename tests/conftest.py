@@ -926,7 +926,7 @@ class CredJson(_Json):
 
 
 @pytest.fixture
-def conf_json(request, pytestconfig, tmpdir):
+def conf_json(request, pytestconfig, tmpdir, accelize_drm):
     """
     Manage "conf.json" in testing environment.
     """
@@ -955,8 +955,8 @@ def conf_json(request, pytestconfig, tmpdir):
         log_param['log_file_append'] = pytestconfig.getoption("logfileappend")
     # Save config to JSON file
     drm_param = {}
-    if 'som' in pytestconfig.getoption("fpga_image"):
-        drm_param.update({'drm_software': True, 'bypass_frequency_detection':True})        
+    if 'som' in accelize_drm.pytest_fpga_image:
+        drm_param.update({'drm_software': True, 'bypass_frequency_detection':True})
     json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param, design=design_param, drm=drm_param)
     json_conf.save()
     return json_conf
