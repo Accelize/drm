@@ -247,6 +247,16 @@ def pytest_runtest_setup(item):
     if skip_awsxrt and markers:
         pytest.skip("Don't run XRT (Vitis) tests.")
 
+    # Check cosim tests
+    m_option = item.config.getoption('-m')
+    if search(r'\bcosim\b', m_option) and not search(r'\nnot\n\s+\bcosim\b', m_option):
+        skip_cosim = False
+    else:
+        skip_cosim = True
+    markers = tuple(item.iter_markers(name='cosim'))
+    if skip_cosim and markers:
+        pytest.skip("Don't run COSIM (Vitis) tests.")
+
     # Determine if DRM Ctrl SW is under test
     hybrid_test = False
     fpga_image = item.config.getoption('--fpga_image')
