@@ -90,9 +90,9 @@ xclDeviceHandle boardHandler;
 
 
 #define test_retcode(err_condition, str) \
-	if(err_condition) { \
-	    printf("%s: FAILED\n", str); \
-	    return EXIT_FAILURE; \
+    if(err_condition) { \
+        printf("%s: FAILED\n", str); \
+        return EXIT_FAILURE; \
     }
 
 /* Returns the local date/time formatted as 2014-03-19 11:11:52 */
@@ -222,8 +222,8 @@ uint32_t load_file_to_memory(const char *filename, char **result)
     FILE *f = fopen(filename, "rb");
     if (f == NULL)
     {
-	*result = NULL;
-	return -1; // -1 means file opening fail
+    *result = NULL;
+    return -1; // -1 means file opening fail
     }
     fseek(f, 0, SEEK_END);
     size = ftell(f);
@@ -231,8 +231,8 @@ uint32_t load_file_to_memory(const char *filename, char **result)
     *result = (char *)malloc(size+1);
     if (size != fread(*result, sizeof(char), size, f))
     {
-	free(*result);
-	return -2; // -2 means file reading fail
+    free(*result);
+    return -2; // -2 means file reading fail
     }
     fclose(f);
     (*result)[size] = 0;
@@ -244,7 +244,7 @@ uint32_t load_file_to_memory(const char *filename, char **result)
 /* Callback function for DRM library to perform a thread safe register read */
 int read_register( uint32_t offset, uint32_t* p_value, void* user_p ) {
     if (xclRead(*(xclDeviceHandle*)user_p, XCL_ADDR_KERNEL_CTRL, DRM_CTRL_ADDR+offset, p_value, 4) <= 0) {
-		ERROR("Unable to read from the fpga!");
+        ERROR("Unable to read from the fpga!");
         return 1;
     }
     return 0;
@@ -376,11 +376,12 @@ void print_session_id( DrmManager* pDrmManager ) {
 
 
 void print_metered_data( DrmManager* pDrmManager ) {
-    uint64_t metered_data;
-    if ( DrmManager_get_uint64(pDrmManager, DRM__metered_data, &metered_data) )
+    char * metered_data = new char[1024];
+    if ( DrmManager_get_string(pDrmManager, DRM__metered_data, &metered_data) )
         ERROR("Failed to get the current metering data from FPGA design: %s", pDrmManager->error_message);
     else
-        INFO(COLOR_GREEN "Current metering data fromFPGA design: %lu", metered_data);
+        INFO(COLOR_GREEN "Current metering data fromFPGA design: %s", metered_data);
+    delete[] metered_data;
 }
 
 int test_custom_field( DrmManager* pDrmManager, uint32_t value ) {
@@ -555,7 +556,7 @@ int batch_mode(xclDeviceHandle* pci_bar_handle, const char* credentialFile, cons
 
     DEBUG("credential file is %s", credentialFile);
     DEBUG("configuration file is %s", configurationFile);
-    
+
     for(i=0; i<batchSize; i++) {
         DEBUG("command #%u: name='%s', id=%u, value=%u", i, batch[i].name, batch[i].id, batch[i].value);
     }
@@ -760,25 +761,25 @@ int main(int argc, char **argv) {
 
     /* Get platform/device information */
     ret = clGetPlatformIDs(1, &platform_id,  &num_platforms);
-    
+
     // Connect to a compute device
-    ret = clGetDeviceIDs( platform_id, CL_DEVICE_TYPE_ACCELERATOR, 1, devices, &num_platforms);   
-    printf("num_platforms = %d\n", num_platforms);  
-    
-    device_id = devices[1];        
-    
+    ret = clGetDeviceIDs( platform_id, CL_DEVICE_TYPE_ACCELERATOR, 1, devices, &num_platforms);
+    printf("num_platforms = %d\n", num_platforms);
+
+    device_id = devices[1];
+
     /* Create OpenCL Context */
     context = clCreateContext( 0, 1, &device_id, NULL, NULL, &ret);
 
     char *fpga_bin;
     size_t fpga_bin_size;
-    fpga_bin_size = load_file_to_memory(argv[1], &fpga_bin);   
+    fpga_bin_size = load_file_to_memory(argv[1], &fpga_bin);
     test_retcode((int32_t)fpga_bin_size<0, "load kernel from xclbin");
 
     /* Program Device */
     clCreateProgramWithBinary(context, 1,
-							(const cl_device_id* ) &device_id, &fpga_bin_size,
-							(const unsigned char**) &fpga_bin, NULL, &ret);
+                            (const cl_device_id* ) &device_id, &fpga_bin_size,
+                            (const unsigned char**) &fpga_bin, NULL, &ret);
     test_retcode(ret!=CL_SUCCESS, "program the FPGA from xclbin");
 
     // Init xclhal2 library

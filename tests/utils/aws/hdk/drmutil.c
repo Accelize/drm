@@ -344,11 +344,12 @@ void print_session_id( DrmManager* pDrmManager ) {
 
 
 void print_metered_data( DrmManager* pDrmManager ) {
-    uint64_t metered_data;
-    if ( DrmManager_get_uint64(pDrmManager, DRM__metered_data, &metered_data) )
+    char *metered_data = new char[1024];
+    if ( DrmManager_get_string(pDrmManager, DRM__metered_data, &metered_data) )
         ERROR("Failed to get the current metering data from FPGA design: %s", pDrmManager->error_message);
     else
-        INFO(COLOR_GREEN "Current metering data fromFPGA design: %llu", metered_data);
+        INFO(COLOR_GREEN "Current metering data fromFPGA design: %s", metered_data);
+    delete[] metered_data;
 }
 
 int test_custom_field( DrmManager* pDrmManager, uint32_t value ) {
