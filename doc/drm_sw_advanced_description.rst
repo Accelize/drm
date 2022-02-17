@@ -79,7 +79,7 @@ num_activators                 uint32_t  Read-only     -                       r
 session_id                     string    Read-only     -                       return the current session ID
 session_status                 bool      Read-only     true or false           indicate if a session is currently open
 license_status                 bool      Read-only     -                       indicate if a license is running in the Controller
-metered_data                   uint64_t  Read-only     -                       return the current value of the metering data counter
+metered_data                   string    Read-only     -                       return a string with the current metering value for each activator
 nodelocked_request_file        string    Read-only     -                       return the path to the node-locked license request JSON file
 drm_frequency                  int32_t   Read-only     -                       return the measured DRM frequency
 drm_license_type               string    Read-only     -                       return the license type of the DRM Controller: node-locked, floating/metering

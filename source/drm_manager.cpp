@@ -244,7 +244,7 @@ protected:
 
     uint32_t SDK_CTRL_TIMEOUT_IN_US = 10000000;
     uint32_t SDK_CTRL_SLEEP_IN_US = 100;
-    
+
     const std::map<eCtrlLogVerbosity, uint32_t> LogCtrlLevelMap = {
             {eCtrlLogVerbosity::ERROR  , PNC_DRM_LOG_ERROR},
             {eCtrlLogVerbosity::WARN   , PNC_DRM_LOG_WARN},
@@ -2517,10 +2517,10 @@ public:
                 else
                     Debug( "DRM Controller is a Software Application" );
                 // Set sleep period because SW Controller is slower
-                mCtrlTimeFactor = 100;                
+                mCtrlTimeFactor = 100;
             } else {
                 Debug( "DRM Controller is a FPGA IP" );
-                mCtrlTimeFactor = 1;                
+                mCtrlTimeFactor = 1;
             }
             uint32_t timeout_period = SDK_CTRL_TIMEOUT_IN_US * mCtrlTimeFactor;
             uint32_t sleep_period = SDK_CTRL_SLEEP_IN_US * mCtrlTimeFactor;
@@ -2735,7 +2735,7 @@ public:
                         uint64_t ip_metering = 0;
                         #else
                         // No "int64_t" support with JsonCpp < 1.7.5
-                        unsigned long long ip_metering = 0;
+                        unsigned long long int ip_metering = 0;
                         #endif
                         Json::Value json_request = getMeteringHealth();
                         std::string meteringFileStr = json_request["meteringFile"].asString();
