@@ -259,7 +259,7 @@ def test_api_retry_on_lost_connection(accelize_drm, conf_json, cred_json, async_
         retry_timeout = drm_manager.get('ws_request_timeout')
         retry_sleep = drm_manager.get('ws_retry_period_short')
         nb_attempts_expected = int(retry_duration / (retry_timeout + retry_sleep)) + 1
-        assert nb_attempts_expected > 1
+        assert nb_attempts_expected >= 1
         context = {'data': list(),
                    'sleep':retry_timeout + 1}
         set_context(context)
