@@ -31,6 +31,9 @@ def test_normal_usage(accelize_drm, request, exec_func, live_server, tmpdir,
     # Create C/C++ executable
     exec_func._conf_json['licensing']['url'] = _request.url + request.function.__name__
     logfile = log_file_factory.create(0)
+    exec_func._conf_json['settings']['ws_connection_timeout'] = 15
+    exec_func._conf_json['settings']['ws_request_timeout'] = 30
+    exec_func._conf_json['settings']['ws_api_retry_duration'] = 60
     exec_func._conf_json['settings'].update(logfile.json)
     exec_func._conf_json.save()
     driver = accelize_drm.pytest_fpga_driver[0]
