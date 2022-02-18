@@ -24,6 +24,12 @@ def test_improve_coverage_ws_client(accelize_drm, conf_json, cred_json,
     conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
 
+    # Set initial context on the live server
+    error_code = 600
+    context = {'error_code':error_code}
+    set_context(context)
+    assert get_context() == context
+
     with accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
@@ -31,13 +37,6 @@ def test_improve_coverage_ws_client(accelize_drm, conf_json, cred_json,
             driver.write_register_callback,
             async_cb.callback
         ) as drm_manager:
-
-        # Set initial context on the live server
-        error_code = 600
-        context = {'error_code':error_code}
-        set_context(context)
-        assert get_context() == context
-
         with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
             drm_manager.activate()
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
@@ -285,7 +284,7 @@ def test_improve_coverage_getDesignInfo(accelize_drm, conf_json, cred_json, asyn
         ret = driver.read_register_callback(register_offset, returned_data)
         if ctx['page'] == 5 and register_offset == 4:
             ctx['cnt'] += 1
-            if ctx['cnt'] == 11:
+            if ctx['cnt'] == 12:
                 returned_data.contents.value &= 0xFFFF
         return ret
 
@@ -313,7 +312,7 @@ def test_improve_coverage_getDesignInfo(accelize_drm, conf_json, cred_json, asyn
 
 
 def test_improve_coverage_setLicense(accelize_drm, conf_json, cred_json, async_handler,
-                        live_server, request):
+                            live_server, request):
     """
     Improve coverage of the setLicense function
     """

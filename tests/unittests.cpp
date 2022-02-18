@@ -747,7 +747,7 @@ int test_set_json_string_with_empty_string() {
 }
 
 // Test normal usage, especially to run valgrind for memory leak check
-int test_normal_usage( string param_file) {
+int test_normal_usage( string param_file ) {
     int ret = -1;
 
     Json::Value param_json = parseJsonFile(param_file);
