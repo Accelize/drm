@@ -90,7 +90,7 @@ def get_default_conf_json(licensing_server_url):
         "settings": {
             "ws_connection_timeout": 3,
             "ws_request_timeout": 5,
-            "ws_api_retry_duration": 5
+            "ws_api_retry_duration": 10
         }
     }
 
