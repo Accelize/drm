@@ -13,6 +13,7 @@ jobs:
         CentOS 8:
           osName: centos
           osVersion: "8"
+          image: quay.io/centos/centos:stream8
         Debian 10:
           osName: debian
           osVersion: "10"
@@ -39,6 +40,7 @@ jobs:
           osVersion:  "21.10"
 
     variables:
+      image: ""
       # File that store release number for each version
       versionsJson: versions.json
       versionsJsonS3: s3://accelize/versions.json
@@ -89,7 +91,8 @@ jobs:
                 src='deployment/Dockerfile.j2',
                 dst='Dockerfile',
                 osName='$(osName)', osVersion='$(osVersion)',
-                image='$(osName):$(osVersion)', buildLayer=True)
+                image='$(image)' or '$(osName):$(osVersion)',
+                buildLayer=True)
 
       - script: $(dockerBuild)
         displayName: Build "building" container image
@@ -126,7 +129,8 @@ jobs:
                 src='deployment/Dockerfile.j2',
                 dst='Dockerfile',
                 osName='$(osName)', osVersion='$(osVersion)',
-                image='$(osName):$(osVersion)', buildLayer=False)
+                image='$(image)' or '$(osName):$(osVersion)',
+                buildLayer=False)
 
       - script: $(dockerBuild)
         displayName: Build "testing" container image
