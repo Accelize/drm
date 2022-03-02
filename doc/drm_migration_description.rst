@@ -209,3 +209,9 @@ From v4.2 to 6.0
 
 - Nothing to do.
 
+From v6.0 to 7.0
+~~~~~~~~~~~~~~~~
+
+- The TLAST signal has been added to the AXI4-Stream interface of the DRM bus.
+- FIFOs on the AXI4-Stream lines between the Controller and the Activators are not fully supported.
+

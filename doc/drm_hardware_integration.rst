@@ -38,6 +38,7 @@ currently supported by the DRM HDK:
        * Vivado 2020.1
        * Vivado 2020.2
        * Vivado 2021.1
+       * Vivado 2021.2
      - * Ultrascale+
        * Ultrascale
        * Virtex 7
