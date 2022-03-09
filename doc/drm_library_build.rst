@@ -187,7 +187,8 @@ Run following command to install requirements:
 Test generation option
 ----------------------
 
-.. warning:: This dependency is mandatory to complete the `Run tests`_ section.
+.. warning::
+   This dependency is mandatory to complete the `Run tests`_ section.
 
 This step is required only if you want to:
 
@@ -418,7 +419,7 @@ Once the CMake configuration built, you can either:
 
   .. code-block:: bash
 
-    make -j
+     make -j
 
   From here you can test your compiled library in section `Run tests`_.
 
@@ -426,7 +427,7 @@ Once the CMake configuration built, you can either:
 
   .. code-block:: bash
 
-    sudo make install
+     sudo make install
 
   From here you can test your compiled library in section `Run tests`_.
 
@@ -434,7 +435,7 @@ Once the CMake configuration built, you can either:
 
   .. code-block:: bash
 
-    make package
+     make package
 
 
 Generated output
@@ -456,14 +457,16 @@ Run tests
 
 This section explains how to run Accelize DRM python library tests.
 
-.. warning:: Following tests require a real FPGA board and associated driver installed.
-             Refer to `supported_os` paragraph in :doc:`drm_library_installation` to get
-             the list of tested OS.
+.. warning::
+   Following tests require a real FPGA board and associated driver installed.
+   Refer to `supported_os` paragraph in :doc:`drm_library_installation` to get
+   the list of tested OS.
 
-.. important:: The tests described below are based on the Python DRM library
-               and *pytest* module. So make sure sections `Python 3 library option`_
-               and `Test generation option`_ have been completed and that you have
-               run the CMake command with the ``-DTESTS=ON -DPYTHON3=ON`` options.
+.. important::
+   The tests described below are based on the Python DRM library
+   and *pytest* module. So make sure sections `Python 3 library option`_
+   and `Test generation option`_ have been completed and that you have
+   run the CMake command with the ``-DTESTS=ON -DPYTHON3=ON`` options.
 
 Test command
 ------------
@@ -482,12 +485,13 @@ Here is the test command:
     # Run tests with pytest
     pytest --cred=path_to_cred.json [options]
 
-.. warning:: Depending on your execution platform environment and the driver requirements you
-             might need to execute the comment with ``sudo``:
+.. warning::
+   Depending on your execution platform environment and the driver requirements you
+   might need to execute the comment with ``sudo``:
 
-             .. code-block:: bash
+   .. code-block:: bash
 
-                sudo LD_LIBRARY_PATH=path_to_build_directory pytest --cred=path_to_cred.json [options]
+      sudo LD_LIBRARY_PATH=path_to_build_directory pytest --cred=path_to_cred.json [options]
 
 ``path_to_cred.json`` is the path to your credentials file.
 For more details refer to the section 'Credentials file' in :doc:`drm_configuration`
@@ -538,7 +542,8 @@ Command options are:
 Coverage
 ^^^^^^^^
 
-.. important:: To enable coverage reporting the section `Coverage option`_ must have been performed.
+.. important::
+   To enable coverage reporting the section `Coverage option`_ must have been performed.
 
 Use --cov=accelize_drm option to enable the coverage with the test execution:
 
@@ -558,11 +563,13 @@ coverage using lcov as follows:
 
 The result is an HTML report located in the ``coverage`` directory.
 
-.. note:: To enable coverage the CMake configuration must contain the
-         ``-DCOVERAGE=ON -DCMAKE_BUILD_TYPE=Debug`` options.
+.. note::
+   To enable coverage the CMake configuration must contain the
+   ``-DCOVERAGE=ON -DCMAKE_BUILD_TYPE=Debug`` options.
 
-.. note:: This procedure is fully and automatically managed using tox.
-          See `Run tests partially`_ for more details.
+.. note::
+   This procedure is fully and automatically managed using tox.
+   See `Run tests partially`_ for more details.
 
 
 Run full tests
@@ -592,10 +599,12 @@ The usual test options can be used after the ``--`` delimiter.
 
     tox -- --cred=~/my_application/cred.json [options]
 
-.. note:: The ``--backend`` option is not supported because managed by tox.
+.. note::
+   The ``--backend`` option is not supported because managed by tox.
 
-.. warning:: Running Tox with ``sudo`` may be required to run ``build-install``
-             scenario and to access FPGA in ``c`` and ``cpp`` scenarios.
+.. warning::
+   Running Tox with ``sudo`` may be required to run ``build-install``
+   scenario and to access FPGA in ``c`` and ``cpp`` scenarios.
 
 Run tests partially
 -------------------
@@ -653,8 +662,9 @@ Some examples:
 If your platform has 2 FPGA on 2 different PCIe slots, you can optimize the execution time
 by parallelizing some tests with the ``-p all`` option:
 
-.. note:: In this case, the ``--fpga_slot_id`` is not supported because managed
-          by tox.
+.. note::
+   In this case, the ``--fpga_slot_id`` is not supported because managed
+   by tox.
 
 .. code-block:: bash
     :caption: Running full scenario in parallel
