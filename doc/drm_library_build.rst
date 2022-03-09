@@ -402,11 +402,11 @@ Use the following options to build optional components:
 * ``-DCMAKE_BUILD_TYPE=Debug``: Compile in Debug mode.
 * ``-DAWS=ON``: Run full test suite when executed on AWS f1 instance.
 
-.. note:: Build the development package require both ``-DPYTHON3=ON`` and
+.. note:: Building the development package requires both ``-DPYTHON3=ON`` and
           ``-DDOC=ON`` options.
 
 .. code-block:: bash
-   :caption: Build Python Library and Sphinx-like documentation
+   :caption: Building Python Library and Sphinx-like documentation
 
    cmake -DPYTHON3=ON -DDOC=ON ..
 
@@ -461,6 +461,7 @@ This section explains how to run Accelize DRM python library tests.
    Following tests require a real FPGA board and associated driver installed.
    Refer to `supported_os` paragraph in :doc:`drm_library_installation` to get
    the list of tested OS.
+
 
 .. important::
    The tests described below are based on the Python DRM library
