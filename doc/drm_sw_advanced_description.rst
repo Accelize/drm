@@ -129,7 +129,7 @@ trng_status                    string    Read-only     -                       r
 num_license_loaded             uint32_t  Read-only     -                       read the number of licenses provisioned in the DRM Controller
 =============================  ========  ============  ======================  =============================================
 
-.. note:: With the C API, the parameter name shall be prepended with DRM__ (double underscore).
+.. note:: With the C API, the parameter name shall be prepended with `DRM__` (double underscore).
 
 
 Detailed explanation
