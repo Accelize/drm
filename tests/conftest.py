@@ -641,6 +641,8 @@ def accelize_drm(pytestconfig):
             is_ctrl_sw = True
         elif fpga_image.endswith('.awsxclbin'):
             fpga_driver_name = 'aws_xrt'
+        elif fpga_image.endswith('.xclbin'):
+            fpga_driver_name = 'xrt'
         elif search(r'agfi-[0-9a-f]+', fpga_image, IGNORECASE):
             fpga_driver_name = 'aws_f1'
         elif fpga_image.endswith('.som'):
