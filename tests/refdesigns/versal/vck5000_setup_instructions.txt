@@ -4,10 +4,10 @@ sudo su
 # Update and install dependencies
 apt update
 apt install -y git make g++ libcurl4-openssl-dev libjsoncpp-dev cmake pkg-config python3-dev python3-pip python3-wheel python3-setuptools cython3 tox
-pip3 install pyopencl python-dateutil python-flask
+pip3 install pyopencl python-dateutil pytest-flask
 
 # Compile DRM library
-git clone --recursive https://github.com/Accelize/drm.git -b dev
+git clone --recursive https://github.com/Accelize/drm.git -b dev; cd drm
 
 source /opt/xilinx/xrt/setup.sh
 

@@ -105,7 +105,7 @@ jobs:
         condition: ${{ contains(config.os_distrib, 'ubuntu') }}
 
       - script: sudo -E tox ${{ config.tox_operation }}
-                -- --cred=$(Build.SourcesDirectory)/cred.json --server=prod --artifacts_dir=$(Build.SourcesDirectory)/artifacts -rxs ${{ config.tox_extra_option }}
+                -- --cred=$(Build.SourcesDirectory)/cred.json --server=prod --artifacts_dir=$(Build.SourcesDirectory)/artifacts -ra ${{ config.tox_extra_option }}
         displayName: Run tests from package with Tox on ${{ config.os_distrib }}
         env:
           TOX_PARALLEL_NO_SPINNER: 1

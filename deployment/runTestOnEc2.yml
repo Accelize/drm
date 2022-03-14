@@ -84,7 +84,7 @@ jobs:
         displayName: Create Accelize credentials file
 
       - script: sudo -E tox ${{ config.tox_operation }}
-                -- --cred=$(Build.SourcesDirectory)/cred.json --server=$(meteringServer) --artifacts_dir=$(Build.SourcesDirectory)/artifacts -rxs ${{ config.tox_extra_option }}
+                -- --cred=$(Build.SourcesDirectory)/cred.json --server=$(meteringServer) --artifacts_dir=$(Build.SourcesDirectory)/artifacts -ra ${{ config.tox_extra_option }}
         displayName: Run tests with Tox
         env:
           CODECOV_TOKEN: $(codecovToken)

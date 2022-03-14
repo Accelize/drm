@@ -144,9 +144,8 @@ class FpgaDriver(_FpgaDriverBase):
         """
         Initialize FPGA handle with XRT and OpenCL libraries.
         """
-        image_name = splitext(self._fpga_image)[0]
         dev =cl.get_platforms()[0].get_devices()
-        binary = open(_join('/lib','firmware','xilinx',image_name,image_name+'.xclbin'), 'rb').read()
+        binary = open(self._fpga_image, 'rb').read()
         ctx = cl.Context(dev_type=cl.device_type.ALL)
         prg = cl.Program(ctx,dev,[binary])
         prg.build()
