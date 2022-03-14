@@ -150,6 +150,10 @@ def test_drm_manager_frequency_detection_method1(accelize_drm, conf_json, cred_j
     if accelize_drm.is_ctrl_sw:
         pytest.skip("Test involves DRM frequency: skipped on SoM target (no clock on DRM Ctrl Sw)")
 
+    refdesign = accelize_drm.pytest_ref_designs
+    if refdesign is None:
+        pytest.skip("No refdesign with HDK v3.x could be found in the testsuite")
+
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     fpga_image_bkp = driver.fpga_image
@@ -157,7 +161,6 @@ def test_drm_manager_frequency_detection_method1(accelize_drm, conf_json, cred_j
     try:
         if accelize_drm.pytest_freq_detection_version != 0xFFFFFFFF:
             # Program FPGA with HDK 3.x.x (with frequency detection method 1)
-            refdesign = accelize_drm.pytest_ref_designs
             hdk = list(filter(lambda x: x.startswith('3.'), refdesign.hdk_versions))
             if len(hdk) == 0:
                 pytest.skip("No refdesign with HDK v3.x could be found in the testsuite")
@@ -282,7 +285,7 @@ def test_drm_manager_frequency_detection_method_2_and_3_exception(accelize_drm, 
     async_cb = async_handler.create()
 
     conf_json.reset()
-    conf_json['settings']['frequency_detection_period'] = (int)(2**32 / 125000000 * 1000) + 1000
+    conf_json['settings']['frequency_detection_period'] = (int)(2**32 / 121000000 * 1000) + 1000
     conf_json.save()
     with pytest.raises(accelize_drm.exceptions.DRMBadFrequency) as excinfo:
         drm_manager = accelize_drm.DrmManager(

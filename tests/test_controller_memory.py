@@ -102,6 +102,9 @@ def test_empty_product_id(accelize_drm, conf_json, cred_json, async_handler, log
         pytest.skip("Test skipped on SoM target: no empty RO Mailbox bitstream available")
 
     refdesign = accelize_drm.pytest_ref_designs
+    if refdesign is None:
+        pytest.skip("No FPGA image found for 'empty_product_id'")
+
     driver = accelize_drm.pytest_fpga_driver[0]
     fpga_image_bkp = driver.fpga_image
     async_cb = async_handler.create()
@@ -140,6 +143,9 @@ def test_malformed_product_id(accelize_drm, conf_json, cred_json, async_handler)
         pytest.skip("Test skipped on SoM target: no corrupted RO Mailbox bitstream available")
 
     refdesign = accelize_drm.pytest_ref_designs
+    if refdesign is None:
+        pytest.skip("No FPGA image found for 'bad_product_id'")
+
     driver = accelize_drm.pytest_fpga_driver[0]
     fpga_image_bkp = driver.fpga_image
     async_cb = async_handler.create()
