@@ -1935,8 +1935,8 @@ protected:
 
         // Compute estimated DRM frequency
         int32_t measured_frequency = (int32_t)((double)counter / mFrequencyDetectionPeriod / 1000);
-        Debug( "Frequency detection counter after {:f} ms is 0x{:08x}  => estimated frequency = {} MHz",
-            (double)mFrequencyDetectionPeriod/1000, counter, measured_frequency );
+        Debug( "Frequency detection counter after {} ms is 0x{:08x}  => estimated frequency = {} MHz",
+            mFrequencyDetectionPeriod, counter, measured_frequency );
 
         checkDrmFrequency( measured_frequency );
     }
@@ -1979,13 +1979,13 @@ protected:
 
         // Compute estimated DRM frequency for s_axi_aclk
         mAxiFrequency = (int32_t)((double)counter_axiaclk / mFrequencyDetectionPeriod / 1000);
-        Debug( "Frequency detection of s_axi_aclk counter after {:f} ms is 0x{:08x}  => estimated frequency = {} MHz",
-            (double)mFrequencyDetectionPeriod/1000, counter_axiaclk, mAxiFrequency );
+        Debug( "Frequency detection of s_axi_aclk counter after {} ms is 0x{:08x}  => estimated frequency = {} MHz",
+            mFrequencyDetectionPeriod, counter_axiaclk, mAxiFrequency );
 
         // Compute estimated DRM frequency for drm_aclk
         int32_t measured_drmaclk = (int32_t)((double)counter_drmaclk / mFrequencyDetectionPeriod / 1000);
-        Debug( "Frequency detection of drm_aclk counter after {:f} ms is 0x{:08x}  => estimated frequency = {} MHz",
-            (double)mFrequencyDetectionPeriod/1000, counter_drmaclk, measured_drmaclk );
+        Debug( "Frequency detection of drm_aclk counter after {} ms is 0x{:08x}  => estimated frequency = {} MHz",
+            mFrequencyDetectionPeriod, counter_drmaclk, measured_drmaclk );
         checkDrmFrequency( measured_drmaclk ); // Only drm_aclk can be verified because provided in the config.json
     }
 
