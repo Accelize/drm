@@ -149,6 +149,9 @@ def test_drm_manager_frequency_detection_method1(accelize_drm, conf_json, cred_j
     """Test method 1 (based on license timer) to estimate drm frequency is still working"""
     if accelize_drm.is_ctrl_sw:
         pytest.skip("Test involves DRM frequency: skipped on SoM target (no clock on DRM Ctrl Sw)")
+    refdesign = accelize_drm.pytest_ref_designs
+    if refdesign is None:
+        pytest.skip("No refdesign with HDK v3.x could be found in the testsuite")
 
     refdesign = accelize_drm.pytest_ref_designs
     if refdesign is None:
