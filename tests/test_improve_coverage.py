@@ -396,6 +396,5 @@ def test_improve_coverage_perform(accelize_drm, conf_json, cred_json, async_hand
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
     assert search(r'Failed to perform HTTP request to Accelize webservice', str(excinfo.value), IGNORECASE)
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, HTTP_TIMEOUT_ERR_MSG)
-
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, 'Failed to perform HTTP request to Accelize webservice')
     async_cb.reset()

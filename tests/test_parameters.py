@@ -840,7 +840,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         if accelize_drm.is_ctrl_sw:
             assert freq_drm == 0.001
         else:
-            assert 125 <= freq_drm <= 126, 'Unexpected frequency gap threshold'
+            assert accelize_drm.pytest_drm_frequency-1 <= freq_drm <= accelize_drm.pytest_drm_frequency+1, 'Unexpected frequency gap threshold'
         async_cb.assert_NoError()
         print("Test parameter 'drm_frequency': PASS")
 

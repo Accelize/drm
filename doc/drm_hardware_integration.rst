@@ -5,9 +5,10 @@ DRM Hardware integration
 This section gives the main steps to generate a bitstream including the DRM
 controller and the protection blocks (DRM Activators) to integrate in the FPGA design.
 
-.. note:: When the bitstream is loaded in the FPGA board, the design is initially locked.
-          The Accelize DRM library is then required to unlock the design with
-          a valid license. See :doc:`drm_library_integration` for more information.
+.. note::
+   When the bitstream is loaded in the FPGA board, the design is initially locked.
+   The Accelize DRM library is then required to unlock the design with
+   a valid license. See :doc:`drm_library_integration` for more information.
 
 More details about DRM Controller and Activator logics can be found here:
 
@@ -57,11 +58,13 @@ currently supported by the DRM HDK:
        * Stratix V
        * Stratix 10
 
-.. warning:: As long as Intel(R) OPAE is not exposing the Chip ID,
-             node-locked mode can not be implemented.
+.. warning::
+   As long as Intel(R) OPAE is not exposing the Chip ID,
+   node-locked mode can not be implemented.
 
-.. warning:: As long as IEEE-1735 encryption is supported only on Pro Editions of Quartus,
-             only Pro Editions are supported.
+.. warning::
+   As long as IEEE-1735 encryption is supported only on Pro Editions of Quartus,
+   only Pro Editions are supported.
 
 
 Request DRM HDK
@@ -133,8 +136,9 @@ With this approach, managing multiple instances of the same protected IP is buil
 .. image:: _static/Protected-IP.png
    :target: _static/Protected-IP.png
 
-.. note:: Clock and reset ports of the IP core are not represented on the figure but
-          there could have a single or multiple clocks and resets ports.
+.. note::
+   Clock and reset ports of the IP core are not represented on the figure but
+   there could have a single or multiple clocks and resets ports.
 
 
 Create a wrapper
@@ -239,12 +243,14 @@ the ACTIVATION_CODE signal as follows:
 .. image:: _static/Activation-code.png
    :target: _static/Activation-code.png
 
-.. warning:: It is highly recommended to use as much as possible those techniques
-             as it increases the protection against reverse engineering attacks.
+.. warning::
+   It is highly recommended to use as much as possible those techniques
+   as it increases the protection against reverse engineering attacks.
 
-.. important:: The DRM event and activation ports are synchronized on the ``ip_core_aclk``
-             clock. Make sure a clock domain crossing technique is implemented
-             when necessary.
+.. important::
+   The DRM event and activation ports are synchronized on the ``ip_core_aclk``
+   clock. Make sure a clock domain crossing technique is implemented
+   when necessary.
 
 #. Add metering logic
 
@@ -270,13 +276,15 @@ Each pulse on ``metering_event`` increases the metering 64-bit counter by 1.
 The value of this counter is transmitted to the DRM Web Service which converts it
 in number of usage units for this particular account.
 
-.. note:: Pay particular attention to the way the IP core drives this
-          ``metering_event`` signal as it might be directly related to the business model.
-          ``metering_event`` input is level-sensitive and must be de-asserted after each event.
+.. note::
+   Pay particular attention to the way the IP core drives this
+   ``metering_event`` signal as it might be directly related to the business model.
+   ``metering_event`` input is level-sensitive and must be de-asserted after each event.
 
-.. warning:: The DRM event is synchronized on the ``ip_core_aclk``
-             clock. Make sure a clock domain crossing technique is implemented
-             when necessary.
+.. warning::
+   The DRM event is synchronized on the ``ip_core_aclk``
+   clock. Make sure a clock domain crossing technique is implemented
+   when necessary.
 
 Instantiate the adapted IP core and DRM Activator in the wrapper and connect them
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -292,8 +300,9 @@ Instantiate the adapted IP core and DRM Activator in the wrapper and connect the
 Encrypt the Protected IPs
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. warning:: Encrypting the Protected IP is mandatory since it contains the
-             activation code in clear text.
+.. warning::
+   Encrypting the Protected IP is mandatory since it contains the
+   activation code in clear text.
 
 Encrypt each protected IP in IEEE 1735 for Vivado or Ampcrypt for Quartus.
 Please contact your EDA reseller for more information about IP encryption.
@@ -322,21 +331,27 @@ protected IP cores.
 .. image:: _static/DRM_ENVIRONMENT_TOPOLOGY.png
    :target: _static/DRM_ENVIRONMENT_TOPOLOGY.png
 
-.. warning:: The ``drm_aclk`` clock of the DRM Controller and the DRM Activators
-             MUST be the same clock.
+.. warning::
+   The ``drm_aclk`` clock of the DRM Controller and the DRM Activators
+   MUST be the same clock.
 
-.. note:: For SoM platforms, the controller IP is a lightweight bridge IP which has the exact same
-          interfaces as the full Controller IP and is responsible for translating the requests from the SW Controller
-          running on the TEE of the processor core to the Activator IP in the Fabrics.
+.. note::
+   For SoM platforms, the controller IP is a lightweight bridge IP which has the exact same
+   interfaces as the full Controller IP and is responsible for translating the requests from the SW Controller
+   running on the TEE of the processor core to the Activator IP in the Fabrics.
 
-.. note:: For SoM platforms, contact `Accelize Support Team <mailto:support@accelize.com>`_ to get the SW Controller Trusted Application.
+.. note::
+   For SoM platforms, contact `Accelize Support Team <mailto:support@accelize.com>`_ to get
+   the SW Controller Trusted Application.
 
 
 Simulate your design
 ====================
 
-.. important:: For SoM platform, there is no simulation application of the SW Controller normally running in the TEE.
-               So don't use the Controller SW bridge IP but use the Controller HW IP instead with the BFM enabled (USE_BFM=TRUE, more details below).
+.. important::
+   For SoM platform, there is no simulation application of the SW Controller normally running in the TEE.
+   So don't use the Controller SW bridge IP but use the Controller HW IP instead with the BFM enabled
+   (USE_BFM=TRUE, more details below).
 
 Requirements:
 
@@ -366,9 +381,10 @@ In addition to the simulation top-level, you'll find in the ``sim`` folder the f
 ModelSim Compilation and Simulation
 -----------------------------------
 
-.. important:: DRM Controller VHDL source files MUST be compile under "drm_library" library.
-               DRM Activator files must compiled in their own library, for example "drm_0xVVVVLLLLNNNNVVVV_library".
-               See examples below.
+.. important::
+   DRM Controller VHDL source files MUST be compile under "drm_library" library.
+   DRM Activator files must compiled in their own library, for example "drm_0xVVVVLLLLNNNNVVVV_library".
+   See examples below.
 
 Create libraries
 ^^^^^^^^^^^^^^^^
@@ -476,9 +492,10 @@ Run the simulation:
 
    run -all
 
-.. warning:: Note that the BFM takes approximately 30 us to load the license file.
-             Make sure your application stimuli starts to operate after the ``LICENSE_FILE_LOADED``
-             signal is asserted.
+.. warning::
+   Note that the BFM takes approximately 30 us to load the license file.
+   Make sure your application stimuli starts to operate after the ``LICENSE_FILE_LOADED``
+   signal is asserted.
 
 
 Simulation configuration
@@ -495,11 +512,12 @@ to tune the simulation behavior.
      the DRM software Library must also be included and linked in your host application. Refer to
      :doc:`drm_library_integration` for more information the DRM library integration.
 
-.. warning:: To run a cosimulation, you will need to:
+  .. warning::
+     To run a cosimulation, you will need to:
 
-             - Disable the BFM
-             - Set the environment variable `DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS` to
-               1000000000 because of the slowness of the simulation execution.
+     - Disable the BFM
+     - Set the environment variable `DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS` to
+       1000000000 because of the slowness of the simulation execution.
 
 - DRM_LICENSE_FILE: Specify the path to a fake DRM License file used by the Controller BFM
       to unlock the activator. It is used only when the USE_BFM is TRUE. Otherwise the license
@@ -508,8 +526,9 @@ to tune the simulation behavior.
 - ENABLE_DRM_MESSAGE: Enable/disable the DRM messaging system of the Controller BFM.
       It is particularily useful when debugging to determine the states of DRM IP.
 
-.. warning:: ENABLE_DRM_MESSAGE = TRUE (1) is only supported on questasim/modelsim.
-             Otherwise keep it to FALSE (0).
+.. warning::
+   ENABLE_DRM_MESSAGE = TRUE (1) is only supported on questasim/modelsim.
+   Otherwise keep it to FALSE (0).
 
 
 Expected Behavior
@@ -578,9 +597,10 @@ Please communicate this error code when you contact Accelize_ for assistance.
 Synthesize and implement your design
 ====================================
 
-.. important:: DRM Controller VHDL source files MUST be compile under "drm_library" library.
-               DRM Activator files must compiled in their own library, for example "drm_0xVVVVLLLLNNNNVVVV_library".
-               See examples below.
+.. important::
+   DRM Controller VHDL source files MUST be compile under "drm_library" library.
+   DRM Activator files must compiled in their own library, for example "drm_0xVVVVLLLLNNNNVVVV_library".
+   See examples below.
 
 Xilinx(R) Vivado
 ----------------
@@ -591,12 +611,13 @@ For Vivado, GUI or TCL script can be used to synthesize the DRM controller and
 the DRM Activator.
 The DRM IPs are in VHDL but the DRM HDK also contains a Verilog wrapper.
 
-.. important:: The DRM Controller IP instantiates the DNA primitive.
-               We thus strongly recommend against floorplanning/placement constraints
-               on the DRM Controller IP: this could prevent physical access to the DNA
-               primitive and result in a Vivado placement error.
-               If your design requires floorplanning the DRM Controller, you must then ensure
-               the assigned region encompasses the physical location of one DNA primitive.
+.. important::
+   The DRM Controller IP instantiates the DNA primitive.
+   We thus strongly recommend against floorplanning/placement constraints
+   on the DRM Controller IP: this could prevent physical access to the DNA
+   primitive and result in a Vivado placement error.
+   If your design requires floorplanning the DRM Controller, you must then ensure
+   the assigned region encompasses the physical location of one DNA primitive.
 
 VHDL
 ^^^^
@@ -804,11 +825,12 @@ Intel(R) Quartus Prime Pro
 
 Refer to `Supported hardware`_ for more information on supported Quartus versions.
 
-.. note:: In the ``common`` folder of the DRM HDK, you will find an *altera* and an
-          *alteraProprietary* subfolders. Both subfolders contain the same code but
-          encrypted in IEEE-1735 and Ampcrypt respectively. Quartus Prime Standard
-          does not support IEEE-1735 encryption. Make sure to replace the path with
-          the correct subfolder in the rest of the page.
+.. note::
+   In the ``common`` folder of the DRM HDK, you will find an *altera* and an
+   *alteraProprietary* subfolders. Both subfolders contain the same code but
+   encrypted in IEEE-1735 and Ampcrypt respectively. Quartus Prime Standard
+   does not support IEEE-1735 encryption. Make sure to replace the path with
+   the correct subfolder in the rest of the page.
 
 VHDL
 ^^^^
@@ -866,7 +888,8 @@ DRM Controller
 
 The DRM Controller top-level name is **top_drm_controller**.
 
-.. note:: ``drm_all_components`` and ``drm_ip_controller`` entities are available in VHDL only.
+.. note::
+   ``drm_all_components`` and ``drm_ip_controller`` entities are available in VHDL only.
 
 To add the DRM Controller sources to your project, you can use:
 
@@ -891,8 +914,9 @@ DRM Activator
 The DRM Activator top-level name is **top_drm_activator_0xVVVVLLLLNNNNVVVV**.
 0xVVVVLLLLNNNNVVVV is an hexadecimal string encoding the VLNV of this IP.
 
-.. note:: ``drm_all_components`` and ``drm_ip_activator_0xVVVVLLLLNNNNVVVV`` entities are
-          available in VHDL only.
+.. note::
+   ``drm_all_components`` and ``drm_ip_activator_0xVVVVLLLLNNNNVVVV`` entities are
+   available in VHDL only.
 
 To add the DRM Activator sources to your project, you can use:
 
@@ -918,7 +942,8 @@ A CDC mechanism is implemented in the DRM Activator IP to handle different clock
 The associated CDC constraints shall be defined in your project. Because the sources are encrypted
 you will find in the names of the CDC elements to constrain in the SDC files in the ``syn/constraints`` folder.
 
-.. note:: The path in the SDC constraint file must be adapted to match your design hierarchy.
+.. note::
+   The path in the SDC constraint file must be adapted to match your design hierarchy.
 
 
 .. _Accelize: https://www.accelize.com/contact-us

@@ -64,7 +64,7 @@ def is_file_busy(path):
         return True
 
 
-def get_default_conf_json(licensing_server_url):
+def get_default_conf_json(licensing_server_url, drm_frequency):
     """
     Get default "conf.json" file content as python dict.
 
@@ -82,7 +82,7 @@ def get_default_conf_json(licensing_server_url):
             "nodelocked": False
         },
         "drm": {
-            "frequency_mhz": 125
+            "frequency_mhz": drm_frequency
         },
         "design": {
             "boardType": "Running on AWS"
@@ -174,6 +174,9 @@ def pytest_addoption(parser):
     parser.addoption(
         "--server", action="store",
         default="prod", help='Specify the metering server to use')
+    parser.addoption(
+        "--drm_frequency", action="store", type=int,
+        default=125, help='Specify the DRM frequency.')
     parser.addoption(
         "--loglevel", action="store", type=int, choices=list(range(7)),
         default=2, help='Specify "libaccelize_drm" verbosity level')
@@ -749,6 +752,7 @@ def accelize_drm(pytestconfig):
     _accelize_drm.pytest_freq_detection_version = freq_version
     _accelize_drm.pytest_proxy_debug = pytestconfig.getoption("proxy_debug")
     _accelize_drm.pytest_server = pytestconfig.getoption("server")
+    _accelize_drm.pytest_drm_frequency = pytestconfig.getoption("drm_frequency")
     _accelize_drm.pytest_build_environment = build_environment
     _accelize_drm.pytest_build_source_dir = build_source_dir
     _accelize_drm.pytest_build_type = build_type
@@ -822,8 +826,8 @@ class _Json:
 class ConfJson(_Json):
     """conf.json file"""
 
-    def __init__(self, tmpdir, url, **kwargs):
-        content = get_default_conf_json(url)
+    def __init__(self, tmpdir, url, freq, **kwargs):
+        content = get_default_conf_json(url, freq)
         for k, v in kwargs.items():
             if isinstance(v, dict):
                 content[k].update(v)
@@ -969,7 +973,8 @@ def conf_json(request, pytestconfig, tmpdir, accelize_drm):
     drm_param = {}
     if 'som' in accelize_drm.pytest_fpga_image:
         drm_param.update({'drm_software': True, 'bypass_frequency_detection':True})
-    json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param, design=design_param, drm=drm_param)
+    json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), pytestconfig.getoption("drm_frequency"),
+                        settings=log_param, design=design_param, drm=drm_param)
     json_conf.save()
     return json_conf
 

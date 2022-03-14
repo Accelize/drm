@@ -402,20 +402,20 @@ Add Accelize DRM Library recipe
 
 To compile the DRM Lib with Petalinux:
 
-# Create a new 'accelizedrm' app in your petalinux project:
+# Create a new 'libaccelize-drm' app in your petalinux project:
 
 .. code-block:: bash
     :caption: bash
 
-    $ petalinux-create -p <PROJECT_PATH> -t apps --template install -n accelizedrm --enable
+    $ petalinux-create -p <PROJECT_PATH> -t apps --template install -n libaccelize-drm --enable
 
-# Replace the whole content of the recipe in <PROJECT_PATH>/project-spec/meta-user/recipes-apps/accelizedrm/accelizedrm.bb by this one:
+# Replace the whole content of the recipe in <PROJECT_PATH>/project-spec/meta-user/recipes-apps/libaccelize-drm/libaccelize-drm.bb by this one:
 
 .. code-block:: bash
     :caption: bash
 
     #
-    # This file is the accelizedrm recipe.
+    # This file is the libaccelize-drm recipe.
     #
 
     SUMMARY = "Accelize DRM Library"
@@ -423,7 +423,7 @@ To compile the DRM Lib with Petalinux:
     LICENSE = "MIT"
     LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda2f7b4f302"
 
-    SRC_URI = "gitsm://github.com/Accelize/drm.git;protocol=https;branch=som"
+    SRC_URI = "gitsm://github.com/Accelize/drm.git;protocol=https;branch=master"
     SRCREV = "${AUTOREV}"
 
     DEPENDS += " \
@@ -441,12 +441,12 @@ To compile the DRM Lib with Petalinux:
 Modify your application recipe
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Edit the recipe of your main application and add the accelizedrm library to the list of dependencies.
+Edit the recipe of your main application and add the libaccelize-drm library to the list of dependencies.
 
 .. code-block:: bash
     :caption: bash
 
-    DEPENDS += " accelizedrm "
+    DEPENDS += " libaccelize-drm "
 
 Modify your application code
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

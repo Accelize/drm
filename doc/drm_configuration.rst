@@ -32,10 +32,11 @@ Download the credential files (``cred.json``) which looks like this:
       "client_secret": "Your client secret from Accelize DRM portal"
    }
 
-.. note:: Even in node-locked licensing mode, assuming an internet connection is valid,
-          the license file can be automatically requested from the License Web Service.
-          All you need is a credentials file. Once the license file is saved locally, the
-          credential file can be omitted.
+.. note::
+   Even in node-locked licensing mode, assuming an internet connection is valid,
+   the license file can be automatically requested from the License Web Service.
+   All you need is a credentials file. Once the license file is saved locally, the
+   credential file can be omitted.
 
 
 .. _configuration-file:
@@ -64,7 +65,8 @@ basic ``conf.json`` file content:
 
 * ``url``: URL to Accelize DRM Web Service.
 
-  .. important:: For Chinese mainland, url must be set to ``https://alibaba.metering.accelize.com:4443``.
+  .. important::
+     For Chinese mainland, url must be set to ``https://alibaba.metering.accelize.com:4443``.
 
 * ``frequency_mhz``: Must be set to the effective frequency in MHz of the DRM Controller IP.
 * ``boardType``: Any string of 30 characters maximum to store any piece of information this product the ISV (IP/App vendor) might want to save
@@ -105,10 +107,11 @@ configuration file:
         }
     }
 
-.. note:: Once a license has been generated and a license file is in the
-          ``license_dir`` directory, the ``url`` field may be omitted. Note that
-          even if url value is kept, no communication with the web service is
-          performed if a valid license is already installed on the machine.
+.. note::
+   Once a license has been generated and a license file is in the
+   ``license_dir`` directory, the ``url`` field may be omitted. Note that
+   even if url value is kept, no communication with the web service is
+   performed if a valid license is already installed on the machine.
 
 logging parameters
 ~~~~~~~~~~~~~~~~~~
@@ -161,9 +164,10 @@ To list these parameters use the following code:
 
 Some of these parameters are better explained in the :doc:`drm_sw_advanced_description`.
 
-.. warning:: Most of these parameters are critical for a proper functioning of the system.
-             It is highly recommended not to modify them. Contact the support team for
-             additional information.
+.. warning::
+   Most of these parameters are critical for a proper functioning of the system.
+   It is highly recommended not to modify them. Contact the support team for
+   additional information.
 
 
 Configuration files storage
@@ -181,10 +185,11 @@ running the DRM protected application.
   something like ``~/.accelize_drm/cred.json`` or
   ``~/.my_application/cred.json``.
 
-.. warning:: The credential file contain sensible information and must be stored
-             in a secure way. The minimum is to ensure that access to the folder
-             containing the file ``cred.json`` is only allowed to appropriate
-             users only.
+.. warning::
+   The credential file contain sensible information and must be stored
+   in a secure way. The minimum is to ensure that access to the folder
+   containing the file ``cred.json`` is only allowed to appropriate
+   users only.
 
 .. _Accelize portal registration: https://portal.accelize.com/user/register
 .. _Accelize portal account: https://portal.accelize.com/front/customer/apicredential
@@ -199,5 +204,6 @@ your FPGA host to access the following IP addresses on port 443/TCP:
 * 15.197.128.83
 * 3.33.128.162
 
-.. note:: The Node-locked licensing model does not require Webserver access once the
-          license file is generated.
+.. note::
+   The Node-locked licensing model does not require Webserver access once the
+   license file is generated.
