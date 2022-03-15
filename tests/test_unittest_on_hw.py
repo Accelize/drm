@@ -572,6 +572,7 @@ def test_security_stop(accelize_drm, conf_json, cred_json, async_handler):
 
 
 @pytest.mark.minimum
+@pytest.mark.skip(reason='78.153.251.226 server is not repsonding anymore')
 def test_curl_host_resolve(accelize_drm, conf_json, cred_json, async_handler):
     """Test host resolve information is taken into account by DRM Library"""
     driver = accelize_drm.pytest_fpga_driver[0]
