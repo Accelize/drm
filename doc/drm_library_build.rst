@@ -463,11 +463,14 @@ This section explains how to run Accelize DRM python library tests.
    the list of tested OS.
 
 
+
 .. important::
    The tests described below are based on the Python DRM library
    and *pytest* module. So make sure sections `Python 3 library option`_
    and `Test generation option`_ have been completed and that you have
    run the CMake command with the ``-DTESTS=ON -DPYTHON3=ON`` options.
+
+
 
 Test command
 ------------
