@@ -51,6 +51,7 @@ stages:
           displayName: Install dependencies
 
         - script: |
+            sudo pip list
             mkdir build_doc
             cd build_doc
             cmake -DPYTHON3=ON -DDOC=ON ..
