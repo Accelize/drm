@@ -9,7 +9,6 @@ from re import search
 from tests.conftest import wait_func_true
 
 
-@pytest.mark.nosom
 def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_json, async_handler):
     """Test errors when wrong frequency is given to DRM Controller Constructor"""
     from math import ceil, floor
@@ -144,7 +143,6 @@ def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_jso
 
 
 @pytest.mark.minimum
-@pytest.mark.nosom
 def test_drm_manager_frequency_detection_method1(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """Test method 1 (based on license timer) to estimate drm frequency is still working"""
     if accelize_drm.is_ctrl_sw:
@@ -196,7 +194,6 @@ def test_drm_manager_frequency_detection_method1(accelize_drm, conf_json, cred_j
             driver.program_fpga(fpga_image_bkp)
 
 
-@pytest.mark.nosom
 def test_drm_manager_frequency_detection_method2(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """Test method2 (based on dedicated counter in AXI wrapper) to estimate drm_aclk frequency is working"""
     if accelize_drm.is_ctrl_sw:
@@ -228,7 +225,6 @@ def test_drm_manager_frequency_detection_method2(accelize_drm, conf_json, cred_j
 
 
 @pytest.mark.minimum
-@pytest.mark.nosom
 def test_drm_manager_frequency_detection_method3(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """Test method 3 (based on dedicated counter in AXI wrapper) to estimate drm_aclk and s_axi_aclk frequencies is working"""
     if accelize_drm.is_ctrl_sw:
@@ -276,7 +272,6 @@ def test_drm_manager_frequency_detection_method3(accelize_drm, conf_json, cred_j
             driver.program_fpga(fpga_image_bkp)
 
 
-@pytest.mark.nosom
 def test_drm_manager_frequency_detection_method_2_and_3_exception(accelize_drm, conf_json, cred_json, async_handler):
     """Test method 2 and 3 (based on dedicated counter in AXI wrapper) to estimate drm aclk frequency is working"""
     if accelize_drm.is_ctrl_sw:

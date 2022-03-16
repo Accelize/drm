@@ -73,7 +73,6 @@ def test_improve_coverage_getHostAndCardInfo(accelize_drm, conf_json, cred_json,
     async_cb.assert_NoError()
 
 
-@pytest.mark.nosom
 def test_improve_coverage_readDrmAddress(accelize_drm, conf_json, cred_json, async_handler,
                                          log_file_factory):
     """
@@ -107,7 +106,6 @@ def test_improve_coverage_readDrmAddress(accelize_drm, conf_json, cred_json, asy
     logfile.remove()
 
 
-@pytest.mark.nosom
 def test_improve_coverage_writeDrmAddress(accelize_drm, conf_json, cred_json, async_handler,
                                          log_file_factory):
     """
@@ -141,7 +139,6 @@ def test_improve_coverage_writeDrmAddress(accelize_drm, conf_json, cred_json, as
     logfile.remove()
 
 
-@pytest.mark.nosom
 def test_improve_coverage_runBistLevel2_bad_size(accelize_drm, conf_json, cred_json, async_handler,
                                          log_file_factory):
     """
@@ -185,7 +182,6 @@ def test_improve_coverage_runBistLevel2_bad_size(accelize_drm, conf_json, cred_j
     logfile.remove()
 
 
-@pytest.mark.nosom
 def test_improve_coverage_runBistLevel2_bad_data(accelize_drm, conf_json, cred_json, async_handler,
                                          log_file_factory):
     """
@@ -264,7 +260,6 @@ def test_improve_coverage_getMeteringHeader(accelize_drm, conf_json, cred_json, 
     logfile.remove()
 
 
-@pytest.mark.nosom
 def test_improve_coverage_getDesignInfo(accelize_drm, conf_json, cred_json, async_handler,
                                         log_file_factory):
     """
@@ -337,7 +332,6 @@ def test_improve_coverage_setLicense(accelize_drm, conf_json, cred_json, async_h
     assert 'Malformed response from License Web Service:' in async_cb.message
 
 
-@pytest.mark.nosom
 def test_improve_coverage_detectDrmFrequencyMethod1(accelize_drm, conf_json, cred_json, async_handler,
                                                     log_file_factory):
     """
