@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2018, Accelize
+Copyright (C) 2022, Accelize
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,28 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <stdlib.h>
-#include <iostream>
-#include <iomanip>
-#include <cstddef>
-#include <cstdint>
-#include <memory>
-#include <json/json.h>
 #include <json/version.h>
-#include <thread>
-#include <chrono>
-#include <numeric>
 #include <future>
-#include <mutex>
-#include <condition_variable>
-#include <queue>
 #include <fstream>
-#include <typeinfo>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <cmath>
-#include <algorithm>
-#include <vector>
 
 #include "accelize/drm/drm_manager.h"
 #include "accelize/drm/version.h"
@@ -50,6 +31,7 @@ limitations under the License.
 #include "DrmControllerDataConverter.hpp"
 #include "HAL/DrmControllerOperations.hpp"
 #pragma GCC diagnostic pop
+
 
 #define NB_MAX_REGISTER  32
 
@@ -681,11 +663,6 @@ protected:
         }
         Debug( "xbutil tool has been found in {}", mXbutil );
 
-        // Get xbutil version
-        std::string cmd = fmt::format( "{} --version", mXbutil );
-        std::string cmd_out = execCmd( cmd );
-        Debug( "xbutil version:\n{}", cmd_out );
-
         return true;
     }
 
@@ -754,7 +731,7 @@ protected:
             std::string cmd = fmt::format( "{} examine -f JSON -o {} --force", mXbutil, xbutil_log );
             cmd_out = execCmd( cmd );
         } catch( const std::exception &e ) {
-            hostcard_node["xrt2"]["error"] = fmt::format( "Error executing XRT for global data: {}\n", e.what() );
+            hostcard_node["xrt2"]["error"] = fmt::format( "Error executing XRT command: {}\n", e.what() );
             return false;
         }
         // Parse available devices
@@ -768,23 +745,22 @@ protected:
         // Collect meta-data for each device found
         bool is_ok( true );
         hostcard_node["xrt2"]["devices"] = Json::nullValue;
-        for ( const auto &d: hostcard_node["system"]["host"]["devices"] ) {
+        for ( const auto &d: hostcard_node["xrt2"]["system"]["host"]["devices"] ) {
             std::string bdf = d["bdf"].asString();
             std::string xbutil_device_log = fmt::format( "xbutil_{}.log", bdf );
-            Json::Value device_info;
+            Json::Value device_info = Json::nullValue;
             // Call xbutil report
             try {
-                std::string cmd = fmt::format( "{} examine -f JSON -o {} --force -d {}",
+                std::string cmd = fmt::format( "{} examine -f JSON -o {} --force -d {} ",
                                                 mXbutil, xbutil_device_log, bdf );
                 if ( mHostDataVerbosity == eHostDataVerbosity::FULL ) {
                     cmd += std::string("-r all");
                 } else {
-                    cmd += std::string("-r dynamic-regions -r pcie_info -r platforms -r ");
+                    cmd += std::string("-r dynamic-regions -r pcie-info -r platform");
                 }
                 std::string cmd_out = execCmd( cmd );
             } catch( const std::exception &e ) {
-                device_info[bdf] = fmt::format( "Error executing XRT for meta-data of device {}: {}\n",
-                                                bdf, e.what() );
+                device_info[bdf] = fmt::format( "Error executing XRT command: {}\n", e.what() );
                 hostcard_node["xrt2"]["devices"].append( device_info );
                 is_ok = false;
                 continue;
@@ -792,6 +768,7 @@ protected:
             // Parse device report
             try {
                 device_info = parseJsonFile( xbutil_device_log );
+                hostcard_node["xrt2"]["devices"].append( device_info["devices"][0] );
             } catch( const std::exception &e ) {
                 device_info[bdf] = fmt::format( "Error parsing XRT meta-data file {}: {}.\n",
                                                     xbutil_device_log, e.what() );
@@ -800,7 +777,8 @@ protected:
                 continue;
             }
         }
-        Debug( "Succeeded to gather host and card information with XRT method 2" );
+        if ( is_ok )
+            Debug( "Succeeded to gather host and card information with XRT method 2" );
         return is_ok;
     }
 
@@ -1759,7 +1737,7 @@ protected:
         // Wait until session is running if license is metering
         waitUntilSessionIsRunning();
 
-        Info( "Provisioned license #{} for session {} on DRM controller", mLicenseCounter, mSessionID );
+        Debug( "Provisioned license #{} for session {} on DRM controller", mLicenseCounter, mSessionID );
         mLicenseCounter ++;
     }
 
@@ -2438,7 +2416,7 @@ protected:
             mHealthRetrySleep = JVgetOptional( metering_node, "healthRetrySleep", Json::uintValue, mHealthRetrySleep ).asUInt();
         }
         Debug( "Released metering access mutex from startSession" );
-        Info( "DRM session {} created.", mSessionID );
+        Info( "DRM session {} started.", mSessionID );
     }
 
     void pauseSession() {
