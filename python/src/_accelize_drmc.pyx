@@ -152,20 +152,25 @@ cdef class DrmManager:
         if return_code:
             _raise_from_error(self._drm_manager.error_message, return_code)
 
-    def __dealloc__(self):
+    def free(self):
         if self._drm_manager is NULL:
             return
         cdef int return_code
         with nogil:
             return_code = DrmManager_free(&self._drm_manager)
+        self._drm_manager = NULL
         if return_code:
             _raise_from_error(self._drm_manager.error_message, return_code)
+
+    def __dealloc__(self):
+        self.free()
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.deactivate()
+        self.free()
 
     def activate(self, const bint resume_session_request=False):
         """

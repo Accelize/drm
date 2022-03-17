@@ -21,7 +21,7 @@ cmake_minimum_required(VERSION 3.12)
 # - Alpha             : 1.0.0-alpha.1
 # - Beta              : 1.0.0-beta.1
 # - Release candidate : 1.0.0-rc.1
-set(ACCELIZEDRM_VERSION 2.5.3)
+set(ACCELIZEDRM_VERSION 2.5.4)
 
 ## Define package release number (Number of time this version was packaged)
 if (NOT CPACK_PACKAGE_RELEASE)
@@ -158,6 +158,8 @@ set(DRM_CONTROLLER_SDK_SOURCES
 	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v4_2_0.cpp
 	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v4_2_1.cpp
 	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v6_0_0.cpp
+	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v6_0_1.cpp
+	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v7_0_0.cpp
 )
 include_directories(drm_controller_sdk/include)
 set_source_files_properties(${DRM_CONTROLLER_SDK_SOURCES} PROPERTIES COMPILE_FLAGS "-Wno-unused-parameter")
@@ -177,12 +179,13 @@ set(API_HEADERS
     include/accelize/drmc/errorcode.h
     include/accelize/drmc/wrapper.h
     include/accelize/drmc.h
+    include/pnr/provencore.h
 )
 
 set(API_PUBLIC_HEADERS)
 foreach(_header_file ${API_HEADERS})
   get_filename_component(_header_file_path ${_header_file} DIRECTORY)
-  add_custom_command(OUTPUT ${_header_file}
+  add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/${_header_file}
 		     COMMAND mkdir -p ${_header_file_path}
 		     COMMAND cp ${CMAKE_SOURCE_DIR}/${_header_file} ${_header_file}
 		     DEPENDS ${CMAKE_SOURCE_DIR}/${_header_file})
@@ -211,6 +214,7 @@ set(TARGET_SOURCES
     source/utils.cpp
     source/error.cpp
     source/log.cpp
+    source/provencore.cpp
 )
 add_library(accelize_drm SHARED ${TARGET_SOURCES})
 target_compile_options(accelize_drm PRIVATE -DSPDLOG_COMPILED_LIB)
@@ -284,6 +288,7 @@ if (PYTHON3)
 						  build_ext -I ${CMAKE_INCLUDE_DIR}:${JSONCPP_INCLUDEDIR} -L ${CMAKE_BINARY_DIR} ${BUILD_EXT_EXTRA} -j ${CPU_COUNT}
 	    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 	    COMMENT "Building accelize_drm Python 3 (With wheel Package)"
+	    DEPENDS ${API_PUBLIC_HEADERS}
 	    VERBATIM
     )
     if (PKG)

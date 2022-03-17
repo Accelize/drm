@@ -277,7 +277,7 @@ DRM_ErrorCode DrmManager_get_uint( DrmManager *m, const DrmParameterKey key_id, 
     \return An error code defined by the enumerator #DRM_ErrorCode indicating
     the success or the cause of the error during the function execution.
 */
-DRM_ErrorCode DrmManager_get_int64( DrmManager *m, const DrmParameterKey key_id, long long* p_value ) DRM_EXPORT;
+DRM_ErrorCode DrmManager_get_int64( DrmManager *m, const DrmParameterKey key_id, long long int* p_value ) DRM_EXPORT;
 
 
 /** \brief Get information from the DRM system.
@@ -293,7 +293,7 @@ DRM_ErrorCode DrmManager_get_int64( DrmManager *m, const DrmParameterKey key_id,
     \return An error code defined by the enumerator #DRM_ErrorCode indicating
     the success or the cause of the error during the function execution.
 */
-DRM_ErrorCode DrmManager_get_uint64( DrmManager *m, const DrmParameterKey key_id, unsigned long long* p_value ) DRM_EXPORT;
+DRM_ErrorCode DrmManager_get_uint64( DrmManager *m, const DrmParameterKey key_id, unsigned long long int* p_value ) DRM_EXPORT;
 
 
 /** \brief Get information from the DRM system.
@@ -416,7 +416,7 @@ DRM_ErrorCode DrmManager_set_uint  ( DrmManager *m, const DrmParameterKey key_id
     \return An error code defined by the enumerator #DRM_ErrorCode indicating
     the success or the cause of the error during the function execution.
 */
-DRM_ErrorCode DrmManager_set_int64 ( DrmManager *m, const DrmParameterKey key_id, const long long value ) DRM_EXPORT;
+DRM_ErrorCode DrmManager_set_int64 ( DrmManager *m, const DrmParameterKey key_id, const long long int value ) DRM_EXPORT;
 
 
 /** \brief Set information of the DRM system.
@@ -431,7 +431,7 @@ DRM_ErrorCode DrmManager_set_int64 ( DrmManager *m, const DrmParameterKey key_id
     \return An error code defined by the enumerator #DRM_ErrorCode indicating
     the success or the cause of the error during the function execution.
 */
-DRM_ErrorCode DrmManager_set_uint64( DrmManager *m, const DrmParameterKey key_id, const unsigned long long value ) DRM_EXPORT;
+DRM_ErrorCode DrmManager_set_uint64( DrmManager *m, const DrmParameterKey key_id, const unsigned long long int value ) DRM_EXPORT;
 
 
 /** \brief Set information of the DRM system.

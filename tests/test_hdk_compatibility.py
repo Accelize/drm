@@ -13,8 +13,6 @@ def test_hdk_stability_on_programming(accelize_drm, conf_json, cred_json, async_
     image_id = driver.fpga_image
     async_cb = async_handler.create()
     async_cb.reset()
-    drm_manager = None
-
     nb_reset = 5
     for i in range(nb_reset):
         # Program FPGA with lastest HDK per major number
@@ -169,3 +167,30 @@ def test_compatibilities(accelize_drm, conf_json, cred_json, async_handler):
     finally:
         # Reprogram FPGA with original image
         driver.program_fpga(fpga_image_bkp)
+
+
+def test_ctrl_version_match_mailbox_version(accelize_drm, conf_json, cred_json, async_handler):
+    """Verify the version in the controller register match the version in the read-only mailbox"""
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip("DRM Bridge version differs from the version in the read-only mailbox")
+
+    driver = accelize_drm.pytest_fpga_driver[0]
+    image_id = driver.fpga_image
+    async_cb = async_handler.create()
+    async_cb.reset()
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        ctrl_version_str = drm_manager.get('controller_version')
+        ctrl_rom = drm_manager.get('controller_rom')
+    ctrl_version_match = match(r'(\d+)\.(\d+)\.(\d+)', ctrl_version_str)
+    rom_version_match = match(r'(\d+)\.(\d+)\.(\d+)\.\d+', ctrl_rom['extra']['lgdn_full_version'])
+    ctrl_version = ''.join(map(lambda x: '%02X' % int(x), rom_version_match.groups()))
+    rom_version = ''.join(map(lambda x: '%02X' % int(x), rom_version_match.groups()))
+    assert rom_version == ctrl_version
+    async_cb.assert_NoError()
+

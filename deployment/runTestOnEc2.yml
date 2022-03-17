@@ -7,7 +7,7 @@ parameters:
   instance_type: 'f1.4xlarge'
   config_list:
   - os_distrib: 'centos_7'
-    tox_operation: '-e aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug'
+    tox_operation: '-e aws-build-debug,cpp-debug,c-debug,noparallel-debug,coverage-debug'
     tox_extra_option: ''
 
 jobs:
@@ -30,6 +30,7 @@ jobs:
 
   # Run tests on AWS agent
   - job: runTests_${{ parameters.identifier }}_on_${{ config.os_distrib }}
+    timeoutInMinutes: 120
     displayName: Test ${{ parameters.description }} on ${{ config.os_distrib }}
     dependsOn: startAgent_${{ parameters.identifier }}_on_${{ config.os_distrib }}
     condition: succeededOrFailed()
@@ -83,7 +84,7 @@ jobs:
         displayName: Create Accelize credentials file
 
       - script: sudo -E tox ${{ config.tox_operation }}
-                -- --cred=$(Build.SourcesDirectory)/cred.json --server=$(meteringServer) --artifacts_dir=$(Build.SourcesDirectory)/artifacts -rxs ${{ config.tox_extra_option }}
+                -- --cred=$(Build.SourcesDirectory)/cred.json --server=$(meteringServer) --artifacts_dir=$(Build.SourcesDirectory)/artifacts -ra ${{ config.tox_extra_option }}
         displayName: Run tests with Tox
         env:
           CODECOV_TOKEN: $(codecovToken)

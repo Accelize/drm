@@ -8,6 +8,7 @@ from flask import request as _request
 from re import search, findall, IGNORECASE
 from ctypes import c_uint, byref
 
+from tests.conftest import HTTP_TIMEOUT_ERR_MSG
 from tests.proxy import get_context, set_context, get_proxy_error
 
 
@@ -23,6 +24,12 @@ def test_improve_coverage_ws_client(accelize_drm, conf_json, cred_json,
     conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
 
+    # Set initial context on the live server
+    error_code = 600
+    context = {'error_code':error_code}
+    set_context(context)
+    assert get_context() == context
+
     with accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
@@ -30,13 +37,6 @@ def test_improve_coverage_ws_client(accelize_drm, conf_json, cred_json,
             driver.write_register_callback,
             async_cb.callback
         ) as drm_manager:
-
-        # Set initial context on the live server
-        error_code = 600
-        context = {'error_code':error_code}
-        set_context(context)
-        assert get_context() == context
-
         with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
             drm_manager.activate()
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
@@ -78,6 +78,9 @@ def test_improve_coverage_readDrmAddress(accelize_drm, conf_json, cred_json, asy
     """
     Improve coverage of the readDrmAddress function
     """
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip("Test involves callbacks modification: skipped on SoM target (no callback provided for SoM)")
+
     def my_bad_read_register(register_offset, returned_data):
         return 123
 
@@ -108,6 +111,9 @@ def test_improve_coverage_writeDrmAddress(accelize_drm, conf_json, cred_json, as
     """
     Improve coverage of the writeDrmAddress function
     """
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip("Test involves callbacks modification: skipped on SoM target (no callback provided for SoM)")
+
     def my_bad_write_register(register_offset, data_to_write):
         return 123
 
@@ -138,6 +144,9 @@ def test_improve_coverage_runBistLevel2_bad_size(accelize_drm, conf_json, cred_j
     """
     Improve coverage of the runBistLevel2 function: generate bad mailbox size
     """
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip("Test involves callbacks modification: skipped on SoM target (no callback provided for SoM)")
+
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
@@ -178,6 +187,9 @@ def test_improve_coverage_runBistLevel2_bad_data(accelize_drm, conf_json, cred_j
     """
     Improve coverage of the runBistLevel2 function: generate bad data
     """
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip("Test involves callbacks modification: skipped on SoM target (no callback provided for SoM)")
+
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
@@ -253,6 +265,9 @@ def test_improve_coverage_getDesignInfo(accelize_drm, conf_json, cred_json, asyn
     """
     Improve coverage of the getDesignInfo function
     """
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip("Test involves callbacks modification: skipped on SoM target (no callback provided for SoM)")
+
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
@@ -264,7 +279,7 @@ def test_improve_coverage_getDesignInfo(accelize_drm, conf_json, cred_json, asyn
         ret = driver.read_register_callback(register_offset, returned_data)
         if ctx['page'] == 5 and register_offset == 4:
             ctx['cnt'] += 1
-            if ctx['cnt'] == 11:
+            if ctx['cnt'] == 12:
                 returned_data.contents.value &= 0xFFFF
         return ret
 
@@ -292,7 +307,7 @@ def test_improve_coverage_getDesignInfo(accelize_drm, conf_json, cred_json, asyn
 
 
 def test_improve_coverage_setLicense(accelize_drm, conf_json, cred_json, async_handler,
-                        live_server, request):
+                            live_server, request):
     """
     Improve coverage of the setLicense function
     """
@@ -322,6 +337,9 @@ def test_improve_coverage_detectDrmFrequencyMethod1(accelize_drm, conf_json, cre
     """
     Improve coverage of the detectDrmFrequencyMethod1 function
     """
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip("Test involves DRM frequency: skipped on SoM target (no clock on DRM Ctrl Sw)")
+
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
@@ -371,6 +389,6 @@ def test_improve_coverage_perform(accelize_drm, conf_json, cred_json, async_hand
         drm_manager.deactivate()
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
     assert search(r'Failed to perform HTTP request to Accelize webservice', str(excinfo.value), IGNORECASE)
-    async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, 'The issue could be caused by a networking problem: please verify your internet access')
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, HTTP_TIMEOUT_ERR_MSG)
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, 'Failed to perform HTTP request to Accelize webservice')
     async_cb.reset()

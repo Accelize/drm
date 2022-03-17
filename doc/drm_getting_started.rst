@@ -13,16 +13,19 @@ Prerequisites
 - To access the Accelize Web Service you need an Internet connection which allows
   outbound HTTPS connection to Accelize server: https://master.metering.accelize.com.
 
-  .. note:: In node-locked mode, the web service access is not mandatory. The License Key file
-            will just have to be manually copied on the machine (refer to `Node-locked`_).
+  .. note::
+     In node-locked mode, the web service access is not mandatory. The License Key file
+     will just have to be manually copied on the machine (refer to `Node-locked`_).
 
-  .. note:: The DRM licensing mode is defined during the `configuration mode <drm_configuration>`_.
+  .. note::
+     The DRM licensing mode is defined during the `configuration mode <drm_configuration>`_.
 
 - Create your account from `Accelize website <https://www.accelize.com/content/request-vendor-account>`_
   web site.
 
-.. warning:: DRM API 1.x is compatible with the DRM HDK versions inferior or equal to 2.x.
-             For DRM HDK superior to 3.x use exclusively DRM API 2.x.
+.. warning::
+   DRM API 1.x is compatible with the DRM HDK versions inferior or equal to 2.x.
+   For DRM HDK superior to 3.x use exclusively DRM API 2.x.
 
 Adapt your FPGA design
 ----------------------
@@ -55,9 +58,10 @@ Synthesize and implement your FPGA design
 
 1. Add the DRM HDK files to your synthesis script.
 
-   .. warning:: DRM Conbtroller VHDL source files must be compiled under the library ``drm_library`` and
-                DRM Activator VHDL source files must be compiled under the library ``drm_0xVVVVLLLLNNNNVVVV_library``
-                or the synthesis will fail.
+   .. warning::
+      DRM Conbtroller VHDL source files must be compiled under the library ``drm_library`` and
+      DRM Activator VHDL source files must be compiled under the library ``drm_0xVVVVLLLLNNNNVVVV_library``
+      or the synthesis will fail.
 
 2. To simulate your design, use the simulation source file in the HDK.
    For more details, visit the section 'RTL Simulation' of :doc:`drm_hardware_integration` page.

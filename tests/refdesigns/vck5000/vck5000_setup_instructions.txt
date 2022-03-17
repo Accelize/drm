@@ -1,0 +1,18 @@
+# To be run in sudo mode
+sudo su
+
+# Update and install dependencies
+apt update
+apt install -y git make g++ libcurl4-openssl-dev libjsoncpp-dev cmake pkg-config python3-dev python3-pip python3-wheel python3-setuptools cython3 tox
+pip3 install pyopencl python-dateutil pytest-flask
+
+# Compile DRM library
+git clone --recursive https://github.com/Accelize/drm.git -b dev; cd drm
+
+source /opt/xilinx/xrt/setup.sh
+
+# Add cred
+vi /dev/shm/cred.json
+# Start test
+tox -e build-debug,c-debug -- --cred=/dev/shm/cred.json --server=dev --fpga_image=tests/refdesign/versal/vitis_2activator_121_97.xclbin -ra -m hwtst
+tox -e build-debug,c-debug -- --cred=/dev/shm/cred.json --server=dev --fpga_image=tests/refdesign/versal/vitis_2activator_121_97.xclbin -s tests/test_metered_mode_on_hw.py::test_fast_start_stop

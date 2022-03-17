@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegistersBase.hpp
-*  \version   6.0.0.0
-*  \date      April 2021
+*  \version   7.0.0.0
+*  \date      October 2021
 *  \brief     Class DrmControllerRegistersBase defines low level procedures for registers access.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.

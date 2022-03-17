@@ -25,9 +25,9 @@ limitations under the License.
 #include <json/json.h>
 #include <cstring>
 
-
 #include "accelize/drmc/common.h"
 #include "accelize/drm/version.h"
+#include "pnr/provencore.h"
 
 
 //! Accelize interfaces and implementations
@@ -62,6 +62,21 @@ private:
     //std::unique_ptr<Impl> pImpl; //!< Internal representation
     Impl* pImpl; //!< Internal representation
 
+    /* File descriptor attached to device /dev/trustzone */
+    static pnc_session_t *s_pnc_session;
+
+    /* Virtual address and size of the mapped [tzfd] file */
+    static uint32_t *s_pnc_tzvaddr;
+    static size_t s_pnc_tzsize;
+
+    /* DRM Controller page offset in shared memory */
+    static uint32_t s_pnc_page_offset;
+
+    static const std::string DRM_SELF_TEST_ERROR_MESSAGE;
+    static const std::string DRM_CONNECTION_ERROR_MESSAGE;
+    static const std::string DRM_DOC_LINK;
+    static const std::string DRM_CTRL_TA_INIT_ERROR_MESSAGE;
+
 public:
 
     /** \brief FPGA read register callback function.
@@ -75,7 +90,7 @@ public:
         \warning This function must be thread-safe in case of concurrency on the
         register bus.
     */
-    typedef std::function<int/*errcode*/ (uint32_t /*register offset*/, uint32_t* /*returned data*/)> ReadRegisterCallback;
+    typedef std::function<int32_t/*errcode*/ (uint32_t /*register offset*/, uint32_t* /*returned data*/)> ReadRegisterCallback;
 
     /** \brief FPGA write register callback function.
         The register offset is relative to first register of DRM controller.
@@ -87,7 +102,7 @@ public:
         \warning This function must be thread-safe in case of concurrency on the
         register bus.
     */
-    typedef std::function<int/*errcode*/ (uint32_t /*register offset*/, uint32_t /*data to write*/)> WriteRegisterCallback;
+    typedef std::function<int32_t/*errcode*/ (uint32_t /*register offset*/, uint32_t /*data to write*/)> WriteRegisterCallback;
 
     /** \brief Asynchronous Error handling callback function.
         This function is called in case of asynchronous error during operation.

@@ -351,8 +351,8 @@ void print_session_id( DrmManager* pDrmManager ) {
 
 void print_metered_data( DrmManager* pDrmManager ) {
     TRY
-        uint64_t metered_data = pDrmManager->get<uint64_t>( ParameterKey::metered_data );
-        INFO(COLOR_GREEN "Current metering data fromFPGA design: %llu", metered_data);
+        std::string metered_data = pDrmManager->get<std::string>( ParameterKey::metered_data );
+        INFO(COLOR_GREEN "Current metering data fromFPGA design: %s", metered_data.c_str());
     CATCH("Failed to get the current metering data from FPGA design")
 }
 

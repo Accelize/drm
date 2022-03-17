@@ -579,7 +579,7 @@ def test_curl_host_resolve(accelize_drm, conf_json, cred_json, async_handler):
 
     conf_json.reset()
     url = conf_json['licensing']['url']
-    conf_json['licensing']['host_resolves'] = {'%s:443' % url.replace('https://',''): '78.153.251.226'}
+    conf_json['licensing']['host_resolves'] = {'%s:443' % url.replace('https://',''): '92.222.139.190'}
     conf_json.save()
     async_cb.reset()
     with accelize_drm.DrmManager(

@@ -50,8 +50,8 @@ Packaging the DRM Controller
      ipx::associate_bus_interfaces -clock s_axi_aclk -reset s_axi_arstn [ipx::current_core]
 
 * In the Packager GUI
-  * [Review and Package]
-    * Click "Package IP"
+* [Review and Package]
+* Click "Package IP"
 
 Packaging the DRM Activator
 ===========================
@@ -89,8 +89,8 @@ Packaging the DRM Activator
      ipx::associate_bus_interfaces -busif activation_code -clock ip_core_aclk [ipx::current_core]
 
 * In the Packager GUI:
-  * [Review and Package]
-    * Click "Package IP"
+* [Review and Package]
+* Click "Package IP"
 
 Block Design with DRM IPs
 =========================

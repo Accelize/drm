@@ -76,12 +76,6 @@ DRM_ErrorCode DrmManager_alloc( DrmManager **p_m,
     m->drm = NULL;
     *p_m = m;
     TRY
-        if (read_register == NULL)
-            Throw( DRM_BadArg, "Read register callback function must not be NULL" );
-        if (write_register == NULL)
-            Throw( DRM_BadArg, "Write register callback function must not be NULL" );
-        if (async_error == NULL)
-            Throw( DRM_BadArg, "Asynchronous error callback function must not be NULL" );
         m->drm = (decltype(m->drm))malloc(sizeof(*(m->drm)));
         m->drm->obj = NULL;
         m->drm->obj = new cpp::DrmManager(conf_file_path, cred_file_path,
@@ -130,49 +124,49 @@ DRM_ErrorCode DrmManager_deactivate( DrmManager *m, bool pause_session_request )
 DRM_ErrorCode DrmManager_get_bool( DrmManager *m, const DrmParameterKey key, bool* p_value ) {
     TRY
         checkPointer(m);
-        *p_value = m->drm->obj->get<bool>((cpp::ParameterKey) key);
+        *p_value = m->drm->obj->get<bool>((cpp::ParameterKey)key);
     CATCH_RETURN
 }
 
 DRM_ErrorCode DrmManager_get_int( DrmManager *m, const DrmParameterKey key, int* p_value ) {
     TRY
         checkPointer(m);
-        *p_value = m->drm->obj->get<int32_t>((cpp::ParameterKey) key);
+        *p_value = m->drm->obj->get<int32_t>((cpp::ParameterKey)key);
     CATCH_RETURN
 }
 
 DRM_ErrorCode DrmManager_get_uint( DrmManager *m, const DrmParameterKey key, unsigned int* p_value ) {
     TRY
         checkPointer(m);
-        *p_value = m->drm->obj->get<uint32_t>((cpp::ParameterKey) key);
+        *p_value = m->drm->obj->get<uint32_t>((cpp::ParameterKey)key);
     CATCH_RETURN
 }
 
-DRM_ErrorCode DrmManager_get_int64( DrmManager *m, const DrmParameterKey key, long long* p_value ) {
+DRM_ErrorCode DrmManager_get_int64( DrmManager *m, const DrmParameterKey key, long long int* p_value ) {
     TRY
         checkPointer(m);
-        *p_value = m->drm->obj->get<int64_t>((cpp::ParameterKey) key);
+        *p_value = m->drm->obj->get<int64_t>((cpp::ParameterKey)key);
     CATCH_RETURN
 }
 
-DRM_ErrorCode DrmManager_get_uint64( DrmManager *m, const DrmParameterKey key, unsigned long long* p_value ) {
+DRM_ErrorCode DrmManager_get_uint64( DrmManager *m, const DrmParameterKey key, unsigned long long int* p_value ) {
     TRY
     checkPointer(m);
-    *p_value = m->drm->obj->get<uint64_t>((cpp::ParameterKey) key);
+    *p_value = m->drm->obj->get<uint64_t>((cpp::ParameterKey)key);
     CATCH_RETURN
 }
 
 DRM_ErrorCode DrmManager_get_float( DrmManager *m, const DrmParameterKey key, float* p_value ) {
     TRY
     checkPointer(m);
-    *p_value = m->drm->obj->get<float>((cpp::ParameterKey) key);
+    *p_value = m->drm->obj->get<float>((cpp::ParameterKey)key);
     CATCH_RETURN
 }
 
 DRM_ErrorCode DrmManager_get_double( DrmManager *m, const DrmParameterKey key, double* p_value ) {
     TRY
         checkPointer(m);
-        *p_value = m->drm->obj->get<double>((cpp::ParameterKey) key);
+        *p_value = m->drm->obj->get<double>((cpp::ParameterKey)key);
     CATCH_RETURN
 }
 
@@ -217,14 +211,14 @@ DRM_ErrorCode DrmManager_set_uint( DrmManager *m, const DrmParameterKey key, con
     CATCH_RETURN
 }
 
-DRM_ErrorCode DrmManager_set_int64( DrmManager *m, const DrmParameterKey key, const long long value ) {
+DRM_ErrorCode DrmManager_set_int64( DrmManager *m, const DrmParameterKey key, const long long int value ) {
     TRY
         checkPointer(m);
         m->drm->obj->set<int64_t>((cpp::ParameterKey)key, value);
     CATCH_RETURN
 }
 
-DRM_ErrorCode DrmManager_set_uint64( DrmManager *m, const DrmParameterKey key, const unsigned long long value ) {
+DRM_ErrorCode DrmManager_set_uint64( DrmManager *m, const DrmParameterKey key, const unsigned long long int value ) {
     TRY
         checkPointer(m);
         m->drm->obj->set<uint64_t>((cpp::ParameterKey)key, value);

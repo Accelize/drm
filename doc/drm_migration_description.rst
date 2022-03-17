@@ -180,7 +180,7 @@ From v3.x to 4.x
 
 - `activator` folder:
 
-  - DRM Activator top-level files (VHDL and Verilog) have been prefixed with 'top_' and have been moved
+  - DRM Activator top-level files (VHDL and Verilog) have been prefixed with `top_` and have been moved
     to the `sim` et `syn` folder for the simulation and synthesis respectively.
   - `simu` folder name has been replaced by `sim` and `rtl` has been replace by `core`.
   - A DRM Controller BFM has been embedded directly in the Activator simulation model to unlock the IP without
@@ -194,7 +194,7 @@ From v3.x to 4.x
 
   - RTL source files have been moved to a `rtl` folder and split in 3 different sub-folders: `core` contains
     the core of the IP, `sim` and `syn` contains the top level of the Controller IP in VHDL and SystemVerilog for
-    the simulation and synthesis respectively. Top level files are prefixed with 'top_'.
+    the simulation and synthesis respectively. Top level files are prefixed with `top_`.
   - `sdaccel` and `vitis` folders has been create: they contains the scirpt and makefile to generate the kernel
     for those specific flows.
 
@@ -203,4 +203,15 @@ From v4.1 to 4.2
 
 - The file `drm_ip_activator_package_0xVVVVLLLLNNNNVVVV.vhdl` has been added and must be compiled under `drm_library`.
 - The file `controller/rtl/core/cdc_bridge.sv` has been added and must be compiled under the default working folder.
+
+From v4.2 to 6.0
+~~~~~~~~~~~~~~~~
+
+- Nothing to do.
+
+From v6.0 to 7.0
+~~~~~~~~~~~~~~~~
+
+- The TLAST signal has been added to the AXI4-Stream interface of the DRM bus.
+- FIFOs on the AXI4-Stream lines between the Controller and the Activators are not fully supported.
 

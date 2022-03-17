@@ -62,10 +62,10 @@ stages:
           instance_type: 'f1.4xlarge'
           config_list:
           - os_distrib: 'centos_7'
-            tox_operation: '-p all -e aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug'
+            tox_operation: '-p all -e aws-build-debug,cpp-debug,c-debug,noparallel-debug,coverage-debug'
             tox_extra_option: '$(tox_mark)'
           #- os_distrib: 'ubuntu_18_04'
-          #  tox_operation: 'aws-build-debug,cpp-debug,c-debug,integration-debug,coverage-debug'
+          #  tox_operation: 'aws-build-debug,cpp-debug,c-debug,noparallel-debug,coverage-debug'
           #  tox_extra_option: '$(tox_mark)'
           #  dependsOn: 'centos_7'
 

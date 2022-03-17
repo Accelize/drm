@@ -59,6 +59,16 @@ limitations under the License.
 #define FREQ_DETECTION_VERSION_2	 0x60DC0DE0
 #define FREQ_DETECTION_VERSION_3	 0x60DC0DE1
 
+#define PNC_PAGE_SIZE               4096
+#define PNC_ALLOC_SIZE              (PNC_PAGE_SIZE * 24)
+#define PNC_DRM_INIT_SHM            11
+#define PNC_DRM_LOG_ERROR           12
+#define PNC_DRM_LOG_WARN            13
+#define PNC_DRM_LOG_INFO            14
+#define PNC_DRM_LOG_DEBUG           15
+#define PNC_DRM_LOG_TRACE1          16
+#define PNC_DRM_LOG_TRACE2          17
+
 
 #define TRY try {
 
@@ -83,23 +93,132 @@ limitations under the License.
     }
 
 
-static const std::string DRM_SELF_TEST_ERROR_MESSAGE( "Could not access DRM Controller registers.\nPlease verify:\n"
-                        "\t-The read/write callbacks implementation in the SW application: verify it uses the correct offset address of DRM Controller IP in the design address space.\n"
-                        "\t-The DRM Controller IP instantiation in the FPGA design: verify the correctness of 16-bit address received by the AXI-Lite port of the DRM Controller." );
+pnc_session_t *Accelize::DRM::DrmManager::s_pnc_session = nullptr;
+uint32_t *Accelize::DRM::DrmManager::s_pnc_tzvaddr = nullptr;
+size_t Accelize::DRM::DrmManager::s_pnc_tzsize = 0;
+uint32_t Accelize::DRM::DrmManager::s_pnc_page_offset = 0;
 
-static const std::string DRM_CONNECTION_ERROR_MESSAGE( "\n!!! The issue could be caused by a networking problem: please verify your internet access !!!\n" );
+const std::string Accelize::DRM::DrmManager::DRM_SELF_TEST_ERROR_MESSAGE = std::string(
+        "Could not access DRM Controller registers.\nPlease verify:\n"
+                        "\t-The read/write callbacks implementation in the SW application: verify it uses the correct offset address of DRM Controller IP in the design address space.\n"
+        "\t-The DRM Controller IP instantiation in the FPGA design: verify the correctness of 16-bit address received by the AXI-Lite port of the DRM Controller.\n" );
+
+const std::string Accelize::DRM::DrmManager::DRM_CONNECTION_ERROR_MESSAGE = std::string(
+        "\n!!! The issue could either be caused by a networking problem, by a firewall or NAT blocking incoming traffic or by a wrong server address. "
+                        "Please verify your configuration and try again !!!\n" );
+
+const std::string Accelize::DRM::DrmManager::DRM_CTRL_TA_INIT_ERROR_MESSAGE = std::string(
+        "Please verify:\n"
+        "\t- the DRM Controller instance in the PL is at the right offset address.\n"
+        "\t- the PUF has been registered.\n" );
+
+const std::string Accelize::DRM::DrmManager::DRM_DOC_LINK = std::string(
+        "https://tech.accelize.com/documentation/stable");
 
 
 namespace Accelize {
 namespace DRM {
 
-
 const char* getApiVersion() {
     return DRMLIB_VERSION;
 }
 
-
 class DRM_LOCAL DrmManager::Impl {
+
+private:
+
+    // DRM Controller TA communication callbacks
+
+    // Read Callback Function
+    int32_t pnc_read_drm_ctrl_ta( uint32_t addr, uint32_t *value ) {
+        *value = *(s_pnc_tzvaddr + s_pnc_page_offset + (addr >> 2));
+        return 0;
+    }
+
+    // Write Callback Function
+    int32_t pnc_write_drm_ctrl_ta( uint32_t addr, uint32_t value ) {
+        if (addr == 0) {
+            if (value > 5)
+                Throw( DRM_Fatal, "Invalid DRM Controller page index {}. ", value );
+            s_pnc_page_offset = s_pnc_tzvaddr[value];
+        }
+        *(s_pnc_tzvaddr + s_pnc_page_offset + (addr >> 2)) = value;
+        return 0;
+    }
+
+    bool pnc_initialize_drm_ctrl_ta() const {
+        int err = 0;
+        if ( s_pnc_session != nullptr) {
+            Debug( "Found and reuse an existing ProvenCore session. " );
+            return true;
+        }
+        err = pnc_session_new(PNC_ALLOC_SIZE, &s_pnc_session);
+        if ( err == -ENODEV ) {
+            Info( "Provencecore driver is not loaded" );
+            return false;
+        }
+        if ( err < 0 ) {
+            Throw( DRM_PncInitError, "Failed to open TrustZone module: {}. ", strerror(errno) );
+        }
+        Debug( "ProvenCore session created. " );
+        try {
+            int ret = 0;
+            for (int timeout = 10; timeout > 0; timeout--) {
+                ret = pnc_session_config_by_name(s_pnc_session, "drm_controller_rs");
+                if (ret < 0) {
+                    if (errno == EAGAIN) {
+                        sleep(1);
+                        continue;
+                    }
+                    Throw( DRM_PncInitError, "Failed to configure ProvenCore for DRM Controller TA: {}. ",
+                        strerror(errno) );
+                }
+                break;
+            }
+            if (ret < 0) {
+                Throw( DRM_PncInitError, "Failed to allocate resource for DRM Controller TA: Timeout. " );
+            }
+            Debug( "ProvenCore session configured for DRM Controller TA. " );
+
+            // get virtual address and size of shared memory region
+            ret = pnc_session_getinfo(s_pnc_session, (void**)&s_pnc_tzvaddr, &s_pnc_tzsize);
+            if ( ret < 0) {
+                Throw( DRM_PncInitError, "Failed to get information from DRM Controller TA: {}. ",
+                    strerror(errno) );
+            }
+            if (s_pnc_tzvaddr == NULL) {
+                Throw( DRM_PncInitError, "Failed to create shared memory for DRM Controller TA: {}. ",
+                    strerror(errno) );
+            }
+            Debug( "DRM Controller TA information collected. " );
+
+            // Request initialization of the Drm Controller Trusted App
+            uint32_t response = 0;
+            ret = pnc_session_send_request_and_wait_response(s_pnc_session, PNC_DRM_INIT_SHM, 0, &response);
+            if ( (ret < 0) || (response != 0) ) {
+                std::string msg = fmt::format( "Failed to initialize DRM Controller TA: retcode={} / response={}. ", strerror(errno), response );
+                msg += DRM_CTRL_TA_INIT_ERROR_MESSAGE;
+                msg += fmt::format(
+                    "For more details refer to the online documentation: {}/drm_hardware_integration.html#xilinx-r-som-boards",
+                    DRM_DOC_LINK );
+                Throw( DRM_PncInitError, msg );
+            }
+            Debug( "DRM Controller TA initialized and ready to operate." );
+            return true;
+        }
+        catch( const Exception &e ) {
+            pnc_session_destroy(s_pnc_session);
+            s_pnc_session = nullptr;
+            throw;
+        }
+    }
+
+    void pnc_uninitialize_drm_ctrl_ta() const {
+        pnc_session_destroy( s_pnc_session );
+        s_pnc_session = nullptr;
+        Debug( "Provencore session closed. " );
+    }
+
 
 protected:
 
@@ -111,6 +230,7 @@ protected:
     enum class eLicenseType: uint8_t {METERED, NODE_LOCKED, NONE};
     enum class eMailboxOffset: uint8_t {MB_LOCK_DRM=0, MB_CUSTOM_FIELD, MB_SESSION_0, MB_SESSION_1, MB_LIC_EXP_0, MB_LIC_EXP_1, MB_USER};
     enum class eHostDataVerbosity: uint8_t {FULL=0, PARTIAL, NONE};
+    enum class eCtrlLogVerbosity: uint8_t {ERROR=0, WARN, INFO, DEBUG, TRACE1, TRACE2};
 
     // Design constants
     const uint32_t HDK_COMPATIBILITY_LIMIT_MAJOR = 3;
@@ -122,7 +242,17 @@ protected:
             {eLicenseType::NODE_LOCKED, "Node-Locked"}
     };
 
-    const double ACTIVATIONCODE_TRANSMISSION_TIMEOUT_MS = 2000.0;
+    uint32_t SDK_CTRL_TIMEOUT_IN_US = 10000000;
+    uint32_t SDK_CTRL_SLEEP_IN_US = 100;
+
+    const std::map<eCtrlLogVerbosity, uint32_t> LogCtrlLevelMap = {
+            {eCtrlLogVerbosity::ERROR  , PNC_DRM_LOG_ERROR},
+            {eCtrlLogVerbosity::WARN   , PNC_DRM_LOG_WARN},
+            {eCtrlLogVerbosity::INFO   , PNC_DRM_LOG_INFO},
+            {eCtrlLogVerbosity::DEBUG  , PNC_DRM_LOG_DEBUG},
+            {eCtrlLogVerbosity::TRACE1 , PNC_DRM_LOG_TRACE1},
+            {eCtrlLogVerbosity::TRACE2 , PNC_DRM_LOG_TRACE2}
+    };
 
 #ifdef _WIN32
     const char path_sep = '\\';
@@ -131,7 +261,8 @@ protected:
 #endif
 
     // HDK version
-    uint32_t mDrmVersion = 0;
+    uint32_t mDrmVersionNum = 0;
+    std::string mDrmVersionStr;
 
     // Composition
     std::unique_ptr<DrmWSClient> mWsClient;
@@ -143,13 +274,15 @@ protected:
     spdlog::level::level_enum sLogConsoleVerbosity = spdlog::level::err;
     std::string sLogConsoleFormat = std::string("[%^%=8l%$] %-6t, %v");
 
-    spdlog::level::level_enum sLogFileVerbosity = spdlog::level::info;
+    spdlog::level::level_enum sLogFileVerbosity = spdlog::level::warn;
     std::string  sLogFilePath         = fmt::format( "accelize_drmlib_{}.log", getpid() );
     std::string  sLogFileFormat       = std::string("%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v");
     eLogFileType sLogFileType         = eLogFileType::NONE;
     bool         sLogFileAppend       = false;
     size_t       sLogFileRotatingSize = 100*1024; ///< Size max in KBytes of the log roating file
     size_t       sLogFileRotatingNum  = 3;
+
+    eCtrlLogVerbosity sLogCtrlVerbosity = eCtrlLogVerbosity::ERROR;
 
     // Function callbacks
     DrmManager::ReadRegisterCallback  f_read_register = nullptr;
@@ -177,14 +310,22 @@ protected:
     eLicenseType mLicenseType = eLicenseType::METERED;
     uint32_t mLicenseDuration = 0;        ///< Time duration in seconds of the license
 
-    double mActivationTransmissionTimeoutMS = ACTIVATIONCODE_TRANSMISSION_TIMEOUT_MS;  ///< Timeout in milliseconds to complete the transmission of the activation code to the Activator's interface
+    double mActivationTransmissionTimeoutMS = 0;  ///< Timeout in milliseconds to complete the transmission of the activation code to the Activator's interface
+
+    uint32_t mCtrlTimeoutInUS = 0;
+    uint32_t mCtrlSleepInUS = 0;
+    uint32_t mCtrlTimeFactor = 1;
 
     // To protect access to the metering data (to securize the segment ID check in HW)
     mutable std::mutex mMeteringAccessMutex;
 
+    // Operating mode
+    bool mIsHybrid = false;
+    bool mIsPnR = false;
+
     // DRM Frequency parameters
     int32_t mFrequencyInit = 0;
-    int32_t mFrequencyCurr = 0;
+    double mFrequencyCurr = 0.0;
     uint32_t mFrequencyDetectionPeriod = 100;       // in milliseconds
     double mFrequencyDetectionThreshold = 12.0;     // Error in percentage
     uint8_t mFreqDetectionMethod = 0;
@@ -222,12 +363,10 @@ protected:
     // XRT PATH
     std::string mXrtPath;
     std::string mXbutil;
-    Json::Value mHostConfigData;
+    Json::Value mHostConfigData = Json::nullValue;
     eHostDataVerbosity mHostDataVerbosity = eHostDataVerbosity::PARTIAL;
-    Json::Value mSettings;
-
-    // Simulation flag
-    bool mSimulationFlag{false};
+    Json::Value mSettings = Json::nullValue;
+    Json::Value mMailboxRoData = Json::nullValue;
 
     // Debug parameters
     spdlog::level::level_enum mDebugMessageLevel;
@@ -254,9 +393,9 @@ protected:
                 Throw( DRM_CtlrError, "{} failed with error code {}. ", #func, errcode );       \
             }                                                                                   \
         } catch( const std::exception &e ) {                                                    \
+            Error( "{} threw an exception: {}", #func, e.what() );                              \
             logDrmCtrlError();                                                                  \
             logDrmCtrlTrngStatus();                                                             \
-            Error( "{} threw an exception: {}", #func, e.what() );                              \
             Throw( DRM_CtlrError, e.what() );                                                   \
         }                                                                                       \
     }
@@ -280,9 +419,10 @@ protected:
         mCredFilePath = cred_file_path;
 
         mFrequencyInit = 0;
-        mFrequencyCurr = 0;
+        mFrequencyCurr = 0.0;
 
-        mSimulationFlag = false;
+        mIsHybrid = false;
+        mIsPnR = false;
 
         mDebugMessageLevel = spdlog::level::trace;
 
@@ -316,6 +456,10 @@ protected:
                         Json::uintValue, (uint32_t)sLogFileRotatingSize ).asUInt();
                 sLogFileRotatingNum = JVgetOptional( param_lib, "log_file_rotating_num",
                         Json::uintValue, (uint32_t)sLogFileRotatingNum ).asUInt();
+
+                // Software Controller logging
+                sLogCtrlVerbosity = static_cast<eCtrlLogVerbosity>( JVgetOptional(
+                        param_lib, "log_ctrl_verbosity", Json::uintValue, (uint32_t)sLogCtrlVerbosity ).asUInt() );
 
                 // Frequency detection
                 mFrequencyDetectionPeriod = JVgetOptional( param_lib, "frequency_detection_period",
@@ -367,23 +511,14 @@ protected:
                 // Get DRM frequency related parameters
                 Json::Value conf_drm = JVgetRequired( conf_json, "drm", Json::objectValue );
                 mFrequencyInit = JVgetRequired( conf_drm, "frequency_mhz", Json::intValue ).asUInt();
-                mFrequencyCurr = mFrequencyInit;
+                mFrequencyCurr = double(mFrequencyInit);
                 mBypassFrequencyDetection = JVgetOptional( conf_drm, "bypass_frequency_detection", Json::booleanValue,
                         mBypassFrequencyDetection ).asBool();
+                mIsHybrid = JVgetOptional( conf_drm, "drm_software", Json::booleanValue, false ).asBool();
             }
 
             // Optionally, check derived product
             mDerivedProductFromConf = JVgetOptional( conf_json, "derived_product", Json::stringValue, "" ).asString();
-
-            // Check DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS variable exists
-            char* env_val = getenv( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS" );
-            if (env_val == NULL) {
-                Debug( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS variable is not defined" );
-            } else {
-                Warning( "Accelize DRM Library is configured to run for simulation only" );
-                mSimulationFlag = true;
-                mActivationTransmissionTimeoutMS *= 1000;
-            }
 
         } catch( const Exception &e ) {
             if ( e.getErrCode() != DRM_BadFormat )
@@ -461,6 +596,31 @@ protected:
         }
     }
 
+    void checkCtrlLogLevel( eCtrlLogVerbosity level_e ) {
+        if ( LogCtrlLevelMap.find( level_e ) == LogCtrlLevelMap.end() ) {
+            Throw( DRM_BadArg, "Invalid log level for SW Controller: {}", level_e );
+        }
+    }
+
+    void updateCtrlLogLevel( eCtrlLogVerbosity level_e, bool force = false ) {
+        if ( !mIsPnR ) {
+            Warning( "This command has no effect on HW DRM Controller IP" );
+            return;
+        }
+        checkCtrlLogLevel( level_e );
+        if ( force || ( level_e != sLogCtrlVerbosity ) ) {
+            uint32_t level_id = LogCtrlLevelMap.find( level_e )->second;
+            if ( pnc_session_request(s_pnc_session, level_id, 0) < 0) {
+                Throw( DRM_PncInitError, "Failed to set the log level of the DRM Controller TA to {}: {}. ",
+                        level_id, strerror(errno) );
+            }
+            Debug( "Updated log level for SW Controller from {} to {}", sLogCtrlVerbosity, level_e );
+            sLogCtrlVerbosity = level_e;
+        } else {
+            Debug( "Log level for SW Controller is already set to {}", sLogCtrlVerbosity );
+        }
+    }
+
     void getDrmCtrlError( uint8_t& activation_error, uint8_t& dna_error, uint8_t& vlnv_error, uint8_t& license_error ) const {
         getDrmController().readActivationErrorRegister( activation_error );
         getDrmController().readExtractDnaErrorRegister( dna_error );
@@ -477,10 +637,10 @@ protected:
         Debug( "Controller License Timer error register: 0x{:02x}", license_error );
     }
 
-    void getTrngStatus( bool securityAlertBit, std::string& adaptiveProportionTestError,
-                        std::string& repetitionCountTestError ) const {
-        auto drmMajor = ( mDrmVersion >> 16 ) & 0xFF;
-        auto drmMinor = ( mDrmVersion >> 8  ) & 0xFF;
+    void getTrngStatus( bool securityAlertBit, uint32_t& adaptiveProportionTestError,
+                        uint32_t& repetitionCountTestError ) const {
+        auto drmMajor = ( mDrmVersionNum >> 16 ) & 0xFF;
+        auto drmMinor = ( mDrmVersionNum >> 8  ) & 0xFF;
         if ( ( drmMajor > 4 ) || ( ( drmMajor == 4 ) && ( drmMinor >= 2 ) ) ) {
             checkDRMCtlrRet( getDrmController().readSecurityAlertStatusRegister( securityAlertBit ) );
             checkDRMCtlrRet( getDrmController().extractAdaptiveProportionTestFailures( adaptiveProportionTestError ) );
@@ -492,7 +652,7 @@ protected:
 
     void logDrmCtrlTrngStatus() const {
         bool securityAlertBit( false );
-        std::string adaptiveProportionTestError, repetitionCountTestError;
+        uint32_t adaptiveProportionTestError, repetitionCountTestError;
         getTrngStatus( securityAlertBit, adaptiveProportionTestError, repetitionCountTestError );
         Debug( "Controller TRNG status: security alert bit = {}, adaptative proportion test error = {}, repetition count test error = {}",
                 securityAlertBit, adaptiveProportionTestError, repetitionCountTestError );
@@ -607,6 +767,8 @@ protected:
 
     Json::Value buildSettingsNode() {
         Json::Value settings;
+        settings["drm_software"] = mIsHybrid;
+        settings["drm_pnr"] = mIsPnR;
         settings["frequency_detection_method"] = mFreqDetectionMethod;
         settings["bypass_frequency_detection"] = mBypassFrequencyDetection;
         settings["frequency_detection_threshold"] = mFrequencyDetectionThreshold;
@@ -617,6 +779,7 @@ protected:
         settings["log_file_rotating_num"] = static_cast<uint32_t>( sLogFileRotatingNum );
         settings["log_file_verbosity"] = static_cast<uint32_t>( sLogFileVerbosity );
         settings["log_verbosity"] = static_cast<uint32_t>( sLogConsoleVerbosity );
+        settings["log_ctrl_verbosity"] = static_cast<uint32_t>( sLogCtrlVerbosity );
         settings["ws_retry_period_long"] = mWSRetryPeriodLong;
         settings["ws_retry_period_short"] = mWSRetryPeriodShort;
         settings["ws_request_timeout"] = (int32_t)(getDrmWSClient().getRequestTimeoutMS() / 1000);
@@ -625,7 +788,9 @@ protected:
         settings["health_retry_sleep"] = mHealthRetrySleep;
         settings["ws_api_retry_duration"] = mWSApiRetryDuration;
         settings["host_data_verbosity"] = static_cast<uint32_t>( mHostDataVerbosity );
-        settings["simulation_flag"] = mSimulationFlag;
+        settings["drm_ctrl_time_factor"] = mCtrlTimeFactor;
+        settings["drm_ctrl_timeout_us"] = mCtrlTimeoutInUS;
+        settings["drm_ctrl_sleep_us"] = mCtrlSleepInUS;
         settings["axi_frequency"] = mAxiFrequency;
         return settings;
     }
@@ -639,7 +804,7 @@ protected:
 
     uint32_t getUserMailboxSize() const {
         uint32_t mbSize = getMailboxSize() - (uint32_t)eMailboxOffset::MB_USER;
-        auto drmMajor = ( mDrmVersion >> 16 ) & 0xFF;
+        auto drmMajor = ( mDrmVersionNum >> 16 ) & 0xFF;
         if ( (drmMajor <= 3) && (mbSize >= 4) )
             // Used to compensate the bug in the HDK that prevent any access to the highest addresses of the mailbox
             mbSize -= 4;
@@ -812,25 +977,23 @@ protected:
 
     // Check compatibility of the DRM Version with Algodone version
     void checkHdkCompatibility() {
-        std::string drmVersionDot;
-
         std::string drmVersion = getDrmCtrlVersion();
-        mDrmVersion = DrmControllerLibrary::DrmControllerDataConverter::hexStringToBinary( drmVersion )[0];
-        drmVersionDot = DrmControllerLibrary::DrmControllerDataConverter::binaryToVersionString( mDrmVersion );
+        mDrmVersionNum = DrmControllerLibrary::DrmControllerDataConverter::hexStringToBinary( drmVersion )[0];
+        mDrmVersionStr = DrmControllerLibrary::DrmControllerDataConverter::binaryToVersionString( mDrmVersionNum );
 
-        auto drmMajor = ( mDrmVersion >> 16 ) & 0xFF;
-        auto drmMinor = ( mDrmVersion >> 8  ) & 0xFF;
+        auto drmMajor = ( mDrmVersionNum >> 16 ) & 0xFF;
+        auto drmMinor = ( mDrmVersionNum >> 8  ) & 0xFF;
 
         if ( drmMajor < HDK_COMPATIBILITY_LIMIT_MAJOR ) {
             Throw( DRM_CtlrError,
                     "This DRM Library version {} is not compatible with the DRM HDK version {}: To be compatible HDK version shall be > or equal to {}.{}.x ",
-                    DRMLIB_VERSION, drmVersionDot, HDK_COMPATIBILITY_LIMIT_MAJOR, HDK_COMPATIBILITY_LIMIT_MINOR );
+                    DRMLIB_VERSION, mDrmVersionStr, HDK_COMPATIBILITY_LIMIT_MAJOR, HDK_COMPATIBILITY_LIMIT_MINOR );
         } else if ( ( drmMajor == HDK_COMPATIBILITY_LIMIT_MAJOR ) && ( drmMinor < HDK_COMPATIBILITY_LIMIT_MINOR ) ) {
             Throw( DRM_CtlrError,
                     "This DRM Library version {} is not compatible with the DRM HDK version {}: To be compatible HDK version shall be > or equal to {}.{}.x ",
-                    DRMLIB_VERSION, drmVersionDot, HDK_COMPATIBILITY_LIMIT_MAJOR, HDK_COMPATIBILITY_LIMIT_MINOR );
+                    DRMLIB_VERSION, mDrmVersionStr, HDK_COMPATIBILITY_LIMIT_MAJOR, HDK_COMPATIBILITY_LIMIT_MINOR );
         }
-        Debug( "DRM HDK Version: {}", drmVersionDot );
+        Debug( "DRM HDK Version: {}", mDrmVersionStr );
     }
 
     /* Run BIST to check Page register access
@@ -854,14 +1017,18 @@ protected:
      * This test write and read mailbox registers to verify the read and write callbacks are working correctly.
      */
     void runBistLevel2() const {
-        // Get mailbox size
+        // Check mailbox size
+        uint32_t mb_full_size = getMailboxSize();
+        if ( mb_full_size < (uint32_t)eMailboxOffset::MB_USER ) {
+            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Unexpected mailbox size {}: Must be > {}.\n{}", mb_full_size, eMailboxOffset::MB_USER, DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
+        }
         uint32_t mbSize = getUserMailboxSize();
 
         // Check mailbox size
         uint32_t mbSizeMax = 0x8000;
         if ( mbSize >= mbSizeMax ) {
             Debug( "DRM Communication Self-Test 2 failed: bad size {}", mbSize );
-            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Unexpected mailbox size ({} > {}).\n{}", mbSize, mbSizeMax, DRM_SELF_TEST_ERROR_MESSAGE); //LCOV_EXCL_LINE
+            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Unexpected mailbox size ({} > {}).\n{}", mbSize, mbSizeMax, DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
         }
         Debug( "DRM Communication Self-Test 2: test size of mailbox passed" );
 
@@ -928,6 +1095,16 @@ protected:
         if ( mDrmController )
             return;
 
+        // Check DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS variable exists
+        const char* ctrl_timeout = getenv( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS" );
+        mCtrlTimeoutInUS = std::stoul(std::string(ctrl_timeout));
+        Debug("DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS environment variable is {}", mCtrlTimeoutInUS);
+        mActivationTransmissionTimeoutMS = 20.0 * mCtrlTimeoutInUS;
+
+        const char* ctrl_sleep = getenv( "DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS" );
+        mCtrlSleepInUS = std::stoul(std::string(ctrl_sleep));
+        Debug("DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS environment variable is {}", mCtrlSleepInUS);
+
         // create instance
         try {
             mDrmController.reset(
@@ -969,9 +1146,9 @@ protected:
                 detectDrmFrequencyMethod3();
             } else if ( mFreqDetectionMethod == 2 ) {
                 detectDrmFrequencyMethod2();
-            } else if ( mFreqDetectionMethod == 1 ) {
+            } else if ( ( mFreqDetectionMethod == 1 ) || ( mFreqDetectionMethod == 0 ) ) {
             } else {
-                Warning( "DRM frequency auto-detection is disabled: {} will be used to compute license timers", mFrequencyCurr );
+                Warning( "DRM frequency auto-detection is disabled: {:0.1f} will be used to compute license timers", mFrequencyCurr );
             }
         }
 
@@ -1105,21 +1282,21 @@ protected:
         // Fulfill with product information
         if ( !mailboxReadOnly.empty() ) {
             try {
-                Json::Value product_info = parseJsonString( mailboxReadOnly );
-                if ( product_info.isMember( "product_id" ) )
-                    json_output["product"] = product_info["product_id"];
+                mMailboxRoData = parseJsonString( mailboxReadOnly );
+                if ( mMailboxRoData.isMember( "product_id" ) )
+                    json_output["product"] = mMailboxRoData["product_id"];
                 else
-                    json_output["product"] = product_info;
-                if ( product_info.isMember( "pkg_version" ) ) {
-                    json_output["pkg_version"] = product_info["pkg_version"];
+                    json_output["product"] = mMailboxRoData;
+                if ( mMailboxRoData.isMember( "pkg_version" ) ) {
+                    json_output["pkg_version"] = mMailboxRoData["pkg_version"];
                     Debug( "HDK Generator version: {}", json_output["pkg_version"].asString() );
                 }
-                if ( product_info.isMember( "dna_type" ) ) {
-                    json_output["dna_type"] = product_info["dna_type"];
+                if ( mMailboxRoData.isMember( "dna_type" ) ) {
+                    json_output["dna_type"] = mMailboxRoData["dna_type"];
                     Debug( "HDK DNA type: {}", json_output["dna_type"].asString() );
                 }
-                if ( product_info.isMember( "extra" ) ) {
-                    json_output["extra"] = product_info["extra"];
+                if ( mMailboxRoData.isMember( "extra" ) ) {
+                    json_output["extra"] = mMailboxRoData["extra"];
                     Debug( "HDK extra data: {}", json_output["extra"].toStyledString() );
                 }
             } catch( const Exception &e ) {
@@ -1180,8 +1357,9 @@ protected:
         json_request["saasChallenge"] = saasChallenge;
         json_request["meteringFile"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
         json_request["request"] = "open";
-        if ( !isConfigInNodeLock() )
+        if ( !isConfigInNodeLock() && !mIsHybrid ) {
             json_request["drm_frequency"] = mFrequencyCurr;
+        }
         json_request["mode"] = (uint8_t)mLicenseType;
 
         return json_request;
@@ -1196,14 +1374,15 @@ protected:
         Debug( "Build license request #{} to maintain current session", mLicenseCounter );
 
         // Check if an error occurred
-        checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 5 ) );
+        uint32_t timeout = 5 * mCtrlTimeFactor;
+        checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( timeout ) );
         // Request challenge and metering info for new request
         checkDRMCtlrRet( getDrmController().synchronousExtractMeteringFile( numberOfDetectedIps, saasChallenge, meteringFile ) );
         json_request["saasChallenge"] = saasChallenge;
         json_request["sessionId"] = meteringFile[0].substr( 0, 16 );
         checkSessionIDFromDRM( json_request );
 
-        if ( !isConfigInNodeLock() )
+        if ( !isConfigInNodeLock() && !mIsHybrid )
             json_request["drm_frequency"] = mFrequencyCurr;
         json_request["meteringFile"] = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
         json_request["request"] = "running";
@@ -1225,7 +1404,7 @@ protected:
         json_request["sessionId"] = meteringFile[0].substr( 0, 16 );
         checkSessionIDFromDRM( json_request );
 
-        if ( !isConfigInNodeLock() )
+        if ( !isConfigInNodeLock() && !mIsHybrid )
             json_request["drm_frequency"] = mFrequencyCurr;
         json_request["meteringFile"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
         json_request["request"] = "close";
@@ -1262,7 +1441,8 @@ protected:
         }
         // Finalize the request with the collected data
         json_request["meteringFile"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
-        json_request["drm_frequency"] = mFrequencyCurr;
+        if ( !mIsHybrid )
+            json_request["drm_frequency"] = mFrequencyCurr;
         json_request["request"] = "health";
         json_request["health_id"] = mHealthCounter++;
         return json_request;
@@ -1281,6 +1461,7 @@ protected:
         checkDRMCtlrRet( getDrmController().extractDrmVersion( drmVersion ) );
         checkDRMCtlrRet( getDrmController().extractDna( dna ) );
         checkDRMCtlrRet( getDrmController().extractVlnvFile( nbOfDetectedIps, vlnvFile ) );
+        Debug( "Number of detected activators: {}", nbOfDetectedIps );
         checkDRMCtlrRet( getDrmController().readMailboxFileRegister( readOnlyMailboxSize, readWriteMailboxSize,
                                                                      readOnlyMailboxData, readWriteMailboxData ) );
         Debug( "Mailbox sizes: read-only={}, read-write={}", readOnlyMailboxSize, readWriteMailboxSize );
@@ -1460,7 +1641,7 @@ protected:
             if ( !isConfigInNodeLock() )
                 licenseTimer = JVgetRequired( dna_node, "licenseTimer", Json::stringValue ).asString();
             mLicenseDuration = JVgetRequired( metering_node, "timeoutSecond", Json::uintValue ).asUInt();
-            if ( mLicenseDuration == 0 )
+            if ( ( mLicenseDuration == 0 ) && ( mLicenseType == eLicenseType::NODE_LOCKED ) )
                 Warning( "'timeoutSecond' field sent by License WS must not be 0" );
 
         } catch( const Exception &e ) {
@@ -1477,7 +1658,8 @@ protected:
 
         // Load license timer
         if ( !isConfigInNodeLock() ) {
-            checkDRMCtlrRet( getDrmController().loadLicenseTimerInit( licenseTimer ) );
+            uint32_t timeout = 5 * mCtrlTimeFactor;
+            checkDRMCtlrRet( getDrmController().loadLicenseTimerInit( licenseTimer, mIsHybrid, timeout ) );
             Debug( "Wrote license timer #{} of session ID {} for a duration of {} seconds",
                     mLicenseCounter, mSessionID, mLicenseDuration );
         }
@@ -1491,45 +1673,15 @@ protected:
         Debug( "Update expiration time to {}", time_t_to_string( steady_clock_to_time_t( mExpirationTime ) ) );
 
         // Wait until license has been pushed to Activator's port
-        bool activationCodesTransmitted( false );
-        TClock::duration timeSpan;
-        double mseconds( 0.0 );
-        TClock::time_point timeStart = TClock::now();
-        uint32_t sleep_period = 10000;
-        if ( mSimulationFlag )
-            sleep_period *= 1000;
-
-        while( mseconds < mActivationTransmissionTimeoutMS ) {
-            checkDRMCtlrRet( getDrmController().readActivationCodesTransmittedStatusRegister(
-                    activationCodesTransmitted ) );
-            timeSpan = TClock::now() - timeStart;
-            mseconds = 1000.0 * double( timeSpan.count() ) * TClock::period::num / TClock::period::den;
-            if ( activationCodesTransmitted ) {
-                Debug( "License #{} transmitted after {:f} ms", mLicenseCounter, mseconds );
-                break;
-            }
-            Debug2( "License #{} not transmitted yet after {:f} ms", mLicenseCounter, mseconds );
-            usleep(sleep_period);
-        }
-        if ( !activationCodesTransmitted ) {
-            Throw( DRM_CtlrError, "DRM Controller could not transmit Licence #{} to activators after {:f} ms. ", mLicenseCounter, mseconds ); //LCOV_EXCL_LINE
-        }
+        waitActivationCodeTransmitted();
 
         // Check DRM Controller has switched to the right license mode
-        bool is_nodelocked = isDrmCtrlInNodelock();
-        bool is_metered = isDrmCtrlInMetering();
-        if ( is_nodelocked && is_metered )
-            Unreachable( "DRM Controller cannot be in both Node-Locked and Metering/Floating license modes. " ); //LCOV_EXCL_LINE
-        if ( !isConfigInNodeLock() ) {
-            if ( !is_metered )
-                Unreachable( "DRM Controller failed to switch to Metering license mode" ); //LCOV_EXCL_LINE
-            Debug( "DRM Controller is in Metering license mode" );
-        } else {
-            if ( !is_nodelocked )
-                Unreachable( "DRM Controller failed to switch to Node-Locked license mode" ); //LCOV_EXCL_LINE
-            Debug( "DRM Controller is in Node-Locked license mode" );
-        }
-        Debug( "Provisioned license #{} for session {} on DRM controller", mLicenseCounter, mSessionID );
+        checkDRMControllerLicenseType();
+
+        // Wait until session is running if license is metering
+        waitUntilSessionIsRunning();
+
+        Info( "Provisioned license #{} for session {} on DRM controller", mLicenseCounter, mSessionID );
         mLicenseCounter ++;
     }
 
@@ -1707,7 +1859,17 @@ protected:
             Debug( "Frequency detection sequence is bypassed." );
             return;
         }
-        int ret = readDrmAddress( REG_FREQ_DETECTION_VERSION, reg );
+
+        if ( mIsHybrid ){
+            Debug( "SW DRM Controller: no frequency detection is performed" );
+            mFreqDetectionMethod = 0;
+            mBypassFrequencyDetection = true;
+            mFrequencyCurr = 0.001;
+            return;
+        }
+
+        int ret = writeDrmAddress(0, 0 );
+        ret |= readDrmAddress( REG_FREQ_DETECTION_VERSION, reg );
         if ( ret != 0 ) {
             Debug( "Failed to read DRM Ctrl frequency detection version register, errcode = {}. ", ret ); //LCOV_EXCL_LINE
         }
@@ -1773,8 +1935,8 @@ protected:
 
         // Compute estimated DRM frequency
         int32_t measured_frequency = (int32_t)((double)counter / mFrequencyDetectionPeriod / 1000);
-        Debug( "Frequency detection counter after {:f} ms is 0x{:08x}  => estimated frequency = {} MHz",
-            (double)mFrequencyDetectionPeriod/1000, counter, measured_frequency );
+        Debug( "Frequency detection counter after {} ms is 0x{:08x}  => estimated frequency = {} MHz",
+            mFrequencyDetectionPeriod, counter, measured_frequency );
 
         checkDrmFrequency( measured_frequency );
     }
@@ -1817,13 +1979,13 @@ protected:
 
         // Compute estimated DRM frequency for s_axi_aclk
         mAxiFrequency = (int32_t)((double)counter_axiaclk / mFrequencyDetectionPeriod / 1000);
-        Debug( "Frequency detection of s_axi_aclk counter after {:f} ms is 0x{:08x}  => estimated frequency = {} MHz",
-            (double)mFrequencyDetectionPeriod/1000, counter_axiaclk, mAxiFrequency );
+        Debug( "Frequency detection of s_axi_aclk counter after {} ms is 0x{:08x}  => estimated frequency = {} MHz",
+            mFrequencyDetectionPeriod, counter_axiaclk, mAxiFrequency );
 
         // Compute estimated DRM frequency for drm_aclk
         int32_t measured_drmaclk = (int32_t)((double)counter_drmaclk / mFrequencyDetectionPeriod / 1000);
-        Debug( "Frequency detection of drm_aclk counter after {:f} ms is 0x{:08x}  => estimated frequency = {} MHz",
-            (double)mFrequencyDetectionPeriod/1000, counter_drmaclk, measured_drmaclk );
+        Debug( "Frequency detection of drm_aclk counter after {} ms is 0x{:08x}  => estimated frequency = {} MHz",
+            mFrequencyDetectionPeriod, counter_drmaclk, measured_drmaclk );
         checkDrmFrequency( measured_drmaclk ); // Only drm_aclk can be verified because provided in the config.json
     }
 
@@ -1984,7 +2146,7 @@ protected:
                 if ( errcode != DRM_Exit ) {
                     std::string errmsg = std::string( e.what() );
                     if ( ( errcode >= DRM_WSReqError ) && ( errcode <= DRM_WSTimedOut ) ) {
-                        errmsg += "\nThe issue could be caused by a networking problem: Please verify your internet access.";
+                        errmsg += DRM_CONNECTION_ERROR_MESSAGE;
                     }
                     Error( errmsg );
                     f_asynch_error( errmsg );
@@ -2070,7 +2232,7 @@ protected:
                     if ( errcode != DRM_Exit ) {
                         std::string errmsg = std::string( e.what() );
                         if ( ( errcode >= DRM_WSReqError ) && ( errcode <= DRM_WSTimedOut ) ) {
-                            errmsg += "\nThe issue could be caused by a networking problem: Please verify your internet access.";
+                            errmsg += DRM_CONNECTION_ERROR_MESSAGE;
                         }
                         Error( errmsg );
                         f_asynch_error( errmsg );
@@ -2108,6 +2270,71 @@ protected:
         }
     }
 
+    void waitActivationCodeTransmitted() {
+        bool activationCodesTransmitted( false );
+        TClock::duration timeSpan;
+        double mseconds( 0.0 );
+        uint32_t sleep_period = mCtrlSleepInUS * 100;
+        TClock::time_point timeStart = TClock::now();
+        while( mseconds < mActivationTransmissionTimeoutMS ) {
+            checkDRMCtlrRet( getDrmController().readActivationCodesTransmittedStatusRegister(
+                    activationCodesTransmitted ) );
+            timeSpan = TClock::now() - timeStart;
+            mseconds = 1000.0 * double( timeSpan.count() ) * TClock::period::num / TClock::period::den;
+            if ( activationCodesTransmitted ) {
+                Debug( "License #{} transmitted after {:f} ms", mLicenseCounter, mseconds );
+                break;
+            }
+            Debug2( "License #{} not transmitted yet after {:f} ms", mLicenseCounter, mseconds );
+            usleep(sleep_period);
+        }
+        if ( !activationCodesTransmitted ) {
+            Throw( DRM_CtlrError, "DRM Controller could not transmit Licence #{} to activators after {:f} ms. ", mLicenseCounter, mseconds ); //LCOV_EXCL_LINE
+        }
+    }
+
+    void checkDRMControllerLicenseType() {
+        bool is_nodelocked = isDrmCtrlInNodelock();
+        bool is_metered = isDrmCtrlInMetering();
+        if ( is_nodelocked && is_metered )
+            Unreachable( "DRM Controller cannot be in both Node-Locked and Metering/Floating license modes. " ); //LCOV_EXCL_LINE
+        if ( !isConfigInNodeLock() ) {
+            if ( !is_metered )
+                Unreachable( "DRM Controller failed to switch to Metering license mode" ); //LCOV_EXCL_LINE
+            Debug( "DRM Controller is in Metering license mode" );
+        } else {
+            if ( !is_nodelocked )
+                Unreachable( "DRM Controller failed to switch to Node-Locked license mode" ); //LCOV_EXCL_LINE
+            Debug( "DRM Controller is in Node-Locked license mode" );
+        }
+    }
+
+    void waitUntilSessionIsRunning() {
+        if ( !isDrmCtrlInMetering() ) {
+            Debug( "There is no session in Node-Locked licensing mode" );
+            return;
+        }
+        double mseconds( 0.0 );
+        bool is_running(false);
+        TClock::duration timeSpan;
+        uint32_t sleep_period = mCtrlSleepInUS * 100;
+        TClock::time_point timeStart = TClock::now();
+        while( mseconds < mActivationTransmissionTimeoutMS ) {
+            is_running = isSessionRunning();
+            timeSpan = TClock::now() - timeStart;
+            mseconds = 1000.0 * double( timeSpan.count() ) * TClock::period::num / TClock::period::den;
+            if ( is_running ) {
+                Debug( "Session ID {} is now running after {:f} ms", mSessionID, mseconds );
+                break;
+            }
+            Debug2( "Session ID {} is not running yet after {:f} ms", mSessionID, mseconds );
+            usleep(sleep_period);
+        }
+        if ( !is_running ) {
+            Throw( DRM_CtlrError, "DRM Controller could not run Session ID {} after {:f} ms. ", mSessionID, mseconds ); //LCOV_EXCL_LINE
+        }
+    }
+
     void startSession() {
         {
             Debug( "Waiting metering access mutex from startSession" );
@@ -2125,8 +2352,6 @@ protected:
             // Send request and receive new license
             Json::Value license_json = getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
             setLicense( license_json );
-            // Check if an error occurred
-            checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( 5 ) );
 
             // Extract asynchronous health parameters from response
             Json::Value metering_node = JVgetOptional( license_json, "metering", Json::objectValue, Json::nullValue );
@@ -2199,11 +2424,11 @@ protected:
         Debug2( "Clearing session ID: {}", mSessionID );
         std::string sessionID = mSessionID;
         mSessionID = std::string("");
+        // Clear mailbox
         writeMailbox<uint64_t>( eMailboxOffset::MB_SESSION_0, 0 );
         Debug( "Reseting expiration time" );
         mExpirationTime = TClock::time_point();
         writeMailbox<time_t>( eMailboxOffset::MB_LIC_EXP_0, steady_clock_to_time_t( mExpirationTime ) );
-
         // Clear security flag
         Debug( "Clearing stop security flag" );
         mSecurityStop = false;
@@ -2265,14 +2490,56 @@ public:
     {
         TRY
             Debug( "Calling Impl public constructor" );
+            const char* ctrl_timeout = getenv( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS" );
+            const char* ctrl_sleep = getenv( "DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS" );
             if ( f_user_asynch_error )
                 f_asynch_error = f_user_asynch_error;
-            if ( !f_user_read_register )
+            // Determine DRM Ctrl TA existance by trying to initialize it
+            mIsPnR = pnc_initialize_drm_ctrl_ta();
+            if ( mIsPnR ) {
+                mIsHybrid = true;
+                //  Set Ctrl TA logging
+                updateCtrlLogLevel( sLogCtrlVerbosity, true );
+                //  Set callbacks
+                f_read_register = [&]( uint32_t  offset, uint32_t *value ) {
+                    return pnc_read_drm_ctrl_ta( offset, value );
+                };
+                f_write_register = [&]( uint32_t  offset, uint32_t value ) {
+                    return pnc_write_drm_ctrl_ta(offset, value );
+                };
+            } else {
+                f_read_register = f_user_read_register;
+                f_write_register = f_user_write_register;
+            }
+            if ( mIsHybrid ) {
+                if ( mIsPnR )
+                    Debug( "DRM Controller is a PnR Trusted Application" );
+                else
+                    Debug( "DRM Controller is a Software Application" );
+                // Set sleep period because SW Controller is slower
+                mCtrlTimeFactor = 100;
+            } else {
+                Debug( "DRM Controller is a FPGA IP" );
+                mCtrlTimeFactor = 1;
+            }
+            uint32_t timeout_period = SDK_CTRL_TIMEOUT_IN_US * mCtrlTimeFactor;
+            uint32_t sleep_period = SDK_CTRL_SLEEP_IN_US * mCtrlTimeFactor;
+            std::string s_timeout_period = std::to_string(timeout_period);
+            std::string s_sleep_period = std::to_string(sleep_period);
+            if (ctrl_timeout == NULL) {
+                Debug( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS variable is not defined" );
+                setenv("DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS", s_timeout_period.c_str() , 0);
+            }
+            if (ctrl_sleep == NULL) {
+                Debug( "DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS variable is not defined" );
+                setenv("DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS", s_sleep_period.c_str(), 0);
+            }
+            if ( !f_read_register )
                 Throw( DRM_BadArg, "Read register callback function must not be NULL. " );
-            f_read_register = f_user_read_register;
-            if ( !f_user_write_register )
+            if ( !f_write_register )
                 Throw( DRM_BadArg, "Write register callback function must not be NULL. " );
-            f_write_register = f_user_write_register;
+            if ( !f_asynch_error )
+                Throw( DRM_BadArg, "Asynchronous error callback function must not be NULL. " );
             initDrmInterface();
             getHostAndCardInfo();
             Debug( "Exiting Impl public constructor" );
@@ -2280,8 +2547,8 @@ public:
     }
 
     ~Impl() {
-        TRY
-            try {
+        try {
+            TRY
                 Debug( "Calling Impl destructor" );
                 if ( mSecurityStop && isSessionRunning() ) {
                     Debug( "Security stop triggered: stopping current session" );
@@ -2289,10 +2556,13 @@ public:
                 } else {
                     stopThread();
                 }
-            } catch( ... ) {}
-            unlockDrmToInstance();
-            Debug( "Exiting Impl destructor" );
-        CATCH_AND_THROW
+
+            CATCH_AND_THROW
+        } catch(...) {}
+        unlockDrmToInstance();
+        pnc_uninitialize_drm_ctrl_ta();
+        Debug( "Exiting Impl destructor" );
+        sLogger->flush();
     }
 
     void activate( const bool& resume_session_request = false ) {
@@ -2465,7 +2735,7 @@ public:
                         uint64_t ip_metering = 0;
                         #else
                         // No "int64_t" support with JsonCpp < 1.7.5
-                        unsigned long long ip_metering = 0;
+                        unsigned long long int ip_metering = 0;
                         #endif
                         Json::Value json_request = getMeteringHealth();
                         std::string meteringFileStr = json_request["meteringFile"].asString();
@@ -2709,7 +2979,7 @@ public:
                     case ParameterKey::trng_status: {
                         Json::Value trng_status_json;
                         bool securityAlertBit( false );
-                        std::string adaptiveProportionTestError, repetitionCountTestError;
+                        uint32_t adaptiveProportionTestError, repetitionCountTestError;
                         getTrngStatus( securityAlertBit, adaptiveProportionTestError, repetitionCountTestError );
                         trng_status_json["security_alert_bit"] = securityAlertBit;
                         trng_status_json["adaptive_proportion_test_error"] = adaptiveProportionTestError;
@@ -2738,6 +3008,31 @@ public:
                         int32_t con_timeout_sec = (int32_t)(getDrmWSClient().getConnectionTimeoutMS() / 1000);
                         json_value[key_str] = con_timeout_sec;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id, con_timeout_sec );
+                        break;
+                    }
+                    case ParameterKey::log_ctrl_verbosity: {
+                        uint32_t logVerbosity = static_cast<uint32_t>( sLogCtrlVerbosity );
+                        json_value[key_str] = logVerbosity;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                                logVerbosity );
+                        break;
+                    }
+                    case ParameterKey::is_drm_software: {
+                        json_value[key_str] = mIsHybrid;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                                mIsHybrid );
+                        break;
+                    }
+                    case ParameterKey::controller_version: {
+                        json_value[key_str] = mDrmVersionStr;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                                mDrmVersionStr );
+                        break;
+                    }
+                    case ParameterKey::controller_rom: {
+                        json_value[key_str] = mMailboxRoData;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                                mMailboxRoData.toStyledString() );
                         break;
                     }
                     case ParameterKey::ParameterKeyCount: {
@@ -2903,6 +3198,14 @@ public:
                         Debug( "Set parameter '{}' (ID={}) to value {}", key_str, key_id, vln_str );
                         break;
                     }
+                    case ParameterKey::log_ctrl_verbosity: {
+                        int32_t verbosityInt = (*it).asInt();
+                        eCtrlLogVerbosity level_e = static_cast<eCtrlLogVerbosity>( verbosityInt );
+                        updateCtrlLogLevel( level_e );
+                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
+                               verbosityInt);
+                        break;
+                    }
                     default:
                         Throw( DRM_BadArg, "Parameter '{}' cannot be overwritten. ", key_str );
                 }
@@ -2933,60 +3236,60 @@ public:
 
 template<> std::string DrmManager::Impl::get( const ParameterKey key_id ) const {
     TRY
-		IMPL_GET_BODY
-		if ( json_value[key_str].isString() )
-		    return json_value[key_str].asString();
-		return json_value[key_str].toStyledString();
+        IMPL_GET_BODY
+        if ( json_value[key_str].isString() )
+            return json_value[key_str].asString();
+        return json_value[key_str].toStyledString();
     CATCH_AND_THROW
 }
 
 template<> bool DrmManager::Impl::get( const ParameterKey key_id ) const {
-	TRY
-		IMPL_GET_BODY
-		return json_value[key_str].asBool();
-	CATCH_AND_THROW
+    TRY
+        IMPL_GET_BODY
+        return json_value[key_str].asBool();
+    CATCH_AND_THROW
 }
 
 template<> int32_t DrmManager::Impl::get( const ParameterKey key_id ) const {
-	TRY
-		IMPL_GET_BODY
-		return json_value[key_str].asInt();
-	CATCH_AND_THROW
+    TRY
+        IMPL_GET_BODY
+        return json_value[key_str].asInt();
+    CATCH_AND_THROW
 }
 
 template<> uint32_t DrmManager::Impl::get( const ParameterKey key_id ) const {
-	TRY
-		IMPL_GET_BODY
-		return json_value[key_str].asUInt();
-	CATCH_AND_THROW
+    TRY
+        IMPL_GET_BODY
+        return json_value[key_str].asUInt();
+    CATCH_AND_THROW
 }
 
 template<> int64_t DrmManager::Impl::get( const ParameterKey key_id ) const {
-	TRY
-		IMPL_GET_BODY
-		return json_value[key_str].asInt64();
-	CATCH_AND_THROW
+    TRY
+        IMPL_GET_BODY
+        return json_value[key_str].asInt64();
+    CATCH_AND_THROW
 }
 
 template<> uint64_t DrmManager::Impl::get( const ParameterKey key_id ) const {
-	TRY
-		IMPL_GET_BODY
-		return json_value[key_str].asUInt64();
-	CATCH_AND_THROW
+    TRY
+        IMPL_GET_BODY
+        return json_value[key_str].asUInt64();
+    CATCH_AND_THROW
 }
 
 template<> float DrmManager::Impl::get( const ParameterKey key_id ) const {
-	TRY
-		IMPL_GET_BODY
-		return json_value[key_str].asFloat();
-	CATCH_AND_THROW
+    TRY
+        IMPL_GET_BODY
+        return json_value[key_str].asFloat();
+    CATCH_AND_THROW
 }
 
 template<> double DrmManager::Impl::get( const ParameterKey key_id ) const {
-	TRY
-		IMPL_GET_BODY
-		return json_value[key_str].asDouble();
-	CATCH_AND_THROW
+    TRY
+        IMPL_GET_BODY
+        return json_value[key_str].asDouble();
+    CATCH_AND_THROW
 }
 
 #define IMPL_SET_BODY \
@@ -2997,57 +3300,57 @@ template<> double DrmManager::Impl::get( const ParameterKey key_id ) const {
 
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const std::string& value ) {
-	TRY
-		IMPL_SET_BODY
-	CATCH_AND_THROW
+    TRY
+        IMPL_SET_BODY
+    CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const bool& value ) {
-	TRY
-		IMPL_SET_BODY
-	CATCH_AND_THROW
+    TRY
+        IMPL_SET_BODY
+    CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const int32_t& value ) {
-	TRY
-		IMPL_SET_BODY
-	CATCH_AND_THROW
+    TRY
+        IMPL_SET_BODY
+    CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const uint32_t& value ) {
-	TRY
-		IMPL_SET_BODY
-	CATCH_AND_THROW
+    TRY
+        IMPL_SET_BODY
+    CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const int64_t& value ) {
-	TRY
-		Json::Value json_value;
-		std::string key_str = findParameterString( key_id );
-		json_value[key_str] = Json::Int64( value );
-		set( json_value );
-	CATCH_AND_THROW
+    TRY
+        Json::Value json_value;
+        std::string key_str = findParameterString( key_id );
+        json_value[key_str] = Json::Int64( value );
+        set( json_value );
+    CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const uint64_t& value ) {
-	TRY
-		Json::Value json_value;
-		std::string key_str = findParameterString( key_id );
-		json_value[key_str] = Json::UInt64( value );
-		set( json_value );
-	CATCH_AND_THROW
+    TRY
+        Json::Value json_value;
+        std::string key_str = findParameterString( key_id );
+        json_value[key_str] = Json::UInt64( value );
+        set( json_value );
+    CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const float& value ) {
-	TRY
-		IMPL_SET_BODY
-	CATCH_AND_THROW
+    TRY
+        IMPL_SET_BODY
+    CATCH_AND_THROW
 }
 
 template<> void DrmManager::Impl::set( const ParameterKey key_id, const double& value ) {
-	TRY
-		IMPL_SET_BODY
-	CATCH_AND_THROW
+    TRY
+        IMPL_SET_BODY
+    CATCH_AND_THROW
 }
 
 

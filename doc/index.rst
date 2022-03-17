@@ -114,7 +114,9 @@ The Accelize DRM solution comprises 3 layers:
   in dynamic licensing and handles user authentication, licensing and metering. Upon
   special request, the DRM Web Service can deployed on-premise.
 
-.. important:: 1 FPGA image = 1 DRM Controller = 1 DRM Client process
+.. important::
+   1 FPGA image = 1 DRM Controller = 1 DRM Client process
+
 
 .. image:: _static/Accelize_DRM_Technology_service.png
    :target: _static/Accelize_DRM_Technology_service.png
@@ -131,6 +133,7 @@ Given a version number MAJOR.MINOR.PATCH, increment the:
 - MAJOR version when you make incompatible API changes,
 - MINOR version when you add functionality in a backwards compatible manner, and
 - PATCH version when you make backwards compatible bug fixes.
+
 Additional labels for pre-release and build metadata are available as extensions to the MAJOR.MINOR.PATCH format.
 
 

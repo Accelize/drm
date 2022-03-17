@@ -13,6 +13,9 @@ limitations under the License.
 import json
 import requests
 
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+
 
 class WSListFunction(object):
 
@@ -43,8 +46,11 @@ class WSListFunction(object):
     def _authentifed_call(self, method, url, data=None, headers={}):
         headers['Authorization'] = "Bearer " + str(self.token)
         headers['Content-Type'] = "application/json"
-        r = requests.request(method, self.url + url, data=json.dumps(data), headers=headers)
-#        json_acceptable_string = r.content.replace("'", "\"")
+        s = requests.Session()
+        retries = Retry(total=10, backoff_factor=1, status_forcelist=[ 502, 503, 504 ])
+        s.mount('http://', HTTPAdapter(max_retries=retries))
+        s.mount('https://', HTTPAdapter(max_retries=retries))
+        r = s.request(method, self.url + url, data=json.dumps(data), headers=headers)
         try:
             text = json.loads(r.content)
         except:
@@ -61,7 +67,6 @@ class WSListFunction(object):
 
     def application_create(self, data):
         #    url(r'^auth/createapplication/', APIMetering.create_application),
-
         response, status = self._authentifed_call("POST", "/auth/createapplication/", data=data)
         return response, status
 
@@ -195,6 +200,13 @@ class WSListFunction(object):
 
     def remove_product_information(self, data):
         # url(r'^auth/metering/rmthissession/', APIMetering.remove_product_information),
+        """
+        print('[remove_product_information] data=', data)
+        print('[remove_product_information] url=', self.url)
+        print('[remove_product_information] login=', self.login)
+        print('[remove_product_information] password=', self.password)
+        print('[remove_product_information] self=', self.__dict__)
+        """
         response, status = self._authentifed_call("POST", "/auth/metering/archiveduserproductinfo/", data=data)
         return response, status
 

@@ -320,7 +320,7 @@ uint64_t str2int64( std::string num_str )
     errno = 0;
     uint64_t num_int = strtoull( num_str.c_str(), nullptr, 16 );
     if ( errno ) {
-        Throw( DRM_CtlrError, "Could not convert string '{}' to unsigned long long.",
+        Throw( DRM_CtlrError, "Could not convert string '{}' to unsigned long long int.",
             num_str );
     }
     return num_int;

@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerVersion.cpp
-*  \version   6.0.0.0
-*  \date      April 2021
+*  \version   7.0.0.0
+*  \date      October 2021
 *  \brief     Class DrmControllerVersion defines procedures
 *             for hardware versus SDK versions checks.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");

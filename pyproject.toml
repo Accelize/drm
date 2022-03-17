@@ -1,0 +1,42 @@
+[tool.poetry]
+name = "accelize_drm"
+version = "1.0.0"
+description = "Accelize DRM"
+authors = ["Accelize"]
+
+[tool.poetry.dependencies]
+python = "^3.6"
+
+[tool.poetry.dev-dependencies]
+flake8 = "*"
+pytest-cov = "*"
+sphinx = "*"
+sphinx_rtd_theme = "*"
+breathe = "*"
+tox = "*"
+setuptools = "*"
+wheel = "*"
+cython = "*"
+
+[tool.pytest.ini_options]
+addopts = ["--strict-markers", "--cov=accelize_drm"]
+markers = [
+    "no_parallel: Cannont be run in parallel.",
+    "on_2_fpga: Require 2 FPGA",
+    "aws: Require AWS.",
+    "endurance: Endurance test.",
+    "long_run: Long run tests.",
+    "minimum: Minimal and fast set of test",
+    "packages: No hardware test used to check packages integrity.",
+    "security: marks tests used to check security",
+    "first: used by pytest-ordering plugin",
+    "last: used by pytest-ordering plugin",
+    "hwtst: used to run minimum hw validation tests",
+    "lgdn: used to run tests shared with LGDN",
+    "awsxrt: used to run AWS XRT (Vitis) tests on AWS",
+    "awsf1: used to run AWS F1 (Vivado) tests on AWS",
+]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

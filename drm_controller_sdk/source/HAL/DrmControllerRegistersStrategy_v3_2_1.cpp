@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegistersStrategy_v3_2_1.cpp
-*  \version   6.0.0.0
-*  \date      April 2021
+*  \version   7.0.0.0
+*  \date      October 2021
 *  \brief     Class DrmControllerRegistersStrategy_v3_2_1 defines strategy for register access of drm controller v3.2.1.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License") {
 
@@ -75,7 +75,7 @@ DrmControllerRegistersStrategy_v3_2_1::DrmControllerRegistersStrategy_v3_2_1(tDr
   mMeteringFileFirstIpMeteringDataWordPosition(DRM_CONTROLLER_V3_2_1_METERING_FILE_FIRST_IP_METERING_DATA_POSITION),
   mMeteringFileMacWordFromEndPosition(DRM_CONTROLLER_V3_2_1_METERING_FILE_MAC_FROM_END_POSITION),
   mDrmErrorRegisterMessagesArraySize(DRM_CONTROLLER_V3_2_1_NUMBER_OF_ERROR_CODES),
-  mDrmErrorRegisterMessagesArray({
+  mDrmErrorRegisterMessagesArray{
     { mDrmErrorNotReady,                                   "Not ready" },
     { mDrmErrorNoError,                                    "No error"  },
     { mDrmErrorBusReadAuthenticatorDrmVersionTimeOutError, "Bus read authenticator drm version timeout error" },
@@ -98,7 +98,7 @@ DrmControllerRegistersStrategy_v3_2_1::DrmControllerRegistersStrategy_v3_2_1(tDr
     { mDrmErrorBusWriteActivatorResponseTimeOutError,      "Bus write activator response timeout error" },
     { mDrmErrorBusReadInterruptTimeOutError,               "Bus read interrupt timeout error" },
     { mDrmErrorBusReadExpectedStatusError,                 "Bus read expected status error" }
-  })
+  }
 {
   setIndexedRegisterName(DRM_CONTROLLER_V3_2_1_INDEXED_REGISTER_NAME);
 }
@@ -237,6 +237,18 @@ unsigned int DrmControllerRegistersStrategy_v3_2_1::writeMeteringExtractCommandR
 **/
 unsigned int DrmControllerRegistersStrategy_v3_2_1::writeSampleLicenseTimerCounterCommandRegister() const {
   return writeCommandRegister(mDrmCommandSampleLicenseTimerCounter);
+}
+
+/** writeLicenseTimerInitSemaphoreRequestCommandRegister
+*   \brief Write the LicenseTimerInitSemaphoreRequest bit in the command register to the given value (do not modify the other bits of the command register).
+*   This method will access to the system bus to write into the command register.
+*   \param[in] licenseTimerInitSemaphoreRequest is the value of the LicenseTimerInitSemaphoreRequest bit to write in the command register.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwise.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegistersStrategy_v3_2_1::writeLicenseTimerInitSemaphoreRequestCommandRegister(bool &licenseTimerInitSemaphoreRequest) const {
+  throwUnsupportedFeatureException("License Timer Init Semaphore Request command", DRM_CONTROLLER_V3_2_1_SUPPORTED_VERSION);
+      return mDrmApi_UNSUPPORTED_FEATURE_ERROR;
 }
 
 /** readLicenseStartAddressRegister
@@ -790,6 +802,32 @@ unsigned int DrmControllerRegistersStrategy_v3_2_1::waitSecurityAlertStatusRegis
   return mDrmApi_UNSUPPORTED_FEATURE_ERROR;
 }
 
+/** readLicenseTimerInitSemaphoreAcknowledgeStatusRegister
+*   \brief Read the status register and get the License Timer Init Semaphore Acknowledge status bit.
+*   This method will access to the system bus to read the status register.
+*   \param[out] licenseTimerInitSemaphoreAcknowledge is the value of the status bit License Timer Init Semaphore Acknowledge.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwise.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegistersStrategy_v3_2_1::readLicenseTimerInitSemaphoreAcknowledgeStatusRegister(bool &licenseTimerInitSemaphoreAcknowledge) const {
+  throwUnsupportedFeatureException("License Timer Init Semaphore Acknowledge status", DRM_CONTROLLER_V3_2_1_SUPPORTED_VERSION);
+    return mDrmApi_UNSUPPORTED_FEATURE_ERROR;
+}
+
+/** waitLicenseTimerInitSemaphoreAcknowledgeStatusRegister
+*   \brief Wait License Timer Init Semaphore Acknowledge status register to reach specified value.
+*   This method will access to the system bus to read the status register.
+*   \param[in]  timeout is the timeout value in micro seconds.
+*   \param[in]  expected is the value of the status to be expected.
+*   \param[out] actual is the value of the status bit read.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, mDrmApi_HARDWARE_TIMEOUT_ERROR if a timeout occurred, errors from read/write register functions otherwise.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+*   \throw DrmControllerTimeOutException whenever a timeout error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegistersStrategy_v3_2_1::waitLicenseTimerInitSemaphoreAcknowledgeStatusRegister(const unsigned int &timeout, const bool &expected, bool &actual) const {
+  throwUnsupportedFeatureException("License Timer Init Semaphore Acknowledge status", DRM_CONTROLLER_V3_2_1_SUPPORTED_VERSION);
+    return mDrmApi_UNSUPPORTED_FEATURE_ERROR;
+}
 
 /** readNumberOfLicenseTimerLoadedStatusRegister
 *   \brief Read the status register and get the number of license timer loaded.
@@ -1315,7 +1353,7 @@ void DrmControllerRegistersStrategy_v3_2_1::printMeteringFileHwReport(std::ostre
       writter << "IP INDEX 0x" << DrmControllerDataConverter::binaryToHexString(ipIndex) << " PLAIN METERING";
       file << registerValue(DrmControllerDataConverter::binaryToHexString(ipMetering), writter.str()) << std::endl;
     }
-  }    
+  }
   else
     file << registerValue(DrmControllerDataConverter::binaryToHexStringList(getMeteringFileIpMeteringData(meteringFile),mMeteringWordRegisterWordNumber), "ENCRYPTED IP METERING DATA", 0) << std::endl;
   file << registerValue(DrmControllerDataConverter::binaryToHexString(getMeteringFileMac(meteringFile)), "MAC") << std::endl;
@@ -1794,10 +1832,10 @@ std::vector<unsigned int> DrmControllerRegistersStrategy_v3_2_1::getMeteringFile
 *   \param[in] file is the stream to use for the data print.
 **/
 void DrmControllerRegistersStrategy_v3_2_1::printAdaptiveProportionTestFailuresHwReport(std::ostream &file) const { }
-  
+
 /** printRepetitionCountTestFailures
 *   \brief Display the value of the Repetition Count Test Failures.
 *   \param[in] file is the stream to use for the data print.
 **/
 void DrmControllerRegistersStrategy_v3_2_1::printRepetitionCountTestFailuresHwReport(std::ostream &file) const { }
-  
+

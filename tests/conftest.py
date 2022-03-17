@@ -10,7 +10,7 @@ from os import environ, getpid, listdir, remove, makedirs, getcwd, urandom, rena
 from os.path import basename, dirname, expanduser, isdir, isfile, join, \
     realpath, splitext, exists
 from random import randint
-from re import IGNORECASE, match, search
+from re import IGNORECASE, match, search, findall
 from datetime import datetime
 from time import time, sleep
 from shutil import rmtree
@@ -35,7 +35,15 @@ CNT_EVENT_REG_OFFSET = 0x44
 LOG_FORMAT_SHORT = "[%^%=8l%$] %-6t, %v"
 LOG_FORMAT_LONG = "%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v"
 
+HTTP_TIMEOUT_ERR_MSG = (r"The issue could either be caused by a networking problem, "
+    r"by a firewall or NAT blocking incoming traffic or by a wrong server address")
+
+
 HASH_FUNTION_TABLE = {}
+
+
+def auto_int(x):
+    return int(x, 0)
 
 
 def bit_not(n, numbits=32):
@@ -56,7 +64,7 @@ def is_file_busy(path):
         return True
 
 
-def get_default_conf_json(licensing_server_url):
+def get_default_conf_json(licensing_server_url, drm_frequency):
     """
     Get default "conf.json" file content as python dict.
 
@@ -74,14 +82,15 @@ def get_default_conf_json(licensing_server_url):
             "nodelocked": False
         },
         "drm": {
-            "frequency_mhz": 125
+            "frequency_mhz": drm_frequency
         },
         "design": {
             "boardType": "Running on AWS"
         },
         "settings": {
             "ws_connection_timeout": 3,
-            "ws_request_timeout": 5
+            "ws_request_timeout": 5,
+            "ws_api_retry_duration": 10
         }
     }
 
@@ -157,7 +166,7 @@ def pytest_addoption(parser):
         "--fpga_slot_id", action="store", default=0, type=int,
         help='Specify the FPGA slot to use')
     parser.addoption(
-        "--drm_controller_base_address", action="store", default=0, type=int,
+        "--drm_controller_base_address", action="store", default=0, type=auto_int,
         help='Specify the DRM controller base address')
     parser.addoption(
         "--cred", action="store", default="./cred.json",
@@ -166,10 +175,13 @@ def pytest_addoption(parser):
         "--server", action="store",
         default="prod", help='Specify the metering server to use')
     parser.addoption(
-        "--library_verbosity", action="store", type=int, choices=list(range(7)),
+        "--drm_frequency", action="store", type=int,
+        default=125, help='Specify the DRM frequency.')
+    parser.addoption(
+        "--loglevel", action="store", type=int, choices=list(range(7)),
         default=2, help='Specify "libaccelize_drm" verbosity level')
     parser.addoption(
-        "--library_format", action="store", type=int, choices=(0, 1), default=0,
+        "--logformat", action="store", type=int, choices=(0, 1), default=0,
         help='Specify "libaccelize_drm" logging format: 0=short, 1=long')
     parser.addoption(
         "--no_clear_fpga", action="store_true", help='Bypass clearing of FPGA at start-up')
@@ -193,10 +205,10 @@ def pytest_addoption(parser):
              'use default FPGA image for the selected driver and last HDK '
              'version.')
     parser.addoption(
-        "--integration", action="store_true",
-        help='Run integration tests. Theses tests may needs two FPGAs.')
+        "--noparallel", action="store_true",
+        help='Run tests that cannot be run in parallel or need 2 FPGA')
     parser.addoption(
-        "--activator_base_address", action="store", default=0x10000, type=int,
+        "--activator_base_address", action="store", default=0x10000, type=auto_int,
         help=('Specify the base address of the 1st activator. '
               'The other activators shall be separated by an address gap of '
               '0x10000'))
@@ -208,13 +220,17 @@ def pytest_addoption(parser):
     parser.addoption(
         "--artifacts_dir", action="store", default=getcwd(),
         help='Specify pytest artifacts directory')
+    parser.addoption(
+        "--fpga_driver_extra", action="store", default=None,
+        help='Specify extra option to the fpga driver')
+
 
 
 def pytest_runtest_setup(item):
     """
     Configure test initialization
     """
-    # Check awsxrt tests
+    # Check awsf1 tests
     m_option = item.config.getoption('-m')
     if search(r'\bawsf1\b', m_option) and not search(r'\nnot\n\s+\bawsf1\b', m_option):
         skip_awsf1 = False
@@ -234,14 +250,44 @@ def pytest_runtest_setup(item):
     if skip_awsxrt and markers:
         pytest.skip("Don't run XRT (Vitis) tests.")
 
-    # Check integration tests
-    markers = tuple(item.iter_markers(name='no_parallel'))
-    markers += tuple(item.iter_markers(name='on_2_fpga'))
-    if not item.config.getoption("integration") and markers:
-        pytest.skip("Don't run integration tests.")
-    elif item.config.getoption("integration") and not markers:
-        pytest.skip("Run only integration tests.")
+    # Check cosim tests
+    m_option = item.config.getoption('-m')
+    if search(r'\bcosim\b', m_option) and not search(r'\nnot\n\s+\bcosim\b', m_option):
+        skip_cosim = False
+    else:
+        skip_cosim = True
+    markers = tuple(item.iter_markers(name='cosim'))
+    if skip_cosim and markers:
+        pytest.skip("Don't run COSIM (Vitis) tests.")
 
+    # Determine if DRM Ctrl SW is under test
+    hybrid_test = False
+    fpga_image = item.config.getoption('--fpga_image')
+    if fpga_image and fpga_image.endswith(".som"):
+        hybrid_test = True
+    fpga_driver = item.config.getoption('--fpga_driver')
+    if fpga_driver and fpga_driver == 'som_xrt':
+        hybrid_test = True
+
+    if not hybrid_test:
+        # Check noparallel tests
+        markers = tuple(item.iter_markers(name='no_parallel'))
+        markers += tuple(item.iter_markers(name='on_2_fpga'))
+        if not item.config.getoption("noparallel") and markers:
+            pytest.skip("Don't run 'noparallel' tests.")
+        elif item.config.getoption("noparallel") and not markers:
+            pytest.skip("Run only 'noparallel' tests.")
+        # Check som tests
+        if tuple(item.iter_markers(name='som')):
+            pytest.skip("Don't run SoM specific tests.")
+    '''
+    # Check twofpga tests
+    markers = tuple(item.iter_markers(name='on_2_fpga'))
+    if not item.config.getoption("twofpga") and markers:
+        pytest.skip("Don't run 'twofpga' tests.")
+    elif item.config.getoption("twofpga") and not markers:
+        pytest.skip("Run only 'twofpga' tests.")
+    '''
     # Check endurance tests
     m_option = item.config.getoption('-m')
     if search(r'\bendurance\b', m_option) and not search(r'\nnot\n\s+\bendurance\b', m_option):
@@ -285,9 +331,10 @@ def scanActivatorsByCard(driver, base_addr):
             break
         base_addr_list.append(base_addr)
         base_addr += 0x10000
-    if len(base_addr_list) == 0:
-        raise IOError('No activator found on slot #%d' % driver._fpga_slot_id)
-    activators = ActivatorsInFPGA(driver, base_addr_list)
+    if len(base_addr_list):
+        activators = ActivatorsInFPGA(driver, base_addr_list)
+    else:
+        activators = ActivatorsInFPGA(None, base_addr_list)
     print('Found %d activator(s) on slot #%d' % (len(base_addr_list), driver._fpga_slot_id))
     return activators
 
@@ -300,13 +347,16 @@ class SingleActivator:
         self.driver = driver
         self.base_address = base_address
         self.metering_data = 0
-        self.event_cnt_flag = self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET) != 0xDEADDEAD
-        print('Event counter in Activator @0x%08X is active' % self.base_address)
+        if driver is not None:
+            self.event_cnt_flag = self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET) != 0xDEADDEAD
+            print('Event counter in Activator @0x%08X is active' % self.base_address)
 
     def autotest(self, is_activated=None):
         """
         Verify IP works as expected
         """
+        if self.driver is None:
+            return
         # Test IP mailbox depending on activation status
         activated = self.get_status()
         if is_activated is not None:
@@ -345,6 +395,8 @@ class SingleActivator:
         Args:
             coins (int): Number of coins to generate.
         """
+        if self.driver is None:
+            return 0
         if coins is None:
             coins = randint(1,10)
         for _ in range(coins):
@@ -357,6 +409,8 @@ class SingleActivator:
         """
         Reset the coins counter
         """
+        if self.driver is None:
+            return
         self.metering_data = 0
         if self.event_cnt_flag:
             self.driver.write_register(self.base_address + CNT_EVENT_REG_OFFSET, 0)
@@ -369,6 +423,8 @@ class SingleActivator:
         Args:
             coins (int): Number of coins to compare to.
         """
+        if self.driver is None:
+            return 0
         # Read counter in Activation's registry
         if self.event_cnt_flag:
             metering_data_from_activator = self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET)
@@ -402,13 +458,15 @@ class ActivatorsInFPGA:
     """
     def __init__(self, driver, base_address_list):
         self.activators = list()
-        for addr in base_address_list:
-            self.activators.append(SingleActivator(driver, addr))
+        if driver is None:
+            self.activators.append(SingleActivator(None, None))
+        else:
+            for addr in base_address_list:
+                self.activators.append(SingleActivator(driver, addr))
         self.product_id = {
             "vendor": "accelize.com",
             "library": "refdesign",
-            "name": "drm_%dactivator" % len(base_address_list),
-            "sign": ""
+            "name": "drm_%dactivator" % len(self.activators)
         }
 
     def __getitem__(self, index):
@@ -579,11 +637,20 @@ def accelize_drm(pytestconfig):
     if fpga_driver_name and fpga_image:
         raise ValueError(
             'Mutually exclusive options: Please set "fpga_driver" or "fpga_image", but not both')
+    is_ctrl_sw = False
     if fpga_image:
-        if fpga_image.endswith('.awsxclbin'):
+        if fpga_image.endswith('awsxclbin.som'):
+            fpga_driver_name = 'aws_som'
+            is_ctrl_sw = True
+        elif fpga_image.endswith('.awsxclbin'):
             fpga_driver_name = 'aws_xrt'
+        elif fpga_image.endswith('.xclbin'):
+            fpga_driver_name = 'xrt'
         elif search(r'agfi-[0-9a-f]+', fpga_image, IGNORECASE):
             fpga_driver_name = 'aws_f1'
+        elif fpga_image.endswith('.som'):
+            fpga_driver_name = 'som_xrt'
+            is_ctrl_sw = True
         else:
             raise ValueError("Unsupported 'fpga_image' option")
     elif fpga_driver_name is None:
@@ -595,7 +662,12 @@ def accelize_drm(pytestconfig):
         build_source_dir = realpath('.')
 
     # Get Ref Designs available
-    ref_designs = RefDesign(join(build_source_dir, 'tests', 'refdesigns', fpga_driver_name))
+    refdesign_path = join(build_source_dir, 'tests', 'refdesigns', fpga_driver_name)
+    if isdir(refdesign_path):
+        ref_designs = RefDesign(refdesign_path)
+    else:
+        ref_designs = None
+        print('No ref design available for this FPGA driver: %s' % fpga_driver_name)
 
     if fpga_image is None or hdk_version:
         # Use specified HDK version
@@ -613,8 +685,8 @@ def accelize_drm(pytestconfig):
         fpga_image = ref_designs.get_image_id(hdk_version)
 
     # Define or get FPGA Slot
-    if pytestconfig.getoption('integration'):
-        # Integration tests requires 2 slots
+    if pytestconfig.getoption('noparallel'):
+        # noparallel tests requires 2 slots
         fpga_slot_id = [0, 1]
     elif environ.get('TOX_PARALLEL_ENV'):
         # Define FPGA slot for Tox parallel execution
@@ -630,10 +702,17 @@ def accelize_drm(pytestconfig):
     # Initialize FPGA
     no_clear_fpga = pytestconfig.getoption("no_clear_fpga")
     drm_ctrl_base_addr = pytestconfig.getoption("drm_controller_base_address")
+    fpga_driver_extra_str = pytestconfig.getoption("fpga_driver_extra")
     print('FPGA SLOT ID:', fpga_slot_id)
     print('FPGA DRIVER:', fpga_driver_name)
     print('FPGA IMAGE:', fpga_image)
     print('HDK VERSION:', hdk_version)
+    print('CONTROLLER SW:', is_ctrl_sw)
+    if fpga_driver_extra_str:
+        fpga_driver_extra = dict(findall(r'([^;]+):([^;]+)', fpga_driver_extra_str))
+        print('DRIVER EXTRA:', fpga_driver_extra)
+    else:
+        fpga_driver_extra = {}
     fpga_driver = list()
     for slot_id in fpga_slot_id:
         try:
@@ -641,7 +720,8 @@ def accelize_drm(pytestconfig):
                 fpga_driver_cls( fpga_slot_id=slot_id,
                     fpga_image=fpga_image,
                     drm_ctrl_base_addr=drm_ctrl_base_addr,
-                    no_clear_fpga=no_clear_fpga
+                    no_clear_fpga=no_clear_fpga,
+                    **fpga_driver_extra
                 )
             )
         except:
@@ -659,15 +739,20 @@ def accelize_drm(pytestconfig):
         makedirs(pytest_artifacts_dir)
     print('pytest artifacts directory: ', pytest_artifacts_dir)
 
-    # Get frequency detection version
-    freq_version = fpga_driver[0].read_register(drm_ctrl_base_addr + 0xFFF0)
-    print('Frequency detection version: 0x%08X' % freq_version)
+    if is_ctrl_sw:
+        freq_version = 0
+        print('No frequency detection on DRM Controller SW')
+    else:
+        # Get frequency detection version
+        freq_version = fpga_driver[0].read_register(drm_ctrl_base_addr + 0xFFF0)
+        print('Frequency detection version: 0x%08X' % freq_version)
 
     # Store some values for access in tests
     import accelize_drm as _accelize_drm
     _accelize_drm.pytest_freq_detection_version = freq_version
     _accelize_drm.pytest_proxy_debug = pytestconfig.getoption("proxy_debug")
     _accelize_drm.pytest_server = pytestconfig.getoption("server")
+    _accelize_drm.pytest_drm_frequency = pytestconfig.getoption("drm_frequency")
     _accelize_drm.pytest_build_environment = build_environment
     _accelize_drm.pytest_build_source_dir = build_source_dir
     _accelize_drm.pytest_build_type = build_type
@@ -687,6 +772,7 @@ def accelize_drm(pytestconfig):
     _accelize_drm.scanActivators = types.MethodType( scan, _accelize_drm )
     _accelize_drm.pytest_params = param2dict(pytestconfig.getoption("params"))
     _accelize_drm.pytest_artifacts_dir = pytest_artifacts_dir
+    _accelize_drm.is_ctrl_sw = is_ctrl_sw
     return _accelize_drm
 
 
@@ -740,10 +826,13 @@ class _Json:
 class ConfJson(_Json):
     """conf.json file"""
 
-    def __init__(self, tmpdir, url, **kwargs):
-        content = get_default_conf_json(url)
+    def __init__(self, tmpdir, url, freq, **kwargs):
+        content = get_default_conf_json(url, freq)
         for k, v in kwargs.items():
-            content[k] = v
+            if isinstance(v, dict):
+                content[k].update(v)
+            else:
+                content[k] = v
         filename = 'conf%f.json' % time()
         _Json.__init__(self, tmpdir, filename, content)
 
@@ -853,7 +942,7 @@ class CredJson(_Json):
 
 
 @pytest.fixture
-def conf_json(request, pytestconfig, tmpdir):
+def conf_json(request, pytestconfig, tmpdir, accelize_drm):
     """
     Manage "conf.json" in testing environment.
     """
@@ -866,13 +955,14 @@ def conf_json(request, pytestconfig, tmpdir):
             f.write(dumps(HASH_FUNTION_TABLE, indent=4, sort_keys=True))
     design_param = {'boardType': hash_value}
     # Build config content
-    log_param = {'log_verbosity': pytestconfig.getoption("library_verbosity")}
-    if pytestconfig.getoption("library_format") == 1:
-        log_param['log_format'] = '%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v'
+    log_param = {'log_verbosity': pytestconfig.getoption("loglevel")}
+    if pytestconfig.getoption("logformat") == 1:
+        log_param['log_format'] = LOG_FORMAT_LONG
     else:
-        log_param['log_format'] = '[%^%=8l%$] %-6t, %v'
+        log_param['log_format'] = LOG_FORMAT_SHORT
     if pytestconfig.getoption("logfile") is not None:
         log_param['log_file_type'] = 1
+        log_param['log_format'] = LOG_FORMAT_LONG
         if len(pytestconfig.getoption("logfile")) != 0:
             log_param['log_file_path'] = pytestconfig.getoption("logfile")
         else:
@@ -880,7 +970,11 @@ def conf_json(request, pytestconfig, tmpdir):
         log_param['log_file_verbosity'] = pytestconfig.getoption("logfilelevel")
         log_param['log_file_append'] = pytestconfig.getoption("logfileappend")
     # Save config to JSON file
-    json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), settings=log_param, design=design_param)
+    drm_param = {}
+    if 'som' in accelize_drm.pytest_fpga_image:
+        drm_param.update({'drm_software': True, 'bypass_frequency_detection':True})
+    json_conf = ConfJson(tmpdir, pytestconfig.getoption("server"), pytestconfig.getoption("drm_frequency"),
+                        settings=log_param, design=design_param, drm=drm_param)
     json_conf.save()
     return json_conf
 
@@ -1312,6 +1406,9 @@ def log_file_factory(pytestconfig, request, accelize_drm):
     else:
         log_file_verbosity = None
 
+    # Determine log file format
+    log_file_format = LOG_FORMAT_LONG if pytestconfig.getoption("logfile") is not None else LOG_FORMAT_LONG
+
     # Determine log file append mode
     log_file_append = pytestconfig.getoption("logfileappend")
 
@@ -1319,4 +1416,4 @@ def log_file_factory(pytestconfig, request, accelize_drm):
     log_file_keep = pytestconfig.getoption("logfile") is not None
 
     return LogFileFactory(basepath=log_file_basepath, default_verbosity=log_file_verbosity,
-                          default_append=log_file_append, keep=log_file_keep)
+            default_format=log_file_format, default_append=log_file_append, keep=log_file_keep)

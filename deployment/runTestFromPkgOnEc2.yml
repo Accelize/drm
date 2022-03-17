@@ -7,7 +7,7 @@ parameters:
   instance_type: 'f1.4xlarge'
   config_list:
   - os_distrib: 'centos_7'
-    tox_operation: '-e cpp-install,c-install,integration-install'
+    tox_operation: '-e cpp-install,c-install,noparallel-install'
     tox_extra_option: ''
 
 jobs:
@@ -105,7 +105,7 @@ jobs:
         condition: ${{ contains(config.os_distrib, 'ubuntu') }}
 
       - script: sudo -E tox ${{ config.tox_operation }}
-                -- --cred=$(Build.SourcesDirectory)/cred.json --server=prod --artifacts_dir=$(Build.SourcesDirectory)/artifacts -rxs ${{ config.tox_extra_option }}
+                -- --cred=$(Build.SourcesDirectory)/cred.json --server=prod --artifacts_dir=$(Build.SourcesDirectory)/artifacts -ra ${{ config.tox_extra_option }}
         displayName: Run tests from package with Tox on ${{ config.os_distrib }}
         env:
           TOX_PARALLEL_NO_SPINNER: 1

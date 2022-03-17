@@ -73,7 +73,11 @@ _PARAM_LIST = ('license_type',
                'trng_status',
                'num_license_loaded',
                'derived_product',
-               'ws_connection_timeout'
+               'ws_connection_timeout',
+               'log_ctrl_verbosity',
+               'is_drm_software',
+               'controller_version',
+               'controller_rom'
 )
 
 
@@ -244,12 +248,15 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
             driver.write_register_callback,
             async_cb.callback
         ) as drm_manager:
-        if accelize_drm.pytest_freq_detection_version == 0x60DC0DE0:
-            assert drm_manager.get('frequency_detection_method') == 2
-        elif accelize_drm.pytest_freq_detection_version == 0x60DC0DE1:
-            assert drm_manager.get('frequency_detection_method') == 3
+        if accelize_drm.is_ctrl_sw:
+            assert drm_manager.get('frequency_detection_method') == 0
         else:
-            assert drm_manager.get('frequency_detection_method') == 1
+            if accelize_drm.pytest_freq_detection_version == 0x60DC0DE0:
+                assert drm_manager.get('frequency_detection_method') == 2
+            elif accelize_drm.pytest_freq_detection_version == 0x60DC0DE1:
+                assert drm_manager.get('frequency_detection_method') == 3
+            else:
+                assert drm_manager.get('frequency_detection_method') == 1
     print("Test parameter 'frequency_detection_method': PASS")
 
     # Test parameter: bypass_frequency_detection
@@ -261,7 +268,10 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
             driver.write_register_callback,
             async_cb.callback
         ) as drm_manager:
-        assert not drm_manager.get('bypass_frequency_detection')
+        if accelize_drm.is_ctrl_sw:
+            assert drm_manager.get('bypass_frequency_detection')
+        else:
+            assert not drm_manager.get('bypass_frequency_detection')
     conf_json.reset()
     conf_json['drm']['bypass_frequency_detection'] = True
     conf_json.save()
@@ -275,53 +285,56 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     print("Test parameter 'bypass_frequency_detection': PASS")
 
     # Test parameter: drm_frequency
-    async_cb.reset()
-    conf_json.reset()
-    exp_value = 2*orig_frequency_mhz
-    conf_json['drm']['bypass_frequency_detection'] = True
-    conf_json['drm']['frequency_mhz'] = exp_value
-    conf_json.save()
-    with accelize_drm.DrmManager(
-            conf_json.path, cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        ) as drm_manager:
-        assert drm_manager.get('drm_frequency') == exp_value
-    async_cb.assert_NoError()
-    print("Test parameter 'drm_frequency': PASS")
+    if not accelize_drm.is_ctrl_sw:
+        async_cb.reset()
+        conf_json.reset()
+        exp_value = 2*orig_frequency_mhz
+        conf_json['drm']['bypass_frequency_detection'] = True
+        conf_json['drm']['frequency_mhz'] = exp_value
+        conf_json.save()
+        with accelize_drm.DrmManager(
+                conf_json.path, cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+            assert drm_manager.get('drm_frequency') == exp_value
+        async_cb.assert_NoError()
+        print("Test parameter 'drm_frequency': PASS")
 
     # Test parameter: frequency_detection_period
-    async_cb.reset()
-    conf_json.reset()
-    exp_value = 2*orig_frequency_detect_period
-    conf_json['settings']['frequency_detection_period'] = exp_value
-    conf_json.save()
-    with accelize_drm.DrmManager(
-            conf_json.path, cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        ) as drm_manager:
-        assert drm_manager.get('frequency_detection_period') == exp_value
-    async_cb.assert_NoError()
-    print("Test parameter 'frequency_detection_period': PASS")
+    if not accelize_drm.is_ctrl_sw:
+        async_cb.reset()
+        conf_json.reset()
+        exp_value = 2*orig_frequency_detect_period
+        conf_json['settings']['frequency_detection_period'] = exp_value
+        conf_json.save()
+        with accelize_drm.DrmManager(
+                conf_json.path, cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+            assert drm_manager.get('frequency_detection_period') == exp_value
+        async_cb.assert_NoError()
+        print("Test parameter 'frequency_detection_period': PASS")
 
     # Test parameter: frequency_detection_threshold
-    async_cb.reset()
-    conf_json.reset()
-    exp_value = 2*orig_frequency_detect_threshold
-    conf_json['settings']['frequency_detection_threshold'] = exp_value
-    conf_json.save()
-    with accelize_drm.DrmManager(
-            conf_json.path, cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        ) as drm_manager:
-        assert drm_manager.get('frequency_detection_threshold') == exp_value
-    async_cb.assert_NoError()
-    print("Test parameter 'frequency_detection_threshold': PASS")
+    if not accelize_drm.is_ctrl_sw:
+        async_cb.reset()
+        conf_json.reset()
+        exp_value = 2*orig_frequency_detect_threshold
+        conf_json['settings']['frequency_detection_threshold'] = exp_value
+        conf_json.save()
+        with accelize_drm.DrmManager(
+                conf_json.path, cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+            assert drm_manager.get('frequency_detection_threshold') == exp_value
+        async_cb.assert_NoError()
+        print("Test parameter 'frequency_detection_threshold': PASS")
 
     # Test parameter: ws_retry_period_long
     async_cb.reset()
@@ -570,6 +583,23 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     async_cb.assert_NoError()
     print("Test parameter 'ws_connection_timeout': PASS")
 
+    # Test parameter: log_ctrl_verbosity
+    if accelize_drm.is_ctrl_sw:
+        async_cb.reset()
+        conf_json.reset()
+        expect_value = 5
+        conf_json['settings']['log_ctrl_verbosity'] = expect_value
+        conf_json.save()
+        with accelize_drm.DrmManager(
+                conf_json.path, cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+            assert drm_manager.get('log_ctrl_verbosity') == expect_value
+        async_cb.assert_NoError()
+        print("Test parameter 'log_ctrl_verbosity': PASS")
+
     # Test unsupported parameter
     async_cb.reset()
     conf_json.reset()
@@ -807,7 +837,10 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         drm_manager.activate()
         freq_drm = drm_manager.get('drm_frequency')
         drm_manager.deactivate()
-        assert 125 <= freq_drm <= 126, 'Unexpected frequency gap threshold'
+        if accelize_drm.is_ctrl_sw:
+            assert freq_drm == 0.001
+        else:
+            assert accelize_drm.pytest_drm_frequency-1 <= freq_drm <= accelize_drm.pytest_drm_frequency+1, 'Unexpected frequency gap threshold'
         async_cb.assert_NoError()
         print("Test parameter 'drm_frequency': PASS")
 
@@ -988,7 +1021,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
                 driver.write_register_callback,
                 async_cb.callback
             ) as drm_manager:
-        drm_manager.set(log_message_level=logfile.verbosity)
+        drm_manager.set(log_message_level=5)
         msg = 'This line should appear in log file'
         drm_manager.set(log_message=msg)
     log_content = logfile.read()
@@ -1125,9 +1158,9 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         assert 'security_alert_bit' in trng_status.keys()
         assert 'adaptive_proportion_test_error' in trng_status.keys()
         assert 'repetition_count_test_error' in trng_status.keys()
-        assert isinstance(trng_status['security_alert_bit'], bool)
-        assert match(r'[0-9A-F]{8}', trng_status['adaptive_proportion_test_error'], IGNORECASE)
-        assert match(r'[0-9A-F]{8}', trng_status['repetition_count_test_error'], IGNORECASE)
+        assert trng_status['security_alert_bit'] == 0
+        assert trng_status['adaptive_proportion_test_error'] == 0
+        assert trng_status['repetition_count_test_error'] == 0
         with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
             drm_manager.set(trng_status={'security_alert_bit':1})
         async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code," cannot be overwritten")
@@ -1161,6 +1194,48 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         async_cb.reset()
         assert drm_manager.get('ws_connection_timeout') == ref_timeout
         print("Test parameter 'ws_connection_timeout': PASS")
+
+        # Test parameter: log_ctrl_verbosity
+        if accelize_drm.is_ctrl_sw:
+            orig_val = drm_manager.get('log_ctrl_verbosity')
+            exp_val = 1 if orig_val == 0 else 0
+            drm_manager.set(log_ctrl_verbosity=exp_val)
+            assert drm_manager.get('log_ctrl_verbosity') == exp_val
+            drm_manager.set(log_ctrl_verbosity=orig_val)
+            async_cb.assert_NoError()
+            print("Test parameter 'log_ctrl_verbosity': PASS")
+
+        # Test parameter: is_drm_software
+        with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+            drm_manager.set(is_drm_software=True)
+        async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code," cannot be overwritten")
+        async_cb.reset()
+        assert drm_manager.get('is_drm_software') == accelize_drm.is_ctrl_sw
+        async_cb.assert_NoError()
+        print("Test parameter 'is_drm_software': PASS")
+
+        # Test parameter: controller_version
+        with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+            drm_manager.set(controller_version=1)
+        async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code," cannot be overwritten")
+        async_cb.reset()
+        assert match(r'\d+\.\d+\.\d+', drm_manager.get('controller_version'))
+        async_cb.assert_NoError()
+        print("Test parameter 'controller_version': PASS")
+
+        # Test parameter: controller_rom
+        with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+            drm_manager.set(controller_rom="{}")
+        async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code," cannot be overwritten")
+        async_cb.reset()
+        rom = drm_manager.get('controller_rom')
+        assert rom
+        assert rom.get('extra')
+        assert rom.get('product_id')
+        assert rom.get('pkg_version')
+        assert rom.get('drm_software') == accelize_drm.is_ctrl_sw
+        async_cb.assert_NoError()
+        print("Test parameter 'controller_version': PASS")
 
 
 def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cred_json,
