@@ -12,7 +12,8 @@ import re
 import json
 import os
 import tempfile
-from os.path import isdir, isfile, join
+from os.path import isdir, isfile, join, basename
+from shutil import copyfile
 from tabulate import tabulate
 
 
@@ -20,6 +21,9 @@ AWS_S3_BUCKET = "s3://accelizecodebuildstorage/pt_reference_design"
 
 REGEX_HDK_DESIGNS = r'\b\d+activator_\S+'
 REGEX_VITIS_DESIGNS = r'\bvitis_\S+'
+
+HDK_DEFAULT_BITSTREAM = '2activator_axi4_250_125'
+VITIS_DEFAULT_BITSTREAM = 'vitis_2activator_100_125'
 
 
 def run_cmd(cmd):
@@ -29,6 +33,25 @@ def run_cmd(cmd):
     if ret.returncode:
         raise RuntimeError(f'Failed to execute command: {cmd}\n{out}')
     return out
+
+
+def get_hdk_version(s3_design_dir):
+    with tempfile.NamedTemporaryFile() as tmp_file:
+        # Copy the AFI info file from S3
+        src_file = join(s3_design_dir, 'IMPL', 'AFI', 'afi_info.json')
+        cmd = f'aws s3 cp {src_file} {tmp_file.name}'
+        run_cmd(cmd)
+        logging.debug(f'Downloaded {src_file} as {tmp_file.name}')
+        # Parsing AFI info file to extract HDK-Versions tag
+        with open(tmp_file.name, 'rt') as f:
+            content = json.load(f)
+        hdk_version_string = next(filter(lambda x: x['Key'] == 'HDK-Versions', content['FpgaImages'][0]['Tags']))
+        assert hdk_version_string['Key'] == 'HDK-Versions'
+        hdk_version_list = hdk_version_string['Value'].split(':')
+        assert len(set(hdk_version_list)) == 1, f"Inconsistent HDK versions: {hdk_version_string['Value']}"
+        hdk_version = hdk_version_list[0]
+        logging.debug(f"HDK version: {hdk_version}")
+        return hdk_version
 
 
 def copy_aws_hdk_bitstream(s3_job_dir, output, force=False):
@@ -41,15 +64,24 @@ def copy_aws_hdk_bitstream(s3_job_dir, output, force=False):
     if not isdir(out_dir):
         os.makedirs(out_dir)
     # Get AFI/AGFI for each AWS HDK design
+    hdk_version = None
     res = list()
     for d in re.finditer(REGEX_HDK_DESIGNS, out, re.IGNORECASE):
         design_name = d.group(0)[:-1]
         is_ok = False
+        logging.debug(f"Parsing design {design_name}")
+        dst_file = join(out_dir, f'{design_name}.json')
         try:
-            dst_file = join(out_dir, f'{design_name}.json')
             if isfile(dst_file) and not force:
                 logging.error(f"AWS Vivado bitstream '{dst_file}' is already existing: to overwrite add -f option.")
                 continue
+            # Check HDK version
+            current_hdk_version = get_hdk_version(join(s3_job_dir, 'aws', design_name))
+            if hdk_version is None:
+                hdk_version = current_hdk_version
+            else:
+                assert hdk_version == current_hdk_version, f"Unexpected HDK version: current is {current_hdk_version} but expect {hdk_version}"
+            # Find and copy design bitstream
             with tempfile.NamedTemporaryFile() as tmp_file:
                 # Copy the AFI info file from S3
                 src_file = join(s3_job_dir, 'aws', design_name, 'IMPL', 'AFI', 'afi_info.json')
@@ -62,15 +94,31 @@ def copy_aws_hdk_bitstream(s3_job_dir, output, force=False):
                 new_content = dict()
                 new_content['afi'] = content['FpgaImages'][0]['FpgaImageId']
                 new_content['agfi'] = content['FpgaImages'][0]['FpgaImageGlobalId']
+                if HDK_DEFAULT_BITSTREAM in design_name:
+                    hdk_version = next(filter(lambda x: x['Key'] == 'HDK-Versions', content['FpgaImages'][0]['Tags']))
+                    assert hdk_version['Key'] == 'HDK-Versions'
+                    hdk_version = hdk_version['Value'].split(':')[0]
+                    logging.debug(f"Found HDK version: {hdk_version}")
                 # Copy AFI/AGFI json file locally in output directory
                 with open(dst_file, 'wt') as f:
                     json.dump(new_content, f, indent=4)
                 logging.info(f'Copied {dst_file}')
                 is_ok = True
+        except KeyboardInterrupt:
+            raise
         except:
             logging.exception(f"Failed to copy bitstream for design: {design_name}")
         finally:
-            res.append((design_name, is_ok))
+            res.append((basename(dst_file), 'HDK', is_ok))
+
+    if hdk_version is not None:
+        # Copy default design too
+        src_file = join(out_dir, f'{HDK_DEFAULT_BITSTREAM}.json')
+        dst_file = join(out_dir, f'{hdk_version}.json')
+        copyfile(src_file, dst_file)
+        logging.info(f'Copied {dst_file}')
+        res.append((basename(dst_file), 'HDK', True))
+
     return res
 
 
@@ -84,26 +132,44 @@ def copy_aws_vitis_bitstream(s3_job_dir, output, force=False):
     if not isdir(out_dir):
         os.makedirs(out_dir)
     # Get AFI/AGFI for each AWS HDK design
+    hdk_version = None
     res = list()
     for d in re.finditer(REGEX_VITIS_DESIGNS, out, re.IGNORECASE):
         design_name = d.group(0)[:-1]
         is_ok = False
+        logging.debug(f"Parsing design {design_name}")
+        dst_file = join(out_dir, f'{design_name}.awsxclbin')
         try:
-            dst_file = join(out_dir, f'{design_name}.awsxclbin')
-            #if isfile(dst_file) and not force:
-            #    logging.error(f"Vitis bitstream '{dst_file}' is already existing: to overwrite add -f option.")
-            #    ret += 1
-            #    continue
+            if isfile(dst_file) and not force:
+                logging.error(f"Vitis bitstream '{dst_file}' is already existing: to overwrite add -f option.")
+                continue
+            # Check HDK version
+            current_hdk_version = get_hdk_version(join(s3_job_dir, 'aws', design_name))
+            if hdk_version is None:
+                hdk_version = current_hdk_version
+            else:
+                assert hdk_version == current_hdk_version, f"Unexpected HDK version: current is {current_hdk_version} but expect {hdk_version}"
             # Copy the AWSXCLBIN file from S3
             src_file = join(s3_job_dir, 'aws', design_name, 'IMPL', 'AFI', f'{design_name}.awsxclbin')
             cmd = f'aws s3 cp {src_file} {dst_file}'
             run_cmd(cmd)
             logging.info(f'Copied {dst_file}')
             is_ok = True
+        except KeyboardInterrupt:
+            raise
         except:
             logging.exception(f"Failed to copy Vitis bitstream for design: {design_name}")
         finally:
-            res.append((design_name, is_ok))
+            res.append((basename(dst_file), 'Vitis', is_ok))
+
+    if hdk_version is not None:
+        # Copy default design too
+        src_file = join(out_dir, f'{VITIS_DEFAULT_BITSTREAM}.awsxclbin')
+        dst_file = join(out_dir, f'{hdk_version}.awsxclbin')
+        copyfile(src_file, dst_file)
+        logging.info(f'Copied {dst_file}')
+        res.append((basename(dst_file), 'Vitis', True))
+
     return res
 
 
@@ -163,8 +229,9 @@ def download_bitstream_from_s3(output, regex, force):
         logging.error(e)
 
     # Show summary table
-    logging.info(f"Summary of bitstreams copied from synthesis job '{job_name}':\n\n%s\n", tabulate(result, headers=['Design', 'Available Bitstream']))
-    err = sum([not(e[1]) for e in result])
+    logging.info(f"Summary of bitstreams copied from synthesis job '{job_name}':\n\n%s\n",
+                tabulate(result, headers=['Design', 'Flow', 'Available Bitstream']))
+    err = sum([not(e[2]) for e in result])
     if err == 0:
         logging.info('== All designs copied ==')
     else:
@@ -198,7 +265,7 @@ if __name__ == '__main__':
 
     if args.list:
         job_list = list_synthesis_jobs_from_s3(args.regex)
-        logging.info(f"List of synthesis jobs found on S3 matching regex '{regex}':\n%s" % '\n'.join(job_list))
+        logging.info(f"List of synthesis jobs found on S3 matching regex '{args.regex}':\n%s" % '\n'.join(job_list))
         ret = 0
     else:
         ret = download_bitstream_from_s3(args.output, args.regex, args.force)
