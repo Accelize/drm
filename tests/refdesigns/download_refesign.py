@@ -119,7 +119,7 @@ def copy_bitstreams(s3_job_dir, output, force=False):
     aws_hdk_dir = join(output, 'aws_f1')
     if not isdir(aws_hdk_dir):
         os.makedirs(aws_hdk_dir)
-    aws_vitis_dir = join(output, 'aws_f1')
+    aws_vitis_dir = join(output, 'aws_xrt')
     if not isdir(aws_vitis_dir):
         os.makedirs(aws_vitis_dir)
     # For each AFI info JSON file found
@@ -165,7 +165,7 @@ def copy_bitstreams(s3_job_dir, output, force=False):
             src_file, design_type = e[:2]
             if basename(src_file) in DEFAULT_BITSTREAMS:
                 ext = splitext(src_file)[1]
-                dst_file = join(dirname(src_file), f'{job_version}{ext}')
+                dst_file = join(dirname(src_file), f'v{job_version}{ext}')
                 is_ok = False
                 try:
                     copyfile(src_file, dst_file)
