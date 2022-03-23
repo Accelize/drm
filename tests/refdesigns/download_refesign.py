@@ -12,18 +12,21 @@ import re
 import json
 import os
 import tempfile
-from os.path import isdir, isfile, join, basename
+from os.path import isdir, isfile, join, basename, dirname, splitext
 from shutil import copyfile, rmtree
 from tabulate import tabulate
 
-
-AWS_S3_BUCKET = "s3://accelizecodebuildstorage/pt_reference_design"
+AWS_S3_BUCKET = 's3://accelizecodebuildstorage'
+AWS_S3_SYN_DIR = f'{AWS_S3_BUCKET}/pt_reference_design'
 
 REGEX_HDK_DESIGNS = r'\b\d+activator_\S+'
 REGEX_VITIS_DESIGNS = r'\bvitis_\S+'
 
-HDK_DEFAULT_BITSTREAM = '2activator_axi4_250_125'
-VITIS_DEFAULT_BITSTREAM = 'vitis_2activator_100_125'
+DEFAULT_BITSTREAMS = (
+    '2activator_axi4_250_125.json',
+    'vitis_2activator_100_125.awsxclbin',
+)
+
 
 
 def run_cmd(cmd):
@@ -35,166 +38,156 @@ def run_cmd(cmd):
     return out
 
 
-def get_hdk_version(s3_design_dir):
+def s3_listall(s3_dir, regex='.*', regex_flags=0):
+    out = run_cmd(f'aws s3 ls --recursive {s3_dir}')
+    ls = [re.findall(r'(\S+)', line)[-1] for line in out.strip().split('\n')]
+    ls = list(filter(lambda x: re.search(regex, x, regex_flags), ls))
+    ls = list(map(lambda x: join(AWS_S3_BUCKET, x), ls))
+    logging.debug(f"All files matching regex {regex} in {s3_dir}: %s" % '\n'.join(ls))
+    return ls
+
+
+def get_design_name(json_content):
+    design_name_node = next(filter(lambda x: x['Key'] == 'Project-Name', json_content['FpgaImages'][0]['Tags']))
+    assert design_name_node['Key'] == 'Project-Name'
+    design_name = design_name_node['Value']
+    logging.debug(f"Design name: {design_name}")
+    return design_name
+
+
+def get_design_type(json_content):
+    design_type_node = next(filter(lambda x: x['Key'] == 'Project-Type', json_content['FpgaImages'][0]['Tags']))
+    assert design_type_node['Key'] == 'Project-Type'
+    design_type = design_type_node['Value']
+    logging.debug(f"design type: {design_type}")
+    return design_type
+
+
+def check_design_version(json_content):
+    design_version_string = next(filter(lambda x: x['Key'] == 'HDK-Versions', json_content['FpgaImages'][0]['Tags']))
+    assert design_version_string['Key'] == 'HDK-Versions'
+    design_version_list = design_version_string['Value'].split(':')
+    assert len(set(design_version_list)) == 1, f"Inconsistent HDK versions: {design_version_string['Value']}"
+    design_version = design_version_list[0]
+    logging.debug(f"HDK version: {design_version}")
+    return design_version
+
+
+def copy_hdk_bitstream(s3_design_dir, dst_file, force=False):
+    # Download and open AFI info file
+    afi_info_file = join(s3_design_dir, 'afi_info.json')
     with tempfile.NamedTemporaryFile() as tmp_file:
-        # Copy the AFI info file from S3
-        src_file = join(s3_design_dir, 'IMPL', 'AFI', 'afi_info.json')
-        cmd = f'aws s3 cp {src_file} {tmp_file.name}'
-        run_cmd(cmd)
-        logging.debug(f'Downloaded {src_file} as {tmp_file.name}')
-        # Parsing AFI info file to extract HDK-Versions tag
+        run_cmd(f'aws s3 cp {afi_info_file} {tmp_file.name}')
+        logging.debug(f'Downloaded {afi_info_file} as {tmp_file.name}')
         with open(tmp_file.name, 'rt') as f:
-            content = json.load(f)
-        hdk_version_string = next(filter(lambda x: x['Key'] == 'HDK-Versions', content['FpgaImages'][0]['Tags']))
-        assert hdk_version_string['Key'] == 'HDK-Versions'
-        hdk_version_list = hdk_version_string['Value'].split(':')
-        assert len(set(hdk_version_list)) == 1, f"Inconsistent HDK versions: {hdk_version_string['Value']}"
-        hdk_version = hdk_version_list[0]
-        logging.debug(f"HDK version: {hdk_version}")
-        return hdk_version
+            afi_info_json = json.load(f)
+    if isfile(dst_file) and not force:
+        logging.error(f"AWS Vivado bitstream '{dst_file}' is already existing: to overwrite add -f option.")
+        return False
+    bitstream_json = dict()
+    bitstream_json['FpgaImageId'] = afi_info_json['FpgaImages'][0]['FpgaImageId']
+    bitstream_json['FpgaImageGlobalId'] = afi_info_json['FpgaImages'][0]['FpgaImageGlobalId']
+    # Copy AFI/AGFI json file locally in output directory
+    with open(dst_file, 'wt') as f:
+        json.dump(bitstream_json, f, indent=4)
+    logging.info(f'Copied {dst_file}')
+    return True
 
 
-def copy_aws_hdk_bitstream(s3_job_dir, output, force=False):
-    # Find all the designs performed by this synthesis job
-    cmd = f'aws s3 ls {s3_job_dir}/aws/'
-    out = run_cmd(cmd)
-    logging.debug(f"List of synthesis for job '{s3_job_dir}':\n{out}")
-    # Create AWS HDK output folder
-    out_dir = join(output, 'aws_f1')
-    if not isdir(out_dir):
-        os.makedirs(out_dir)
-    # Get AFI/AGFI for each AWS HDK design
-    hdk_version = None
+def copy_vitis_bitstream(s3_design_dir, dst_file, force=False):
+    if isfile(dst_file) and not force:
+        logging.error(f"Vitis bitstream '{dst_file}' is already existing: to overwrite add -f option.")
+        return False
+    # Find awsxclbin file
+    bitstream_list = s3_listall(s3_design_dir, r'.*\.awsxclbin')
+    assert len(bitstream_list) == 1
+    # Copy the AWSXCLBIN file from S3
+    src_file = bitstream_list[0]
+    run_cmd(f'aws s3 cp {src_file} {dst_file}')
+    logging.info(f'Copied {dst_file}')
+    return True
+
+
+COPY_BITSTREAM_FUNC = {
+    'hdk': copy_hdk_bitstream,
+    'vitis': copy_vitis_bitstream,
+}
+
+
+def copy_bitstreams(s3_job_dir, output, force=False):
+    # Create AWS output folders
+    aws_hdk_dir = join(output, 'aws_f1')
+    if not isdir(aws_hdk_dir):
+        os.makedirs(aws_hdk_dir)
+    aws_vitis_dir = join(output, 'aws_f1')
+    if not isdir(aws_vitis_dir):
+        os.makedirs(aws_vitis_dir)
+    # For each AFI info JSON file found
+    job_version = None
     res = list()
-    for d in re.finditer(REGEX_HDK_DESIGNS, out, re.IGNORECASE):
-        design_name = d.group(0)[:-1]
+    for afi_info_file in s3_listall(s3_job_dir, r'afi_info\.json'):
+        # Download and open AFI info file
+        with tempfile.NamedTemporaryFile() as tmp_file:
+            run_cmd(f'aws s3 cp {afi_info_file} {tmp_file.name}')
+            logging.debug(f'Downloaded {afi_info_file} as {tmp_file.name}')
+            with open(tmp_file.name, 'rt') as f:
+                afi_info_json = json.load(f)
+        # Extract design name, design type and design version
+        design_name = get_design_name(afi_info_json)
+        design_type = get_design_type(afi_info_json)
+        design_version = check_design_version(afi_info_json)
+        if job_version is None:
+            job_version = design_version
+        else:
+            assert job_version == design_version, f"Unexpected HDK version: current is {design_version} but expect {job_version}"
+        logging.debug(f'Handling design {design_name} with HDK version {job_version}')
+        # Create bitstream file depending on each project type
         is_ok = False
-        logging.debug(f"Parsing design {design_name}")
-        dst_file = join(out_dir, f'{design_name}.json')
+        if design_type == 'hdk':
+            dst_file = join(aws_hdk_dir, f'{design_name}.json')
+        elif design_type == 'vitis':
+            dst_file = join(aws_vitis_dir, f'{design_name}.awsxclbin')
+        else:
+            raise RuntimeError(f'Unsupported project type {design_type}')
         try:
-            if isfile(dst_file) and not force:
-                logging.error(f"AWS Vivado bitstream '{dst_file}' is already existing: to overwrite add -f option.")
-                continue
-            # Check HDK version
-            current_hdk_version = get_hdk_version(join(s3_job_dir, 'aws', design_name))
-            if hdk_version is None:
-                hdk_version = current_hdk_version
-            else:
-                assert hdk_version == current_hdk_version, f"Unexpected HDK version: current is {current_hdk_version} but expect {hdk_version}"
-            # Find and copy design bitstream
-            with tempfile.NamedTemporaryFile() as tmp_file:
-                # Copy the AFI info file from S3
-                src_file = join(s3_job_dir, 'aws', design_name, 'IMPL', 'AFI', 'afi_info.json')
-                cmd = f'aws s3 cp {src_file} {tmp_file.name}'
-                run_cmd(cmd)
-                logging.debug(f'Downloaded {src_file} as {tmp_file.name}')
-                # Parsing AFI info file to extract AFI/AGFI IDs
-                with open(tmp_file.name, 'rt') as f:
-                    content = json.load(f)
-                new_content = dict()
-                new_content['afi'] = content['FpgaImages'][0]['FpgaImageId']
-                new_content['agfi'] = content['FpgaImages'][0]['FpgaImageGlobalId']
-                if HDK_DEFAULT_BITSTREAM in design_name:
-                    hdk_version = next(filter(lambda x: x['Key'] == 'HDK-Versions', content['FpgaImages'][0]['Tags']))
-                    assert hdk_version['Key'] == 'HDK-Versions'
-                    hdk_version = hdk_version['Value'].split(':')[0]
-                    logging.debug(f"Found HDK version: {hdk_version}")
-                # Copy AFI/AGFI json file locally in output directory
-                with open(dst_file, 'wt') as f:
-                    json.dump(new_content, f, indent=4)
-                logging.info(f'Copied {dst_file}')
-                is_ok = True
+            s3_design_dir = dirname(afi_info_file)
+            is_ok = COPY_BITSTREAM_FUNC[design_type](s3_design_dir, dst_file, force)
         except KeyboardInterrupt:
             raise
         except:
-            logging.exception(f"Failed to copy HDK bitstream for design: {basename(dst_file)}")
+            logging.exception(f"Failed to copy {design_type} bitstream for design {design_name}")
         finally:
-            res.append((basename(dst_file), 'HDK', is_ok))
+            res.append((dst_file, design_type, design_version, is_ok))
 
-    if hdk_version is not None:
-        # Copy default design too
-        src_file = join(out_dir, f'{HDK_DEFAULT_BITSTREAM}.json')
-        dst_file = join(out_dir, f'{hdk_version}.json')
-        is_ok = False
-        try:
-            copyfile(src_file, dst_file)
-            logging.info(f'Copied {dst_file}')
-            is_ok = True
-        except:
-            logging.exception(f"Failed to copy HDK bitstream for design: {basename(dst_file)}")
-        finally:
-            res.append((basename(dst_file), 'HDK', is_ok))
-
-    return res
-
-
-def copy_aws_vitis_bitstream(s3_job_dir, output, force=False):
-    # Find all the designs performed by this synthesis job
-    cmd = f'aws s3 ls {s3_job_dir}/aws/'
-    out = run_cmd(cmd)
-    logging.debug(f"List of synthesis for job '{s3_job_dir}':\n{out}")
-    # Create AWS HDK output folder
-    out_dir = join(output, 'aws_xrt')
-    if not isdir(out_dir):
-        os.makedirs(out_dir)
-    # Get AFI/AGFI for each AWS HDK design
-    hdk_version = None
-    res = list()
-    for d in re.finditer(REGEX_VITIS_DESIGNS, out, re.IGNORECASE):
-        design_name = d.group(0)[:-1]
-        is_ok = False
-        logging.debug(f"Parsing design {design_name}")
-        dst_file = join(out_dir, f'{design_name}.awsxclbin')
-        try:
-            if isfile(dst_file) and not force:
-                logging.error(f"Vitis bitstream '{dst_file}' is already existing: to overwrite add -f option.")
-                continue
-            # Check HDK version
-            current_hdk_version = get_hdk_version(join(s3_job_dir, 'aws', design_name))
-            if hdk_version is None:
-                hdk_version = current_hdk_version
-            else:
-                assert hdk_version == current_hdk_version, f"Unexpected HDK version: current is {current_hdk_version} but expect {hdk_version}"
-            # Copy the AWSXCLBIN file from S3
-            src_file = join(s3_job_dir, 'aws', design_name, 'IMPL', 'AFI', f'{design_name}.awsxclbin')
-            cmd = f'aws s3 cp {src_file} {dst_file}'
-            run_cmd(cmd)
-            logging.info(f'Copied {dst_file}')
-            is_ok = True
-        except KeyboardInterrupt:
-            raise
-        except:
-            logging.exception(f"Failed to copy Vitis bitstream for design: {design_name}")
-        finally:
-            res.append((basename(dst_file), 'Vitis', is_ok))
-
-    if hdk_version is not None:
-        # Copy default design too
-        src_file = join(out_dir, f'{VITIS_DEFAULT_BITSTREAM}.awsxclbin')
-        dst_file = join(out_dir, f'{hdk_version}.awsxclbin')
-        is_ok = False
-        try:
-            copyfile(src_file, dst_file)
-            logging.info(f'Copied {dst_file}')
-            is_ok = True
-        except:
-            logging.exception(f"Failed to copy Vitis bitstream for design: {basename(dst_file)}")
-        finally:
-            res.append((basename(dst_file), 'Vitis', is_ok))
+    if job_version is not None:
+        # Copy default designs too
+        for e in res:
+            src_file, design_type = e[:2]
+            if basename(src_file) in DEFAULT_BITSTREAMS:
+                ext = splitext(src_file)[1]
+                dst_file = join(dirname(src_file), f'{job_version}{ext}')
+                is_ok = False
+                try:
+                    copyfile(src_file, dst_file)
+                    logging.info(f'Copied {dst_file}')
+                    is_ok = True
+                except:
+                    logging.exception(f"Failed to copy {design_type} bitstream for design {job_version}")
+                finally:
+                    res.append((dst_file, design_type, job_version, is_ok))
 
     return res
 
 
 def list_synthesis_jobs_from_s3(regex):
     # Get the content of AWS S3 bucket
-    cmd = f'aws s3 ls {AWS_S3_BUCKET}/'
-    out = run_cmd(cmd)
-    logging.debug(f'Content of {AWS_S3_BUCKET}:\n{out}')
+    out = run_cmd(f'aws s3 ls {AWS_S3_SYN_DIR}/')
+    logging.debug(f'Content of {AWS_S3_SYN_DIR}:\n{out}')
     # Evalute regex on the list of synthesis jobs on S3 folder
     if regex is None:
         r = r'(?<=PRE)\s+(\S+)'
     else:
-        r = r'(?<=PRE)\s+(\S+%s\S+)' % regex
+        r = r'(?<=PRE)\s+(\S*%s\S*)' % regex
     job_list = re.findall(r, out, re.IGNORECASE)
     # Sort list by date and time
     dated_job_list = list(map(lambda x: (extract_date_time(x), x), job_list))
@@ -212,12 +205,12 @@ def extract_date_time(s):
         return m.group(0)
 
 
-def download_bitstream_from_s3(output, regex, force):
+def download_bitstreams_from_s3(output, regex, force):
     try:
-        # Check existance of output dir
+        # Check existance of output folder
         logging.debug(f'Output directory: {output}')
-        if not isdir(args.output):
-            os.makedirs(args.output)
+        if not isdir(output):
+            os.makedirs(output)
         # Get synthesis jobs on AWS S3
         job_list = list_synthesis_jobs_from_s3(regex)
         if regex is None and len(job_list) > 1:
@@ -229,24 +222,26 @@ def download_bitstream_from_s3(output, regex, force):
             logging.error(f"Found multiple jobs matching regex '{regex}':\n%s" % '\n'.join(job_list))
             return -1
         job_name = job_list[0][:-1]
-        logging.info(f"Downloading all bitstreams from job {job_name}")
-        s3_job_dir = join(AWS_S3_BUCKET, job_name)
-        result = []
+        logging.info(f"Downloading all bitstreams in job {job_name}")
+        s3_job_dir = join(AWS_S3_SYN_DIR, job_name)
         # Copy the bitstreams of all available AWS HDK synthesized designs
-        result += copy_aws_hdk_bitstream(s3_job_dir, output, force)
-        # Copy the bitstreams of all available AWS HDK synthesized designs
-        result += copy_aws_vitis_bitstream(s3_job_dir, output, force)
+        result = copy_bitstreams(s3_job_dir, output, force)
     except RuntimeError as e:
         logging.error(e)
 
     # Show summary table
-    logging.info(f"Summary of bitstreams copied from synthesis job '{job_name}':\n\n%s\n",
-                tabulate(result, headers=['Design', 'Flow', 'Available Bitstream']))
-    err = sum([not(e[2]) for e in result])
-    if err == 0:
-        logging.info('== All designs copied ==')
+    if result:
+        logging.info(f"Summary of bitstreams copied from synthesis job '{job_name}':\n\n%s\n",
+                    tabulate(map(lambda x: (basename(x[0]), x[1], x[2], x[3]), result),
+                                headers=['Design', 'Flow', 'HDK Version', 'Available Bitstream']))
+        err = sum([not(e[2]) for e in result])
+        if err == 0:
+            logging.info(f'== {len(result)} designs copied ==')
+        else:
+            logging.error(f'== {err} designs NOT copied ==')
     else:
-        logging.error(f'== {err} designs NOT copied ==')
+        logging.error('== No design copied ==')
+        err = -1
 
     return err
 
@@ -278,20 +273,19 @@ if __name__ == '__main__':
     if args.output is None:
         args.output = "output"
 
-    if isdir(args.output):
-        if not args.clean:
-            logging.warning((f"Output directory {args.output} is already existing. "
-                    "Use -c option if you want to remove it first, otherwise the bitstreams will be added to the existing one"))
-        else:
-            rmtree(args.output)
-            logging.warning(f"Existing output directory {args.output} has been removed.")
-
     if args.list:
         job_list = list_synthesis_jobs_from_s3(args.regex)
         logging.info(f"List of synthesis jobs found on S3 matching regex '{args.regex}':\n%s" % '\n'.join(job_list))
         ret = 0
     else:
-        ret = download_bitstream_from_s3(args.output, args.regex, args.force)
+        if isdir(args.output):
+            if not args.clean:
+                logging.warning((f"Output directory {args.output} is already existing. "
+                        "Use -c option if you want to remove it first, otherwise the bitstreams will be added to the existing one"))
+            else:
+                rmtree(args.output)
+                logging.warning(f"Existing output directory {args.output} has been removed.")
+        ret = download_bitstreams_from_s3(args.output, args.regex, args.force)
 
     sys.exit(ret)
 
