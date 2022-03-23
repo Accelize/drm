@@ -13,7 +13,7 @@ import json
 import os
 import tempfile
 from os.path import isdir, isfile, join, basename
-from shutil import copyfile
+from shutil import copyfile, rmtree
 from tabulate import tabulate
 
 
@@ -107,7 +107,7 @@ def copy_aws_hdk_bitstream(s3_job_dir, output, force=False):
         except KeyboardInterrupt:
             raise
         except:
-            logging.exception(f"Failed to copy bitstream for design: {design_name}")
+            logging.exception(f"Failed to copy HDK bitstream for design: {basename(dst_file)}")
         finally:
             res.append((basename(dst_file), 'HDK', is_ok))
 
@@ -115,9 +115,15 @@ def copy_aws_hdk_bitstream(s3_job_dir, output, force=False):
         # Copy default design too
         src_file = join(out_dir, f'{HDK_DEFAULT_BITSTREAM}.json')
         dst_file = join(out_dir, f'{hdk_version}.json')
-        copyfile(src_file, dst_file)
-        logging.info(f'Copied {dst_file}')
-        res.append((basename(dst_file), 'HDK', True))
+        is_ok = False
+        try:
+            copyfile(src_file, dst_file)
+            logging.info(f'Copied {dst_file}')
+            is_ok = True
+        except:
+            logging.exception(f"Failed to copy HDK bitstream for design: {basename(dst_file)}")
+        finally:
+            res.append((basename(dst_file), 'HDK', is_ok))
 
     return res
 
@@ -166,9 +172,15 @@ def copy_aws_vitis_bitstream(s3_job_dir, output, force=False):
         # Copy default design too
         src_file = join(out_dir, f'{VITIS_DEFAULT_BITSTREAM}.awsxclbin')
         dst_file = join(out_dir, f'{hdk_version}.awsxclbin')
-        copyfile(src_file, dst_file)
-        logging.info(f'Copied {dst_file}')
-        res.append((basename(dst_file), 'Vitis', True))
+        is_ok = False
+        try:
+            copyfile(src_file, dst_file)
+            logging.info(f'Copied {dst_file}')
+            is_ok = True
+        except:
+            logging.exception(f"Failed to copy Vitis bitstream for design: {basename(dst_file)}")
+        finally:
+            res.append((basename(dst_file), 'Vitis', is_ok))
 
     return res
 
@@ -211,14 +223,13 @@ def download_bitstream_from_s3(output, regex, force):
         if regex is None and len(job_list) > 1:
             job_list = [job_list[0]]
             logging.warning("No regex option provided by user: the most recent synthesis job will be selected")
-        job_name = job_list[0][:-1]
-        logging.info(f"Downloading all bitstreams from job {job_name}")
         if len(job_list) == 0:
             return -1
         if len(job_list) > 1:
             logging.error(f"Found multiple jobs matching regex '{regex}':\n%s" % '\n'.join(job_list))
             return -1
-
+        job_name = job_list[0][:-1]
+        logging.info(f"Downloading all bitstreams from job {job_name}")
         s3_job_dir = join(AWS_S3_BUCKET, job_name)
         result = []
         # Copy the bitstreams of all available AWS HDK synthesized designs
@@ -243,11 +254,12 @@ def download_bitstream_from_s3(output, regex, force):
 ## MAIN
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-o', '--output', dest='output', type=str, default=os.getcwd(), help='Specify the path to the directory to copy the designs to')
+    parser.add_argument('-o', '--output', dest='output', type=str, default=None, help='Specify the path to the directory to copy the designs to')
     parser.add_argument('-l', '--list', dest='list', action='store_true', default=False, help='List available synthesis jobs on S3')
-    parser.add_argument('-r', '--regex', dest='regex', type=str, default=None, help=('Specify a regex pattern used to find the designs to downloads. ',
+    parser.add_argument('-r', '--regex', dest='regex', type=str, default=None, help=('Specify a regex pattern used to find the designs to downloads. '
                                             'If omitted, the most recent synthesis job is used'))
-    parser.add_argument('-f', '--force', action='store_true', default=False, help='Overwrite output directory if already existing.')
+    parser.add_argument('-f', '--force', action='store_true', default=False, help='Overwrite bitstream file if already existing locally.')
+    parser.add_argument('-c', '--clean', dest='clean', action='store_true', default=False, help='Clean output directory if existing')
     parser.add_argument('-v', dest='verbosity', action='store_true', default=False, help='More verbosity')
     args = parser.parse_args()
 
@@ -262,6 +274,17 @@ if __name__ == '__main__':
         handlers=[
             logging.StreamHandler()
         ])
+
+    if args.output is None:
+        args.output = "output"
+
+    if isdir(args.output):
+        if not args.clean:
+            logging.warning((f"Output directory {args.output} is already existing. "
+                    "Use -c option if you want to remove it first, otherwise the bitstreams will be added to the existing one"))
+        else:
+            rmtree(args.output)
+            logging.warning(f"Existing output directory {args.output} has been removed.")
 
     if args.list:
         job_list = list_synthesis_jobs_from_s3(args.regex)
