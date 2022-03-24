@@ -262,3 +262,4 @@ class FpgaDriver(_FpgaDriverBase):
             return size_or_error if size_or_error != 4 else 0
 
         return write_register
+

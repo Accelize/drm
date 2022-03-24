@@ -1,8 +1,13 @@
-* Wed Mar 16 2022 Accelize v2.5.4-rc.2
+* Thu Mar 24 2022 Accelize v2.5.5-alpha
+- NEW: Support of Versal
+- NEW: Support of new XRT v2.12 with new xbutil API
+- NEW: Support of HDK v7.1.0.0
+
+* Mon Mar 21 2022 Accelize v2.5.4
 - NEW: Support of HDK v7.0.0.0-Fix.
 - NEW: Support DRM Hybrid Solution for SoM boards
 - NEW: Define a default asynchronous error callback.
-- NEW: Add script to generate the Petalinux recipe
+- NEW: Add script to generate the Petalinux recipe for the DRM Library
 
 * Mon Jun 29 2021 Accelize v2.5.3
 - NEW: Add message to check networking connection in case of Timeout or Retry errors on HTTP request.
