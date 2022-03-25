@@ -19,6 +19,7 @@ trigger:
       - LICENSE
       - deployment/README.md
       - deployment/release.py
+      - deployment/azure-pipelines-docs.yml
 
 pr: none
 
