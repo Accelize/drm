@@ -44,10 +44,17 @@ stages:
         displayName: Update documentation
         steps:
 
+        - task: UsePythonVersion@0
+          inputs:
+            versionSpec: '3.x'
+            addToPath: true
+            architecture: 'x64'
+          displayName: Get Python
+
         - script: |
             sudo apt-get update
             sudo apt-get install -y --no-install-recommends doxygen g++ libcurl4-openssl-dev libjsoncpp-dev make pkg-config
-            pip install -U --upgrade-strategy=eager --disable-pip-version-check breathe cython sphinx_rtd_theme
+            pip install --disable-pip-version-check breathe cython sphinx_rtd_theme
           displayName: Install dependencies
 
         - script: |
