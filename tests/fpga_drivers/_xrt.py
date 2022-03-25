@@ -127,6 +127,7 @@ class FpgaDriver(_FpgaDriverBase):
         Args:
             fpga_image (str): FPGA image.
         """
+        self._clear_fpga()
         load_image = _run(
             [self._xbutil, 'program', '-d', 'all', '-u', fpga_image],
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)

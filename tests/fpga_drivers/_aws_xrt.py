@@ -4,6 +4,7 @@ Xilinx XRT driver for Accelize DRM Python library
 
 Requires XRT: https://github.com/Xilinx/XRT
 """
+import pyopencl as cl
 from ctypes import (
     cdll as _cdll, POINTER as _POINTER, c_char_p as _c_char_p,
     c_uint as _c_uint, c_uint64 as _c_uint64, c_int as _c_int,
@@ -84,9 +85,9 @@ class FpgaDriver(_FpgaDriverBase):
         if _isfile(_join(xrt_path, 'lib','libxrt_aws.so')):
             print('Loading XRT API library for AWS targets')
             fpga_library = _cdll.LoadLibrary(_join(xrt_path, 'lib','libxrt_aws.so'))
-        elif _isfile(_join(xrt_path, 'lib','libxrt_core.so')):
-            print('Loading XRT API library for Xilinx targets')
-            fpga_library = _cdll.LoadLibrary(_join(xrt_path, 'lib','libxrt_core.so'))
+        #elif _isfile(_join(xrt_path, 'lib','libxrt_core.so')):
+        #    print('Loading XRT API library for Xilinx targets')
+        #    fpga_library = _cdll.LoadLibrary(_join(xrt_path, 'lib','libxrt_core.so'))
         else:
             raise RuntimeError('Unable to find Xilinx XRT Library')
         return fpga_library
@@ -131,26 +132,7 @@ class FpgaDriver(_FpgaDriverBase):
         Args:
             fpga_image (str): FPGA image.
         """
-        # Vitis does not reprogram a FPGA that has already the bitstream.
-        # So to force it we write another bitstream first.
-        clear_image = _join(SCRIPT_DIR, 'clear.awsxclbin')
-        load_image = _run(
-            [self._xbutil, 'program',
-             '-d', str(self._fpga_slot_id), '-p', clear_image],
-            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
-        if load_image.returncode:
-            raise RuntimeError(load_image.stdout)
-        print('Cleared AWS XRT slot #%d' % self._fpga_slot_id)
-
-        # Now load the real image
-        fpga_image = _realpath(_fsdecode(fpga_image))
-        load_image = _run(
-            [self._xbutil, 'program',
-             '-d', str(self._fpga_slot_id), '-p', fpga_image],
-            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
-        if load_image.returncode:
-            raise RuntimeError(load_image.stdout)
-        print('Programmed AWS XRT slot #%d with FPGA image %s' % (self._fpga_slot_id, fpga_image))
+        self._clear_fpga()
 
     def _reset_fpga(self):
         """
@@ -167,6 +149,12 @@ class FpgaDriver(_FpgaDriverBase):
         """
         Initialize FPGA handle with driver library.
         """
+        dev =cl.get_platforms()[0].get_devices()
+        binary = open(self._fpga_image, 'rb').read()
+        ctx = cl.Context(dev_type=cl.device_type.ALL)
+        prg = cl.Program(ctx, [dev[self._fpga_slot_id]], [binary])
+        prg.build()
+
         # Find all devices
         xcl_probe = self._fpga_library.xclProbe
         xcl_probe.restype = _c_uint  # Devices count
