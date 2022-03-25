@@ -54,11 +54,11 @@ stages:
         - script: |
             sudo apt-get update
             sudo apt-get install -y --no-install-recommends doxygen g++ libcurl4-openssl-dev libjsoncpp-dev make pkg-config
-            pip install --disable-pip-version-check breathe cython sphinx_rtd_theme
+            pip install -q --disable-pip-version-check breathe cython sphinx_rtd_theme wheel
+            pip --disable-pip-version-check list
           displayName: Install dependencies
 
         - script: |
-            pip list
             mkdir build_doc
             cd build_doc
             cmake -DPYTHON3=ON -DDOC=ON ..
