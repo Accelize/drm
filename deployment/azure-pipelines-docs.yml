@@ -27,8 +27,7 @@ trigger:
 pr: none
 
 variables:
-  variables:
-    cacheDir: $(Agent.TempDirectory)/.pipeline_cache
+  cacheDir: $(Agent.TempDirectory)/.pipeline_cache
   ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/master') }}:
     releaseChannel: stable
   ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/master') }}:
