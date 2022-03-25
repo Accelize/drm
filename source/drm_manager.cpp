@@ -16,6 +16,7 @@ limitations under the License.
 
 #include <json/version.h>
 #include <future>
+#include <numeric>
 #include <fstream>
 
 #include "accelize/drm/drm_manager.h"
