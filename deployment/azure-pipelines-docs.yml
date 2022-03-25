@@ -27,6 +27,7 @@ trigger:
 pr: none
 
 variables:
+  cacheDir: $(Agent.TempDirectory)/.pipeline_cache
   ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/master') }}:
     releaseChannel: stable
   ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/master') }}:
@@ -44,19 +45,37 @@ stages:
         displayName: Update documentation
         steps:
 
-        - script: |
-            sudo apt-get update
-            sudo apt-get install -y --no-install-recommends doxygen g++ libcurl4-openssl-dev libjsoncpp-dev make pkg-config
-            pip install -U --upgrade-strategy=eager --disable-pip-version-check breathe cython sphinx_rtd_theme
-          displayName: Install dependencies
+        - task: UsePythonVersion@0
+          inputs:
+            versionSpec: '3.x'
+            addToPath: true
+            architecture: 'x64'
+          displayName: Get Python
+
+        - task: Cache@2
+          inputs:
+            key: 'cache | "$(Agent.OS)"'
+            path: $(cacheDir)
+          displayName: Cache packages and CCache
 
         - script: |
-            pip list
+            sudo apt-get -q update
+            sudo apt-get -q install -y --no-install-recommends ccache doxygen g++ libcurl4-openssl-dev libjsoncpp-dev make pkg-config
+            pip install -q --disable-pip-version-check breathe cython sphinx_rtd_theme wheel
+            pip --disable-pip-version-check list
+            echo "##vso[task.prependpath]/usr/lib/ccache"
+          displayName: Install dependencies
+          env:
+            PIP_CACHE_DIR: $(cacheDir)/.pip_packages
+
+        - script: |
             mkdir build_doc
             cd build_doc
             cmake -DPYTHON3=ON -DDOC=ON ..
             make -s -j
           displayName: Build documentation
+          env:
+            CCACHE_DIR: $(cacheDir)/.ccache
 
         - task: AWSCLI@1
           displayName: Publish documentation
