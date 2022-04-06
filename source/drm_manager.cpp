@@ -1698,7 +1698,7 @@ protected:
             if ( !isConfigInNodeLock() )
                 licenseTimer = JVgetRequired( dna_node, "licenseTimer", Json::stringValue ).asString();
             mLicenseDuration = JVgetRequired( metering_node, "timeoutSecond", Json::uintValue ).asUInt();
-            if ( ( mLicenseDuration == 0 ) && ( mLicenseType == eLicenseType::NODE_LOCKED ) )
+            if ( ( mLicenseDuration == 0 ) && ( mLicenseType != eLicenseType::NODE_LOCKED ) )
                 Warning( "'timeoutSecond' field sent by License WS must not be 0" );
 
         } catch( const Exception &e ) {
