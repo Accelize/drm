@@ -13,7 +13,7 @@
       vars:
         aws_fpga_install: true
         aws_fpga_src_install: /opt/aws_fpga
-        xilinx_xrt_version: 2021.1
+        xilinx_xrt_version: 2021.2
         xilinx_xrt_env: aws
         xilinx_xrt_install: true
         xilinx_xrt_ensure_compatible_kernel: false
