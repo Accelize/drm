@@ -58,7 +58,6 @@ def test_metered_start_stop_short_time(accelize_drm, conf_json, cred_json, async
     activators.reset_coin()
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_02')
-
     async_cb.reset()
     conf_json.reset()
     logfile = log_file_factory.create(2)
@@ -682,3 +681,60 @@ def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handl
     async_cb.assert_NoError()
     logfile.remove()
 
+
+@pytest.mark.minimum
+@pytest.mark.hwtst
+def test_heart_beat(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
+    """
+    Test activator locks if heart beat stops
+    """
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    async_cb.reset()
+    activators = accelize_drm.pytest_fpga_activators[0]
+    activators.autotest()
+    logfile = log_file_factory.create(2)
+    conf_json['settings'].update(logfile.json)
+    conf_json.save()
+
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+        assert not drm_manager.get('license_status')
+        activators.autotest(is_activated=False)
+        drm_manager.activate()
+        assert drm_manager.get('license_status')
+        activators.autotest(is_activated=True)
+        license_duration = drm_manager.get('license_duration')
+        # Cut communication between Controller and each activator progressively
+        act0 = activators[0]
+        act1 = activators[1]
+        def print_status(expect0, expect1):
+            s0 = act0.get_status()
+            s1 = act1.get_status()
+            print('status=', s0, s1)
+            if expect0 is None:
+                ret = True
+            else:
+                ret = s0 == expect0
+            if expect1 is None:
+                ret &= True
+            else:
+                ret &= s0 == expect0
+            return ret
+        act0.write_register(0x34, 1)
+        print_status(False, True)
+        sleep(1)
+        act0.write_register(0x34, 0)
+        wait_func_true(lambda: print_status(False, True), 2*license_duration)
+        act0.write_register(0x34, 0)
+        drm_manager.deactivate()
+        assert not drm_manager.get('license_status')
+        activators.autotest(is_activated=False)
+        assert sum(drm_manager.get('metered_data')) == 0
+        async_cb.assert_NoError()
+    logfile.remove()
