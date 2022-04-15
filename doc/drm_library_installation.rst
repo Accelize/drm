@@ -23,6 +23,7 @@ Following OS are minimally tested only (without hardware):
 * Debian 11 Bullseye
 * Fedora (2 latest stable versions)
 * Ubuntu 20.04 LTS Focal
+* Ubuntu 22.04 LTS Jammy
 * Ubuntu (2 latest stable versions)
 * Red Hat Enterprise Linux 7
 * Red Hat Enterprise Linux 8
