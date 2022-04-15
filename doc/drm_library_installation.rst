@@ -65,15 +65,15 @@ To install the repository, run the following commands:
 
 .. code-block:: bash
 
-    # Ensure common system utilities are installed
+    # Ensure wget is installed (It can be removed once the repository is installed)
     sudo apt update
-    sudo apt install -y apt-transport-https software-properties-common lsb-release gnupg curl
+    sudo apt install -y wget
 
     # Add Accelize GPG public key for package signature verification
-    curl -fsSL https://tech.accelize.com/gpg | sudo apt-key add -
+    sudo wget https://tech.accelize.com/gpg_unarmored -O /etc/apt/trusted.gpg.d/accelize.gpg
 
     # Install repository
-    sudo add-apt-repository "deb https://tech.accelize.com/deb $(lsb_release -cs) stable"
+    echo "deb https://tech.accelize.com/deb $(grep -ioP '^VERSION_CODENAME=\K.+' /etc/os-release) stable" | sudo tee /etc/apt/sources.list.d/accelize_stable.list
     sudo apt update
 
 
@@ -85,11 +85,11 @@ To install the Accelize repository, run the following commands:
 .. code-block:: bash
     :caption: On Fedora, RHEL/CentOS/CentOS Stream >= 8
 
-    # Ensure config manager is installed
-    sudo dnf install -y 'dnf-command(config-manager)'
+    # Ensure curl is installed (It can be removed once the repository is installed)
+    sudo dnf install -y curl
 
-    # Install repository
-    sudo dnf config-manager --add-repo https://tech.accelize.com/rpm/accelize_stable.repo
+    # Install Accelize repository:
+    sudo curl https://tech.accelize.com/rpm/accelize_stable.repo -o /etc/yum.repos.d/accelize_stable.repo
 
 .. code-block:: bash
     :caption: On RHEL 7, CentOS 7
