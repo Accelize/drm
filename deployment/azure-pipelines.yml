@@ -117,67 +117,32 @@ stages:
         # Performs release only if not scheduled
         environment: drmLibrary
         pool:
-          vmImage: ubuntu-18.04
+          vmImage: ubuntu-latest
         variables:
-          # DEB and RPM repositories paths
-          debRepo: /tmp/deb_repo
           ${{ if not(contains(variables['Build.SourceBranch'], '-')) }}:
-            debS3: s3://accelize/deb/
+            ReleaseChannel: stable
           ${{ if contains(variables['Build.SourceBranch'], '-') }}:
-            debS3: s3://accelize/deb_prerelease/
-          rpmRepo: /tmp/rpm_repo
-          rpmS3: s3://accelize/rpm/
-          versionsJson: versions.json
-          versionsJsonS3: s3://accelize/versions.json
+            ReleaseChannel: prerelease
 
         strategy:
           runOnce:
             deploy:
               steps:
 
-                # Initialize environment
+                # Publish packages
+
+                - task: AWSCLI@1
+                  displayName: Publish packages
+                  inputs:
+                    awsCredentials: AWS-Repository
+                    regionName: eu-west-1
+                    awsCommand: s3
+                    awsSubCommand: sync
+                    awsArguments: . s3://accelize/t/$(ReleaseChannel)/ --no-progress --exclude "*" --include "*.deb" --include "*.rpm"
+
+                # Publish the release on GitHub
                 - checkout: self
                   fetchDepth: 1
-
-                - script: |
-                    sudo apt-get update &&
-                    sudo apt-get install -y --no-install-recommends createrepo reprepro
-                  displayName: Install dependencies
-
-                # Get current repositories
-                - task: AWSCLI@1
-                  displayName: Get published releases manifest
-                  inputs:
-                    awsCredentials: AWS-Repository
-                    regionName: eu-west-1
-                    awsCommand: s3
-                    awsSubCommand: cp
-                    awsArguments: $(versionsJsonS3) $(versionsJson)
-                                  --no-progress
-
-                - task: AWSCLI@1
-                  displayName: Get current RPM repository
-                  inputs:
-                    awsCredentials: AWS-Repository
-                    regionName: eu-west-1
-                    awsCommand: s3
-                    awsSubCommand: sync
-                    awsArguments: $(rpmS3) $(rpmRepo) --no-progress
-
-                - task: AWSCLI@1
-                  displayName: Get current DEB repository
-                  inputs:
-                    awsCredentials: AWS-Repository
-                    regionName: eu-west-1
-                    awsCommand: s3
-                    awsSubCommand: sync
-                    awsArguments: $(debS3) $(debRepo) --no-progress
-
-                - task: DownloadSecureFile@1
-                  displayName: Get GPG private key
-                  name: gpgPrivateKey
-                  inputs:
-                    secureFile: gpgPrivateKey
 
                 - task: UsePythonVersion@0
                   inputs:
@@ -186,50 +151,6 @@ stages:
                     architecture: 'x64'
                   displayName: Get Python
 
-                # Update repositories
-                - task: PythonScript@0
-                  displayName: Add packages to repositories
-                  inputs:
-                    scriptSource: inline
-                    script: |
-                      from azure_pipeline_utils import publish_packages
-                      publish_packages(
-                          pkg_source='$(Pipeline.Workspace)',
-                          versions_json='$(versionsJson)',
-                          deb_repo='$(debRepo)', rpm_repo='$(rpmRepo)',
-                          deb_s3='$(debS3)',
-                          gpg_private_key='$(gpgPrivateKey.secureFilePath)',
-                          gpg_key_id='$(gpgKeyId)')
-
-                # Publish updated repositories
-                - task: AWSCLI@1
-                  displayName: Update published releases manifest
-                  inputs:
-                    awsCredentials: AWS-Repository
-                    regionName: eu-west-1
-                    awsCommand: s3
-                    awsSubCommand: cp
-                    awsArguments: $(versionsJson) $(versionsJsonS3) --no-progress
-
-                - task: AWSCLI@1
-                  displayName: Publish RPM repository
-                  inputs:
-                    awsCredentials: AWS-Repository
-                    regionName: eu-west-1
-                    awsCommand: s3
-                    awsSubCommand: sync
-                    awsArguments: $(rpmRepo) $(rpmS3) --no-progress --delete
-
-                - task: AWSCLI@1
-                  displayName: Publish DEB repository
-                  inputs:
-                    awsCredentials: AWS-Repository
-                    regionName: eu-west-1
-                    awsCommand: s3
-                    awsSubCommand: sync
-                    awsArguments: $(debRepo) $(debS3) --no-progress --delete
-
-                # Publish the release on GitHub
                 - task: PythonScript@0
                   displayName: Get DRM library version
                   inputs:
