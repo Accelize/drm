@@ -149,7 +149,7 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (accelize_drm.fpga_drivers._aws_f1.FpgaDriver):
                     Keep a reference to driver.
             """
-            with driver._fpga_read_register_lock():
+            with driver._fpga_register_lock():
                 return driver._fpga_read_register(
                     driver._fpga_handle,
                     driver._drm_ctrl_base_addr + register_offset,
@@ -183,7 +183,7 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (accelize_drm.fpga_drivers._aws_f1.FpgaDriver):
                     Keep a reference to driver.
             """
-            with driver._fpga_write_register_lock():
+            with driver._fpga_register_lock():
                 return driver._fpga_write_register(
                     driver._fpga_handle,
                     driver._drm_ctrl_base_addr + register_offset,

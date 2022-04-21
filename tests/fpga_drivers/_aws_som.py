@@ -27,7 +27,7 @@ SHM_PATH = "/usr/lib/drm-controller/shared-memory-file"
 
 def int_to_bytes(x: int) -> bytes:
     return x.to_bytes(4, 'little', signed=False)
-    
+
 def bytes_to_int(xbytes: bytes) -> int:
     return int.from_bytes(xbytes, 'little', signed=False)
 
@@ -44,7 +44,7 @@ class FpgaDriver(_FpgaDriverBase):
     """
     _name = _match(r'_(.+)\.py', _basename(__file__)).group(1)
     _reglock = _Lock()
-    
+
     @staticmethod
     def _get_xrt_lib():
         """
@@ -55,7 +55,7 @@ class FpgaDriver(_FpgaDriverBase):
             if _isfile(_join(prefix, 'bin','xbutil')):
                 return prefix
         raise RuntimeError('Unable to find Xilinx XRT')
-    
+
     @staticmethod
     def _get_driver():
         """
@@ -74,7 +74,7 @@ class FpgaDriver(_FpgaDriverBase):
         else:
             raise RuntimeError('Unable to find Xilinx XRT Library')
         return fpga_library
-    
+
     @staticmethod
     def _get_xbutil():
         xrt_path = FpgaDriver._get_xrt_lib()
@@ -94,7 +94,7 @@ class FpgaDriver(_FpgaDriverBase):
         Get a lock on the FPGA driver
         """
         return _Lock
-    
+
     def _clear_fpga(self):
         """
         Clear FPGA
@@ -138,7 +138,7 @@ class FpgaDriver(_FpgaDriverBase):
         # Init global specific variables
         self.shm_pages = list()
         self.ctrl_sw_exec = None
-        
+
         # Start Controller SW
         fpga_image = ''
         if not _isfile(fpga_image):
@@ -210,10 +210,10 @@ class FpgaDriver(_FpgaDriverBase):
             self.ctrl_sw_exec.send_signal(signal.SIGINT)
             self.ctrl_sw_exec.wait()
         print('Terminate DRM')
-        
+
     def int_to_bytes(x: int) -> bytes:
         return x.to_bytes((x.bit_length() + 7) // 8, 'little', signed=False)
-		
+
     def int_from_bytes(xbytes: bytes) -> int:
         return int.from_bytes(xbytes, 'big')
 
@@ -246,7 +246,7 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (accelize_drm.fpga_drivers._aws_xrt.FpgaDriver):
                     Keep a reference to driver.
             """
-            with driver._fpga_read_register_lock():
+            with driver._fpga_register_lock():
                 if register_offset >= 0x10000:
                     '''
                     size_or_error = driver._fpga_read_register(
@@ -266,7 +266,7 @@ class FpgaDriver(_FpgaDriverBase):
                         reg_value = page_index
                     else:
                         shm = driver.shm_pages[page_index]
-                        reg_value = bytes_to_int(shm.read(4, register_offset))                        
+                        reg_value = bytes_to_int(shm.read(4, register_offset))
 #                    print('Read @%08X: 0x%08X' % (register_offset, reg_value))
                     returned_data.contents.value = reg_value
                     ret = 0
@@ -291,7 +291,7 @@ class FpgaDriver(_FpgaDriverBase):
             _c_size_t  # size
         )
         self._fpga_write_register = xcl_write
-        
+
         def write_register(register_offset, data_to_write, driver=self):
             """
             Write register.
@@ -302,7 +302,7 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (accelize_drm.fpga_drivers._aws_xrt.FpgaDriver):
                     Keep a reference to driver.
             """
-            with driver._fpga_read_register_lock():
+            with driver._fpga_register_lock():
                 if register_offset >= 0x10000:
                     '''
                     size_or_error = driver._fpga_write_register(

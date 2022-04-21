@@ -208,7 +208,7 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (accelize_drm.fpga_drivers._aws_xrt.FpgaDriver):
                     Keep a reference to driver.
             """
-            with driver._fpga_read_register_lock():
+            with driver._fpga_register_lock():
                 size_or_error = driver._fpga_read_register(
                     driver._fpga_handle,
                     2,  # XCL_ADDR_KERNEL_CTRL
@@ -250,7 +250,7 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (accelize_drm.fpga_drivers._aws_xrt.FpgaDriver):
                     Keep a reference to driver.
             """
-            with driver._fpga_write_register_lock():
+            with driver._fpga_register_lock():
                 size_or_error = driver._fpga_write_register(
                     driver._fpga_handle,
                     2,  # XCL_ADDR_KERNEL_CTRL
