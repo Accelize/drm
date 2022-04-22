@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegistersStrategy_v7_0_0.cpp
-*  \version   7.0.0.0
-*  \date      October 2021
+*  \version   7.1.0.0
+*  \date      January 2022
 *  \brief     Class DrmControllerRegistersStrategy_v7_0_0 defines strategy for register access of drm controller v7.0.0.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License") {
 
@@ -79,7 +79,7 @@ DrmControllerRegistersStrategy_v7_0_0::DrmControllerRegistersStrategy_v7_0_0(tDr
   mMeteringFileFirstIpMeteringDataWordPosition(DRM_CONTROLLER_V7_0_0_METERING_FILE_FIRST_IP_METERING_DATA_POSITION),
   mMeteringFileMacWordFromEndPosition(DRM_CONTROLLER_V7_0_0_METERING_FILE_MAC_FROM_END_POSITION),
   mDrmErrorRegisterMessagesArraySize(DRM_CONTROLLER_V7_0_0_NUMBER_OF_ERROR_CODES),
-  mDrmErrorRegisterMessagesArray{
+  mDrmErrorRegisterMessagesArray({
     { mDrmErrorNotReady,                                   "Not ready" },
     { mDrmErrorNoError,                                    "No error"  },
     { mDrmErrorBusReadAuthenticatorDrmVersionTimeOutError, "Bus read authenticator drm version timeout error" },
@@ -102,7 +102,7 @@ DrmControllerRegistersStrategy_v7_0_0::DrmControllerRegistersStrategy_v7_0_0(tDr
     { mDrmErrorBusWriteActivatorResponseTimeOutError,      "Bus write activator response timeout error" },
     { mDrmErrorBusReadInterruptTimeOutError,               "Bus read interrupt timeout error" },
     { mDrmErrorBusReadExpectedStatusError,                 "Bus read expected status error" }
-  }
+  })
 {
   setIndexedRegisterName(DRM_CONTROLLER_V7_0_0_INDEXED_REGISTER_NAME);
 }
@@ -967,7 +967,7 @@ unsigned int DrmControllerRegistersStrategy_v7_0_0::readLicenseTimerLoadErrorReg
   return DrmControllerRegistersStrategyInterface::readErrorRegister(mDrmLicenseTimerLoadErrorPosition, mDrmLicenseTimerLoadErrorMask, licenseTimerLoadError);
 }
 
-/** waitLicenseTimerLoadErrorRegister
+/** waitActivationErrorRegister
 *   \brief Wait error to reach specified value.
 *   This method will access to the system bus to read the error register.
 *   \param[in]  timeout is the timeout value in micro seconds.
@@ -1359,7 +1359,7 @@ void DrmControllerRegistersStrategy_v7_0_0::printMeteringFileHwReport(std::ostre
       writter << "IP INDEX 0x" << DrmControllerDataConverter::binaryToHexString(ipIndex) << " PLAIN METERING";
       file << registerValue(DrmControllerDataConverter::binaryToHexString(ipMetering), writter.str()) << std::endl;
     }
-  }
+  }    
   else
     file << registerValue(DrmControllerDataConverter::binaryToHexStringList(getMeteringFileIpMeteringData(meteringFile),mMeteringWordRegisterWordNumber), "ENCRYPTED IP METERING DATA", 0) << std::endl;
   file << registerValue(DrmControllerDataConverter::binaryToHexString(getMeteringFileMac(meteringFile)), "MAC") << std::endl;

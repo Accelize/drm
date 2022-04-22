@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegisters.hpp
-*  \version   7.0.0.0
-*  \date      October 2021
+*  \version   7.1.0.0
+*  \date      January 2022
 *  \brief     Class DrmControllerRegisters defines low level procedures
 *             for access to all registers.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,6 +40,7 @@
 #include <HAL/DrmControllerRegistersStrategy_v6_0_0.hpp>
 #include <HAL/DrmControllerRegistersStrategy_v6_0_1.hpp>
 #include <HAL/DrmControllerRegistersStrategy_v7_0_0.hpp>
+#include <HAL/DrmControllerRegistersStrategy_v7_1_0.hpp>
 
 /**
 *   \namespace DrmControllerLibrary

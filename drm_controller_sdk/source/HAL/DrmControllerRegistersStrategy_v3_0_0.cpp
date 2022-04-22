@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegistersStrategy_v3_0_0.cpp
-*  \version   7.0.0.0
-*  \date      October 2021
+*  \version   7.1.0.0
+*  \date      January 2022
 *  \brief     Class DrmControllerRegistersStrategy_v3_0_0 defines strategy for register access of drm controller v3.0.0.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License") {
 
@@ -66,7 +66,7 @@ DrmControllerRegistersStrategy_v3_0_0::DrmControllerRegistersStrategy_v3_0_0(tDr
   mLicenseFileIpBlockWordNumber(DRM_CONTROLLER_V3_0_0_LICENSE_IP_BLOCK_SIZE),
   mLicenseFileMinimumWordNumber((mLicenseFileHeaderWordNumber+mLicenseFileIpBlockWordNumber)*mLicenseWordRegisterWordNumber),
   mDrmErrorRegisterMessagesArraySize(DRM_CONTROLLER_V3_0_0_NUMBER_OF_ERROR_CODES),
-  mDrmErrorRegisterMessagesArray{
+  mDrmErrorRegisterMessagesArray({
     { mDrmErrorNotReady,                                   "Not ready" },
     { mDrmErrorNoError,                                    "No error"  },
     { mDrmErrorBusReadAuthenticatorDrmVersionTimeOutError, "Bus read authenticator drm version timeout error" },
@@ -89,7 +89,7 @@ DrmControllerRegistersStrategy_v3_0_0::DrmControllerRegistersStrategy_v3_0_0(tDr
     { mDrmErrorBusWriteActivatorResponseTimeOutError,      "Bus write activator response timeout error" },
     { mDrmErrorBusReadInterruptTimeOutError,               "Bus read interrupt timeout error" },
     { mDrmErrorBusReadExpectedStatusError,                 "Bus read expected status error" }
-  }
+  })
 {
   setIndexedRegisterName(DRM_CONTROLLER_V3_0_0_INDEXED_REGISTER_NAME);
 }
@@ -242,7 +242,7 @@ unsigned int DrmControllerRegistersStrategy_v3_0_0::writeSampleLicenseTimerCount
 **/
 unsigned int DrmControllerRegistersStrategy_v3_0_0::writeLicenseTimerInitSemaphoreRequestCommandRegister(bool &licenseTimerInitSemaphoreRequest) const {
   throwUnsupportedFeatureException("License Timer Init Semaphore Request command", DRM_CONTROLLER_V3_0_0_SUPPORTED_VERSION);
-  return mDrmApi_UNSUPPORTED_FEATURE_ERROR;
+      return mDrmApi_UNSUPPORTED_FEATURE_ERROR;
 }
 
 /** readLicenseStartAddressRegister
@@ -1644,11 +1644,11 @@ void DrmControllerRegistersStrategy_v3_0_0::printMailBoxFileHwReport(std::ostrea
 *   \param[in] file is the stream to use for the data print.
 **/
 void DrmControllerRegistersStrategy_v3_0_0::printAdaptiveProportionTestFailuresHwReport(std::ostream &file) const { }
-
+  
 
 /** printRepetitionCountTestFailures
 *   \brief Display the value of the Repetition Count Test Failures.
 *   \param[in] file is the stream to use for the data print.
 **/
 void DrmControllerRegistersStrategy_v3_0_0::printRepetitionCountTestFailuresHwReport(std::ostream &file) const { }
-
+  
