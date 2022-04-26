@@ -1,3 +1,6 @@
+####################################
+# EXECUTE REGRESSION ON VMACCEL
+
 # To be run in sudo mode
 sudo su
 
