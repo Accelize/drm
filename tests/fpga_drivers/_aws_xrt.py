@@ -85,9 +85,9 @@ class FpgaDriver(_FpgaDriverBase):
         if _isfile(_join(xrt_path, 'lib','libxrt_aws.so')):
             print('Loading XRT API library for AWS targets')
             fpga_library = _cdll.LoadLibrary(_join(xrt_path, 'lib','libxrt_aws.so'))
-        #elif _isfile(_join(xrt_path, 'lib','libxrt_core.so')):
-        #    print('Loading XRT API library for Xilinx targets')
-        #    fpga_library = _cdll.LoadLibrary(_join(xrt_path, 'lib','libxrt_core.so'))
+        elif _isfile(_join(xrt_path, 'lib','libxrt_core.so')):
+            print('Loading XRT API library for Xilinx targets')
+            fpga_library = _cdll.LoadLibrary(_join(xrt_path, 'lib','libxrt_core.so'))
         else:
             raise RuntimeError('Unable to find Xilinx XRT Library')
         return fpga_library
