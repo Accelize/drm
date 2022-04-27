@@ -249,13 +249,18 @@ def download_bitstreams_from_s3(output, regex, force):
 ## MAIN
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-o', '--output', dest='output', type=str, default=None, help='Specify the path to the directory to copy the designs to')
-    parser.add_argument('-l', '--list', dest='list', action='store_true', default=False, help='List available synthesis jobs on S3')
-    parser.add_argument('-r', '--regex', dest='regex', type=str, default=None, help=('Specify a regex pattern used to find the designs to downloads. '
-                                            'If omitted, the most recent synthesis job is used'))
-    parser.add_argument('-f', '--force', action='store_true', default=False, help='Overwrite bitstream file if already existing locally.')
-    parser.add_argument('-c', '--clean', dest='clean', action='store_true', default=False, help='Clean output directory if existing')
-    parser.add_argument('-v', dest='verbosity', action='store_true', default=False, help='More verbosity')
+    parser.add_argument('op', choices=['ls','cp'], help='Operation to perform')
+    parser.add_argument('-o', '--output', dest='output', type=str, default=None,
+                        help='Specify the path to the directory to copy the designs to')
+    parser.add_argument('-r', '--regex', dest='regex', type=str, default=None,
+                        help=('Specify a regex pattern used to find the designs to downloads. '
+                            'If omitted, the most recent synthesis job is used'))
+    parser.add_argument('-f', '--force', action='store_true', default=False,
+                        help='Overwrite bitstream file if already existing locally.')
+    parser.add_argument('--rm', dest='rm', action='store_true', default=False,
+                        help='Remove output directory if existing')
+    parser.add_argument('-v', dest='verbosity', action='store_true', default=False,
+                        help='More verbosity')
     args = parser.parse_args()
 
     level = logging.INFO
@@ -273,15 +278,15 @@ if __name__ == '__main__':
     if args.output is None:
         args.output = "output"
 
-    if args.list:
+    if args.op == 'ls':
         job_list = list_synthesis_jobs_from_s3(args.regex)
         logging.info(f"List of synthesis jobs found on S3 matching regex '{args.regex}':\n%s" % '\n'.join(job_list))
         ret = 0
-    else:
+    elif args.op == 'cp':
         if isdir(args.output):
-            if not args.clean:
+            if not args.rm:
                 logging.warning((f"Output directory {args.output} is already existing. "
-                        "Use -c option if you want to remove it first, otherwise the bitstreams will be added to the existing one"))
+                        "Use --rm option if you want to remove it first, otherwise the bitstreams will be added to the existing one"))
             else:
                 rmtree(args.output)
                 logging.warning(f"Existing output directory {args.output} has been removed.")
