@@ -116,7 +116,7 @@ def test_entitlement_user2_metering(accelize_drm, conf_json, cred_json, async_ha
         drm_manager.deactivate()
     async_cb.assert_NoError()
     log_content = logfile.read()
-    assert search(r'DRM session .{16} created', log_content, MULTILINE)
+    assert search(r'DRM session .{16} started', log_content, MULTILINE)
     logfile.remove()
 
 
@@ -193,7 +193,7 @@ def test_entitlement_user3_metering(accelize_drm, conf_json, cred_json, async_ha
         drm_manager.deactivate()
     async_cb.assert_NoError()
     log_content = logfile.read()
-    assert search(r'DRM session .{16} created', log_content, MULTILINE)
+    assert search(r'DRM session .{16} started', log_content, MULTILINE)
     logfile.remove()
 
 
@@ -265,7 +265,7 @@ def test_entitlement_user4_metering(accelize_drm, conf_json, cred_json, async_ha
         drm_manager.deactivate()
     async_cb.assert_NoError()
     log_content = logfile.read()
-    assert search(r'DRM session .{16} created', log_content, MULTILINE)
+    assert search(r'DRM session .{16} started', log_content, MULTILINE)
     logfile.remove()
 
 
