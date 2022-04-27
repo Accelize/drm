@@ -54,9 +54,9 @@ def test_host_data_verbosity(accelize_drm, conf_json, cred_json, async_handler,
         assert type(data_partial) == dict
         assert len(str(data_partial))
         if data_partial['host_card'].get('xrt2'):
-            assert len(str(data_full)) == len(str(data_partial)) > 0
+            assert len(str(data_full)) == len(str(data_partial))
         else:
-            assert len(str(data_full)) > len(str(data_partial)) > 0
+            assert len(str(data_full)) > len(str(data_partial))
 
     # Get none data
     conf_json['settings']['host_data_verbosity'] = 2
