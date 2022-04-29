@@ -41,7 +41,6 @@ def test_fast_start_stop(accelize_drm, conf_json, cred_json, async_handler, log_
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
-        assert sum(drm_manager.get('metered_data')) == 0
         async_cb.assert_NoError()
     logfile.remove()
 
@@ -120,7 +119,6 @@ def test_metered_start_stop_short_time_in_debug(accelize_drm, conf_json, cred_js
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
-        assert sum(drm_manager.get('metered_data')) == 0
         async_cb.assert_NoError()
     logfile.remove()
 
@@ -675,9 +673,8 @@ def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handl
         activators.generate_coin()
         activators.check_coin(drm_manager.get('metered_data'))
         drm_manager.deactivate()
-        assert sum(drm_manager.get('metered_data')) == 0
     log_content = logfile.read()
-    assert len(list(findall(r'warning\b.*\bCannot access metering data when no session is running', log_content))) == 2
+    assert len(list(findall(r'warning\b.*\bCannot access metering data when no session is running', log_content))) == 1
     async_cb.assert_NoError()
     logfile.remove()
 
@@ -736,6 +733,5 @@ def test_heart_beat(accelize_drm, conf_json, cred_json, async_handler, log_file_
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
-        assert sum(drm_manager.get('metered_data')) == 0
-        async_cb.assert_NoError()
+    async_cb.assert_NoError()
     logfile.remove()

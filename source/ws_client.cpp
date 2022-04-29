@@ -33,7 +33,7 @@ CurlEasyPost::CurlEasyPost( const uint32_t& connection_timeout_ms ) {
     mCurl = curl_easy_init();
     if ( !mCurl )
         Throw( DRM_ExternFail, "Curl : cannot init curl_easy" );
-    curl_easy_setopt( mCurl, CURLOPT_WRITEFUNCTION, &CurlEasyPost::write_callback );
+    curl_easy_setopt( mCurl, CURLOPT_WRITEFUNCTION, &CurlEasyPost::curl_write_callback );
     curl_easy_setopt( mCurl, CURLOPT_ERRORBUFFER, mErrBuff.data() );
     curl_easy_setopt( mCurl, CURLOPT_FOLLOWLOCATION, 1L );
     curl_easy_setopt( mCurl, CURLOPT_NOPROGRESS, 1L);

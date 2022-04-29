@@ -109,8 +109,10 @@ public:
         T response;
         uint32_t resp_code;
 
-        if ( timeout_ms <= 0 )
-            Throw( DRM_WSTimedOut, "Did not perform HTTP request to Accelize webservice because deadline is reached." );
+        if ( timeout_ms <= 0 ) {
+            ThrowSetLog( SPDLOG_LEVEL_DEBUG, DRM_WSTimedOut,
+                "Did not perform HTTP request to Accelize webservice because deadline is reached." );
+        }
 
         // Configure and execute CURL command
         curl_easy_setopt( mCurl, CURLOPT_URL, url.c_str() );
@@ -127,9 +129,13 @@ public:
               || res == CURLE_COULDNT_RESOLVE_HOST
               || res == CURLE_COULDNT_CONNECT
               || res == CURLE_OPERATION_TIMEDOUT ) {
-                Throw( DRM_WSMayRetry, "Failed to perform HTTP request to Accelize webservice ({}) : {}", curl_easy_strerror( res ), mErrBuff.data() );  //LCOV_EXCL_LINE
+                ThrowSetLog( SPDLOG_LEVEL_DEBUG, DRM_WSMayRetry,
+                    "Failed to perform HTTP request to Accelize webservice ({}) : {}",
+                    curl_easy_strerror( res ), mErrBuff.data() );  //LCOV_EXCL_LINE
             } else {
-                Throw( DRM_ExternFail, "Failed to perform HTTP request to Accelize webservice ({}) : {}", curl_easy_strerror( res ), mErrBuff.data() );  //LCOV_EXCL_LINE
+                ThrowSetLog( SPDLOG_LEVEL_DEBUG, DRM_ExternFail,
+                    "Failed to perform HTTP request to Accelize webservice ({}) : {}",
+                    curl_easy_strerror( res ), mErrBuff.data() );  //LCOV_EXCL_LINE
             }
         }
         curl_easy_getinfo( mCurl, CURLINFO_RESPONSE_CODE, &resp_code );
@@ -145,7 +151,8 @@ public:
                 drm_error = DRM_WSReqError;
             else
                 drm_error = DRM_WSError;
-            Throw( drm_error, "OAuth2 Web Service error {}: {}", resp_code, response );
+            ThrowSetLog( SPDLOG_LEVEL_DEBUG, drm_error, "OAuth2 Web Service error {}: {}",
+                resp_code, response );
         }
         return response;
     }
@@ -156,7 +163,8 @@ public:
         uint32_t resp_code;
 
         if ( timeout_ms <= 0 )
-            Throw( DRM_WSTimedOut, "Did not perform HTTP request to Accelize webservice because deadline is reached." );
+            ThrowSetLog( SPDLOG_LEVEL_DEBUG, DRM_WSTimedOut,
+                "Did not perform HTTP request to Accelize webservice because deadline is reached." );
 
         // Configure and execute CURL command
         curl_easy_setopt( mCurl, CURLOPT_URL, url.c_str() );
@@ -174,11 +182,13 @@ public:
               || res == CURLE_COULDNT_RESOLVE_HOST
               || res == CURLE_COULDNT_CONNECT
               || res == CURLE_OPERATION_TIMEDOUT ) {
-                Throw( DRM_WSMayRetry, "Failed to perform HTTP request to Accelize webservice ({}) : {}",
-                        curl_easy_strerror( res ), mErrBuff.data() );
+                ThrowSetLog( SPDLOG_LEVEL_DEBUG, DRM_WSMayRetry,
+                    "Failed to perform HTTP request to Accelize webservice ({}) : {}",
+                    curl_easy_strerror( res ), mErrBuff.data() );
             } else {
-                Throw( DRM_ExternFail, "Failed to perform HTTP request to Accelize webservice ({}) : {}",
-                        curl_easy_strerror( res ), mErrBuff.data() );
+                ThrowSetLog( SPDLOG_LEVEL_DEBUG, DRM_ExternFail,
+                    "Failed to perform HTTP request to Accelize webservice ({}) : {}",
+                    curl_easy_strerror( res ), mErrBuff.data() );
             }
         }
         curl_easy_getinfo( mCurl, CURLINFO_RESPONSE_CODE, &resp_code );
@@ -188,7 +198,7 @@ public:
 
 protected:
 
-    static size_t write_callback( void *contents, size_t size, size_t nmemb, std::string *userp ) {
+    static size_t curl_write_callback( void *contents, size_t size, size_t nmemb, std::string *userp ) {
         size_t realsize = size * nmemb;
         try {
             userp->append( (const char*)contents, realsize );
