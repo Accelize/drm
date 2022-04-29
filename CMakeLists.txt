@@ -25,9 +25,9 @@ set(ACCELIZEDRM_VERSION 2.5.4-rc.1)
 
 ## Define package release number (Number of time this version was packaged)
 if (NOT CPACK_PACKAGE_RELEASE)
-    # Use 1 as default value if not defined with
-    # "-DCPACK_PACKAGE_RELEASE=value" command line argument.
-    set(CPACK_PACKAGE_RELEASE 1)
+	# Use 1 as default value if not defined with
+	# "-DCPACK_PACKAGE_RELEASE=value" command line argument.
+	set(CPACK_PACKAGE_RELEASE 1)
 endif()
 
 ## Note: Python package version is synchronised with ACCELIZEDRM_VERSION
@@ -48,14 +48,14 @@ set(ACCELIZE_EMAIL info@accelize.com)
 set(ACCELIZEDRM_LONG_VERSION ${ACCELIZEDRM_VERSION})
 find_program(GIT git)
 if (GIT)
-    execute_process(COMMAND git rev-parse --short HEAD
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_COMMIT
-    OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-    if (GIT_COMMIT)
+	execute_process(COMMAND git rev-parse --short HEAD
+	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+	OUTPUT_VARIABLE GIT_COMMIT
+	OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+	if (GIT_COMMIT)
 	# Add as Semantic versioning build metadata
 	set(ACCELIZEDRM_LONG_VERSION ${ACCELIZEDRM_VERSION}+${GIT_COMMIT})
-    endif ()
+	endif ()
 endif ()
 
 ## Find ABI version
@@ -82,11 +82,11 @@ set(CMAKE_BUILD_PARALLEL_LEVEL ${CPU_COUNT})
 ## Build type
 set(default_build_type "Release")
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-    message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
-    set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
+	message(STATUS "Setting build type to '${default_build_type}' as none was specified.")
+	set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
 
-    # Set the possible values of build type for cmake-gui
-    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+	# Set the possible values of build type for cmake-gui
+	set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
 ## Compiler and linker options
@@ -96,31 +96,31 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 add_compile_options(-fvisibility=hidden)
 if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-    # Enable warnings
-    add_compile_options(-Wall -Wextra -Wnon-virtual-dtor -Wpedantic -Werror=format-security)
+	# Enable warnings
+	add_compile_options(-Wall -Wextra -Wnon-virtual-dtor -Wpedantic -Werror=format-security)
 
-    # Optimize for Debugging
-    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+	# Optimize for Debugging
+	if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
 	add_compile_options(-fdebug-prefix-map=${CMAKE_SOURCE_DIR}=.)
-    endif()
+	endif()
 
-    # ABI check
-    add_compile_options(-g -Og)
+	# ABI check
+	add_compile_options(-g -Og)
 
-    # Code coverage
-    option(COVERAGE "Activate code coverage" OFF)
-    if(COVERAGE)
+	# Code coverage
+	option(COVERAGE "Activate code coverage" OFF)
+	if(COVERAGE)
 	# Add coverage compile and link options
 	add_compile_options(--coverage)
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --coverage")
 	if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
-	    link_libraries(gcov)
+		link_libraries(gcov)
 	endif()
-    endif(COVERAGE)
+	endif(COVERAGE)
 
 else()
-    # Optimize for runtime
-    add_compile_options(-O3)
+	# Optimize for runtime
+	add_compile_options(-O3)
 endif()
 
 add_definitions(-DBUILDING_DRMLIB)
@@ -200,15 +200,9 @@ set(CMAKE_INCLUDE_DIR ${CMAKE_BINARY_DIR}/include)
 include_directories(${CMAKE_INCLUDE_DIR})
 include_directories(internal_inc)
 include_directories(include)
-include_directories(spdlog/include)
 
-## spdlog
+## Sources
 set(TARGET_SOURCES
-    spdlog/src/fmt.cpp
-    spdlog/src/spdlog.cpp
-    spdlog/src/async.cpp
-    spdlog/src/color_sinks.cpp
-    spdlog/src/file_sinks.cpp
     source/ws_client.cpp
     source/csp.cpp
     source/drm_manager.cpp
@@ -218,7 +212,7 @@ set(TARGET_SOURCES
     source/provencore.cpp
 )
 add_library(accelize_drm SHARED ${TARGET_SOURCES})
-target_compile_options(accelize_drm PRIVATE -DSPDLOG_COMPILED_LIB)
+target_include_directories(accelize_drm PRIVATE spdlog/include)
 
 ## libaccelize_drm
 set_target_properties(accelize_drm PROPERTIES VERSION ${ACCELIZEDRM_VERSION} SOVERSION ${ABI_VERSION})
@@ -233,6 +227,7 @@ set(TARGET_C_SOURCES
     source/log.cpp)
 
 add_library(accelize_drmc SHARED ${TARGET_C_SOURCES})
+target_include_directories(accelize_drmc PRIVATE spdlog/include)
 set_target_properties(accelize_drmc PROPERTIES VERSION ${ACCELIZEDRM_VERSION} SOVERSION ${ABI_VERSION})
 target_link_libraries(accelize_drmc accelize_drm)
 
@@ -252,47 +247,47 @@ set(PACKAGE_OUTPUT ${CMAKE_BINARY_DIR}/${CPACK_OUTPUT_FILE_PREFIX})
 # Python binding
 option(PYTHON3 "Generates Python 3 library" OFF)
 if (PYTHON3)
-    include(FindPython3)
-    find_package (Python3 COMPONENTS Interpreter Development)
+	include(FindPython3)
+	find_package (Python3 COMPONENTS Interpreter Development)
 
-    if (NOT EXISTS "${Python3_SITEARCH}")
+	if (NOT EXISTS "${Python3_SITEARCH}")
 	# Fix bad Python3_SITEARCH in some cases (Example Ubuntu)
 	execute_process(
 		COMMAND "${Python3_EXECUTABLE}" -c "import sys;print(sys.path[-1])"
 		OUTPUT_VARIABLE Python3_SITEARCH
 		OUTPUT_STRIP_TRAILING_WHITESPACE)
-    endif()
+	endif()
 
-    ## Retrieves sources
-    set(PYTHON3_BDIST_RELATIVE python3_bdist)
-    set(PYTHON3_BDIST ${CMAKE_BINARY_DIR}/${PYTHON3_BDIST_RELATIVE})
-    set(PYTHON_SOURCE ${CMAKE_BINARY_DIR}/python_src)
-    set(PYTHON_SETUP ${PYTHON_SOURCE}/setup.py)
-    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/python/ DESTINATION ${PYTHON_SOURCE}
-	    FILES_MATCHING PATTERN "*.in" PATTERN "*.py*" PATTERN "*.pxd"
-	    PATTERN "*.md" PATTERN "*.service")
-    configure_file(${PYTHON_SOURCE}/accelize_drm/__init__.py
+	## Retrieves sources
+	set(PYTHON3_BDIST_RELATIVE python3_bdist)
+	set(PYTHON3_BDIST ${CMAKE_BINARY_DIR}/${PYTHON3_BDIST_RELATIVE})
+	set(PYTHON_SOURCE ${CMAKE_BINARY_DIR}/python_src)
+	set(PYTHON_SETUP ${PYTHON_SOURCE}/setup.py)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/python/ DESTINATION ${PYTHON_SOURCE}
+		FILES_MATCHING PATTERN "*.in" PATTERN "*.py*" PATTERN "*.pxd"
+		PATTERN "*.md" PATTERN "*.service")
+	configure_file(${PYTHON_SOURCE}/accelize_drm/__init__.py
 		   ${PYTHON_SOURCE}/accelize_drm/__init__.py)
-    configure_file(${PYTHON_SETUP} ${PYTHON_SETUP})
-    configure_file(${PYTHON_SOURCE}/README.md ${PYTHON_SOURCE}/README.md)
+	configure_file(${PYTHON_SETUP} ${PYTHON_SETUP})
+	configure_file(${PYTHON_SOURCE}/README.md ${PYTHON_SOURCE}/README.md)
 
-    ## Build and generate Wheel distribution + Source distribution
-    if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+	## Build and generate Wheel distribution + Source distribution
+	if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
 	# Required for coverage (See "setup.py")
 	set(BUILD_EXT_EXTRA --inplace)
-    endif()
+	endif()
 
-    add_custom_target(
-	    python3 ALL
-	    COMMAND
-	    ${Python3_EXECUTABLE} ${PYTHON_SETUP} bdist_wheel -b ${PYTHON3_BDIST} -d ${PACKAGE_OUTPUT} -k
+	add_custom_target(
+		python3 ALL
+		COMMAND
+		${Python3_EXECUTABLE} ${PYTHON_SETUP} bdist_wheel -b ${PYTHON3_BDIST} -d ${PACKAGE_OUTPUT} -k
 						  build_ext -I ${CMAKE_INCLUDE_DIR}:${JSONCPP_INCLUDEDIR} -L ${CMAKE_BINARY_DIR} ${BUILD_EXT_EXTRA} -j ${CPU_COUNT}
-	    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-	    COMMENT "Building accelize_drm Python 3 (With wheel Package)"
-	    DEPENDS ${API_PUBLIC_HEADERS}
-	    VERBATIM
-    )
-    if (PKG)
+		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+		COMMENT "Building accelize_drm Python 3 (With wheel Package)"
+		DEPENDS ${API_PUBLIC_HEADERS}
+		VERBATIM
+	)
+	if (PKG)
 	add_custom_command(
 		TARGET python3 POST_BUILD
 		COMMAND ${Python3_EXECUTABLE} ${PYTHON_SETUP} sdist -d ${PACKAGE_OUTPUT}
@@ -300,45 +295,45 @@ if (PYTHON3)
 		COMMENT "Building accelize_drm Python 3 source Package"
 		VERBATIM
 	)
-    endif ()
+	endif ()
 
-    add_dependencies(python3 accelize_drm)
-    add_dependencies(python3 accelize_drmc)
-    add_dependencies(python3 Python3::Interpreter)
-    install(DIRECTORY ${PYTHON3_BDIST}/ DESTINATION ${Python3_SITEARCH}
-	    COMPONENT python3
-	    PATTERN "*.pyx" EXCLUDE
-	    PATTERN "*.c" EXCLUDE
-	    PATTERN "*.cpp" EXCLUDE)
+	add_dependencies(python3 accelize_drm)
+	add_dependencies(python3 accelize_drmc)
+	add_dependencies(python3 Python3::Interpreter)
+	install(DIRECTORY ${PYTHON3_BDIST}/ DESTINATION ${Python3_SITEARCH}
+		COMPONENT python3
+		PATTERN "*.pyx" EXCLUDE
+		PATTERN "*.c" EXCLUDE
+		PATTERN "*.cpp" EXCLUDE)
 
 endif ()
 
 # Documentation
 option(DOC "Produce documentation" OFF)
 if (DOC)
-    # Set Directories
-    set(DOC_SOUCES ${CMAKE_BINARY_DIR}/doc_sources)
-    set(DOC_HTML_DIR ${CMAKE_BINARY_DIR}/doc_html)
-    set(DOC_SOUCES_INC ${CMAKE_BINARY_DIR}/doc_sources/includes)
+	# Set Directories
+	set(DOC_SOUCES ${CMAKE_BINARY_DIR}/doc_sources)
+	set(DOC_HTML_DIR ${CMAKE_BINARY_DIR}/doc_html)
+	set(DOC_SOUCES_INC ${CMAKE_BINARY_DIR}/doc_sources/includes)
 
-    # Retrieve sources
-    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/doc/ DESTINATION ${DOC_SOUCES})
+	# Retrieve sources
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/doc/ DESTINATION ${DOC_SOUCES})
 
-    # Set Doxygen Command
-    find_package(Doxygen REQUIRED)
-    string(REPLACE ";" " " API_PUBLIC_HEADERS_DOC "${API_PUBLIC_HEADERS}")
-    add_custom_target(
-	    doc ALL
-	    COMMAND ${DOXYGEN_EXECUTABLE} ${DOC_SOUCES}/Doxyfile > /dev/null
-	    DEPENDS ${API_PUBLIC_HEADERS}
-	    WORKING_DIRECTORY ${DOC_SOUCES}
-	    COMMENT "Generating C/C++ API documentation"
-	    VERBATIM)
-    message( "DOXYGEN_EXECUTABLE=${DOXYGEN_EXECUTABLE}" )
-    message( "DOC_SOUCES=${DOC_SOUCES}" )
+	# Set Doxygen Command
+	find_package(Doxygen REQUIRED)
+	string(REPLACE ";" " " API_PUBLIC_HEADERS_DOC "${API_PUBLIC_HEADERS}")
+	add_custom_target(
+		doc ALL
+		COMMAND ${DOXYGEN_EXECUTABLE} ${DOC_SOUCES}/Doxyfile > /dev/null
+		DEPENDS ${API_PUBLIC_HEADERS}
+		WORKING_DIRECTORY ${DOC_SOUCES}
+		COMMENT "Generating C/C++ API documentation"
+		VERBATIM)
+	message( "DOXYGEN_EXECUTABLE=${DOXYGEN_EXECUTABLE}" )
+	message( "DOC_SOUCES=${DOC_SOUCES}" )
 
-    # Build full Sphinx documentation (Require built Python 3 target)
-    if (PYTHON3)
+	# Build full Sphinx documentation (Require built Python 3 target)
+	if (PYTHON3)
 	# Configure Doxygen as Sphinx source
 	set(DOC_DOXYGEN_XML_DIR ${DOC_SOUCES}/_doxygen)
 	set(DOC_DOXYGEN_XML YES)
@@ -370,78 +365,78 @@ if (DOC)
 	# Python3 target required to build its API documentation
 	add_dependencies(doc python3)
 
-    # Build Only Doxygen (Contain only C/C++ API documentation)
-    else()
+	# Build Only Doxygen (Contain only C/C++ API documentation)
+	else()
 	# Configure Doxygen as Main documentation
 	set(DOC_DOXYGEN_XML NO)
 	set(DOC_DOXYGEN_HTML YES)
-    endif ()
+	endif ()
 
-    # Configure Doxygen
-    configure_file(${DOC_SOUCES}/Doxyfile ${DOC_SOUCES}/Doxyfile)
+	# Configure Doxygen
+	configure_file(${DOC_SOUCES}/Doxyfile ${DOC_SOUCES}/Doxyfile)
 
 endif ()
 
 # Packages
 if (PKG)
-    set(CPACK_PACKAGE_VERSION ${ACCELIZEDRM_VERSION})
-    set(CPACK_PACKAGE_NAME "libaccelize-drm")
-    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY ${CPACK_DESCRIPTION_SUMMARY})
-    set(CPACK_COMPONENT_RUN_DESCRIPTION ${CPACK_DESCRIPTION_SUMMARY})
+	set(CPACK_PACKAGE_VERSION ${ACCELIZEDRM_VERSION})
+	set(CPACK_PACKAGE_NAME "libaccelize-drm")
+	set(CPACK_PACKAGE_DESCRIPTION_SUMMARY ${CPACK_DESCRIPTION_SUMMARY})
+	set(CPACK_COMPONENT_RUN_DESCRIPTION ${CPACK_DESCRIPTION_SUMMARY})
 
-    ## libaccelize_drm package
+	## libaccelize_drm package
 
-    # Get Linux distribution information from os-release
-    if (EXISTS "/etc/os-release")
+	# Get Linux distribution information from os-release
+	if (EXISTS "/etc/os-release")
 	set(OS_RELEASE "/etc/os-release")
-    elseif(EXISTS "/usr/lib/os-release")
+	elseif(EXISTS "/usr/lib/os-release")
 	set(OS_RELEASE "/usr/lib/os-release")
-    endif()
+	endif()
 
-    if (OS_RELEASE)
+	if (OS_RELEASE)
 	# Get information from file
 	file (STRINGS ${OS_RELEASE} lines)
 	foreach (line ${lines})
-	    # Get Distribution name
-	    if (line MATCHES "^ID=(.*)")
+		# Get Distribution name
+		if (line MATCHES "^ID=(.*)")
 		SET (DIST_ID "${CMAKE_MATCH_1}")
 		if (DIST_ID MATCHES "^['\"](.*)['\"]\$")
-		    set (DIST_ID "${CMAKE_MATCH_1}")
+			set (DIST_ID "${CMAKE_MATCH_1}")
 		endif ()
-	    endif ()
-	    # Get distribution codename
-	    if (line MATCHES "^VERSION_CODENAME=(.*)")
+		endif ()
+		# Get distribution codename
+		if (line MATCHES "^VERSION_CODENAME=(.*)")
 		SET (DIST_CODENAME "${CMAKE_MATCH_1}")
 		if (DIST_CODENAME MATCHES "^['\"](.*)['\"]\$")
-		    set (DIST_CODENAME "${CMAKE_MATCH_1}")
+			set (DIST_CODENAME "${CMAKE_MATCH_1}")
 		endif ()
-	    endif ()
-	    # Get distribution full version string
-	    if (line MATCHES "^VERSION=(.*)")
+		endif ()
+		# Get distribution full version string
+		if (line MATCHES "^VERSION=(.*)")
 		SET (DIST_VERSION "${CMAKE_MATCH_1}")
 		if (DIST_VERSION MATCHES "^['\"](.*)['\"]\$")
-		    set (DIST_VERSION "${CMAKE_MATCH_1}")
+			set (DIST_VERSION "${CMAKE_MATCH_1}")
 		endif ()
-	    endif ()
-	    # Get distribution version number
-	    if (line MATCHES "^VERSION_ID=(.*)")
+		endif ()
+		# Get distribution version number
+		if (line MATCHES "^VERSION_ID=(.*)")
 		SET (VERSION_ID "${CMAKE_MATCH_1}")
 		if (VERSION_ID MATCHES "^['\"](.*)['\"]\$")
-		    set (VERSION_ID "${CMAKE_MATCH_1}")
+			set (VERSION_ID "${CMAKE_MATCH_1}")
 		endif ()
-	    endif ()
+		endif ()
 	endforeach ()
 	if (NOT DIST_CODENAME AND DIST_VERSION)
-	    # If VERSION_CODENAME is missing, get codename from full version
-	    if (DIST_VERSION MATCHES "^.* [\(](.*)[\)]\$")
+		# If VERSION_CODENAME is missing, get codename from full version
+		if (DIST_VERSION MATCHES "^.* [\(](.*)[\)]\$")
 		set (DIST_CODENAME "${CMAKE_MATCH_1}")
-	    endif ()
+		endif ()
 	endif()
-    endif ()
+	endif ()
 
-    # RPM Packages
-    find_program(RPMBUILD rpmbuild)
-    if (RPMBUILD)
+	# RPM Packages
+	find_program(RPMBUILD rpmbuild)
+	if (RPMBUILD)
 	set(CPACK_GENERATOR "RPM")
 	set(CPACK_RPM_COMPONENT_INSTALL ON)
 	string(REPLACE "-" "_" CPACK_RPM_PACKAGE_VERSION ${CPACK_PACKAGE_VERSION})
@@ -464,19 +459,19 @@ if (PKG)
 
 	# Python Package
 	if (PYTHON3)
-	    # Package Dependencies (Without Python)
-	    set(CPACK_RPM_PYTHON3_PACKAGE_REQUIRES "${CPACK_PACKAGE_NAME} >= ${VERSION_MAJOR}.${VERSION_MINOR}")
+		# Package Dependencies (Without Python)
+		set(CPACK_RPM_PYTHON3_PACKAGE_REQUIRES "${CPACK_PACKAGE_NAME} >= ${VERSION_MAJOR}.${VERSION_MINOR}")
 
-	    # RHEL/CentOS 7 package was renamed from "python36"
-	    if (VERSION_ID MATCHES "7")
+		# RHEL/CentOS 7 package was renamed from "python36"
+		if (VERSION_ID MATCHES "7")
 		set(CPACK_RPM_PACKAGE_OBSOLETES "python36-accelize-drm")
-	    endif ()
+		endif ()
 
-	    # Configure package
-	    set(CPACK_RPM_PYTHON3_PACKAGE_NAME "python3-accelize-drm")
-	    set(CPACK_RPM_PYTHON3_FILE_NAME "${CPACK_RPM_PYTHON3_PACKAGE_NAME}-${CPACK_RPM_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}${CPACK_RPM_PACKAGE_RELEASE_DIST}.${CMAKE_SYSTEM_PROCESSOR}.rpm")
-	    set(CPACK_RPM_PYTHON3_PACKAGE_SUMMARY ${CPACK_COMPONENT_PYTHON3_DESCRIPTION})
-	    set(CPACK_RPM_PYTHON3_PACKAGE_GROUP "Development/Libraries/Python")
+		# Configure package
+		set(CPACK_RPM_PYTHON3_PACKAGE_NAME "python3-accelize-drm")
+		set(CPACK_RPM_PYTHON3_FILE_NAME "${CPACK_RPM_PYTHON3_PACKAGE_NAME}-${CPACK_RPM_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}${CPACK_RPM_PACKAGE_RELEASE_DIST}.${CMAKE_SYSTEM_PROCESSOR}.rpm")
+		set(CPACK_RPM_PYTHON3_PACKAGE_SUMMARY ${CPACK_COMPONENT_PYTHON3_DESCRIPTION})
+		set(CPACK_RPM_PYTHON3_PACKAGE_GROUP "Development/Libraries/Python")
 
 	endif ()
 
@@ -486,11 +481,11 @@ if (PKG)
 	set(CPACK_RPM_PACKAGE_GROUP "Development/Libraries/C and C++")
 
 	message(STATUS "Packaging : RPM for ${DIST_ID} ${DIST_RELEASE}")
-    endif ()
+	endif ()
 
-    # DEB Packages
-    find_program(DPKGBUILD dpkg-buildpackage)
-    if (DPKGBUILD)
+	# DEB Packages
+	find_program(DPKGBUILD dpkg-buildpackage)
+	if (DPKGBUILD)
 	set(CPACK_PACKAGE_VERSION "${ACCELIZEDRM_VERSION}-${CPACK_PACKAGE_RELEASE}+${DIST_CODENAME}")
 	set(CPACK_GENERATOR "DEB")
 	set(CPACK_DEB_COMPONENT_INSTALL ON)
@@ -514,85 +509,87 @@ if (PKG)
 
 	# Python Package
 	if (PYTHON3)
-	    # Configure package
-	    set(CPACK_DEBIAN_PYTHON3_PACKAGE_NAME "python3-accelize-drm")
-	    set(CPACK_DEBIAN_PYTHON3_FILE_NAME "${CPACK_DEBIAN_PYTHON3_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}.deb")
-	    set(CPACK_DEBIAN_PYTHON3_PACKAGE_SECTION libs)
-	    set(CPACK_DEBIAN_PYTHON3_PACKAGE_DEPENDS "${CPACK_PACKAGE_NAME} (>= ${VERSION_MAJOR}.${VERSION_MINOR}), python3:any (>= 3.4)")
+		# Configure package
+		set(CPACK_DEBIAN_PYTHON3_PACKAGE_NAME "python3-accelize-drm")
+		set(CPACK_DEBIAN_PYTHON3_FILE_NAME "${CPACK_DEBIAN_PYTHON3_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}.deb")
+		set(CPACK_DEBIAN_PYTHON3_PACKAGE_SECTION libs)
+		set(CPACK_DEBIAN_PYTHON3_PACKAGE_DEPENDS "${CPACK_PACKAGE_NAME} (>= ${VERSION_MAJOR}.${VERSION_MINOR}), python3:any (>= 3.4)")
 	endif ()
 
 	# Other information
 	message(STATUS "Packaging : DEB for ${DIST_ID} ${DIST_CODENAME}")
-    endif ()
+	endif ()
 
-    include(CPack)
+	include(CPack)
 
-    # Runtime libraries package
-    cpack_add_component_group(RUN)
-    cpack_add_component(libraries GROUP RUN)
-    cpack_add_component(licenses GROUP RUN)
+	# Runtime libraries package
+	cpack_add_component_group(RUN)
+	cpack_add_component(libraries GROUP RUN)
+	cpack_add_component(licenses GROUP RUN)
 
-    # Dev/Devel package
-    cpack_add_component_group(DEV)
-    cpack_add_component(headers GROUP DEV)
+	# Dev/Devel package
+	cpack_add_component_group(DEV)
+	cpack_add_component(headers GROUP DEV)
 
-    # Python package
-    if (PYTHON3)
+	# Python package
+	if (PYTHON3)
 	cpack_add_component_group(PYTHON3)
 	cpack_add_component(python3 GROUP PYTHON3)
-    endif ()
+	endif ()
 endif ()
 
 # Tests
 option(TESTS "Generates tests files" OFF)
 option(AWS "Generates specific tests on AWS" OFF)
 if(TESTS)
-    # Copy tests
-    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tests/ DESTINATION ${CMAKE_BINARY_DIR}/tests
-	    PATTERN __pycache__ EXCLUDE PATTERN .pyc EXCLUDE)
-    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tests/.coveragerc DESTINATION ${CMAKE_BINARY_DIR})
-    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/pytest.ini DESTINATION ${CMAKE_BINARY_DIR})
-    configure_file(${CMAKE_BINARY_DIR}/tests/conftest.py ${CMAKE_BINARY_DIR}/tests/conftest.py)
+	# Copy tests
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tests/ DESTINATION ${CMAKE_BINARY_DIR}/tests
+		PATTERN __pycache__ EXCLUDE PATTERN .pyc EXCLUDE)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tests/.coveragerc DESTINATION ${CMAKE_BINARY_DIR})
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/pytest.ini DESTINATION ${CMAKE_BINARY_DIR})
+	configure_file(${CMAKE_BINARY_DIR}/tests/conftest.py ${CMAKE_BINARY_DIR}/tests/conftest.py)
 
-    if (AWS)
+	if (AWS)
 	# Compile unittest.cpp application
 	if ( NOT DEFINED ENV{SDK_DIR} )
-	    if ( ${CMAKE_BUILD_TYPE} STREQUAL "Debug" )
+		if ( ${CMAKE_BUILD_TYPE} STREQUAL "Debug" )
 		message( SEND_ERROR "SDK_DIR environment variable is not defined: "
 			"Cannot compile tests with AWS FPGA Management driver." )
-	    endif()
+		endif()
 	else()
-	    find_path(FPGAMGMTLIB_INCLUDE_DIRS
-		    NAMES fpga_mgmt.h
-		    PATHS $ENV{SDK_DIR}/userspace/include /usr/local/include NO_DEFAULT_PATH
-	    )
-	    message( "FPGAMGMTLIB_INCLUDE_DIRS=${FPGAMGMTLIB_INCLUDE_DIRS}" )
-	    find_library(FPGAMGMTLIB_LIBRARIES
-		    NAMES fpga_mgmt
-		    PATHS $ENV{SDK_DIR}/userspace/lib/so /usr/local/lib64 NO_DEFAULT_PATH
-	    )
-	    message( "FPGAMGMTLIB_LIBRARIES=${FPGAMGMTLIB_LIBRARIES}" )
-	    add_executable( unittests ${CMAKE_CURRENT_SOURCE_DIR}/tests/unittests.cpp )
-	    set_target_properties( unittests
-		PROPERTIES
-		RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
-	    )
-	    target_include_directories( unittests PUBLIC ${FPGAMGMTLIB_INCLUDE_DIRS} )
-	    target_include_directories( unittests PUBLIC ${JSONCPP_INCLUDEDIR} )
-	    target_link_libraries( unittests accelize_drmc )
-	    target_link_libraries( unittests ${FPGAMGMTLIB_LIBRARIES} )
-	    target_link_libraries( unittests jsoncpp )
+		find_path(FPGAMGMTLIB_INCLUDE_DIRS
+			NAMES fpga_mgmt.h
+			PATHS $ENV{SDK_DIR}/userspace/include /usr/local/include NO_DEFAULT_PATH
+		)
+		message( "FPGAMGMTLIB_INCLUDE_DIRS=${FPGAMGMTLIB_INCLUDE_DIRS}" )
+		find_library(FPGAMGMTLIB_LIBRARIES
+			NAMES fpga_mgmt
+			PATHS $ENV{SDK_DIR}/userspace/lib/so /usr/local/lib64 NO_DEFAULT_PATH
+		)
+		message( "FPGAMGMTLIB_LIBRARIES=${FPGAMGMTLIB_LIBRARIES}" )
+		add_executable( unittests ${CMAKE_CURRENT_SOURCE_DIR}/tests/unittests.cpp )
+		set_target_properties( unittests
+		      PROPERTIES
+			      RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+		)
+		target_include_directories( unittests PUBLIC ${FPGAMGMTLIB_INCLUDE_DIRS} )
+		target_include_directories( unittests PUBLIC ${JSONCPP_INCLUDEDIR} )
+		target_link_libraries( unittests accelize_drmc )
+		target_link_libraries( unittests ${FPGAMGMTLIB_LIBRARIES} )
+		target_link_libraries( unittests jsoncpp )
 	endif()
-    endif()
+	endif()
 endif()
 
 # uninstall target
 if(NOT TARGET uninstall)
-  configure_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
-    IMMEDIATE @ONLY)
+    configure_file(
+	"${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
+	"${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+	IMMEDIATE @ONLY
+    )
 
-  add_custom_target(uninstall
-    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
+    add_custom_target(uninstall
+	    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake
+    )
 endif()

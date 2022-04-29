@@ -681,7 +681,7 @@ def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handl
 
 @pytest.mark.minimum
 @pytest.mark.hwtst
-@pytest.mark.skip
+#@pytest.mark.skip
 def test_heart_beat(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test activator locks if heart beat stops
@@ -724,12 +724,12 @@ def test_heart_beat(accelize_drm, conf_json, cred_json, async_handler, log_file_
             else:
                 ret &= s0 == expect0
             return ret
-        act0.write_register(0x34, 1)
+        act0.write_register(0x38, 1)
         print_status(False, True)
         sleep(1)
-        act0.write_register(0x34, 0)
+        act0.write_register(0x38, 0)
         wait_func_true(lambda: print_status(False, True), 2*license_duration)
-        act0.write_register(0x34, 0)
+        act0.write_register(0x38, 0)
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
