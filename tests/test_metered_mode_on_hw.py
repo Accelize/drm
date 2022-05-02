@@ -695,43 +695,41 @@ def test_heart_beat(accelize_drm, conf_json, cred_json, async_handler, log_file_
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
-    with accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            ) as drm_manager:
-        assert not drm_manager.get('license_status')
-        activators.autotest(is_activated=False)
-        drm_manager.activate()
-        assert drm_manager.get('license_status')
-        activators.autotest(is_activated=True)
-        license_duration = drm_manager.get('license_duration')
-        # Cut communication between Controller and each activator progressively
-        act0 = activators[0]
-        act1 = activators[1]
-        def print_status(expect0, expect1):
-            s0 = act0.get_status()
-            s1 = act1.get_status()
-            print('status=', s0, s1)
-            if expect0 is None:
-                ret = True
-            else:
-                ret = s0 == expect0
-            if expect1 is None:
-                ret &= True
-            else:
-                ret &= s0 == expect0
-            return ret
-        act0.write_register(0x38, 1)
-        print_status(False, True)
-        sleep(1)
-        act0.write_register(0x38, 0)
-        wait_func_true(lambda: print_status(False, True), 2*license_duration)
-        act0.write_register(0x38, 0)
-        drm_manager.deactivate()
-        assert not drm_manager.get('license_status')
-        activators.autotest(is_activated=False)
-    async_cb.assert_NoError()
+    act0 = activators[0]
+    act1 = activators[1]
+    def print_status(expect0, expect1):
+        s0 = act0.get_status()
+        s1 = act1.get_status()
+        print('status=', s0, s1)
+        if expect0 is None:
+            ret = True
+        else:
+            ret = s0 == expect0
+        if expect1 is None:
+            ret &= True
+        else:
+            ret &= s0 == expect0
+        return ret
+
+    with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
+        with accelize_drm.DrmManager(
+                    conf_json.path,
+                    cred_json.path,
+                    driver.read_register_callback,
+                    driver.write_register_callback,
+                    async_cb.callback
+                ) as drm_manager:
+            assert not drm_manager.get('license_status')
+            activators.autotest(is_activated=False)
+            drm_manager.activate()
+            assert drm_manager.get('license_status')
+            activators.autotest(is_activated=True)
+            license_duration = drm_manager.get('license_duration')
+            # Cut communication between Controller and each activator progressively
+            act0.write_register(0x38, 1)
+            wait_func_true(lambda: print_status(False, False), license_duration)
+            act0.write_register(0x38, 0)
+            wait_func_true(lambda: print_status(True, True), license_duration)
+            assert drm_manager.get('license_status')
+    activators.autotest(is_activated=False)
     logfile.remove()

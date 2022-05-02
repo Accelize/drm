@@ -121,8 +121,8 @@ def test_vitis_1activator_200_125(accelize_drm, conf_json, cred_json, async_hand
     Test a vitis configuration: 1 activator with dual clock kernels (AXI clock > DRM clock)
     """
     design_name = 'vitis_1activator_200_125'
-    axiclk_freq_ref = 200
-    drmclk_freq_ref = 125
+    axiclk_freq_ref = 87
+    drmclk_freq_ref = 219
     log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
                                     log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
 
@@ -146,8 +146,8 @@ def test_vitis_2activator_vhdl_250_125(accelize_drm, conf_json, cred_json, async
     """
     # Run test
     design_name = 'vitis_2activator_vhdl_250_125'
-    axiclk_freq_ref = 250
-    drmclk_freq_ref = 125
+    axiclk_freq_ref = 87
+    drmclk_freq_ref = 219
     log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
                                     log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
 

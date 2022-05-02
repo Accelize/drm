@@ -583,7 +583,7 @@ class RefDesign:
         if hdk_version is None:
             hdk_version = self.hdk_versions[-1]
         elif hdk_version not in self.image_files.keys():
-            return None
+            raise RuntimeError(f'No FPGA image found for {hdk_version} in {self.image_files.keys()}')
         filename = self.image_files[hdk_version]
         ext = splitext(filename)[1]
         try:
@@ -593,7 +593,7 @@ class RefDesign:
             elif ext == '.awsxclbin':
                 return filename
         except Exception as e:
-            raise Exception('No FPGA image found for %s: %s' % (hdk_version, str(e)))
+            raise RuntimeError(f'No FPGA image found for {hdk_version}: {str(e)}')
 
 
 def scanAllActivators(fpga_driver, actr_base_address):
