@@ -23,7 +23,7 @@ REGEX_HDK_DESIGNS = r'\b\d+activator_\S+'
 REGEX_VITIS_DESIGNS = r'\bvitis_\S+'
 
 DEFAULT_BITSTREAMS = (
-    '2activator_15_225.json',
+    '2activator_15_125.json',
     'vitis_2activator_100_125.awsxclbin',
 )
 
