@@ -311,7 +311,7 @@ protected:
     int32_t mFrequencyInit = 0;
     double mFrequencyCurr = 0.0;
     uint32_t mFrequencyDetectionPeriod = 100;       // in milliseconds
-    double mFrequencyDetectionThreshold = 12.0;     // Error in percentage
+    double mFrequencyDetectionThreshold = 10.0;     // Error in percentage
     uint8_t mFreqDetectionMethod = 0;
     bool mBypassFrequencyDetection = false;
     uint32_t mAxiFrequency = 0;
