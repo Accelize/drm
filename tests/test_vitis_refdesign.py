@@ -116,13 +116,13 @@ def run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_ha
 
 
 @pytest.mark.awsxrt
-def test_vitis_1activator_200_125(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
+def test_vitis_1activator_219_87(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test a vitis configuration: 1 activator with dual clock kernels (AXI clock > DRM clock)
     """
     design_name = 'vitis_1activator_200_125'
-    axiclk_freq_ref = 87
-    drmclk_freq_ref = 219
+    axiclk_freq_ref = 219
+    drmclk_freq_ref = 87
     log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
                                     log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
 
@@ -140,14 +140,14 @@ def test_vitis_2activator_125(accelize_drm, conf_json, cred_json, async_handler,
 
 
 @pytest.mark.awsxrt
-def test_vitis_2activator_vhdl_250_125(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
+def test_vitis_2activator_vhdl_219_87(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test a VHDL vitis configuration: dual clock kernels with AXI clock > DRM clock
     """
     # Run test
     design_name = 'vitis_2activator_vhdl_250_125'
-    axiclk_freq_ref = 87
-    drmclk_freq_ref = 219
+    axiclk_freq_ref = 219
+    drmclk_freq_ref = 87
     log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
                                     log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
 
@@ -166,27 +166,27 @@ def test_vitis_2activator_vhdl_125(accelize_drm, conf_json, cred_json, async_han
 
 
 @pytest.mark.awsxrt
-def test_vitis_2activator_100_125(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
+def test_vitis_2activator_87_125(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test a vitis configuration: dual clock kernels with AXI clock < DRM clock
     """
     # Run test
     design_name = 'vitis_2activator_100_125'
-    axiclk_freq_ref = 100
+    axiclk_freq_ref = 87
     drmclk_freq_ref = 125
     log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
                                     log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
 
 
 @pytest.mark.awsxrt
-def test_vitis_2activator_slr_200_125(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
+def test_vitis_2activator_slr_219_87(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test a vitis configuration: SLR crossing with dual clock kernels
     """
     # Run test
     design_name = 'vitis_2activator_slr_200_125'
-    axiclk_freq_ref = 200
-    drmclk_freq_ref = 125
+    axiclk_freq_ref = 219
+    drmclk_freq_ref = 87
     log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
                                     log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
 
@@ -212,8 +212,8 @@ def test_vitis_2activator_dualclkfifo(accelize_drm, conf_json, cred_json, async_
     """
     # Run test
     design_name = 'vitis_2activator_dualclkfifo'
-    axiclk_freq_ref = 200
-    drmclk_freq_ref = 125
+    axiclk_freq_ref = 219
+    drmclk_freq_ref = 87
     log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
                                     log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
 
@@ -240,8 +240,8 @@ def test_vitis_30activator(accelize_drm, conf_json, cred_json, async_handler, lo
     """
     # Run test
     design_name = 'vitis_30activator'
-    axiclk_freq_ref = 100
-    drmclk_freq_ref = 125
+    axiclk_freq_ref = 87
+    drmclk_freq_ref = 219
     log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
                                     log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
 
