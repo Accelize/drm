@@ -696,6 +696,9 @@ def test_heart_beat(accelize_drm, conf_json, cred_json, async_handler, log_file_
 
     act0 = activators[0]
     act1 = activators[1]
+
+    print('reg 34=', act0.read_register(0x34))
+
     def print_status(expect0, expect1):
         s0 = act0.get_status()
         s1 = act1.get_status()

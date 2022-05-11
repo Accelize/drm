@@ -118,11 +118,12 @@ class FpgaDriver(_FpgaDriverBase):
         """
         Clear FPGA
         """
-        clear_fpga = _run(
-            ['fpga-clear-local-image', '-S', str(self._fpga_slot_id)],
-            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
-        if clear_fpga.returncode:
-            raise RuntimeError(clear_fpga.stdout)
+        clear_image = _join(SCRIPT_DIR, 'clear.awsxclbin')
+        dev =cl.get_platforms()[0].get_devices()
+        binary = open(clear_image, 'rb').read()
+        ctx = cl.Context(dev_type=cl.device_type.ALL)
+        prg = cl.Program(ctx, [dev[self._fpga_slot_id]], [binary])
+        prg.build()
         print('FPGA cleared')
 
     def _program_fpga(self, fpga_image):

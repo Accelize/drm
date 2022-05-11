@@ -307,7 +307,7 @@ def test_nodelock_limits(accelize_drm, conf_json, conf_json_second, cred_json, a
             assert drm_manager0.get('drm_license_type') == 'Node-Locked'
             drm_manager0.deactivate()
             assert drm_manager0.get('drm_license_type') == 'Node-Locked'
-            async_cb0.assert_NoError()
+        async_cb0.assert_NoError()
 
         # Create the second instance on the other FPGA
         with accelize_drm.DrmManager(
@@ -346,7 +346,7 @@ def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, c
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     cred_json.set_user('accelize_accelerator_test_03')        # User with a single nodelock license
-    logfile = log_file_factory.create(2)
+    logfile = log_file_factory.create(2, append=True)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
@@ -368,10 +368,7 @@ def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, c
             drm_manager.deactivate()
 
         # Set metering configuration
-        conf_json.reset()
-        conf_json['settings'].update(logfile.json)
-        conf_json['settings']['log_file_append'] = True
-        conf_json.save()
+        conf_json.removeNodelock()
         with accelize_drm.DrmManager(
                     conf_json.path,
                     cred_json.path,
@@ -410,6 +407,7 @@ def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, c
             assert drm_manager.get('drm_license_type') == 'Floating/Metering'
             drm_manager.deactivate()
             assert not drm_manager.get('license_status')
+        logfile.remove()
 
     finally:
         accelize_drm.clean_nodelock_env(None, driver, conf_json, cred_json, ws_admin)
@@ -417,19 +415,23 @@ def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, c
 
 @pytest.mark.no_parallel
 @pytest.mark.hwtst
-def test_nodelock_after_metering_mode(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
+def test_nodelock_after_metering_mode(accelize_drm, conf_json, cred_json, async_handler,
+                            ws_admin, log_file_factory):
     """Test metering session is stopped when switching to nodelock mode"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
     activators = accelize_drm.pytest_fpga_activators[0]
     async_cb = async_handler.create()
     cred_json.set_user('accelize_accelerator_test_03')        # User with a single nodelock license
+    logfile = log_file_factory.create(1)
+    conf_json.reset()
+    conf_json['settings'].update(logfile.json)
+    conf_json.save()
 
     try:
         accelize_drm.clean_nodelock_env(driver=driver, conf_json=conf_json, cred_json=cred_json,
                                         ws_admin=ws_admin)
         # Set metering configuration
-        conf_json.reset()
         with accelize_drm.DrmManager(
                     conf_json.path,
                     cred_json.path,
@@ -452,7 +454,6 @@ def test_nodelock_after_metering_mode(accelize_drm, conf_json, cred_json, async_
             assert session_id == drm_manager.get('session_id')
 
         # Switch to nodelock
-        conf_json.reset()
         conf_json.addNodelock()
         with accelize_drm.DrmManager(
                     conf_json.path,
@@ -469,6 +470,10 @@ def test_nodelock_after_metering_mode(accelize_drm, conf_json, cred_json, async_
             assert drm_manager.get('drm_license_type') == 'Node-Locked'
             drm_manager.deactivate()
         async_cb.assert_NoError()
+
+        log_content = logfile.read()
+        assert 'A session is still pending and latest license' in log_content
+        logfile.remove()
 
     finally:
         accelize_drm.clean_nodelock_env(None, driver, conf_json, cred_json, ws_admin)
