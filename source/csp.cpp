@@ -25,7 +25,7 @@ namespace DRM {
 
 Json::Value GetCspInfo( uint32_t verbosity ) {
     Json::Value csp_info = Json::nullValue;
-    std::unique_ptr<Csp> csp_obj( new Csp(verbosity) );
+    std::unique_ptr<Csp> csp_obj( new Csp(verbosity, 2000, 2000) );
     // Try EC2 metadata service
     csp_obj->get_metadata_ec2( csp_info );
     // Try OpenStack metadata service
@@ -56,9 +56,9 @@ Json::Value GetCspInfo( uint32_t verbosity ) {
 */
 Csp::Csp( const uint32_t verbosity, const int32_t connection_timeout_ms,
           const int32_t request_timeout_ms ) {
+    mVerbosity = verbosity;
     mConnectionTimeoutMS = connection_timeout_ms;
     mRequestTimeoutMS = request_timeout_ms;
-    mVerbosity = verbosity;
 }
 
 
@@ -70,13 +70,12 @@ void Csp::get_metadata_ec2( Json::Value &csp_info ) const {
     Json::Value result_json;
     try {
         result_str = req.perform_get<std::string>( base_url, mRequestTimeoutMS );
-        result_json = parseJsonString( result_str );
-        Debug( "List of available EC2 instance metadata: {}", result_json.toStyledString() );
-        csp_info["provider"] = "Unknown";
+        Debug( "List of available EC2 instance metadata:\n{}", result_str );
+        csp_info["csp_name"] = "Unknown";
         csp_info["ami-id"] = req.perform_get<std::string>( fmt::format( "{}/ami-id", base_url ), mRequestTimeoutMS );
         csp_info["hostname"] = req.perform_get<std::string>( fmt::format( "{}/hostname", base_url ), mRequestTimeoutMS );
         csp_info["instance-type"] = req.perform_get<std::string>( fmt::format( "{}/instance-type", base_url ), mRequestTimeoutMS );
-    } catch(std::runtime_error) {
+    } catch(std::runtime_error const&) {
         Debug( "Failed to access instance metadata using EC2 url" );
     }
 }
@@ -90,14 +89,13 @@ void Csp::get_metadata_openstack( Json::Value &csp_info ) const {
     try {
         result_str = req.perform_get<std::string>( base_url, mRequestTimeoutMS );
         result_json = parseJsonString( result_str );
-        Debug( "List of available openstack instance metadata: {}", result_json.toStyledString() );
+        Debug( "List of available openstack instance metadata:\n{}", result_json.toStyledString() );
         csp_info["openstack"] = Json::nullValue;
-        csp_info["openstack"]["provider"] = "Unknown";
         csp_info["openstack"]["hostname"] = result_json["hostname"];
         csp_info["openstack"]["availability_zone"] = result_json["availability_zone"];
         csp_info["openstack"]["devices"] = result_json["devices"];
         csp_info["openstack"]["dedicated_cpus"] = result_json["dedicated_cpus"];
-    } catch(std::runtime_error) {
+    } catch(std::runtime_error const&) {
         Debug( "Failed to access instance metadata using OpenStack url" );
     }
 }
@@ -111,7 +109,7 @@ bool Csp::get_metadata_aws(Json::Value &csp_info) const {
     try {
         std::string result_str = req.perform_get<std::string>( "http://169.254.169.254/latest/meta-data/services/domain", mRequestTimeoutMS );
         if ( result_str.find( "aws" ) != std::string::npos) {
-            csp_info["provider"] = "AWS";
+            csp_info["csp_name"] = "AWS";
             // Add AWS specific fields
             result_str = req.perform_get<std::string>( "http://169.254.169.254/latest/dynamic/instance-identity/document", mRequestTimeoutMS );
             result_json = parseJsonString( result_str );
@@ -121,7 +119,7 @@ bool Csp::get_metadata_aws(Json::Value &csp_info) const {
             Debug( "Instance is running on AWS" );
             return true;
         }
-    } catch(std::runtime_error) {
+    } catch(std::runtime_error const&) {
         Debug( "Could not extract AWS metadata" );
     }
     return false;
@@ -133,7 +131,7 @@ bool Csp::get_metadata_vmaccel(Json::Value &csp_info) const {
     if ( csp_info.isMember( "hostname" ) ) {
         std::string hostname = csp_info["hostname"].asString();
         if ( hostname.find( "vmaccel" ) ) {
-            csp_info["provider"] = "VMAccel";
+            csp_info["csp_name"] = "VMAccel";
             Debug( "Instance is running on VMAccel" );
             return true;
         }
@@ -149,7 +147,7 @@ bool Csp::get_metadata_alibaba(Json::Value &csp_info) const {
     std::string base_url = std::string("http://100.100.100.200/latest/meta-data");
     try {
         csp_info["instance-type"] = req.perform_get<std::string>( fmt::format( "{}/instance/instance-type", base_url ), mRequestTimeoutMS );
-        csp_info["provider"] = "Alibaba";
+        csp_info["csp_name"] = "Alibaba";
         csp_info["image-id"] = req.perform_get<std::string>( fmt::format( "{}/image-id", base_url ), mRequestTimeoutMS );
         csp_info["hostname"] = req.perform_get<std::string>( fmt::format( "{}/hostname", base_url ), mRequestTimeoutMS );
         csp_info["product-code"] = req.perform_get<std::string>( fmt::format( "{}/image/market-place/product-code", base_url ), mRequestTimeoutMS );
@@ -158,7 +156,7 @@ bool Csp::get_metadata_alibaba(Json::Value &csp_info) const {
         csp_info["zone-id"] = req.perform_get<std::string>( fmt::format( "{}/zone-id", base_url ), mRequestTimeoutMS );
         Debug( "Instance is running on Alibaba" );
         return true;
-    } catch(std::runtime_error) {}
+    } catch(std::runtime_error const&) {}
     return false;
 }
 
@@ -172,7 +170,7 @@ bool Csp::get_metadata_azure(Json::Value &csp_info) const {
     try {
         std::string result_str = req.perform_get<std::string>( "http://169.254.169.254/metadata/instance?api-version=2021-02-01", mRequestTimeoutMS );
         if ( result_str.find( "AZUREPUBLICCLOUD" ) != std::string::npos ) {
-            csp_info["provider"] = "Azure";
+            csp_info["csp_name"] = "Azure";
             result_json = parseJsonString( result_str );
             csp_info["location"] = result_json["compute"]["location"];
             csp_info["extendedLocation"] = result_json["compute"]["extendedLocation"];
@@ -184,7 +182,7 @@ bool Csp::get_metadata_azure(Json::Value &csp_info) const {
             Debug( "Instance is running on Azure" );
             return true;
         }
-    } catch(std::runtime_error) {}
+    } catch(std::runtime_error const&) {}
     return false;
 }
 
