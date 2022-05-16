@@ -34,55 +34,29 @@ Json::Value GetCspInfo( uint32_t verbosity );
 
 /** \brief Interface to collect CSP metadata
 */
-class CspBase {
+class Csp {
 
 private:
-    std::string mName;  // CSP name
-
-protected:
     int32_t mConnectionTimeoutMS; // Connection timeout in milliseconds
     int32_t mRequestTimeoutMS; // Request timeout in milliseconds
     uint32_t mVerbosity; // HTTP verbosity: 0: default, 1:verbose
 
 public:
 
-    CspBase() = delete; //!< No default constructor
-    CspBase( const std::string &name, const int32_t connection_timeout_ms, const int32_t request_timeout_ms );
-    virtual ~CspBase() {};
-
-    std::string getName() const { return mName; }
+    Csp() = delete; //!< No default constructor
+    Csp( const uint32_t verbosity = 0, const int32_t connection_timeout_ms = 50,
+         const int32_t request_timeout_ms = 50 );
+    ~Csp() {};
 
     uint32_t getVerbosity() const { return mVerbosity; }
     void setVerbosity( const uint32_t& verbosity ) { mVerbosity = verbosity; }
 
-    /** \brief Get Metadata information
-
-        \param[in] resume_session_request : If true, the pending session is
-        reused. If no pending session is found, create a new one. If
-        false and a pending session is found, close it and create a new
-        one. Default to False.
-    */
-    virtual Json::Value get_metadata() = 0;
-};
-
-
-/** \brief Interface to collect AWS metadata
-*/
-class Aws : public CspBase {
-public:
-    Aws();
-    //~Aws() {};
-    Json::Value get_metadata();
-};
-
-
-/** \brief Interface to collect Alibaba metadata
-*/
-class Alibaba : public CspBase {
-public:
-    Alibaba();
-    //~Alibaba() {};
-    Json::Value get_metadata();
+    void get_metadata_ec2( Json::Value &csp_info ) const;
+    void get_metadata_openstack( Json::Value &csp_info ) const;
+    bool get_metadata_aws(Json::Value &csp_info) const;
+    bool get_metadata_vmaccel(Json::Value &csp_info) const;
+    bool get_metadata_alibaba(Json::Value &csp_info) const;
+    bool get_metadata_azure(Json::Value &csp_info) const;
 };
 
 

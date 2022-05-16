@@ -432,47 +432,47 @@ def test_nodelock_after_metering_mode(accelize_drm, conf_json, cred_json, async_
         accelize_drm.clean_nodelock_env(driver=driver, conf_json=conf_json, cred_json=cred_json,
                                         ws_admin=ws_admin)
         # Set metering configuration
-        with accelize_drm.DrmManager(
+        drm_manager = accelize_drm.DrmManager(
                     conf_json.path,
                     cred_json.path,
                     driver.read_register_callback,
                     driver.write_register_callback,
                     async_cb.callback
-                ) as drm_manager:
-            assert drm_manager.get('license_type') == 'Floating/Metering'
-            assert not drm_manager.get('license_status')
-            assert not drm_manager.get('session_status')
-            drm_manager.activate()
-            assert drm_manager.get('license_status')
-            assert drm_manager.get('drm_license_type') == 'Floating/Metering'
-            assert drm_manager.get('session_status')
-            session_id = drm_manager.get('session_id')
-            assert len(session_id) > 0
-            activators[0].generate_coin()
-            drm_manager.deactivate(True)    # Pause session
-            assert drm_manager.get('session_status')
-            assert session_id == drm_manager.get('session_id')
+                )
+        assert drm_manager.get('license_type') == 'Floating/Metering'
+        assert not drm_manager.get('license_status')
+        assert not drm_manager.get('session_status')
+        drm_manager.activate()
+        assert drm_manager.get('license_status')
+        assert drm_manager.get('drm_license_type') == 'Floating/Metering'
+        assert drm_manager.get('session_status')
+        session_id = drm_manager.get('session_id')
+        assert len(session_id) > 0
+        activators[0].generate_coin()
+        drm_manager.deactivate(True)    # Pause session
+        assert drm_manager.get('session_status')
+        assert session_id == drm_manager.get('session_id')
 
         # Switch to nodelock
         conf_json.addNodelock()
-        with accelize_drm.DrmManager(
+        drm_manager = accelize_drm.DrmManager(
                     conf_json.path,
                     cred_json.path,
                     driver.read_register_callback,
                     driver.write_register_callback,
                     async_cb.callback
-                ) as drm_manager:
-            assert drm_manager.get('license_type') == 'Node-Locked'
-            assert session_id != drm_manager.get('session_id')
-            assert not drm_manager.get('session_status')
-            drm_manager.activate()
-            assert not drm_manager.get('session_status')
-            assert drm_manager.get('drm_license_type') == 'Node-Locked'
-            drm_manager.deactivate()
+                )
+        assert drm_manager.get('license_type') == 'Node-Locked'
+        assert session_id != drm_manager.get('session_id')
+        assert not drm_manager.get('session_status')
+        drm_manager.activate()
+        assert not drm_manager.get('session_status')
+        assert drm_manager.get('drm_license_type') == 'Node-Locked'
+        drm_manager.deactivate()
         async_cb.assert_NoError()
 
         log_content = logfile.read()
-        assert 'A session is still pending and latest license' in log_content
+        assert 'A floating/metering session is still pending: trying to close it gracefully before switching to nodelocked license' in log_content
         logfile.remove()
 
     finally:

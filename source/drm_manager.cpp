@@ -1885,6 +1885,7 @@ protected:
             }
         } else {
             /// No license has been found locally, request one to License WS:
+            Debug( "Could not find nodelocked license file: {}", mNodeLockLicenseFilePath );
             /// - Clear Session IS
             Debug( "Clearing session ID: {}", mSessionID );
             mSessionID = std::string("");
@@ -2654,7 +2655,7 @@ public:
                     resumeSession();
                 } else {
                     Debug( "A session is still pending but latest license has expired: "
-                           "pending session will be stopped and a new one will be created" );
+                           "pending session is stopped and a new one is created" );
                     stopSession();
                     startSession();
                 }
