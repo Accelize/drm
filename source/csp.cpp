@@ -76,7 +76,7 @@ void Csp::get_metadata_ec2( Json::Value &csp_info ) const {
         csp_info["hostname"] = req.perform_get<std::string>( fmt::format( "{}/hostname", base_url ), mRequestTimeoutMS );
         csp_info["instance-type"] = req.perform_get<std::string>( fmt::format( "{}/instance-type", base_url ), mRequestTimeoutMS );
     } catch(std::runtime_error const&) {
-        Debug( "Failed to access instance metadata using EC2 url" );
+        Debug( "Could not access instance metadata using EC2 url" );
     }
 }
 
@@ -96,7 +96,7 @@ void Csp::get_metadata_openstack( Json::Value &csp_info ) const {
         csp_info["openstack"]["devices"] = result_json["devices"];
         csp_info["openstack"]["dedicated_cpus"] = result_json["dedicated_cpus"];
     } catch(std::runtime_error const&) {
-        Debug( "Failed to access instance metadata using OpenStack url" );
+        Debug( "Could not access instance metadata using OpenStack url" );
     }
 }
 

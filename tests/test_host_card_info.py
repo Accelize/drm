@@ -155,8 +155,8 @@ def test_csp_format(accelize_drm, conf_json, cred_json, async_handler,
     else:
         csp = data['csp']
         assert csp
-        assert match(r'ami-.*', csp.get('ami_id'))
-        assert match(r'i-.*', csp.get('instance_id'))
-        assert match(r'f1.\dxlarge', csp.get('instance_type'))
+        assert csp.get('csp_name') == 'AWS'
+        assert match(r'ami-.*', csp.get('ami-id'))
+        assert match(r'f1.\dxlarge', csp.get('instance-type'))
         assert csp.get('region')
     async_cb.assert_NoError()
