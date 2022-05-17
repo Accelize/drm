@@ -69,11 +69,13 @@ def run_test_on_design(accelize_drm, design_name, is_dual_clk):
         hex_str += '%08X' % reg.value
     text_str = stringify(hex_str)
     text_json = loads(text_str)
-    assert text_json['product_id']['vendor'] == 'accelize.com'
-    assert text_json['product_id']['library'] == 'refdesign'
     assert text_json['pkg_version']
     assert text_json['drm_software']
+    assert text_json['product_id']
+    assert text_json['product_id']['vendor'] == 'accelize.com'
+    assert text_json['product_id']['library'] == 'refdesign'
     assert text_json['product_id']['name'] == 'drm_1activator'
+    assert text_json['extra']
     assert text_json['extra']['fpga_family'] == 'random_id'
     assert text_json['extra']['fpga_vendor'] == 'xilinx'
     assert text_json['extra']['csp'].lower() == 'som'
