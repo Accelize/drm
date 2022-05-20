@@ -169,7 +169,7 @@ bool Csp::get_metadata_azure(Json::Value &csp_info) const {
     Json::Value result_json = Json::nullValue;
     try {
         std::string result_str = req.perform_get<std::string>( "http://169.254.169.254/metadata/instance?api-version=2021-02-01", mRequestTimeoutMS );
-        if ( result_str.find( "AZUREPUBLICCLOUD" ) != std::string::npos ) {
+        if ( result_str.find( "AzurePublicCloud" ) != std::string::npos ) {
             csp_info["csp_name"] = "Azure";
             result_json = parseJsonString( result_str );
             csp_info["location"] = result_json["compute"]["location"];
