@@ -18,9 +18,12 @@ Packaging the DRM Controller
 
 * Start Vivado
 * "Create project"
+
   * "RTL Project", "Do not specify sources at this time"
   * Select your board
+
 * From TCL console:
+
   * Execute there commands to use the VHDL wrapper:
 
     .. code-block:: tcl
@@ -50,8 +53,10 @@ Packaging the DRM Controller
        update_compile_order -fileset sources_1
 
 * Tools > Create and package New IP
+
   * Package current project
-* TCL Console:
+
+* From TCL Console:
 
   .. code-block:: tcl
      :caption: In TCL
@@ -75,7 +80,6 @@ Packaging the DRM Controller
    You must execute the following TCL commands instead:
 
    .. code-block:: tcl
-      :caption: In TCL with Verilog sources
 
      set path_to_hdl ./drm_gstarted/drm_hdk
      read_verilog -sv [ glob $path_to_hdl/controller/rtl/core/*.sv ]
