@@ -23,7 +23,6 @@ Following OS are minimally tested only (without hardware):
 * Debian 11 Bullseye
 * Fedora (2 latest stable versions)
 * Ubuntu 20.04 LTS Focal
-* Ubuntu 22.04 LTS Jammy
 * Ubuntu (2 latest stable versions)
 * Red Hat Enterprise Linux 7
 * Red Hat Enterprise Linux 8
@@ -63,15 +62,15 @@ To install the repository, run the following commands:
 
 .. code-block:: bash
 
-    # Ensure wget is installed (It can be removed once the repository is installed)
+    # Ensure common system utilities are installed
     sudo apt update
-    sudo apt install -y wget
+    sudo apt install -y apt-transport-https software-properties-common lsb-release gnupg curl
 
     # Add Accelize GPG public key for package signature verification
-    sudo wget https://tech.accelize.com/gpg_unarmored -O /etc/apt/trusted.gpg.d/accelize.gpg
+    curl -fsSL https://tech.accelize.com/gpg | sudo apt-key add -
 
     # Install repository
-    echo "deb https://tech.accelize.com/deb $(grep -ioP '^VERSION_CODENAME=\K.+' /etc/os-release) stable" | sudo tee /etc/apt/sources.list.d/accelize_stable.list
+    sudo add-apt-repository "deb https://tech.accelize.com/deb $(lsb_release -cs) stable"
     sudo apt update
 
 
@@ -83,11 +82,11 @@ To install the Accelize repository, run the following commands:
 .. code-block:: bash
     :caption: On Fedora, RHEL/CentOS/CentOS Stream >= 8
 
-    # Ensure curl is installed (It can be removed once the repository is installed)
-    sudo dnf install -y curl
+    # Ensure config manager is installed
+    sudo dnf install -y 'dnf-command(config-manager)'
 
-    # Install Accelize repository:
-    sudo curl https://tech.accelize.com/rpm/accelize_stable.repo -o /etc/yum.repos.d/accelize_stable.repo
+    # Install repository
+    sudo dnf config-manager --add-repo https://tech.accelize.com/rpm/accelize_stable.repo
 
 .. code-block:: bash
     :caption: On RHEL 7, CentOS 7

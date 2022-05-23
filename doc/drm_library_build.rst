@@ -225,34 +225,42 @@ Before going further, make sure the section `Python 3 library option`_ has been 
 RPM package (For RHEL, CentOS, Fedora)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Utilities:
+Required to build packages:
  * rpm-build
+
+Required to sign packages:
+ * rpm-sign
+ * gnupg
 
 To install the required utilities, run the following command:
 
 .. code-block:: bash
     :caption: On Fedora, RHEL 8, CentOS 8, CentOS Stream 8
 
-    sudo dnf install -y rpm-build
+    sudo dnf install -y rpm-build rpm-sign gnupg
 
 .. code-block:: bash
     :caption: On RHEL 7, CentOS 7
 
-    sudo yum install -y rpm-build
+    sudo yum install -y rpm-build rpm-sign gnupg
 
 DEB Packages (For Debian, Ubuntu)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Utilities:
+Required to build package:
  * pkg-config
  * dpkg-dev
  * file
+
+Required to sign packages:
+ * dpkg-sig
+ * gnupg
 
 To install required utilities, run the following command:
 
 .. code-block:: bash
 
-    sudo apt install -y pkg-config dpkg-dev file
+    sudo apt install -y pkg-config dpkg-dev dpkg-sig gnupg file
 
 ABI check option
 ----------------
