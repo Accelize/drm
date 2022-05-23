@@ -129,7 +129,7 @@ Packaging the DRM Activator
 
   * Package current project
 
-* TCL console:
+* From TCL console:
 
   .. code-block:: tcl
      :caption: In TCL
