@@ -95,9 +95,12 @@ Packaging the DRM Activator
 
 * Start Vivado
 * "Create project"
+
   * "RTL Project", "Do not specify sources at this time"
   * Select U200 board
+
 * From TCL Console (Note that 'VVVVLLLLNNNNVVVV' is specific to your DRM package and must be replaced by the appropriate value):
+
   * Execute there commands to use the VHDL wrapper:
 
     .. code-block:: tcl
@@ -123,7 +126,9 @@ Packaging the DRM Activator
        set_property top top_drm_activator_0xVVVVLLLLNNNNVVVV [current_fileset]
 
 * Tools > Create and package New IP
+
   * Package current project
+
 * TCL console:
 
   .. code-block:: tcl
@@ -147,12 +152,17 @@ Block Design with DRM IPs
 
 * Start Vivado
 * "Create project"
+
   * "RTL Project", "Do not specify sources at this time"
   * Select U200 board
+
 * Add IP Repositories:
+
   * "Project Manager" > "Settings" > "IP" > "Repository"
   * Add previously created IP repositories (1 for DRM, 1 for Activator)
+
 * "Project Manager" > "IP INTEGRATOR" > "Create Block Design"
+
   * Add the DRM Controller and Activator IPs
 
 
