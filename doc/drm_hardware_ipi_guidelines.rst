@@ -20,18 +20,34 @@ Packaging the DRM Controller
 * "Create project"
   * "RTL Project", "Do not specify sources at this time"
   * Select your board
-* TCL Console:
+* From TCL console:
+  * Execute there commands to use the VHDL wrapper:
 
-  .. code-block:: tcl
-     :caption: In TCL
+    .. code-block:: tcl
+       :caption: In TCL with VHDL sources
 
-     set path_to_hdl ./drm_gstarted/drm_hdk
-     read_vhdl [ glob $path_to_hdl/common/vhdl/xilinx/*.vhdl ] -library drm_library
-     read_vhdl $path_to_hdl/controller/rtl/core/drm_ip_controller.vhdl -library drm_library
-     read_verilog -sv [glob $path_to_hdl/controller/rtl/core/*.sv]
-     read_verilog -sv [glob $path_to_hdl/controller/rtl/syn/*.sv]
-     set_property top top_drm_controller [current_fileset]
-     update_compile_order -fileset sources_1
+       set path_to_hdl ./drm_gstarted/drm_hdk
+       read_vhdl [ glob $path_to_hdl/common/vhdl/xilinx/*.vhdl ] -library drm_library
+       read_vhdl [ glob $path_to_hdl/controller/rtl/core/*.vhdl ] -library drm_library
+       read_verilog -sv [glob $path_to_hdl/controller/rtl/core/*.sv]
+       read_vhdl [ glob $path_to_hdl/controller/rtl/syn/*.vhdl ]
+       set_property top top_drm_controller [current_fileset]
+       update_compile_order -fileset sources_1
+
+  * Or execute there commands to use the Verilog wrapper:
+
+    .. code-block:: tcl
+       :caption: In TCL with Verilog sources
+
+       set path_to_hdl ./drm_gstarted/drm_hdk
+       read_vhdl [ glob $path_to_hdl/common/vhdl/xilinx/*.vhdl ] -library drm_library
+       read_vhdl [ glob $path_to_hdl/controller/rtl/core/*.vhdl ] -library drm_library
+       read_verilog -sv [glob $path_to_hdl/controller/rtl/core/*.sv]
+       read_verilog -sv [glob $path_to_hdl/controller/rtl/syn/*.sv]
+       set_property top top_drm_controller [current_fileset]
+       read_xdc -unmanaged $path_to_hdl/controller/rtl/drm_controller.xdc
+       set_property PROCESSING_ORDER LATE [get_files $path_to_hdl/controller/rtl/drm_controller.xdc]
+       update_compile_order -fileset sources_1
 
 * Tools > Create and package New IP
   * Package current project
@@ -53,6 +69,23 @@ Packaging the DRM Controller
 * [Review and Package]
 * Click "Package IP"
 
+
+.. note::
+   For SoM project the DRM Controller sources are different.
+   You must execute the following TCL commands instead:
+
+   .. code-block:: tcl
+      :caption: In TCL with Verilog sources
+
+     set path_to_hdl ./drm_gstarted/drm_hdk
+     read_verilog -sv [ glob $path_to_hdl/controller/rtl/core/*.sv ]
+     read_verilog -sv [glob $path_to_hdl/controller/rtl/syn/*.sv]
+     set_property top top_drm_controller [current_fileset]
+     read_xdc -unmanaged $path_to_hdl/controller/rtl/drm_controller.xdc
+     set_property PROCESSING_ORDER LATE [get_files $path_to_hdl/controller/rtl/drm_controller.xdc]
+     update_compile_order -fileset sources_1
+
+
 Packaging the DRM Activator
 ===========================
 
@@ -60,17 +93,30 @@ Packaging the DRM Activator
 * "Create project"
   * "RTL Project", "Do not specify sources at this time"
   * Select U200 board
-* TCL Console (Note that 'VVVVLLLLNNNNVVVV' is specific to your DRM package and must be replaced by the appropriate value):
+* From TCL Console (Note that 'VVVVLLLLNNNNVVVV' is specific to your DRM package and must be replaced by the appropriate value):
+  * Execute there commands to use the VHDL wrapper:
 
-  .. code-block:: tcl
-     :caption: In TCL
+    .. code-block:: tcl
+       :caption: In TCL with VHDL sources
 
-     set path_to_drm_hdk ./drm_gstarted/drm_hdk
-     read_vhdl [ glob $path_to_drm_hdk/common/vhdl/xilinx/*.vhdl ] -library drm_library
-     read_vhdl [ glob $path_to_drm_hdk/activator0/core/*.vhdl ] -library drm_library
-     read_vhdl [ glob $path_to_drm_hdk/activator0/syn/*.vhdl ] -library drm_library
-     read_verilog -sv [ glob $path_to_drm_hdk/activator0/syn/*.sv ]
-     set_property top top_drm_activator_0xVVVVLLLLNNNNVVVV [current_fileset]
+       set path_to_drm_hdk ./drm_gstarted/drm_hdk
+       read_vhdl [ glob $path_to_drm_hdk/common/vhdl/xilinx/*.vhdl ] -library drm_library
+       read_vhdl $path_to_drm_hdk/activator0/core/drm_ip_activator_package_0xVVVVLLLLNNNNVVVV.vhdl -library drm_library
+       read_vhdl $path_to_drm_hdk/activator0/core/drm_ip_activator_0xVVVVLLLLNNNNVVVV.vhdl -library drm_0xVVVVLLLLNNNNVVVV_library
+       read_vhdl [ glob $path_to_drm_hdk/activator0/syn/*.vhdl ]
+       set_property top top_drm_activator_0xVVVVLLLLNNNNVVVV [current_fileset]
+
+  * Or execute there commands to use the Verilog wrapper:
+
+    .. code-block:: tcl
+       :caption: In TCL with Verilog sources
+
+       set path_to_drm_hdk ./drm_gstarted/drm_hdk
+       read_vhdl [ glob $path_to_drm_hdk/common/vhdl/xilinx/*.vhdl ] -library drm_library
+       read_vhdl $path_to_drm_hdk/activator0/core/drm_ip_activator_package_0xVVVVLLLLNNNNVVVV.vhdl -library drm_library
+       read_vhdl $path_to_drm_hdk/activator0/core/drm_ip_activator_0xVVVVLLLLNNNNVVVV.vhdl -library drm_0xVVVVLLLLNNNNVVVV_library
+       read_verilog -sv [ glob $path_to_drm_hdk/activator0/syn/*.sv ]
+       set_property top top_drm_activator_0xVVVVLLLLNNNNVVVV [current_fileset]
 
 * Tools > Create and package New IP
   * Package current project
