@@ -668,6 +668,8 @@ To add the DRM Activator source to your project, you can use:
    }
    read_vhdl -library drm_0xVVVVLLLLNNNNVVVV_library {
       drm_hdk/activator_VLNV/core/drm_ip_activator_0xVVVVLLLLNNNNVVVV.vhdl
+   }
+   read_vhdl {
       drm_hdk/activator_VLNV/syn/top_drm_activator_0xVVVVLLLLNNNNVVVV.vhdl
    }
 
