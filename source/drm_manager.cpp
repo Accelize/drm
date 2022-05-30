@@ -1,4 +1,4 @@
-/*
+p/*
 Copyright (C) 2022, Accelize
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -2554,6 +2554,9 @@ public:
                 f_asynch_error = f_user_asynch_error;
             // Determine DRM Ctrl TA existance by trying to initialize it
             mIsPnR = pnc_initialize_drm_ctrl_ta();
+            if ( mIsHybrid && !mIsPnR ) {
+                Throw( "Configuration file {} is defining a DRM Controller software but no one is detected", conf_file_path ); //LCOV_EXCL_LINE
+            }
             if ( mIsPnR ) {
                 mIsHybrid = true;
                 //  Set Ctrl TA logging
@@ -2577,7 +2580,7 @@ public:
                 // Set sleep period because SW Controller is slower
                 mCtrlTimeFactor = 100;
             } else {
-                Debug( "DRM Controller is a FPGA IP" );
+                Debug( "DRM Controller is a Hardware IP" );
                 mCtrlTimeFactor = 1;
             }
             uint32_t timeout_period = SDK_CTRL_TIMEOUT_IN_US * mCtrlTimeFactor;
