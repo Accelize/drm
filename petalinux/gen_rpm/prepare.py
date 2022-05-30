@@ -116,7 +116,12 @@ if __name__ == '__main__':
     # Populate template file
     with open(join(SCRIPT_DIR, 'libaccelize-drm', 'tmpl.libaccelize-drm.bb')) as f:
         tmpl_str = f.read()
-    tmpl_obj = Template(tmpl_str)    
+    tmpl_obj = Template(tmpl_str)
+    print(f'TMPL_LICENSE_MD5={md5}',
+          f'TMPL_GIT_OPTIONS={git_options}', 
+          f'TMPL_GIT_COMMIT={git_commit}', 
+          f'TMPL_PV={pv}', 
+          f'TMPL_PR={pr}')
     dst_str = tmpl_obj.substitute(TMPL_LICENSE_MD5=md5,
         TMPL_GIT_OPTIONS=git_options, TMPL_GIT_COMMIT=git_commit, 
         TMPL_PV=pv, TMPL_PR=pr
