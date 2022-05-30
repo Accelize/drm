@@ -146,6 +146,11 @@ int pnc_session_new(size_t size, pnc_session_t **session)
 {
     pnc_session_t *pnc_new;
 
+    /* Upper round to a multiple of PAGE_SIZE, so that _pnc_open will not fail */
+    if ((size % PAGE_SIZE) != 0) {
+        size += PAGE_SIZE - (size % PAGE_SIZE);
+    }
+
     /* If we configure the session with a string rather than
      * a 64 bits id, we need more room in shared memory
      * to be able to store that string.
@@ -170,7 +175,6 @@ int pnc_session_new(size_t size, pnc_session_t **session)
     }
 
     *session = pnc_new;
-
     return 0;
 }
 
