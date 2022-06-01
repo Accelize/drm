@@ -29,11 +29,15 @@ limitations under the License.
 // SPDLOG_ACTIVE_LEVEL must be declared before the spdlog.h include
 #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 #include "spdlog/sinks/null_sink.h"
 #include "spdlog/sinks/basic_file_sink.h"       // support for basic file logging
 #include "spdlog/sinks/rotating_file_sink.h"    // support for rotating file logging
+#pragma GCC diagnostic pop
 
 #include "accelize/drm/error.h"
 

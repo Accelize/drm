@@ -1,4 +1,4 @@
-p/*
+/*
 Copyright (C) 2022, Accelize
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -582,7 +582,7 @@ protected:
 
     void checkCtrlLogLevel( eCtrlLogVerbosity level_e ) {
         if ( LogCtrlLevelMap.find( level_e ) == LogCtrlLevelMap.end() ) {
-            Throw( DRM_BadArg, "Invalid log level for SW Controller: {}", level_e );
+            Throw( DRM_BadArg, "Invalid log level for SW Controller: {}", (uint32_t)level_e );
         }
     }
 
@@ -598,10 +598,10 @@ protected:
                 Throw( DRM_PncInitError, "Failed to set the log level of the DRM Controller TA to {}: {}. ",
                         level_id, strerror(errno) );
             }
-            Debug( "Updated log level for SW Controller from {} to {}", sLogCtrlVerbosity, level_e );
+            Debug( "Updated log level for SW Controller from {} to {}", (uint32_t)sLogCtrlVerbosity, (uint32_t)level_e );
             sLogCtrlVerbosity = level_e;
         } else {
-            Debug( "Log level for SW Controller is already set to {}", sLogCtrlVerbosity );
+            Debug( "Log level for SW Controller is already set to {}", (uint32_t)sLogCtrlVerbosity );
         }
     }
 
@@ -1077,7 +1077,7 @@ protected:
         // Check mailbox size
         uint32_t mb_full_size = getMailboxSize();
         if ( mb_full_size < (uint32_t)eMailboxOffset::MB_USER ) {
-            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Unexpected mailbox size {}: Must be > {}.\n{}", mb_full_size, eMailboxOffset::MB_USER, DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
+            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Unexpected mailbox size {}: Must be > {}.\n{}", mb_full_size, (uint32_t)eMailboxOffset::MB_USER, DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
         }
         uint32_t mbSize = getUserMailboxSize();
 
@@ -2554,9 +2554,6 @@ public:
                 f_asynch_error = f_user_asynch_error;
             // Determine DRM Ctrl TA existance by trying to initialize it
             mIsPnR = pnc_initialize_drm_ctrl_ta();
-            if ( mIsHybrid && !mIsPnR ) {
-                Throw( "Configuration file {} is defining a DRM Controller software but no one is detected", conf_file_path ); //LCOV_EXCL_LINE
-            }
             if ( mIsPnR ) {
                 mIsHybrid = true;
                 //  Set Ctrl TA logging
@@ -2732,7 +2729,7 @@ public:
                     case ParameterKey::log_file_type: {
                         json_value[key_str] = (uint32_t)sLogFileType;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
-                               sLogFileType );
+                               (uint32_t)sLogFileType );
                         break;
                     }
                     case ParameterKey::log_file_rotating_num: {
