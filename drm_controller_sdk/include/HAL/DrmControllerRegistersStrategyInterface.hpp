@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegistersStrategyInterface.hpp
-*  \version   7.1.0.0
-*  \date      January 2022
+*  \version   8.0.0.0
+*  \date      March 2022
 *  \brief     Class DrmControllerRegistersStrategyInterface defines strategy interface for register access.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <sys/time.h>
+#include <mutex>
 
 #include <DrmControllerCommon.hpp>
 #include <DrmControllerVersion.hpp>
@@ -42,6 +43,8 @@ namespace DrmControllerLibrary {
 
     // public members, functions ...
     public:
+
+      mutable std::recursive_mutex mDrmControllerRegistersMutex;
 
       /** DrmControllerRegistersStrategyInterface
       *   \brief Class constructor.

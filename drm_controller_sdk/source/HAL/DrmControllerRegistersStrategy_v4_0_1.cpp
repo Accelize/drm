@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegistersStrategy_v4_0_1.cpp
-*  \version   7.1.0.0
-*  \date      January 2022
+*  \version   8.0.0.0
+*  \date      March 2022
 *  \brief     Class DrmControllerRegistersStrategy_v4_0_1 defines strategy for register access of drm controller v4.0.1.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License") {
 
@@ -75,7 +75,7 @@ DrmControllerRegistersStrategy_v4_0_1::DrmControllerRegistersStrategy_v4_0_1(tDr
   mMeteringFileFirstIpMeteringDataWordPosition(DRM_CONTROLLER_V4_0_1_METERING_FILE_FIRST_IP_METERING_DATA_POSITION),
   mMeteringFileMacWordFromEndPosition(DRM_CONTROLLER_V4_0_1_METERING_FILE_MAC_FROM_END_POSITION),
   mDrmErrorRegisterMessagesArraySize(DRM_CONTROLLER_V4_0_1_NUMBER_OF_ERROR_CODES),
-  mDrmErrorRegisterMessagesArray({
+  mDrmErrorRegisterMessagesArray{
     { mDrmErrorNotReady,                                   "Not ready" },
     { mDrmErrorNoError,                                    "No error"  },
     { mDrmErrorBusReadAuthenticatorDrmVersionTimeOutError, "Bus read authenticator drm version timeout error" },
@@ -98,7 +98,7 @@ DrmControllerRegistersStrategy_v4_0_1::DrmControllerRegistersStrategy_v4_0_1(tDr
     { mDrmErrorBusWriteActivatorResponseTimeOutError,      "Bus write activator response timeout error" },
     { mDrmErrorBusReadInterruptTimeOutError,               "Bus read interrupt timeout error" },
     { mDrmErrorBusReadExpectedStatusError,                 "Bus read expected status error" }
-  })
+  }
 {
   setIndexedRegisterName(DRM_CONTROLLER_V4_0_1_INDEXED_REGISTER_NAME);
 }
@@ -259,6 +259,7 @@ unsigned int DrmControllerRegistersStrategy_v4_0_1::writeLicenseTimerInitSemapho
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerRegistersStrategy_v4_0_1::readLicenseStartAddressRegister(std::vector<unsigned int> &licenseStartAddress) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerRegistersMutex);
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return readRegisterListFromIndex(mLicenseStartAddressRegisterStartIndex, mLicenseStartAddressRegisterWordNumber, licenseStartAddress);
@@ -272,6 +273,7 @@ unsigned int DrmControllerRegistersStrategy_v4_0_1::readLicenseStartAddressRegis
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerRegistersStrategy_v4_0_1::writeLicenseStartAddressRegister(const std::vector<unsigned int> &licenseStartAddress) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerRegistersMutex);
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return writeRegisterListFromIndex(mLicenseStartAddressRegisterStartIndex, mLicenseStartAddressRegisterWordNumber, licenseStartAddress);
@@ -285,6 +287,7 @@ unsigned int DrmControllerRegistersStrategy_v4_0_1::writeLicenseStartAddressRegi
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerRegistersStrategy_v4_0_1::readLicenseTimerInitRegister(std::vector<unsigned int> &licenseTimerInit) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerRegistersMutex);
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return readRegisterListFromIndex(mLicenseTimerRegisterStartIndex, mLicenseTimerRegisterWordNumber, licenseTimerInit);
@@ -298,6 +301,7 @@ unsigned int DrmControllerRegistersStrategy_v4_0_1::readLicenseTimerInitRegister
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerRegistersStrategy_v4_0_1::writeLicenseTimerInitRegister(const std::vector<unsigned int> &licenseTimerInit) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerRegistersMutex);
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return writeRegisterListFromIndex(mLicenseTimerRegisterStartIndex, mLicenseTimerRegisterWordNumber, licenseTimerInit);
@@ -978,6 +982,7 @@ unsigned int DrmControllerRegistersStrategy_v4_0_1::waitLicenseTimerLoadErrorReg
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerRegistersStrategy_v4_0_1::readDnaRegister(std::vector<unsigned int> &dna) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerRegistersMutex);
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return readRegisterListFromIndex(mDnaRegisterStartIndex, mDnaRegisterWordNumber, dna);
@@ -991,6 +996,7 @@ unsigned int DrmControllerRegistersStrategy_v4_0_1::readDnaRegister(std::vector<
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerRegistersStrategy_v4_0_1::readSaasChallengeRegister(std::vector<unsigned int> &saasChallenge) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerRegistersMutex);
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return readRegisterListFromIndex(mSaasChallengeRegisterStartIndex, mSaasChallengeRegisterWordNumber, saasChallenge);
@@ -1004,6 +1010,7 @@ unsigned int DrmControllerRegistersStrategy_v4_0_1::readSaasChallengeRegister(st
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerRegistersStrategy_v4_0_1::readLicenseTimerCounterRegister(std::vector<unsigned int> &licenseTimerCounter) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerRegistersMutex);
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return readRegisterListFromIndex(mSampledLicenseTimerCountRegisterStartIndex, mSampledLicenseTimerCountRegisterWordNumber, licenseTimerCounter);
@@ -1017,6 +1024,7 @@ unsigned int DrmControllerRegistersStrategy_v4_0_1::readLicenseTimerCounterRegis
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerRegistersStrategy_v4_0_1::readDrmVersionRegister(unsigned int &drmVersion) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerRegistersMutex);
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return readRegisterAtIndex(mVersionRegisterStartIndex, drmVersion);
@@ -1031,6 +1039,7 @@ unsigned int DrmControllerRegistersStrategy_v4_0_1::readDrmVersionRegister(unsig
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerRegistersStrategy_v4_0_1::readLogsRegister(const unsigned int &numberOfIps, std::vector<unsigned int> &logs) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerRegistersMutex);
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return readRegisterListFromIndex(mLogsRegisterStartIndex, numberOfWords(numberOfIps), logs);
@@ -1048,6 +1057,7 @@ unsigned int DrmControllerRegistersStrategy_v4_0_1::readLogsRegister(const unsig
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerRegistersStrategy_v4_0_1::readVlnvFileRegister(const unsigned int &numberOfIps, std::vector<unsigned int> &vlnvFile) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerRegistersMutex);
   unsigned int errorCode = writeVlnvFilePageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return readRegisterListFromIndex(mVlnvWordRegisterStartIndex, mVlnvWordRegisterWordNumber*(numberOfIps+mVlnvNumberOfAdditionalWords), vlnvFile);
@@ -1081,6 +1091,7 @@ unsigned int DrmControllerRegistersStrategy_v4_0_1::readVlnvFileRegister(const u
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerRegistersStrategy_v4_0_1::readLicenseFileRegister(const unsigned int &licenseFileSize, std::vector<unsigned int> &licenseFile) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerRegistersMutex);
   unsigned int errorCode = writeLicenseFilePageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return readRegisterListFromIndex(mLicenseWordRegisterStartIndex, mLicenseWordRegisterWordNumber*licenseFileSize, licenseFile);
@@ -1112,6 +1123,7 @@ unsigned int DrmControllerRegistersStrategy_v4_0_1::readLicenseFileRegister(cons
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerRegistersStrategy_v4_0_1::writeLicenseFileRegister(const unsigned int &licenseFileSize, const std::vector<unsigned int> &licenseFile) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerRegistersMutex);
   unsigned int errorCode = writeLicenseFilePageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return writeRegisterListFromIndex(mLicenseWordRegisterStartIndex, mLicenseWordRegisterWordNumber*licenseFileSize, licenseFile);
@@ -1144,6 +1156,7 @@ unsigned int DrmControllerRegistersStrategy_v4_0_1::writeLicenseFileRegister(con
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerRegistersStrategy_v4_0_1::readTraceFileRegister(const unsigned int &numberOfIps, std::vector<unsigned int> &traceFile) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerRegistersMutex);
   unsigned int errorCode = writeTraceFilePageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return readRegisterListFromIndex(mTraceWordRegisterStartIndex, mTraceWordRegisterWordNumber*numberOfIps*mNumberOfTracesPerIp, traceFile);
@@ -1174,6 +1187,7 @@ unsigned int DrmControllerRegistersStrategy_v4_0_1::readTraceFileRegister(const 
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerRegistersStrategy_v4_0_1::readMeteringFileRegister(const unsigned int &numberOfIps, std::vector<unsigned int> &meteringFile) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerRegistersMutex);
   unsigned int errorCode = writeMeteringFilePageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return readRegisterListFromIndex(mMeteringWordRegisterStartIndex, mMeteringWordRegisterWordNumber*(numberOfIps+mMeteringNumberOfAdditionalWords), meteringFile);
@@ -1204,6 +1218,7 @@ unsigned int DrmControllerRegistersStrategy_v4_0_1::readMeteringFileRegister(con
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerRegistersStrategy_v4_0_1::readMailboxFileSizeRegister(unsigned int &readOnlyMailboxWordNumber, unsigned int &readWriteMailboxWordNumber) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerRegistersMutex);
   unsigned int errorCode = writeMailBoxFilePageRegister();
   // read data at file start index
   unsigned int mailboxSize;
@@ -1398,6 +1413,7 @@ unsigned int DrmControllerRegistersStrategy_v4_0_1::writePageRegister(const unsi
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerRegistersStrategy_v4_0_1::readCommandRegister(unsigned int &command) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerRegistersMutex);
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return readRegisterAtIndex(mCommandRegisterStartIndex, command);
@@ -1411,6 +1427,7 @@ unsigned int DrmControllerRegistersStrategy_v4_0_1::readCommandRegister(unsigned
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerRegistersStrategy_v4_0_1::writeCommandRegister(const unsigned int &command) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerRegistersMutex);
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return writeRegisterAtIndex(mCommandRegisterStartIndex, command);
@@ -1424,6 +1441,7 @@ unsigned int DrmControllerRegistersStrategy_v4_0_1::writeCommandRegister(const u
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerRegistersStrategy_v4_0_1::readStatusRegister(unsigned int &status) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerRegistersMutex);
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return readRegisterAtIndex(mStatusRegisterStartIndex, status);
@@ -1437,6 +1455,7 @@ unsigned int DrmControllerRegistersStrategy_v4_0_1::readStatusRegister(unsigned 
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerRegistersStrategy_v4_0_1::readErrorRegister(unsigned int &error) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerRegistersMutex);
   unsigned int errorCode = writeRegistersPageRegister();
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
   return readRegisterAtIndex(mErrorRegisterStartIndex, error);

@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegistersStrategy_v6_0_1.hpp
-*  \version   7.1.0.0
-*  \date      January 2022
+*  \version   8.0.0.0
+*  \date      March 2022
 *  \brief     Class DrmControllerRegistersStrategy_v6_0_1 defines strategy for register access of drm controller v6.0.1.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.

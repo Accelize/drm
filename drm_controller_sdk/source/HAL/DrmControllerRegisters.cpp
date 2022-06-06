@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegisters.cpp
-*  \version   7.1.0.0
-*  \date      January 2022
+*  \version   8.0.0.0
+*  \date      March 2022
 *  \brief     Class DrmControllerRegisters defines low level procedures
 *             for access to all registers.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,147 +44,6 @@ DrmControllerRegisters::~DrmControllerRegisters() {
   }
 }
 
-/** writeRegistersPageRegister
-*   \brief Write the page register to select the registers page.
-*   This method will access to the system bus to write into the page register.
-*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
-*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
-**/
-unsigned int DrmControllerRegisters::writeRegistersPageRegister() const {
-  return mDrmControllerRegistersStrategyInterface->writeRegistersPageRegister();
-}
-
-/** writeVlnvFilePageRegister
-*   \brief Write the page register to select the vlnv file page.
-*   This method will access to the system bus to write into the page register.
-*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
-*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
-**/
-unsigned int DrmControllerRegisters::writeVlnvFilePageRegister() const {
-  return mDrmControllerRegistersStrategyInterface->writeVlnvFilePageRegister();
-}
-
-/** writeLicenseFilePageRegister
-*   \brief Write the page register to select the license file page.
-*   This method will access to the system bus to write into the page register.
-*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
-*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
-**/
-unsigned int DrmControllerRegisters::writeLicenseFilePageRegister() const {
-  return mDrmControllerRegistersStrategyInterface->writeLicenseFilePageRegister();
-}
-
-/** writeTraceFilePageRegister
-*   \brief Write the page register to select the trace file page.
-*   This method will access to the system bus to write into the page register.
-*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
-*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
-**/
-unsigned int DrmControllerRegisters::writeTraceFilePageRegister() const {
-  return mDrmControllerRegistersStrategyInterface->writeTraceFilePageRegister();
-}
-
-/** writeMeteringFilePageRegister
-*   \brief Write the page register to select the metering file page.
-*   This method will access to the system bus to write into the page register.
-*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
-*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
-**/
-unsigned int DrmControllerRegisters::writeMeteringFilePageRegister() const {
-  return mDrmControllerRegistersStrategyInterface->writeMeteringFilePageRegister();
-}
-
-/** writeMailBoxFilePageRegister
-*   \brief Write the page register to select the mailbox file page.
-*   This method will access to the system bus to write into the page register.
-*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
-*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
-**/
-unsigned int DrmControllerRegisters::writeMailBoxFilePageRegister() const {
-  return mDrmControllerRegistersStrategyInterface->writeMailBoxFilePageRegister();
-}
-
-/** writeNopCommandRegister
-*   \brief Write the command register to the NOP Command.
-*   This method will access to the system bus to write into the command register.
-*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
-*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
-**/
-unsigned int DrmControllerRegisters::writeNopCommandRegister() const {
-  return mDrmControllerRegistersStrategyInterface->writeNopCommandRegister();
-}
-
-/** writeDnaExtractCommandRegister
-*   \brief Write the command register to the DNA Extract Command.
-*   This method will access to the system bus to write into the command register.
-*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
-*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
-**/
-unsigned int DrmControllerRegisters::writeDnaExtractCommandRegister() const {
-  return mDrmControllerRegistersStrategyInterface->writeDnaExtractCommandRegister();
-}
-
-/** writeVlnvExtractCommandRegister
-*   \brief Write the command register to the VLNV Extract Command.
-*   This method will access to the system bus to write into the command register.
-*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
-*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
-**/
-unsigned int DrmControllerRegisters::writeVlnvExtractCommandRegister() const {
-  return mDrmControllerRegistersStrategyInterface->writeVlnvExtractCommandRegister();
-}
-
-/** writeActivateCommandRegister
-*   \brief Write the command register to the Activate Command.
-*   This method will access to the system bus to write into the command register.
-*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
-*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
-**/
-unsigned int DrmControllerRegisters::writeActivateCommandRegister() const {
-  return mDrmControllerRegistersStrategyInterface->writeActivateCommandRegister();
-}
-
-/** writeEndSessionMeteringExtractCommandRegister
-*   \brief Write the command register to the end session extract metering Command.
-*   This method will access to the system bus to write into the command register.
-*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
-*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
-**/
-unsigned int DrmControllerRegisters::writeEndSessionMeteringExtractCommandRegister() const {
-  return mDrmControllerRegistersStrategyInterface->writeEndSessionMeteringExtractCommandRegister();
-}
-
-/** writeMeteringExtractCommandRegister
-*   \brief Write the command register to the extract metering Command.
-*   This method will access to the system bus to write into the command register.
-*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
-*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
-**/
-unsigned int DrmControllerRegisters::writeMeteringExtractCommandRegister() const {
-  return mDrmControllerRegistersStrategyInterface->writeMeteringExtractCommandRegister();
-}
-
-/** writeSampleLicenseTimerCounterCommandRegister
-*   \brief Write the command register to the sample license timer counter Command.
-*   This method will access to the system bus to write into the command register.
-*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
-*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
-**/
-unsigned int DrmControllerRegisters::writeSampleLicenseTimerCounterCommandRegister() const {
-  return mDrmControllerRegistersStrategyInterface->writeSampleLicenseTimerCounterCommandRegister();
-}
-
-/** writeLicenseTimerInitSemaphoreRequestCommandRegister
-*   \brief Write the LicenseTimerInitSemaphoreRequest bit in the command register to the given value (do not modify the other bits of the command register).
-*   This method will access to the system bus to write into the command register.
-*   \param[in] licenseTimerInitSemaphoreRequest is the value of the LicenseTimerInitSemaphoreRequest bit to write in the command register.
-*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwise.
-*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
-**/
-unsigned int DrmControllerRegisters::writeLicenseTimerInitSemaphoreRequestCommandRegister(bool &licenseTimerInitSemaphoreRequest) const {
-  return mDrmControllerRegistersStrategyInterface->writeLicenseTimerInitSemaphoreRequestCommandRegister(licenseTimerInitSemaphoreRequest);
-}
-
 /** readLicenseStartAddressRegister
 *   \brief Read the license start address register.
 *   This method will access to the system bus to read the license start address.
@@ -205,28 +64,6 @@ unsigned int DrmControllerRegisters::readLicenseStartAddressRegister(std::vector
 **/
 unsigned int DrmControllerRegisters::readLicenseStartAddressRegister(std::string &licenseStartAddress) const {
   return mDrmControllerRegistersStrategyInterface->readLicenseStartAddressRegister(licenseStartAddress);
-}
-
-/** writeLicenseStartAddressRegister
-*   \brief Write the license start address register.
-*   This method will access to the system bus to write the license start address.
-*   \param[in] licenseStartAddress is a list of binary values for the license start address register.
-*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
-*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
-**/
-unsigned int DrmControllerRegisters::writeLicenseStartAddressRegister(const std::vector<unsigned int> &licenseStartAddress) const {
-  return mDrmControllerRegistersStrategyInterface->writeLicenseStartAddressRegister(licenseStartAddress);
-}
-
-/** writeLicenseStartAddressRegister
-*   \brief Write the value of the license start address.
-*   This method will access to the system bus to write the license start address register.
-*   \param[in] licenseStartAddress is the license start address value.
-*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
-*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
-**/
-unsigned int DrmControllerRegisters::writeLicenseStartAddressRegister(const std::string &licenseStartAddress) const {
-  return mDrmControllerRegistersStrategyInterface->writeLicenseStartAddressRegister(licenseStartAddress);
 }
 
 /** readLicenseTimerInitRegister
@@ -1109,33 +946,6 @@ unsigned int DrmControllerRegisters::readLicenseFileRegister(const unsigned int 
   return mDrmControllerRegistersStrategyInterface->readLicenseFileRegister(licenseFileSize, licenseFile);
 }
 
-/** writeLicenseFile
-*   \brief Write the license file.
-*   This method will access to the system bus to write the license file.
-*   \param[in] licenseFileSize is the number of 128 bits words to read.
-*   \param[in] licenseFile is the license file.
-*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
-*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
-**/
-unsigned int DrmControllerRegisters::writeLicenseFileRegister(const unsigned int &licenseFileSize, const std::vector<unsigned int> &licenseFile) const {
-  return mDrmControllerRegistersStrategyInterface->writeLicenseFileRegister(licenseFileSize, licenseFile);
-}
-
-/** writeLicenseFileRegister
-*   \brief Write the license file.
-*   This method will access to the system bus to write the license file.
-*   The license file is a string using a hexadecimal representation.
-*   \param[in] licenseFile is the license file.
-*   \return Returns mDrmApi_NO_ERROR if no error,
-*           mDrmApi_LICENSE_FILE_SIZE_ERROR if the license file size is lower than the minimum required,
-*           or the error code produced by the read/write register function.
-*   \throw DrmControllerLicenseFileSizeException whenever a check on license file size is bad. DrmControllerLicenseFileSizeException::what()
-*          should be called to get the exception description.
-**/
-unsigned int DrmControllerRegisters::writeLicenseFileRegister(const std::string &licenseFile) const {
-  return mDrmControllerRegistersStrategyInterface->writeLicenseFileRegister(licenseFile);
-}
-
 /** readTraceFileRegister
 *   \brief Read the trace file and get the value.
 *   This method will access to the system bus to read the trace file.
@@ -1374,6 +1184,196 @@ const char* DrmControllerRegisters::getDrmErrorRegisterMessage(const unsigned ch
 /**                  PROTECTED MEMBER FUNCTIONS            **/
 /************************************************************/
 
+/** writeRegistersPageRegister
+*   \brief Write the page register to select the registers page.
+*   This method will access to the system bus to write into the page register.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegisters::writeRegistersPageRegister() const {
+  return mDrmControllerRegistersStrategyInterface->writeRegistersPageRegister();
+}
+
+/** writeVlnvFilePageRegister
+*   \brief Write the page register to select the vlnv file page.
+*   This method will access to the system bus to write into the page register.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegisters::writeVlnvFilePageRegister() const {
+  return mDrmControllerRegistersStrategyInterface->writeVlnvFilePageRegister();
+}
+
+/** writeLicenseFilePageRegister
+*   \brief Write the page register to select the license file page.
+*   This method will access to the system bus to write into the page register.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegisters::writeLicenseFilePageRegister() const {
+  return mDrmControllerRegistersStrategyInterface->writeLicenseFilePageRegister();
+}
+
+/** writeTraceFilePageRegister
+*   \brief Write the page register to select the trace file page.
+*   This method will access to the system bus to write into the page register.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegisters::writeTraceFilePageRegister() const {
+  return mDrmControllerRegistersStrategyInterface->writeTraceFilePageRegister();
+}
+
+/** writeMeteringFilePageRegister
+*   \brief Write the page register to select the metering file page.
+*   This method will access to the system bus to write into the page register.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegisters::writeMeteringFilePageRegister() const {
+  return mDrmControllerRegistersStrategyInterface->writeMeteringFilePageRegister();
+}
+
+/** writeMailBoxFilePageRegister
+*   \brief Write the page register to select the mailbox file page.
+*   This method will access to the system bus to write into the page register.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegisters::writeMailBoxFilePageRegister() const {
+  return mDrmControllerRegistersStrategyInterface->writeMailBoxFilePageRegister();
+}
+
+/** writeNopCommandRegister
+*   \brief Write the command register to the NOP Command.
+*   This method will access to the system bus to write into the command register.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegisters::writeNopCommandRegister() const {
+  return mDrmControllerRegistersStrategyInterface->writeNopCommandRegister();
+}
+
+/** writeDnaExtractCommandRegister
+*   \brief Write the command register to the DNA Extract Command.
+*   This method will access to the system bus to write into the command register.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegisters::writeDnaExtractCommandRegister() const {
+  return mDrmControllerRegistersStrategyInterface->writeDnaExtractCommandRegister();
+}
+
+/** writeVlnvExtractCommandRegister
+*   \brief Write the command register to the VLNV Extract Command.
+*   This method will access to the system bus to write into the command register.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegisters::writeVlnvExtractCommandRegister() const {
+  return mDrmControllerRegistersStrategyInterface->writeVlnvExtractCommandRegister();
+}
+
+/** writeActivateCommandRegister
+*   \brief Write the command register to the Activate Command.
+*   This method will access to the system bus to write into the command register.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegisters::writeActivateCommandRegister() const {
+  return mDrmControllerRegistersStrategyInterface->writeActivateCommandRegister();
+}
+
+/** writeEndSessionMeteringExtractCommandRegister
+*   \brief Write the command register to the end session extract metering Command.
+*   This method will access to the system bus to write into the command register.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegisters::writeEndSessionMeteringExtractCommandRegister() const {
+  return mDrmControllerRegistersStrategyInterface->writeEndSessionMeteringExtractCommandRegister();
+}
+
+/** writeMeteringExtractCommandRegister
+*   \brief Write the command register to the extract metering Command.
+*   This method will access to the system bus to write into the command register.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegisters::writeMeteringExtractCommandRegister() const {
+  return mDrmControllerRegistersStrategyInterface->writeMeteringExtractCommandRegister();
+}
+
+/** writeSampleLicenseTimerCounterCommandRegister
+*   \brief Write the command register to the sample license timer counter Command.
+*   This method will access to the system bus to write into the command register.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegisters::writeSampleLicenseTimerCounterCommandRegister() const {
+  return mDrmControllerRegistersStrategyInterface->writeSampleLicenseTimerCounterCommandRegister();
+}
+
+/** writeLicenseTimerInitSemaphoreRequestCommandRegister
+*   \brief Write the LicenseTimerInitSemaphoreRequest bit in the command register to the given value (do not modify the other bits of the command register).
+*   This method will access to the system bus to write into the command register.
+*   \param[in] licenseTimerInitSemaphoreRequest is the value of the LicenseTimerInitSemaphoreRequest bit to write in the command register.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_UNSUPPORTED_FEATURE_ERROR if the feature is not supported, errors from read/write register functions otherwise.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegisters::writeLicenseTimerInitSemaphoreRequestCommandRegister(bool &licenseTimerInitSemaphoreRequest) const {
+  return mDrmControllerRegistersStrategyInterface->writeLicenseTimerInitSemaphoreRequestCommandRegister(licenseTimerInitSemaphoreRequest);
+}
+
+/** writeLicenseStartAddressRegister
+*   \brief Write the license start address register.
+*   This method will access to the system bus to write the license start address.
+*   \param[in] licenseStartAddress is a list of binary values for the license start address register.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegisters::writeLicenseStartAddressRegister(const std::vector<unsigned int> &licenseStartAddress) const {
+  return mDrmControllerRegistersStrategyInterface->writeLicenseStartAddressRegister(licenseStartAddress);
+}
+
+/** writeLicenseStartAddressRegister
+*   \brief Write the value of the license start address.
+*   This method will access to the system bus to write the license start address register.
+*   \param[in] licenseStartAddress is the license start address value.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegisters::writeLicenseStartAddressRegister(const std::string &licenseStartAddress) const {
+  return mDrmControllerRegistersStrategyInterface->writeLicenseStartAddressRegister(licenseStartAddress);
+}
+
+/** writeLicenseFile
+*   \brief Write the license file.
+*   This method will access to the system bus to write the license file.
+*   \param[in] licenseFileSize is the number of 128 bits words to read.
+*   \param[in] licenseFile is the license file.
+*   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_Unsupported_Feature if the feature is not supported, errors from read/write register functions otherwize.
+*   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
+**/
+unsigned int DrmControllerRegisters::writeLicenseFileRegister(const unsigned int &licenseFileSize, const std::vector<unsigned int> &licenseFile) const {
+  return mDrmControllerRegistersStrategyInterface->writeLicenseFileRegister(licenseFileSize, licenseFile);
+}
+
+/** writeLicenseFileRegister
+*   \brief Write the license file.
+*   This method will access to the system bus to write the license file.
+*   The license file is a string using a hexadecimal representation.
+*   \param[in] licenseFile is the license file.
+*   \return Returns mDrmApi_NO_ERROR if no error,
+*           mDrmApi_LICENSE_FILE_SIZE_ERROR if the license file size is lower than the minimum required,
+*           or the error code produced by the read/write register function.
+*   \throw DrmControllerLicenseFileSizeException whenever a check on license file size is bad. DrmControllerLicenseFileSizeException::what()
+*          should be called to get the exception description.
+**/
+unsigned int DrmControllerRegisters::writeLicenseFileRegister(const std::string &licenseFile) const {
+  return mDrmControllerRegistersStrategyInterface->writeLicenseFileRegister(licenseFile);
+}
+
 /************************************************************/
 /**                  PRIVATE MEMBER FUNCTIONS              **/
 /************************************************************/
@@ -1429,6 +1429,7 @@ DrmControllerRegisters::tDrmControllerRegistersStrategyDictionary DrmControllerR
   strategies[DRM_CONTROLLER_V6_0_1_SUPPORTED_VERSION] = new DrmControllerRegistersStrategy_v6_0_1(readRegisterFunction, writeRegisterFunction);
   strategies[DRM_CONTROLLER_V7_0_0_SUPPORTED_VERSION] = new DrmControllerRegistersStrategy_v7_0_0(readRegisterFunction, writeRegisterFunction);
   strategies[DRM_CONTROLLER_V7_1_0_SUPPORTED_VERSION] = new DrmControllerRegistersStrategy_v7_1_0(readRegisterFunction, writeRegisterFunction);
+  strategies[DRM_CONTROLLER_V8_0_0_SUPPORTED_VERSION] = new DrmControllerRegistersStrategy_v8_0_0(readRegisterFunction, writeRegisterFunction);
   return strategies;
 }
 

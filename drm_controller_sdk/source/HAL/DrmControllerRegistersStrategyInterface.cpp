@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegistersStrategyInterface.cpp
-*  \version   7.1.0.0
-*  \date      January 2022
+*  \version   8.0.0.0
+*  \date      March 2022
 *  \brief     Class DrmControllerRegistersBase defines low level procedures for registers access.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.
@@ -351,8 +351,7 @@ unsigned int DrmControllerRegistersStrategyInterface::waitStatusRegister(const u
 *   \throw DrmControllerUnsupportedFeature whenever the feature is not supported. DrmControllerUnsupportedFeature::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerRegistersStrategyInterface::waitStatusRegister(const unsigned int &timeout, const unsigned int &bitPosition, const unsigned int &mask, const unsigned int &expected, unsigned int &actual) const {
-  unsigned int errorCode = writeRegistersPageRegister();
-  if (errorCode != mDrmApi_NO_ERROR) return errorCode;
+  unsigned int errorCode;
   // get current time
   timeval startTimePoint, currentTimePoint;
   gettimeofday(&startTimePoint, NULL);
@@ -361,7 +360,6 @@ unsigned int DrmControllerRegistersStrategyInterface::waitStatusRegister(const u
   do {
     // read status
     errorCode = readStatusRegister(bitPosition, mask, actual);
-    if (errorCode != mDrmApi_NO_ERROR) return errorCode;
     // get current time
     gettimeofday(&currentTimePoint, NULL);
     // get time duration
@@ -408,8 +406,7 @@ unsigned int DrmControllerRegistersStrategyInterface::readErrorRegister(const un
 *   \return Returns mDrmApi_NO_ERROR if no error, mDrmApi_HARDWARE_TIMEOUT_ERROR if a timeout occured, errors from read/write register functions otherwize.
 **/
 unsigned int DrmControllerRegistersStrategyInterface::waitErrorRegister(const unsigned int &timeout, const unsigned int &position, const unsigned int &mask, const unsigned char &expected, unsigned char &actual) const {
-  unsigned int errorCode = writeRegistersPageRegister();
-  if (errorCode != mDrmApi_NO_ERROR) return errorCode;
+  unsigned int errorCode;
   // get current time
   timeval startTimePoint, currentTimePoint;
   gettimeofday(&startTimePoint, NULL);
@@ -418,7 +415,6 @@ unsigned int DrmControllerRegistersStrategyInterface::waitErrorRegister(const un
   do {
     // read status
     errorCode = readErrorRegister(position, mask, actual);
-    if (errorCode != mDrmApi_NO_ERROR) return errorCode;
     // get current time
     gettimeofday(&currentTimePoint, NULL);
     // get time duration

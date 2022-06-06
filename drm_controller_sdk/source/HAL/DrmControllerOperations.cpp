@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerOperations.cpp
-*  \version   7.1.0.0
-*  \date      January 2022
+*  \version   8.0.0.0
+*  \date      March 2022
 *  \brief     Class DrmControllerOperations is an abstraction level to execute operations.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.
@@ -58,6 +58,7 @@ DrmControllerOperations::~DrmControllerOperations() { }
 *   \throw DrmControllerTimeOutException whenever a time out error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerOperations::waitAutonomousControllerDone(bool &heartBeatModeEnabled, bool &autoEnabled, bool &autoBusy) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerOperationsMutex);
   // get auto controller enabled status
   unsigned int errorCode = readAutonomousControllerEnabledStatusRegister(autoEnabled);
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
@@ -100,6 +101,8 @@ unsigned int DrmControllerOperations::waitAutonomousControllerDone(bool &heartBe
         bool activationDone(false);
         autoBusy = true;
         errorCode = waitActivationDoneStatusRegister(mTimeoutInMicroSeconds, true, activationDone);
+        unsigned char activationErrorCode;
+        errorCode=readActivationErrorRegister(activationErrorCode);
       } // heartBeatModeEnabled == true
       else if (autoEnabled == true) {
         // wait autonomous controller not busy if autocontroller is enabled
@@ -107,7 +110,13 @@ unsigned int DrmControllerOperations::waitAutonomousControllerDone(bool &heartBe
       }
     }
     catch (DrmControllerTimeOutException const &e) {
-      throwTimeoutException("DRM Controller Initialization After Reset is in timeout");
+    	bool activationDone(false);
+    	unsigned char activationErrorCode;
+    	readActivationDoneStatusRegister(activationDone);
+    	readActivationErrorRegister(activationErrorCode);
+    	throwTimeoutException("DRM Controller Initialization After Reset is in timeout", "Expected Activation Done Status Bit", "Actual Activation Done Status Bit",
+    	                          "Expected Activation Extract Error Register", "Actual Activation Extract Error Register", true, activationDone, mDrmErrorNoError, activationErrorCode);
+
       return mDrmApi_HARDWARE_TIMEOUT_ERROR;
     }
   }
@@ -147,6 +156,7 @@ unsigned int DrmControllerOperations::waitAutonomousControllerDone() {
 *   \return Returns the error code produced by the read/write register function.
 **/
 unsigned int DrmControllerOperations::extractDrmVersion(std::string &drmVersion) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerOperationsMutex);
   return readDrmVersionRegister(drmVersion);
 }
 
@@ -157,6 +167,7 @@ unsigned int DrmControllerOperations::extractDrmVersion(std::string &drmVersion)
 *   \return Returns the error code produced by the read/write register function.
 **/
 unsigned int DrmControllerOperations::extractAdaptiveProportionTestFailures(unsigned int &adaptiveProportionTestFailures) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerOperationsMutex);
   std::vector<unsigned int> vec;
   unsigned int ret = readAdaptiveProportionTestFailuresRegister(vec);
   if (ret == mDrmApi_NO_ERROR)
@@ -171,6 +182,7 @@ unsigned int DrmControllerOperations::extractAdaptiveProportionTestFailures(unsi
 *   \return Returns the error code produced by the read/write register function.
 **/
 unsigned int DrmControllerOperations::extractAdaptiveProportionTestFailures(std::string &adaptiveProportionTestFailures) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerOperationsMutex);
   return readAdaptiveProportionTestFailuresRegister(adaptiveProportionTestFailures);
 }
 
@@ -181,6 +193,7 @@ unsigned int DrmControllerOperations::extractAdaptiveProportionTestFailures(std:
 *   \return Returns the error code produced by the read/write register function.
 **/
 unsigned int DrmControllerOperations::extractRepetitionCountTestFailures(unsigned int &repetitionCountTestFailures) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerOperationsMutex);
   std::vector<unsigned int> vec;
   unsigned int ret = readRepetitionCountTestFailuresRegister(vec);
   if (ret == mDrmApi_NO_ERROR)
@@ -195,6 +208,7 @@ unsigned int DrmControllerOperations::extractRepetitionCountTestFailures(unsigne
 *   \return Returns the error code produced by the read/write register function.
 **/
 unsigned int DrmControllerOperations::extractRepetitionCountTestFailures(std::string &repetitionCountTestFailures) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerOperationsMutex);
   return readRepetitionCountTestFailuresRegister(repetitionCountTestFailures);
 }
 
@@ -208,6 +222,7 @@ unsigned int DrmControllerOperations::extractRepetitionCountTestFailures(std::st
 *   \throw DrmControllerTimeOutException whenever a time out error occured. DrmControllerTimeOutException::what() should be called to get the exception description.
 **/
 unsigned int DrmControllerOperations::extractDna(std::string &dna, bool &dnaReady, unsigned char &dnaErrorCode) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerOperationsMutex);
   unsigned int errorCode;
   // check heart beat mode is disabled
   if (mHeartBeatModeEnabled == false) {
@@ -268,6 +283,7 @@ unsigned int DrmControllerOperations::extractDna(std::string &dna) const {
 *          should be called to get the exception description.
 **/
 unsigned int DrmControllerOperations::extractVlnvFile(unsigned int &numberOfDetectedIps, std::vector<std::string> &vlnvFile, bool &vlnvReady, unsigned char &vlnvErrorCode) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerOperationsMutex);
   unsigned int errorCode;
   // check heart beat mode is disabled
   if (mHeartBeatModeEnabled == false) {
@@ -336,6 +352,7 @@ unsigned int DrmControllerOperations::extractVlnvFile(unsigned int &numberOfDete
 **/
 unsigned int DrmControllerOperations::initialization(unsigned int &numberOfDetectedIps, std::string &saasChallenge, std::vector<std::string> &meteringFile,
                                                      bool &meteringEnabled, bool &saasChallengeReady, bool &meteringReady) {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerOperationsMutex);
   // the license timer is not loaded
   mLicenseTimerWasLoaded = false;
   // call extract metering file and saas challenge
@@ -379,6 +396,7 @@ unsigned int DrmControllerOperations::initialization(unsigned int &numberOfDetec
 **/
 unsigned int DrmControllerOperations::loadLicenseTimerInit(const std::string &licenseTimerInit, bool &licenseTimerEnabled,
     const bool useLicenseTimerInitSemaphore, const unsigned int &licenseTimerInitSemaphoreTimeout) {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerOperationsMutex);
   // check license timer enabled status
   unsigned int errorCode = checkLicenseTimerEnabledStatusRegister(licenseTimerEnabled);
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
@@ -462,6 +480,7 @@ unsigned int DrmControllerOperations::loadLicenseTimerInit(const std::string &li
 *          should be called to get the exception description.
 **/
 unsigned int DrmControllerOperations::activate(const std::string &licenseFile, bool &activationDone, unsigned char &activationErrorCode) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerOperationsMutex);
   unsigned int errorCode;
   // set the license file
   errorCode = writeLicenseFileRegister(licenseFile);
@@ -526,6 +545,7 @@ unsigned int DrmControllerOperations::activate(const std::string &licenseFile) c
 *   \return Returns the error code produced by the read/write register function.
 **/
 unsigned int DrmControllerOperations::extractLicenseFile(const unsigned int &licenseFileSize, std::string &licenseFile, bool &activationDone, unsigned char &activationErrorCode) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerOperationsMutex);
   unsigned int errorCode;
   // get activation done status
   errorCode = readActivationDoneStatusRegister(activationDone);
@@ -561,6 +581,7 @@ unsigned int DrmControllerOperations::extractLicenseFile(const unsigned int &lic
 *   \return Returns the error code produced by the read/write register function.
 **/
 unsigned int DrmControllerOperations::extractTraceFile(unsigned int &numberOfDetectedIps, std::vector<std::string> &traceFile) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerOperationsMutex);
   unsigned int errorCode;
   // get the number of detected ips
   errorCode = readNumberOfDetectedIpsStatusRegister(numberOfDetectedIps);
@@ -578,6 +599,7 @@ unsigned int DrmControllerOperations::extractTraceFile(unsigned int &numberOfDet
 *   \return Returns the error code produced by the read/write register function.
 **/
 unsigned int DrmControllerOperations::extractLogs(unsigned int &numberOfDetectedIps, std::string &logs) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerOperationsMutex);
   // get the number of detected ips
   unsigned int errorCode = readNumberOfDetectedIpsStatusRegister(numberOfDetectedIps);
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
@@ -659,6 +681,7 @@ unsigned int DrmControllerOperations::extractMeteringFile(const unsigned int &wa
 *          should be called to get the exception description.
 **/
 unsigned int DrmControllerOperations::waitNotTimerInitLoaded(const unsigned int &waitNotLicenseTimerInitLoadedTimeout, bool &licenseTimerEnabled, bool &licenseTimerInitLoaded, unsigned char &licenseTimerLoadErrorCode) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerOperationsMutex);
   // check license timer enabled status
   unsigned int errorCode = checkLicenseTimerEnabledStatusRegister(licenseTimerEnabled);
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
@@ -718,6 +741,7 @@ unsigned int DrmControllerOperations::waitNotTimerInitLoaded(const unsigned int 
 **/
 unsigned int DrmControllerOperations::synchronousExtractMeteringFile(unsigned int &numberOfDetectedIps, std::string &saasChallenge, std::vector<std::string> &meteringFile,
                                                                      bool &meteringEnabled, bool &saasChallengeReady, bool &meteringReady) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerMeteringMutex);
   // extract metering file and saas challenge
   return extractMeteringFileAndSaasChallenge(numberOfDetectedIps, saasChallenge, meteringFile, meteringEnabled, saasChallengeReady, meteringReady);
 }
@@ -762,6 +786,7 @@ unsigned int DrmControllerOperations::synchronousExtractMeteringFile(unsigned in
 **/
 unsigned int DrmControllerOperations::asynchronousExtractMeteringFile(unsigned int &numberOfDetectedIps, std::string &saasChallenge, std::vector<std::string> &meteringFile, bool &meteringEnabled,
                                                                       bool &saasChallengeReady, bool &meteringReady, bool &asynchronousMeteringReady) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerMeteringMutex);
   // check metering enabled status
   unsigned int errorCode = checkMeteringEnabledStatusRegister(meteringEnabled);
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
@@ -836,6 +861,7 @@ unsigned int DrmControllerOperations::asynchronousExtractMeteringFile(unsigned i
 **/
 unsigned int DrmControllerOperations::endSessionAndExtractMeteringFile(unsigned int &numberOfDetectedIps, std::string &saasChallenge, std::vector<std::string> &meteringFile, bool &meteringEnabled,
                                                                        bool &saasChallengeReady, bool &meteringReady, bool &endSessionMeteringReady) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerMeteringMutex);
   // check metering enabled status
   unsigned int errorCode = checkMeteringEnabledStatusRegister(meteringEnabled);
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
@@ -903,6 +929,7 @@ unsigned int DrmControllerOperations::endSessionAndExtractMeteringFile(unsigned 
 *          should be called to get the exception description.
 **/
 unsigned int DrmControllerOperations::sampleLicenseTimerCounter(unsigned int &licenseTimerCountMsb, unsigned int &licenseTimerCountLsb, bool &licenseTimerEnabled, bool &licenseTimerSampleReady) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerOperationsMutex);
   // check license timer enabled status
   unsigned int errorCode = checkLicenseTimerEnabledStatusRegister(licenseTimerEnabled);
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
@@ -962,6 +989,7 @@ unsigned int DrmControllerOperations::sampleLicenseTimerCounter(unsigned int &li
 *   \return Returns the error message.
 **/
 const char* DrmControllerOperations::getDrmApiMessage(const unsigned int &drmApiErrorCode) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerOperationsMutex);
   // iterate on each element of the error array
   for (unsigned int ii = 0; ii < mDrmApiErrorArraySize; ii++) {
     // verify error register to return the error text
@@ -999,6 +1027,7 @@ const char* DrmControllerOperations::getDrmApiMessage(const unsigned int &drmApi
 *          should be called to get the exception description.
 **/
 unsigned int DrmControllerOperations::extractMeteringFile(unsigned int &numberOfDetectedIps, std::vector<std::string> &meteringFile, bool &meteringEnabled, bool &meteringReady) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerOperationsMutex);
   // check metering enabled status
   unsigned int errorCode = checkMeteringEnabledStatusRegister(meteringEnabled);
   if (errorCode != mDrmApi_NO_ERROR) return errorCode;
@@ -1029,6 +1058,7 @@ unsigned int DrmControllerOperations::extractMeteringFile(unsigned int &numberOf
 *          should be called to get the exception description.
 **/
 unsigned int DrmControllerOperations::extractSaasChallenge(std::string &saasChallenge, bool &saasChallengeReady) const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerOperationsMutex);
   unsigned int errorCode(mDrmApi_NO_ERROR);
   try {
     // wait saas challenge ready status
@@ -1053,6 +1083,7 @@ unsigned int DrmControllerOperations::extractSaasChallenge(std::string &saasChal
 *          should be called to get the exception description.
 **/
 unsigned int DrmControllerOperations::checkLicenseTimerInitLoaded() const {
+  std::lock_guard<std::recursive_mutex> lock(mDrmControllerOperationsMutex);
   // get license timer load done bit status
   bool licenseTimerInitLoaded;
   unsigned int errorCode = readLicenseTimerInitLoadedStatusRegister(licenseTimerInitLoaded);
