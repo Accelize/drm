@@ -11,10 +11,10 @@ from os.path import realpath, isfile
 
 from tests.conftest import wait_deadline, wait_func_true
 
-
+'''
 def test_fast_start_stop(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
-    Test no error occurs witha quick start/stop
+    Test no error occurs with a quick start/stop
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -44,7 +44,7 @@ def test_fast_start_stop(accelize_drm, conf_json, cred_json, async_handler, log_
         assert sum(drm_manager.get('metered_data')) == 0
         async_cb.assert_NoError()
     logfile.remove()
-
+'''
 
 @pytest.mark.minimum
 @pytest.mark.hwtst
@@ -86,7 +86,7 @@ def test_metered_start_stop_short_time(accelize_drm, conf_json, cred_json, async
         async_cb.assert_NoError()
     logfile.remove()
 
-
+'''
 def test_metered_start_stop_short_time_in_debug(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test no error occurs in normal start/stop metering mode during a short period of time
@@ -124,7 +124,7 @@ def test_metered_start_stop_short_time_in_debug(accelize_drm, conf_json, cred_js
         assert sum(drm_manager.get('metered_data')) == 0
         async_cb.assert_NoError()
     logfile.remove()
-
+'''
 
 @pytest.mark.long_run
 @pytest.mark.hwtst
