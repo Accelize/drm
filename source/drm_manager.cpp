@@ -972,16 +972,7 @@ protected:
             return *mWsClient;
         Unreachable( "No Web Service has been defined. " ); //LCOV_EXCL_LINE
     }
-/*
-    static uint32_t getDrmRegisterOffset( const std::string& regName ) {
-        printf("regName = %s\n", regName.c_str());
-        if ( regName == "DrmPageRegister" )
-            return 0;
-        if ( regName.substr( 0, 15 ) == "DrmRegisterLine" )
-            return (uint32_t)std::stoul( regName.substr( 15 ) ) * 4 + 4;
-        Unreachable( "Unsupported regName argument: {}. ", regName ); //LCOV_EXCL_LINE
-    }
-*/
+
     unsigned int readDrmAddress( const uint32_t address, uint32_t& value ) const {
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
         int ret = f_read_register( address, &value );
@@ -991,11 +982,7 @@ protected:
             Debug2( "Read DRM Ctrl address 0x{:x} = 0x{:08x}", address, value );
         return ret;
     }
-/*
-    unsigned int readDrmRegister( const std::string& regName, uint32_t& value ) const {
-        return readDrmAddress( getDrmRegisterOffset( regName ), value );
-    }
-*/
+
     unsigned int writeDrmAddress( const uint32_t address, uint32_t value ) const {
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
         int ret = f_write_register( address, value );
@@ -1005,11 +992,7 @@ protected:
             Debug2( "Wrote DRM Ctrl address 0x{:x} = 0x{:08x}", address, value );
         return ret;
     }
-/*
-    unsigned int writeDrmRegister( const std::string& regName, uint32_t value ) const {
-        return writeDrmAddress( getDrmRegisterOffset( regName ), value );
-    }
-*/
+
     void lockDrmToInstance() {
         return;
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
