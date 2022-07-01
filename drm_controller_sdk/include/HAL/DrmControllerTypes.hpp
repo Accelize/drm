@@ -28,13 +28,13 @@ namespace DrmControllerLibrary {
   *   \brief   Read register function prototype.
   *   \remark  The read register function shall return 0 for no error.
   **/
-  typedef std::function<unsigned int(const std::string&, unsigned int&)> tDrmReadRegisterFunction;
+  typedef std::function<unsigned int(const unsigned int&, unsigned int&)> tDrmReadRegisterFunction;
 
   /** \typedef tDrmWriteRegisterFunction
   *   \brief   Write register function prototype.
   *   \remark  The write register function shall return 0 for no error.
   **/
-  typedef std::function<unsigned int(const std::string&, unsigned int)>  tDrmWriteRegisterFunction;
+  typedef std::function<unsigned int(const unsigned int&, unsigned int)>  tDrmWriteRegisterFunction;
 
 } // DrmControllerLibrary
 

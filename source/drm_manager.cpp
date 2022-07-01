@@ -855,7 +855,7 @@ protected:
     uint32_t getMailboxSize() const {
         uint32_t roSize, rwSize;
         checkDRMCtlrRet( getDrmController().readMailboxFileSizeRegister( roSize, rwSize ) );
-        Debug2( "Full mailbox size: {}", rwSize );
+        Debug2( "Full R/W mailbox size: {}", rwSize );
         return rwSize;
     }
 
@@ -972,15 +972,16 @@ protected:
             return *mWsClient;
         Unreachable( "No Web Service has been defined. " ); //LCOV_EXCL_LINE
     }
-
+/*
     static uint32_t getDrmRegisterOffset( const std::string& regName ) {
+        printf("regName = %s\n", regName.c_str());
         if ( regName == "DrmPageRegister" )
             return 0;
         if ( regName.substr( 0, 15 ) == "DrmRegisterLine" )
             return (uint32_t)std::stoul( regName.substr( 15 ) ) * 4 + 4;
         Unreachable( "Unsupported regName argument: {}. ", regName ); //LCOV_EXCL_LINE
     }
-
+*/
     unsigned int readDrmAddress( const uint32_t address, uint32_t& value ) const {
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
         int ret = f_read_register( address, &value );
@@ -990,11 +991,11 @@ protected:
             Debug2( "Read DRM Ctrl address 0x{:x} = 0x{:08x}", address, value );
         return ret;
     }
-
+/*
     unsigned int readDrmRegister( const std::string& regName, uint32_t& value ) const {
         return readDrmAddress( getDrmRegisterOffset( regName ), value );
     }
-
+*/
     unsigned int writeDrmAddress( const uint32_t address, uint32_t value ) const {
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
         int ret = f_write_register( address, value );
@@ -1004,11 +1005,11 @@ protected:
             Debug2( "Wrote DRM Ctrl address 0x{:x} = 0x{:08x}", address, value );
         return ret;
     }
-
+/*
     unsigned int writeDrmRegister( const std::string& regName, uint32_t value ) const {
         return writeDrmAddress( getDrmRegisterOffset( regName ), value );
     }
-
+*/
     void lockDrmToInstance() {
         return;
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
@@ -1057,11 +1058,21 @@ protected:
      * This test write and read DRM Ctrl Page register to verify the page switch is working
      */
     void runBistLevel1() const {
+        if ( (mDrmVersionNum >> 16) >= 8 ) {
+            Debug( "DRM Communication Self-Test 1 is skipped for DRM Version >= 8.x" );
+            return;
+        }
         unsigned int reg;
         for(unsigned int i=0; i<=5; i++) {
+            /*
             if ( writeDrmRegister( "DrmPageRegister", i ) != 0 )
                 Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not write DRM Ctrl page register\n{}", DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
             if ( readDrmRegister( "DrmPageRegister", reg ) != 0 )
+                Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not read DRM Ctrl page register\n{}", DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
+            */
+            if ( writeDrmAddress( 0, i ) != 0 )
+                Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not write DRM Ctrl page register\n{}", DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
+            if ( readDrmAddress( 0, reg ) != 0 )
                 Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not read DRM Ctrl page register\n{}", DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
             if ( reg != i ) {
                 Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not switch DRM Ctrl register page.\n{}", DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
@@ -1166,11 +1177,13 @@ protected:
         try {
             mDrmController.reset(
                     new DrmControllerLibrary::DrmControllerOperations(
-                            std::bind( &DrmManager::Impl::readDrmRegister,
+                            //std::bind( &DrmManager::Impl::readDrmRegister,
+                            std::bind( &DrmManager::Impl::readDrmAddress,
                                        this,
                                        std::placeholders::_1,
                                        std::placeholders::_2 ),
-                            std::bind( &DrmManager::Impl::writeDrmRegister,
+                            //std::bind( &DrmManager::Impl::writeDrmRegister,
+                            std::bind( &DrmManager::Impl::writeDrmAddress,                            
                                        this,
                                        std::placeholders::_1,
                                        std::placeholders::_2 )
@@ -1282,18 +1295,6 @@ protected:
         licenseTimerCounter <<= 32;
         licenseTimerCounter |= licenseTimerCounterLsb;
         return licenseTimerCounter;
-    }
-
-    std::string getDrmPage( uint32_t page_index ) const {
-        uint32_t value;
-        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        writeDrmRegister( "DrmPageRegister", page_index );
-        std::string str = fmt::format( "DRM Page {}  registry:\n", page_index );
-        for( uint32_t r=0; r < NB_MAX_REGISTER; r++ ) {
-            readDrmAddress( r*4, value );
-            str += fmt::format( "\tRegister @0x{:02X}: 0x{:08X} ({:d})\n", r*4, value, value );
-        }
-        return str;
     }
 
     std::string getDrmReport() const {
@@ -2823,18 +2824,6 @@ public:
                             Debug( "Get value of parameter '{}' (ID={}): Node-locked license request file is saved in {}",
                                     key_str, key_id, mNodeLockRequestFilePath );
                         }
-                        break;
-                    }
-                    case ParameterKey::page_ctrlreg:
-                    case ParameterKey::page_vlnvfile:
-                    case ParameterKey::page_licfile:
-                    case ParameterKey::page_tracefile:
-                    case ParameterKey::page_meteringfile:
-                    case ParameterKey::page_mailbox: {
-                        std::string str = getDrmPage( key_id - ParameterKey::page_ctrlreg );
-                        json_value[key_str] = str;
-                        Debug( "Get value of parameter '{}' (ID={})", key_str, key_id );
-                        Info( str );
                         break;
                     }
                     case ParameterKey::hw_report: {

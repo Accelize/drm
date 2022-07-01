@@ -107,12 +107,6 @@ ws_request_timeout             uint32_t  Read-write    >0                      r
 log_message_level              int32_t   Read-write    -                       only for testing, read and write the log level used with log_message parameter to set the message level
 list_all                       string    Read-only     -                       list all parameter keys available
 dump_all                       string    Read-only     -                       read all parameter key values
-page_ctrlreg                   string    Read-only     -                       return nothing, print all registers in the DRM Controller Registry page
-page_vlnvfile                  string    Read-only     -                       return nothing, print all registers in the VLNV File page
-page_licfile                   string    Read-only     -                       return nothing, print all registers in the License File page
-page_tracefile                 string    Read-only     -                       return nothing, print all registers in the Trace File page
-page_meteringfile              string    Read-only     -                       return nothing, print all registers in the Metering File page
-page_mailbox                   string    Read-only     -                       return nothing, print all registers in the Mailbox page
 hw_report                      string    Read-only     -                       return nothing, print the Algodone HW report
 trigger_async_callback         string    Write-only    -                       only for testing, call the asynchronous error callback with the given message
 log_message                    string    Write-only    -                       only for testing, insert a message with the value as content

@@ -74,20 +74,20 @@ namespace DrmControllerLibrary {
       std::string getIndexedRegisterName() const;
 
       /** readRegister
-      *   \brief Read the value from the register pointed by name.
-      *   \param[in] name is the name of the register to read.
+      *   \brief Read the value from the register pointed by offset.
+      *   \param[in] offset is the offset of the register to read.
       *   \param[inout] value is the read value of the register.
       *   \return Returns mDrmApi_NO_ERROR if no error, errors from read register functions otherwize.
       **/
-      unsigned int readRegister(const std::string &name, unsigned int &value) const;
+      unsigned int readRegister(const unsigned int &offset, unsigned int &value) const;
 
       /** writeRegister
-      *   \brief Write the value to the register pointed by name.
-      *   \param[in] name is the name of the register to read.
+      *   \brief Write the value to the register pointed by offset.
+      *   \param[in] offset is the offset of the register to read.
       *   \param[in] value is the value to write to the register.
       *   \return Returns mDrmApi_NO_ERROR if no error, errors from read register functions otherwize.
       **/
-      unsigned int writeRegister(const std::string &name, const unsigned int &value) const;
+      unsigned int writeRegister(const unsigned int &offset, const unsigned int &value) const;
 
       /** bits
       *   \brief Get the value of a several and contigous bits.
@@ -136,12 +136,12 @@ namespace DrmControllerLibrary {
       **/
       unsigned int writeRegisterAtIndex(const unsigned int &index, const unsigned int &value) const;
 
-      /** registerNameFromIndex
-      *   \brief Get the register name from index
+      /** registerOffsetFromIndex
+      *   \brief Get the register offset from index
       *   \param[in] index is the register index.
-      *   \return Returns the name of the register at the specified index.
+      *   \return Returns the offset of the register at the specified index.
       **/
-      const std::string registerNameFromIndex(const unsigned int &index) const;
+      unsigned int registerOffsetFromIndex(const unsigned int &index) const;
 
       /** numberOfWords
       *   \brief Get the number of words used by a register.

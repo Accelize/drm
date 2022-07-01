@@ -30,7 +30,7 @@
 #define DRM_CONTROLLER_V4_0_1_SUPPORTED_VERSION "4.0.1" /**<Definition of the version of the supported DRM Controller.**/
 
 // Name of the registers.
-#define DRM_CONTROLLER_V4_0_1_PAGE_REGISTER_NAME    "DrmPageRegister" /**<Definition of the name of the page register.**/
+#define DRM_CONTROLLER_V4_0_1_PAGE_REGISTER_NAME    0 /**<Definition of the name of the page register.**/
 #define DRM_CONTROLLER_V4_0_1_INDEXED_REGISTER_NAME "DrmRegisterLine" /**<Definition of the base name of indexed registers.**/
 
 // Size of registers
