@@ -1042,17 +1042,11 @@ protected:
      */
     void runBistLevel1() const {
         if ( (mDrmVersionNum >> 16) >= 8 ) {
-            Debug( "DRM Communication Self-Test 1 is skipped for DRM Version >= 8.x" );
+            Debug( "DRM Communication Self-Test 1 is skipped for DRM HDK Version >= 8.x" );
             return;
         }
         unsigned int reg;
         for(unsigned int i=0; i<=5; i++) {
-            /*
-            if ( writeDrmRegister( "DrmPageRegister", i ) != 0 )
-                Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not write DRM Ctrl page register\n{}", DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
-            if ( readDrmRegister( "DrmPageRegister", reg ) != 0 )
-                Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not read DRM Ctrl page register\n{}", DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
-            */
             if ( writeDrmAddress( 0, i ) != 0 )
                 Throw( DRM_BadArg, "DRM Communication Self-Test 1 failed: Could not write DRM Ctrl page register\n{}", DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
             if ( readDrmAddress( 0, reg ) != 0 )
@@ -1160,12 +1154,10 @@ protected:
         try {
             mDrmController.reset(
                     new DrmControllerLibrary::DrmControllerOperations(
-                            //std::bind( &DrmManager::Impl::readDrmRegister,
                             std::bind( &DrmManager::Impl::readDrmAddress,
                                        this,
                                        std::placeholders::_1,
                                        std::placeholders::_2 ),
-                            //std::bind( &DrmManager::Impl::writeDrmRegister,
                             std::bind( &DrmManager::Impl::writeDrmAddress,                            
                                        this,
                                        std::placeholders::_1,

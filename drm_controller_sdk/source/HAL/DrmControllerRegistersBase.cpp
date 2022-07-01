@@ -60,18 +60,6 @@ std::string DrmControllerRegistersBase::getIndexedRegisterName() const {
   return mIndexedRegisterName;
 }
 
-/** registerOffsetFromIndex
-*   \brief Get the register offset from index
-*   \param[in] index is the register index.
-*   \return Returns the offset of the register at the specified index.
-**/
-unsigned int DrmControllerRegistersBase::registerOffsetFromIndex(const unsigned int &index) const {
-  if (index == 0) {
-    return index;
-  }
-  return (index + 1) << 2;
-}
-
 /** readRegister
 *   \brief Read the value from the register pointed by name.
 *   \param[in] offset is the offset of the register to read.
@@ -162,6 +150,18 @@ unsigned int DrmControllerRegistersBase::writeRegisterListFromIndex(const unsign
 unsigned int DrmControllerRegistersBase::writeRegisterAtIndex(const unsigned int &index, const unsigned int &value) const {
   // write register at index
   return writeRegister(registerOffsetFromIndex(index), value);
+}
+
+/** registerOffsetFromIndex
+*   \brief Get the register offset from index
+*   \param[in] index is the register index.
+*   \return Returns the offset of the register at the specified index.
+**/
+unsigned int DrmControllerRegistersBase::registerOffsetFromIndex(const unsigned int &index) const {
+  if (index == 0) {
+    return index;
+  }
+  return (index + 1) << 2;
 }
 
 /** numberOfWords

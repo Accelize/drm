@@ -73,7 +73,6 @@ typedef enum {
     GENERATE_COIN,
     NB_ACTIVATORS,
     ACTIVATORS_STATUS,
-    VIEW_PAGE,
     WAIT
 } t_BatchCmdId;
 
@@ -191,9 +190,6 @@ int tokenize(char str[], t_BatchCmd tokens[], uint32_t* tokens_len)
         } else if ( (strcmp(token,"t") == 0) || (strcmp(token,"actsta") == 0) ) {
             strcpy(tokens[i].name, "ACTIVATORS STATUS");
             tokens[i].id = ACTIVATORS_STATUS;
-        } else if ( (strcmp(token,"v") == 0) || (strcmp(token,"view") == 0) ) {
-            strcpy(tokens[i].name, "VIEW PAGE");
-            tokens[i].id = VIEW_PAGE;
         } else if ( (strcmp(token,"w") == 0) || (strcmp(token,"wait") == 0) ) {
             strcpy(tokens[i].name, "WAIT");
             tokens[i].id = WAIT;
@@ -407,23 +403,6 @@ int test_custom_field( DrmManager* pDrmManager, uint32_t value ) {
 }
 
 
-int print_drm_page(DrmManager* pDrmManager, uint32_t page)
-{
-    char* dump;
-    uint32_t nbPageMax = DRM__page_mailbox - DRM__page_ctrlreg + 1;
-    if (page > nbPageMax) {
-        ERROR("Page index overflow: must be less or equal to %d", nbPageMax-1);
-        return 1;
-    }
-    /* Print registers in page */
-    if (DrmManager_get_string(pDrmManager, DRM__page_ctrlreg+page, &dump))
-        ERROR("Failed to print HW page %u registry: %s", page, pDrmManager->error_message);
-    printf("Page %d:\n%s", page, dump);
-    free(dump);
-    return 0;
-}
-
-
 int print_drm_report(DrmManager* pDrmManager)
 {
     char* dump;
@@ -468,17 +447,6 @@ int interactive_mode(xclDeviceHandle* pci_bar_handle, const char* credentialFile
         else if (answer[0] == 'z') {
             if (print_drm_report(pDrmManager) == 0)
                 INFO(COLOR_CYAN "HW report printed");
-        }
-
-        else if (answer[0] == 'v') {
-            if (strlen(answer) < 2) {
-                print_interactive_menu();
-                continue;
-            }
-            ptr = NULL;
-            val = strtol(answer+1, &ptr, 10);
-            if (print_drm_page(pDrmManager, val) == 0)
-                INFO(COLOR_CYAN "Registers on page %u printed", val);
         }
 
         else if (answer[0] == 'a') {
@@ -675,18 +643,6 @@ int batch_mode(xclDeviceHandle* pci_bar_handle, const char* credentialFile, cons
                 INFO(COLOR_CYAN "Sleeping %u seconds ...", batch[i].value);
                 sleep(batch[i].value);
                 DEBUG("Wake up from sleep");
-                break;
-            }
-
-            case VIEW_PAGE: {
-                INFO(COLOR_CYAN "Dumping DRM registry ...");
-                /* Diplay page N of DRM controller regsiter map */
-                val = batch[i].value;
-                if (print_drm_page(pDrmManager, val)) {
-                    ERROR("Failed to read page %u of DRM Controller registery", val);
-                    goto batch_mode_free;
-                }
-                DEBUG("Displayed page %u of DRM Controller registery", val);
                 break;
             }
 

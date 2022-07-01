@@ -97,7 +97,6 @@ typedef enum {
     GENERATE_COIN,
     NB_ACTIVATORS,
     ACTIVATORS_STATUS,
-    VIEW_PAGE,
     WAIT
 } t_BatchCmdId;
 
@@ -202,9 +201,6 @@ std::vector<t_BatchCmd> tokenize( std::string str ) {
         } else if ( (cmd.rfind("s", 0) == 0) || (cmd.rfind("actsta", 0) == 0) ) {
             token.name = std::string("STATUS OF ACTIVATORS");
             token.id = ACTIVATORS_STATUS;
-        } else if ( (cmd.rfind("v", 0) == 0) || (cmd.rfind("view", 0) == 0) ) {
-            token.name = std::string("VIEW PAGE");
-            token.id = VIEW_PAGE;
         } else if ( (cmd.rfind("w", 0) == 0) || (cmd.rfind("wait", 0) == 0) ) {
             token.name = std::string("WAIT");
             token.id = WAIT;
@@ -436,22 +432,6 @@ int check_afi_ready(int slot_id)
 }
 
 
-int print_drm_page(DrmManager* pDrmManager, uint32_t page)
-{
-    uint32_t nbPageMax = ParameterKey::page_mailbox - ParameterKey::page_ctrlreg + 1;
-    if (page > nbPageMax) {
-        ERROR("Page index overflow: must be less or equal to %d", nbPageMax-1);
-        return 1;
-    }
-    TRY
-        /* Print registers in page */
-        std::cout << pDrmManager->get<std::string>( (ParameterKey)(ParameterKey::page_ctrlreg + page));
-        std::cout << std::endl;
-        return 0;
-    CATCH_EXIT("Failed to print HW registry", 1)
-}
-
-
 int print_drm_report(DrmManager* pDrmManager)
 {
     TRY
@@ -508,13 +488,6 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const std::string& creden
             } else if (cmd == 'z') {
                 if (print_drm_report(pDrmManager) == 0)
                     INFO(COLOR_CYAN "HW report printed");
-            } else if (cmd == 'v') {
-                if (answer.size() < 2) {
-                    print_interactive_menu();
-                    continue;
-                }
-                if (print_drm_page(pDrmManager, val) == 0)
-                    INFO(COLOR_CYAN "Registers on page %u printed", val);
             } else if (cmd == 'a') {
                 pDrmManager->activate(false);
                 INFO(COLOR_CYAN "Session started");
@@ -684,18 +657,6 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const std::string& credentialFi
                 INFO(COLOR_CYAN "Sleeping %u seconds ...", batch.value);
                 sleep(batch.value);
                 DEBUG("Wake up from sleep");
-                break;
-            }
-
-            case VIEW_PAGE: {
-                /* Diplay page N of DRM controller regsiter map */
-                INFO(COLOR_CYAN "Dumping DRM registry ...");
-                val = batch.value;
-                if (print_drm_page(pDrmManager, val)) {
-                    ERROR("Failed to read page %u of DRM Controller registery", val);
-                    goto batch_mode_free;
-                }
-                DEBUG("Displayed page %u of DRM Controller registery", val);
                 break;
             }
 
