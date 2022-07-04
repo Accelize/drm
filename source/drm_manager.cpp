@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2018, Accelize
+Copyright (C) 2022, Accelize
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -154,7 +154,7 @@ private:
         }
         err = pnc_session_new(PNC_ALLOC_SIZE, &s_pnc_session);
         if ( err == -ENODEV ) {
-            Info( "Provencecore driver is not loaded" );
+            Debug( "ProvenCore driver is not loaded" );
             return false;
         }
         if ( err < 0 ) {
@@ -679,7 +679,124 @@ protected:
             return false;
         }
         Debug( "xbutil tool has been found in {}", mXbutil );
+
         return true;
+    }
+
+    bool getXrtPlatformInfoV1( Json::Value& hostcard_node ) {
+        Debug( "Attempt to gather host and card information with XRT method 1" );
+        std::string cmd_out;
+        try {
+            // Call xbutil to collect host and card data
+            std::string cmd = fmt::format( "{} dump", mXbutil );
+            cmd_out = execCmd( cmd );
+        } catch( const std::exception &e ) {
+            hostcard_node["xrt1"]["error"] = fmt::format( "Host and card information not collected with XRT method 1: execution error '{}'\n",
+                                    e.what() );
+            return false;
+        }
+        // Parse collected data and save to header
+        Json::Value xbutil_node;
+        try {
+            xbutil_node = parseJsonString( cmd_out );
+        } catch( const std::exception &e ) {
+            hostcard_node["xrt1"]["error"] = fmt::format( "Host and card information not collected with XRT method 1: error '{}' parsing:\n{}\n",
+                                    e.what(), cmd_out );
+            return false;
+        }
+        // Filtering meta-data
+        if ( mHostDataVerbosity == eHostDataVerbosity::FULL ) {
+            // Verbosity is FULL
+            hostcard_node["xrt1"] = xbutil_node;
+        } else {
+            // Verbosity is PARTIAL
+            for(Json::Value::iterator itr=xbutil_node.begin(); itr!=xbutil_node.end(); ++itr) {
+                std::string key = itr.key().asString();
+                try {
+                    if (   ( key == "version" )
+                        || ( key == "system" )
+                        || ( key == "runtime" )
+                       )
+                        hostcard_node["xrt1"][key] = *itr;
+                    else if ( key == "board" ) {
+                        //  Add general info node
+                        hostcard_node["xrt1"][key]["info"] = itr->get("info", Json::nullValue);
+                        // Try to get the number of kernels
+                        Json::Value compute_unit_node = itr->get("compute_unit", Json::nullValue);
+                        if ( compute_unit_node != Json::nullValue )
+                            hostcard_node["xrt1"][key]["compute_unit"] = compute_unit_node.size();
+                        else
+                            hostcard_node["xrt1"][key]["compute_unit"] = -1;
+                        // Add XCLBIN UUID
+                        hostcard_node["xrt1"][key]["xclbin"] = itr->get("xclbin", Json::nullValue);
+                    }
+                } catch( const std::exception &e ) {
+                    Debug( "Could not extract Host Information for key {}", key );
+                }
+            }
+        }
+        Debug( "Succeeded to gather host and card information with XRT method 1" );
+        return true;
+    }
+
+    bool getXrtPlatformInfoV2( Json::Value& hostcard_node ) {
+        Debug( "Attempt to gather host and card information with XRT method 2" );
+        std::string xbutil_log("xbutil.log");
+        std::string cmd_out;
+        // Call xbutil to examine the platform
+        try {
+            std::string cmd = fmt::format( "{} examine -f JSON -o {} --force", mXbutil, xbutil_log );
+            cmd_out = execCmd( cmd );
+        } catch( const std::exception &e ) {
+            hostcard_node["xrt2"]["error"] = fmt::format( "Error executing XRT command: {}\n", e.what() );
+            return false;
+        }
+        // Parse available devices
+        try {
+            hostcard_node["xrt2"] = parseJsonFile( xbutil_log );
+        } catch( const std::exception &e ) {
+            hostcard_node["xrt2"]["error"] = fmt::format( "Error parsing XRT global data file {}: {}.\n",
+                                                xbutil_log, e.what() );
+            return false;
+        }
+        // Collect meta-data for each device found
+        bool is_ok( true );
+        hostcard_node["xrt2"]["devices"] = Json::nullValue;
+        for ( const auto &d: hostcard_node["xrt2"]["system"]["host"]["devices"] ) {
+            std::string bdf = d["bdf"].asString();
+            std::string xbutil_device_log = fmt::format( "xbutil_{}.log", bdf );
+            Json::Value device_info = Json::nullValue;
+            // Call xbutil report
+            try {
+                std::string cmd = fmt::format( "{} examine -f JSON -o {} --force -d {} ",
+                                                mXbutil, xbutil_device_log, bdf );
+                if ( mHostDataVerbosity == eHostDataVerbosity::FULL ) {
+                    cmd += std::string("-r all");
+                } else {
+                    cmd += std::string("-r dynamic-regions -r pcie-info -r platform");
+                }
+                std::string cmd_out = execCmd( cmd );
+            } catch( const std::exception &e ) {
+                device_info[bdf] = fmt::format( "Error executing XRT command: {}\n", e.what() );
+                hostcard_node["xrt2"]["devices"].append( device_info );
+                is_ok = false;
+                continue;
+            }
+            // Parse device report
+            try {
+                device_info = parseJsonFile( xbutil_device_log );
+                hostcard_node["xrt2"]["devices"].append( device_info["devices"][0] );
+            } catch( const std::exception &e ) {
+                device_info[bdf] = fmt::format( "Error parsing XRT meta-data file {}: {}.\n",
+                                                    xbutil_device_log, e.what() );
+                hostcard_node["xrt2"]["devices"].append( device_info );
+                is_ok = false;
+                continue;
+            }
+        }
+        if ( is_ok )
+            Debug( "Succeeded to gather host and card information with XRT method 2" );
+        return is_ok;
     }
 
     void getHostAndCardInfo() {
@@ -694,55 +811,11 @@ protected:
         // Gather host and card information if xbutil existing
         if ( findXrtUtility() ) {
             Json::Value hostcard_node = Json::nullValue;
-            Json::Value xbutil_node;
-            try {
-                // Call xbutil to collect host and card data
-                std::string cmd = fmt::format( "{} dump", mXbutil );
-                std::string cmd_out = execCmd( cmd );
-
-                // Parse collected data and save to header
-                try {
-                    xbutil_node = parseJsonString( cmd_out );
-                } catch( const std::exception & ) {
-                    Throw( DRM_ExternFail, "Unexpected result from xbutil: {}. ", cmd_out );
-                }
-
-                if ( mHostDataVerbosity == eHostDataVerbosity::FULL ) {
-                    // Verbosity is FULL
-                    hostcard_node = xbutil_node;
-                } else {
-                    // Verbosity is PARTIAL
-                    for(Json::Value::iterator itr=xbutil_node.begin(); itr!=xbutil_node.end(); ++itr) {
-                        std::string key = itr.key().asString();
-                        try {
-                            if (   ( key == "version" )
-                                || ( key == "system" )
-                                || ( key == "runtime" )
-                               )
-                                hostcard_node[key] = *itr;
-                            else if ( key == "board" ) {
-                                //  Add general info node
-                                hostcard_node[key]["info"] = itr->get("info", Json::nullValue);
-                                // Try to get the number of kernels
-                                Json::Value compute_unit_node = itr->get("compute_unit", Json::nullValue);
-                                if ( compute_unit_node != Json::nullValue )
-                                    hostcard_node[key]["compute_unit"] = compute_unit_node.size();
-                                else
-                                    hostcard_node[key]["compute_unit"] = -1;
-                                // Add XCLBIN UUID
-                                hostcard_node[key]["xclbin"] = itr->get("xclbin", Json::nullValue);
-                            }
-                        } catch( const std::exception &e ) {
-                            Debug( "Could not extract Host Information for key {}", key );
-                        }
-                    }
-                }
-            } catch( const std::exception &e ) {
-                Debug( "No host and card information collected: {}", e.what() );
-                hostcard_node = fmt::format( "No host and card information collected: {}", e.what() );
+            if ( !getXrtPlatformInfoV2( hostcard_node ) ) {
+                getXrtPlatformInfoV1( hostcard_node );
             }
-            Debug( "Host and card information:\n{}", hostcard_node.toStyledString() );
             mHostConfigData["host_card"] = hostcard_node;
+            Debug( "Host and card information:\n{}", hostcard_node.toStyledString() );
         }
     }
 
@@ -1641,7 +1714,7 @@ protected:
             if ( !isConfigInNodeLock() )
                 licenseTimer = JVgetRequired( dna_node, "licenseTimer", Json::stringValue ).asString();
             mLicenseDuration = JVgetRequired( metering_node, "timeoutSecond", Json::uintValue ).asUInt();
-            if ( ( mLicenseDuration == 0 ) && ( mLicenseType == eLicenseType::NODE_LOCKED ) )
+            if ( ( mLicenseDuration == 0 ) && ( mLicenseType != eLicenseType::NODE_LOCKED ) )
                 Warning( "'timeoutSecond' field sent by License WS must not be 0" );
 
         } catch( const Exception &e ) {
@@ -1681,7 +1754,7 @@ protected:
         // Wait until session is running if license is metering
         waitUntilSessionIsRunning();
 
-        Info( "Provisioned license #{} for session {} on DRM controller", mLicenseCounter, mSessionID );
+        Debug( "Provisioned license #{} for session {} on DRM controller", mLicenseCounter, mSessionID );
         mLicenseCounter ++;
     }
 
@@ -2360,7 +2433,7 @@ protected:
             mHealthRetrySleep = JVgetOptional( metering_node, "healthRetrySleep", Json::uintValue, mHealthRetrySleep ).asUInt();
         }
         Debug( "Released metering access mutex from startSession" );
-        Info( "DRM session {} created.", mSessionID );
+        Info( "DRM session {} started.", mSessionID );
     }
 
     void pauseSession() {

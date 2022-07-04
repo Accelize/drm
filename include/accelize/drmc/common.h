@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2018, Accelize
+Copyright (C) 2022, Accelize
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -29,6 +29,13 @@ limitations under the License.
         #define DRM_EXPORT
         #define DRM_LOCAL
     #endif /* __cplusplus */
+
+
+     #define ThrowSetLog( log_level, errcode, ... ) do {                                              \
+        Accelize::DRM::Exception except( errcode, fmt::format( __VA_ARGS__ ) );     \
+        SPDLOG_LOGGER_CALL( Accelize::DRM::sLogger, (spdlog::level::level_enum)log_level, fmt::format( __VA_ARGS__ )); \
+        throw except;                                                               \
+    } while(0)
 
 
     #define Throw( errcode, ... ) do {                                              \

@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2018, Accelize
+Copyright (C) 2022, Accelize
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -268,12 +268,19 @@ std::string execCmd( const std::string& cmd ) {
     std::array<char, 128> buffer;
     std::string result;
     Debug( "Running command: {}", cmd );
-    std::unique_ptr<FILE, decltype(&pclose)> pipe( popen( cmd.c_str(), "r" ), pclose );
-    if ( !pipe ) {
-        throw std::runtime_error( "popen() failed!" );
-    }
-    while( fgets( buffer.data(), buffer.size(), pipe.get() ) != nullptr ) {
-        result += buffer.data();
+    FILE *pipe = popen( cmd.c_str(), "r" );
+    try {
+        if ( pipe ) {
+            while( fgets( buffer.data(), buffer.size(), pipe ) != nullptr ) {
+                result += buffer.data();
+            }
+        }
+    } catch(...) {}
+    int status = pclose(pipe);
+    uint32_t retcode = WEXITSTATUS(status);
+    if ( retcode ) {
+        throw std::runtime_error( fmt::format( "Following command failed with return code {}: {}",
+                                    retcode, cmd.c_str() ) );
     }
     return result;
 }

@@ -1,3 +1,7 @@
+* Thu Jul 4 2022 Accelize v2.5.5-alpha.1
+- NEW: Support of new XRT v2.12 with new xbutil API
+- FIX: Better handle low-level error messaging on CSP/XRT detection
+
 * Mon Mar 21 2022 Accelize v2.5.4
 - NEW: Support of HDK v7.0.0.0-Fix.
 - NEW: Support DRM Hybrid Solution for SoM boards
