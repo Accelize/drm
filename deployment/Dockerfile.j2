@@ -76,11 +76,9 @@ yum install -y \
 {%- elif osName in ("debian", "ubuntu") %}
 apt-get install -y \
 {%- endif %}
-    gnupg \
     make \
 {%- if osName in ("debian", "ubuntu") %}
     dpkg-dev \
-    dpkg-sig \
     file \
     g++ \
     libcurl4-openssl-dev \
@@ -93,8 +91,7 @@ apt-get install -y \
     jsoncpp-devel \
     libcurl-devel \
     python3-devel \
-    rpm-build \
-    rpm-sign && \
+    rpm-build && \
 {%- endif %}
 {%- if osName == "rhel" %}
 subscription-manager remove --all && \
