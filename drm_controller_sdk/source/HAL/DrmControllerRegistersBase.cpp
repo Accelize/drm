@@ -158,10 +158,7 @@ unsigned int DrmControllerRegistersBase::writeRegisterAtIndex(const unsigned int
 *   \return Returns the offset of the register at the specified index.
 **/
 unsigned int DrmControllerRegistersBase::registerOffsetFromIndex(const unsigned int &index) const {
-  if (index == 0) {
-    return index;
-  }
-  return (index + 1) << 2;
+  return (index << 2) + 4;
 }
 
 /** numberOfWords
