@@ -112,7 +112,7 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
     wait_start = data_list.pop(0)[1]
     for i, (start, end) in enumerate(data_list):
         delta = parser.parse(start) - parser.parse(wait_start)
-        assert int(delta.total_seconds()) == healthPeriod + i
+        assert int(delta.total_seconds()) >= healthPeriod
         wait_start = end
     assert get_proxy_error() is None
 
