@@ -5,7 +5,7 @@ Run tests that help to improve coverage
 import pytest
 from time import sleep
 from flask import request as _request
-from re import search, findall, IGNORECASE
+from re import search, match, findall, IGNORECASE
 from ctypes import c_uint, byref
 
 from tests.conftest import HTTP_TIMEOUT_ERR_MSG
@@ -124,6 +124,9 @@ def test_improve_coverage_writeDrmAddress(accelize_drm, conf_json, cred_json, as
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
+    hdk_version = accelize_drm.get_drm_ctrl_version(conf_json, cred_json)
+    version_major = int(match(r'(\d+)\..+', hdk_version).group(1))
+
     with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
         accelize_drm.DrmManager(
             conf_json.path,
@@ -134,7 +137,10 @@ def test_improve_coverage_writeDrmAddress(accelize_drm, conf_json, cred_json, as
         )
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
     assert search(r'Error in write register callback, errcode = 123: failed to write', logfile.read(), IGNORECASE)
-    async_cb.assert_Error(accelize_drm.exceptions.DRMCtlrError.error_code, 'Unable to find DRM Controller registers')
+    if version_major >= 8:
+        async_cb.assert_Error(accelize_drm.exceptions.DRMCtlrError.error_code, 'getDrmController\(\)\.writeMailboxFileRegister\( rwData, rwSize \) failed with error code 123')
+    else:
+        async_cb.assert_Error(accelize_drm.exceptions.DRMCtlrError.error_code, 'Unable to find DRM Controller registers')
     async_cb.reset()
     logfile.remove()
 

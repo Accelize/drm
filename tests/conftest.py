@@ -323,6 +323,18 @@ def pytest_runtest_setup(item):
             pytest.skip('"long_run" marker not selected')
 
 
+def get_drm_ctrl_version(accelize_drm, conf_json, cred_json):
+    driver = accelize_drm.pytest_fpga_driver[0]
+    with accelize_drm.DrmManager(
+            conf_json.path, cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            None
+        ) as drm_manager:
+        hdk_version = drm_manager.get('controller_version')
+    return hdk_version
+
+
 def scanActivatorsByCard(driver, base_addr):
     base_addr_list = []
     while True:
@@ -789,6 +801,7 @@ def accelize_drm(pytestconfig):
     _accelize_drm.pytest_params = param2dict(pytestconfig.getoption("params"))
     _accelize_drm.pytest_artifacts_dir = pytest_artifacts_dir
     _accelize_drm.is_ctrl_sw = is_ctrl_sw
+    _accelize_drm.get_drm_ctrl_version = lambda conf, cred: get_drm_ctrl_version(_accelize_drm, conf, cred)
     return _accelize_drm
 
 
