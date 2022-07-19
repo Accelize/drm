@@ -323,18 +323,6 @@ def pytest_runtest_setup(item):
             pytest.skip('"long_run" marker not selected')
 
 
-def get_drm_ctrl_version(accelize_drm, conf_json, cred_json):
-    driver = accelize_drm.pytest_fpga_driver[0]
-    with accelize_drm.DrmManager(
-            conf_json.path, cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            None
-        ) as drm_manager:
-        hdk_version = drm_manager.get('controller_version')
-    return hdk_version
-
-
 def scanActivatorsByCard(driver, base_addr):
     base_addr_list = []
     while True:
@@ -618,7 +606,7 @@ def scanAllActivators(fpga_driver, actr_base_address):
 
 # Pytest Fixtures
 @pytest.fixture(scope='session')
-def accelize_drm(pytestconfig):
+def accelize_drm(pytestconfig, tmpdir_factory):
     """
     Get Python Accelize DRM configured the proper way.
     """
@@ -750,7 +738,7 @@ def accelize_drm(pytestconfig):
                     drm_ctrl_base_addr=drm_ctrl_base_addr,
                     no_clear_fpga=no_clear_fpga,
                     **fpga_driver_extra
-                )
+                 )
             )
         except:
             raise IOError("Failed to load driver on slot %d" % slot_id)
@@ -775,8 +763,24 @@ def accelize_drm(pytestconfig):
         freq_version = fpga_driver[0].read_register(drm_ctrl_base_addr + 0xFFF0)
         print('Frequency detection version: 0x%08X' % freq_version)
 
-    # Store some values for access in tests
+    # Get DRM Controller Version
     import accelize_drm as _accelize_drm
+    jsontmpdir = tmpdir_factory.mktemp('drmjsondir')
+    conf = ConfJson(jsontmpdir, pytestconfig.getoption("server"), pytestconfig.getoption("drm_frequency"),
+                drm={'drm_software': is_ctrl_sw, 'bypass_frequency_detection':True})
+    cred = CredJson(jsontmpdir, realpath(expanduser(pytestconfig.getoption("cred"))))
+    ctrl_versions = list()
+    for driver in fpga_driver:
+        with _accelize_drm.DrmManager(
+                conf.path, cred.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                None
+            ) as drm_manager:
+            ctrl_versions.append(drm_manager.get('controller_version'))
+    assert len(set(ctrl_versions)) == 1
+
+    # Store some values for access in tests
     _accelize_drm.pytest_freq_detection_version = freq_version
     _accelize_drm.pytest_proxy_debug = pytestconfig.getoption("proxy_debug")
     _accelize_drm.pytest_server = pytestconfig.getoption("server")
@@ -801,7 +805,7 @@ def accelize_drm(pytestconfig):
     _accelize_drm.pytest_params = param2dict(pytestconfig.getoption("params"))
     _accelize_drm.pytest_artifacts_dir = pytest_artifacts_dir
     _accelize_drm.is_ctrl_sw = is_ctrl_sw
-    _accelize_drm.get_drm_ctrl_version = lambda conf, cred: get_drm_ctrl_version(_accelize_drm, conf, cred)
+    _accelize_drm.pytest_ctrl_version = ctrl_versions[0]
     return _accelize_drm
 
 

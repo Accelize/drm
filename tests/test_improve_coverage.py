@@ -124,9 +124,6 @@ def test_improve_coverage_writeDrmAddress(accelize_drm, conf_json, cred_json, as
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
-    hdk_version = accelize_drm.get_drm_ctrl_version(conf_json, cred_json)
-    version_major = int(match(r'(\d+)\..+', hdk_version).group(1))
-
     with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
         accelize_drm.DrmManager(
             conf_json.path,
@@ -137,6 +134,7 @@ def test_improve_coverage_writeDrmAddress(accelize_drm, conf_json, cred_json, as
         )
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
     assert search(r'Error in write register callback, errcode = 123: failed to write', logfile.read(), IGNORECASE)
+    version_major = int(match(r'(\d+)\..+', accelize_drm.pytest_ctrl_version).group(1))
     if version_major >= 8:
         async_cb.assert_Error(accelize_drm.exceptions.DRMCtlrError.error_code, 'getDrmController\(\)\.writeMailboxFileRegister\( rwData, rwSize \) failed with error code 123')
     else:

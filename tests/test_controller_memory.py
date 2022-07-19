@@ -212,8 +212,7 @@ def test_drm_manager_bist(accelize_drm, conf_json, cred_json, async_handler):
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
-    hdk_version = accelize_drm.get_drm_ctrl_version(conf_json, cred_json)
-    version_major = int(match(r'(\d+)\..+', hdk_version).group(1))
+    version_major = int(match(r'(\d+)\..+', accelize_drm.pytest_ctrl_version).group(1))
 
     # Test read callback error
     def my_wrong_read_callback(register_offset, returned_data):
