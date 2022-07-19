@@ -4,7 +4,7 @@ Test all other vitis reference designs
 """
 import pytest
 from datetime import datetime
-from re import search, IGNORECASE
+from re import search, match, IGNORECASE
 
 import tests.conftest as conftest
 
@@ -21,6 +21,7 @@ def run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_ha
     driver = accelize_drm.pytest_fpga_driver[0]
     driver.program_fpga(fpga_image)
     accelize_drm.scanActivators()
+    pytest_hdk_version =  match(r'(.+)\.\d+$', accelize_drm.pytest_hdk_version).group(1)
 
     # Run test
     async_cb = async_handler.create()
@@ -39,6 +40,7 @@ def run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_ha
                 driver.write_register_callback,
                 async_cb.callback
             ) as drm_manager:
+        assert pytest_hdk_version == drm_manager.get('controller_version')
         assert not drm_manager.get('session_status')
         assert not drm_manager.get('license_status')
         assert drm_manager.get('session_id') == ''
@@ -120,7 +122,7 @@ def test_1activator_125(accelize_drm, conf_json, cred_json, async_handler, log_f
     Test a RTL vivado configuration: 1 single clock kernels with Verilog source
     """
     # Run test
-    design_name = '1activator_125'
+    design_name = '1activator_axi4_125'
     axiclk_freq_ref = 125
     drmclk_freq_ref = 125
     log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
@@ -166,6 +168,7 @@ def test_2activator_vhdl_125(accelize_drm, conf_json, cred_json, async_handler, 
                                     log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
 
 
+@pytest.mark.skip
 @pytest.mark.awsf1
 def test_2activator_vhdl_15_225(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
@@ -185,9 +188,9 @@ def test_2activator_250_75_swap_activator(accelize_drm, conf_json, cred_json, as
     Test a RTL vivado configuration: dual clock kernels with activators inverted on LGDN bus
     """
     # Run test
-    design_name = '2activator_250_75_swap_activator'
+    design_name = '2activator_axi4_swap_activator_250_125'
     axiclk_freq_ref = 250
-    drmclk_freq_ref = 75
+    drmclk_freq_ref = 125
     log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
                                     log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
 
