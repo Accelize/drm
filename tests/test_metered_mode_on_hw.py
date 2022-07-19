@@ -678,7 +678,7 @@ def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handl
         drm_manager.deactivate()
         assert sum(drm_manager.get('metered_data')) == 0
     log_content = logfile.read()
-    assert len(list(findall(r'warning\b.*\bCannot access metering data when no session is running', log_content))) == 1
+    assert len(list(findall(r'warning\b.*\bCannot access metering data when no session is running', log_content))) == 2
     async_cb.assert_NoError()
     logfile.remove()
 
@@ -689,36 +689,22 @@ def test_heart_beat(accelize_drm, conf_json, cred_json, async_handler, log_file_
     """
     Test activator locks if heart beat stops
     """
+    activators = accelize_drm.pytest_fpga_activators[0]
+    activators.autotest()
+    act = activators[0]
+
+    if act.read_register(0x38) & 0xFFFFFF00 == 0:
+        pytest.skip('Activator is not supporting the AXI4-stream communication cut')
+
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    activators = accelize_drm.pytest_fpga_activators[0]
-    activators.autotest()
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
-    act1 = activators[0]
-    act2 = activators[1]
-
-    if act1.read_register(0x34) & 0xFFFFFF00 == 0:
-        pytest.skip('Activator is not supporting the AXI4-stream communication cut')
-
-    test_act2 = False if act2.read_register(0x34) & 0xFFFFFF00 == 0 else True
-
-    def print_status(expect1, expect2):
-        s1 = act1.get_status()
-        s2 = act2.get_status()
-#        print('status=', s1, s2)
-        if expect1 is None:
-            ret = True
-        else:
-            ret = s1 == expect1
-        if expect2 is None:
-            ret &= True
-        else:
-            ret &= s2 == expect2
-        return ret
+    def print_status(expect):
+        return act.get_status() == expect
 
     with accelize_drm.DrmManager(
                 conf_json.path,
@@ -734,52 +720,15 @@ def test_heart_beat(accelize_drm, conf_json, cred_json, async_handler, log_file_
         activators.autotest(is_activated=True)
         license_duration = drm_manager.get('license_duration')
         # Temporarily cut communication between Controller and activator 1
-        act1.write_register(0x34, 1)
-        assert act1.read_register(0x34) == 1
-        wait_func_true(lambda: print_status(False, None), license_duration)
+        act.write_register(0x38, 1)
+        wait_func_true(lambda: print_status(False), license_duration)
         activators.autotest(is_activated=False)
         assert not drm_manager.get('license_status')
-        act1.write_register(0x34, 0)
-        assert act1.read_register(0x34) == 0
-        wait_func_true(lambda: print_status(True, True), license_duration)
+        act.write_register(0x38, 0)
+        wait_func_true(lambda: print_status(True), license_duration)
         activators.autotest(is_activated=True)
         assert drm_manager.get('license_status')
-        # Temporarily cut communication between Controller and activator 2
-        act2.write_register(0x34, 1)
-        assert act2.read_register(0x34) == 1
-        wait_func_true(lambda: print_status(None, False), license_duration)
-        activators.autotest(is_activated=False)
-        assert not drm_manager.get('license_status')
-        act2.write_register(0x34, 0)
-        assert act2.read_register(0x34) == 0
-        wait_func_true(lambda: print_status(True, True), license_duration)
-        activators.autotest(is_activated=True)
-        assert drm_manager.get('license_status')
-
-    """
-    try:
-        with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
-            with accelize_drm.DrmManager(
-                        conf_json.path,
-                        cred_json.path,
-                        driver.read_register_callback,
-                        driver.write_register_callback,
-                        async_cb.callback
-                    ) as drm_manager:
-                assert not drm_manager.get('license_status')
-                activators.autotest(is_activated=False)
-                drm_manager.activate()
-                assert drm_manager.get('license_status')
-                activators.autotest(is_activated=True)
-                license_duration = drm_manager.get('license_duration')
-                # Cut communication between Controller and each activator progressively
-                act0.write_register(0x34, 1)
-                assert act0.read_register(0x34) == 1
-                wait_func_true(lambda: print_status(False, False), 2*license_duration)
-                activators.autotest(is_activated=False)
-    finally:
-        fpga_image = accelize_drm.pytest_fpga_image
-        driver.program_fpga(fpga_image)
-    """
+        async_cb.assert_Error(accelize_drm.exceptions.DRMCtlrError.error_code, 'Status Bit: 0b0')
+        async_cb.reset()
     logfile.remove()
 
