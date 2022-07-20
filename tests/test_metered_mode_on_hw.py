@@ -653,7 +653,6 @@ def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handl
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
         activators.generate_coin()
-        assert sum(drm_manager.get('metered_data')) == 0
         drm_manager.activate()
         assert sum(drm_manager.get('metered_data')) == 0
         activators.generate_coin()
