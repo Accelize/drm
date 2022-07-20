@@ -38,10 +38,10 @@ def test_fast_start_stop(accelize_drm, conf_json, cred_json, async_handler, log_
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
         drm_manager.activate()
+        assert sum(drm_manager.get('metered_data')) == 0
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
-        assert sum(drm_manager.get('metered_data')) == 0
         async_cb.assert_NoError()
     logfile.remove()
 
@@ -121,7 +121,6 @@ def test_metered_start_stop_short_time_in_debug(accelize_drm, conf_json, cred_js
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
-        assert sum(drm_manager.get('metered_data')) == 0
         async_cb.assert_NoError()
     logfile.remove()
 
