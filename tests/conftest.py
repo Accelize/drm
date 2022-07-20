@@ -28,9 +28,9 @@ _LICENSING_SERVERS = dict(
     prod='https://master.metering.accelize.com')
 
 ACT_STATUS_REG_OFFSET = 0x38
-MAILBOX_REG_OFFSET = 0x3C
-INC_EVENT_REG_OFFSET = 0x40
-CNT_EVENT_REG_OFFSET = 0x44
+MAILBOX_REG_OFFSET    = 0x3C
+INC_EVENT_REG_OFFSET  = 0x40
+CNT_EVENT_REG_OFFSET  = 0x44
 
 LOG_FORMAT_SHORT = "[%^%=8l%$] %-6t, %v"
 LOG_FORMAT_LONG = "%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v"
@@ -401,7 +401,7 @@ class SingleActivator:
         Returns:
             int: Status.
         """
-        return self.driver.read_register(self.base_address + ACT_STATUS_REG_OFFSET) == 3
+        return self.driver.read_register(self.base_address + ACT_STATUS_REG_OFFSET) & 3 == 3
 
     def generate_coin(self, coins=None):
         """
