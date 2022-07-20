@@ -157,6 +157,6 @@ def test_csp_format(accelize_drm, conf_json, cred_json, async_handler,
         assert csp
         assert match(r'ami-.*', csp.get('ami_id'))
         assert match(r'i-.*', csp.get('instance_id'))
-        assert match(r'f1.\dxlarge', csp.get('instance_type'))
+        assert match(r'f1.\d+xlarge', csp.get('instance_type'))
         assert csp.get('region')
     async_cb.assert_NoError()
