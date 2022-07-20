@@ -53,7 +53,7 @@ def test_host_data_verbosity(accelize_drm, conf_json, cred_json, async_handler,
         data_partial = drm_manager.get('host_data')
         assert type(data_partial) == dict
         assert len(str(data_partial))
-        assert len(str(data_full)) >= len(str(data_partial))
+        assert len(str(data_full)) >= len(str(data_partial)) > 0
 
     # Get none data
     conf_json['settings']['host_data_verbosity'] = 2
@@ -157,6 +157,6 @@ def test_csp_format(accelize_drm, conf_json, cred_json, async_handler,
         assert csp
         assert csp.get('csp_name') == 'AWS'
         assert match(r'ami-.*', csp.get('ami-id'))
-        assert match(r'f1.\dxlarge', csp.get('instance-type'))
+        assert match(r'f1.\d+xlarge', csp.get('instance-type'))
         assert csp.get('region')
     async_cb.assert_NoError()

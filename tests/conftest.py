@@ -738,7 +738,7 @@ def accelize_drm(pytestconfig, tmpdir_factory):
                     drm_ctrl_base_addr=drm_ctrl_base_addr,
                     no_clear_fpga=no_clear_fpga,
                     **fpga_driver_extra
-                 )
+                )
             )
         except:
             raise IOError("Failed to load driver on slot %d" % slot_id)
