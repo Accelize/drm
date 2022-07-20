@@ -213,7 +213,7 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
         session_id = drm_manager.get('session_id')
         assert len(session_id) > 0
         lic_duration = drm_manager.get('license_duration')
-        wait_numbers = [lic_duration*2-2,lic_duration*2+2]
+        wait_numbers = [lic_duration*2-5,lic_duration*2+1]
         activators.autotest(is_activated=True)
         for i in range(nb_pause_resume):
             activators.generate_coin()
@@ -234,8 +234,9 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
                 activators.reset_coin()
                 session_id = drm_manager.get('session_id')
             else:
-                start += timedelta(seconds=lic_duration)
                 assert drm_manager.get('session_id') == session_id, 'after loop #%d' % i
+                wait_deadline(start, 2*lic_duration+1)
+                start += timedelta(seconds=2*lic_duration)
         assert drm_manager.get('session_status')
         assert drm_manager.get('session_id') == session_id
         assert drm_manager.get('license_status')
