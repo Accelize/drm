@@ -677,7 +677,7 @@ def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handl
         drm_manager.deactivate()
         assert sum(drm_manager.get('metered_data')) == 0
     log_content = logfile.read()
-    assert len(list(findall(r'warning\b.*\bCannot access metering data when no session is running', log_content))) == 2
+    assert findall(r'warning\b.*\bCannot access metering data when no session is running', log_content)
     async_cb.assert_NoError()
     logfile.remove()
 
