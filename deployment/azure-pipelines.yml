@@ -60,7 +60,7 @@ stages:
         parameters:
           identifier: full_features_on_single_design
           description: full features on single design
-          instance_type: 'f1.16xlarge'
+          instance_type: 'f1.4xlarge'
           config_list:
           - os_distrib: 'centos_7'
             tox_operation: '-p all -e aws-build-debug,cpp-debug,c-debug,noparallel-debug,coverage-debug'
