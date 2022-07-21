@@ -52,12 +52,6 @@ _PARAM_LIST = ('license_type',
                'log_message_level',
                'list_all',
                'dump_all',
-               'page_ctrlreg',
-               'page_vlnvfile',
-               'page_licfile',
-               'page_tracefile',
-               'page_meteringfile',
-               'page_mailbox',
                'hw_report',
                'trigger_async_callback',
                'log_message',
@@ -768,42 +762,6 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         activators.reset_coin()
         async_cb.assert_NoError()
         print("Test parameter 'metered_data': PASS")
-
-        # Test parameter: page_ctrlreg
-        page = drm_manager.get('page_ctrlreg')
-        assert search(r'Register\s+@0x00:\s+0x00000000', page), 'Unexpected content of page_ctrlreg'
-        async_cb.assert_NoError()
-        print("Test parameter 'page_ctrlreg': PASS")
-
-        # Test parameter: page_vlnvfile
-        page = drm_manager.get('page_vlnvfile')
-        assert search(r'Register\s+@0x00:\s+0x00000001', page), 'Unexpected content of page_vlnvfile'
-        async_cb.assert_NoError()
-        print("Test parameter 'page_vlnvfile': PASS")
-
-        # Test parameter: page_licfile
-        page = drm_manager.get('page_licfile')
-        assert search(r'Register\s+@0x00:\s+0x00000002', page), 'Unexpected content of page_licfile'
-        async_cb.assert_NoError()
-        print("Test parameter 'page_licfile': PASS")
-
-        # Test parameter: page_tracefile
-        page = drm_manager.get('page_tracefile')
-        assert search(r'Register\s+@0x00:\s+0x00000003', page), 'Unexpected content of page_tracefile'
-        async_cb.assert_NoError()
-        print("Test parameter 'page_tracefile': PASS")
-
-        # Test parameter: page_meteringfile
-        page = drm_manager.get('page_meteringfile')
-        assert search(r'Register\s+@0x00:\s+0x00000004', page), 'Unexpected content of page_meteringfile'
-        async_cb.assert_NoError()
-        print("Test parameter 'page_meteringfile': PASS")
-
-        # Test parameter: page_mailbox
-        page = drm_manager.get('page_mailbox')
-        assert search(r'Register\s+@0x00:\s+0x00000005', page), 'Unexpected content of page_mailbox'
-        async_cb.assert_NoError()
-        print("Test parameter 'page_mailbox': PASS")
 
         # Test parameter: hw_report
         hw_report = drm_manager.get('hw_report')

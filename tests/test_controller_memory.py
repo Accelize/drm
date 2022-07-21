@@ -3,7 +3,7 @@
 Test node-locked behavior of DRM Library.
 """
 import pytest
-from re import search, IGNORECASE
+from re import search, match, IGNORECASE
 
 
 def test_wrong_drm_controller_address(accelize_drm, conf_json, cred_json, async_handler,
@@ -212,12 +212,18 @@ def test_drm_manager_bist(accelize_drm, conf_json, cred_json, async_handler):
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
 
+    version_major = int(match(r'(\d+)\..+', accelize_drm.pytest_ctrl_version).group(1))
+
     # Test read callback error
     def my_wrong_read_callback(register_offset, returned_data):
         addr = register_offset
-        if register_offset > 0 and register_offset <= 0x40:
+        if version_major >= 8:
+            if register_offset >> 13 == 5:
+                addr += 0x4
+        elif register_offset > 0 and register_offset <= 0x40:
             addr += 0x4
         return driver.read_register_callback(addr, returned_data, driver)
+
     with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         drm_manager = accelize_drm.DrmManager(
             conf_json.path, cred_json.path,

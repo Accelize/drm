@@ -28,9 +28,9 @@ _LICENSING_SERVERS = dict(
     prod='https://master.metering.accelize.com')
 
 ACT_STATUS_REG_OFFSET = 0x38
-MAILBOX_REG_OFFSET = 0x3C
-INC_EVENT_REG_OFFSET = 0x40
-CNT_EVENT_REG_OFFSET = 0x44
+MAILBOX_REG_OFFSET    = 0x3C
+INC_EVENT_REG_OFFSET  = 0x40
+CNT_EVENT_REG_OFFSET  = 0x44
 
 LOG_FORMAT_SHORT = "[%^%=8l%$] %-6t, %v"
 LOG_FORMAT_LONG = "%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v"
@@ -401,7 +401,7 @@ class SingleActivator:
         Returns:
             int: Status.
         """
-        return self.driver.read_register(self.base_address + ACT_STATUS_REG_OFFSET) == 3
+        return self.driver.read_register(self.base_address + ACT_STATUS_REG_OFFSET) & 3 == 3
 
     def generate_coin(self, coins=None):
         """
@@ -605,7 +605,7 @@ def scanAllActivators(fpga_driver, actr_base_address):
 
 # Pytest Fixtures
 @pytest.fixture(scope='session')
-def accelize_drm(pytestconfig):
+def accelize_drm(pytestconfig, tmpdir_factory):
     """
     Get Python Accelize DRM configured the proper way.
     """
@@ -762,8 +762,24 @@ def accelize_drm(pytestconfig):
         freq_version = fpga_driver[0].read_register(drm_ctrl_base_addr + 0xFFF0)
         print('Frequency detection version: 0x%08X' % freq_version)
 
-    # Store some values for access in tests
+    # Get DRM Controller Version
     import accelize_drm as _accelize_drm
+    jsontmpdir = tmpdir_factory.mktemp('drmjsondir')
+    conf = ConfJson(jsontmpdir, pytestconfig.getoption("server"), pytestconfig.getoption("drm_frequency"),
+                drm={'drm_software': is_ctrl_sw, 'bypass_frequency_detection':True})
+    cred = CredJson(jsontmpdir, realpath(expanduser(pytestconfig.getoption("cred"))))
+    ctrl_versions = list()
+    for driver in fpga_driver:
+        with _accelize_drm.DrmManager(
+                conf.path, cred.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                None
+            ) as drm_manager:
+            ctrl_versions.append(drm_manager.get('controller_version'))
+    assert len(set(ctrl_versions)) == 1
+
+    # Store some values for access in tests
     _accelize_drm.pytest_freq_detection_version = freq_version
     _accelize_drm.pytest_proxy_debug = pytestconfig.getoption("proxy_debug")
     _accelize_drm.pytest_server = pytestconfig.getoption("server")
@@ -788,6 +804,7 @@ def accelize_drm(pytestconfig):
     _accelize_drm.pytest_params = param2dict(pytestconfig.getoption("params"))
     _accelize_drm.pytest_artifacts_dir = pytest_artifacts_dir
     _accelize_drm.is_ctrl_sw = is_ctrl_sw
+    _accelize_drm.pytest_ctrl_version = ctrl_versions[0]
     return _accelize_drm
 
 

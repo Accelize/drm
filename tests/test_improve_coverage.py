@@ -5,7 +5,7 @@ Run tests that help to improve coverage
 import pytest
 from time import sleep
 from flask import request as _request
-from re import search, findall, IGNORECASE
+from re import search, match, findall, IGNORECASE
 from ctypes import c_uint, byref
 
 from tests.conftest import HTTP_TIMEOUT_ERR_MSG
@@ -134,7 +134,11 @@ def test_improve_coverage_writeDrmAddress(accelize_drm, conf_json, cred_json, as
         )
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
     assert search(r'Error in write register callback, errcode = 123: failed to write', logfile.read(), IGNORECASE)
-    async_cb.assert_Error(accelize_drm.exceptions.DRMCtlrError.error_code, 'Unable to find DRM Controller registers')
+    version_major = int(match(r'(\d+)\..+', accelize_drm.pytest_ctrl_version).group(1))
+    if version_major >= 8:
+        async_cb.assert_Error(accelize_drm.exceptions.DRMCtlrError.error_code, 'getDrmController\(\)\.writeMailboxFileRegister\( rwData, rwSize \) failed with error code 123')
+    else:
+        async_cb.assert_Error(accelize_drm.exceptions.DRMCtlrError.error_code, 'Unable to find DRM Controller registers')
     async_cb.reset()
     logfile.remove()
 
@@ -154,9 +158,12 @@ def test_improve_coverage_runBistLevel2_bad_size(accelize_drm, conf_json, cred_j
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
+    version_major = int(match(r'(\d+)\..+', accelize_drm.pytest_ctrl_version).group(1))
+
     def my_bad_read_register(register_offset, returned_data, ctx):
         ret = driver.read_register_callback(register_offset, returned_data)
-        if ctx['page'] == 5 and register_offset == 4:
+        if (version_major >= 8 and register_offset == 0xA004) or (
+            version_major < 8 and ctx['page'] == 5 and register_offset == 4):
             returned_data.contents.value += 0x8000
         return ret
 
@@ -197,9 +204,12 @@ def test_improve_coverage_runBistLevel2_bad_data(accelize_drm, conf_json, cred_j
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
+    version_major = int(match(r'(\d+)\..+', accelize_drm.pytest_ctrl_version).group(1))
+
     def my_bad_read_register(register_offset, returned_data, ctx):
         ret = driver.read_register_callback(register_offset, returned_data)
-        if ctx['page'] == 5 and register_offset == 4:
+        if (version_major >= 8 and register_offset == 0xA004) or (
+            version_major < 8 and ctx['page'] == 5 and register_offset == 4):
             rw_size = returned_data.contents.value & 0xFFFF
             ro_size = returned_data.contents.value >> 16
             ctx['rwOffset'] = 4 * (ro_size + rw_size) + 4
@@ -208,7 +218,8 @@ def test_improve_coverage_runBistLevel2_bad_data(accelize_drm, conf_json, cred_j
     def my_bad_write_register(register_offset, data_to_write, ctx):
         if register_offset == 0:
             ctx['page'] = data_to_write
-        if ctx['page'] == 5 and register_offset >= ctx['rwOffset'] and data_to_write != 0 and data_to_write != 0xFFFFFFFF:
+        if (version_major >= 8) or (ctx['page'] == 5 and register_offset == 4):
+            if (register_offset & 0xFFF) >= ctx['rwOffset'] and data_to_write != 0 and data_to_write != 0xFFFFFFFF:
                 data_to_write += 1
         return driver.write_register_callback(register_offset, data_to_write)
 
@@ -275,9 +286,12 @@ def test_improve_coverage_getDesignInfo(accelize_drm, conf_json, cred_json, asyn
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
+    version_major = int(match(r'(\d+)\..+', accelize_drm.pytest_ctrl_version).group(1))
+
     def my_read_register(register_offset, returned_data, ctx):
         ret = driver.read_register_callback(register_offset, returned_data)
-        if ctx['page'] == 5 and register_offset == 4:
+        if (version_major >= 8 and register_offset == 0xA004) or (
+                version_major < 8 and ctx['page'] == 5 and register_offset == 4):
             ctx['cnt'] += 1
             if ctx['cnt'] == 12:
                 returned_data.contents.value &= 0xFFFF
