@@ -556,8 +556,8 @@ def test_drm_manager_get_and_set_bad_arguments(accelize_drm, conf_json, cred_jso
 @pytest.mark.aws
 def test_c_unittests(accelize_drm, exec_func):
     """Test errors when missing arguments are given to DRM Controller Constructor"""
-    if 'aws' not in accelize_drm.pytest_fpga_driver_name:
-        pytest.skip("C unit-tests are only supported with AWS driver.")
+    if 'aws_f1' not in accelize_drm.pytest_fpga_driver_name:
+        pytest.skip("C unit-tests are only supported with AWS-F1 driver.")
 
     driver = accelize_drm.pytest_fpga_driver[0]
     exec_lib = exec_func.load('unittests', driver._fpga_slot_id)

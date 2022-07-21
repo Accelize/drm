@@ -18,8 +18,8 @@ DEPENDS += " \
 S = "$${WORKDIR}/git"
 
 PV = "${TMPL_PV}"
-
 PR = "${TMPL_PR}"
+PKGR = "$${PR}"
 
 DEPENDS += " \
     curl \

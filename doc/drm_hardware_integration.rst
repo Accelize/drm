@@ -498,6 +498,21 @@ Run the simulation:
    signal is asserted.
 
 
+Hw Emulation with Xilinx(R) Vitis
+---------------------------------
+
+It is possible to simulate your design with Vitis.
+Compilation of the DRM Controller kernel is simplified by using the makefile located in
+the controller/vitis/ folder in the DRM HDK package.
+
+Simply call the makefile with the SIM option:
+
+- make SIM=1 is used for cosimulation. In this configuration the DRM BFM is not implementedused so
+  your test application will have to call and link the Accelize DRM Library or,
+
+- make SIM=2 to use the DRM BFM. No need to use the Accelize DRM Library in our test application.
+
+
 Simulation configuration
 ------------------------
 

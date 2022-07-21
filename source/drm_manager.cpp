@@ -84,7 +84,7 @@ uint32_t Accelize::DRM::DrmManager::s_pnc_page_offset = 0;
 
 const std::string Accelize::DRM::DrmManager::DRM_SELF_TEST_ERROR_MESSAGE = std::string(
         "Could not access DRM Controller registers.\nPlease verify:\n"
-                        "\t-The read/write callbacks implementation in the SW application: verify it uses the correct offset address of DRM Controller IP in the design address space.\n"
+                        "\t-The read/write callbacks implementation in the host application: verify it uses the correct offset address of DRM Controller IP in the design address space.\n"
         "\t-The DRM Controller IP instantiation in the FPGA design: verify the correctness of 16-bit address received by the AXI-Lite port of the DRM Controller.\n" );
 
 const std::string Accelize::DRM::DrmManager::DRM_CONNECTION_ERROR_MESSAGE = std::string(
@@ -311,7 +311,7 @@ protected:
     int32_t mFrequencyInit = 0;
     double mFrequencyCurr = 0.0;
     uint32_t mFrequencyDetectionPeriod = 100;       // in milliseconds
-    double mFrequencyDetectionThreshold = 12.0;     // Error in percentage
+    double mFrequencyDetectionThreshold = 10.0;     // Error in percentage
     uint8_t mFreqDetectionMethod = 0;
     bool mBypassFrequencyDetection = false;
     uint32_t mAxiFrequency = 0;
@@ -582,7 +582,7 @@ protected:
 
     void checkCtrlLogLevel( eCtrlLogVerbosity level_e ) {
         if ( LogCtrlLevelMap.find( level_e ) == LogCtrlLevelMap.end() ) {
-            Throw( DRM_BadArg, "Invalid log level for SW Controller: {}", level_e );
+            Throw( DRM_BadArg, "Invalid log level for SW Controller: {}", (uint32_t)level_e );
         }
     }
 
@@ -598,10 +598,10 @@ protected:
                 Throw( DRM_PncInitError, "Failed to set the log level of the DRM Controller TA to {}: {}. ",
                         level_id, strerror(errno) );
             }
-            Debug( "Updated log level for SW Controller from {} to {}", sLogCtrlVerbosity, level_e );
+            Debug( "Updated log level for SW Controller from {} to {}", (uint32_t)sLogCtrlVerbosity, (uint32_t)level_e );
             sLogCtrlVerbosity = level_e;
         } else {
-            Debug( "Log level for SW Controller is already set to {}", sLogCtrlVerbosity );
+            Debug( "Log level for SW Controller is already set to {}", (uint32_t)sLogCtrlVerbosity );
         }
     }
 
@@ -1077,7 +1077,7 @@ protected:
         // Check mailbox size
         uint32_t mb_full_size = getMailboxSize();
         if ( mb_full_size < (uint32_t)eMailboxOffset::MB_USER ) {
-            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Unexpected mailbox size {}: Must be > {}.\n{}", mb_full_size, eMailboxOffset::MB_USER, DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
+            Throw( DRM_BadArg, "DRM Communication Self-Test 2 failed: Unexpected mailbox size {}: Must be > {}.\n{}", mb_full_size, (uint32_t)eMailboxOffset::MB_USER, DRM_SELF_TEST_ERROR_MESSAGE ); //LCOV_EXCL_LINE
         }
         uint32_t mbSize = getUserMailboxSize();
 
@@ -1831,26 +1831,22 @@ protected:
         return postHealth( request_json, retry_deadline, retry_sleep_ms );
     }
 
-    std::string getDesignHash() {
+    std::string getNodelockBaseName() {
         std::string drmVersion, dna, mailboxReadOnly;
         std::vector<std::string> vlnvFile;
-        std::hash<std::string> hasher;
-
         getDesignInfo( drmVersion, dna, vlnvFile, mailboxReadOnly );
-        std::string design = dna + drmVersion;
-        for( const std::string& vlnv: vlnvFile )
-            design += vlnv;
-        std::string hash = fmt::format( "{:016X}", hasher( design ) );
-        Debug( "Hash for HW design is {}", hash );
-        return hash;
+        std::string name = mHeaderJsonRequest["product"]["vendor"].asString();
+        name += "_" + mHeaderJsonRequest["product"]["library"].asString();
+        name += "_" + mHeaderJsonRequest["product"]["name"].asString();
+        name += "_" + dna;
+        return name;
     }
 
     void createNodelockedLicenseRequestFile() {
         // Create hash name based on design info
-        std::string designHash = getDesignHash();
-        mNodeLockRequestFilePath = mNodeLockLicenseDirPath + path_sep + designHash + ".req";
-        mNodeLockLicenseFilePath = mNodeLockLicenseDirPath + path_sep + designHash + ".lic";
-        Debug( "Created hash name based on design info: {}", designHash );
+        std::string basname = getNodelockBaseName();
+        mNodeLockRequestFilePath = mNodeLockLicenseDirPath + path_sep + basname + ".req";
+        mNodeLockLicenseFilePath = mNodeLockLicenseDirPath + path_sep + basname + ".lic";
         // Check if license request file already exists
         if ( isFile( mNodeLockRequestFilePath ) ) {
             Debug( "A license request file is already existing in license directory: {}", mNodeLockLicenseDirPath );
@@ -1885,6 +1881,7 @@ protected:
             }
         } else {
             /// No license has been found locally, request one to License WS:
+            Debug( "Could not find nodelocked license file: {}", mNodeLockLicenseFilePath );
             /// - Clear Session IS
             Debug( "Clearing session ID: {}", mSessionID );
             mSessionID = std::string("");
@@ -2576,7 +2573,7 @@ public:
                 // Set sleep period because SW Controller is slower
                 mCtrlTimeFactor = 100;
             } else {
-                Debug( "DRM Controller is a FPGA IP" );
+                Debug( "DRM Controller is a Hardware IP" );
                 mCtrlTimeFactor = 1;
             }
             uint32_t timeout_period = SDK_CTRL_TIMEOUT_IN_US * mCtrlTimeFactor;
@@ -2654,7 +2651,7 @@ public:
                     resumeSession();
                 } else {
                     Debug( "A session is still pending but latest license has expired: "
-                           "pending session will be stopped and a new one will be created" );
+                           "pending session is stopped and a new one is created" );
                     stopSession();
                     startSession();
                 }
@@ -2728,7 +2725,7 @@ public:
                     case ParameterKey::log_file_type: {
                         json_value[key_str] = (uint32_t)sLogFileType;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
-                               sLogFileType );
+                               (uint32_t)sLogFileType );
                         break;
                     }
                     case ParameterKey::log_file_rotating_num: {

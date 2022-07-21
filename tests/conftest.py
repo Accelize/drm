@@ -351,6 +351,22 @@ class SingleActivator:
             self.event_cnt_flag = self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET) != 0xDEADDEAD
             print('Event counter in Activator @0x%08X is active' % self.base_address)
 
+    def read_register(self, offset):
+        """
+        Read activator register at offset
+        """
+        if self.driver is None:
+            raise RuntimeError(f'No driver found to access activator at 0x{self.base_address:08X}')
+        return self.driver.read_register(self.base_address + offset)
+
+    def write_register(self, offset, value):
+        """
+        Write value into activator register at offset
+        """
+        if self.driver is None:
+            raise RuntimeError(f'No driver found to access activator at 0x{self.base_address:08X}')
+        self.driver.write_register(self.base_address + offset, value)
+
     def autotest(self, is_activated=None):
         """
         Verify IP works as expected
@@ -361,23 +377,22 @@ class SingleActivator:
         activated = self.get_status()
         if is_activated is not None:
             assert activated == is_activated
+        if activated:
+            # If unlocked writing the mailbox should succeed
+            val = self.driver.read_register(self.base_address + MAILBOX_REG_OFFSET)
+            not_val = bit_not(val)
+            self.driver.write_register(self.base_address + MAILBOX_REG_OFFSET, not_val)
+            assert self.driver.read_register(self.base_address + MAILBOX_REG_OFFSET) == not_val
         else:
-            if activated:
-                # If unlocked writing the mailbox should succeed
-                val = self.driver.read_register(self.base_address + MAILBOX_REG_OFFSET)
-                not_val = bit_not(val)
-                self.driver.write_register(self.base_address + MAILBOX_REG_OFFSET, not_val)
-                assert self.driver.read_register(self.base_address + MAILBOX_REG_OFFSET) == not_val
-            else:
-                # If locked writing the mailbox should fail
-                val = self.driver.read_register(self.base_address + MAILBOX_REG_OFFSET)
-                not_val = bit_not(val)
-                self.driver.write_register(self.base_address + MAILBOX_REG_OFFSET, not_val)
-                assert self.driver.read_register(self.base_address + MAILBOX_REG_OFFSET) == val
-            # Test reading of the generate event register
-            assert self.driver.read_register(self.base_address + INC_EVENT_REG_OFFSET) == 0x600DC0DE
-            # Test address overflow
-            assert self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET + 0x4) == 0xDEADDEAD
+            # If locked writing the mailbox should fail
+            val = self.driver.read_register(self.base_address + MAILBOX_REG_OFFSET)
+            not_val = bit_not(val)
+            self.driver.write_register(self.base_address + MAILBOX_REG_OFFSET, not_val)
+            assert self.driver.read_register(self.base_address + MAILBOX_REG_OFFSET) == val
+        # Test reading of the generate event register
+        assert self.driver.read_register(self.base_address + INC_EVENT_REG_OFFSET) == 0x600DC0DE
+        # Test address overflow
+        assert self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET + 0x4) == 0xDEADDEAD
 
     def get_status(self):
         """
@@ -578,7 +593,7 @@ class RefDesign:
             elif ext == '.awsxclbin':
                 return filename
         except Exception as e:
-            raise Exception('No FPGA image found for %s: %s' % (hdk_version, str(e)))
+            raise RuntimeError(f'No FPGA image found for {hdk_version}: {str(e)}')
 
 
 def scanAllActivators(fpga_driver, actr_base_address):
