@@ -49,7 +49,7 @@ echo "disable-pip-version-check = true " >> /etc/pip.conf && \
 python3 -m pip install -U{% if osName in ("centos", "rhel") and osVersion == "7" %} --prefix='/usr'{% endif %} \
     pip \
     setuptools && \
-python3 -m pip install -U{% if osName in ("centos", "rhel") and osVersion == "7" %} --prefix='/usr'{% endif %} \
+python3 -m pip install{% if osName in ("centos", "rhel") and osVersion != "9" %} -U{% endif %}{% if osName in ("centos", "rhel") and osVersion == "7" %} --prefix='/usr'{% endif %} \
     cython \
     flake8 \
     pytest \

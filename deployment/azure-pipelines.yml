@@ -99,8 +99,8 @@ stages:
   - stage: build_packages
     displayName: Create packages
     # Build packages only if tagged or scheduled
-    dependsOn: compile_and_test
-    condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags'))
+    dependsOn: []
+    condition: startsWith(variables['Build.SourceBranch'], 'refs/tags')
     jobs:
       - template: buildPackages.yml
 
