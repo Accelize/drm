@@ -1,5 +1,6 @@
 * Wed Jul 20 2022 Accelize v2.5.5-rc.1
 - NEW: Support of XRT v2.12 with new xbutil API
+- NEW: Support of Versal
 - FIX: Better handling of low-level messaging for CSP/XRT information
 
 * Mon Mar 21 2022 Accelize v2.5.4
