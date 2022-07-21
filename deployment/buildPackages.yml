@@ -14,6 +14,10 @@ jobs:
           osName: centos
           osVersion: "8"
           image: quay.io/centos/centos:stream8
+        CentOS 9 Stream:
+          osName: centos
+          osVersion: "9"
+          image: quay.io/centos/centos:stream9
         Debian 10:
           osName: debian
           osVersion: "10"

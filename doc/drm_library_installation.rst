@@ -19,13 +19,16 @@ tests:
 Following OS are minimally tested only (without hardware):
 
 * CentOS Stream 8
+* CentOS Stream 9
 * Debian 10 Buster
 * Debian 11 Bullseye
 * Fedora (2 latest stable versions)
 * Ubuntu 20.04 LTS Focal
+* Ubuntu 22.04 LTS Jammy
 * Ubuntu (2 latest stable versions)
 * Red Hat Enterprise Linux 7
 * Red Hat Enterprise Linux 8
+* Red Hat Enterprise Linux 9
 
 .. note:: We limit hardware tested OS to those which are supported by FPGA
           vendors. But, we do minimal tests on more OS to ensure to our
