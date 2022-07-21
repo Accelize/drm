@@ -34,7 +34,7 @@ def test_entitlement_user1_metering(accelize_drm, conf_json, cred_json, async_ha
             drm_manager.activate()
         assert "Metering Web Service error 400" in str(excinfo.value)
         assert "DRM WS request failed" in str(excinfo.value)
-        assert search(r'\\"No Entitlement\\" with .+ for \S+_test_01@accelize.com', str(excinfo.value))
+        assert search(r'No Entitlement.* with PT DRM Ref Design .+ for \S+_test_01@accelize.com', str(excinfo.value))
         assert "User account has no entitlement. Purchase additional licenses via your portal" in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'User account has no entitlement. Purchase additional licenses via your portal')
@@ -74,7 +74,7 @@ def test_entitlement_user1_nodelock(accelize_drm, conf_json, cred_json, async_ha
                 drm_manager.activate()
             assert "Metering Web Service error 400" in str(excinfo.value)
             assert "DRM WS request failed" in str(excinfo.value)
-            assert search(r'\\"No Entitlement\\" with .+ for \S+_test_01@accelize.com', str(excinfo.value))
+            assert search(r'No Entitlement.* with PT DRM Ref Design .+ for \S+_test_01@accelize.com', str(excinfo.value))
             assert "User account has no entitlement. Purchase additional licenses via your portal" in str(excinfo.value)
             assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'User account has no entitlement. Purchase additional licenses via your portal')
@@ -116,7 +116,7 @@ def test_entitlement_user2_metering(accelize_drm, conf_json, cred_json, async_ha
         drm_manager.deactivate()
     async_cb.assert_NoError()
     log_content = logfile.read()
-    assert search(r'DRM session .{16} created', log_content, MULTILINE)
+    assert search(r'DRM session .{16} started', log_content, MULTILINE)
     logfile.remove()
 
 
@@ -150,7 +150,7 @@ def test_entitlement_user2_nodelock(accelize_drm, conf_json, cred_json, async_ha
                 drm_manager.activate()
             assert "Metering Web Service error 400" in str(excinfo.value)
             assert "DRM WS request failed" in str(excinfo.value)
-            assert search(r'\\"No Entitlement\\" with .+ for \S+_test_02@accelize.com', str(excinfo.value))
+            assert search(r'No Entitlement.* with PT DRM Ref Design .+ for \S+_test_02@accelize.com', str(excinfo.value))
             assert 'No valid NodeLocked entitlement found for your account' in str(excinfo.value)
             assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'No valid NodeLocked entitlement found for your account')
@@ -193,7 +193,7 @@ def test_entitlement_user3_metering(accelize_drm, conf_json, cred_json, async_ha
         drm_manager.deactivate()
     async_cb.assert_NoError()
     log_content = logfile.read()
-    assert search(r'DRM session .{16} created', log_content, MULTILINE)
+    assert search(r'DRM session .{16} started', log_content, MULTILINE)
     logfile.remove()
 
 
@@ -265,7 +265,7 @@ def test_entitlement_user4_metering(accelize_drm, conf_json, cred_json, async_ha
         drm_manager.deactivate()
     async_cb.assert_NoError()
     log_content = logfile.read()
-    assert search(r'DRM session .{16} created', log_content, MULTILINE)
+    assert search(r'DRM session .{16} started', log_content, MULTILINE)
     logfile.remove()
 
 
@@ -299,7 +299,7 @@ def test_entitlement_user4_nodelock(accelize_drm, conf_json, cred_json, async_ha
                 drm_manager.activate()
             assert "Metering Web Service error 400" in str(excinfo.value)
             assert "DRM WS request failed" in str(excinfo.value)
-            assert search(r'\\"No Entitlement\\" with .+ for \S+_test_04@accelize.com', str(excinfo.value))
+            assert search(r'No Entitlement.* with PT DRM Ref Design .+ for \S+_test_04@accelize.com', str(excinfo.value))
             assert 'No valid NodeLocked entitlement found for your account' in str(excinfo.value)
             assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'No valid NodeLocked entitlement found for your account')

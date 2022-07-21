@@ -118,11 +118,12 @@ class FpgaDriver(_FpgaDriverBase):
         """
         Clear FPGA
         """
-        clear_fpga = _run(
-            ['fpga-clear-local-image', '-S', str(self._fpga_slot_id)],
-            stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
-        if clear_fpga.returncode:
-            raise RuntimeError(clear_fpga.stdout)
+        clear_image = _join(SCRIPT_DIR, 'clear.awsxclbin')
+        dev = cl.get_platforms()[0].get_devices()
+        binary = open(clear_image, 'rb').read()
+        ctx = cl.Context(dev_type=cl.device_type.ALL)
+        prg = cl.Program(ctx, [dev[self._fpga_slot_id]], [binary])
+        prg.build()
         print('FPGA cleared')
 
     def _program_fpga(self, fpga_image):
@@ -133,6 +134,12 @@ class FpgaDriver(_FpgaDriverBase):
             fpga_image (str): FPGA image.
         """
         self._clear_fpga()
+        dev = cl.get_platforms()[0].get_devices()
+        binary = open(fpga_image, 'rb').read()
+        ctx = cl.Context(dev_type=cl.device_type.ALL)
+        prg = cl.Program(ctx, [dev[self._fpga_slot_id]], [binary])
+        prg.build()
+        print(f'FPGA programed with {fpga_image}')
 
     def _reset_fpga(self):
         """
@@ -144,17 +151,12 @@ class FpgaDriver(_FpgaDriverBase):
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
         if reset_image.returncode:
             raise RuntimeError(reset_image.stdout)
+        print(f'FPGA reset')
 
     def _init_fpga(self):
         """
         Initialize FPGA handle with driver library.
         """
-        dev =cl.get_platforms()[0].get_devices()
-        binary = open(self._fpga_image, 'rb').read()
-        ctx = cl.Context(dev_type=cl.device_type.ALL)
-        prg = cl.Program(ctx, [dev[self._fpga_slot_id]], [binary])
-        prg.build()
-
         # Find all devices
         xcl_probe = self._fpga_library.xclProbe
         xcl_probe.restype = _c_uint  # Devices count
@@ -179,6 +181,9 @@ class FpgaDriver(_FpgaDriverBase):
         if not device_handle:
             raise RuntimeError("xclOpen failed to open device")
         self._fpga_handle = device_handle
+
+    def _uninit_fpga(self):
+        pass
 
     def _get_read_register_callback(self):
         """
@@ -208,7 +213,7 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (accelize_drm.fpga_drivers._aws_xrt.FpgaDriver):
                     Keep a reference to driver.
             """
-            with driver._fpga_read_register_lock():
+            with driver._fpga_register_lock():
                 size_or_error = driver._fpga_read_register(
                     driver._fpga_handle,
                     2,  # XCL_ADDR_KERNEL_CTRL
@@ -250,7 +255,7 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (accelize_drm.fpga_drivers._aws_xrt.FpgaDriver):
                     Keep a reference to driver.
             """
-            with driver._fpga_write_register_lock():
+            with driver._fpga_register_lock():
                 size_or_error = driver._fpga_write_register(
                     driver._fpga_handle,
                     2,  # XCL_ADDR_KERNEL_CTRL
@@ -263,3 +268,4 @@ class FpgaDriver(_FpgaDriverBase):
             return size_or_error if size_or_error != 4 else 0
 
         return write_register
+
