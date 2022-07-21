@@ -11,39 +11,6 @@ from os.path import realpath, isfile
 
 from tests.conftest import wait_deadline, wait_func_true
 
-'''
-def test_fast_start_stop(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
-    """
-    Test no error occurs with a quick start/stop
-    """
-    driver = accelize_drm.pytest_fpga_driver[0]
-    async_cb = async_handler.create()
-    async_cb.reset()
-    activators = accelize_drm.pytest_fpga_activators[0]
-    activators.reset_coin()
-    activators.autotest()
-    cred_json.set_user('accelize_accelerator_test_02')
-    conf_json.reset()
-    logfile = log_file_factory.create(2)
-    conf_json['settings'].update(logfile.json)
-    conf_json.save()
-
-    with accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            ) as drm_manager:
-        assert not drm_manager.get('license_status')
-        activators.autotest(is_activated=False)
-        drm_manager.activate()
-        drm_manager.deactivate()
-        assert not drm_manager.get('license_status')
-        activators.autotest(is_activated=False)
-        async_cb.assert_NoError()
-    logfile.remove()
-'''
 
 @pytest.mark.minimum
 @pytest.mark.hwtst
@@ -84,44 +51,6 @@ def test_metered_start_stop_short_time(accelize_drm, conf_json, cred_json, async
         async_cb.assert_NoError()
     logfile.remove()
 
-'''
-def test_metered_start_stop_short_time_in_debug(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
-    """
-    Test no error occurs in normal start/stop metering mode during a short period of time
-    """
-    driver = accelize_drm.pytest_fpga_driver[0]
-    async_cb = async_handler.create()
-    activators = accelize_drm.pytest_fpga_activators[0]
-    activators.reset_coin()
-    activators.autotest()
-    cred_json.set_user('accelize_accelerator_test_02')
-
-    async_cb.reset()
-    conf_json.reset()
-    logfile = log_file_factory.create(1)
-    conf_json['settings'].update(logfile.json)
-    conf_json.save()
-    with accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            ) as drm_manager:
-        assert not drm_manager.get('license_status')
-        activators.autotest(is_activated=False)
-        drm_manager.activate()
-        assert sum(drm_manager.get('metered_data')) == 0
-        assert drm_manager.get('license_status')
-        activators.autotest(is_activated=True)
-        activators.generate_coin()
-        activators.check_coin(drm_manager.get('metered_data'))
-        drm_manager.deactivate()
-        assert not drm_manager.get('license_status')
-        activators.autotest(is_activated=False)
-        async_cb.assert_NoError()
-    logfile.remove()
-'''
 
 @pytest.mark.long_run
 @pytest.mark.hwtst
@@ -173,11 +102,10 @@ def test_metered_start_stop_long_time(accelize_drm, conf_json, cred_json, async_
     logfile.remove()
 
 
-@pytest.mark.minimum
 @pytest.mark.hwtst
-def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
+def test_metered_pause_resume(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
-    Test no error occurs in normal start/stop metering mode during a long period of time
+    Test no error occurs in normal start/stop metering mode
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -247,6 +175,7 @@ def test_metered_pause_resume_long_time(accelize_drm, conf_json, cred_json, asyn
     logfile.remove()
 
 
+@pytest.mark.minimum
 @pytest.mark.hwtst
 def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, conf_json_second,
                     cred_json, async_handler, log_file_factory):
@@ -680,8 +609,6 @@ def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handl
     logfile.remove()
 
 
-@pytest.mark.minimum
-@pytest.mark.hwtst
 def test_heart_beat(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test activator locks if heart beat stops
