@@ -51,10 +51,7 @@ stages:
         meteringServer: prod
       ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/master') }}:
         meteringServer: dev
-      ${{ if startsWith(variables['Build.SourceBranch'], 'refs/tags') }}:
-        tox_mark: '-m minimum'
-      ${{ if not(startsWith(variables['Build.SourceBranch'], 'refs/tags')) }}:
-        tox_mark: ''
+      tox_mark: ''
 
     jobs:
       - template: runTestOnEc2.yml
