@@ -4,7 +4,7 @@ Test all other vitis reference designs
 """
 import pytest
 from datetime import datetime
-from re import search, IGNORECASE
+from re import search, match, IGNORECASE
 
 import tests.conftest as conftest
 
@@ -21,6 +21,7 @@ def run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_ha
     driver = accelize_drm.pytest_fpga_driver[0]
     driver.program_fpga(fpga_image)
     accelize_drm.scanActivators()
+    pytest_hdk_version =  match(r'(.+)\.\d+$', accelize_drm.pytest_hdk_version).group(1)
 
     # Run test
     async_cb = async_handler.create()
@@ -39,6 +40,7 @@ def run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_ha
                 driver.write_register_callback,
                 async_cb.callback
             ) as drm_manager:
+        assert pytest_hdk_version == drm_manager.get('controller_version')
         assert not drm_manager.get('session_status')
         assert not drm_manager.get('license_status')
         assert drm_manager.get('session_id') == ''
@@ -202,6 +204,6 @@ def test_2activator_missing_1activator(accelize_drm, conf_json, cred_json, async
     # Run test
     design_name = '2activator_missing_1activator'
     axiclk_freq_ref = 15
-    drmclk_freq_ref = 225
+    drmclk_freq_ref = 125
     log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
                                     log_file_factory, axiclk_freq_ref, drmclk_freq_ref)

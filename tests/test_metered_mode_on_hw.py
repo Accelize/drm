@@ -11,7 +11,7 @@ from os.path import realpath, isfile
 
 from tests.conftest import wait_deadline, wait_func_true
 
-
+'''
 def test_fast_start_stop(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test no error occurs with a quick start/stop
@@ -38,13 +38,12 @@ def test_fast_start_stop(accelize_drm, conf_json, cred_json, async_handler, log_
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
         drm_manager.activate()
-        assert sum(drm_manager.get('metered_data')) == 0
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
         async_cb.assert_NoError()
     logfile.remove()
-
+'''
 
 @pytest.mark.minimum
 @pytest.mark.hwtst
@@ -58,7 +57,6 @@ def test_metered_start_stop_short_time(accelize_drm, conf_json, cred_json, async
     activators.reset_coin()
     activators.autotest()
     cred_json.set_user('accelize_accelerator_test_02')
-
     async_cb.reset()
     conf_json.reset()
     logfile = log_file_factory.create(2)
@@ -86,7 +84,7 @@ def test_metered_start_stop_short_time(accelize_drm, conf_json, cred_json, async
         async_cb.assert_NoError()
     logfile.remove()
 
-
+'''
 def test_metered_start_stop_short_time_in_debug(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test no error occurs in normal start/stop metering mode during a short period of time
@@ -123,7 +121,7 @@ def test_metered_start_stop_short_time_in_debug(accelize_drm, conf_json, cred_js
         activators.autotest(is_activated=False)
         async_cb.assert_NoError()
     logfile.remove()
-
+'''
 
 @pytest.mark.long_run
 @pytest.mark.hwtst
@@ -730,4 +728,5 @@ def test_heart_beat(accelize_drm, conf_json, cred_json, async_handler, log_file_
         async_cb.assert_Error(accelize_drm.exceptions.DRMCtlrError.error_code, 'Status Bit: 0b0')
         async_cb.reset()
     logfile.remove()
+
 

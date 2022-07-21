@@ -84,7 +84,7 @@ uint32_t Accelize::DRM::DrmManager::s_pnc_page_offset = 0;
 
 const std::string Accelize::DRM::DrmManager::DRM_SELF_TEST_ERROR_MESSAGE = std::string(
         "Could not access DRM Controller registers.\nPlease verify:\n"
-                        "\t-The read/write callbacks implementation in the SW application: verify it uses the correct offset address of DRM Controller IP in the design address space.\n"
+                        "\t-The read/write callbacks implementation in the host application: verify it uses the correct offset address of DRM Controller IP in the design address space.\n"
         "\t-The DRM Controller IP instantiation in the FPGA design: verify the correctness of 16-bit address received by the AXI-Lite port of the DRM Controller.\n" );
 
 const std::string Accelize::DRM::DrmManager::DRM_CONNECTION_ERROR_MESSAGE = std::string(
@@ -1158,7 +1158,7 @@ protected:
                                        this,
                                        std::placeholders::_1,
                                        std::placeholders::_2 ),
-                            std::bind( &DrmManager::Impl::writeDrmAddress,                            
+                            std::bind( &DrmManager::Impl::writeDrmAddress,
                                        this,
                                        std::placeholders::_1,
                                        std::placeholders::_2 )
@@ -1807,26 +1807,22 @@ protected:
         return postHealth( request_json, retry_deadline, retry_sleep_ms );
     }
 
-    std::string getDesignHash() {
+    std::string getNodelockBaseName() {
         std::string drmVersion, dna, mailboxReadOnly;
         std::vector<std::string> vlnvFile;
-        std::hash<std::string> hasher;
-
         getDesignInfo( drmVersion, dna, vlnvFile, mailboxReadOnly );
-        std::string design = dna + drmVersion;
-        for( const std::string& vlnv: vlnvFile )
-            design += vlnv;
-        std::string hash = fmt::format( "{:016X}", hasher( design ) );
-        Debug( "Hash for HW design is {}", hash );
-        return hash;
+        std::string name = mHeaderJsonRequest["product"]["vendor"].asString();
+        name += "_" + mHeaderJsonRequest["product"]["library"].asString();
+        name += "_" + mHeaderJsonRequest["product"]["name"].asString();
+        name += "_" + dna;
+        return name;
     }
 
     void createNodelockedLicenseRequestFile() {
         // Create hash name based on design info
-        std::string designHash = getDesignHash();
-        mNodeLockRequestFilePath = mNodeLockLicenseDirPath + path_sep + designHash + ".req";
-        mNodeLockLicenseFilePath = mNodeLockLicenseDirPath + path_sep + designHash + ".lic";
-        Debug( "Created hash name based on design info: {}", designHash );
+        std::string basname = getNodelockBaseName();
+        mNodeLockRequestFilePath = mNodeLockLicenseDirPath + path_sep + basname + ".req";
+        mNodeLockLicenseFilePath = mNodeLockLicenseDirPath + path_sep + basname + ".lic";
         // Check if license request file already exists
         if ( isFile( mNodeLockRequestFilePath ) ) {
             Debug( "A license request file is already existing in license directory: {}", mNodeLockLicenseDirPath );

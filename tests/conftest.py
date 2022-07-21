@@ -584,7 +584,6 @@ class RefDesign:
             hdk_version = self.hdk_versions[-1]
         elif hdk_version not in self.image_files.keys():
             return None
-            #raise RuntimeError(f'No FPGA image found for {hdk_version} in {self.image_files.keys()}')
         filename = self.image_files[hdk_version]
         ext = splitext(filename)[1]
         try:

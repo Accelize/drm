@@ -119,7 +119,7 @@ class FpgaDriver(_FpgaDriverBase):
         Clear FPGA
         """
         clear_image = _join(SCRIPT_DIR, 'clear.awsxclbin')
-        dev =cl.get_platforms()[0].get_devices()
+        dev = cl.get_platforms()[0].get_devices()
         binary = open(clear_image, 'rb').read()
         ctx = cl.Context(dev_type=cl.device_type.ALL)
         prg = cl.Program(ctx, [dev[self._fpga_slot_id]], [binary])
@@ -134,7 +134,7 @@ class FpgaDriver(_FpgaDriverBase):
             fpga_image (str): FPGA image.
         """
         self._clear_fpga()
-        dev =cl.get_platforms()[0].get_devices()
+        dev = cl.get_platforms()[0].get_devices()
         binary = open(fpga_image, 'rb').read()
         ctx = cl.Context(dev_type=cl.device_type.ALL)
         prg = cl.Program(ctx, [dev[self._fpga_slot_id]], [binary])
@@ -181,7 +181,6 @@ class FpgaDriver(_FpgaDriverBase):
         if not device_handle:
             raise RuntimeError("xclOpen failed to open device")
         self._fpga_handle = device_handle
-
 
     def _uninit_fpga(self):
         pass

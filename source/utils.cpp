@@ -268,7 +268,6 @@ std::string execCmd( const std::string& cmd ) {
     std::array<char, 128> buffer;
     std::string result;
     Debug( "Running command: {}", cmd );
-    //std::unique_ptr<FILE, decltype(&pclose)> pipe( popen( cmd.c_str(), "r" ), pclose );
     FILE *pipe = popen( cmd.c_str(), "r" );
     try {
         if ( pipe ) {
