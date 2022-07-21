@@ -127,6 +127,7 @@ class FpgaDriver(_FpgaDriverBase):
         Args:
             fpga_image (str): FPGA image.
         """
+        self._clear_fpga()
         load_image = _run(
             [self._xbutil, 'program', '-d', 'all', '-u', fpga_image],
             stderr=_STDOUT, stdout=_PIPE, universal_newlines=True, check=False)
@@ -207,7 +208,7 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (accelize_drm.fpga_drivers._aws_xrt.FpgaDriver):
                     Keep a reference to driver.
             """
-            with driver._fpga_read_register_lock():
+            with driver._fpga_register_lock():
                 size_or_error = driver._fpga_read_register(
                     driver._fpga_handle,
                     2,  # XCL_ADDR_KERNEL_CTRL
@@ -249,7 +250,7 @@ class FpgaDriver(_FpgaDriverBase):
                 driver (accelize_drm.fpga_drivers._aws_xrt.FpgaDriver):
                     Keep a reference to driver.
             """
-            with driver._fpga_write_register_lock():
+            with driver._fpga_register_lock():
                 size_or_error = driver._fpga_write_register(
                     driver._fpga_handle,
                     2,  # XCL_ADDR_KERNEL_CTRL
