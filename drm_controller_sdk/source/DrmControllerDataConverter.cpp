@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerDataConverter.cpp
-*  \version   7.0.0.0
-*  \date      October 2021
+*  \version   8.1.0.0
+*  \date      July 2022
 *  \brief     Class DrmController is used as a top level component in the user application.
 *             It provides top level procedures related to the  DRM Controller component.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");

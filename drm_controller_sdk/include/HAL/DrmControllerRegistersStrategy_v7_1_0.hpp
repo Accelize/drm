@@ -1,8 +1,8 @@
 /**
-*  \file      DrmControllerRegistersStrategy_v3_0_0.hpp
-*  \version   7.0.0.0
-*  \date      October 2021
-*  \brief     Class DrmControllerRegistersStrategy_v3_0_0 defines strategy for register access of drm controller v3.0.0.
+*  \file      DrmControllerRegistersStrategy_v7_1_0.hpp
+*  \version   8.1.0.0
+*  \date      July 2022
+*  \brief     Class DrmControllerRegistersStrategy_v7_1_0 defines strategy for register access of drm controller v7.1.0.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.
 *             You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -13,8 +13,8 @@
 *             limitations under the License.
 **/
 
-#ifndef __DRM_CONTROLLER_REGISTERS_STRATEGY_V3_0_0_HPP__
-#define __DRM_CONTROLLER_REGISTERS_STRATEGY_V3_0_0_HPP__
+#ifndef __DRM_CONTROLLER_REGISTERS_STRATEGY_V7_1_0_HPP__
+#define __DRM_CONTROLLER_REGISTERS_STRATEGY_V7_1_0_HPP__
 
 #include <iostream>
 #include <string>
@@ -27,35 +27,44 @@
 #include <HAL/DrmControllerRegistersStrategyInterface.hpp>
 
 // version of the DRM Controller supported by this class
-#define DRM_CONTROLLER_V3_0_0_SUPPORTED_VERSION "3.0.0" /**<Definition of the version of the supported DRM Controller.**/
+#define DRM_CONTROLLER_V7_1_0_SUPPORTED_VERSION "7.1.0" /**<Definition of the version of the supported DRM Controller.**/
 
-// Name of the registers.
-#define DRM_CONTROLLER_V3_0_0_PAGE_REGISTER_NAME    "DrmPageRegister" /**<Definition of the name of the page register.**/
-#define DRM_CONTROLLER_V3_0_0_INDEXED_REGISTER_NAME "DrmRegisterLine" /**<Definition of the base name of indexed registers.**/
+// offset of the register
+#define DRM_CONTROLLER_V7_1_0_PAGE_REGISTER_INDEX    0 /**<Definition of the offset of the page register.**/
 
 // Size of registers
-#define DRM_CONTROLLER_V3_0_0_COMMAND_SIZE               7   /**<Definition of the register size for the command register.**/
-#define DRM_CONTROLLER_V3_0_0_LICENSE_START_ADDRESS_SIZE 64  /**<Definition of the register size for the license start address register.**/
-#define DRM_CONTROLLER_V3_0_0_LICENSE_TIMER_SIZE         384 /**<Definition of the register size for the license timer register.**/
-#define DRM_CONTROLLER_V3_0_0_STATUS_SIZE                32  /**<Definition of the register size for the status register.**/
-#define DRM_CONTROLLER_V3_0_0_ERROR_SIZE                 32  /**<Definition of the register size for the error register.**/
-#define DRM_CONTROLLER_V3_0_0_DEVICE_DNA_SIZE            128 /**<Definition of the register size for the device dna register.**/
-#define DRM_CONTROLLER_V3_0_0_SAAS_CHALLENGE_SIZE        128 /**<Definition of the register size for the saas challenge register.**/
-#define DRM_CONTROLLER_V3_0_0_VERSION_SIZE               24  /**<Definition of the register size for the version register.**/
-#define DRM_CONTROLLER_V3_0_0_VLNV_WORD_SIZE             64  /**<Definition of the register size for the vlnv word.**/
-#define DRM_CONTROLLER_V3_0_0_LICENSE_WORD_SIZE          128 /**<Definition of the register size for the license word.**/
-#define DRM_CONTROLLER_V3_0_0_TRACE_WORD_SIZE            64  /**<Definition of the register size for the trace word.**/
-#define DRM_CONTROLLER_V3_0_0_METERING_WORD_SIZE         128 /**<Definition of the register size for the metering word.**/
+#define DRM_CONTROLLER_V7_1_0_COMMAND_SIZE               32   /**<Definition of the register size for the command register.**/
+#define DRM_CONTROLLER_V7_1_0_LICENSE_START_ADDRESS_SIZE 64  /**<Definition of the register size for the license start address register.**/
+#define DRM_CONTROLLER_V7_1_0_LICENSE_TIMER_SIZE         384 /**<Definition of the register size for the license timer register.**/
+#define DRM_CONTROLLER_V7_1_0_STATUS_SIZE                32  /**<Definition of the register size for the status register.**/
+#define DRM_CONTROLLER_V7_1_0_ERROR_SIZE                 32  /**<Definition of the register size for the error register.**/
+#define DRM_CONTROLLER_V7_1_0_DEVICE_DNA_SIZE            128 /**<Definition of the register size for the device dna register.**/
+#define DRM_CONTROLLER_V7_1_0_SAAS_CHALLENGE_SIZE        128 /**<Definition of the register size for the saas challenge register.**/
+#define DRM_CONTROLLER_V7_1_0_LICENSE_TIMER_COUNTER_SIZE 64  /**<Definition of the register size for the license timer counter register.**/
+#define DRM_CONTROLLER_V7_1_0_VERSION_SIZE               24  /**<Definition of the register size for the version register.**/
+#define DRM_CONTROLLER_V7_1_0_ADAPTIVE_PROPORTION_TEST_FAILURES_SIZE                  16  /**<Definition of the register size for the Adaptive Proportion Test Failures register.**/
+#define DRM_CONTROLLER_V7_1_0_REPETITION_COUNT_TEST_FAILURES_SIZE                  16  /**<Definition of the register size for the Repetition Count Test Failures register.**/
+#define DRM_CONTROLLER_V7_1_0_VLNV_WORD_SIZE             64  /**<Definition of the register size for the vlnv word.**/
+#define DRM_CONTROLLER_V7_1_0_LICENSE_WORD_SIZE          128 /**<Definition of the register size for the license word.**/
+#define DRM_CONTROLLER_V7_1_0_TRACE_WORD_SIZE            64  /**<Definition of the register size for the trace word.**/
+#define DRM_CONTROLLER_V7_1_0_METERING_WORD_SIZE         128 /**<Definition of the register size for the metering word.**/
+#define DRM_CONTROLLER_V7_1_0_MAILBOX_WORD_SIZE          32  /**<Definition of the register size for the mailbox word.**/
 
-#define DRM_CONTROLLER_V3_0_0_NUMBER_OF_TRACES_PER_IP 3 /**<Definition of the number of traces per ip.**/
+#define DRM_CONTROLLER_V7_1_0_NUMBER_OF_TRACES_PER_IP 3 /**<Definition of the number of traces per ip.**/
 
-#define DRM_CONTROLLER_V3_0_0_VLNV_NUMBER_OF_ADDITIONAL_WORDS     1 /**<Definition of the number of additional words for the vlnv file.**/
-#define DRM_CONTROLLER_V3_0_0_METERING_NUMBER_OF_ADDITIONAL_WORDS 2 /**<Definition of the number of additional words for the metering file.**/
+#define DRM_CONTROLLER_V7_1_0_VLNV_NUMBER_OF_ADDITIONAL_WORDS     1 /**<Definition of the number of additional words for the vlnv file.**/
+#define DRM_CONTROLLER_V7_1_0_METERING_NUMBER_OF_ADDITIONAL_WORDS 3 /**<Definition of the number of additional words for the metering file.**/
+#define DRM_CONTROLLER_V7_1_0_MAILBOX_NUMBER_OF_ADDITIONAL_WORDS  1 /**<Definition of the number of additional words for the mailbox file.**/
 
-#define DRM_CONTROLLER_V3_0_0_LICENSE_HEADER_BLOCK_SIZE 7 /**<Definition of the number of license word used for the header block.**/
-#define DRM_CONTROLLER_V3_0_0_LICENSE_IP_BLOCK_SIZE     4 /**<Definition of the number of license word used for an ip block.**/
+#define DRM_CONTROLLER_V7_1_0_LICENSE_HEADER_BLOCK_SIZE 7 /**<Definition of the number of license word used for the header block.**/
+#define DRM_CONTROLLER_V7_1_0_LICENSE_IP_BLOCK_SIZE     4 /**<Definition of the number of license word used for an ip block.**/
 
-#define DRM_CONTROLLER_V3_0_0_NUMBER_OF_ERROR_CODES     22 /**<Definition of the number of error codes.**/
+#define DRM_CONTROLLER_V7_1_0_NUMBER_OF_ERROR_CODES     22 /**<Definition of the number of error codes.**/
+
+#define DRM_CONTROLLER_V7_1_0_METERING_FILE_HEADER_POSITION                 0 /**<Definition of the position of the metering file header.**/
+#define DRM_CONTROLLER_V7_1_0_METERING_FILE_LICENSE_TIMER_COUNT_POSITION    1 /**<Definition of the position of the license timer in the metering file.**/
+#define DRM_CONTROLLER_V7_1_0_METERING_FILE_FIRST_IP_METERING_DATA_POSITION 2 /**<Definition of the position of the first metering data in the metering file.**/
+#define DRM_CONTROLLER_V7_1_0_METERING_FILE_MAC_FROM_END_POSITION           0 /**<Definition of the position of the mac from the end of the metering file.**/
 
 /**
 *   \namespace DrmControllerLibrary
@@ -63,27 +72,27 @@
 namespace DrmControllerLibrary {
 
   /**
-  *   \class    DrmControllerRegistersStrategy_v3_0_0 DrmControllerRegistersStrategy_v3_0_0.hpp "include/HAL/DrmControllerRegistersStrategy_v3_0_0.hpp"
-  *   \brief    Class DrmControllerRegistersStrategy_v3_0_0 defines strategy for register access of drm controller v3.0.0.
+  *   \class    DrmControllerRegistersStrategy_v7_1_0 DrmControllerRegistersStrategy_v7_1_0.hpp "include/HAL/DrmControllerRegistersStrategy_v7_1_0.hpp"
+  *   \brief    Class DrmControllerRegistersStrategy_v7_1_0 defines strategy for register access of drm controller v7.1.0.
   **/
-  class DrmControllerRegistersStrategy_v3_0_0: public DrmControllerRegistersStrategyInterface {
+  class DrmControllerRegistersStrategy_v7_1_0: public DrmControllerRegistersStrategyInterface {
 
     // public members, functions ...
     public:
 
-      /** DrmControllerRegistersStrategy_v3_0_0
+      /** DrmControllerRegistersStrategy_v7_1_0
       *   \brief Class constructor.
       *   \param[in] readRegisterFunction function pointer to read 32 bits register.
-      *              The function pointer shall have the following prototype "unsigned int f(const std::string&, unsigned int&)".
+      *              The function pointer shall have the following prototype "unsigned int f(const unsigned int&, unsigned int&)".
       *   \param[in] writeRegisterFunction function pointer to write 32 bits register.
-      *              The function pointer shall have the following prototype "unsigned int f(const std::string&, unsigned int)".
+      *              The function pointer shall have the following prototype "unsigned int f(const unsigned int&, unsigned int)".
       **/
-      DrmControllerRegistersStrategy_v3_0_0(tDrmReadRegisterFunction readRegisterFunction, tDrmWriteRegisterFunction writeRegisterFunction);
+      DrmControllerRegistersStrategy_v7_1_0(tDrmReadRegisterFunction readRegisterFunction, tDrmWriteRegisterFunction writeRegisterFunction);
 
-      /** ~DrmControllerRegistersStrategy_v3_0_0
+      /** ~DrmControllerRegistersStrategy_v7_1_0
       *   \brief Class destructor.
       **/
-      virtual ~DrmControllerRegistersStrategy_v3_0_0();
+      virtual ~DrmControllerRegistersStrategy_v7_1_0();
 
       /** writeRegistersPageRegister
       *   \brief Write the page register to select the registers page.
@@ -853,6 +862,16 @@ namespace DrmControllerLibrary {
       **/
       virtual unsigned int writeLicenseFileRegister(const std::string &licenseFile) const;
 
+      /** clearLicenseFileRegister
+      *   \brief Clear the license file.
+      *   This method will access to the system bus to clear the license file.
+      *   \return Returns mDrmApi_NO_ERROR if no error,
+      *           or the error code produced by the read/write register function.
+      *   \throw DrmControllerLicenseFileSizeException::what()
+      *          should be called to get the exception description.
+      **/
+      virtual unsigned int clearLicenseFileRegister() const;
+      
       /** readTraceFileRegister
       *   \brief Read the trace file and get the value.
       *   This method will access to the system bus to read the trace file.
@@ -961,7 +980,7 @@ namespace DrmControllerLibrary {
       *   \return Returns the error message.
       **/
       virtual const char* getDrmErrorRegisterMessage(const unsigned char &errorRegister) const;
-
+      
       /** readAdaptiveProportionTestFailuresRegister
       *   \brief Read the Adaptive Proportion Test Failures register and get the value.
       *   This method will access to the system bus to read the Adaptive Proportion Test Failures register.
@@ -1149,6 +1168,69 @@ namespace DrmControllerLibrary {
       **/
       virtual void printRepetitionCountTestFailuresHwReport(std::ostream &file) const;
 
+      /** getMeteringFileHeader
+      *   \brief Get the header of the metering file.
+      *   \param[in] meteringFile is a list containing the metering file to retrieve the header from.
+      *   \return Returns a list containing the metering file header.
+      **/
+      std::vector<unsigned int> getMeteringFileHeader(const std::vector<unsigned int> &meteringFile) const;
+
+      /** getMeteringFileHeaderSessionId
+      *   \brief Get the session id from the metering file header.
+      *   \param[in] meteringFileHeader is a list containing the metering file header to retrieve the session id from.
+      *   \return Returns a list containing the metering file session id.
+      **/
+      std::vector<unsigned int> getMeteringFileHeaderSessionId(const std::vector<unsigned int> &meteringFileHeader) const;
+
+      /** getMeteringFileHeaderEncryptedMeteringFlag
+      *   \brief Get the encrypted metering flag from the metering file header.
+      *   \param[in] meteringFileHeader is a list containing the metering file header to retrieve the encrypted metering flag from.
+      *   \return Returns true if the metering file is encrypted, false otherwize.
+      **/
+      bool getMeteringFileHeaderEncryptedMeteringFlag(const std::vector<unsigned int> &meteringFileHeader) const;
+
+      /** getMeteringFileHeaderEndSessionMeteringFlag
+      *   \brief Get the end session metering flag from the metering file header.
+      *   \param[in] meteringFileHeader is a list containing the metering file header to retrieve the end session metering flag from.
+      *   \return Returns true if the metering file is for an end session, false otherwize.
+      **/
+      bool getMeteringFileHeaderEndSessionMeteringFlag(const std::vector<unsigned int> &meteringFileHeader) const;
+
+      /** getMeteringFileHeaderEnvironmentId
+      *   \brief Get the environment id from the metering file header.
+      *   \param[in] meteringFileHeader is a list containing the metering file header to retrieve the environment id from.
+      *   \return Returns the environment id.
+      **/
+      unsigned int getMeteringFileHeaderEnvironmentId(const std::vector<unsigned int> &meteringFileHeader) const;
+
+      /** getMeteringFileHeaderSegmentIndex
+      *   \brief Get the segment index from the metering file header.
+      *   \param[in] meteringFileHeader is a list containing the metering file header to retrieve the segment index from.
+      *   \return Returns the segment index.
+      **/
+      unsigned int getMeteringFileHeaderSegmentIndex(const std::vector<unsigned int> &meteringFileHeader) const;
+
+      /** getMeteringFileLicenseTimer
+      *   \brief Get the license timer from the metering file.
+      *   \param[in] meteringFile is a list containing the metering file to retrieve the license timer from.
+      *   \return Returns a list containing the license timer retrieved from metering file.
+      **/
+      std::vector<unsigned int> getMeteringFileLicenseTimer(const std::vector<unsigned int> &meteringFile) const;
+
+      /** getMeteringFileIpMeteringData
+      *   \brief Get the ip metering data from the metering file.
+      *   \param[in] meteringFile is a list containing the metering file to retrieve the ip metering data from.
+      *   \return Returns a list containing the ip metering retrieved from metering file.
+      **/
+      std::vector<unsigned int> getMeteringFileIpMeteringData(const std::vector<unsigned int> &meteringFile) const;
+
+      /** getMeteringFileMac
+      *   \brief Get the mac from the metering file.
+      *   \param[in] meteringFile is a list containing the metering file to retrieve the mac from.
+      *   \return Returns a list containing the mac retrieved from metering file.
+      **/
+      std::vector<unsigned int> getMeteringFileMac(const std::vector<unsigned int> &meteringFile) const;
+
       // number of words per registers
       const unsigned int mCommandRegisterWordNumber;
       const unsigned int mLicenseStartAddressRegisterWordNumber;
@@ -1157,11 +1239,16 @@ namespace DrmControllerLibrary {
       const unsigned int mErrorRegisterWordNumber;
       const unsigned int mDnaRegisterWordNumber;
       const unsigned int mSaasChallengeRegisterWordNumber;
+      const unsigned int mSampledLicenseTimerCountRegisterWordNumber;
       const unsigned int mVersionRegisterWordNumber;
+      const unsigned int mAdaptiveProportionTestFailuresRegisterWordNumber;
+      const unsigned int mRepetitionCountTestFailuresRegisterWordNumber;
       const unsigned int mVlnvWordRegisterWordNumber;
       const unsigned int mLicenseWordRegisterWordNumber;
       const unsigned int mTraceWordRegisterWordNumber;
       const unsigned int mMeteringWordRegisterWordNumber;
+      const unsigned int mMailboxWordRegisterWordNumber;
+      
 
       // start index of each registers
       const unsigned int mCommandRegisterStartIndex;
@@ -1171,24 +1258,35 @@ namespace DrmControllerLibrary {
       const unsigned int mErrorRegisterStartIndex;
       const unsigned int mDnaRegisterStartIndex;
       const unsigned int mSaasChallengeRegisterStartIndex;
+      const unsigned int mSampledLicenseTimerCountRegisterStartIndex;
       const unsigned int mVersionRegisterStartIndex;
+      const unsigned int mAdaptiveProportionTestFailuresRegisterStartIndex;
+      const unsigned int mRepetitionCountTestFailuresRegisterStartIndex;
       const unsigned int mLogsRegisterStartIndex;
       const unsigned int mVlnvWordRegisterStartIndex;
       const unsigned int mLicenseWordRegisterStartIndex;
       const unsigned int mTraceWordRegisterStartIndex;
       const unsigned int mMeteringWordRegisterStartIndex;
-
+      const unsigned int mMailboxWordRegisterStartIndex;
+      
       // number of traces per ip
       const unsigned int mNumberOfTracesPerIp;
 
       // number of additional words
       const unsigned int mVlnvNumberOfAdditionalWords;
       const unsigned int mMeteringNumberOfAdditionalWords;
+      const unsigned int mMailboxNumberOfAdditionalWords;
 
       // number of words in license 
       const unsigned int mLicenseFileHeaderWordNumber;
       const unsigned int mLicenseFileIpBlockWordNumber;
       const unsigned int mLicenseFileMinimumWordNumber;
+
+      // metering file words positions
+      const unsigned int mMeteringFileHeaderWordPosition;
+      const unsigned int mMeteringFileLicenseTimerCountWordPosition;
+      const unsigned int mMeteringFileFirstIpMeteringDataWordPosition;
+      const unsigned int mMeteringFileMacWordFromEndPosition;
 
       /**
       *   \enum  tDrmPageRegisterEnumValues
@@ -1200,6 +1298,7 @@ namespace DrmControllerLibrary {
         mDrmPageLicenseFile  = 0x02,  /**<Value for the license file page.**/
         mDrmPageTraceFile    = 0x03,  /**<Value for the trace file page.**/
         mDrmPageMeteringFile = 0x04,  /**<Value for the metering file page.**/
+        mDrmPageMailboxFile  = 0x05   /**<Value for the mailbox file page.**/
       } tDrmPageRegisterEnumValues;
 
       /**
@@ -1207,13 +1306,16 @@ namespace DrmControllerLibrary {
       *   \brief Enumeration for command codes.
       **/
       typedef enum tDrmCommandRegisterEnumValues {
-        mDrmCommandNop                       = 0x0020,  /**<Value for command NOP.**/
-        mDrmCommandExtractDna                = 0x0001,  /**<Value for command Extract DNA.**/
-        mDrmCommandExtractVlnv               = 0x0002,  /**<Value for command Extract VLNV.**/
-        mDrmCommandActivate                  = 0x0004,  /**<Value for command Activate.**/
-        mDrmCommandHeartBeatInit             = 0x0008,  /**<Value for command Heart Beat Initialization (unsued).**/
-        mDrmCommandHeartBeatFinish           = 0x0010,  /**<Value for command Heart Beat Finalization (unused).**/
-        mDrmCommandEndSessionExtractMetering = 0x0040,  /**<Value for command End Session Extract Metering.**/
+        mDrmCommandNop                              = 0x00000020,  /**<Value for command NOP.**/
+        mDrmCommandExtractDna                       = 0x00000001,  /**<Value for command Extract DNA.**/
+        mDrmCommandExtractVlnv                      = 0x00000002,  /**<Value for command Extract VLNV.**/
+        mDrmCommandActivate                         = 0x00000004,  /**<Value for command Activate.**/
+        mDrmCommandHeartBeatInit                    = 0x00000008,  /**<Value for command Heart Beat Initialization (unsued).**/
+        mDrmCommandHeartBeatFinish                  = 0x00000010,  /**<Value for command Heart Beat Finalization (unused).**/
+        mDrmCommandEndSessionExtractMetering        = 0x00000040,  /**<Value for command End Session Extract Metering.**/
+        mDrmCommandExtractMetering                  = 0x00000080,  /**<Value for command Extract Metering.**/
+        mDrmCommandSampleLicenseTimerCounter        = 0x00000100,  /**<Value for command Sample License Timer Counter.**/
+        mDrmCommandLicenseTimerInitSemaphoreRequest = 0x80000000   /**<Value for the License Timer Init Semaphore Request.**/
       } tDrmCommandRegisterEnumValues;
 
       /**
@@ -1221,19 +1323,31 @@ namespace DrmControllerLibrary {
       *   \brief Enumeration for status bit positions.
       **/
       typedef enum tDrmStatusRegisterEnumValues {
-        mDrmStatusDnaReady                    = 0,  /**<Position of the status DNA Ready.**/
-        mDrmStatusVlnvReady                   = 1,  /**<Position of the status VLNV Ready.**/
-        mDrmStatusActivationDone              = 2,  /**<Position of the status Activation Done.**/
-        mDrmStatusAutoEnabled                 = 3,  /**<Position of the status Auto Controller Enabled.**/
-        mDrmStatusAutoBusy                    = 4,  /**<Position of the status Auto Controller Busy.**/
-        mDrmStatusMeteringEnabled             = 5,  /**<Position of the status Metering Operations Enabled.**/
-        mDrmStatusMeteringReady               = 6,  /**<Position of the status Metering Ready.**/
-        mDrmStatusSaasChallengeReady          = 7,  /**<Position of the status Saas Challenge Ready.**/
-        mDrmStatusLicenseTimerEnabled         = 8,  /**<Position of the status License Timer Operations Enabled.**/
-        mDrmStatusLicenseTimerInitLoaded      = 9,  /**<Position of the status License Timer Init Loaded.**/
-        mDrmStatusEndSessionMeteringReady     = 10, /**<Position of the status End session metering ready.**/
-        mDrmStatusIpActivatorNumberLsb        = 11, /**<LSB position of the status IP Activator Number.**/
-        mDrmStatusIpActivatorNumberMsb        = 31  /**<MSB position of the status IP Activator Number.**/
+        mDrmStatusDnaReady                             = 0,  /**<Position of the status DNA Ready.**/
+        mDrmStatusVlnvReady                            = 1,  /**<Position of the status VLNV Ready.**/
+        mDrmStatusActivationDone                       = 2,  /**<Position of the status Activation Done.**/
+        mDrmStatusAutoEnabled                          = 3,  /**<Position of the status Auto Controller Enabled.**/
+        mDrmStatusAutoBusy                             = 4,  /**<Position of the status Auto Controller Busy.**/
+        mDrmStatusMeteringEnabled                      = 5,  /**<Position of the status Metering Operations Enabled.**/
+        mDrmStatusMeteringReady                        = 6,  /**<Position of the status Metering Ready.**/
+        mDrmStatusSaasChallengeReady                   = 7,  /**<Position of the status Saas Challenge Ready.**/
+        mDrmStatusLicenseTimerEnabled                  = 8,  /**<Position of the status License Timer Operations Enabled.**/
+        mDrmStatusLicenseTimerInitLoaded               = 9,  /**<Position of the status License Timer Init Loaded.**/
+        mDrmStatusEndSessionMeteringReady              = 10, /**<Position of the status End session metering ready.**/
+        mDrmStatusHeartBeatModeEnabled                 = 11, /**<Position of the status Heart beat mode enabled.**/
+        mDrmStatusAsynchronousMeteringReady            = 12, /**<Position of the status Asynchronous metering ready.**/
+        mDrmStatusLicenseTimerSampleReady              = 13, /**<Position of the status License Timer sample ready.**/
+        mDrmStatusLicenseTimerCountEmpty               = 14, /**<Position of the status License Timer Count empty.**/
+        mDrmStatusSessionRunning                       = 15, /**<Position of the status Session Running.**/
+        mDrmStatusActivationCodesTransmitted           = 16, /**<Position of the status Activation Code Transmitted.**/
+        mDrmStatusLicenseNodeLock                      = 17, /**<Position of the status License Node Lock.**/
+        mDrmStatusLicenseMetering                      = 18, /**<Position of the status License Metering.**/
+        mDrmStatusLicenseTimerLoadedNumberLsb          = 19, /**<LSB position of the status License Timer Loaded Number.**/
+        mDrmStatusLicenseTimerLoadedNumberMsb          = 20, /**<MSB position of the status License Timer Loaded Number.**/
+        mDrmStatusSecurityAlert                        = 21, /**<Position of the status Security Alert.**/
+        mDrmStatusLicenseTimerInitSemaphoreAcknowledge = 22, /**<Position of the status License Timer Init Semaphore Acknowledge.**/
+        mDrmStatusIpActivatorNumberLsb                 = 23, /**<LSB position of the status IP Activator Number.**/
+        mDrmStatusIpActivatorNumberMsb                 = 31  /**<MSB position of the status IP Activator Number.**/
       } tDrmStatusRegisterEnumValues;
 
       /**
@@ -1241,18 +1355,29 @@ namespace DrmControllerLibrary {
       *   \brief Enumeration for status bit masks.
       **/
       typedef enum tDrmStatusRegisterMaskEnumValues {
-        mDrmStatusMaskDnaReady                    = 0x00000001,   /**<Mask for the status bit DNA Ready.**/
-        mDrmStatusMaskVlnvReady                   = 0x00000002,   /**<Mask for the status bit VLNV Ready.**/
-        mDrmStatusMaskActivationDone              = 0x00000004,   /**<Mask for the status bit Activation Done.**/
-        mDrmStatusMaskAutoEnabled                 = 0x00000008,   /**<Mask for the status bit Auto Controller Enabled.**/
-        mDrmStatusMaskAutoBusy                    = 0x00000010,   /**<Mask for the status bit Auto Controller Busy.**/
-        mDrmStatusMaskMeteringEnabled             = 0x00000020,   /**<Mask for the status bit Metering Operations Enabled.**/
-        mDrmStatusMaskMeteringReady               = 0x00000040,   /**<Mask for the status bit Metering Ready.**/
-        mDrmStatusMaskSaasChallengeReady          = 0x00000080,   /**<Mask for the status bit Saas Challenge Ready.**/
-        mDrmStatusMaskLicenseTimerEnabled         = 0x00000100,   /**<Mask for the status bit License Timer Operations Enabled.**/
-        mDrmStatusMaskLicenseTimerInitLoaded      = 0x00000200,   /**<Mask for the status bit License Timer Load Done.**/
-        mDrmStatusMaskEndSessionMeteringReady     = 0x00000400,   /**<Mask for the status End session metering ready.**/
-        mDrmStatusMaskIpActivatorNumber           = 0xFFFFF800    /**<Mask for the status IP Activator Number.**/
+        mDrmStatusMaskDnaReady                             = 0x00000001,   /**<Mask for the status bit DNA Ready.**/
+        mDrmStatusMaskVlnvReady                            = 0x00000002,   /**<Mask for the status bit VLNV Ready.**/
+        mDrmStatusMaskActivationDone                       = 0x00000004,   /**<Mask for the status bit Activation Done.**/
+        mDrmStatusMaskAutoEnabled                          = 0x00000008,   /**<Mask for the status bit Auto Controller Enabled.**/
+        mDrmStatusMaskAutoBusy                             = 0x00000010,   /**<Mask for the status bit Auto Controller Busy.**/
+        mDrmStatusMaskMeteringEnabled                      = 0x00000020,   /**<Mask for the status bit Metering Operations Enabled.**/
+        mDrmStatusMaskMeteringReady                        = 0x00000040,   /**<Mask for the status bit Metering Ready.**/
+        mDrmStatusMaskSaasChallengeReady                   = 0x00000080,   /**<Mask for the status bit Saas Challenge Ready.**/
+        mDrmStatusMaskLicenseTimerEnabled                  = 0x00000100,   /**<Mask for the status bit License Timer Operations Enabled.**/
+        mDrmStatusMaskLicenseTimerInitLoaded               = 0x00000200,   /**<Mask for the status bit License Timer Load Done.**/
+        mDrmStatusMaskEndSessionMeteringReady              = 0x00000400,   /**<Mask for the status End session metering ready.**/
+        mDrmStatusMaskHeartBeatModeEnabled                 = 0x00000800,   /**<Mask for the status Heart beat mode enabled.**/
+        mDrmStatusMaskAsynchronousMeteringReady            = 0x00001000,   /**<Mask for the status Asynchronous metering ready.**/
+        mDrmStatusMaskLicenseTimerSampleReady              = 0x00002000,   /**<Mask for the status License Timer sample ready.**/
+        mDrmStatusMaskLicenseTimerCountEmpty               = 0x00004000,   /**<Mask for the status License Timer Count empty.**/
+        mDrmStatusMaskSessionRunning                       = 0x00008000,   /**<Mask for the status Session Running.**/
+        mDrmStatusMaskActivationCodesTransmitted           = 0x00010000,   /**<Mask for the status Activation Code Transmitted.**/
+        mDrmStatusMaskLicenseNodeLock                      = 0x00020000,   /**<Mask for the status License Node Lock.**/
+        mDrmStatusMaskLicenseMetering                      = 0x00040000,   /**<Mask for the status License Metering.**/
+        mDrmStatusMaskLicenseTimerLoadedNumber             = 0x00180000,   /**<Mask for the status License Timer Loaded Number.**/
+        mDrmStatusMaskSecurityAlert                        = 0x00200000,   /**<Mask for the status Security Alert.**/
+        mDrmStatusMaskLicenseTimerInitSemaphoreAcknowledge = 0x00400000,   /**<Mask for the status License Timer Init Semaphore Acknowledge.**/
+        mDrmStatusMaskIpActivatorNumber                    = 0xFF800000    /**<Mask for the status IP Activator Number.**/
       } tDrmStatusRegisterMaskEnumValues;
 
       /**
@@ -1307,6 +1432,26 @@ namespace DrmControllerLibrary {
       } tDrmErrorRegisterByteMaskEnumValues;
 
       /**
+      *   \enum  tDrmMailBoxRegisterEnumValues
+      *   \brief Enumeration for mailbox register bit positions.
+      **/
+      typedef enum tDrmMailBoxRegisterEnumValues {
+        mDrmMailboxFileReadWriteMailboxWordNumberLsb = 0,   /**<LSB position of the read write mailbox word number bit.**/
+        mDrmMailboxFileReadWriteMailboxWordNumberMsb = 15,  /**<MSB position of the read write mailbox word number bit.**/
+        mDrmMailboxFileReadOnlyMailboxWordNumberLsb  = 16,  /**<LSB position of the read only mailbox word number bit.**/
+        mDrmMailboxFileReadOnlyMailboxWordNumberMsb  = 31   /**<MSB position of the read only mailbox word number bit.**/
+      } tDrmMailBoxRegisterEnumValues;
+
+      /**
+      *   \enum  tDrmMailBoxRegisterMaskEnumValues
+      *   \brief Enumeration for mailbox register bit masks.
+      **/
+      typedef enum tDrmMailBoxRegisterMaskEnumValues {
+        mDrmMailboxFileMaskReadWriteMailboxWordNumber = 0x0000FFFF,   /**<Mask for the read write mailbox word number.**/
+        mDrmMailboxFileMaskReadOnlyMailboxWordNumber  = 0xFFFF0000    /**<Mask for the read only mailbox word number.**/
+      } tDrmMailBoxRegisterMaskEnumValues;
+
+      /**
       *   \struct tDrmError
       *   \brief  Structure containing the error code enumeration and the error message.
       **/
@@ -1316,10 +1461,10 @@ namespace DrmControllerLibrary {
       } tDrmErrorRegisterMessages;
 
       const unsigned int mDrmErrorRegisterMessagesArraySize ;
-      const tDrmErrorRegisterMessages mDrmErrorRegisterMessagesArray[DRM_CONTROLLER_V3_0_0_NUMBER_OF_ERROR_CODES];
+      const tDrmErrorRegisterMessages mDrmErrorRegisterMessagesArray[DRM_CONTROLLER_V7_1_0_NUMBER_OF_ERROR_CODES];
 
-  }; // class DrmControllerRegistersStrategy_v3_0_0
+  }; // class DrmControllerRegistersStrategy_v7_1_0
 
 } // namespace DrmControllerLibrary
 
-#endif // __DRM_CONTROLLER_REGISTERS_STRATEGY_V3_0_0_HPP__
+#endif // __DRM_CONTROLLER_REGISTERS_STRATEGY_V7_1_0_HPP__

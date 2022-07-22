@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegistersStrategyInterface.hpp
-*  \version   7.0.0.0
-*  \date      October 2021
+*  \version   8.1.0.0
+*  \date      July 2022
 *  \brief     Class DrmControllerRegistersStrategyInterface defines strategy interface for register access.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <sys/time.h>
+#include <mutex>
 
 #include <DrmControllerCommon.hpp>
 #include <DrmControllerVersion.hpp>
@@ -43,12 +44,14 @@ namespace DrmControllerLibrary {
     // public members, functions ...
     public:
 
+      mutable std::recursive_mutex mDrmControllerRegistersMutex;
+
       /** DrmControllerRegistersStrategyInterface
       *   \brief Class constructor.
       *   \param[in] readRegisterFunction function pointer to read 32 bits register.
-      *              The function pointer shall have the following prototype "unsigned int f(const std::string&, unsigned int&)".
+      *              The function pointer shall have the following prototype "unsigned int f(const unsigned int&, unsigned int&)".
       *   \param[in] writeRegisterFunction function pointer to write 32 bits register.
-      *              The function pointer shall have the following prototype "unsigned int f(const std::string&, unsigned int)".
+      *              The function pointer shall have the following prototype "unsigned int f(const unsigned int&, unsigned int)".
       **/
       DrmControllerRegistersStrategyInterface(tDrmReadRegisterFunction readRegisterFunction, tDrmWriteRegisterFunction writeRegisterFunction);
 
@@ -963,6 +966,16 @@ namespace DrmControllerLibrary {
       **/
       virtual unsigned int writeLicenseFileRegister(const std::string &licenseFile) const = 0;
 
+      /** clearLicenseFileRegister
+      *   \brief Clear the license file.
+      *   This method will access to the system bus to clear the license file.
+      *   \return Returns mDrmApi_NO_ERROR if no error,
+      *           or the error code produced by the read/write register function.
+      *   \throw DrmControllerLicenseFileSizeException::what()
+      *          should be called to get the exception description.
+      **/
+      virtual unsigned int clearLicenseFileRegister() const = 0;
+      
       /** readTraceFileRegister
       *   \brief Read the trace file and get the value.
       *   This method will access to the system bus to read the trace file.

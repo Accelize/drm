@@ -49,9 +49,10 @@ set(ACCELIZEDRM_LONG_VERSION ${ACCELIZEDRM_VERSION})
 find_program(GIT git)
 if (GIT)
 	execute_process(COMMAND git rev-parse --short HEAD
-	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-	OUTPUT_VARIABLE GIT_COMMIT
-	OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+		OUTPUT_VARIABLE GIT_COMMIT
+		OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET
+	)
 	if (GIT_COMMIT)
 		# Add as Semantic versioning build metadata
 		set(ACCELIZEDRM_LONG_VERSION ${ACCELIZEDRM_VERSION}+${GIT_COMMIT})
@@ -160,6 +161,9 @@ set(DRM_CONTROLLER_SDK_SOURCES
 	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v6_0_0.cpp
 	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v6_0_1.cpp
 	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v7_0_0.cpp
+	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v7_1_0.cpp
+	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v8_0_0.cpp
+	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v8_1_0.cpp
 )
 include_directories(drm_controller_sdk/include)
 set_source_files_properties(${DRM_CONTROLLER_SDK_SOURCES} PROPERTIES COMPILE_FLAGS "-Wno-unused-parameter")

@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerCommon.hpp
-*  \version   7.0.0.0
-*  \date      October 2021
+*  \version   8.1.0.0
+*  \date      July 2022
 *  \brief     This header file contains the common definitions
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
 #include <bitset>
 
 // version value
-#define DRM_CONTROLLER_SDK_VERSION "7.0.0.0"
+#define DRM_CONTROLLER_SDK_VERSION "8.1.0.0"
 
 // IP component name
 #define DRM_CONTROLLER_COMPONENT_NAME "DRM_CONTROLLER_WITH_DNA"      /**<Definition of the drm controller component name.**/

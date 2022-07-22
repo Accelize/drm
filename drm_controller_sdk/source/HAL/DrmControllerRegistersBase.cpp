@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegistersBase.cpp
-*  \version   7.0.0.0
-*  \date      October 2021
+*  \version   8.1.0.0
+*  \date      July 2022
 *  \brief     Class DrmControllerRegistersBase defines low level procedures for registers access.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.
@@ -25,16 +25,15 @@ using namespace DrmControllerLibrary;
 /** DrmControllerRegistersBase
 *   \brief Class constructor.
 *   \param[in] readRegisterFunction function pointer to read 32 bits register.
-*              The function pointer shall have the following prototype "unsigned int f(const std::string&, unsigned int&)".
+*              The function pointer shall have the following prototype "unsigned int f(const unsigned int&, unsigned int&)".
 *   \param[in] writeRegisterFunction function pointer to write 32 bits register.
-*              The function pointer shall have the following prototype "unsigned int f(const std::string&, unsigned int)".
+*              The function pointer shall have the following prototype "unsigned int f(const unsigned int&, unsigned int)".
 **/
 DrmControllerRegistersBase::DrmControllerRegistersBase(tDrmReadRegisterFunction readRegisterFunction,
                                                        tDrmWriteRegisterFunction writeRegisterFunction)
 : DrmControllerRegistersReport(),
   mReadRegisterFunction(readRegisterFunction),
-  mWriteRegisterFunction(writeRegisterFunction),
-  mIndexedRegisterName("")
+  mWriteRegisterFunction(writeRegisterFunction)
 { }
 
 /** ~DrmControllerRegistersBase
@@ -44,40 +43,24 @@ DrmControllerRegistersBase::~DrmControllerRegistersBase() {
 
 }
 
-/** setIndexedRegisterName
-*   \brief Indexed register name setter.
-*   \param[in] indexedRegisterName is the name to set.
-**/
-void DrmControllerRegistersBase::setIndexedRegisterName(const std::string &indexedRegisterName) {
-  mIndexedRegisterName = indexedRegisterName;
-}
-
-/** getIndexedRegisterName
-*   \brief Indexed register name getter.
-*   \return Returns the value of the indexed register name.
-**/
-std::string DrmControllerRegistersBase::getIndexedRegisterName() const {
-  return mIndexedRegisterName;
-}
-
 /** readRegister
 *   \brief Read the value from the register pointed by name.
-*   \param[in] name is the name of the register to read.
+*   \param[in] offset is the offset of the register to read.
 *   \param[inout] value is the read value of the register.
 *   \return Returns mDrmApi_NO_ERROR if no error, errors from read register functions otherwize.
 **/
-unsigned int DrmControllerRegistersBase::readRegister(const std::string &name, unsigned int &value) const {
-  return mReadRegisterFunction(name, value);
+unsigned int DrmControllerRegistersBase::readRegister(const unsigned int &offset, unsigned int &value) const {
+  return mReadRegisterFunction(offset, value);
 }
 
 /** writeRegister
 *   \brief Write the value to the register pointed by name.
-*   \param[in] name is the name of the register to read.
+*   \param[in] offset is the offset of the register to read.
 *   \param[in] value is the value to write to the register.
 *   \return Returns mDrmApi_NO_ERROR if no error, errors from read register functions otherwize.
 **/
-unsigned int DrmControllerRegistersBase::writeRegister(const std::string &name, const unsigned int &value) const {
-  return mWriteRegisterFunction(name, value);
+unsigned int DrmControllerRegistersBase::writeRegister(const unsigned int &offset, const unsigned int &value) const {
+  return mWriteRegisterFunction(offset, value);
 }
 
 /** bits
@@ -119,7 +102,7 @@ unsigned int DrmControllerRegistersBase::readRegisterListFromIndex(const unsigne
 *   \return Returns mDrmApi_NO_ERROR if no error, errors from read/write register functions otherwize.
 **/
 unsigned int DrmControllerRegistersBase::readRegisterAtIndex(const unsigned int &index, unsigned int &value) const {
-  return readRegister(registerNameFromIndex(index), value);
+  return readRegister(registerOffsetFromIndex(index), value);
 }
 
 /** writeRegisterListFromIndex
@@ -148,19 +131,16 @@ unsigned int DrmControllerRegistersBase::writeRegisterListFromIndex(const unsign
 *   \return Returns mDrmApi_NO_ERROR if no error, errors from read/write register functions otherwize.
 **/
 unsigned int DrmControllerRegistersBase::writeRegisterAtIndex(const unsigned int &index, const unsigned int &value) const {
-  // write register at index
-  return writeRegister(registerNameFromIndex(index), value);
+	return writeRegister(registerOffsetFromIndex(index), value);
 }
 
-/** registerNameFromIndex
-*   \brief Get the register name from index
+/** registerOffsetFromIndex
+*   \brief Get the register offset from index
 *   \param[in] index is the register index.
-*   \return Returns the name of the register at the specified index.
+*   \return Returns the offset of the register at the specified index.
 **/
-const std::string DrmControllerRegistersBase::registerNameFromIndex(const unsigned int &index) const {
-  std::ostringstream stringStream;
-  stringStream << mIndexedRegisterName << index;
-  return stringStream.str();
+unsigned int DrmControllerRegistersBase::registerOffsetFromIndex(const unsigned int &index) const {
+  return (index*(DRM_CONTROLLER_SYSTEM_BUS_DATA_SIZE/DRM_CONTROLLER_BYTE_SIZE));
 }
 
 /** numberOfWords

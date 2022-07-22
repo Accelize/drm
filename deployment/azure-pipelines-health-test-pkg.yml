@@ -26,6 +26,12 @@ pool:
 variables:
   # Import variable group
   - group: drmLibrary
+  # Set Git branch conditional variables
+  - name: repo_type
+    ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/master') }}:
+      value: 'stable'
+    ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/master') }}:
+      value: 'prerelease'
 
 jobs:
   - template: runTestFromPkgOnEc2.yml
@@ -33,6 +39,7 @@ jobs:
       identifier: install_and_test_packages
       description: Install and test packages
       instance_type: 'f1.4xlarge'
+      repo: $(repo_type)
       config_list:
       - os_distrib: 'centos_7'
         tox_operation: '-e cpp-install,c-install,noparallel-install'

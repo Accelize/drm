@@ -157,6 +157,8 @@ def test_compatibilities(accelize_drm, conf_json, cred_json, async_handler):
                     driver.write_register_callback,
                     async_cb.callback
                 ) as drm_manager:
+                hdk_expect = match(r'(\d+\.\d+\.\d+).*', hdk).group(1)
+                assert drm_manager.get('controller_version') == hdk_expect
                 assert not drm_manager.get('license_status')
                 drm_manager.activate()
                 assert drm_manager.get('license_status')

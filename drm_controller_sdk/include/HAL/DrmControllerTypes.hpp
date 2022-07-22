@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerTypes.hpp
-*  \version   7.0.0.0
-*  \date      October 2021
+*  \version   8.1.0.0
+*  \date      July 2022
 *  \brief     Types definitions.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.
@@ -28,13 +28,13 @@ namespace DrmControllerLibrary {
   *   \brief   Read register function prototype.
   *   \remark  The read register function shall return 0 for no error.
   **/
-  typedef std::function<unsigned int(const std::string&, unsigned int&)> tDrmReadRegisterFunction;
+  typedef std::function<unsigned int(const unsigned int&, unsigned int&)> tDrmReadRegisterFunction;
 
   /** \typedef tDrmWriteRegisterFunction
   *   \brief   Write register function prototype.
   *   \remark  The write register function shall return 0 for no error.
   **/
-  typedef std::function<unsigned int(const std::string&, unsigned int)>  tDrmWriteRegisterFunction;
+  typedef std::function<unsigned int(const unsigned int&, unsigned int)>  tDrmWriteRegisterFunction;
 
 } // DrmControllerLibrary
 

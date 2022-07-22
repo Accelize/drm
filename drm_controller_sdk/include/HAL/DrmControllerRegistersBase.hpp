@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegistersBase.hpp
-*  \version   7.0.0.0
-*  \date      October 2021
+*  \version   8.1.0.0
+*  \date      July 2022
 *  \brief     Class DrmControllerRegistersBase defines low level procedures for registers access.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.
@@ -50,9 +50,9 @@ namespace DrmControllerLibrary {
       /** DrmControllerRegistersBase
       *   \brief Class constructor.
       *   \param[in] readRegisterFunction function pointer to read 32 bits register.
-      *              The function pointer shall have the following prototype "unsigned int f(const std::string&, unsigned int&)".
+      *              The function pointer shall have the following prototype "unsigned int f(const unsigned int&, unsigned int&)".
       *   \param[in] writeRegisterFunction function pointer to write 32 bits register.
-      *              The function pointer shall have the following prototype "unsigned int f(const std::string&, unsigned int)".
+      *              The function pointer shall have the following prototype "unsigned int f(const unsigned int&, unsigned int)".
       **/
       DrmControllerRegistersBase(tDrmReadRegisterFunction readRegisterFunction, tDrmWriteRegisterFunction writeRegisterFunction);
 
@@ -61,33 +61,21 @@ namespace DrmControllerLibrary {
       **/
       ~DrmControllerRegistersBase();
 
-      /** setIndexedRegisterName
-      *   \brief Indexed register name setter.
-      *   \param[in] indexedRegisterName is the name to set.
-      **/
-      void setIndexedRegisterName(const std::string &indexedRegisterName);
-
-      /** getIndexedRegisterName
-      *   \brief Indexed register name getter.
-      *   \return Returns the value of the indexed register name.
-      **/
-      std::string getIndexedRegisterName() const;
-
       /** readRegister
       *   \brief Read the value from the register pointed by name.
-      *   \param[in] name is the name of the register to read.
+      *   \param[in] offset is the offset of the register to read.
       *   \param[inout] value is the read value of the register.
       *   \return Returns mDrmApi_NO_ERROR if no error, errors from read register functions otherwize.
       **/
-      unsigned int readRegister(const std::string &name, unsigned int &value) const;
+      unsigned int readRegister(const unsigned int &offset, unsigned int &value) const;
 
       /** writeRegister
       *   \brief Write the value to the register pointed by name.
-      *   \param[in] name is the name of the register to read.
+      *   \param[in] offset is the offset of the register to read.
       *   \param[in] value is the value to write to the register.
       *   \return Returns mDrmApi_NO_ERROR if no error, errors from read register functions otherwize.
       **/
-      unsigned int writeRegister(const std::string &name, const unsigned int &value) const;
+      unsigned int writeRegister(const unsigned int &offset, const unsigned int &value) const;
 
       /** bits
       *   \brief Get the value of a several and contigous bits.
@@ -136,12 +124,12 @@ namespace DrmControllerLibrary {
       **/
       unsigned int writeRegisterAtIndex(const unsigned int &index, const unsigned int &value) const;
 
-      /** registerNameFromIndex
-      *   \brief Get the register name from index
-      *   \param[in] index is the register index.
-      *   \return Returns the name of the register at the specified index.
+      /** registerOffsetFromIndex
+       *   \brief Get the register offset from index
+       *   \param[in] index is the register index.
+       *   \return Returns the offset of the register at the specified index.
       **/
-      const std::string registerNameFromIndex(const unsigned int &index) const;
+      unsigned int registerOffsetFromIndex(const unsigned int &index) const;
 
       /** numberOfWords
       *   \brief Get the number of words used by a register.
@@ -289,8 +277,6 @@ namespace DrmControllerLibrary {
 
       tDrmReadRegisterFunction  mReadRegisterFunction;
       tDrmWriteRegisterFunction mWriteRegisterFunction;
-
-      std::string mIndexedRegisterName;
 
       /** unsupportedFeatureExceptionDescription
       *   \brief Generate the description of a unsupported feature exception.

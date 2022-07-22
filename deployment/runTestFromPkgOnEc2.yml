@@ -5,6 +5,7 @@ parameters:
   identifier: 'test_on_aws'
   description: 'Test on AWS'
   instance_type: 'f1.4xlarge'
+  repo: 'stable'
   config_list:
   - os_distrib: 'centos_7'
     tox_operation: '-e cpp-install,c-install,noparallel-install'
@@ -84,7 +85,7 @@ jobs:
 
       - script: |
           sudo yum install -y yum-utils python3-pip
-          sudo yum-config-manager --add-repo https://tech.accelize.com/rpm/accelize_stable.repo
+          sudo yum-config-manager --add-repo https://tech.accelize.com/rpm/accelize_${{ parameters.repo }}.repo
           sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
           sudo yum install -y python3-accelize-drm
           sudo yum install -y libaccelize-drm
@@ -96,7 +97,7 @@ jobs:
           sudo apt update
           sudo apt install -y apt-transport-https software-properties-common lsb-release gnupg curl python3-pip
           curl -fsSL https://tech.accelize.com/gpg | sudo apt-key add -
-          sudo add-apt-repository "deb https://tech.accelize.com/deb $(lsb_release -cs) stable"
+          sudo add-apt-repository "deb https://tech.accelize.com/deb $(lsb_release -cs) ${{ parameters.repo }}"
           sudo apt update
           sudo apt install -y python3-accelize-drm
           sudo apt install -y libaccelize-drm

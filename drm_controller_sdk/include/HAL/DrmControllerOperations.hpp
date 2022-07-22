@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerOperations.hpp
-*  \version   7.0.0.0
-*  \date      October 2021
+*  \version   8.1.0.0
+*  \date      July 2022
 *  \brief     Class DrmControllerOperations is an abstraction level to execute operations.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.
@@ -28,6 +28,8 @@ namespace DrmControllerLibrary {
   *   \class    DrmControllerOperations DrmControllerOperations.hpp "include/DrmControllerOperations.hpp"
   *   \brief    Class DrmControllerOperations is an abstraction level to execute operations.
   **/
+
+
   class DrmControllerOperations: public DrmControllerRegisters {
 
     // public members, functions ...
@@ -36,9 +38,9 @@ namespace DrmControllerLibrary {
       /** DrmControllerOperations
       *   \brief Class constructor.
       *   \param[in] readRegisterFunction function pointer to read 32 bits register.
-      *              The function pointer shall have the following prototype "unsigned int f(const std::string&, unsigned int&)".
+      *              The function pointer shall have the following prototype "unsigned int f(const unsigned int&, unsigned int&)".
       *   \param[in] writeRegisterFunction function pointer to write 32 bits register.
-      *              The function pointer shall have the following prototype "unsigned int f(const std::string&, unsigned int)".
+      *              The function pointer shall have the following prototype "unsigned int f(const unsigned int&, unsigned int)".
       **/
       DrmControllerOperations(tDrmReadRegisterFunction readRegisterFunction, tDrmWriteRegisterFunction writeRegisterFunction);
 
@@ -533,6 +535,9 @@ namespace DrmControllerLibrary {
 
     // private members, functions ...
     private:
+
+      mutable std::recursive_mutex mDrmControllerOperationsMutex;
+      mutable std::recursive_mutex mDrmControllerMeteringMutex;
 
       const unsigned char mDrmErrorNoError;  /**<!Error code value.*/
       const unsigned char mDrmErrorNotReady; /**<!Error code value.*/

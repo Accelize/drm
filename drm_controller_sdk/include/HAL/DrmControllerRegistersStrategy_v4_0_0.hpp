@@ -1,7 +1,7 @@
 /**
 *  \file      DrmControllerRegistersStrategy_v4_0_0.hpp
-*  \version   7.0.0.0
-*  \date      October 2021
+*  \version   8.1.0.0
+*  \date      July 2022
 *  \brief     Class DrmControllerRegistersStrategy_v4_0_0 defines strategy for register access of drm controller v4.0.0.
 *  \copyright Licensed under the Apache License, Version 2.0 (the "License");
 *             you may not use this file except in compliance with the License.
@@ -29,9 +29,8 @@
 // version of the DRM Controller supported by this class
 #define DRM_CONTROLLER_V4_0_0_SUPPORTED_VERSION "4.0.0" /**<Definition of the version of the supported DRM Controller.**/
 
-// Name of the registers.
-#define DRM_CONTROLLER_V4_0_0_PAGE_REGISTER_NAME    "DrmPageRegister" /**<Definition of the name of the page register.**/
-#define DRM_CONTROLLER_V4_0_0_INDEXED_REGISTER_NAME "DrmRegisterLine" /**<Definition of the base name of indexed registers.**/
+// offset of the register
+#define DRM_CONTROLLER_V4_0_0_PAGE_REGISTER_INDEX    0 /**<Definition of the offset of the page register.**/
 
 // Size of registers
 #define DRM_CONTROLLER_V4_0_0_COMMAND_SIZE               9   /**<Definition of the register size for the command register.**/
@@ -82,9 +81,9 @@ namespace DrmControllerLibrary {
       /** DrmControllerRegistersStrategy_v4_0_0
       *   \brief Class constructor.
       *   \param[in] readRegisterFunction function pointer to read 32 bits register.
-      *              The function pointer shall have the following prototype "unsigned int f(const std::string&, unsigned int&)".
+      *              The function pointer shall have the following prototype "unsigned int f(const unsigned int&, unsigned int&)".
       *   \param[in] writeRegisterFunction function pointer to write 32 bits register.
-      *              The function pointer shall have the following prototype "unsigned int f(const std::string&, unsigned int)".
+      *              The function pointer shall have the following prototype "unsigned int f(const unsigned int&, unsigned int)".
       **/
       DrmControllerRegistersStrategy_v4_0_0(tDrmReadRegisterFunction readRegisterFunction, tDrmWriteRegisterFunction writeRegisterFunction);
 
@@ -860,6 +859,16 @@ namespace DrmControllerLibrary {
       *          should be called to get the exception description.
       **/
       virtual unsigned int writeLicenseFileRegister(const std::string &licenseFile) const;
+
+      /** clearLicenseFileRegister
+      *   \brief Clear the license file.
+      *   This method will access to the system bus to clear the license file.
+      *   \return Returns mDrmApi_NO_ERROR if no error,
+      *           or the error code produced by the read/write register function.
+      *   \throw DrmControllerLicenseFileSizeException::what()
+      *          should be called to get the exception description.
+      **/
+      virtual unsigned int clearLicenseFileRegister() const;
 
       /** readTraceFileRegister
       *   \brief Read the trace file and get the value.
