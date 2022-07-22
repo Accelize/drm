@@ -148,7 +148,6 @@ set(DRM_CONTROLLER_SDK_SOURCES
 	drm_controller_sdk/source/HAL/DrmControllerRegistersBase.cpp
 	drm_controller_sdk/source/HAL/DrmControllerRegistersReport.cpp
 	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategyInterface.cpp
-	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v3_0_0.cpp
 	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v3_1_0.cpp
 	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v3_2_0.cpp
 	drm_controller_sdk/source/HAL/DrmControllerRegistersStrategy_v3_2_1.cpp
@@ -345,7 +344,7 @@ if (DOC)
 		message( "DOC_DOXYGEN_XML_DIR=${DOC_DOXYGEN_XML_DIR}" )
 		message( "DOC_DOXYGEN_XML=${DOC_DOXYGEN_XML}" )
 		message( "DOC_DOXYGEN_HTML=${DOC_DOXYGEN_HTML}" )
-	
+
 		# Configure Sphinx
 		configure_file(${DOC_SOUCES}/conf.py ${DOC_SOUCES}/conf.py)
 
@@ -514,7 +513,7 @@ if (PKG)
 		set(CPACK_DEBIAN_DEV_PACKAGE_SECTION libdevel)
 		set(CPACK_DEBIAN_DEV_PACKAGE_ARCHITECTURE "all")
 		set(CPACK_DEBIAN_DEV_PACKAGE_DEPENDS "${CPACK_PACKAGE_NAME}, libcurl4-openssl-dev, libjsoncpp-dev")
-	
+
 		# Python Package
 		if (PYTHON3)
 			# Configure package
