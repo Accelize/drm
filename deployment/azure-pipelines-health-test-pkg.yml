@@ -28,10 +28,10 @@ variables:
   - group: drmLibrary
   # Set Git branch conditional variables
   - name: repo_type
-  ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/master') }}:
-    value: 'stable'
-  ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/master') }}:
-    value: 'prerelease'
+    ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/master') }}:
+      value: 'stable'
+    ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/master') }}:
+      value: 'prerelease'
 
 jobs:
   - template: runTestFromPkgOnEc2.yml
