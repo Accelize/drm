@@ -44,16 +44,14 @@ variables:
 stages:
   - stage: compile_and_test
     displayName: Compile sources and test multiple hardware designs
+    condition: not(startsWith(variables['Build.SourceBranch'], 'refs/tags'))
     variables:
       # Set Git branch conditional variables
       ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/master') }}:
         meteringServer: prod
       ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/master') }}:
         meteringServer: dev
-      ${{ if startsWith(variables['Build.SourceBranch'], 'refs/tags') }}:
-        tox_mark: '-m minimum'
-      ${{ if not(startsWith(variables['Build.SourceBranch'], 'refs/tags')) }}:
-        tox_mark: ''
+      tox_mark: ''
 
     jobs:
       - template: runTestOnEc2.yml
@@ -101,8 +99,8 @@ stages:
   - stage: build_packages
     displayName: Create packages
     # Build packages only if tagged or scheduled
-    dependsOn: compile_and_test
-    condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags'))
+    dependsOn: []
+    condition: startsWith(variables['Build.SourceBranch'], 'refs/tags')
     jobs:
       - template: buildPackages.yml
 
@@ -130,6 +128,9 @@ stages:
               steps:
 
                 # Publish packages
+
+                - script: find .. -name "*.rpm" -type f -exec mv {} . \; && find .. -name "*.deb" -type f -exec mv {} . \;
+                  displayName: Retrieve *.rpm and *.deb in working directory
 
                 - task: AWSCLI@1
                   displayName: Publish packages
