@@ -8,7 +8,7 @@ ENV TOX_PARALLEL_NO_SPINNER 1
 
 # "Building" and "Testing" common layer
 RUN \
-{%- if osName == "rhel" %}
+{%- if osName == "rhel" and osVersion in ("7", "8") %}
 subscription-manager register \
     --auto-attach \
     --name=AccelizeDrmTestRhel{{ osVersion }} \
@@ -21,7 +21,6 @@ yum install -y \
     yum-plugin-fastestmirror && \
 yum install -y \
 {%- elif osName in ("fedora", "centos", "rhel") %}
-echo "fastestmirror=True" >> /etc/dnf/dnf.conf && \
 echo "max_parallel_downloads=10" >> /etc/dnf/dnf.conf && \
 echo "install_weak_deps=False" >> /etc/dnf/dnf.conf && \
 {%- if osName in ("centos", "rhel") %}
@@ -36,8 +35,11 @@ echo "APT::Acquire::Retries 10;" >> /etc/apt/apt.conf.d/parallel && \
 apt-get update && \
 apt-get install -y \
 {%- endif %}
+{%- if osName in ("debian", "ubuntu") and osVersion not in ("10", "18.04") %}
+    python-is-python3 \
+{%- endif %}
     python3-pip && \
-{%- if osName == "rhel" %}
+{%- if osName == "rhel" and osVersion in ("7", "8") %}
 subscription-manager remove --all && \
 subscription-manager unregister && \
 subscription-manager clean && \
@@ -47,7 +49,7 @@ echo "disable-pip-version-check = true " >> /etc/pip.conf && \
 python3 -m pip install -U{% if osName in ("centos", "rhel") and osVersion == "7" %} --prefix='/usr'{% endif %} \
     pip \
     setuptools && \
-python3 -m pip install -U{% if osName in ("centos", "rhel") and osVersion == "7" %} --prefix='/usr'{% endif %} \
+python3 -m pip install{% if osName in ("centos", "rhel") and osVersion != "9" %} -U{% endif %}{% if osName in ("centos", "rhel") and osVersion == "7" %} --prefix='/usr'{% endif %} \
     cython \
     flake8 \
     pytest \
@@ -62,7 +64,7 @@ python3 -m pip install -U{% if osName in ("centos", "rhel") and osVersion == "7"
 {%- if buildLayer %}
 # "Building" only layer
 RUN \
-{%- if osName == "rhel" %}
+{%- if osName == "rhel" and osVersion in ("7", "8") %}
 subscription-manager register \
     --auto-attach \
     --name=AccelizeDrmTestRhel{{ osVersion }} \
@@ -93,7 +95,7 @@ apt-get install -y \
     python3-devel \
     rpm-build && \
 {%- endif %}
-{%- if osName == "rhel" %}
+{%- if osName == "rhel" and osVersion in ("7", "8") %}
 subscription-manager remove --all && \
 subscription-manager unregister && \
 subscription-manager clean && \
