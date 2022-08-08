@@ -68,6 +68,20 @@ bool isFile( const std::string& file_path ) {
 }
 
 
+bool removeFile( const std::string& file_path ) {
+    if ( !isFile(file_path) ) {
+        Debug( "File '{}' to remove does not exit.", file_path );
+        return true;
+    }
+    bool ret = std::remove( file_path.c_str() ) == 0; // delete file
+    if ( ret )
+        Debug( "Removed file '{}'.", file_path );
+    else
+        Debug( "Failed to remove file '{}'.", file_path );
+    return ret;
+}
+
+
 bool makeDirs( const std::string& dir_path, mode_t mode ) {
     std::string path = dir_path;
     std::string dir;

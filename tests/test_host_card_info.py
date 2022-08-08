@@ -5,7 +5,20 @@ Test host and card information releated feature
 import pytest
 from os import environ
 from time import sleep
-from re import match
+from re import match, compile
+
+from tests.conftest import wait_func_true
+
+
+
+def find_files(root_dir=os.getcwd(), regex=r'.*'):
+    list_files = []
+    r = compile(regex)
+    for root, dirs, files in os.walk(root_dir):
+        for f in files:
+            if r.match(f):
+                list_files.append(f)
+    return list_files
 
 
 def test_host_data_verbosity(accelize_drm, conf_json, cred_json, async_handler,
@@ -118,6 +131,8 @@ def test_host_format(accelize_drm, conf_json, cred_json, async_handler,
         info = board.get('info')
         assert info
         assert info.get('dsa_name') is not None
+    # Check no xbutil log files are left over
+    assert len(find_files( regex=r'xbutil.*\.log')) == 0
     async_cb.assert_NoError()
 
 

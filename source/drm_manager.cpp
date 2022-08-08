@@ -743,6 +743,7 @@ protected:
                                                 xbutil_log, e.what() );
             return false;
         }
+        removeFile( xbutil_log );
         // Collect meta-data for each device found
         bool is_ok( true );
         hostcard_node["xrt2"]["devices"] = Json::nullValue;
@@ -775,8 +776,8 @@ protected:
                                                     xbutil_device_log, e.what() );
                 hostcard_node["xrt2"]["devices"].append( device_info );
                 is_ok = false;
-                continue;
             }
+            removeFile( xbutil_device_log );
         }
         if ( is_ok )
             Debug( "Succeeded to gather host and card information with XRT method 2" );

@@ -35,6 +35,7 @@ const char PATH_SEP =
 std::string getDirName( const std::string& full_path );
 bool isDir( const std::string& dir_path );
 bool isFile( const std::string& file_path );
+bool removeFile( const std::string& file_path );
 bool makeDirs( const std::string& dir_path, mode_t mode = 744 );
 
 // JSON related functions
