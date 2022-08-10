@@ -135,10 +135,7 @@ def test_improve_coverage_writeDrmAddress(accelize_drm, conf_json, cred_json, as
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
     assert search(r'Error in write register callback, errcode = 123: failed to write', logfile.read(), IGNORECASE)
     version_major = int(match(r'(\d+)\..+', accelize_drm.pytest_ctrl_version).group(1))
-    if version_major >= 8:
-        async_cb.assert_Error(accelize_drm.exceptions.DRMCtlrError.error_code, 'getDrmController\(\)\.writeMailboxFileRegister\( rwData, rwSize \) failed with error code 123')
-    else:
-        async_cb.assert_Error(accelize_drm.exceptions.DRMCtlrError.error_code, 'Unable to find DRM Controller registers')
+    async_cb.assert_Error(accelize_drm.exceptions.DRMCtlrError.error_code, 'failed with error code 123')
     async_cb.reset()
     logfile.remove()
 
@@ -218,7 +215,7 @@ def test_improve_coverage_runBistLevel2_bad_data(accelize_drm, conf_json, cred_j
     def my_bad_write_register(register_offset, data_to_write, ctx):
         if register_offset == 0:
             ctx['page'] = data_to_write
-        if (version_major >= 8) or (ctx['page'] == 5 and register_offset == 4):
+        if version_major >= 8 or ctx['page'] == 5:
             if (register_offset & 0xFFF) >= ctx['rwOffset'] and data_to_write != 0 and data_to_write != 0xFFFFFFFF:
                 data_to_write += 1
         return driver.write_register_callback(register_offset, data_to_write)

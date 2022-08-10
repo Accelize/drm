@@ -3,7 +3,7 @@
 Test host and card information releated feature
 """
 import pytest
-from os import environ
+from os import environ, getcwd, walk
 from time import sleep
 from re import match, compile
 
@@ -11,10 +11,10 @@ from tests.conftest import wait_func_true
 
 
 
-def find_files(root_dir=os.getcwd(), regex=r'.*'):
+def find_files(root_dir=getcwd(), regex=r'.*'):
     list_files = []
     r = compile(regex)
-    for root, dirs, files in os.walk(root_dir):
+    for root, dirs, files in walk(root_dir):
         for f in files:
             if r.match(f):
                 list_files.append(f)
