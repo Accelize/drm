@@ -147,6 +147,36 @@ def create_app(url):
     def health__test_header_error_on_key():
         return redirect(request.url_root + '/auth/metering/health/', code=307)
 
+    # test_header_error_on_key2 functions
+    @app.route('/test_header_error_on_key2/o/token/', methods=['GET', 'POST'])
+    def otoken__test_header_error_on_key2():
+        return redirect(request.url_root + '/o/token/', code=307)
+
+    @app.route('/test_header_error_on_key2/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_header_error_on_key2_genlicense():
+        global context, lock
+        new_url = request.url.replace(request.url_root+'test_header_error_on_key2', url)
+        request_json = request.get_json()
+        with lock:
+            if context['cnt'] > 0:
+                return ({'error':'Test did not run as expected'}, 408)
+            context['cnt'] += 1
+        response = post(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text)
+        response_json = response.json()
+        dna, lic_json = list(response_json['license'].items())[0]
+        key = lic_json['key']
+        key = key[0:-1] + '1' if key[-1] == '0' else key[0:-1] + '0'
+        response_json['license'][dna]['key'] = key
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        return Response(dumps(response_json), response.status_code, headers)
+
+    @app.route('/test_header_error_on_key2/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_header_error_on_key2():
+        return redirect(request.url_root + '/auth/metering/health/', code=307)
+
     # test_header_error_on_licenseTimer functions
     @app.route('/test_header_error_on_licenseTimer/o/token/', methods=['GET', 'POST'])
     def otoken__test_header_error_on_licenseTimer():
@@ -180,15 +210,48 @@ def create_app(url):
     def health__test_header_error_on_licenseTimer():
         return redirect(request.url_root + '/auth/metering/health/', code=307)
 
-    # test_session_id_error functions
-    @app.route('/test_session_id_error/o/token/', methods=['GET', 'POST'])
-    def otoken__test_session_id_error():
+    # test_header_error_on_licenseTimer2 functions
+    @app.route('/test_header_error_on_licenseTimer2/o/token/', methods=['GET', 'POST'])
+    def otoken__test_header_error_on_licenseTimer2():
         return redirect(request.url_root + '/o/token/', code=307)
 
-    @app.route('/test_session_id_error/auth/metering/genlicense/', methods=['GET', 'POST'])
-    def genlicense__test_session_id_error():
+    @app.route('/test_header_error_on_licenseTimer2/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_header_error_on_licenseTimer2():
         global context, lock
-        new_url = request.url.replace(request.url_root+'test_session_id_error', url)
+        new_url = request.url.replace(request.url_root+'test_header_error_on_licenseTimer2', url)
+        request_json = request.get_json()
+        request_type = request_json['request']
+        with lock:
+            cnt = context['cnt']
+            if request_type != 'close' and cnt > 1:
+                return ({'error':'Test did not run as expected'}, 408)
+            context['cnt'] += 1
+        response = post(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text)
+        response_json = response.json()
+        if cnt == 1:
+            dna, lic_json = list(response_json['license'].items())[0]
+            timer = lic_json['licenseTimer']
+            timer = timer[0:-1] + '1' if timer[-1] == '0' else timer[0:-1] + '0'
+            response_json['license'][dna]['licenseTimer'] = timer
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        return Response(dumps(response_json), response.status_code, headers)
+
+    @app.route('/test_header_error_on_licenseTimer2/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_header_error_on_licenseTimer2():
+        return redirect(request.url_root + '/auth/metering/health/', code=307)
+
+    # test_replay_request functions
+    @app.route('/test_replay_request/o/token/', methods=['GET', 'POST'])
+    def otoken__test_replay_request():
+        return redirect(request.url_root + '/o/token/', code=307)
+
+    @app.route('/test_replay_request/auth/metering/genlicense/', methods=['GET', 'POST'])
+    def genlicense__test_replay_request():
+        global context, lock
+        new_url = request.url.replace(request.url_root+'test_replay_request', url)
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         request_json = request.get_json()
         response = post(new_url, json=request_json, headers=request.headers)
@@ -213,8 +276,8 @@ def create_app(url):
                    context['replay'] = response
                 return Response(response.content, response.status_code, headers)
 
-    @app.route('/test_session_id_error/auth/metering/health/', methods=['GET', 'POST'])
-    def health__test_session_id_error():
+    @app.route('/test_replay_request/auth/metering/health/', methods=['GET', 'POST'])
+    def health__test_replay_request():
         return redirect(request.url_root + '/auth/metering/health/', code=307)
 
     ##############################################################################
