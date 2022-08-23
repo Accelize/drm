@@ -609,6 +609,7 @@ def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handl
     logfile.remove()
 
 
+@pytest.mark.skip
 def test_heart_beat(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
     Test activator locks if heart beat stops
@@ -655,5 +656,3 @@ def test_heart_beat(accelize_drm, conf_json, cred_json, async_handler, log_file_
         async_cb.assert_Error(accelize_drm.exceptions.DRMCtlrError.error_code, 'Status Bit: 0b0')
         async_cb.reset()
     logfile.remove()
-
-
