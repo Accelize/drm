@@ -134,7 +134,7 @@ def test_improve_coverage_writeDrmAddress(accelize_drm, conf_json, cred_json, as
         )
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
     assert search(r'Error in write register callback, errcode = 123: failed to write', logfile.read(), IGNORECASE)
-    version_major = int(match(r'(\d+)\..+', accelize_drm.pytest_ctrl_version).group(1))
+    version_major = int(match(r'(\d+)\..+', accelize_drm.pytest_hdk_version).group(1))
     async_cb.assert_Error(accelize_drm.exceptions.DRMCtlrError.error_code, 'failed with error code 123')
     async_cb.reset()
     logfile.remove()
@@ -155,7 +155,7 @@ def test_improve_coverage_runBistLevel2_bad_size(accelize_drm, conf_json, cred_j
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
-    version_major = int(match(r'(\d+)\..+', accelize_drm.pytest_ctrl_version).group(1))
+    version_major = int(match(r'(\d+)\..+', accelize_drm.pytest_hdk_version).group(1))
 
     def my_bad_read_register(register_offset, returned_data, ctx):
         ret = driver.read_register_callback(register_offset, returned_data)
@@ -201,7 +201,7 @@ def test_improve_coverage_runBistLevel2_bad_data(accelize_drm, conf_json, cred_j
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
-    version_major = int(match(r'(\d+)\..+', accelize_drm.pytest_ctrl_version).group(1))
+    version_major = int(match(r'(\d+)\..+', accelize_drm.pytest_hdk_version).group(1))
 
     def my_bad_read_register(register_offset, returned_data, ctx):
         ret = driver.read_register_callback(register_offset, returned_data)
@@ -283,7 +283,7 @@ def test_improve_coverage_getDesignInfo(accelize_drm, conf_json, cred_json, asyn
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
-    version_major = int(match(r'(\d+)\..+', accelize_drm.pytest_ctrl_version).group(1))
+    version_major = int(match(r'(\d+)\..+', accelize_drm.pytest_hdk_version).group(1))
 
     def my_read_register(register_offset, returned_data, ctx):
         ret = driver.read_register_callback(register_offset, returned_data)

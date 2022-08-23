@@ -721,7 +721,6 @@ def accelize_drm(pytestconfig, tmpdir_factory):
     print('FPGA SLOT ID:', fpga_slot_id)
     print('FPGA DRIVER:', fpga_driver_name)
     print('FPGA IMAGE:', fpga_image)
-    print('HDK VERSION:', hdk_version)
     print('CONTROLLER SW:', is_ctrl_sw)
     if fpga_driver_extra_str:
         fpga_driver_extra = dict(findall(r'([^;]+):([^;]+)', fpga_driver_extra_str))
@@ -778,6 +777,7 @@ def accelize_drm(pytestconfig, tmpdir_factory):
             ) as drm_manager:
             ctrl_versions.append(drm_manager.get('controller_version'))
     assert len(set(ctrl_versions)) == 1
+    print('DRM CTRL VERSION:', ctrl_versions[0])
 
     # Store some values for access in tests
     _accelize_drm.pytest_freq_detection_version = freq_version
@@ -792,7 +792,7 @@ def accelize_drm(pytestconfig, tmpdir_factory):
     _accelize_drm.pytest_fpga_driver_name = fpga_driver_name
     _accelize_drm.pytest_fpga_slot_id = fpga_slot_id
     _accelize_drm.pytest_fpga_image = fpga_image
-    _accelize_drm.pytest_hdk_version = hdk_version
+    _accelize_drm.pytest_hdk_version = ctrl_versions[0]
     _accelize_drm.pytest_actr_base_address = actr_base_address
     _accelize_drm.pytest_fpga_activators = fpga_activators
     _accelize_drm.pytest_ref_designs = ref_designs
@@ -804,7 +804,6 @@ def accelize_drm(pytestconfig, tmpdir_factory):
     _accelize_drm.pytest_params = param2dict(pytestconfig.getoption("params"))
     _accelize_drm.pytest_artifacts_dir = pytest_artifacts_dir
     _accelize_drm.is_ctrl_sw = is_ctrl_sw
-    _accelize_drm.pytest_ctrl_version = ctrl_versions[0]
     return _accelize_drm
 
 
