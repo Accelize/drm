@@ -161,8 +161,8 @@ def test_drm_manager_frequency_detection_method1(accelize_drm, conf_json, cred_j
     image_id = None
     try:
         if accelize_drm.pytest_freq_detection_version != 0xFFFFFFFF:
-            # Program FPGA with HDK 3.x.x (with frequency detection method 1)
-            hdk = list(filter(lambda x: x.startswith('3.'), refdesign.hdk_versions))
+            # Program FPGA with HDK 3.2.x (with frequency detection method 1)
+            hdk = list(filter(lambda x: x.startswith('3.2'), refdesign.hdk_versions))
             if len(hdk) == 0:
                 pytest.skip("No refdesign with HDK v3.x could be found in the testsuite")
             hdk = hdk[-1]
