@@ -394,7 +394,7 @@ Following code snippets show how to implement pause/resume functionality:
 Petalinux integration
 ---------------------
 
-We assume you have already a working petalinux build project.
+We assume you have already a working petalinux project.
 From this project you must perform the following modifications:
 
 Add Accelize DRM Library recipe
@@ -420,10 +420,10 @@ To compile the DRM Lib with Petalinux:
 
     SUMMARY = "Accelize DRM Library"
     SECTION = "PETALINUX/apps"
-    LICENSE = "MIT"
-    LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda2f7b4f302"
+    LICENSE = "Apache-2.0"
+    LIC_FILES_CHKSUM = "file://${WORKDIR}/git/LICENSE;md5=e368f0931469a726e1017aaa567bd040"
 
-    SRC_URI = "gitsm://github.com/Accelize/drm.git;protocol=https;branch=master"
+    SRC_URI = "gitsm://github.com/Accelize/drm.git;protocol=http;branch=master"
     SRCREV = "${AUTOREV}"
 
     DEPENDS += " \
@@ -457,44 +457,11 @@ before and after your own code.
 .. code-block:: c
     :caption: In C
 
-    #include "provencore.h"
-    #include "service_ids.h"
     #include "accelize/drmc.h"
-
-    /* File descriptor attached to device /dev/trustzone */
-    static pnc_session_t *session;
-
-    /* Virtual address and size of the mapped [tzfd] file */
-    static void *tzvaddr;
-    static size_t tzsize = 0;
 
     //*******************************************
     // DRM Controller communication callbacks
     //*******************************************
-
-    static uint32_t shm_offset = 0;
-    //
-    // DRMLib Read Callback Function
-    //
-    int32_t drm_read_callback(uint32_t addr, uint32_t *value, void* context) {
-        uint32_t *shmem = (uint32_t*)context;
-        *value = *(shmem + shm_offset + (addr >> 2));
-        return 0;
-    }
-
-    //
-    // DRMLib Write Callback Function
-    //
-    int32_t drm_write_callback(uint32_t addr, uint32_t value, void* context) {
-        uint32_t *shmem = (uint32_t*)context;
-        if (addr == 0) {
-            if (value > 5)
-                return -1;
-            shm_offset = shmem[value];
-        }
-        *(shmem + shm_offset + (addr >> 2)) = value;
-        return 0;
-    }
 
     //
     // DRMLib Error Callback Function
@@ -511,69 +478,21 @@ before and after your own code.
     int main(int argc, char **argv) {
 
         int ret = 0;
-        uint32_t *shmem = nullptr;
         DrmManager *pDrmManager = nullptr;
         uint32_t reg = 0;
-
-        // ACCELIZE CODE TO START TEE APPLICATION
-        if (pnc_session_new(ALLOC_SIZE, &session) < 0) {
-            printf("could not open trustzone module (%s)\n", strerror(errno));
-            return EXIT_FAILURE;
-        }
-        for (int timeout = 10; timeout > 0; timeout--) {
-            ret = pnc_session_config(session, SID_DRMCTRL, true);
-            if (ret < 0) {
-                if (errno == EAGAIN) {
-                    sleep(1);
-                    continue;
-                }
-                printf("could not allocate data (%s)\n", strerror(errno));
-                pnc_session_destroy(session);
-                return -1;
-            }
-            break;
-        }
-        if (ret < 0) {
-            printf("could not allocate data (timeout)\n");
-            pnc_session_destroy(session);
-            return -1;
-        }
-
-        // get virtual address and size of shared memory region
-        if (pnc_session_getinfo(session, &tzvaddr, &tzsize) < 0) {
-            printf("could not get info (%s)\n", strerror(errno));
-            pnc_session_destroy(session);
-            return -1;
-        }
-        if (tzvaddr == NULL) {
-            printf("could not map shm buffer (%s)\n", strerror(errno));
-            pnc_session_destroy(session);
-            return -1;
-        }
-
-        // ask drm controller app to initialize shared memory
-        if (pnc_session_request(session, DRM_INIT_SHM, 0) < 0) {
-            printf("failed to send command (%s)\n", strerror(errno));
-            pnc_session_destroy(session);
-            return -1;
-        }
-
-        // create casted pointer to shared memory
-        shmem = (uint32_t*)tzvaddr;
-        shm_offset = shmem[0];
 
         // ACCELIZE CODE TO UNLOCK APPLICATION STARTS HERE
         if (DRM_OK != DrmManager_alloc(&pDrmManager,
                 "/usr/bin/conf.json", "/usr/bin/cred.json",
-                drm_read_callback, drm_write_callback, drm_error_callback,
-                tzvaddr )) {
+                NULL,       // Read callback is not required because handled internally to match the TEE constraints.
+                NULL,       // Write callback is not required because handled internally to match the TEE constraints.
+                drm_error_callback,
+                NULL )) {
             printf("ERROR: Error allocating DRM Manager object: %s\n", pDrmManager->error_message);
-            pnc_session_destroy(session);
             return -1;
         }
         if (DRM_OK != DrmManager_activate(pDrmManager, false)) {
             printf("ERROR: Error activating DRM Manager object: %s\n", pDrmManager->error_message);
-            pnc_session_destroy(session);
             return -1;
         }
 
@@ -589,46 +508,18 @@ before and after your own code.
         if (DrmManager_free(&pDrmManager))
             printf("ERROR: Failed to free DRM manager object: %s\n", pDrmManager->error_message);
 
-        // ACCELIZE CODE TO CLOSE TEE APPLICATION
-        pnc_session_destroy(session);
         return ret;
     }
 
 .. code-block:: c++
     :caption: In C++
 
-    #include "provencore.h"
-    #include "service_ids.h"
     #include "accelize/drm.h"
     namespace drm = Accelize::DRM;
 
     //*******************************************
     // DRM Controller communication callbacks
     //*******************************************
-
-    static uint32_t shm_offset = 0;
-    //
-    // DRMLib Read Callback Function
-    //
-    int32_t drm_read_callback(uint32_t addr, uint32_t *value, void* context) {
-        uint32_t *shmem = (uint32_t*)context;
-        *value = *(shmem + shm_offset + (addr >> 2));
-        return 0;
-    }
-
-    //
-    // DRMLib Write Callback Function
-    //
-    int32_t drm_write_callback(uint32_t addr, uint32_t value, void* context) {
-        uint32_t *shmem = (uint32_t*)context;
-        if (addr == 0) {
-            if (value > 5)
-                return -1;
-            shm_offset = shmem[value];
-        }
-        *(shmem + shm_offset + (addr >> 2)) = value;
-        return 0;
-    }
 
     //
     // DRMLib Error Callback Function
@@ -645,77 +536,23 @@ before and after your own code.
     int main(int argc, char **argv) {
 
         int ret = 0;
-        uint32_t *shmem = nullptr;
         DrmManager *pDrmManager = nullptr;
         uint32_t reg = 0;
-
-        // ACCELIZE CODE TO START TEE APPLICATION
-        if (pnc_session_new(ALLOC_SIZE, &session) < 0) {
-            printf("could not open trustzone module (%s)\n", strerror(errno));
-            return EXIT_FAILURE;
-        }
-        for (int timeout = 10; timeout > 0; timeout--) {
-            ret = pnc_session_config(session, SID_DRMCTRL, true);
-            if (ret < 0) {
-                if (errno == EAGAIN) {
-                    sleep(1);
-                    continue;
-                }
-                printf("could not allocate data (%s)\n", strerror(errno));
-                pnc_session_destroy(session);
-                return -1;
-            }
-            break;
-        }
-        if (ret < 0) {
-            printf("could not allocate data (timeout)\n");
-            pnc_session_destroy(session);
-            return -1;
-        }
-
-        // get virtual address and size of shared memory region
-        if (pnc_session_getinfo(session, &tzvaddr, &tzsize) < 0) {
-            printf("could not get info (%s)\n", strerror(errno));
-            pnc_session_destroy(session);
-            return -1;
-        }
-        if (tzvaddr == NULL) {
-            printf("could not map shm buffer (%s)\n", strerror(errno));
-            pnc_session_destroy(session);
-            return -1;
-        }
-
-        // ask drm controller app to initialize shared memory
-        if (pnc_session_request(session, DRM_INIT_SHM, 0) < 0) {
-            printf("failed to send command (%s)\n", strerror(errno));
-            pnc_session_destroy(session);
-            return -1;
-        }
-
-        // create casted pointer to shared memory
-        shmem = (uint32_t*)tzvaddr;
-        shm_offset = shmem[0];
 
         // ACCELIZE CODE TO UNLOCK APPLICATION STARTS HERE
         try {
             pDrmManager = new DrmManager(
                 std::string("/usr/bin/conf.json"),
                 std::string("/usr/bin/cred.json"),
-                [&]( uint32_t  offset, uint32_t * value) {      // Read DRM register
-                    return  drm_read_callback(offset, value, shmem);
-                },
-                [&]( uint32_t  offset, uint32_t value) {        // Write DRM register
-                    return drm_write_callback(offset, value, shmem);
-                },
+                nullptr,        // Read callback is not required because handled internally to match the TEE constraints.
+                nullptr,        // Write callback is not required because handled internally to match the TEE constraints.
                 [&]( const  std::string & err_msg) {
                    drm_error_callback(err_msg.c_str(), nullptr);
                 }
             );
             pDrmManager->activate();
         } catch( const Exception& e ) {
-            printf("ERROR: DRM failure: %s\n", e.what());;
-            printf("Closing ProvenCore session...\n");
-            pnc_session_destroy(session);
+            printf("ERROR: DRM failure: %s\n", e.what());
             return -1;
         }
 
@@ -731,8 +568,6 @@ before and after your own code.
         }
         delete pDrmManager;
 
-        // ACCELIZE CODE TO CLOSE TEE APPLICATION
-        pnc_session_destroy(session);
         return ret;
     }
 
