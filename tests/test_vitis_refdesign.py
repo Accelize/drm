@@ -206,6 +206,19 @@ def test_vitis_2activator_350_350(accelize_drm, conf_json, cred_json, async_hand
                                     log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
 
 
+@pytest.mark.awsxrt
+def test_vitis_10activator_200_125(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
+    """
+    Test a vitis configuration: 10 activators in dual clock
+    """
+    # Run test
+    design_name = 'vitis_10activator_200_125'
+    axiclk_freq_ref = 219
+    drmclk_freq_ref = 87
+    log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
+                                    log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
+
+
 @pytest.mark.skip(reason='No design yet available with dual clock FIFOs between kernels')
 @pytest.mark.awsxrt
 def test_vitis_2activator_dualclkfifo(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):

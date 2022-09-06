@@ -88,8 +88,9 @@ def test_header_error_on_key2(accelize_drm, conf_json, cred_json, async_handler,
         # Check failure is detected
         with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
             drm_manager.activate()
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
         assert "DRM Controller Activation is in timeout" in str(excinfo.value)
-        assert "License header check error" in str(excinfo.value)
+        assert "License MAC check error" in str(excinfo.value)
 
 
 @pytest.mark.no_parallel

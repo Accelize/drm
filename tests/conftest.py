@@ -349,7 +349,7 @@ class SingleActivator:
         self.metering_data = 0
         if driver is not None:
             self.event_cnt_flag = self.driver.read_register(self.base_address + CNT_EVENT_REG_OFFSET) != 0xDEADDEAD
-            print('Event counter in Activator @0x%08X is active' % self.base_address)
+            print('Event counter in Activator @0x%08X is detected' % self.base_address)
 
     def read_register(self, offset):
         """
