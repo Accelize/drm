@@ -34,14 +34,16 @@ limitations under the License.
 #pragma GCC diagnostic pop
 
 
-#define NB_MAX_REGISTER  32
-
 #define REG_FREQ_DETECTION_VERSION  0xFFF0
 #define REG_FREQ_DETECTION_COUNTER_DRMACLK  0xFFF4
 #define REG_FREQ_DETECTION_COUNTER_AXIACLK  0xFFF8
 
 #define FREQ_DETECTION_VERSION_2	 0x60DC0DE0
 #define FREQ_DETECTION_VERSION_3	 0x60DC0DE1
+
+#define PAGE_INDEX_SHIFT        13
+#define OFFSET_IN_PAGE_MASK     0x1FFF
+#define NUM_PAGE_MAX            6
 
 #define PNC_PAGE_SIZE               4096
 #define PNC_ALLOC_SIZE              (PNC_PAGE_SIZE * 24)
@@ -115,18 +117,23 @@ private:
 
     // Read Callback Function
     int32_t pnc_read_drm_ctrl_ta( uint32_t addr, uint32_t *value ) {
-        *value = *(s_pnc_tzvaddr + s_pnc_page_offset + (addr >> 2));
+        uint32_t page_index = addr >> PAGE_INDEX_SHIFT;
+        if (page_index >= NUM_PAGE_MAX)
+            Throw( DRM_Fatal, "Attempting to read invalid page index {} of the DRM Controller. ", page_index );
+        uint32_t offset_in_page = (addr & OFFSET_IN_PAGE_MASK) >> 2;
+        s_pnc_page_offset = s_pnc_tzvaddr[page_index];
+        *value = *(s_pnc_tzvaddr + s_pnc_page_offset + offset_in_page);
         return 0;
     }
 
     // Write Callback Function
     int32_t pnc_write_drm_ctrl_ta( uint32_t addr, uint32_t value ) {
-        if (addr == 0) {
-            if (value > 5)
-                Throw( DRM_Fatal, "Invalid DRM Controller page index {}. ", value );
-            s_pnc_page_offset = s_pnc_tzvaddr[value];
-        }
-        *(s_pnc_tzvaddr + s_pnc_page_offset + (addr >> 2)) = value;
+        uint32_t page_index = addr >> PAGE_INDEX_SHIFT;
+        if (page_index >= NUM_PAGE_MAX)
+            Throw( DRM_Fatal, "Attempting to read invalid page index {} of the DRM Controller. ", page_index );
+        uint32_t offset_in_page = (addr & OFFSET_IN_PAGE_MASK) >> 2;
+        s_pnc_page_offset = s_pnc_tzvaddr[page_index];
+        *(s_pnc_tzvaddr + s_pnc_page_offset + offset_in_page) = value;
         return 0;
     }
 
