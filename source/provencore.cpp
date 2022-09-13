@@ -93,7 +93,7 @@ static int _pnc_open(pnc_session_t *session, size_t size)
 
     session->fd = open(devname, O_RDWR);
     if (session->fd == -1) {
-        Debug( "PNC: Could not to open device file {}: {}", devname, strerror(errno) );
+        Debug( "PNC: Could not open device file {}: {}", devname, strerror(errno) );
         return -ENODEV;
     }
 
@@ -175,7 +175,6 @@ int pnc_session_new(size_t size, pnc_session_t **session)
     }
 
     *session = pnc_new;
-
     return 0;
 }
 
