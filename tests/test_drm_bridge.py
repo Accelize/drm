@@ -14,6 +14,8 @@ RegBridgeStream = 0x4
 RegBridgeMailboxSize = 0x8
 RegBridgeMailboxRoData = 0xC
 
+DRM_BRIDGE_VERSION_EXPECTED = 0x02000000
+
 
 def reverse_string(x):
     y=list(x)
@@ -53,7 +55,7 @@ def run_test_on_design(accelize_drm, design_name, is_dual_clk):
     # Test controller bridge version
     reg = c_uint(0)
     assert driver.read_register_callback(driver._drm_ctrl_base_addr + RegBridgeVersion, byref(reg)) == 0
-    assert reg.value == 0x01000000
+    assert reg.value == DRM_BRIDGE_VERSION_EXPECTED
 
     # Test controller bridge mailbox size
     assert driver.read_register_callback(driver._drm_ctrl_base_addr + RegBridgeMailboxSize, byref(reg)) == 0
