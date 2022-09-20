@@ -226,7 +226,7 @@ def test_vitis_2activator_swap(accelize_drm, conf_json, cred_json, async_handler
     # Run test
     design_name = 'vitis_2activator_swap'
     axiclk_freq_ref = 219
-    drmclk_freq_ref = 87
+    drmclk_freq_ref = 125
     log_content = run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
                                     log_file_factory, axiclk_freq_ref, drmclk_freq_ref)
 

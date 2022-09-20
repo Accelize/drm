@@ -33,7 +33,7 @@ def stringify(h):
     return ''.join(h_list)
 
 
-def run_test_on_design(accelize_drm, design_name, is_dual_clk):
+def run_test_on_design(accelize_drm, design_name, is_dual_clk, num_activator_expected=1):
     if accelize_drm.is_ctrl_sw:
         pytest.skip("Test skipped on SoM target because it's meant to test the DRM bridge only on AWS (without DRM Sw)")
 
@@ -103,17 +103,29 @@ def run_test_on_design(accelize_drm, design_name, is_dual_clk):
     # Reset stream counter
     assert driver.write_register_callback(driver._drm_ctrl_base_addr + RegBridgeVersion, 1) == 0
 
-    # Get Activator's LGDN version through bridge
-    assert driver.write_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, 0x22010001) == 0
-    assert driver.read_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, byref(reg)) == 0
-    assert reg.value == int(rom_version,16) << 8
+    # Discover number of activators on the daisy chain
+    assert driver.write_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, 0x100100FF) == 0
+    assert driver.read_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, byref(reg)) == 0     # Read TID
+    num_activator_detected = 0xFF - reg.value
+    assert num_activator_detected == num_activator_expected
+    assert driver.read_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, byref(reg)) == 0     # Read dummy write command
 
-    # Get Activator's VLNV through Bridge:
-    assert driver.write_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, 0x23020001) == 0
-    assert driver.read_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, byref(reg)) == 0
-    assert reg.value == 0x1003000b
-    assert driver.read_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, byref(reg)) == 0
-    assert reg.value == 0x00010001
+    for i in range(num_activator_detected):
+        # Get Activator's LGDN version through bridge
+        assert driver.write_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, 0x22010000+i) == 0
+        assert driver.read_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, byref(reg)) == 0 # Read TID
+        assert reg.value == 0xFF
+        assert driver.read_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, byref(reg)) == 0
+        assert reg.value == int(rom_version,16) << 8
+
+        # Get Activator's VLNV through Bridge:
+        assert driver.write_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, 0x23020001) == 0
+        assert driver.read_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, byref(reg)) == 0 # Read TID
+        assert reg.value == 0xFF
+        assert driver.read_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, byref(reg)) == 0
+        assert reg.value == 0x1003000b
+        assert driver.read_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, byref(reg)) == 0
+        assert reg.value == (0x00010001 + 0x10000 * i)
 
 
 @pytest.mark.awsxrt
@@ -134,4 +146,14 @@ def test_vitis_1activator_som_200_125(accelize_drm, async_handler, log_file_fact
     # Program board with design
     design_name = 'vitis_1activator_som_200_125'
     run_test_on_design(accelize_drm, design_name, True)
+
+
+@pytest.mark.awsxrt
+def test_vitis_2activator_som_vhdl_100_125(accelize_drm, async_handler, log_file_factory):
+    """
+    Test drm controller bridge used for SoM projects: dual clock
+    """
+    # Program board with design
+    design_name = 'vitis_2activator_som_vhdl_100_125'
+    run_test_on_design(accelize_drm, design_name, True, 2)
 
