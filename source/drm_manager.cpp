@@ -2309,6 +2309,10 @@ protected:
     }
 
     void waitActivationCodeTransmitted() {
+        if ( mLicenseCounter > 0 ) {
+            // Don't need to check activation code transmitted bit on license renewal (cause it's already set to 1)
+            return;
+        }
         bool activationCodesTransmitted( false );
         TClock::duration timeSpan;
         double mseconds( 0.0 );
