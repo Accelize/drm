@@ -76,7 +76,7 @@ def run_test_on_design(accelize_drm, design_name, is_dual_clk, num_activator_exp
     assert text_json['product_id']
     assert text_json['product_id']['vendor'] == 'accelize.com'
     assert text_json['product_id']['library'] == 'refdesign'
-    assert text_json['product_id']['name'] == 'drm_1activator'
+    assert text_json['product_id']['name'] == 'drm_%dactivator' % num_activator_expected
     assert text_json['extra']
     assert text_json['extra']['fpga_family'] == 'random_id'
     assert text_json['extra']['fpga_vendor'] == 'xilinx'
