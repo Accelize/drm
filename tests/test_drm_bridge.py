@@ -114,14 +114,14 @@ def run_test_on_design(accelize_drm, design_name, is_dual_clk, num_activator_exp
         # Get Activator's LGDN version through bridge
         assert driver.write_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, 0x22010000+i) == 0
         assert driver.read_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, byref(reg)) == 0 # Read TID
-        assert reg.value == 0xFF
+        assert reg.value == 0xFF-(num_activator_detected-1-i)
         assert driver.read_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, byref(reg)) == 0
         assert reg.value == int(rom_version,16) << 8
 
         # Get Activator's VLNV through Bridge:
-        assert driver.write_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, 0x23020001) == 0
+        assert driver.write_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, 0x23020000+i) == 0
         assert driver.read_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, byref(reg)) == 0 # Read TID
-        assert reg.value == 0xFF
+        assert reg.value == 0xFF-(num_activator_detected-1-i)
         assert driver.read_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, byref(reg)) == 0
         assert reg.value == 0x1003000b
         assert driver.read_register_callback(driver._drm_ctrl_base_addr + RegBridgeStream, byref(reg)) == 0
