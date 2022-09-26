@@ -39,9 +39,9 @@ jobs:
         Ubuntu LTS 22.04:
           osName: ubuntu
           osVersion:  "22.04"
-        Ubuntu 21.10:
+        Ubuntu 22.10:
           osName: ubuntu
-          osVersion:  "21.10"
+          osVersion:  "22.10"
 
     variables:
       image: ""
