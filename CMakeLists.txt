@@ -132,9 +132,66 @@ find_package(PkgConfig REQUIRED)
 
 find_package(Threads REQUIRED)
 
-pkg_check_modules(JSONCPP jsoncpp)
-include_directories(${JSONCPP_INCLUDEDIR})
+#pkg_check_modules(JSONCPP jsoncpp)
+#include_directories(${JSONCPP_INCLUDEDIR})
 
+## Build JsonCpp library
+
+set(JSONCPP_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/jsoncpp)
+set(JSONCPP_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/jsoncpp)
+set(JSONCPP_INCLUDEDIR ${CMAKE_CURRENT_SOURCE_DIR}/jsoncpp/include)
+
+
+#if("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC" )
+#endif("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+
+include(ExternalProject)
+ExternalProject_Add(jsoncpp_project
+	SOURCE_DIR ${JSONCPP_SOURCE_DIR}
+	PREFIX ${CMAKE_CURRENT_BINARY_DIR}/jsoncpp
+	CMAKE_ARGS -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DBUILD_OBJECT_LIBS=OFF -DBUILD_STATIC_LIBS=ON -DBUILD_SHARED_LIBS=OFF -DJSONCPP_WITH_TESTS=OFF -DJSONCPP_WITH_EXAMPLE=OFF
+	INSTALL_COMMAND ""
+)
+ExternalProject_Get_Property(jsoncpp_project binary_dir)
+
+add_library(jsoncpp_lib STATIC IMPORTED)
+set_property(TARGET jsoncpp_lib PROPERTY IMPORTED_LOCATION ${binary_dir}/lib/libjsoncpp.a)
+add_dependencies(jsoncpp_lib jsoncpp_project)
+
+include_directories(${JSONCPP_SOURCE_DIR}/include/)
+
+#add_custom_command(
+#	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/libjsoncpp.a
+#	COMMAND cp ${binary_dir}/lib/libjsoncpp.a ${CMAKE_CURRENT_BINARY_DIR}/
+#	DEPENDS ${binary_dir}/lib/libjsoncpp.a
+#	VERBATIM
+#)
+add_custom_command(
+	OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/libjsoncpp.a
+	COMMAND echo "****************************************************\n*************************"
+	DEPENDS ${JSONCPP_SOURCE_DIR}
+	VERBATIM
+)
+
+# Example from https://mirkokiefer.com/cmake-by-example-f95eb47d45b1
+#ExternalProject_Add(project_luajit
+#  URL http://luajit.org/download/LuaJIT-2.0.1.tar.gz
+#  PREFIX ${CMAKE_CURRENT_BINARY_DIR}/luajit-2.0.1
+#  CONFIGURE_COMMAND ""
+#  BUILD_COMMAND make
+#  INSTALL_COMMAND make install
+#  PREFIX=${CMAKE_CURRENT_BINARY_DIR}/luajit-2.0.1
+#)
+#ExternalProject_Get_Property(project_luajit install_dir)
+#add_library(luajit STATIC IMPORTED)
+#set_property(TARGET luajit PROPERTY IMPORTED_LOCATION ${install_dir}/lib/libluajit-5.1.a)
+#add_dependencies(luajit project_luajit)
+#add_executable(myapp main.c)
+#include_directories(${install_dir}/include/luajit-2.0)
+#target_link_libraries(myapp luajit)
+
+## Curl library
 find_package(CURL REQUIRED)
 include_directories(${CURL_INCLUDE_DIR})
 
@@ -219,7 +276,7 @@ target_include_directories(accelize_drm PRIVATE spdlog/include)
 ## libaccelize_drm
 set_target_properties(accelize_drm PROPERTIES VERSION ${ACCELIZEDRM_VERSION} SOVERSION ${ABI_VERSION})
 target_link_libraries(accelize_drm ${CURL_LIBRARIES})
-target_link_libraries(accelize_drm jsoncpp)
+target_link_libraries(accelize_drm jsoncpp_lib)
 target_link_libraries(accelize_drm drm_controller_lib)
 target_link_libraries(accelize_drm ${CMAKE_THREAD_LIBS_INIT})
 
@@ -279,6 +336,9 @@ if (PYTHON3)
 		# Required for coverage (See "setup.py")
 		set(BUILD_EXT_EXTRA --inplace)
 	endif()
+
+	message("CMAKE_INCLUDE_DIR=${CMAKE_INCLUDE_DIR}")
+	message("JSONCPP_INCLUDEDIR=${JSONCPP_INCLUDEDIR}")
 
 	add_custom_target(
 		python3 ALL
@@ -461,7 +521,7 @@ if (PKG)
 		set(CPACK_RPM_DEV_PACKAGE_ARCHITECTURE "noarch")
 		set(CPACK_RPM_DEV_FILE_NAME "${CPACK_RPM_DEV_PACKAGE_NAME}-${CPACK_RPM_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}${CPACK_RPM_PACKAGE_RELEASE_DIST}.noarch.rpm")
 		set(CPACK_RPM_DEV_PACKAGE_SUMMARY ${CPACK_COMPONENT_DEV_DESCRIPTION})
-		set(CPACK_RPM_DEV_PACKAGE_REQUIRES "${CPACK_PACKAGE_NAME}, libcurl-devel, jsoncpp-devel")
+		set(CPACK_RPM_DEV_PACKAGE_REQUIRES "${CPACK_PACKAGE_NAME}, libcurl-devel")
 
 		# Python Package
 		if (PYTHON3)
@@ -512,7 +572,7 @@ if (PKG)
 		set(CPACK_DEBIAN_DEV_FILE_NAME "${CPACK_DEBIAN_DEV_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}_all.deb")
 		set(CPACK_DEBIAN_DEV_PACKAGE_SECTION libdevel)
 		set(CPACK_DEBIAN_DEV_PACKAGE_ARCHITECTURE "all")
-		set(CPACK_DEBIAN_DEV_PACKAGE_DEPENDS "${CPACK_PACKAGE_NAME}, libcurl4-openssl-dev, libjsoncpp-dev")
+		set(CPACK_DEBIAN_DEV_PACKAGE_DEPENDS "${CPACK_PACKAGE_NAME}, libcurl4-openssl-dev")
 
 		# Python Package
 		if (PYTHON3)
@@ -580,10 +640,10 @@ if(TESTS)
 			    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
 			)
 			target_include_directories( unittests PUBLIC ${FPGAMGMTLIB_INCLUDE_DIRS} )
-			target_include_directories( unittests PUBLIC ${JSONCPP_INCLUDEDIR} )
+			#target_include_directories( unittests PUBLIC ${JSONCPP_INCLUDEDIR} )
 			target_link_libraries( unittests accelize_drmc )
 			target_link_libraries( unittests ${FPGAMGMTLIB_LIBRARIES} )
-			target_link_libraries( unittests jsoncpp )
+			#target_link_libraries( unittests jsoncpp )
 		endif()
 	endif()
 endif()
