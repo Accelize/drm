@@ -189,9 +189,9 @@ private:
             // Request initialization of the Drm Controller Trusted App
             uint32_t response = 0;
             ret = pnc_session_send_request_and_wait_response(s_pnc_session, PNC_DRM_INIT_SHM, 0, &response);
-            Debug( "pnc_session_send_request_and_wait_response returned {}", ret );
+            Debug( "pnc_session_send_request_and_wait_response returned {} with response {}", ret, response );
             if ( (ret < 0) || (response != 0) ) {
-                std::string msg = fmt::format( "Failed to initialize DRM Controller TA: retcode={} / response={}. ", strerror(errno), response );
+                std::string msg = fmt::format( "Failed to initialize DRM Controller TA: stderr={} / response={}. ", strerror(errno), response );
                 msg += DRM_CTRL_TA_INIT_ERROR_MESSAGE;
                 msg += fmt::format(
                     "For more details refer to the online documentation: {}/drm_hardware_integration.html#xilinx-r-som-boards",
