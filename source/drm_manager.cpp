@@ -144,6 +144,7 @@ private:
             return true;
         }
         err = pnc_session_new(PNC_ALLOC_SIZE, &s_pnc_session);
+        Debug( "pnc_session_new returned {}", err );
         if ( err == -ENODEV ) {
             Debug( "ProvenCore driver is not loaded" );
             return false;
@@ -156,6 +157,7 @@ private:
             int ret = 0;
             for (int timeout = 10; timeout > 0; timeout--) {
                 ret = pnc_session_config_by_name(s_pnc_session, "drm_controller_rs");
+                Debug( "pnc_session_config_by_name returned {}", ret );
                 if (ret < 0) {
                     if (errno == EAGAIN) {
                         sleep(1);
@@ -173,6 +175,7 @@ private:
 
             // get virtual address and size of shared memory region
             ret = pnc_session_getinfo(s_pnc_session, (void**)&s_pnc_tzvaddr, &s_pnc_tzsize);
+            Debug( "pnc_session_getinfo returned {}", ret );
             if ( ret < 0) {
                 Throw( DRM_PncInitError, "Failed to get information from DRM Controller TA: {}. ",
                     strerror(errno) );
@@ -186,6 +189,7 @@ private:
             // Request initialization of the Drm Controller Trusted App
             uint32_t response = 0;
             ret = pnc_session_send_request_and_wait_response(s_pnc_session, PNC_DRM_INIT_SHM, 0, &response);
+            Debug( "pnc_session_send_request_and_wait_response returned {}", ret );
             if ( (ret < 0) || (response != 0) ) {
                 std::string msg = fmt::format( "Failed to initialize DRM Controller TA: retcode={} / response={}. ", strerror(errno), response );
                 msg += DRM_CTRL_TA_INIT_ERROR_MESSAGE;
@@ -199,6 +203,7 @@ private:
         }
         catch( const Exception &e ) {
             pnc_session_destroy(s_pnc_session);
+            Debug( "pnc_session_send_request_and_wait_response returned" );
             s_pnc_session = nullptr;
             throw;
         }
