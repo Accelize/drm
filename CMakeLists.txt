@@ -132,13 +132,9 @@ find_package(PkgConfig REQUIRED)
 find_package(Threads REQUIRED)
 
 ## Build JsonCpp library
-
 set(JSONCPP_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/jsoncpp)
 set(JSONCPP_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/jsoncpp)
-
-if("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC" )
-endif("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
 
 include(ExternalProject)
 ExternalProject_Add(jsoncpp_project
@@ -154,8 +150,8 @@ ExternalProject_Add(jsoncpp_project
 		   "-DJSONCPP_WITH_EXAMPLE=OFF "
 	INSTALL_COMMAND ""
 )
-ExternalProject_Get_Property(jsoncpp_project binary_dir)
-set(JSONCPP_LIBRARYDIR ${binary_dir}/lib/)
+ExternalProject_Get_Property(jsoncpp_project BINARY_DIR)
+set(JSONCPP_LIBRARYDIR ${BINARY_DIR}/lib/)
 add_library(jsoncpp_lib STATIC IMPORTED)
 set_property(TARGET jsoncpp_lib PROPERTY IMPORTED_LOCATION ${JSONCPP_LIBRARYDIR}/libjsoncpp.a)
 add_dependencies(jsoncpp_lib jsoncpp_project)
