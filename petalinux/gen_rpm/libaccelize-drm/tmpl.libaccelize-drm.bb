@@ -12,19 +12,12 @@ SRCREV = "$TMPL_GIT_COMMIT"
 
 DEPENDS += " \
     curl \
-    jsoncpp \
 "
 
 S = "$${WORKDIR}/git"
 
 PV = "${TMPL_PV}"
-PR = "${TMPL_PR}"
-PKGR = "$${PR}"
-
-DEPENDS += " \
-    curl \
-    jsoncpp \
-"
+PKGR = "${TMPL_PR}"
 
 INHIBIT_SYSROOT_STRIP = "1"
 

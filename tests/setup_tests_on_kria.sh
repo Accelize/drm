@@ -3,7 +3,7 @@
 
 # Install dependencies
 #If gcc/g++ is not installed by default: dnf install -y packagegroup-petalinux-self-hosted
-dnf install -y git curl-dev libjsoncpp-dev
+dnf install -y git curl-dev
 
 # Install Python dependencies
 pip3 install backports.entry-points-selectable filelock

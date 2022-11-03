@@ -60,7 +60,7 @@ stages:
 
         - script: |
             sudo apt-get -q update
-            sudo apt-get -q install -y --no-install-recommends ccache doxygen g++ libcurl4-openssl-dev libjsoncpp-dev make pkg-config
+            sudo apt-get -q install -y --no-install-recommends ccache doxygen g++ libcurl4-openssl-dev make pkg-config
             pip install -q --disable-pip-version-check breathe cython sphinx_rtd_theme wheel
             pip --disable-pip-version-check list
             echo "##vso[task.prependpath]/usr/lib/ccache"
