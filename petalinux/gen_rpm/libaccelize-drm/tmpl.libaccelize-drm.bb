@@ -18,13 +18,7 @@ DEPENDS += " \
 S = "$${WORKDIR}/git"
 
 PV = "${TMPL_PV}"
-PR = "${TMPL_PR}"
-PKGR = "$${PR}"
-
-DEPENDS += " \
-    curl \
-    jsoncpp \
-"
+PKGR = "1.pl${@d.getVar('XILINX_VER_MAIN').replace('.', '_')}"
 
 INHIBIT_SYSROOT_STRIP = "1"
 
