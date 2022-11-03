@@ -329,8 +329,8 @@ protected:
     uint32_t mAxiFrequency = 0;
 
     // Session state
+    std::string mDeviceID;
     std::string mSessionID;
-    std::string mUDID;
     std::string mBoardType;
 
     // Web service communication
@@ -489,7 +489,6 @@ protected:
             // Design configuration
             Json::Value conf_design = JVgetOptional( conf_json, "design", Json::objectValue );
             if ( !conf_design.empty() ) {
-                mUDID = JVgetOptional( conf_design, "udid", Json::stringValue, "" ).asString();
                 mBoardType = JVgetOptional( conf_design, "boardType", Json::stringValue, "" ).asString();
             }
 
@@ -1299,30 +1298,45 @@ protected:
         std::vector<std::string> vlnvFile;
         std::string mailboxReadOnly;
 
-        // Get information from DRM Controller
-        getDesignInfo( drmVersion, dna, vlnvFile, mailboxReadOnly );
+        json_output["diagnostic"] = Json::nullValue;
+        Json::Value diagnostic_node = json_output["diagnostic"];
 
-        // Fulfill application section
-        if ( !mUDID.empty() )
-            json_output["udid"] = mUDID;
-        else if ( mailboxReadOnly.empty() )
-            Throw( DRM_BadArg, "UDID and Product ID cannot be both missing" );
-        if ( !mBoardType.empty() )
-            json_output["boardType"] = mBoardType;
-        json_output["mode"] = (uint8_t)mLicenseType;
-        if ( !isConfigInNodeLock() )
-            json_output["drm_frequency_init"] = mFrequencyInit;
+        json_output["tmp"] = Json::nullValue;
+        Json::Value tmp_node =json_output["tmp"];
+
+        // Get information from DRM Controller
+        getDesignInfo( drmVersion, mDeviceID, vlnvFile, mailboxReadOnly );
+
+        std::string os_version = execCmd( "grep -Po 'PRETTY_NAME=\"\K[^\"]+' /etc/os-release" );
+        std::string kernel_version = execCmd( "uname -r" );
+        std::string cpu_version = execCmd( "uname -m" );
 
         // Fulfill with DRM section
-        json_output["drmlibVersion"] = DRMLIB_VERSION;
-        json_output["lgdnVersion"] = drmVersion;
-        json_output["dna"] = dna;
+        diagnostic_node["drm_library_version"] = DRMLIB_VERSION;
+        diagnostic_node["drm_ctrl_version"] = drmVersion;
+        diagnostic_node["os_version"] = os_version;
+        diagnostic_node["os_kernel_version"] = kernel_version;
+        diagnostic_node["cpu_architecture"] = cpu_version;
+        diagnostic_node["device_driver_version"] = "";
+        diagnostic_node["device_firmware_version"] = "";
+        diagnostic_node["instance_provider"] = "";
+        diagnostic_node["instance_type"] = "";
+        diagnostic_node["instance_region"] = "";
+        diagnostic_node["instance_image"] = "";
+
+        // Fulfill tmp section
+        if ( mailboxReadOnly.empty() )
+            Throw( DRM_BadArg, "UDID and Product ID cannot be both missing" );
+        tmp_node["mode"] = (uint8_t)mLicenseType;
+        if ( !isConfigInNodeLock() )
+            tmp_node["drm_frequency_init"] = mFrequencyInit;
+
         for ( uint32_t i = 0; i < vlnvFile.size(); i++ ) {
             std::string i_str = std::to_string(i);
-            json_output["vlnvFile"][i_str]["vendor"] = std::string("x") + vlnvFile[i].substr(0, 4);
-            json_output["vlnvFile"][i_str]["library"] = std::string("x") + vlnvFile[i].substr(4, 4);
-            json_output["vlnvFile"][i_str]["name"] = std::string("x") + vlnvFile[i].substr(8, 4);
-            json_output["vlnvFile"][i_str]["version"] = std::string("x") + vlnvFile[i].substr(12, 4);
+            tmp_node["vlnvFile"][i_str]["vendor"] = std::string("x") + vlnvFile[i].substr(0, 4);
+            tmp_node["vlnvFile"][i_str]["library"] = std::string("x") + vlnvFile[i].substr(4, 4);
+            tmp_node["vlnvFile"][i_str]["name"] = std::string("x") + vlnvFile[i].substr(8, 4);
+            tmp_node["vlnvFile"][i_str]["version"] = std::string("x") + vlnvFile[i].substr(12, 4);
         }
 
         // Fulfill with product information
@@ -1330,19 +1344,19 @@ protected:
             try {
                 mMailboxRoData = parseJsonString( mailboxReadOnly );
                 if ( mMailboxRoData.isMember( "product_id" ) )
-                    json_output["product"] = mMailboxRoData["product_id"];
+                    tmp_node["product"] = mMailboxRoData["product_id"];
                 else
                     json_output["product"] = mMailboxRoData;
                 if ( mMailboxRoData.isMember( "pkg_version" ) ) {
-                    json_output["pkg_version"] = mMailboxRoData["pkg_version"];
+                    tmp_node["pkg_version"] = mMailboxRoData["pkg_version"];
                     Debug( "HDK Generator version: {}", json_output["pkg_version"].asString() );
                 }
                 if ( mMailboxRoData.isMember( "dna_type" ) ) {
-                    json_output["dna_type"] = mMailboxRoData["dna_type"];
+                    tmp_node["dna_type"] = mMailboxRoData["dna_type"];
                     Debug( "HDK DNA type: {}", json_output["dna_type"].asString() );
                 }
                 if ( mMailboxRoData.isMember( "extra" ) ) {
-                    json_output["extra"] = mMailboxRoData["extra"];
+                    tmp_node["extra"] = mMailboxRoData["extra"];
                     Debug( "HDK extra data: {}", json_output["extra"].toStyledString() );
                 }
             } catch( const Exception &e ) {

@@ -10,10 +10,7 @@ LIC_FILES_CHKSUM = "file://$${WORKDIR}/git/LICENSE;md5=$TMPL_LICENSE_MD5"
 SRC_URI = "gitsm://github.com/Accelize/drm.git;protocol=http;$TMPL_GIT_OPTIONS"
 SRCREV = "$TMPL_GIT_COMMIT"
 
-DEPENDS += " \
-    curl \
-    jsoncpp \
-"
+DEPENDS += " curl"
 
 S = "$${WORKDIR}/git"
 

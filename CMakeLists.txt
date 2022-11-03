@@ -129,12 +129,37 @@ set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined")
 
 ## Build requirements
 find_package(PkgConfig REQUIRED)
-
 find_package(Threads REQUIRED)
 
-pkg_check_modules(JSONCPP jsoncpp)
+## Build JsonCpp library
+set(JSONCPP_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/jsoncpp)
+set(JSONCPP_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/jsoncpp)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC" )
+
+include(ExternalProject)
+ExternalProject_Add(jsoncpp_project
+	SOURCE_DIR ${JSONCPP_SOURCE_DIR}
+	BINARY_DIR ${JSONCPP_BINARY_DIR}
+	PREFIX ${JSONCPP_BINARY_DIR}
+	CMAKE_ARGS "-DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS} "
+		   "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} "
+		   "-DBUILD_OBJECT_LIBS=OFF "
+		   "-DBUILD_STATIC_LIBS=ON "
+		   "-DBUILD_SHARED_LIBS=OFF "
+		   "-DJSONCPP_WITH_TESTS=OFF "
+		   "-DJSONCPP_WITH_EXAMPLE=OFF "
+	INSTALL_COMMAND ""
+)
+ExternalProject_Get_Property(jsoncpp_project BINARY_DIR)
+set(JSONCPP_LIBRARYDIR ${BINARY_DIR}/lib/)
+add_library(jsoncpp_lib STATIC IMPORTED)
+set_property(TARGET jsoncpp_lib PROPERTY IMPORTED_LOCATION ${JSONCPP_LIBRARYDIR}/libjsoncpp.a)
+add_dependencies(jsoncpp_lib jsoncpp_project)
+
+set(JSONCPP_INCLUDEDIR ${JSONCPP_SOURCE_DIR}/include)
 include_directories(${JSONCPP_INCLUDEDIR})
 
+## Curl library
 find_package(CURL REQUIRED)
 include_directories(${CURL_INCLUDE_DIR})
 
@@ -219,7 +244,7 @@ target_include_directories(accelize_drm PRIVATE spdlog/include)
 ## libaccelize_drm
 set_target_properties(accelize_drm PROPERTIES VERSION ${ACCELIZEDRM_VERSION} SOVERSION ${ABI_VERSION})
 target_link_libraries(accelize_drm ${CURL_LIBRARIES})
-target_link_libraries(accelize_drm jsoncpp)
+target_link_libraries(accelize_drm jsoncpp_lib)
 target_link_libraries(accelize_drm drm_controller_lib)
 target_link_libraries(accelize_drm ${CMAKE_THREAD_LIBS_INIT})
 
@@ -461,7 +486,7 @@ if (PKG)
 		set(CPACK_RPM_DEV_PACKAGE_ARCHITECTURE "noarch")
 		set(CPACK_RPM_DEV_FILE_NAME "${CPACK_RPM_DEV_PACKAGE_NAME}-${CPACK_RPM_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}${CPACK_RPM_PACKAGE_RELEASE_DIST}.noarch.rpm")
 		set(CPACK_RPM_DEV_PACKAGE_SUMMARY ${CPACK_COMPONENT_DEV_DESCRIPTION})
-		set(CPACK_RPM_DEV_PACKAGE_REQUIRES "${CPACK_PACKAGE_NAME}, libcurl-devel, jsoncpp-devel")
+		set(CPACK_RPM_DEV_PACKAGE_REQUIRES "${CPACK_PACKAGE_NAME}, libcurl-devel")
 
 		# Python Package
 		if (PYTHON3)
@@ -512,7 +537,7 @@ if (PKG)
 		set(CPACK_DEBIAN_DEV_FILE_NAME "${CPACK_DEBIAN_DEV_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}_all.deb")
 		set(CPACK_DEBIAN_DEV_PACKAGE_SECTION libdevel)
 		set(CPACK_DEBIAN_DEV_PACKAGE_ARCHITECTURE "all")
-		set(CPACK_DEBIAN_DEV_PACKAGE_DEPENDS "${CPACK_PACKAGE_NAME}, libcurl4-openssl-dev, libjsoncpp-dev")
+		set(CPACK_DEBIAN_DEV_PACKAGE_DEPENDS "${CPACK_PACKAGE_NAME}, libcurl4-openssl-dev")
 
 		# Python Package
 		if (PYTHON3)
@@ -583,7 +608,7 @@ if(TESTS)
 			target_include_directories( unittests PUBLIC ${JSONCPP_INCLUDEDIR} )
 			target_link_libraries( unittests accelize_drmc )
 			target_link_libraries( unittests ${FPGAMGMTLIB_LIBRARIES} )
-			target_link_libraries( unittests jsoncpp )
+			target_link_libraries( unittests jsoncpp_lib )
 		endif()
 	endif()
 endif()

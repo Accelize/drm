@@ -242,7 +242,6 @@ Minimal requirements:
  * make (Or any CMake supported build tool)
  * GCC, G++ >= 4.8 (Or any compatible C++11 compiler)
  * libcurl-devel
- * jsoncpp-devel
 
 Python library requirements:
 
@@ -259,7 +258,7 @@ Run following commands to install all requirements:
 
     # Minimal requirements
     sudo apt update
-    sudo apt install -y git make g++ libcurl4-openssl-dev libjsoncpp-dev pkg-config cmake
+    sudo apt install -y git make g++ libcurl4-openssl-dev pkg-config cmake
 
     # Python library requirements
     sudo apt install -y python3-dev python3-wheel python3-setuptools cython3
@@ -269,7 +268,7 @@ Run following commands to install all requirements:
 
     # Minimal requirements
     sudo apt update
-    sudo apt install -y git make g++ libcurl4-openssl-dev libjsoncpp-dev pkg-config python3-pip
+    sudo apt install -y git make g++ libcurl4-openssl-dev pkg-config python3-pip
     python3 -m pip install --user -U pip
     pip3 install --user -U cmake
 
@@ -284,7 +283,7 @@ Run following commands to install all requirements:
     sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 
     # Minimal requirements
-    sudo dnf install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel python3-pip
+    sudo dnf install -y git make gcc gcc-c++ libcurl-devel python3-pip
     python3 -m pip install --user -U pip
     pip3 install --user -U cmake
 
@@ -299,7 +298,7 @@ Run following commands to install all requirements:
     sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
     # Minimal requirements
-    sudo yum install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel python3-pip
+    sudo yum install -y git make gcc gcc-c++ libcurl-devel python3-pip
     python3 -m pip install --user -U pip
     pip3 install --user -U cmake
 
@@ -311,7 +310,7 @@ Run following commands to install all requirements:
     :caption: On Fedora
 
     # Minimal requirements
-    sudo dnf install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel cmake
+    sudo dnf install -y git make gcc gcc-c++ libcurl-devel cmake
 
     # Python library requirements
     sudo dnf install -y python3-devel python3-setuptools python3-Cython python3-wheel

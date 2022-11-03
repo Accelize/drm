@@ -292,27 +292,6 @@ C or C++ DRM library and have the thread support enabled.
 
     g++ source.cpp -pthread -laccelize_drm -o application
 
-.. warning:: The library requires JsonCpp that is included as ``json/json.h`` for
-             portability.
-
-             On some OS like Ubuntu or CentOS, JsonCpp include is in a
-             ``jsoncpp`` subdirectory of the system include directory
-             (resulting in header file path ``jsoncpp/json/json.h``).
-
-             Make sure to specify the correct JsonCpp include path when compiling.
-
-             .. code-block:: bash
-                :caption: GCC: JsonCpp include with an absolute path specification
-
-                gcc source.c -pthread -laccelize_drmc -o application -I/usr/include/jsoncpp
-
-             .. code-block:: bash
-                :caption: CMake: JsonCpp include path auto-detection
-
-                find_package(PkgConfig REQUIRED)
-                pkg_check_modules(JSONCPP jsoncpp)
-                include_directories(${JSONCPP_INCLUDEDIR})
-
 
 Advanced usage
 --------------
@@ -428,7 +407,6 @@ To compile the DRM Lib with Petalinux:
 
     DEPENDS += " \
         curl \
-        jsoncpp \
     "
 
     S = "${WORKDIR}/git"

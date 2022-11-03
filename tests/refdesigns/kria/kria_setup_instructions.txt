@@ -2,7 +2,7 @@
 sudo su
 
 # Install dependencies
-dnf install -y git curl-dev libjsoncpp-dev
+dnf install -y git curl-dev
 #? dnf install -y packagegroup-petalinux-self-hosted
 pip3 install backports.entry-points-selectable filelock
 pip3 install wheel pyopencl pytest pytest-flask flake8

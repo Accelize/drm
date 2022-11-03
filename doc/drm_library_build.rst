@@ -30,7 +30,6 @@ Utilities:
 
 Libraries:
  * libcurl-devel
- * jsoncpp-devel
 
 Run following commands to install requirements:
 
@@ -41,7 +40,7 @@ Run following commands to install requirements:
     sudo apt update
 
     # Install packages
-    sudo apt install -y git make g++ libcurl4-openssl-dev libjsoncpp-dev cmake
+    sudo apt install -y git make g++ libcurl4-openssl-dev cmake
 
 .. code-block:: bash
     :caption: On Debian < 10, Ubuntu < 18.10
@@ -50,7 +49,7 @@ Run following commands to install requirements:
     sudo apt update
 
     # Install packages
-    sudo apt install -y git make g++ libcurl4-openssl-dev libjsoncpp-dev
+    sudo apt install -y git make g++ libcurl4-openssl-dev
 
     # Ensure Pip3 is installed
     sudo apt install -y python3-pip
@@ -65,7 +64,7 @@ Run following commands to install requirements:
     sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 
     # Install packages
-    sudo dnf install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel
+    sudo dnf install -y git make gcc gcc-c++ libcurl-devel
 
     # Ensure Pip3 is installed
     sudo dnf install -y python3-pip
@@ -80,7 +79,7 @@ Run following commands to install requirements:
     sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
     # Install packages
-    sudo yum install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel
+    sudo yum install -y git make gcc gcc-c++ libcurl-devel
 
     # Ensure Pip3 is installed
     sudo yum install -y python3-pip
@@ -91,7 +90,7 @@ Run following commands to install requirements:
 .. code-block:: bash
     :caption: On Fedora
 
-    sudo dnf install -y git make gcc gcc-c++ libcurl-devel jsoncpp-devel cmake
+    sudo dnf install -y git make gcc gcc-c++ libcurl-devel cmake
 
 Python 3 library option
 -----------------------
