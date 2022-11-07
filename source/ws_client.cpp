@@ -198,13 +198,18 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
     CurlSingleton::Init();
 
     // Set URL of license and metering requests
+    /*mUrl = url;
     mOAuth2Url = url + std::string("/o/token/");
     mLicenseUrl = url + std::string("/auth/metering/genlicense/");
     mHealthUrl = url + std::string("/auth/metering/health/");
+    mProductUrl = url + std::string("/customer/product/{}/entitlement_session");  // product_id
+    mEntitlementUrl = url + std::string("/customer/entitlement_session/{}");  //entitlement_session_id
 
     Debug( "OAuth URL: {}", mOAuth2Url );
     Debug( "Licensing URL: {}", mLicenseUrl );
     Debug( "Health URL: {}", mHealthUrl );
+    */
+    Debug( "DRM Server URL: {}", mUrl );
 }
 
 int32_t DrmWSClient::getTokenTimeLeft() const {
@@ -227,7 +232,7 @@ bool DrmWSClient::isTokenValid() const {
     }
 }
 
-void DrmWSClient::requestOAuth2token( int32_t timeout_msec ) {
+void DrmWSClient::getOAuth2token( int32_t timeout_msec ) {
 
     // Check if a token exists
     if ( !mOAuth2Token.empty() ) {
@@ -242,17 +247,18 @@ void DrmWSClient::requestOAuth2token( int32_t timeout_msec ) {
     req.setVerbosity( mVerbosity );
     req.setHostResolves( mHostResolvesJson );
     std::stringstream ss;
-    ss << "grant_type=client_credentials";
-    ss << "&client_id=" << mClientId;
+    ss << "client_id=" << mClientId;
     ss << "&client_secret=" << mClientSecret;
+    ss << "&grant_type=client_credentials";
     req.setPostFields( ss.str() );
 
     // Send request and wait response
     std::string response;
     if ( timeout_msec >= mRequestTimeoutMS )
         timeout_msec = mRequestTimeoutMS;
-    Debug( "Starting OAuthentication request to {}", mOAuth2Url );
-    long resp_code = req.perform( mOAuth2Url, &response, timeout_msec );
+    std::string oauth_url = mUrl + std::string("/auth/token/");
+    Debug( "Starting OAuthentication request to {}", oauth_url );
+    long resp_code = req.perform( oauth_url, &response, timeout_msec );
 
     // Parse response
     std::string error_msg;
@@ -278,8 +284,14 @@ void DrmWSClient::requestOAuth2token( int32_t timeout_msec ) {
     mTokenExpirationTime = TClock::now() + std::chrono::seconds( mTokenValidityPeriod );
 }
 
-Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Value& json_req,
-                                          int32_t timeout_msec ) {
+Json::Value DrmWSClient::postSaas( const Json::Value& json_req, int32_t timeout_msec ) {
+    std::string url;
+    if ( json_req["request"] == "open" ) {
+        url = mUrl + fmt::format( "/customer/product/{}/entitlement_session", json_req["product_id"].asString() );
+    } else {
+        url = mUrl + fmt::format( "/customer/entitlement_session/{}", json_req["entitlement_id"].asString() );
+    }
+    Debug( "Starting Saas request to {} with data:\n{}", url, json_req.toStyledString() );
 
     // Create new request
     CurlEasyPost req( mConnectionTimeoutMS );
@@ -326,15 +338,6 @@ Json::Value DrmWSClient::requestMetering( const std::string url, const Json::Val
     return json_resp;
 }
 
-Json::Value DrmWSClient::requestLicense( const Json::Value& json_req, int32_t timeout_msec ) {
-    Debug( "Starting License request to {} with data:\n{}", mLicenseUrl, json_req.toStyledString() );
-    return requestMetering( mLicenseUrl, json_req, timeout_msec );
-}
-
-Json::Value DrmWSClient::requestHealth( const Json::Value& json_req, int32_t timeout_msec ) {
-    Debug( "Starting Health request to {} with data:\n{}", mHealthUrl, json_req.toStyledString() );
-    return requestMetering( mHealthUrl, json_req, timeout_msec );
-}
 
 }
 }

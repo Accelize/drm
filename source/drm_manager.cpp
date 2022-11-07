@@ -329,9 +329,8 @@ protected:
     uint32_t mAxiFrequency = 0;
 
     // Session state
-    std::string mDeviceID;
     std::string mSessionID;
-    std::string mBoardType;
+    std::string mEntitlementID;
 
     // Web service communication
     Json::Value mHeaderJsonRequest;
@@ -485,12 +484,6 @@ protected:
             if ( mWSRetryPeriodLong <= mWSRetryPeriodShort )
                 Throw( DRM_BadArg, "ws_retry_period_long ({} sec) must be greater than ws_retry_period_short ({} sec). ",
                         mWSRetryPeriodLong, mWSRetryPeriodShort );
-
-            // Design configuration
-            Json::Value conf_design = JVgetOptional( conf_json, "design", Json::objectValue );
-            if ( !conf_design.empty() ) {
-                mBoardType = JVgetOptional( conf_design, "boardType", Json::stringValue, "" ).asString();
-            }
 
             // Licensing configuration
             Json::Value conf_licensing = JVgetRequired( conf_json, "licensing", Json::objectValue );
@@ -1305,7 +1298,9 @@ protected:
         Json::Value tmp_node =json_output["tmp"];
 
         // Get information from DRM Controller
-        getDesignInfo( drmVersion, mDeviceID, vlnvFile, mailboxReadOnly );
+        getDesignInfo( drmVersion, dna, vlnvFile, mailboxReadOnly );
+
+        json_output["device_id"] = dna;
 
         std::string os_version = execCmd( "grep -Po 'PRETTY_NAME=\"\K[^\"]+' /etc/os-release" );
         std::string kernel_version = execCmd( "uname -r" );
@@ -1414,8 +1409,9 @@ protected:
 
         // Request challenge and metering info for first request
         checkDRMCtlrRet( getDrmController().initialization( numberOfDetectedIps, saasChallenge, meteringFile ) );
-        json_request["saasChallenge"] = saasChallenge;
-        json_request["meteringFile"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
+        Json::Value drm_config = json_request["drm_config"];
+        drm_config["saasChallenge"] = saasChallenge;
+        drm_config["meteringFile"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
         json_request["request"] = "open";
         if ( !isConfigInNodeLock() && !mIsHybrid ) {
             json_request["drm_frequency"] = mFrequencyCurr;
@@ -1599,7 +1595,7 @@ protected:
                 timeout_chrono = std::chrono::duration_cast<std::chrono::milliseconds>(
                                  deadline - TClock::now() );
                 timeout_msec = timeout_chrono.count();
-                getDrmWSClient().requestOAuth2token( timeout_msec );
+                getDrmWSClient().getOAuth2token( timeout_msec );
                 token_valid = true;
             } catch ( const Exception& e ) {
                 lic_attempt = 0;
@@ -1641,7 +1637,7 @@ protected:
                 timeout_chrono = std::chrono::duration_cast<std::chrono::milliseconds>(
                                  deadline - TClock::now() );
                 timeout_msec = timeout_chrono.count();
-                return getDrmWSClient().requestLicense( request_json, timeout_msec );
+                return getDrmWSClient().postSaas( request_json, timeout_msec );
             } catch ( const Exception& e ) {
                 oauth_attempt = 0;
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
@@ -1761,7 +1757,7 @@ protected:
                 timeout_chrono = std::chrono::duration_cast<std::chrono::milliseconds>(
                                  deadline - TClock::now() );
                 timeout_msec = timeout_chrono.count();
-                getDrmWSClient().requestOAuth2token( timeout_msec );
+                getDrmWSClient().getOAuth2token( timeout_msec );
                 token_valid = true;
             } catch ( const Exception& e ) {
                 lic_attempt = 0;
@@ -1788,12 +1784,12 @@ protected:
             }
             if ( !token_valid ) continue;
 
-            // Get new license
+            // Send new metering
             try {
                 timeout_chrono = std::chrono::duration_cast<std::chrono::milliseconds>(
                                  deadline - TClock::now() );
                 timeout_msec = timeout_chrono.count();
-                return getDrmWSClient().requestHealth( request_json, timeout_msec );
+                return getDrmWSClient().postSaas( request_json, timeout_msec );
             } catch ( const Exception& e ) {
                 oauth_attempt = 0;
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
@@ -1824,6 +1820,7 @@ protected:
     Json::Value performHealth( const uint32_t retry_timeout_ms, const uint32_t retry_sleep_ms) {
         // Get next data from DRM Controller
         Json::Value request_json = getMeteringHealth();
+        request_json["is_health"] = true;
         // Check session ID
         checkSessionIDFromDRM( request_json );
         if ( request_json["meteringFile"].empty() )

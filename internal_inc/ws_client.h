@@ -223,9 +223,7 @@ protected:
     std::string mClientId;
     std::string mClientSecret;
     std::string mOAuth2Token;
-    std::string mOAuth2Url;
-    std::string mLicenseUrl;
-    std::string mHealthUrl;
+    std::string mUrl;
     Json::Value mHostResolvesJson;
     uint32_t mTokenValidityPeriod;              /// Validation period of the OAuth2 token in seconds
     uint32_t mTokenExpirationMargin;            /// OAuth2 token expiration margin in seconds
@@ -234,7 +232,6 @@ protected:
     int32_t mConnectionTimeoutMS;               /// Maximum period in milliseconds for the client to connect the server
 
     bool isTokenValid() const;
-    Json::Value requestMetering( const std::string url, const Json::Value& json_req, int32_t timeout_msec );
 
 public:
     DrmWSClient(const std::string &conf_file_path, const std::string &cred_file_path);
@@ -248,11 +245,8 @@ public:
     int32_t getRequestTimeoutMS() const { return mRequestTimeoutMS; }
     int32_t getConnectionTimeoutMS() const { return mConnectionTimeoutMS; }
 
-    void requestOAuth2token( int32_t timeout_msec );
-
-    Json::Value requestLicense( const Json::Value& json_req, int32_t timeout_msec );
-    Json::Value requestHealth( const Json::Value& json_req, int32_t timeout_msec );
-
+    void getOAuth2token( int32_t timeout_msec );
+    Json::Value postSaas( const Json::Value& json_req, int32_t timeout_msec );
 };
 
 }
