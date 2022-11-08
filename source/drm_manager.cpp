@@ -285,10 +285,6 @@ protected:
     DrmManager::WriteRegisterCallback f_write_register = nullptr;
     DrmManager::AsynchErrorCallback   f_asynch_error = nullptr;
 
-    // Derived product
-    std::string mDerivedProduct;
-    std::string mDerivedProductFromConf;
-
     // Settings files
     std::string mConfFilePath;
     std::string mCredFilePath;
@@ -505,10 +501,6 @@ protected:
                         mBypassFrequencyDetection ).asBool();
                 mIsHybrid = JVgetOptional( conf_drm, "drm_software", Json::booleanValue, false ).asBool();
             }
-
-            // Optionally, check derived product
-            mDerivedProductFromConf = JVgetOptional( conf_json, "derived_product", Json::stringValue, "" ).asString();
-
         } catch( const Exception &e ) {
             if ( e.getErrCode() != DRM_BadFormat )
                 throw;
@@ -811,7 +803,6 @@ protected:
         mDiagnosticJson["cpu_architecture"] = cpu_version;
         mDiagnosticJson["device_driver_version"] = "";
         mDiagnosticJson["device_firmware_version"] = "";
-
 
         // Gather host and card information if xbutil existing
         if ( findXrtUtility() ) {
@@ -1219,9 +1210,6 @@ protected:
 
         // Save header information
         mHeaderJsonRequest = getMeteringHeader();
-        // Update with Derviated Product if sepcified in the config file
-        if ( !mDerivedProductFromConf.empty() )
-            loadDerivedProduct( mDerivedProductFromConf );
 
         // If node-locked license is requested, create license request file
         if ( isConfigInNodeLock() ) {
@@ -1347,34 +1335,6 @@ protected:
         }
 
         return json_output;
-    }
-
-    void loadDerivedProduct( const std::string& derivedProductString ) {
-        if ( derivedProductString == mDerivedProduct ) {
-            Debug( "No derived product to load" );
-            return;
-        }
-        std::vector<std::string> derived_product_component = splitByDelimiter( derivedProductString, '/' );
-        Json::Value product_id = mHeaderJsonRequest["product"];
-        std::string vendor = mHeaderJsonRequest["product"]["vendor"].asString();
-        std::string library = mHeaderJsonRequest["product"]["library"].asString();
-        std::string name = mHeaderJsonRequest["product"]["name"].asString();
-
-        // Check vendor are identical
-        if ( vendor != derived_product_component[0] ) {
-            Throw( DRM_BadArg, "Invalid derived product information: vendor mismatch" );
-        }
-        // Check library are identical
-        if ( library != derived_product_component[1] ) {
-            Throw( DRM_BadArg, "Invalid derived product information: library mismatch" );
-        }
-        // Check name starts with the same
-        if ( derived_product_component[2].rfind( name, 0 ) != 0 ) {
-            Throw( DRM_BadArg, "Invalid derived product information: name mismatch" );
-        }
-        mHeaderJsonRequest["product"]["name"] = derived_product_component[2];
-        mDerivedProduct = derivedProductString;
-        Info( "Loaded new derived product: {}", mDerivedProduct );
     }
 
     Json::Value getMeteringStart() const {
@@ -1857,9 +1817,13 @@ protected:
             writeMailbox<uint64_t>( eMailboxOffset::MB_SESSION_0, 0 );
             /// - Create WS access
             mWsClient.reset( new DrmWSClient( mConfFilePath, mCredFilePath ) );
-            /// - Read request file
             try {
+                /// - Read request file
                 Json::Value request_json = parseJsonFile( mNodeLockRequestFilePath );
+                /// - Add diagnostic info
+                getCstInfo();
+                getHostAndCardInfo();
+                request_json["diagnostic"] = mDiagnosticJson;
                 Debug( "Parsed Node-locked License Request file: {}", request_json .toStyledString() );
                 /// - Send request to web service and receive the new license
                 license_json = getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
@@ -2570,9 +2534,6 @@ public:
                                     "To use other modes you must reprogram the FPGA device. " );
             }
 
-            // Load derived product if any
-            loadDerivedProduct( mDerivedProduct );
-
             if ( !isSessionRunning() ) {
                 // Start new session if no session is currently pending
                 startSession();
@@ -2968,12 +2929,6 @@ public:
                                numberOfLicenseProvisioned );
                         break;
                     }
-                    case ParameterKey::derived_product: {
-                        json_value[key_str] = mDerivedProduct;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
-                               mDerivedProduct );
-                        break;
-                    }
                     case ParameterKey::ws_connection_timeout: {
                         int32_t con_timeout_sec = (int32_t)(getDrmWSClient().getConnectionTimeoutMS() / 1000);
                         json_value[key_str] = con_timeout_sec;
@@ -3158,14 +3113,6 @@ public:
                     case ParameterKey::log_message: {
                         std::string custom_msg = (*it).asString();
                         SPDLOG_LOGGER_CALL( sLogger, (spdlog::level::level_enum)mDebugMessageLevel, custom_msg);
-                        break;
-                    }
-                    case ParameterKey::derived_product: {
-                        std::string vln_str = (*it).asString();
-                        if ( isSessionRunning() )
-                            Throw( DRM_BadUsage, "Derived product cannot be loaded if a session is still running. " );
-                        loadDerivedProduct( vln_str );
-                        Debug( "Set parameter '{}' (ID={}) to value {}", key_str, key_id, vln_str );
                         break;
                     }
                     case ParameterKey::log_ctrl_verbosity: {
