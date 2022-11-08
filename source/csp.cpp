@@ -71,10 +71,10 @@ void Csp::get_metadata_ec2( Json::Value &csp_info ) const {
     try {
         result_str = req.perform_get<std::string>( base_url, mRequestTimeoutMS );
         Debug( "List of available EC2 instance metadata:\n{}", result_str );
-        csp_info["csp_name"] = "Unknown";
-        csp_info["ami-id"] = req.perform_get<std::string>( fmt::format( "{}/ami-id", base_url ), mRequestTimeoutMS );
-        csp_info["hostname"] = req.perform_get<std::string>( fmt::format( "{}/hostname", base_url ), mRequestTimeoutMS );
-        csp_info["instance-type"] = req.perform_get<std::string>( fmt::format( "{}/instance-type", base_url ), mRequestTimeoutMS );
+        csp_info["instance_provider"] = "Unknown EC2";
+        csp_info["instance_image"] = req.perform_get<std::string>( fmt::format( "{}/ami-id", base_url ), mRequestTimeoutMS );
+        csp_info["instance_type"] = req.perform_get<std::string>( fmt::format( "{}/instance-type", base_url ), mRequestTimeoutMS );
+        csp_info["extra"]["hostname"] = req.perform_get<std::string>( fmt::format( "{}/hostname", base_url ), mRequestTimeoutMS );
     } catch(std::runtime_error const&) {
         Debug( "Could not access instance metadata using EC2 url" );
     }
@@ -90,11 +90,12 @@ void Csp::get_metadata_openstack( Json::Value &csp_info ) const {
         result_str = req.perform_get<std::string>( base_url, mRequestTimeoutMS );
         result_json = parseJsonString( result_str );
         Debug( "List of available openstack instance metadata:\n{}", result_json.toStyledString() );
-        csp_info["openstack"] = Json::nullValue;
-        csp_info["openstack"]["hostname"] = result_json["hostname"];
-        csp_info["openstack"]["availability_zone"] = result_json["availability_zone"];
-        csp_info["openstack"]["devices"] = result_json["devices"];
-        csp_info["openstack"]["dedicated_cpus"] = result_json["dedicated_cpus"];
+        csp_info["instance_provider"] = "Unknown OpenStack";
+        //csp_info["openstack"] = Json::nullValue;
+        csp_info["extra"]["hostname"] = result_json["hostname"];
+        csp_info["extra"]["availability_zone"] = result_json["availability_zone"];
+        csp_info["extra"]["devices"] = result_json["devices"];
+        csp_info["extra"]["dedicated_cpus"] = result_json["dedicated_cpus"];
     } catch(std::runtime_error const&) {
         Debug( "Could not access instance metadata using OpenStack url" );
     }
@@ -109,13 +110,13 @@ bool Csp::get_metadata_aws(Json::Value &csp_info) const {
     try {
         std::string result_str = req.perform_get<std::string>( "http://169.254.169.254/latest/meta-data/services/domain", mRequestTimeoutMS );
         if ( result_str.find( "aws" ) != std::string::npos) {
-            csp_info["csp_name"] = "AWS";
+            csp_info["instance_provider"] = "AWS";
+            csp_info["instance_region"] = result_json["region"];
             // Add AWS specific fields
             result_str = req.perform_get<std::string>( "http://169.254.169.254/latest/dynamic/instance-identity/document", mRequestTimeoutMS );
             result_json = parseJsonString( result_str );
-            csp_info["architecture"] = result_json["architecture"];
-            csp_info["region"] = result_json["region"];
-            csp_info["version"] = result_json["version"];
+            csp_info["extra"]["architecture"] = result_json["architecture"];
+            csp_info["extra"]["version"] = result_json["version"];
             Debug( "Instance is running on AWS" );
             return true;
         }
@@ -131,7 +132,7 @@ bool Csp::get_metadata_vmaccel(Json::Value &csp_info) const {
     if ( csp_info.isMember( "hostname" ) ) {
         std::string hostname = csp_info["hostname"].asString();
         if ( hostname.find( "vmaccel" ) ) {
-            csp_info["csp_name"] = "VMAccel";
+            csp_info["instance_provider"] = "VMAccel";
             Debug( "Instance is running on VMAccel" );
             return true;
         }
@@ -146,14 +147,14 @@ bool Csp::get_metadata_alibaba(Json::Value &csp_info) const {
     req.setVerbosity( mVerbosity );
     std::string base_url = std::string("http://100.100.100.200/latest/meta-data");
     try {
-        csp_info["instance-type"] = req.perform_get<std::string>( fmt::format( "{}/instance/instance-type", base_url ), mRequestTimeoutMS );
-        csp_info["csp_name"] = "Alibaba";
-        csp_info["image-id"] = req.perform_get<std::string>( fmt::format( "{}/image-id", base_url ), mRequestTimeoutMS );
-        csp_info["hostname"] = req.perform_get<std::string>( fmt::format( "{}/hostname", base_url ), mRequestTimeoutMS );
-        csp_info["product-code"] = req.perform_get<std::string>( fmt::format( "{}/image/market-place/product-code", base_url ), mRequestTimeoutMS );
-        csp_info["charge-type"] = req.perform_get<std::string>( fmt::format( "{}/image/market-place/charge-type", base_url ), mRequestTimeoutMS );
-        csp_info["region-id"] = req.perform_get<std::string>( fmt::format( "{}/region-id", base_url ), mRequestTimeoutMS );
-        csp_info["zone-id"] = req.perform_get<std::string>( fmt::format( "{}/zone-id", base_url ), mRequestTimeoutMS );
+        csp_info["instance_provider"] = "Alibaba";
+        csp_info["instance_type"] = req.perform_get<std::string>( fmt::format( "{}/instance/instance-type", base_url ), mRequestTimeoutMS );
+        csp_info["instance_image"] = req.perform_get<std::string>( fmt::format( "{}/image-id", base_url ), mRequestTimeoutMS );
+        csp_info["instance_region"] = req.perform_get<std::string>( fmt::format( "{}/region-id", base_url ), mRequestTimeoutMS );
+        csp_info["extra"]["hostname"] = req.perform_get<std::string>( fmt::format( "{}/hostname", base_url ), mRequestTimeoutMS );
+        csp_info["extra"]["product-code"] = req.perform_get<std::string>( fmt::format( "{}/image/market-place/product-code", base_url ), mRequestTimeoutMS );
+        csp_info["extra"]["charge-type"] = req.perform_get<std::string>( fmt::format( "{}/image/market-place/charge-type", base_url ), mRequestTimeoutMS );
+        csp_info["extra"]["zone-id"] = req.perform_get<std::string>( fmt::format( "{}/zone-id", base_url ), mRequestTimeoutMS );
         Debug( "Instance is running on Alibaba" );
         return true;
     } catch(std::runtime_error const&) {}
@@ -170,15 +171,15 @@ bool Csp::get_metadata_azure(Json::Value &csp_info) const {
     try {
         std::string result_str = req.perform_get<std::string>( "http://169.254.169.254/metadata/instance?api-version=2021-02-01", mRequestTimeoutMS );
         if ( result_str.find( "AzurePublicCloud" ) != std::string::npos ) {
-            csp_info["csp_name"] = "Azure";
+            csp_info["instance_provider"] = "Azure";
             result_json = parseJsonString( result_str );
-            csp_info["location"] = result_json["compute"]["location"];
-            csp_info["extendedLocation"] = result_json["compute"]["extendedLocation"];
-            csp_info["osType"] = result_json["compute"]["osType"];
-            csp_info["plan"] = result_json["compute"]["plan"];
-            csp_info["imageReference"] = result_json["compute"]["storageProfile"]["imageReference"];
-            csp_info["vmSize"] = result_json["compute"]["vmSize"];
-            csp_info["zone"] = result_json["compute"]["zone"];
+            csp_info["instance_image"] = result_json["compute"]["storageProfile"]["imageReference"];
+            csp_info["instance_region"] = result_json["compute"]["location"];
+            csp_info["extra"]["extendedLocation"] = result_json["compute"]["extendedLocation"];
+            csp_info["extra"]["osType"] = result_json["compute"]["osType"];
+            csp_info["extra"]["plan"] = result_json["compute"]["plan"];
+            csp_info["extra"]["vmSize"] = result_json["compute"]["vmSize"];
+            csp_info["extra"]["zone"] = result_json["compute"]["zone"];
             Debug( "Instance is running on Azure" );
             return true;
         }

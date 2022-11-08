@@ -358,7 +358,8 @@ protected:
     // XRT PATH
     std::string mXrtPath;
     std::string mXbutil;
-    Json::Value mHostConfigData = Json::nullValue;
+
+    Json::Value mDiagnosticJson = Json::nullValue;
     eHostDataVerbosity mHostDataVerbosity = eHostDataVerbosity::PARTIAL;
     Json::Value mSettings = Json::nullValue;
     Json::Value mMailboxRoData = Json::nullValue;
@@ -797,13 +798,28 @@ protected:
             return;
         }
 
+        // Get host info
+        std::string os_version = execCmd( "grep -Po 'PRETTY_NAME=\"\K[^\"]+' /etc/os-release" );
+        std::string kernel_version = execCmd( "uname -r" );
+        std::string cpu_version = execCmd( "uname -m" );
+
+        // Fulfill with DRM section
+        mDiagnosticJson["drm_library_version"] = DRMLIB_VERSION;
+        mDiagnosticJson["drm_ctrl_version"] = mDrmVersionNum;
+        mDiagnosticJson["os_version"] = os_version;
+        mDiagnosticJson["os_kernel_version"] = kernel_version;
+        mDiagnosticJson["cpu_architecture"] = cpu_version;
+        mDiagnosticJson["device_driver_version"] = "";
+        mDiagnosticJson["device_firmware_version"] = "";
+
+
         // Gather host and card information if xbutil existing
         if ( findXrtUtility() ) {
             Json::Value hostcard_node = Json::nullValue;
             if ( !getXrtPlatformInfoV2( hostcard_node ) ) {
                 getXrtPlatformInfoV1( hostcard_node );
             }
-            mHostConfigData["host_card"] = hostcard_node;
+            mDiagnosticJson["host_card"] = hostcard_node;
             Debug( "Host and card information:\n{}", hostcard_node.toStyledString() );
         }
     }
@@ -824,7 +840,7 @@ protected:
             Debug( "No CSP information collected: {}", e.what() );
         }
         Debug( "CSP information:\n{}", csp_node.toStyledString() );
-        mHostConfigData["csp"] = csp_node;
+        mDiagnosticJson.append( csp_node );
     }
 
     Json::Value buildSettingsNode() {
@@ -1190,7 +1206,7 @@ protected:
         runBistLevel2();
 
         // Determine frequency detection method if metering/floating mode is active
-        if ( !isConfigInNodeLock() ) {
+        if ( !isConfigInNodeLock() && !mIsHybrid ) {
             determineFrequencyDetectionMethod();
             if ( mFreqDetectionMethod == 3 ) {
                 detectDrmFrequencyMethod3();
@@ -1200,6 +1216,7 @@ protected:
             } else {
                 Warning( "DRM frequency auto-detection is disabled: {:0.1f} will be used to compute license timers", mFrequencyCurr );
             }
+
         }
 
         // Save header information
@@ -1220,14 +1237,14 @@ protected:
             // If a floating/metering session is still running, try to close it gracefully.
             if ( isDrmCtrlInMetering() && isSessionRunning() ) {
                 Debug( "A floating/metering session is still pending: trying to close it gracefully before switching to nodelocked license." );
-                mHeaderJsonRequest["mode"] = (uint8_t)eLicenseType::METERED;
+                mHeaderJsonRequest["drm_config"]["license_type"] = (uint8_t)eLicenseType::METERED;
                 try {
                     mWsClient.reset( new DrmWSClient( mConfFilePath, mCredFilePath ) );
                     stopSession();
                 } catch( const Exception& e ) {
                     Debug( "Failed to stop gracefully the pending session because: {}", e.what() );
                 }
-                mHeaderJsonRequest["mode"] = (uint8_t)eLicenseType::NODE_LOCKED;
+                mHeaderJsonRequest["drm_config"]["license_type"] = (uint8_t)eLicenseType::NODE_LOCKED;
             }
 
             // Create license request file
@@ -1291,82 +1308,44 @@ protected:
         std::vector<std::string> vlnvFile;
         std::string mailboxReadOnly;
 
-        json_output["diagnostic"] = Json::nullValue;
-        Json::Value diagnostic_node = json_output["diagnostic"];
-
-        json_output["tmp"] = Json::nullValue;
-        Json::Value tmp_node =json_output["tmp"];
+        Json::Value drm_config = json_output["drm_config"];
+        Json::Value extra_node =json_output["extra"];
 
         // Get information from DRM Controller
         getDesignInfo( drmVersion, dna, vlnvFile, mailboxReadOnly );
+        mMailboxRoData = parseJsonString( mailboxReadOnly );
 
         json_output["device_id"] = dna;
+        json_output["product_id"] = mMailboxRoData["product_id"];
 
-        std::string os_version = execCmd( "grep -Po 'PRETTY_NAME=\"\K[^\"]+' /etc/os-release" );
-        std::string kernel_version = execCmd( "uname -r" );
-        std::string cpu_version = execCmd( "uname -m" );
-
-        // Fulfill with DRM section
-        diagnostic_node["drm_library_version"] = DRMLIB_VERSION;
-        diagnostic_node["drm_ctrl_version"] = drmVersion;
-        diagnostic_node["os_version"] = os_version;
-        diagnostic_node["os_kernel_version"] = kernel_version;
-        diagnostic_node["cpu_architecture"] = cpu_version;
-        diagnostic_node["device_driver_version"] = "";
-        diagnostic_node["device_firmware_version"] = "";
-        diagnostic_node["instance_provider"] = "";
-        diagnostic_node["instance_type"] = "";
-        diagnostic_node["instance_region"] = "";
-        diagnostic_node["instance_image"] = "";
-
-        // Fulfill tmp section
-        if ( mailboxReadOnly.empty() )
-            Throw( DRM_BadArg, "UDID and Product ID cannot be both missing" );
-        tmp_node["mode"] = (uint8_t)mLicenseType;
-        if ( !isConfigInNodeLock() )
-            tmp_node["drm_frequency_init"] = mFrequencyInit;
-
+        // Fulfill drm_config section
+        drm_config["lgdn_version"] = mDrmVersionNum;
+        if ( !isConfigInNodeLock() && !mIsHybrid ) {
+            drm_config["drm_frequency_init"] = mFrequencyInit;
+        }
+        drm_config["license_type"] = (uint8_t)mLicenseType;
+        drm_config["drm_type"] = mIsHybrid ? 2:1;
         for ( uint32_t i = 0; i < vlnvFile.size(); i++ ) {
             std::string i_str = std::to_string(i);
-            tmp_node["vlnvFile"][i_str]["vendor"] = std::string("x") + vlnvFile[i].substr(0, 4);
-            tmp_node["vlnvFile"][i_str]["library"] = std::string("x") + vlnvFile[i].substr(4, 4);
-            tmp_node["vlnvFile"][i_str]["name"] = std::string("x") + vlnvFile[i].substr(8, 4);
-            tmp_node["vlnvFile"][i_str]["version"] = std::string("x") + vlnvFile[i].substr(12, 4);
+            drm_config["vlnv_file"][i_str]["vendor"] = std::string("x") + vlnvFile[i].substr(0, 4);
+            drm_config["vlnv_file"][i_str]["library"] = std::string("x") + vlnvFile[i].substr(4, 4);
+            drm_config["vlnv_file"][i_str]["name"] = std::string("x") + vlnvFile[i].substr(8, 4);
+            drm_config["vlnv_file"][i_str]["version"] = std::string("x") + vlnvFile[i].substr(12, 4);
         }
 
-        // Fulfill with product information
-        if ( !mailboxReadOnly.empty() ) {
-            try {
-                mMailboxRoData = parseJsonString( mailboxReadOnly );
-                if ( mMailboxRoData.isMember( "product_id" ) )
-                    tmp_node["product"] = mMailboxRoData["product_id"];
-                else
-                    json_output["product"] = mMailboxRoData;
-                if ( mMailboxRoData.isMember( "pkg_version" ) ) {
-                    tmp_node["pkg_version"] = mMailboxRoData["pkg_version"];
-                    Debug( "HDK Generator version: {}", json_output["pkg_version"].asString() );
-                }
-                if ( mMailboxRoData.isMember( "dna_type" ) ) {
-                    tmp_node["dna_type"] = mMailboxRoData["dna_type"];
-                    Debug( "HDK DNA type: {}", json_output["dna_type"].asString() );
-                }
-                if ( mMailboxRoData.isMember( "extra" ) ) {
-                    tmp_node["extra"] = mMailboxRoData["extra"];
-                    Debug( "HDK extra data: {}", json_output["extra"].toStyledString() );
-                }
-            } catch( const Exception &e ) {
-                if ( e.getErrCode() == DRM_BadFormat )
-                    Throw( DRM_BadFormat, "Failed to parse Read-Only Mailbox in DRM Controller: {}", e.what() );
-                throw;
-            }
+        // Fulfill tmp section
+        if ( mMailboxRoData.isMember( "pkg_version" ) ) {
+            drm_config["pkg_version"] = mMailboxRoData["pkg_version"];
+            Debug( "HDK Generator version: {}", json_output["pkg_version"].asString() );
         }
-
-        // Set the derived product from Controller content
-        std::string vendor = json_output["product"]["vendor"].asString();
-        std::string library = json_output["product"]["library"].asString();
-        std::string name = json_output["product"]["name"].asString();
-        mDerivedProduct = fmt::format( "{}/{}/{}", vendor, library, name );
-        Debug( "Reference Product information: {}", mDerivedProduct );
+        if ( mMailboxRoData.isMember( "dna_type" ) ) {
+            drm_config["dna_type"] = mMailboxRoData["dna_type"];
+            Debug( "HDK DNA type: {}", json_output["dna_type"].asString() );
+        }
+        if ( mMailboxRoData.isMember( "extra" ) ) {
+            drm_config["extra"] = mMailboxRoData["extra"];
+            Debug( "HDK extra data: {}", json_output["extra"].toStyledString() );
+        }
 
         return json_output;
     }
@@ -1410,13 +1389,11 @@ protected:
         // Request challenge and metering info for first request
         checkDRMCtlrRet( getDrmController().initialization( numberOfDetectedIps, saasChallenge, meteringFile ) );
         Json::Value drm_config = json_request["drm_config"];
-        drm_config["saasChallenge"] = saasChallenge;
-        drm_config["meteringFile"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
+        drm_config["saas_challenge"] = saasChallenge;
+        drm_config["metering_file"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
+        drm_config["license_type"] = (uint8_t)mLicenseType;
+
         json_request["request"] = "open";
-        if ( !isConfigInNodeLock() && !mIsHybrid ) {
-            json_request["drm_frequency"] = mFrequencyCurr;
-        }
-        json_request["mode"] = (uint8_t)mLicenseType;
 
         return json_request;
     }
@@ -1433,15 +1410,18 @@ protected:
         uint32_t timeout = 5 * mCtrlTimeFactor;
         checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( timeout ) );
         // Request challenge and metering info for new request
+        Json::Value drm_config = json_request["drm_config"];
         checkDRMCtlrRet( getDrmController().synchronousExtractMeteringFile( numberOfDetectedIps, saasChallenge, meteringFile ) );
-        json_request["saasChallenge"] = saasChallenge;
-        json_request["sessionId"] = meteringFile[0].substr( 0, 16 );
+        drm_config["saas_challenge"] = saasChallenge;
+        drm_config["drm_session_id"] = meteringFile[0].substr( 0, 16 );
         checkSessionIDFromDRM( json_request );
 
-        if ( !isConfigInNodeLock() && !mIsHybrid )
-            json_request["drm_frequency"] = mFrequencyCurr;
-        json_request["meteringFile"] = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
-        json_request["request"] = "running";
+        drm_config["metering_file"] = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
+        json_request["entitlement_id"] = mEntitlementID;
+
+        if ( mLicenseCounter == 1 ) {
+            json_request["diagnostic"] = mDiagnosticJson;
+        }
         return json_request;
     }
 
@@ -1456,14 +1436,12 @@ protected:
         // Request challenge and metering info for first request
         checkDRMCtlrRet( getDrmController().endSessionAndExtractMeteringFile(
                 numberOfDetectedIps, saasChallenge, meteringFile ) );
-        json_request["saasChallenge"] = saasChallenge;
-        json_request["sessionId"] = meteringFile[0].substr( 0, 16 );
+        json_request["saas_challenge"] = saasChallenge;
+        json_request["drm_session_id"] = meteringFile[0].substr( 0, 16 );
         checkSessionIDFromDRM( json_request );
 
-        if ( !isConfigInNodeLock() && !mIsHybrid )
-            json_request["drm_frequency"] = mFrequencyCurr;
-        json_request["meteringFile"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
-        json_request["request"] = "close";
+        json_request["metering_file"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
+        json_request["is_closed"] = true;
         return json_request;
     }
 
@@ -1489,18 +1467,16 @@ protected:
             }
         }
         Debug( "Released metering access mutex from getMeteringHealth" );
-        json_request["saasChallenge"] = saasChallenge;
+        json_request["saas_challenge"] = saasChallenge;
         if ( meteringFile.size() ) {
             json_request["sessionId"] = meteringFile[0].substr( 0, 16 );
         } else {
             json_request["sessionId"] = "";
         }
         // Finalize the request with the collected data
-        json_request["meteringFile"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
-        if ( !mIsHybrid )
-            json_request["drm_frequency"] = mFrequencyCurr;
-        json_request["request"] = "health";
+        json_request["metering_file"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
         json_request["health_id"] = mHealthCounter++;
+        json_request["is_health"] = true;
         return json_request;
     }
 
@@ -1628,9 +1604,6 @@ protected:
 
             // Get new license
             try {
-                // Add Host and Card information for the first 2 requests
-                if ( mLicenseCounter < 2 )
-                    request_json["host_configuration"] = mHostConfigData;
                 // Add settings parameters
                 request_json["settings"] = buildSettingsNode();
                 // Send license request and wait for the answer
@@ -1820,10 +1793,9 @@ protected:
     Json::Value performHealth( const uint32_t retry_timeout_ms, const uint32_t retry_sleep_ms) {
         // Get next data from DRM Controller
         Json::Value request_json = getMeteringHealth();
-        request_json["is_health"] = true;
         // Check session ID
         checkSessionIDFromDRM( request_json );
-        if ( request_json["meteringFile"].empty() )
+        if ( request_json["metering_file"].empty() )
             Unreachable( "Received an empty metering file from DRM Controller" );  //LCOV_EXCL_LINE
         // Compute retry period
         TClock::time_point retry_deadline = TClock::now() + std::chrono::milliseconds( retry_timeout_ms );
@@ -2107,6 +2079,7 @@ protected:
         }
         Debug( "Estimated DRM frequency = {} MHz, config frequency = {} MHz: gap = {}%",
                 mFrequencyCurr, mFrequencyInit, precisionError );
+        mHeaderJsonRequest["drm_config"]["drm_frequency"] = mFrequencyCurr;
     }
 
     template< class Clock, class Duration >
@@ -2149,6 +2122,8 @@ protected:
             try {
                 // Collect CSP information if possible
                 getCstInfo();
+                // Collect Host information
+                getHostAndCardInfo();
 
                 /// Detecting DRM controller frequency if needed
                 if ( mFreqDetectionMethod == 1 )
@@ -2599,7 +2574,6 @@ public:
             if ( !f_asynch_error )
                 Throw( DRM_BadArg, "Asynchronous error callback function must not be NULL. " );
             initDrmInterface();
-            getHostAndCardInfo();
             Debug( "Exiting Impl public constructor" );
         CATCH_AND_THROW
     }
@@ -2796,7 +2770,7 @@ public:
                         unsigned long long int ip_metering = 0;
                         #endif
                         Json::Value json_request = getMeteringHealth();
-                        std::string meteringFileStr = json_request["meteringFile"].asString();
+                        std::string meteringFileStr = json_request["metering_file"].asString();
                         if  ( meteringFileStr.size() ) {
                             std::vector<std::string> meteringFileList = splitByLength( meteringFileStr, 32 );
                             std::vector<std::string> meteringDataList = std::vector<std::string>(meteringFileList.begin() + 2, meteringFileList.end()-1);
@@ -3004,9 +2978,9 @@ public:
                         break;
                     }
                     case ParameterKey::host_data: {
-                        json_value[key_str] = mHostConfigData;
+                        json_value[key_str] = mDiagnosticJson;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
-                               mHostConfigData.toStyledString() );
+                               mDiagnosticJson.toStyledString() );
                         break;
                     }
                     case ParameterKey::log_file_append: {
