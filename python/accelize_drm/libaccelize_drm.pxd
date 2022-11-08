@@ -25,9 +25,9 @@ cdef extern from "accelize/drm.h" namespace "Accelize::DRM" nogil:
                    WriteRegisterCallback f_write_register,
                    AsynchErrorCallback f_asynch_error) except +
 
-        void activate(bool resume_session_request) except +
+        void activate() except +
 
-        void deactivate(bool pause_session_request) except +
+        void deactivate() except +
 
         void get(string& json_string) except +
         T get[T](const ParameterKey key_id) except +

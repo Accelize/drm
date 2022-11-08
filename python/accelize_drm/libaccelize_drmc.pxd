@@ -28,9 +28,9 @@ cdef extern from "accelize/drmc.h" nogil:
 
     int DrmManager_free(DrmManager ** p_m)
 
-    int DrmManager_activate(DrmManager *m, bint resume_session_request)
+    int DrmManager_activate(DrmManager *m)
 
-    int DrmManager_deactivate(DrmManager *m, bint pause_session_request)
+    int DrmManager_deactivate(DrmManager *m)
 
     int DrmManager_get_json_string(DrmManager *m, const char* json_in, char** json_out)
     int DrmManager_get_bool(DrmManager *m, const DrmParameterKey key, bint* p_value)

@@ -799,7 +799,7 @@ protected:
         }
 
         // Get host info
-        std::string os_version = execCmd( "grep -Po 'PRETTY_NAME=\"\K[^\"]+' /etc/os-release" );
+        std::string os_version = execCmd( "grep -Po 'PRETTY_NAME=\"\\K[^\"]+' /etc/os-release" );
         std::string kernel_version = execCmd( "uname -r" );
         std::string cpu_version = execCmd( "uname -m" );
 
@@ -1212,11 +1212,9 @@ protected:
                 detectDrmFrequencyMethod3();
             } else if ( mFreqDetectionMethod == 2 ) {
                 detectDrmFrequencyMethod2();
-            } else if ( ( mFreqDetectionMethod == 1 ) || ( mFreqDetectionMethod == 0 ) ) {
             } else {
                 Warning( "DRM frequency auto-detection is disabled: {:0.1f} will be used to compute license timers", mFrequencyCurr );
             }
-
         }
 
         // Save header information
@@ -1262,11 +1260,12 @@ protected:
     }
 
     void checkSessionIDFromWS( const Json::Value license_json ) {
-        std::string ws_sessionID = license_json["metering"]["sessionId"].asString();
+        std::string ws_sessionID = license_json["drm_session_id"].asString();
         if ( !mSessionID.empty() && ( mSessionID != ws_sessionID ) ) {
             Warning( "Session ID mismatch: WebService returns '{}' but '{}' is expected", ws_sessionID, mSessionID ); //LCOV_EXCL_LINE
         } else if ( mSessionID.empty() ) {
             mSessionID = ws_sessionID;
+            Debug( "Saving session ID: {}", mSessionID );
         }
     }
 
@@ -1646,33 +1645,28 @@ protected:
 
         Debug( "Provisioning license #{} on DRM controller", mLicenseCounter );
 
-        std::string dna = mHeaderJsonRequest["dna"].asString();
+        std::string dna = mHeaderJsonRequest["device_id"].asString();
         std::string licenseKey, licenseTimer;
 
         try {
-            Json::Value metering_node = JVgetRequired( license_json, "metering", Json::objectValue );
-            Json::Value license_node = JVgetRequired( license_json, "license", Json::objectValue );
+            mEntitlementID = JVgetRequired( license_json, "id", Json::stringValue ).asString();
+            Json::Value drm_config_node = JVgetRequired( license_json, "drm_config", Json::objectValue );
+
+            mLicenseDuration = JVgetOptional( drm_config_node, "license_period_second", Json::uintValue, mLicenseDuration ).asUInt();
+            mHealthPeriod = JVgetOptional( drm_config_node, "health_period", Json::uintValue, mHealthPeriod ).asUInt();
+            mHealthRetryTimeout = JVgetOptional( drm_config_node, "health_retry", Json::uintValue, mHealthRetryTimeout ).asUInt();
+            mHealthRetrySleep = JVgetOptional( drm_config_node, "health_retry_sleep", Json::uintValue, mHealthRetrySleep ).asUInt();
+
+            /// Get license node
+            Json::Value license_node = JVgetRequired( drm_config_node, "license", Json::objectValue );
             Json::Value dna_node = JVgetRequired( license_node, dna.c_str(), Json::objectValue );
 
-            /// Get session ID received from web service
-            if ( mSessionID.empty() ) {
-                /// Save new Session ID
-                mSessionID = JVgetRequired( metering_node, "sessionId", Json::stringValue ).asString();
-                Debug( "Saving session ID: {}", mSessionID );
-            } else {
-                /// Verify Session ID
-                checkSessionIDFromWS( license_json );
-            }
+            /// Get session ID received from web service and check it if possible
+            checkSessionIDFromWS( license_json );
 
             /// Extract license key and license timer from web service response
-            if ( mLicenseCounter == 0 )
-                licenseKey = JVgetRequired( dna_node, "key", Json::stringValue ).asString();
-            if ( !isConfigInNodeLock() )
-                licenseTimer = JVgetRequired( dna_node, "licenseTimer", Json::stringValue ).asString();
-            mLicenseDuration = JVgetRequired( metering_node, "timeoutSecond", Json::uintValue ).asUInt();
-            if ( ( mLicenseDuration == 0 ) && ( mLicenseType != eLicenseType::NODE_LOCKED ) )
-                Warning( "'timeoutSecond' field sent by License WS must not be 0" );
-
+            licenseKey = JVgetRequired( dna_node, "key", Json::stringValue ).asString();
+            licenseTimer = JVgetOptional( dna_node, "timer", Json::stringValue, "" ).asString();
         } catch( const Exception &e ) {
             Throw( DRM_WSRespError, "Malformed response from License Web Service: {}", e.what() );
         }
@@ -1687,6 +1681,9 @@ protected:
 
         // Load license timer
         if ( !isConfigInNodeLock() ) {
+            if ( mLicenseDuration == 0 ) {
+                Warning( "'license_period_second' field sent by License WS must not be 0" );
+            }
             uint32_t timeout = 5 * mCtrlTimeFactor;
             checkDRMCtlrRet( getDrmController().loadLicenseTimerInit( licenseTimer, mIsHybrid, timeout ) );
             Debug( "Wrote license timer #{} of session ID {} for a duration of {} seconds",
@@ -2220,10 +2217,10 @@ protected:
 
                     if ( response_json != Json::nullValue ) {
                         /// Extract asynchronous metering parameters from response
-                        Json::Value metering_node = JVgetOptional( response_json, "metering", Json::objectValue, Json::nullValue );
-                        uint32_t healthPeriod = JVgetOptional( metering_node, "healthPeriod", Json::uintValue, mHealthPeriod ).asUInt();
-                        uint32_t healthRetryTimeout = JVgetOptional( metering_node, "healthRetry", Json::uintValue, mHealthRetryTimeout ).asUInt();
-                        uint32_t healthRetrySleep = JVgetOptional( metering_node, "healthRetrySleep", Json::uintValue, mHealthRetrySleep ).asUInt();
+                        Json::Value drm_config_node = JVgetOptional( response_json, "drm_config", Json::objectValue, Json::nullValue );
+                        uint32_t healthPeriod = JVgetOptional( drm_config_node, "health_period", Json::uintValue, mHealthPeriod ).asUInt();
+                        uint32_t healthRetryTimeout = JVgetOptional( drm_config_node, "health_retry", Json::uintValue, mHealthRetryTimeout ).asUInt();
+                        uint32_t healthRetrySleep = JVgetOptional( drm_config_node, "health_retry_sleep", Json::uintValue, mHealthRetrySleep ).asUInt();
 
                         /// Reajust async metering thread if needed
                         if ( ( healthPeriod != mHealthPeriod ) || ( healthRetryTimeout != mHealthRetryTimeout)
@@ -2396,44 +2393,6 @@ protected:
         Info( "DRM session {} started.", mSessionID );
     }
 
-    void pauseSession() {
-        writeMailbox<time_t>( eMailboxOffset::MB_LIC_EXP_0, steady_clock_to_time_t( mExpirationTime ) );
-        writeMailbox<uint64_t>( eMailboxOffset::MB_SESSION_0, std::stoull( mSessionID, 0, 16 ) );
-        stopThread();
-        mSecurityStop = false;
-        if (mHealthPeriod)
-            performHealth(mWSApiRetryDuration * 1000, 0);
-        Info( "DRM session {} paused.", mSessionID );
-    }
-
-    void resumeSession() {
-        {
-            Debug( "Waiting metering access mutex from resumeSession" );
-            std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
-            Debug( "Acquired metering access mutex from resumeSession" );
-
-            // Recover expiration time from DRM ROM
-            if ( mExpirationTime.time_since_epoch().count() == 0 ) {
-                time_t t = readMailbox<time_t>( eMailboxOffset::MB_LIC_EXP_0 );
-                mExpirationTime = time_t_to_steady_clock( t );
-                Debug( "Initialize expiration time from DRM registry: {}", time_t_to_string( t ) );
-            }
-
-            if ( isReadyForNewLicense() ) {
-                // Create JSON license request
-                Json::Value request_json = getMeteringRunning();
-
-                // Send license request to web service
-                Json::Value license_json = getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
-
-                // Provision license on DRM controller
-                setLicense( license_json );
-            }
-        }
-        Debug( "Released metering access mutex from resumeSession" );
-        Info( "DRM session {} resumed.", mSessionID );
-    }
-
     void stopSession() {
         Json::Value request_json;
 
@@ -2597,9 +2556,9 @@ public:
         sLogger->flush();
     }
 
-    void activate( const bool& resume_session_request = false ) {
+    void activate() {
         TRY
-            Debug( "Calling 'activate' with 'resume_session_request'={}", resume_session_request );
+            Debug( "Calling 'activate'" );
 
             if ( isConfigInNodeLock() ) {
                 // Install the node-locked license
@@ -2623,16 +2582,10 @@ public:
                 if ( mSessionID.empty() )
                     mSessionID = toUpHex( readMailbox<uint64_t>( eMailboxOffset::MB_SESSION_0 ) );
 
-                if ( resume_session_request && isLicenseActive() ) {
-                    Debug( "A session is still pending and latest license is still valid: "
-                           "pending session is kept" );
-                    resumeSession();
-                } else {
-                    Debug( "A session is still pending but latest license has expired: "
-                           "pending session is stopped and a new one is created" );
-                    stopSession();
-                    startSession();
-                }
+                Debug( "A session is still pending but latest license has expired: "
+                       "pending session is stopped and a new one is created" );
+                stopSession();
+                startSession();
             }
             mThreadExit = false;
             startLicenseContinuityThread();
@@ -2644,9 +2597,9 @@ public:
         CATCH_AND_THROW
     }
 
-    void deactivate( const bool& pause_session_request = false ) {
+    void deactivate() {
         TRY
-            Debug( "Calling 'deactivate' with 'pause_session_request'={}", pause_session_request );
+            Debug( "Calling 'deactivate'" );
 
             if ( isConfigInNodeLock() ) {
                 return;
@@ -2655,10 +2608,7 @@ public:
                 Debug( "No session is currently running" );
                 return;
             }
-            if ( pause_session_request )
-                pauseSession();
-            else
-                stopSession();
+            stopSession();
         CATCH_AND_THROW
     }
 
@@ -3392,12 +3342,12 @@ DrmManager::~DrmManager() {
 }
 
 
-void DrmManager::activate( const bool& resume_session ) {
-    pImpl->activate( resume_session );
+void DrmManager::activate() {
+    pImpl->activate();
 }
 
-void DrmManager::deactivate( const bool& pause_session ) {
-    pImpl->deactivate( pause_session );
+void DrmManager::deactivate() {
+    pImpl->deactivate();
 }
 
 void DrmManager::get( Json::Value& json_value ) const {

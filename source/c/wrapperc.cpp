@@ -106,17 +106,17 @@ DRM_ErrorCode DrmManager_free(DrmManager **p_m) {
 }
 
 // Methods
-DRM_ErrorCode DrmManager_activate( DrmManager *m, bool resume_session_request ) {
+DRM_ErrorCode DrmManager_activate( DrmManager *m ) {
     TRY
         checkPointer(m);
-        m->drm->obj->activate( resume_session_request );
+        m->drm->obj->activate();
     CATCH_RETURN
 }
 
-DRM_ErrorCode DrmManager_deactivate( DrmManager *m, bool pause_session_request ) {
+DRM_ErrorCode DrmManager_deactivate( DrmManager *m ) {
     TRY
         checkPointer(m);
-        m->drm->obj->deactivate( pause_session_request );
+        m->drm->obj->deactivate();
     CATCH_RETURN
 }
 

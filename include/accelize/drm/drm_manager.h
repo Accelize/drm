@@ -158,7 +158,7 @@ public:
         false and a pending session is found, close it and create a new
         one. Default to False.
     */
-    void activate( const bool& resume_session_request = false );
+    void activate();
 
     /** \brief Deactivate DRM session.
 
@@ -174,7 +174,7 @@ public:
         open for later usage. Otherwise, the current session is closed.
         Default to false.
     */
-    void deactivate( const bool& pause_session_request = false );
+    void deactivate();
 
     /** \brief Get information from the DRM system.
 

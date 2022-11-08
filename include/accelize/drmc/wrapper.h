@@ -171,7 +171,7 @@ DRM_ErrorCode DrmManager_free(DrmManager **p_m) DRM_EXPORT;
     \return An error code defined by the enumerator #DRM_ErrorCode indicating
     the success or the cause of the error during the function execution.
 */
-DRM_ErrorCode DrmManager_activate(DrmManager *m, bool resume_session_request ) DRM_EXPORT;
+DRM_ErrorCode DrmManager_activate(DrmManager *m ) DRM_EXPORT;
 
 
 /** \brief Deactivate DRM session.
@@ -192,7 +192,7 @@ DRM_ErrorCode DrmManager_activate(DrmManager *m, bool resume_session_request ) D
     \return An error code defined by the enumerator #DRM_ErrorCode indicating
     the success or the cause of the error during the function execution.
 */
-DRM_ErrorCode DrmManager_deactivate(DrmManager *m, bool pause_session_request ) DRM_EXPORT;
+DRM_ErrorCode DrmManager_deactivate(DrmManager *m ) DRM_EXPORT;
 
 
 /** \brief Get information from the DRM system.

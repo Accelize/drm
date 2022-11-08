@@ -169,16 +169,14 @@ cdef class DrmManager:
         self.deactivate()
         self.free()
 
-    def activate(self, const bool resume_session_request=False):
+    def activate(self):
         """
         Activate DRM session.
 
         This function activate/unlocks the hardware by unlocking the protected
         IPs in the FPGA and opening a DRM session.
 
-        If a session is still pending the behavior depends on
-        "resume_session_request" argument. If true the session is reused.
-        Otherwise the session is closed and a new session is created.
+        If a session is still pending the session is closed and a new session is created.
 
         This function will start a thread that keeps the hardware unlocked by
         automatically updating the license when necessary.
@@ -188,39 +186,26 @@ cdef class DrmManager:
 
         When this function returns and the license is valid,
         the protected IPs are guaranteed to be unlocked.
-
-        Args:
-            resume_session_request (bool): If True, the pending session is
-                reused. If no pending session is found, create a new one. If
-                False and a pending session is found, close it and create a new
-                one. Default to False.
         """
         try:
             with nogil:
-                self._drm_manager.activate(resume_session_request)
+                self._drm_manager.activate()
         except RuntimeError as exception:
             _handle_exceptions(exception)
 
-    def deactivate(self, const bool pause_session_request=False):
+    def deactivate(self):
         """
         Deactivate DRM session.
 
-        This function deactivates/locks the hardware back and close the session
-        unless the "pause_session_request" argument is True. In this case,
-        the session is kept opened for later use.
+        This function deactivates/locks the hardware back and close the session.
 
         This function will join the thread keeping the hardware unlocked.
 
         When the function returns, the hardware are guaranteed to be locked.
-
-        Args:
-            pause_session_request (bool): If True, the current session is kept
-                open for later usage. Otherwise, the current session is closed.
-                Default to False.
         """
         try:
             with nogil:
-                self._drm_manager.deactivate(pause_session_request)
+                self._drm_manager.deactivate()
         except RuntimeError as exception:
             _handle_exceptions(exception)
 
