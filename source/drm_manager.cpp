@@ -250,12 +250,6 @@ protected:
             {eCtrlLogVerbosity::TRACE2 , PNC_DRM_LOG_TRACE2}
     };
 
-#ifdef _WIN32
-    const char path_sep = '\\';
-# else
-    const char path_sep = '/';
-#endif
-
     // HDK version
     uint32_t mDrmVersionNum = 0;
     std::string mDrmVersionStr;
@@ -1774,8 +1768,8 @@ protected:
     void createNodelockedLicenseRequestFile() {
         // Create hash name based on design info
         std::string basname = getNodelockBaseName();
-        mNodeLockRequestFilePath = mNodeLockLicenseDirPath + path_sep + basname + ".req";
-        mNodeLockLicenseFilePath = mNodeLockLicenseDirPath + path_sep + basname + ".lic";
+        mNodeLockRequestFilePath = mNodeLockLicenseDirPath + PATH_SEP + basname + ".req";
+        mNodeLockLicenseFilePath = mNodeLockLicenseDirPath + PATH_SEP + basname + ".lic";
         // Check if license request file already exists
         if ( isFile( mNodeLockRequestFilePath ) ) {
             Debug( "A license request file is already existing in license directory: {}", mNodeLockLicenseDirPath );

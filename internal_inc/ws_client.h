@@ -108,10 +108,11 @@ public:
     T perform_get( const std::string url, const uint32_t& timeout_ms ) {
         T response;
         uint32_t resp_code;
+        std::string recv_header("");
 
         if ( timeout_ms <= 0 ) {
             ThrowSetLog( SPDLOG_LEVEL_DEBUG, DRM_WSTimedOut,
-                "Did not perform HTTP request to Accelize webservice because deadline is reached." );
+                "Did not perform HTTP request because deadline is reached." );
         }
 
         // Configure and execute CURL command
@@ -120,6 +121,7 @@ public:
             curl_easy_setopt( mCurl, CURLOPT_HTTPHEADER, mHeaders_p );
         }
         curl_easy_setopt( mCurl, CURLOPT_WRITEDATA, (void*)&response );
+        curl_easy_setopt( mCurl, CURLOPT_HEADERDATA, (void*)&recv_header );
         curl_easy_setopt( mCurl, CURLOPT_TIMEOUT_MS, timeout_ms );
         CURLcode res = curl_easy_perform( mCurl );
 
@@ -129,13 +131,13 @@ public:
               || res == CURLE_COULDNT_RESOLVE_HOST
               || res == CURLE_COULDNT_CONNECT
               || res == CURLE_OPERATION_TIMEDOUT ) {
-                ThrowSetLog( SPDLOG_LEVEL_DEBUG, DRM_WSMayRetry, "Failed to perform HTTP request to Accelize webservice ({}) : {}", curl_easy_strerror( res ), mErrBuff.data() );  //LCOV_EXCL_LINE
+                ThrowSetLog( SPDLOG_LEVEL_DEBUG, DRM_WSMayRetry, "Failed to perform HTTP request {} ({}) : {}", recv_header, curl_easy_strerror( res ), mErrBuff.data() );  //LCOV_EXCL_LINE
             } else {
-                ThrowSetLog( SPDLOG_LEVEL_DEBUG, DRM_ExternFail, "Failed to perform HTTP request to Accelize webservice ({}) : {}", curl_easy_strerror( res ), mErrBuff.data() );  //LCOV_EXCL_LINE
+                ThrowSetLog( SPDLOG_LEVEL_DEBUG, DRM_ExternFail, "Failed to perform HTTP request {} ({}) : {}", recv_header, curl_easy_strerror( res ), mErrBuff.data() );  //LCOV_EXCL_LINE
             }
         }
         curl_easy_getinfo( mCurl, CURLINFO_RESPONSE_CODE, &resp_code );
-        Debug( "Received code {} from {} in {} ms", resp_code, url, getTotalTime() * 1000 );
+        Debug( "Received request {} with code {} from {} in {} ms", recv_header, resp_code, url, getTotalTime() * 1000 );
 
         // Analyze HTTP response
         if ( resp_code != 200 ) {
@@ -147,8 +149,8 @@ public:
                 drm_error = DRM_WSReqError;
             else
                 drm_error = DRM_WSError;
-            ThrowSetLog( SPDLOG_LEVEL_DEBUG, drm_error, "OAuth2 Web Service error {}: {}",
-                resp_code, response );
+            ThrowSetLog( SPDLOG_LEVEL_DEBUG, drm_error, "OAuth2 Web Service error {} on request {}: {}",
+                resp_code, recv_header, response );
         }
         return response;
     }
@@ -157,10 +159,11 @@ public:
     T perform_put( const std::string url, const uint32_t& timeout_ms ) {
         T response;
         uint32_t resp_code;
+        std::string recv_header("");
 
         if ( timeout_ms <= 0 )
             ThrowSetLog( SPDLOG_LEVEL_DEBUG, DRM_WSTimedOut,
-                "Did not perform HTTP request to Accelize webservice because deadline is reached." );
+                "Did not perform HTTP request because deadline is reached." );
 
         // Configure and execute CURL command
         curl_easy_setopt( mCurl, CURLOPT_URL, url.c_str() );
@@ -169,6 +172,7 @@ public:
         }
         curl_easy_setopt( mCurl, CURLOPT_CUSTOMREQUEST, "PUT");
         curl_easy_setopt( mCurl, CURLOPT_WRITEDATA, (void*)&response );
+        curl_easy_setopt( mCurl, CURLOPT_HEADERDATA, (void*)&recv_header );
         curl_easy_setopt( mCurl, CURLOPT_TIMEOUT_MS, timeout_ms );
         CURLcode res = curl_easy_perform( mCurl );
 
@@ -179,16 +183,16 @@ public:
               || res == CURLE_COULDNT_CONNECT
               || res == CURLE_OPERATION_TIMEDOUT ) {
                 ThrowSetLog( SPDLOG_LEVEL_DEBUG, DRM_WSMayRetry,
-                    "Failed to perform HTTP request to Accelize webservice ({}) : {}",
-                    curl_easy_strerror( res ), mErrBuff.data() );
+                    "Failed to perform HTTP request {} ({}) : {}",
+                    recv_header, curl_easy_strerror( res ), mErrBuff.data() );
             } else {
                 ThrowSetLog( SPDLOG_LEVEL_DEBUG, DRM_ExternFail,
-                    "Failed to perform HTTP request to Accelize webservice ({}) : {}",
-                    curl_easy_strerror( res ), mErrBuff.data() );
+                    "Failed to perform HTTP request {} ({}) : {}",
+                    recv_header, curl_easy_strerror( res ), mErrBuff.data() );
             }
         }
         curl_easy_getinfo( mCurl, CURLINFO_RESPONSE_CODE, &resp_code );
-        Debug( "Received code {} from {} in {} ms", resp_code, url, getTotalTime() * 1000 );
+        Debug( "Received request {} with code {} from {} in {} ms", recv_header, resp_code, url, getTotalTime() * 1000 );
         return response;
     }
 
@@ -200,6 +204,16 @@ protected:
             userp->append( (const char*)contents, realsize );
         } catch( const std::bad_alloc& e ) {  //LCOV_EXCL_LINE
             Throw( DRM_ExternFail, "Curl write callback exception: {}", e.what() );  //LCOV_EXCL_LINE
+        }
+        return realsize;
+    }
+
+    static size_t curl_header_callback( char *buffer, size_t size, size_t nitems, std::string *userp ) {
+        size_t realsize = size * nitems;
+        try {
+            userp->append( (const char*)buffer, realsize );
+        } catch( const std::bad_alloc& e ) {  //LCOV_EXCL_LINE
+            Throw( DRM_ExternFail, "Curl header callback exception: {}", e.what() );  //LCOV_EXCL_LINE
         }
         return realsize;
     }
@@ -228,6 +242,7 @@ protected:
     uint32_t mTokenValidityPeriod;              /// Validation period of the OAuth2 token in seconds
     uint32_t mTokenExpirationMargin;            /// OAuth2 token expiration margin in seconds
     TClock::time_point mTokenExpirationTime;    /// OAuth2 expiration time
+    std::string mTokenFilePath;                 /// Path to a cache file used to save the token
     int32_t mRequestTimeoutMS;                  /// Maximum period in milliseconds for a request to complete
     int32_t mConnectionTimeoutMS;               /// Maximum period in milliseconds for the client to connect the server
 

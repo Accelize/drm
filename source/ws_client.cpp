@@ -25,6 +25,8 @@ limitations under the License.
 #include "utils.h"
 #include "ws_client.h"
 
+using namespace fmt::literals;
+
 namespace Accelize {
 namespace DRM {
 
@@ -34,6 +36,7 @@ CurlEasyPost::CurlEasyPost( const uint32_t& connection_timeout_ms ) {
     if ( !mCurl )
         Throw( DRM_ExternFail, "Curl : cannot init curl_easy" );
     curl_easy_setopt( mCurl, CURLOPT_WRITEFUNCTION, &CurlEasyPost::curl_write_callback );
+    curl_easy_setopt( mCurl, CURLOPT_HEADERFUNCTION, &CurlEasyPost::curl_header_callback );
     curl_easy_setopt( mCurl, CURLOPT_ERRORBUFFER, mErrBuff.data() );
     curl_easy_setopt( mCurl, CURLOPT_FOLLOWLOCATION, 1L );
     curl_easy_setopt( mCurl, CURLOPT_NOPROGRESS, 1L);
@@ -83,12 +86,14 @@ void CurlEasyPost::setPostFields( const std::string& postfields ) {
     curl_easy_setopt( mCurl, CURLOPT_COPYPOSTFIELDS, postfields.c_str() );
 }
 
-uint32_t CurlEasyPost::perform( const std::string url, std::string* response, const int32_t timeout_msec ) {
+uint32_t CurlEasyPost::perform( const std::string url, std::string* response,
+                                const int32_t timeout_msec ) {
     CURLcode res;
     uint32_t resp_code;
+    std::string recv_header("");
 
     if ( timeout_msec <= 0 )
-        Throw( DRM_WSTimedOut, "Did not perform HTTP request to Accelize webservice because timeout is reached. " );
+        Throw( DRM_WSTimedOut, "Did not perform HTTP request because timeout is reached. " );
 
     // Configure and execute CURL command
     curl_easy_setopt( mCurl, CURLOPT_URL, url.c_str() );
@@ -97,6 +102,7 @@ uint32_t CurlEasyPost::perform( const std::string url, std::string* response, co
     }
     curl_easy_setopt( mCurl, CURLOPT_WRITEDATA, response );
     curl_easy_setopt( mCurl, CURLOPT_TIMEOUT_MS, timeout_msec );
+    curl_easy_setopt( mCurl, CURLOPT_HEADERDATA, (void*)&recv_header );
     res = curl_easy_perform( mCurl );
 
     // Analyze libcurl response
@@ -106,15 +112,15 @@ uint32_t CurlEasyPost::perform( const std::string url, std::string* response, co
           || res == CURLE_COULDNT_RESOLVE_HOST
           || res == CURLE_COULDNT_CONNECT
           || res == CURLE_OPERATION_TIMEDOUT ) {
-            Throw( DRM_WSMayRetry, "Failed to perform HTTP request to Accelize webservice ({}) : {}. ",
-                    curl_easy_strerror( res ), mErrBuff.data() );
+            Throw( DRM_WSMayRetry, "Failed to perform HTTP request {} ({}) : {}. ",
+                    recv_header, curl_easy_strerror( res ), mErrBuff.data() );
         } else {
-            Throw( DRM_ExternFail, "Failed to perform HTTP request to Accelize webservice ({}) : {}. ",
-                    curl_easy_strerror( res ), mErrBuff.data() );
+            Throw( DRM_ExternFail, "Failed to perform HTTP request {} ({}) : {}. ",
+                    recv_header, curl_easy_strerror( res ), mErrBuff.data() );
         }
     }
     curl_easy_getinfo( mCurl, CURLINFO_RESPONSE_CODE, &resp_code );
-    Debug( "Received code {} from {} in {} ms. ", resp_code, url, getTotalTime() * 1000 );
+    Debug( "Received response {} with code {} from {} in {} ms. ", recv_header, resp_code, url, getTotalTime() * 1000 );
     return resp_code;
 }
 
@@ -128,13 +134,16 @@ double CurlEasyPost::getTotalTime() {
 
 
 DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &cred_file_path ) {
-
     std::string url;
-
     mOAuth2Token = std::string("");
     mTokenValidityPeriod = 0;
     mTokenExpirationMargin = cTokenExpirationMargin;
     mTokenExpirationTime = TClock::now();
+
+    const char* home = getenv("HOME");
+    if ( !home ) {
+        Throw( DRM_ExternFail, "No 'HOME' environment variable could be found: please create it." );
+    }
 
     // Set properties based on file
     try {
@@ -198,18 +207,21 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
     CurlSingleton::Init();
 
     // Set URL of license and metering requests
-    /*mUrl = url;
-    mOAuth2Url = url + std::string("/o/token/");
-    mLicenseUrl = url + std::string("/auth/metering/genlicense/");
-    mHealthUrl = url + std::string("/auth/metering/health/");
-    mProductUrl = url + std::string("/customer/product/{}/entitlement_session");  // product_id
-    mEntitlementUrl = url + std::string("/customer/entitlement_session/{}");  //entitlement_session_id
-
-    Debug( "OAuth URL: {}", mOAuth2Url );
-    Debug( "Licensing URL: {}", mLicenseUrl );
-    Debug( "Health URL: {}", mHealthUrl );
-    */
+    mUrl = url;
     Debug( "DRM Server URL: {}", mUrl );
+
+    // Set path to the cache file used to save the token
+    mTokenFilePath = fmt::format( "{home}{sep}.cache{sep}accelize{sep}drm{sep}{clientid}.json",
+            "sep"_a=PATH_SEP, "home"_a=home, "clientid"_a=mClientId );
+    Debug( "Token cache file: {}", mTokenFilePath );
+
+    // Check if a cahched token exists
+    if ( isFile( mTokenFilePath ) ) {
+        Json::Value token_json = parseJsonFile( mTokenFilePath );
+        mOAuth2Token = JVgetRequired( token_json, "access_token", Json::stringValue ).asString();
+        mTokenValidityPeriod = JVgetRequired( token_json, "expires_in", Json::intValue ).asInt();
+        mTokenExpirationTime = time_t_to_steady_clock( JVgetRequired( token_json, "expires_at", Json::uintValue ).asUInt() );
+    }
 }
 
 int32_t DrmWSClient::getTokenTimeLeft() const {
@@ -282,6 +294,10 @@ void DrmWSClient::getOAuth2token( int32_t timeout_msec ) {
     mOAuth2Token = JVgetRequired( json_resp, "access_token", Json::stringValue ).asString();
     mTokenValidityPeriod = JVgetRequired( json_resp, "expires_in", Json::intValue ).asInt();
     mTokenExpirationTime = TClock::now() + std::chrono::seconds( mTokenValidityPeriod );
+    json_resp["expires_at"] = steady_clock_to_time_t( mTokenExpirationTime );
+
+    // Cache the token
+    saveJsonToFile(mTokenFilePath, json_resp);
 }
 
 Json::Value DrmWSClient::postSaas( const Json::Value& json_req, int32_t timeout_msec ) {
