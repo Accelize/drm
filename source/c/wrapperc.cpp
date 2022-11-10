@@ -75,16 +75,22 @@ DRM_ErrorCode DrmManager_alloc( DrmManager **p_m,
     m = (decltype(m))malloc(sizeof(*m));
     m->drm = NULL;
     *p_m = m;
+    cpp::DrmManager::ReadRegisterCallback cpp_read_register = nullptr;
+    cpp::DrmManager::WriteRegisterCallback cpp_write_register = nullptr;
+    cpp::DrmManager::AsynchErrorCallback cpp_async_error = nullptr;
     TRY
         m->drm = (decltype(m->drm))malloc(sizeof(*(m->drm)));
         m->drm->obj = NULL;
+        if ( read_register != NULL)
+            cpp_read_register = [user_p, read_register](uint32_t offset, uint32_t* value) { return read_register(offset, value, user_p); };
+        if ( write_register != NULL)
+            cpp_write_register = [user_p, write_register](uint32_t offset, uint32_t value) { return write_register(offset, value, user_p); };
+        if ( async_error != NULL)
+            cpp_async_error = [user_p, async_error](const std::string& msg) { async_error(msg.c_str(), user_p); };
         m->drm->obj = new cpp::DrmManager(conf_file_path, cred_file_path,
-                    [user_p, read_register](uint32_t offset, uint32_t* value)
-                        { return read_register(offset, value, user_p); },
-                    [user_p, write_register](uint32_t offset, uint32_t value)
-                        { return write_register(offset, value, user_p); },
-                    [user_p, async_error](const std::string& msg)
-                        { async_error(msg.c_str(), user_p); }
+                    cpp_read_register,
+                    cpp_write_register,
+                    cpp_async_error
                 );
     CATCH_RETURN
 }
@@ -96,12 +102,11 @@ DRM_ErrorCode DrmManager_free(DrmManager **p_m) {
         m = *p_m;
         checkPointer(m);
         checkPointer(m->drm);
-        if (m->drm->obj != NULL) {
-            delete m->drm->obj;
-        }
+        if (m->drm->obj != NULL) delete m->drm->obj;
         free(m->drm);
         free(m);
-        *p_m = NULL;
+        m = NULL;
+        p_m = NULL;
     CATCH_RETURN
 }
 
