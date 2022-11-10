@@ -2561,10 +2561,8 @@ public:
           AsynchErrorCallback f_user_asynch_error )
         : Impl( conf_file_path, cred_file_path )
     {
-        TRY
+        try {
             Debug( "Calling Impl public constructor" );
-            const char* ctrl_timeout = getenv( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS" );
-            const char* ctrl_sleep = getenv( "DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS" );
             if ( f_user_asynch_error )
                 f_asynch_error = f_user_asynch_error;
             // Determine DRM Ctrl TA existance by trying to initialize it
@@ -2584,6 +2582,13 @@ public:
                 f_read_register = f_user_read_register;
                 f_write_register = f_user_write_register;
             }
+            if ( !f_read_register )
+                Throw( DRM_BadArg, "Read register callback function must not be NULL. " );
+            if ( !f_write_register )
+                Throw( DRM_BadArg, "Write register callback function must not be NULL. " );
+            if ( !f_asynch_error )
+                Throw( DRM_BadArg, "Asynchronous error callback function must not be NULL. " );
+            
             if ( mIsHybrid ) {
                 if ( mIsPnR )
                     Debug( "DRM Controller is a PnR Trusted Application" );
@@ -2595,6 +2600,8 @@ public:
                 Debug( "DRM Controller is a FPGA IP" );
                 mCtrlTimeFactor = 1;
             }
+            const char* ctrl_timeout = getenv( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS" );
+            const char* ctrl_sleep = getenv( "DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS" );
             uint32_t timeout_period = SDK_CTRL_TIMEOUT_IN_US * mCtrlTimeFactor;
             uint32_t sleep_period = SDK_CTRL_SLEEP_IN_US * mCtrlTimeFactor;
             std::string s_timeout_period = std::to_string(timeout_period);
@@ -2607,16 +2614,16 @@ public:
                 Debug( "DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS variable is not defined" );
                 setenv("DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS", s_sleep_period.c_str(), 0);
             }
-            if ( !f_read_register )
-                Throw( DRM_BadArg, "Read register callback function must not be NULL. " );
-            if ( !f_write_register )
-                Throw( DRM_BadArg, "Write register callback function must not be NULL. " );
-            if ( !f_asynch_error )
-                Throw( DRM_BadArg, "Asynchronous error callback function must not be NULL. " );
             initDrmInterface();
             getHostAndCardInfo();
             Debug( "Exiting Impl public constructor" );
-        CATCH_AND_THROW
+        
+        } catch( const std::exception &e ) {
+            Fatal( e.what() );
+            sLogger->flush();
+            f_asynch_error( e.what() );
+            throw;
+        }   
     }
 
     ~Impl() {
