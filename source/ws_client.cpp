@@ -21,6 +21,7 @@ limitations under the License.
 #include <unistd.h>
 #include <math.h>
 
+#include "accelize/drm/version.h"
 #include "log.h"
 #include "utils.h"
 #include "ws_client.h"
@@ -315,6 +316,7 @@ Json::Value DrmWSClient::postSaas( const Json::Value& json_req, int32_t timeout_
     req.setHostResolves( mHostResolvesJson );
     req.appendHeader( "Accept: application/vnd.accelize.v1+json" );
     req.appendHeader( "Content-Type: application/json" );
+    req.appendHeader( fmt::format("User-Agent: libaccelize_drm_{}", DRMLIB_VERSION ) );
     std::string token_header("Authorization: Bearer ");
     token_header += mOAuth2Token;
     req.appendHeader( token_header );
