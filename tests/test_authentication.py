@@ -3,18 +3,14 @@
 Test node-locked behavior of DRM Library.
 """
 import pytest
-from glob import glob
-from os import remove, getpid
-from os.path import getsize, isfile, dirname, join, realpath
-from re import match, search, finditer, MULTILINE, IGNORECASE
-from time import sleep, time
-from json import loads, dumps
-from datetime import datetime, timedelta
-from multiprocessing import Process
-import requests
+from os import remove
+from os.path import isfile, expanduser
+from re import search
+from time import sleep
+from json import loads
+from datetime import datetime
 from flask import request as _request
 
-from tests.conftest import wait_func_true, wait_deadline
 from tests.proxy import get_context, set_context
 
 
@@ -22,11 +18,9 @@ from tests.proxy import get_context, set_context
 def test_authentication_bad_token(accelize_drm, conf_json, cred_json,
                     async_handler, live_server, log_file_factory, request):
     """Test when a bad authentication token is used"""
-
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + request.function.__name__
     logfile = log_file_factory.create(3)
@@ -59,7 +53,6 @@ def test_authentication_bad_token(accelize_drm, conf_json, cred_json,
 
 def test_authentication_validity_after_deactivation(accelize_drm, conf_json, cred_json, async_handler):
     """Test authentication token is still valid after deactivate"""
-
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
@@ -101,7 +94,6 @@ def test_authentication_validity_after_deactivation(accelize_drm, conf_json, cre
 def test_authentication_token_renewal(accelize_drm, conf_json, cred_json,
                 async_handler, live_server, request):
     """Test a different authentication token is given after expiration"""
-
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
@@ -181,3 +173,45 @@ def test_authentication_endurance(accelize_drm, conf_json, cred_json, async_hand
         assert not drm_manager.get('license_status')
     activators[0].autotest(is_activated=False)
     print('Endurance test has completed')
+
+
+@pytest.mark.no_parallel
+def test_authentication_cache(accelize_drm, conf_json, cred_json,
+                            async_handler, log_file_factory):
+    """Test if the authentication token is cached"""
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    async_cb.reset()
+    conf_json.reset()
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
+    conf_json.save()
+
+    # 1- Remove the cache file
+    clientid = cred_json['client_id']
+    token_cache_file = os.path.expanduser(join('~','.cache','accelize','drm',f'{clientid}.json')
+    if isfile(cache_file):
+        remove(cache_file)
+    assert not isfile(cache_file)
+    # 2- Verify a new cache file is created
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        drm_manager.activate()
+        assert isfile(cache_file)
+        drm_manager.deactivate()
+    assert not isfile(cache_file)
+    token_json = loads(cache_file)
+    assert 'access_token' in token_json.keys()
+    assert 'expires_in' in token_json.keys()
+    assert 'expires_at' in token_json.keys()
+    # 3- Verify log messages
+    log_content = logfile.read()
+    assert search(r'Saved token to file ' + cache_file, log_content)
+    assert search(r'Loaded token from file ' + cache_file, log_content)
+    async_cb.assert_NoError()
+    logfile.remove()

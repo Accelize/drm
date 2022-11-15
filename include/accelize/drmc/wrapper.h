@@ -75,7 +75,7 @@ typedef enum {
     \warning This function must be thread-safe in case of concurrency on the
     register bus.
 */
-typedef int/*errcode*/ (*ReadRegisterCallback)(uint32_t /*register offset*/, uint32_t* /*returned data*/, void* user_p);
+typedef int/*errcode*/ (*ReadRegisterCallback)(uint32_t /*register offset*/, uint32_t* /*returned data*/, void* /*user_p*/);
 
 
 /** \brief FPGA write register callback function.
@@ -89,7 +89,7 @@ typedef int/*errcode*/ (*ReadRegisterCallback)(uint32_t /*register offset*/, uin
     \warning This function must be thread-safe in case of concurrency on the
     register bus.
 */
-typedef int/*errcode*/ (*WriteRegisterCallback)(uint32_t /*register offset*/, uint32_t /*data to write*/, void* user_p);
+typedef int/*errcode*/ (*WriteRegisterCallback)(uint32_t /*register offset*/, uint32_t /*data to write*/, void* /*user_p*/);
 
 
 /** \brief Asynchronous Error handling callback function.
@@ -98,7 +98,7 @@ typedef int/*errcode*/ (*WriteRegisterCallback)(uint32_t /*register offset*/, ui
     \param[in] error_message : Error message.
     \param[in] user_p : User pointer.
 */
-typedef void (*AsynchErrorCallback)(const char* /*error message*/, void* user_p);
+typedef void (*AsynchErrorCallback)(const char* /*error message*/, void* /*user_p*/);
 
 
 /** \brief Return API version.

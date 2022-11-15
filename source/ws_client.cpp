@@ -87,8 +87,7 @@ void CurlEasyPost::setPostFields( const std::string& postfields ) {
     curl_easy_setopt( mCurl, CURLOPT_COPYPOSTFIELDS, postfields.c_str() );
 }
 
-uint32_t CurlEasyPost::perform( const std::string url, std::string* response,
-                                const int32_t timeout_msec ) {
+uint32_t CurlEasyPost::perform( const std::string url, std::string* response, const int32_t timeout_msec ) {
     CURLcode res;
     uint32_t resp_code;
     std::string recv_header("");
@@ -214,7 +213,6 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
     // Set path to the cache file used to save the token
     mTokenFilePath = fmt::format( "{home}{sep}.cache{sep}accelize{sep}drm{sep}{clientid}.json",
             "sep"_a=PATH_SEP, "home"_a=home, "clientid"_a=mClientId );
-    Debug( "Token cache file: {}", mTokenFilePath );
 
     // Check if a cahched token exists
     if ( isFile( mTokenFilePath ) ) {
@@ -222,6 +220,7 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
         mOAuth2Token = JVgetRequired( token_json, "access_token", Json::stringValue ).asString();
         mTokenValidityPeriod = JVgetRequired( token_json, "expires_in", Json::intValue ).asInt();
         mTokenExpirationTime = time_t_to_steady_clock( JVgetRequired( token_json, "expires_at", Json::uintValue ).asUInt() );
+        Debug( "Loaded token from file {}: {}", mTokenFilePath, token_json.toStyledString() );
     }
 }
 
@@ -299,6 +298,7 @@ void DrmWSClient::getOAuth2token( int32_t timeout_msec ) {
 
     // Cache the token
     saveJsonToFile(mTokenFilePath, json_resp);
+    Debug( "Saved token to file {}: {}", mTokenFilePath, json_resp.toStyledString() );
 }
 
 Json::Value DrmWSClient::postSaas( const Json::Value& json_req, int32_t timeout_msec ) {

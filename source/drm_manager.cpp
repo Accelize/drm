@@ -349,7 +349,7 @@ protected:
     std::string mXrtPath;
     std::string mXbutil;
 
-    Json::Value mDiagnosticJson = Json::nullValue;
+    Json::Value mDiagnostic = Json::nullValue;
     eHostDataVerbosity mHostDataVerbosity = eHostDataVerbosity::PARTIAL;
     Json::Value mSettings = Json::nullValue;
     Json::Value mMailboxRoData = Json::nullValue;
@@ -790,13 +790,13 @@ protected:
         std::string cpu_version = execCmd( "uname -m" );
 
         // Fulfill with DRM section
-        mDiagnosticJson["drm_library_version"] = DRMLIB_VERSION;
-        mDiagnosticJson["drm_ctrl_version"] = mDrmVersionNum;
-        mDiagnosticJson["os_version"] = os_version;
-        mDiagnosticJson["os_kernel_version"] = kernel_version;
-        mDiagnosticJson["cpu_architecture"] = cpu_version;
-        mDiagnosticJson["device_driver_version"] = "";
-        mDiagnosticJson["device_firmware_version"] = "";
+        mDiagnostic["drm_library_version"] = DRMLIB_VERSION;
+        mDiagnostic["drm_ctrl_version"] = mDrmVersionNum;
+        mDiagnostic["os_version"] = os_version;
+        mDiagnostic["os_kernel_version"] = kernel_version;
+        mDiagnostic["cpu_architecture"] = cpu_version;
+        mDiagnostic["device_driver_version"] = "";
+        mDiagnostic["device_firmware_version"] = "";
 
         // Gather host and card information if xbutil existing
         if ( findXrtUtility() ) {
@@ -804,7 +804,7 @@ protected:
             if ( !getXrtPlatformInfoV2( hostcard_node ) ) {
                 getXrtPlatformInfoV1( hostcard_node );
             }
-            mDiagnosticJson["host_card"] = hostcard_node;
+            mDiagnostic["host_card"] = hostcard_node;
             Debug( "Host and card information:\n{}", hostcard_node.toStyledString() );
         }
     }
@@ -825,7 +825,7 @@ protected:
             Debug( "No CSP information collected: {}", e.what() );
         }
         Debug( "CSP information:\n{}", csp_node.toStyledString() );
-        mDiagnosticJson.append( csp_node );
+        mDiagnostic.append( csp_node );
     }
 
     Json::Value buildSettingsNode() {
@@ -1373,7 +1373,7 @@ protected:
         json_request["entitlement_id"] = mEntitlementID;
 
         if ( mLicenseCounter == 1 ) {
-            json_request["diagnostic"] = mDiagnosticJson;
+            json_request["diagnostic"] = mDiagnostic;
         }
         return json_request;
     }
@@ -1817,7 +1817,7 @@ protected:
                 /// - Add diagnostic info
                 getCstInfo();
                 getHostAndCardInfo();
-                request_json["diagnostic"] = mDiagnosticJson;
+                request_json["diagnostic"] = mDiagnostic;
                 Debug( "Parsed Node-locked License Request file: {}", request_json .toStyledString() );
                 /// - Send request to web service and receive the new license
                 license_json = getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
@@ -2883,9 +2883,9 @@ public:
                         break;
                     }
                     case ParameterKey::host_data: {
-                        json_value[key_str] = mDiagnosticJson;
+                        json_value[key_str] = mDiagnostic;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
-                               mDiagnosticJson.toStyledString() );
+                               mDiagnostic.toStyledString() );
                         break;
                     }
                     case ParameterKey::log_file_append: {
