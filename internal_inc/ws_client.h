@@ -102,6 +102,8 @@ public:
     void appendHeader( const std::string header );
     void setPostFields( const std::string& postfields );
 
+    std::string escape( const std::string str ) const;
+
     uint32_t perform( const std::string url, std::string* resp, const int32_t timeout_ms );
 
     template<class T>
@@ -249,17 +251,18 @@ protected:
     bool isTokenValid() const;
 
 public:
+
     DrmWSClient(const std::string &conf_file_path, const std::string &cred_file_path);
     ~DrmWSClient() = default;
 
     uint32_t getVerbosity() const { return mVerbosity; }
-
     uint32_t getTokenValidity() const { return mTokenValidityPeriod; }
     int32_t getTokenTimeLeft() const;
     std::string getTokenString() const { return mOAuth2Token; }
     int32_t getRequestTimeoutMS() const { return mRequestTimeoutMS; }
     int32_t getConnectionTimeoutMS() const { return mConnectionTimeoutMS; }
 
+    std::string escape( std::string str ) const;
     void getOAuth2token( int32_t timeout_msec );
     Json::Value postSaas( const Json::Value& json_req, int32_t timeout_msec );
 };

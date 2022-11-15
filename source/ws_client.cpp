@@ -16,7 +16,6 @@ limitations under the License.
 
 #include <iostream>
 #include <sstream>
-#include <curl/curl.h>
 #include <chrono>
 #include <unistd.h>
 #include <math.h>
@@ -56,6 +55,16 @@ CurlEasyPost::~CurlEasyPost() {
 
 void CurlEasyPost::setVerbosity( const uint32_t verbosity ) {
     curl_easy_setopt(mCurl, CURLOPT_VERBOSE, verbosity);
+}
+
+std::string CurlEasyPost::escape( const std::string str ) const {
+    char *escaped_char = curl_easy_escape(mCurl, str.c_str(), str.size());
+    if ( escaped_char == NULL ) {
+        Throw( DRM_BadArg, "Could not URL encode the string: {}", str );
+    }
+    std::string escaped_str = std::string(escaped_char);
+    curl_free(escaped_char);
+    return escaped_str;
 }
 
 void CurlEasyPost::setHostResolves( const Json::Value& host_json ) {
@@ -242,6 +251,11 @@ bool DrmWSClient::isTokenValid() const {
             Debug( "Current authentication token has expired" );
         return false;
     }
+}
+
+std::string DrmWSClient::escape( std::string str ) const {
+    CurlEasyPost req( mConnectionTimeoutMS );
+    return req.escape( str );
 }
 
 void DrmWSClient::getOAuth2token( int32_t timeout_msec ) {

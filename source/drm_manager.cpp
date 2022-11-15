@@ -1297,7 +1297,21 @@ protected:
         mMailboxRoData = parseJsonString( mailboxReadOnly );
 
         json_output["device_id"] = dna;
-        json_output["product_id"] = mMailboxRoData["product_id"];
+        Json::Value product_id_json = mMailboxRoData["product_id"];
+        if ( product_id_json.isString() ) {
+            // v2.x HDK
+            json_output["product_id"] = product_id_json.asString();
+        } else {
+            // v1.x HDK
+            std::string product_vendor = JVgetOptional( product_id_json, "vendor", Json::stringValue, "" ).asString();
+            std::string product_library = JVgetOptional( product_id_json, "library", Json::stringValue, "" ).asString();
+            std::string product_name = JVgetOptional( product_id_json, "name", Json::stringValue, "" ).asString();
+            if ( product_vendor.empty() || product_library.empty() || product_name.empty() ) {
+                Throw( DRM_CtlrError, "Unsupported product ID: {}", product_id_json.toStyledString() );
+            }
+            std::string product_id = product_vendor + '/' + product_library + '/' + product_name;
+            json_output["product_id"] = getDrmWSClient().escape( product_id );
+        }
 
         // Fulfill drm_config section
         drm_config["lgdn_version"] = mDrmVersionNum;
