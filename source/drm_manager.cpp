@@ -1309,7 +1309,7 @@ protected:
             if ( product_vendor.empty() || product_library.empty() || product_name.empty() ) {
                 Throw( DRM_CtlrError, "Unsupported product ID: {}", product_id_json.toStyledString() );
             }
-            std::string product_id = product_vendor + '/' + product_library + '/' + product_name;
+            std::string product_id = product_vendor + "::" + product_library + "::" + product_name;
             json_output["product_id"] = getDrmWSClient().escape( product_id );
         }
 
