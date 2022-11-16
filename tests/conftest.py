@@ -24,7 +24,7 @@ from tests.ws_admin_functions import WSListFunction
 
 _SESSION = dict()
 _LICENSING_SERVERS = dict(
-    dev='https://master.devmetering.accelize.com',
+    dev='https://api.dev.accelize.com',
     prod='https://master.metering.accelize.com')
 
 ACT_STATUS_REG_OFFSET = 0x38

@@ -86,12 +86,12 @@ uint32_t Accelize::DRM::DrmManager::s_pnc_page_offset = 0;
 
 const std::string Accelize::DRM::DrmManager::DRM_SELF_TEST_ERROR_MESSAGE = std::string(
         "Could not access DRM Controller registers.\nPlease verify:\n"
-                        "\t-The read/write callbacks implementation in the host application: verify it uses the correct offset address of DRM Controller IP in the design address space.\n"
+        "\t-The read/write callbacks implementation in the host application: verify it uses the correct offset address of DRM Controller IP in the design address space.\n"
         "\t-The DRM Controller IP instantiation in the FPGA design: verify the correctness of 16-bit address received by the AXI-Lite port of the DRM Controller.\n" );
 
 const std::string Accelize::DRM::DrmManager::DRM_CONNECTION_ERROR_MESSAGE = std::string(
         "\n!!! The issue could either be caused by a networking problem, by a firewall or NAT blocking incoming traffic or by a wrong server address. "
-                        "Please verify your configuration and try again !!!\n" );
+        "Please verify your configuration and try again !!!\n" );
 
 const std::string Accelize::DRM::DrmManager::DRM_CTRL_TA_INIT_ERROR_MESSAGE = std::string(
         "Please verify:\n"
@@ -1297,7 +1297,8 @@ protected:
         mMailboxRoData = parseJsonString( mailboxReadOnly );
 
         json_output["device_id"] = dna;
-        Json::Value product_id_json = mMailboxRoData["product_id"];
+//TODO: UNCOMMENT THIS LINE AND REMOVE THE NEXT ONE       Json::Value product_id_json = mMailboxRoData["product_id"];
+Json::Value product_id_json = "AGCIB23BTJ6PFMRDXY7HKYHXPA";
         if ( product_id_json.isString() ) {
             // v2.x HDK
             json_output["product_id"] = product_id_json.asString();
