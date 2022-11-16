@@ -791,7 +791,7 @@ protected:
 
         // Fulfill with DRM section
         mDiagnostic["drm_library_version"] = DRMLIB_VERSION;
-        mDiagnostic["drm_ctrl_version"] = mDrmVersionNum;
+        mDiagnostic["drm_controller_version"] = mDrmVersionNum;
         mDiagnostic["os_version"] = os_version;
         mDiagnostic["os_kernel_version"] = kernel_version;
         mDiagnostic["cpu_architecture"] = cpu_version;
