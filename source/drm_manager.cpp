@@ -163,13 +163,14 @@ private:
                         sleep(1);
                         continue;
                     }
-                    Throw( DRM_PncInitError, "Failed to configure ProvenCore for DRM Controller TA: {}. ",
-                        strerror(errno) );
+                    Throw( DRM_PncInitError, "Failed to configure ProvenCore for DRM Controller TA with error code {}: {}. ",
+                        ret, strerror(errno) );
                 }
                 break;
             }
             if (ret < 0) {
-                Throw( DRM_PncInitError, "Failed to allocate resource for DRM Controller TA: Timeout. " );
+                Throw( DRM_PncInitError, "Failed to allocate resource for DRM Controller TA with error code {}: {}. ", 
+                        ret, strerror(errno) );
             }
             Debug( "ProvenCore session configured for DRM Controller TA. " );
 
@@ -177,8 +178,8 @@ private:
             ret = pnc_session_getinfo(s_pnc_session, (void**)&s_pnc_tzvaddr, &s_pnc_tzsize);
             Debug( "pnc_session_getinfo returned {}", ret );
             if ( ret < 0) {
-                Throw( DRM_PncInitError, "Failed to get information from DRM Controller TA: {}. ",
-                    strerror(errno) );
+                Throw( DRM_PncInitError, "Failed to get information from DRM Controller TA with error code {}: {}. ",
+                    ret, strerror(errno) );
             }
             if (s_pnc_tzvaddr == NULL) {
                 Throw( DRM_PncInitError, "Failed to create shared memory for DRM Controller TA: {}. ",
@@ -191,7 +192,8 @@ private:
             ret = pnc_session_send_request_and_wait_response(s_pnc_session, PNC_DRM_INIT_SHM, 0, &response);
             Debug( "pnc_session_send_request_and_wait_response returned {} with response {}", ret, response );
             if ( (ret < 0) || (response != 0) ) {
-                std::string msg = fmt::format( "Failed to initialize DRM Controller TA: stderr={} / response={}. ", strerror(errno), response );
+                std::string msg = fmt::format( "Failed to initialize DRM Controller TA with error code {}: stderr={} / response={}. ", 
+                            ret, strerror(errno), response );
                 msg += DRM_CTRL_TA_INIT_ERROR_MESSAGE;
                 msg += fmt::format(
                     "For more details refer to the online documentation: {}/drm_hardware_integration.html#xilinx-r-som-boards",
