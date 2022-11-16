@@ -1289,8 +1289,7 @@ protected:
         std::vector<std::string> vlnvFile;
         std::string mailboxReadOnly;
 
-        Json::Value drm_config = json_output["drm_config"];
-        Json::Value extra_node =json_output["extra"];
+        Json::Value &drm_config = json_output["drm_config"];
 
         // Get information from DRM Controller
         getDesignInfo( drmVersion, dna, vlnvFile, mailboxReadOnly );
@@ -1315,7 +1314,7 @@ Json::Value product_id_json = "AGCIB23BTJ6PFMRDXY7HKYHXPA";
         }
 
         // Fulfill drm_config section
-        drm_config["lgdn_version"] = mDrmVersionNum;
+        drm_config["lgdn_version"] = fmt::format( "{:06X}", mDrmVersionNum );
         if ( !isConfigInNodeLock() && !mIsHybrid ) {
             drm_config["drm_frequency_init"] = mFrequencyInit;
         }
@@ -1332,14 +1331,14 @@ Json::Value product_id_json = "AGCIB23BTJ6PFMRDXY7HKYHXPA";
         // Fulfill tmp section
         if ( mMailboxRoData.isMember( "pkg_version" ) ) {
             drm_config["pkg_version"] = mMailboxRoData["pkg_version"];
-            Debug( "HDK Generator version: {}", json_output["pkg_version"].asString() );
+            Debug( "HDK Generator version: {}", drm_config["pkg_version"].asString() );
         }
         if ( mMailboxRoData.isMember( "dna_type" ) ) {
             drm_config["dna_type"] = mMailboxRoData["dna_type"];
-            Debug( "HDK DNA type: {}", json_output["dna_type"].asString() );
+            Debug( "HDK DNA type: {}", drm_config["dna_type"].asString() );
         }
         if ( mMailboxRoData.isMember( "extra" ) ) {
-            drm_config["extra"] = mMailboxRoData["extra"];
+            json_output["extra"] = mMailboxRoData["extra"];
             Debug( "HDK extra data: {}", json_output["extra"].toStyledString() );
         }
 
@@ -1356,7 +1355,7 @@ Json::Value product_id_json = "AGCIB23BTJ6PFMRDXY7HKYHXPA";
 
         // Request challenge and metering info for first request
         checkDRMCtlrRet( getDrmController().initialization( numberOfDetectedIps, saasChallenge, meteringFile ) );
-        Json::Value drm_config = json_request["drm_config"];
+        Json::Value &drm_config = json_request["drm_config"];
         drm_config["saas_challenge"] = saasChallenge;
         drm_config["metering_file"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
         drm_config["license_type"] = (uint8_t)mLicenseType;

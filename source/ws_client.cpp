@@ -111,7 +111,7 @@ uint32_t CurlEasyPost::perform( const std::string url, std::string* response, co
     }
     curl_easy_setopt( mCurl, CURLOPT_WRITEDATA, response );
     curl_easy_setopt( mCurl, CURLOPT_TIMEOUT_MS, timeout_msec );
-    curl_easy_setopt( mCurl, CURLOPT_HEADERDATA, (void*)&recv_header );
+    curl_easy_setopt( mCurl, CURLOPT_HEADERDATA, &recv_header );
     res = curl_easy_perform( mCurl );
 
     // Analyze libcurl response
@@ -129,7 +129,9 @@ uint32_t CurlEasyPost::perform( const std::string url, std::string* response, co
         }
     }
     curl_easy_getinfo( mCurl, CURLINFO_RESPONSE_CODE, &resp_code );
-    Debug( "Received response {} with code {} from {} in {} ms. ", recv_header, resp_code, url, getTotalTime() * 1000 );
+    std::cout << "resp_code=" << resp_code << std::endl;
+//    std::cout << "recv_header=" << recv_header << std::endl;
+//    Debug( "Received response {} with code {} from {} in {} ms. ", recv_header, resp_code, url, getTotalTime() * 1000 );
     return resp_code;
 }
 

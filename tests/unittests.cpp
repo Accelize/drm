@@ -246,20 +246,20 @@ public:
         END_IF
     }
 
-    void activate( const bool& resume_session_request = false ) {
+    void activate() {
         IF_CPP
-            pDrmManager->activate( resume_session_request );
+            pDrmManager->activate();
         ELSE_C
-            ret = DrmManager_activate( pDrmManager_c, resume_session_request );
+            ret = DrmManager_activate( pDrmManager_c );
         END_IF
 
     }
 
-    void deactivate( const bool& pause_session_request = false ) {
+    void deactivate() {
         IF_CPP
-            pDrmManager->deactivate( pause_session_request );
+            pDrmManager->deactivate();
         ELSE_C
-            ret = DrmManager_deactivate( pDrmManager_c, pause_session_request );
+            ret = DrmManager_deactivate( pDrmManager_c );
         END_IF
     }
 
