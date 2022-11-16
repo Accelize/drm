@@ -86,16 +86,17 @@ uint32_t Accelize::DRM::DrmManager::s_pnc_page_offset = 0;
 
 const std::string Accelize::DRM::DrmManager::DRM_SELF_TEST_ERROR_MESSAGE = std::string(
         "Could not access DRM Controller registers.\nPlease verify:\n"
-                        "\t-The read/write callbacks implementation in the host application: verify it uses the correct offset address of DRM Controller IP in the design address space.\n"
+        "\t-The read/write callbacks implementation in the host application: verify it uses the correct offset address of DRM Controller IP in the design address space.\n"
         "\t-The DRM Controller IP instantiation in the FPGA design: verify the correctness of 16-bit address received by the AXI-Lite port of the DRM Controller.\n" );
 
 const std::string Accelize::DRM::DrmManager::DRM_CONNECTION_ERROR_MESSAGE = std::string(
         "\n!!! The issue could either be caused by a networking problem, by a firewall or NAT blocking incoming traffic or by a wrong server address. "
-                        "Please verify your configuration and try again !!!\n" );
+        "Please verify your configuration and try again !!!\n" );
 
 const std::string Accelize::DRM::DrmManager::DRM_CTRL_TA_INIT_ERROR_MESSAGE = std::string(
         "Please verify:\n"
-        "\t- the DRM Controller instance in the PL is at the right offset address.\n"
+        "\t- the DRM Controller TA has been loaded on the board (in the boot.bin).\n"
+        "\t- the DRM Bridge IP is at the correct offset address in the PL.\n"
         "\t- the PUF has been registered.\n" );
 
 const std::string Accelize::DRM::DrmManager::DRM_DOC_LINK = std::string(
@@ -2562,7 +2563,7 @@ public:
                 Throw( DRM_BadArg, "Write register callback function must not be NULL. " );
             if ( !f_asynch_error )
                 Throw( DRM_BadArg, "Asynchronous error callback function must not be NULL. " );
-            
+
             if ( mIsHybrid ) {
                 if ( mIsPnR )
                     Debug( "DRM Controller is a PnR Trusted Application" );
@@ -2591,13 +2592,13 @@ public:
             initDrmInterface();
             getHostAndCardInfo();
             Debug( "Exiting Impl public constructor" );
-        
+
         } catch( const std::exception &e ) {
             Fatal( e.what() );
             sLogger->flush();
             f_asynch_error( e.what() );
             throw;
-        }   
+        }
     }
 
     ~Impl() {
