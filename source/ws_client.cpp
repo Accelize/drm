@@ -224,7 +224,7 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
     // Set path to the cache file used to save the token
     std::string tokenDir = fmt::format( "{home}{sep}.cache{sep}accelize{sep}drm",
                 "sep"_a=PATH_SEP, "home"_a=home, "clientid"_a=mClientId );
-    mTokenFilePath = fmt::format( "{}{}{}.json", PATH_SEP, tokenDir, mClientId );
+    mTokenFilePath = fmt::format( "{}{}{}.json", tokenDir, PATH_SEP, mClientId );
 
     // Check if a cached token exists
     if ( isFile( mTokenFilePath ) ) {

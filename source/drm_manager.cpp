@@ -1191,7 +1191,7 @@ protected:
         runBistLevel2();
 
         // Determine frequency detection method if metering/floating mode is active
-        if ( !isConfigInNodeLock() && !mIsHybrid ) {
+        if ( !isConfigInNodeLock() ) {
             determineFrequencyDetectionMethod();
             if ( mFreqDetectionMethod == 3 ) {
                 detectDrmFrequencyMethod3();
@@ -1297,7 +1297,7 @@ protected:
 
         json_output["device_id"] = dna;
 //TODO: UNCOMMENT THIS LINE AND REMOVE THE NEXT ONE       Json::Value product_id_json = mMailboxRoData["product_id"];
-Json::Value product_id_json = "AGCIB23BTJ6PFMRDXY7HKYHXPA";
+Json::Value product_id_json = "AGCIL36AYZ4E7K3KCLEINMOVBY";
         if ( product_id_json.isString() ) {
             // v2.x HDK
             json_output["product_id"] = product_id_json.asString();
@@ -1317,29 +1317,32 @@ Json::Value product_id_json = "AGCIB23BTJ6PFMRDXY7HKYHXPA";
         drm_config["lgdn_version"] = fmt::format( "{:06X}", mDrmVersionNum );
         if ( !isConfigInNodeLock() && !mIsHybrid ) {
             drm_config["drm_frequency_init"] = mFrequencyInit;
+// TODO: verify float is accepted by removing the int()
+            drm_config["drm_frequency"] = int(mFrequencyCurr);
         }
         drm_config["license_type"] = (uint8_t)mLicenseType;
         drm_config["drm_type"] = mIsHybrid ? 2:1;
         for ( uint32_t i = 0; i < vlnvFile.size(); i++ ) {
-            std::string i_str = std::to_string(i);
-            drm_config["vlnv_file"][i_str]["vendor"] = std::string("x") + vlnvFile[i].substr(0, 4);
-            drm_config["vlnv_file"][i_str]["library"] = std::string("x") + vlnvFile[i].substr(4, 4);
-            drm_config["vlnv_file"][i_str]["name"] = std::string("x") + vlnvFile[i].substr(8, 4);
-            drm_config["vlnv_file"][i_str]["version"] = std::string("x") + vlnvFile[i].substr(12, 4);
+            std::string v_str = vlnvFile[i].substr(0, 4);
+            v_str += vlnvFile[i].substr(4, 4);
+            v_str += vlnvFile[i].substr(8, 4);
+            v_str += vlnvFile[i].substr(12, 4);
+            drm_config["vlnv_file"].append( v_str );
         }
 
         // Fulfill tmp section
         if ( mMailboxRoData.isMember( "pkg_version" ) ) {
-            drm_config["pkg_version"] = mMailboxRoData["pkg_version"];
-            Debug( "HDK Generator version: {}", drm_config["pkg_version"].asString() );
+// TODO: Verify it's accepted            drm_config["pkg_version"] = mMailboxRoData["pkg_version"];
+//            Debug( "HDK Generator version: {}", drm_config["pkg_version"].asString() );
         }
         if ( mMailboxRoData.isMember( "dna_type" ) ) {
             drm_config["dna_type"] = mMailboxRoData["dna_type"];
             Debug( "HDK DNA type: {}", drm_config["dna_type"].asString() );
         }
         if ( mMailboxRoData.isMember( "extra" ) ) {
-            json_output["extra"] = mMailboxRoData["extra"];
-            Debug( "HDK extra data: {}", json_output["extra"].toStyledString() );
+// TODO: Verify where to include this extra node            json_output["extra"] = mMailboxRoData["extra"];
+//            Debug( "HDK extra data: {}", mMailboxRoData["extra"].toStyledString() );
+            drm_config["dualclk"] = mMailboxRoData["extra"]["dualclk"];
         }
 
         return json_output;
@@ -1572,7 +1575,7 @@ Json::Value product_id_json = "AGCIB23BTJ6PFMRDXY7HKYHXPA";
             // Get new license
             try {
                 // Add settings parameters
-                request_json["settings"] = buildSettingsNode();
+// TODO Move this to another accepted location              request_json["settings"] = buildSettingsNode();
                 // Send license request and wait for the answer
                 timeout_chrono = std::chrono::duration_cast<std::chrono::milliseconds>(
                                  deadline - TClock::now() );
@@ -1850,16 +1853,16 @@ Json::Value product_id_json = "AGCIB23BTJ6PFMRDXY7HKYHXPA";
     void determineFrequencyDetectionMethod() {
         uint32_t reg;
 
-        if ( mBypassFrequencyDetection ) {
-            Debug( "Frequency detection sequence is bypassed." );
-            return;
-        }
-
         if ( mIsHybrid ){
             Debug( "SW DRM Controller: no frequency detection is performed" );
             mFreqDetectionMethod = 0;
             mBypassFrequencyDetection = true;
             mFrequencyCurr = 0.001;
+            return;
+        }
+
+        if ( mBypassFrequencyDetection ) {
+            Debug( "Frequency detection sequence is bypassed." );
             return;
         }
 
@@ -2048,7 +2051,6 @@ Json::Value product_id_json = "AGCIB23BTJ6PFMRDXY7HKYHXPA";
         }
         Debug( "Estimated DRM frequency = {} MHz, config frequency = {} MHz: gap = {}%",
                 mFrequencyCurr, mFrequencyInit, precisionError );
-        mHeaderJsonRequest["drm_config"]["drm_frequency"] = mFrequencyCurr;
     }
 
     template< class Clock, class Duration >
