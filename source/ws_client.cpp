@@ -271,15 +271,24 @@ void DrmWSClient::getOAuth2token( int32_t timeout_msec ) {
     }
 
     // Setup a request to get a new token
+    Json::Value json_req = Json::nullValue;
+    json_req["client_id"] = mClientId;
+    json_req["client_secret"] = mClientSecret;
+    json_req["grant_type"] = "client_credentials";
     CurlEasyPost req( mConnectionTimeoutMS );
     req.setVerbosity( mVerbosity );
     req.setHostResolves( mHostResolvesJson );
+//    req.appendHeader( "Accept: application/vnd.accelize.v1+json" );
+    req.appendHeader( "Content-Type: application/json" );
+    req.appendHeader( fmt::format("User-Agent: libaccelize_drm/{}", DRMLIB_VERSION ) );
+    req.setPostFields( saveJsonToString( json_req ) );
+/*
     std::stringstream ss;
     ss << "client_id=" << mClientId;
     ss << "&client_secret=" << mClientSecret;
     ss << "&grant_type=client_credentials";
     req.setPostFields( ss.str() );
-
+*/
     // Send request and wait response
     std::string response;
     if ( timeout_msec >= mRequestTimeoutMS )
@@ -330,12 +339,10 @@ Json::Value DrmWSClient::postSaas( const Json::Value& json_req, int32_t timeout_
     CurlEasyPost req( mConnectionTimeoutMS );
     req.setVerbosity( mVerbosity );
     req.setHostResolves( mHostResolvesJson );
-    req.appendHeader( "Accept: application/vnd.accelize.v1+json" );
+//    req.appendHeader( "Accept: application/vnd.accelize.v1+json" );
     req.appendHeader( "Content-Type: application/json" );
     req.appendHeader( fmt::format("User-Agent: libaccelize_drm/{}", DRMLIB_VERSION ) );
-    std::string token_header("Authorization: Bearer ");
-    token_header += mOAuth2Token;
-    req.appendHeader( token_header );
+    req.appendHeader( fmt::format( "Authorization: Bearer {}", mOAuth2Token ) );
     req.setPostFields( saveJsonToString( json_req ) );
 
     // Evaluate timeout with regard to the security limit
