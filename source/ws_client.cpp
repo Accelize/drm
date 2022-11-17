@@ -91,14 +91,14 @@ void CurlEasyPost::appendHeader( const std::string header ) {
     mHeaders_p = curl_slist_append( mHeaders_p, header.c_str() );
 }
 
-void CurlEasyPost::setPostFields( const std::string& postfields ) {
+void CurlEasyPost::setPostFields( const std::string postfields ) {
     curl_easy_setopt( mCurl, CURLOPT_POSTFIELDSIZE, postfields.size() );
     curl_easy_setopt( mCurl, CURLOPT_COPYPOSTFIELDS, postfields.c_str() );
 }
 
 uint32_t CurlEasyPost::perform( const std::string url, std::string* response, const int32_t timeout_msec ) {
-    CURLcode res;
     uint32_t resp_code;
+    CURLcode res;
     std::string recv_header("");
 
     if ( timeout_msec <= 0 )
@@ -222,16 +222,23 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
     Debug( "DRM Server URL: {}", mUrl );
 
     // Set path to the cache file used to save the token
-    mTokenFilePath = fmt::format( "{home}{sep}.cache{sep}accelize{sep}drm{sep}{clientid}.json",
-            "sep"_a=PATH_SEP, "home"_a=home, "clientid"_a=mClientId );
+    std::string tokenDir = fmt::format( "{home}{sep}.cache{sep}accelize{sep}drm",
+                "sep"_a=PATH_SEP, "home"_a=home, "clientid"_a=mClientId );
+    mTokenFilePath = fmt::format( "{}{}{}.json", PATH_SEP, tokenDir, mClientId );
 
-    // Check if a cahched token exists
+    // Check if a cached token exists
     if ( isFile( mTokenFilePath ) ) {
         Json::Value token_json = parseJsonFile( mTokenFilePath );
         mOAuth2Token = JVgetRequired( token_json, "access_token", Json::stringValue ).asString();
         mTokenValidityPeriod = JVgetRequired( token_json, "expires_in", Json::intValue ).asInt();
         mTokenExpirationTime = time_t_to_steady_clock( JVgetRequired( token_json, "expires_at", Json::uintValue ).asUInt() );
         Debug( "Loaded token from file {}: {}", mTokenFilePath, token_json.toStyledString() );
+    } else {
+        // Create the path if not existing
+        if ( !makeDirs( tokenDir ) ) {
+            Throw( DRM_ExternFail, "Failed to create cached token folder {}. ", tokenDir );
+        }
+
     }
 }
 
@@ -271,30 +278,21 @@ void DrmWSClient::getOAuth2token( int32_t timeout_msec ) {
     }
 
     // Setup a request to get a new token
-    Json::Value json_req = Json::nullValue;
-    json_req["client_id"] = mClientId;
-    json_req["client_secret"] = mClientSecret;
-    json_req["grant_type"] = "client_credentials";
     CurlEasyPost req( mConnectionTimeoutMS );
     req.setVerbosity( mVerbosity );
     req.setHostResolves( mHostResolvesJson );
-//    req.appendHeader( "Accept: application/vnd.accelize.v1+json" );
-    req.appendHeader( "Content-Type: application/json" );
-    req.appendHeader( fmt::format("User-Agent: libaccelize_drm/{}", DRMLIB_VERSION ) );
-    req.setPostFields( saveJsonToString( json_req ) );
-/*
-    std::stringstream ss;
-    ss << "client_id=" << mClientId;
-    ss << "&client_secret=" << mClientSecret;
-    ss << "&grant_type=client_credentials";
-    req.setPostFields( ss.str() );
-*/
+    std::stringstream qs;
+    qs << "grant_type=client_credentials";
+    qs << "&client_id=" << mClientId;
+    qs << "&client_secret=" << mClientSecret;
+    req.setPostFields();
+
     // Send request and wait response
-    std::string response;
     if ( timeout_msec >= mRequestTimeoutMS )
         timeout_msec = mRequestTimeoutMS;
-    std::string oauth_url = mUrl + std::string("/auth/token/");
+    std::string oauth_url = fmt::format( "{}/auth/token?{}", mUrl, qs.str() );
     Debug( "Starting OAuthentication request to {}", oauth_url );
+    std::string response;
     long resp_code = req.perform( oauth_url, &response, timeout_msec );
 
     // Parse response

@@ -100,7 +100,7 @@ public:
     void setHostResolves( const Json::Value& host_json );
 
     void appendHeader( const std::string header );
-    void setPostFields( const std::string& postfields );
+    void setPostFields( const std::string postfields = "" );
 
     std::string escape( const std::string str ) const;
 
