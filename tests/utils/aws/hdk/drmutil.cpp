@@ -660,7 +660,6 @@ int main(int argc, char **argv) {
     std::string credentialFile( DEFAULT_CREDENTIAL_FILE );
     std::string configurationFile( DEFAULT_CONFIGURATION_FILE );
     static int interactive_flag = 0;
-    static int noretry_flag = 0;
     std::vector<t_BatchCmd> batch_cmd_list;
     int slotID = 0;
     std::string batch_str;
@@ -733,9 +732,9 @@ int main(int argc, char **argv) {
 
     try {
         if (interactive_flag)
-            ret = interactive_mode(&pci_bar_handle, credentialFile, configurationFile, noretry_flag);
+            ret = interactive_mode(&pci_bar_handle, credentialFile, configurationFile);
         else
-            ret = batch_mode(&pci_bar_handle, credentialFile, configurationFile, noretry_flag, batch_cmd_list);
+            ret = batch_mode(&pci_bar_handle, credentialFile, configurationFile, batch_cmd_list);
     } catch (const std::runtime_error& e) {
         printf("Caught exception: %s\n", e.what());
     }

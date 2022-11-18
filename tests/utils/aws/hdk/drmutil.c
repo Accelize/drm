@@ -444,7 +444,7 @@ int print_drm_report(DrmManager* pDrmManager)
 }
 
 
-int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, const char* configurationFile, int no_retry_flag)
+int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, const char* configurationFile)
 {
     int ret = 1;
     DrmManager *pDrmManager = NULL;
@@ -526,7 +526,7 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFil
 
 
 
-int batch_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, const char* configurationFile, uint32_t no_retry_flag, const t_BatchCmd* batch, uint32_t batchSize )
+int batch_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, const char* configurationFile, const t_BatchCmd* batch, uint32_t batchSize )
 {
     int ret = -1;
     DrmManager *pDrmManager = NULL;
@@ -660,7 +660,6 @@ int main(int argc, char **argv) {
     char* credentialFile = DEFAULT_CREDENTIAL_FILE;
     char* configurationFile = DEFAULT_CONFIGURATION_FILE;
     static int interactive_flag = 0;
-    static int noretry_flag = 0;
     t_BatchCmd batch_cmd[MAX_BATCH_CMD];
     uint32_t batch_cmd_len = 0;
     int slotID = 0;
@@ -725,7 +724,7 @@ int main(int argc, char **argv) {
     }
 
     if (interactive_flag) {
-        ret = interactive_mode(&pci_bar_handle, credentialFile, configurationFile, noretry_flag);
+        ret = interactive_mode(&pci_bar_handle, credentialFile, configurationFile);
     }
 
     else {
@@ -738,7 +737,7 @@ int main(int argc, char **argv) {
             print_usage();
             return -1;
         }
-        ret = batch_mode( &pci_bar_handle, credentialFile, configurationFile, noretry_flag, batch_cmd, batch_cmd_len );
+        ret = batch_mode( &pci_bar_handle, credentialFile, configurationFile, batch_cmd, batch_cmd_len );
     }
 
     return ret;
