@@ -47,7 +47,6 @@
 #define ERROR(format, ...) do { if (sCurrentVerbosity >= LOG_ERROR) __LOG__("ERROR", COLOR_RED    , format, ##__VA_ARGS__); } while(0)
 
 
-#define DRM_NB_PAGES    6
 #define MAX_BATCH_CMD   32
 
 #define PCI_VENDOR_ID   0x1D0F /* Amazon PCI Vendor ID */
@@ -61,6 +60,7 @@
 #define ACT_STATUS_REG_OFFSET 0x38
 #define MAILBOX_REG_OFFSET    0x3C
 #define INC_EVENT_REG_OFFSET  0x40
+#define CNT_EVENT_REG_OFFSET  0x44
 
 
 typedef enum {LOG_ERROR, LOG_WARN, LOG_INFO, LOG_DEBUG} t_LogLevel;
@@ -89,17 +89,21 @@ static const int sPfID = FPGA_APP_PF;
 static const int sBarID = APP_PF_BAR0;
 
 
+int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, const char* configurationFile);
+int batch_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, const char* configurationFile, const t_BatchCmd* batch, uint32_t batchSize );
+
+
 /* Returns the local date/time formatted as 2014-03-19 11:11:52 */
 char* getFormattedTime(void) {
 
     time_t rawtime;
     struct tm* timeinfo;
+    static char _retval[20];
 
     time(&rawtime);
     timeinfo = localtime(&rawtime);
 
     /* Must be static, otherwise won't work */
-    static char _retval[20];
     strftime(_retval, sizeof(_retval), "%Y-%m-%d %H:%M:%S", timeinfo);
 
     return _retval;
@@ -113,16 +117,13 @@ void print_usage()
     printf("   -v, --verbosity          : Specify level of vebosity from 0 (error only) to 4 (debug),\n");
     printf("   --cred                   : Specify path to credential file,\n");
     printf("   --conf                   : Specify path to configuration file,\n");
-    printf("   --no-retry               : Disable the retry mechanism if WebService is temporarily unavailable during the start/resume and stop operations\n");
     printf("   -i, --interactive        : Run application in interactive mode. This is mutually exclusive with -b,--batch option,\n");
     printf("   -b, --batch              : Batch mode: execute a set of commands passed in CSV format. This is mutually exclusive with -i,--interactive option\n");
     printf("   -s, --slot               : If server has multiple board, specify the slot ID of the target\n");
 
     printf("\nList of commands available in batch mode. List of commands are passed in CSV format:\n");
     printf("   a, activate              : Start a new session,\n");
-    printf("   r, resume                : Resume an opened session,\n");
     printf("   g<N>, generate=<N>       : Specify the number <N> of coins to generate,\n");
-    printf("   p, pause                 : Pause the current session, leaving it pending,\n");
     printf("   d, deactivate            : Stop the current session,\n");
     printf("   n<N>, activators=<N>     : Check the number of activators in the design equals <N>,\n");
     printf("   s<0|1>, status=<0|1>     : Check the activation status of all activators are either active <0> or inactive <1>,\n");
@@ -138,9 +139,7 @@ void print_interactive_menu()
     printf(" 'i' : display number of activators in design,\n");
     printf(" 's' : display activators status,\n");
     printf(" 'a' : activate session (default start),\n");
-    printf(" 'p' : pause session,\n");
     printf(" 'gN': generate N coins,\n");
-    printf(" 'r' : resume session,\n");
     printf(" 'd' : deactivate session (default stop),\n");
     printf(" 't' : get all paramters,\n");
     printf(" 'q' : stop session and exit\n");
@@ -167,12 +166,6 @@ int tokenize(char str[], t_BatchCmd tokens[], uint32_t* tokens_len)
         if ( (strcmp(token,"a") == 0) || (strcmp(token,"activate") == 0) ) {
             strcpy(tokens[i].name, "START");
             tokens[i].id = START_SESSION;
-        } else if ( (strcmp(token,"r") == 0) || (strcmp(token,"resume") == 0) ) {
-            strcpy(tokens[i].name, "RESUME");
-            tokens[i].id = RESUME_SESSION;
-        } else if ( (strcmp(token,"p") == 0) || (strcmp(token,"pause") == 0) ) {
-            strcpy(tokens[i].name, "PAUSE");
-            tokens[i].id = PAUSE_SESSION;
         } else if ( (strcmp(token,"d") == 0) || (strcmp(token,"deactivate") == 0) ) {
             strcpy(tokens[i].name, "STOP");
             tokens[i].id = STOP_SESSION;
@@ -204,27 +197,38 @@ int tokenize(char str[], t_BatchCmd tokens[], uint32_t* tokens_len)
 }
 
 
-/** Define Three callback for the DRM Lib **/
-/* Callback function for DRM library to perform a thread safe register read */
+/* Register read function */
 int read_register( uint32_t offset, uint32_t* p_value, void* user_p ) {
-    if (fpga_pci_peek(*(pci_bar_handle_t*)user_p, DRM_CTRL_ADDR+offset, p_value)) {
-        ERROR("Unable to read from the fpga!");
+    if (fpga_pci_peek(*(pci_bar_handle_t*)user_p, offset, p_value)) {
+        ERROR("%s", "Unable to read from the fpga!");
         return 1;
     }
     return 0;
+}
+
+/* Register write function */
+int write_register( uint32_t offset, uint32_t value, void* user_p ) {
+    if (fpga_pci_poke(*(pci_bar_handle_t*)user_p, offset, value)) {
+        ERROR("%s", "Unable to write to the fpga.");
+        return 1;
+    }
+    return 0;
+}
+
+/** Define Three callback for the DRM Lib **/
+/* Callback function for DRM library to perform a thread safe register read */
+int drm_read_register_callback( uint32_t offset, uint32_t* p_value, void* user_p ) {
+    return read_register( DRM_CTRL_ADDR + offset, p_value, user_p );
 }
 
 /* Callback function for DRM library to perform a thread safe register write */
-int write_register( uint32_t offset, uint32_t value, void* user_p ) {
-    if (fpga_pci_poke(*(pci_bar_handle_t*)user_p, DRM_CTRL_ADDR+offset, value)) {
-        ERROR("Unable to write to the fpga.");
-        return 1;
-    }
-    return 0;
+int drm_write_register_callback( uint32_t offset, uint32_t value, void* user_p ) {
+    return write_register( DRM_CTRL_ADDR + offset, value, user_p );
 }
 
 /* Callback function for DRM library in case of asynchronous error during operation */
-void print_drm_error( const char* errmsg, void* user_p ){
+void drm_error_callback( const char* errmsg, void* user_p ){
+    (void)user_p;
     ERROR("From async callback: %s", errmsg);
 }
 
@@ -264,7 +268,7 @@ int print_all_information( DrmManager* pDrmManager ) {
 
 
 int get_num_activators( DrmManager* pDrmManager, uint32_t* p_numActivator ) {
-    if (DrmManager_get_uint(pDrmManager, DRM__num_activators, p_numActivator )) {
+    if (DrmManager_get_uint(pDrmManager, (uint32_t)DRM__num_activators, p_numActivator )) {
         ERROR("Failed to get the number of activators in FPGA design: %s", pDrmManager->error_message);
         return 1;
     }
@@ -280,7 +284,7 @@ int get_activators_status( DrmManager* pDrmManager, pci_bar_handle_t* pci_bar_ha
     uint32_t i;
     bool active, all_active;
 
-    // Get the number of activators in the HW
+    /* Get the number of activators in the HW */
     if ( get_num_activators(pDrmManager, &nb_activators) )
         return 1;
 
@@ -340,29 +344,29 @@ void print_session_id( DrmManager* pDrmManager ) {
 
 
 void print_metered_data( DrmManager* pDrmManager ) {
-    char *metered_data = new char[1024];
+    char *metered_data = (char*)malloc(1024*sizeof(char));
     if ( DrmManager_get_string(pDrmManager, DRM__metered_data, &metered_data) )
         ERROR("Failed to get the current metering data from FPGA design: %s", pDrmManager->error_message);
     else
         INFO(COLOR_GREEN "Current metering data fromFPGA design: %s", metered_data);
-    delete[] metered_data;
+    free(metered_data);
 }
 
 int test_custom_field( DrmManager* pDrmManager, uint32_t value ) {
     uint32_t rd_value = 0;
-    // Write value
+    /* Write value */
     if ( DrmManager_set_uint(pDrmManager, DRM__custom_field, value) ) {
         ERROR("Failed to set the custom field in FPGA design: %s", pDrmManager->error_message);
         return 1;
     }
     INFO(COLOR_GREEN "Wrote '%u' custom field in FPGA design", value);
-    // Read value back
+    /* Read value back */
     if ( DrmManager_get_uint(pDrmManager, DRM__custom_field, &rd_value) ) {
         ERROR("Failed to get the custom field in FPGA design: %s", pDrmManager->error_message);
         return 2;
     }
     INFO(COLOR_GREEN "Read custom field in FPGA design: %u", rd_value);
-    // Check coherency
+    /* Check coherency */
     if ( rd_value != value ) {
         ERROR("Value mismatch on custom field: read %u, but wrote %u", rd_value, value);
         return 3;
@@ -372,7 +376,7 @@ int test_custom_field( DrmManager* pDrmManager, uint32_t value ) {
 
 
 /*
-* check if the corresponding AFI for hello_world is loaded
+* check if the corresponding AFI is loaded
 */
 int check_afi_ready(int slot_id)
 {
@@ -380,7 +384,7 @@ int check_afi_ready(int slot_id)
     struct fpga_mgmt_image_info info = {0};
 
     /* get local image description, contains status, vendor id, and device id. */
-    if (fpga_mgmt_describe_local_image(slot_id, &info,0)) {
+    if (fpga_mgmt_describe_local_image(slot_id, &info, 0)) {
         ERROR("Unable to get AFI information from slot %d. Are you running as root?", slot_id);
         return 1;
     }
@@ -397,7 +401,7 @@ int check_afi_ready(int slot_id)
     if (info.spec.map[sPfID].vendor_id != PCI_VENDOR_ID ||
         info.spec.map[sPfID].device_id != PCI_DEVICE_ID) {
         INFO("%s: AFI does not show expected PCI vendor id and device ID. If the AFI "
-                "was just loaded, it might need a rescan. Rescanning now.\n", __FUNCTION__);
+             "was just loaded, it might need a rescan. Rescanning now.\n", __FUNCTION__);
 
         if(fpga_pci_rescan_slot_app_pfs(slot_id)) {
             ERROR("%s: Unable to update PF for slot %d",__FUNCTION__, slot_id);
@@ -411,16 +415,16 @@ int check_afi_ready(int slot_id)
         }
 
         INFO("%s: AFI PCI  Vendor ID: 0x%x, Device ID 0x%x",
-            __FUNCTION__,
-            info.spec.map[sPfID].vendor_id,
-            info.spec.map[sPfID].device_id);
+             __FUNCTION__,
+             info.spec.map[sPfID].vendor_id,
+             info.spec.map[sPfID].device_id);
 
         /* confirm that the AFI that we expect is in fact loaded after rescan */
         if (info.spec.map[sPfID].vendor_id != PCI_VENDOR_ID ||
             info.spec.map[sPfID].device_id != PCI_DEVICE_ID) {
             ret = 1;
             ERROR("%s: The PCI vendor id and device of the loaded AFI are not "
-                "the expected values.",__FUNCTION__);
+                  "the expected values.",__FUNCTION__);
         }
     }
 
@@ -442,7 +446,7 @@ int print_drm_report(DrmManager* pDrmManager)
 
 int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, const char* configurationFile, int no_retry_flag)
 {
-    int ret;
+    int ret = 1;
     DrmManager *pDrmManager = NULL;
     char answer[16] = {0};
     char* ptr;
@@ -454,7 +458,7 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFil
     /* Allocate a DrmManager, providing our previously defined callbacks */
     if (DRM_OK != DrmManager_alloc(&pDrmManager,
             configurationFile, credentialFile,
-            read_register, write_register, print_drm_error,
+            drm_read_register_callback, drm_write_register_callback, drm_error_callback,
             pci_bar_handle )) {
         ERROR("Error allocating DRM Manager object: %s", pDrmManager->error_message);
         return -1;
@@ -469,32 +473,18 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFil
         if ( (answer[0] == 'h') || (answer[0] == '?')) {
             print_interactive_menu();
         }
-
         else if (answer[0] == 'z') {
             if (print_drm_report(pDrmManager) == 0)
-                INFO(COLOR_CYAN "HW report printed");
+                INFO("%s", COLOR_CYAN "HW report printed");
         }
-
         else if (answer[0] == 'a') {
-            if (!DrmManager_activate(pDrmManager, false))
-                INFO(COLOR_CYAN "Session started");
+            if (!DrmManager_activate(pDrmManager))
+                INFO("%s", COLOR_CYAN "Session started");
         }
-
-        else if (answer[0] == 'r') {
-            if (!DrmManager_activate(pDrmManager, true))
-                INFO(COLOR_CYAN "Session resumed");
-        }
-
-        else if (answer[0] == 'p') {
-            if (!DrmManager_deactivate(pDrmManager, true))
-                INFO(COLOR_CYAN "Session paused");
-        }
-
         else if (answer[0] == 'd') {
-            if (!DrmManager_deactivate(pDrmManager, false))
-                INFO(COLOR_CYAN "Session stopped");
+            if (!DrmManager_deactivate(pDrmManager))
+                INFO("%s", COLOR_CYAN "Session stopped");
         }
-
         else if (answer[0] == 'g') {
             if (strlen(answer) < 2) {
                 print_interactive_menu();
@@ -505,7 +495,6 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFil
             if (!generate_coin(pci_bar_handle, 0, val))
                 INFO(COLOR_CYAN "%u coins generated", val);
         }
-
         else if (answer[0] == 'i') {
             print_license_type( pDrmManager );
             print_num_activators( pDrmManager );
@@ -513,22 +502,19 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFil
             print_metered_data( pDrmManager );
             test_custom_field( pDrmManager, rand() );
         }
-
         else if (answer[0] == 't') {
             print_all_information( pDrmManager );
         }
-
         else if (answer[0] == 's') {
             print_activators_status( pDrmManager, pci_bar_handle );
         }
-
         else if (answer[0] == 'q') {
-            if (!DrmManager_deactivate( pDrmManager, false ))
-                INFO(COLOR_CYAN "Stopped session if running and exit application");
+            if (!DrmManager_deactivate( pDrmManager ))
+                INFO("%s", COLOR_CYAN "Stopped session if running and exit application");
         }
-
-        else
+        else {
             print_interactive_menu();
+        }
     }
 
     /* Stop session and free the DrmManager object */
@@ -544,13 +530,12 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, con
 {
     int ret = -1;
     DrmManager *pDrmManager = NULL;
-    int32_t val, expVal;
+    uint32_t val, expVal;
     bool state;
     uint32_t i;
 
     DEBUG("credential file is %s", credentialFile);
     DEBUG("configuration file is %s", configurationFile);
-    DEBUG("no-retry = %d", no_retry_flag);
     for(i=0; i<batchSize; i++) {
         DEBUG("command #%u: name='%s', id=%u, value=%u", i, batch[i].name, batch[i].id, batch[i].value);
     }
@@ -558,10 +543,10 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, con
     /* Allocate a DrmManager, providing our previously defined callbacks*/
     if (DRM_OK != DrmManager_alloc(&pDrmManager,
             configurationFile, credentialFile,
-            read_register, write_register, print_drm_error,
+            drm_read_register_callback, drm_write_register_callback, drm_error_callback,
             pci_bar_handle
             )) {
-        ERROR("Error allocating DRM Manager object");
+        ERROR("%s", "Error allocating DRM Manager object");
         return -1;
     }
 
@@ -573,37 +558,25 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, con
 
             case START_SESSION: {
                 /* Start a new session */
-                INFO(COLOR_CYAN
+                INFO("%s", COLOR_CYAN
                              "Starting a new session ...");
-                if (DRM_OK != DrmManager_activate(pDrmManager, true)) {
+                if (DRM_OK != DrmManager_activate(pDrmManager)) {
                     ERROR("Failed to start a new session: %s", pDrmManager->error_message);
                     goto batch_mode_free;
                 }
-                DEBUG("Start session done");
-                break;
-            }
-
-            case RESUME_SESSION: {
-                /* Resume an existing session */
-                INFO(COLOR_CYAN
-                             "Resuming an existing session ...");
-                if (DRM_OK != DrmManager_activate(pDrmManager, true)) {
-                    ERROR("Failed to resume existing session: %s", pDrmManager->error_message);
-                    goto batch_mode_free;
-                }
-                DEBUG("Resume session done");
+                DEBUG("%s", "Start session done");
                 break;
             }
 
             case NB_ACTIVATORS: {
-                INFO(COLOR_CYAN "Searching for activators ...");
+                INFO("%s", COLOR_CYAN "Searching for activators ...");
                 if (get_num_activators(pDrmManager, &val))
                     goto batch_mode_free;
                 INFO(COLOR_GREEN "Num of activators in FPGA design: %u", val );
-                if (expVal == -1) {
+                if (expVal == 0xFFFFFFFF) {
                     /* Only display number of activators */
                     INFO("Number of activators found: %u", val);
-                    WARN("No check made on the number of activators");
+                    WARN("%s", "No check made on the number of activators");
                     break;
                 }
                 /* Check number of activators */
@@ -616,11 +589,11 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, con
             }
 
             case ACTIVATORS_STATUS: {
-                INFO(COLOR_CYAN "Collecting activators status ...");
+                INFO("%s", COLOR_CYAN "Collecting activators status ...");
                 if (get_activators_status(pDrmManager, pci_bar_handle, &state))
                     goto batch_mode_free;
-                if (expVal == -1) {
-                    WARN("No check made on the activation status");
+                if (expVal == 0xFFFFFFFF) {
+                    WARN("%s", "No check made on the activation status");
                     break;
                 }
                 /* Check activation status */
@@ -633,46 +606,31 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, con
             }
 
             case GENERATE_COIN: {
-                INFO(COLOR_CYAN
-                             "Generating coins ...");
+                INFO("%s", COLOR_CYAN "Generating coins ...");
                 /* Generate coins */
                 if (generate_coin(pci_bar_handle, 0, batch[i].value)) {
-                    ERROR("Failed to generate coins");
+                    ERROR("%s", "Failed to generate coins");
                     goto batch_mode_free;
                 }
                 INFO("%u coins generated", batch[i].value);
                 break;
             }
 
-            case PAUSE_SESSION: {
-                INFO(COLOR_CYAN
-                             "Pausing current session ...");
-                /* Pause the current DRM session */
-                if (DRM_OK != DrmManager_deactivate(pDrmManager, true)) {
-                    ERROR("Failed to pause the DRM session: %s", pDrmManager->error_message);
-                    goto batch_mode_free;
-                }
-                DEBUG("Pause session done");
-                break;
-            }
-
             case STOP_SESSION: {
-                INFO(COLOR_CYAN
-                             "Stopping current session ...");
-                /* Pause the current DRM session */
-                if (DRM_OK != DrmManager_deactivate(pDrmManager, false)) {
+                /* Stop the current DRM session */
+                INFO("%s", COLOR_CYAN "Stopping current session ...");
+                if (DRM_OK != DrmManager_deactivate(pDrmManager)) {
                     ERROR("Failed to stop the DRM session: %s", pDrmManager->error_message);
                     goto batch_mode_free;
                 }
-                DEBUG("Stop session done");
+                DEBUG("%s", "Stop session done");
                 break;
             }
 
             case WAIT: {
-                INFO(COLOR_CYAN
-                             "Sleeping %u seconds ...", batch[i].value);
+                INFO(COLOR_CYAN "Sleeping %u seconds ...", batch[i].value);
                 sleep(batch[i].value);
-                DEBUG("Wake up from sleep");
+                DEBUG("%s", "Wake up from sleep");
                 break;
             }
 
@@ -713,15 +671,14 @@ int main(int argc, char **argv) {
         int c;
         int option_index = 0;
         static struct option long_options[] = {
-            {"interactive", no_argument, NULL, 'i'},
-            {"cred", required_argument, NULL, 'r'},
-            {"conf", required_argument, NULL, 'o'},
-            {"slot", required_argument, NULL, 's'},
-            {"no-retry", no_argument, &noretry_flag, 1},
-            {"batch", required_argument, NULL, 'b'},
-            {"verbosity", required_argument, NULL, 'v'},
-            {"help", no_argument, NULL, 'h'},
-            {0, 0, 0, 0 }
+                {"interactive", no_argument, NULL, 'i'},
+                {"cred", required_argument, NULL, 'r'},
+                {"conf", required_argument, NULL, 'o'},
+                {"slot", required_argument, NULL, 's'},
+                {"batch", required_argument, NULL, 'b'},
+                {"verbosity", required_argument, NULL, 'v'},
+                {"help", no_argument, NULL, 'h'},
+                {0, 0, 0, 0 }
         };
 
         c = getopt_long(argc, argv, "ir:o:s:b:v:h", long_options, &option_index);
@@ -747,18 +704,18 @@ int main(int argc, char **argv) {
 
     /* initialize the fpga_mgmt library */
     if (fpga_mgmt_init()) {
-        ERROR("Unable to initialize the fpga_mgmt library");
+        ERROR("%s", "Unable to initialize the fpga_mgmt library");
         return -1;
     }
 
     /* initialize the fpga_pci library so we could have access to FPGA PCIe from this applications */
     if(fpga_pci_init()) {
-        ERROR("Unable to initialize the fpga_pci library");
+        ERROR("%s", "Unable to initialize the fpga_pci library");
         return -1;
     }
 
     if (check_afi_ready(slotID)) {
-        ERROR("AFI not ready");
+        ERROR("%s", "AFI not ready");
         return -1;
     }
 
@@ -773,7 +730,7 @@ int main(int argc, char **argv) {
 
     else {
         if (batch_str == NULL) {
-            ERROR("In batch mode, the -b option shall be defined with a set of commands.");
+            ERROR("%s", "In batch mode, the -b option shall be defined with a set of commands.");
             print_usage();
             return -1;
         }
