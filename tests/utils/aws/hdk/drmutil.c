@@ -219,12 +219,12 @@ int write_register( uint32_t offset, uint32_t value, void* user_p ) {
 /** Define Three callback for the DRM Lib **/
 /* Callback function for DRM library to perform a thread safe register read */
 int drm_read_register_callback( uint32_t offset, uint32_t* p_value, void* user_p ) {
-	return read_register( DRM_CTRL_ADDR + offset, p_value, user_p );
+    return read_register( DRM_CTRL_ADDR + offset, p_value, user_p );
 }
 
 /* Callback function for DRM library to perform a thread safe register write */
 int drm_write_register_callback( uint32_t offset, uint32_t value, void* user_p ) {
-	return write_register( DRM_CTRL_ADDR + offset, value, user_p );
+    return write_register( DRM_CTRL_ADDR + offset, value, user_p );
 }
 
 /* Callback function for DRM library in case of asynchronous error during operation */
@@ -461,7 +461,7 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFil
     /* Allocate a DrmManager, providing our previously defined callbacks */
     if (DRM_OK != DrmManager_alloc(&pDrmManager,
             configurationFile, credentialFile,
-            drm_read_register_callback, drm_read_register_callback, drm_error_callback,
+            drm_read_register_callback, drm_write_register_callback, drm_error_callback,
             pci_bar_handle )) {
         ERROR("Error allocating DRM Manager object: %s", pDrmManager->error_message);
         return -1;
@@ -517,7 +517,7 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFil
         }
         else {
             print_interactive_menu();
-		}
+        }
     }
 
     /* Stop session and free the DrmManager object */
@@ -548,7 +548,7 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, con
     /* Allocate a DrmManager, providing our previously defined callbacks*/
     if (DRM_OK != DrmManager_alloc(&pDrmManager,
             configurationFile, credentialFile,
-            read_register, write_register, print_drm_error,
+            drm_read_register_callback, drm_write_register_callback, drm_error_callback,
             pci_bar_handle
             )) {
         ERROR("%s", "Error allocating DRM Manager object");
@@ -622,7 +622,7 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, con
             }
 
             case STOP_SESSION: {
-                /* Pause the current DRM session */
+                /* Stop the current DRM session */
                 INFO("%s", COLOR_CYAN "Stopping current session ...");
                 if (DRM_OK != DrmManager_deactivate(pDrmManager)) {
                     ERROR("Failed to stop the DRM session: %s", pDrmManager->error_message);

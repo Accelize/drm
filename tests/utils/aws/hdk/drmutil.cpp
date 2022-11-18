@@ -370,7 +370,7 @@ int test_custom_field( DrmManager* pDrmManager, uint32_t value ) {
 int check_afi_ready(int slot_id)
 {
     int ret=0;
-    struct fpga_mgmt_image_info info = {0};
+    struct fpga_mgmt_image_info info;
 
     /* get local image description, contains status, vendor id, and device id. */
     if (fpga_mgmt_describe_local_image(slot_id, &info, 0)) {
@@ -475,19 +475,19 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const std::string& creden
             if ((answer[0] == 'h') || (answer[0] == '?')) {
                 print_interactive_menu();
             }
-			else if (cmd == 'z') {
+            else if (cmd == 'z') {
                 if (print_drm_report(pDrmManager) == 0)
                     INFO("%s", COLOR_CYAN "HW report printed");
             }
-			else if (cmd == 'a') {
+            else if (cmd == 'a') {
                 pDrmManager->activate();
                 INFO("%s", COLOR_CYAN "Session started");
             }
-			else if (cmd == 'd') {
+            else if (cmd == 'd') {
                 pDrmManager->deactivate();
                 INFO("%s", COLOR_CYAN "Session stopped");
             }
-			else if (cmd == 'g') {
+            else if (cmd == 'g') {
                 if (answer.size() < 2) {
                     print_interactive_menu();
                     continue;
@@ -495,26 +495,26 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const std::string& creden
                 if (!generate_coin(pci_bar_handle, 0, val))
                     INFO(COLOR_CYAN "%u coins generated", val);
             }
-			else if (cmd == 'i') {
+            else if (cmd == 'i') {
                 print_license_type(pDrmManager);
                 print_num_activators(pDrmManager);
                 print_session_id(pDrmManager);
                 print_metered_data(pDrmManager);
                 test_custom_field(pDrmManager, rand());
             }
-			else if (cmd == 't') {
+            else if (cmd == 't') {
                 print_all_information(pDrmManager);
             }
-			else if (cmd == 's') {
+            else if (cmd == 's') {
                 print_activators_status(pDrmManager, pci_bar_handle);
             }
-			else if (cmd == 'q') {
-                pDrmManager->deactivate(false);
+            else if (cmd == 'q') {
+                pDrmManager->deactivate();
                 INFO("%s", COLOR_CYAN "Stopped session if running and exit application");
             }
-			else {
+            else {
                 print_interactive_menu();
-			}
+            }
 
         } catch(...) {
             ERROR("%s", "Failed to execute last command");
