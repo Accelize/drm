@@ -478,11 +478,11 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFil
                 INFO("%s", COLOR_CYAN "HW report printed");
         }
         else if (answer[0] == 'a') {
-            if (!DrmManager_activate(pDrmManager))
+            if (!DrmManager_activate(pDrmManager, false))
                 INFO("%s", COLOR_CYAN "Session started");
         }
         else if (answer[0] == 'd') {
-            if (!DrmManager_deactivate(pDrmManager))
+            if (!DrmManager_deactivate(pDrmManager, false))
                 INFO("%s", COLOR_CYAN "Session stopped");
         }
         else if (answer[0] == 'g') {
@@ -509,7 +509,7 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFil
             print_activators_status( pDrmManager, pci_bar_handle );
         }
         else if (answer[0] == 'q') {
-            if (!DrmManager_deactivate( pDrmManager ))
+            if (!DrmManager_deactivate( pDrmManager, false ))
                 INFO("%s", COLOR_CYAN "Stopped session if running and exit application");
         }
         else {
@@ -560,7 +560,7 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, con
                 /* Start a new session */
                 INFO("%s", COLOR_CYAN
                              "Starting a new session ...");
-                if (DRM_OK != DrmManager_activate(pDrmManager)) {
+                if (DRM_OK != DrmManager_activate(pDrmManager, false)) {
                     ERROR("Failed to start a new session: %s", pDrmManager->error_message);
                     goto batch_mode_free;
                 }
@@ -619,7 +619,7 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, con
             case STOP_SESSION: {
                 /* Stop the current DRM session */
                 INFO("%s", COLOR_CYAN "Stopping current session ...");
-                if (DRM_OK != DrmManager_deactivate(pDrmManager)) {
+                if (DRM_OK != DrmManager_deactivate(pDrmManager, false)) {
                     ERROR("Failed to stop the DRM session: %s", pDrmManager->error_message);
                     goto batch_mode_free;
                 }
