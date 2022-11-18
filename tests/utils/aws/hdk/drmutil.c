@@ -89,8 +89,8 @@ static const int sPfID = FPGA_APP_PF;
 static const int sBarID = APP_PF_BAR0;
 
 
-int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, const char* configurationFile, int no_retry_flag);
-int batch_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, const char* configurationFile, uint32_t no_retry_flag, const t_BatchCmd* batch, uint32_t batchSize );
+int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, const char* configurationFile);
+int batch_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, const char* configurationFile, const t_BatchCmd* batch, uint32_t batchSize );
 
 
 /* Returns the local date/time formatted as 2014-03-19 11:11:52 */
@@ -117,7 +117,6 @@ void print_usage()
     printf("   -v, --verbosity          : Specify level of vebosity from 0 (error only) to 4 (debug),\n");
     printf("   --cred                   : Specify path to credential file,\n");
     printf("   --conf                   : Specify path to configuration file,\n");
-    printf("   --no-retry               : Disable the retry mechanism if WebService is temporarily unavailable during the start/resume and stop operations\n");
     printf("   -i, --interactive        : Run application in interactive mode. This is mutually exclusive with -b,--batch option,\n");
     printf("   -b, --batch              : Batch mode: execute a set of commands passed in CSV format. This is mutually exclusive with -i,--interactive option\n");
     printf("   -s, --slot               : If server has multiple board, specify the slot ID of the target\n");
@@ -445,15 +444,13 @@ int print_drm_report(DrmManager* pDrmManager)
 }
 
 
-int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, const char* configurationFile, int no_retry_flag)
+int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, const char* configurationFile)
 {
     int ret = 1;
     DrmManager *pDrmManager = NULL;
     char answer[16] = {0};
     char* ptr;
     uint32_t val;
-
-    (void)no_retry_flag;
 
     if (sCurrentVerbosity < LOG_INFO)
         sCurrentVerbosity = LOG_INFO;
@@ -529,15 +526,13 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFil
 
 
 
-int batch_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, const char* configurationFile, uint32_t no_retry_flag, const t_BatchCmd* batch, uint32_t batchSize )
+int batch_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, const char* configurationFile, const t_BatchCmd* batch, uint32_t batchSize )
 {
     int ret = -1;
     DrmManager *pDrmManager = NULL;
     uint32_t val, expVal;
     bool state;
     uint32_t i;
-
-    (void)no_retry_flag;
 
     DEBUG("credential file is %s", credentialFile);
     DEBUG("configuration file is %s", configurationFile);
@@ -665,7 +660,6 @@ int main(int argc, char **argv) {
     char* credentialFile = DEFAULT_CREDENTIAL_FILE;
     char* configurationFile = DEFAULT_CONFIGURATION_FILE;
     static int interactive_flag = 0;
-    static int noretry_flag = 0;
     t_BatchCmd batch_cmd[MAX_BATCH_CMD];
     uint32_t batch_cmd_len = 0;
     int slotID = 0;
@@ -680,7 +674,6 @@ int main(int argc, char **argv) {
                 {"cred", required_argument, NULL, 'r'},
                 {"conf", required_argument, NULL, 'o'},
                 {"slot", required_argument, NULL, 's'},
-                {"no-retry", no_argument, &noretry_flag, 1},
                 {"batch", required_argument, NULL, 'b'},
                 {"verbosity", required_argument, NULL, 'v'},
                 {"help", no_argument, NULL, 'h'},
@@ -731,7 +724,7 @@ int main(int argc, char **argv) {
     }
 
     if (interactive_flag) {
-        ret = interactive_mode(&pci_bar_handle, credentialFile, configurationFile, noretry_flag);
+        ret = interactive_mode(&pci_bar_handle, credentialFile, configurationFile);
     }
 
     else {
@@ -744,7 +737,7 @@ int main(int argc, char **argv) {
             print_usage();
             return -1;
         }
-        ret = batch_mode( &pci_bar_handle, credentialFile, configurationFile, noretry_flag, batch_cmd, batch_cmd_len );
+        ret = batch_mode( &pci_bar_handle, credentialFile, configurationFile, batch_cmd, batch_cmd_len );
     }
 
     return ret;

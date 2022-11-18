@@ -137,7 +137,6 @@ void print_usage()
     printf("   -v, --verbosity          : Specify level of vebosity from 0 (error only) to 4 (debug),\n");
     printf("   --cred                   : Specify path to credential file,\n");
     printf("   --conf                   : Specify path to configuration file,\n");
-    printf("   --no-retry               : Disable the retry mechanism if WebService is temporarily unavailable during the start/resume and stop operations\n");
     printf("   -i, --interactive        : Run application in interactive mode. This is mutually exclusive with -b,--batch option,\n");
     printf("   -b, --batch              : Batch mode: execute a set of commands passed in CSV format. This is mutually exclusive with -i,--interactive option\n");
     printf("   -s, --slot               : If server has multiple board, specify the slot ID of the target\n");
@@ -432,7 +431,7 @@ int print_drm_report(DrmManager* pDrmManager)
 }
 
 
-int interactive_mode(pci_bar_handle_t* pci_bar_handle, const std::string& credentialFile, const std::string& configurationFile, int /*no_retry_flag*/)
+int interactive_mode(pci_bar_handle_t* pci_bar_handle, const std::string& credentialFile, const std::string& configurationFile)
 {
     int ret;
     DrmManager *pDrmManager = nullptr;
@@ -529,7 +528,7 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const std::string& creden
 
 
 
-int batch_mode(pci_bar_handle_t* pci_bar_handle, const std::string& credentialFile, const std::string& configurationFile, int /*no_retry_flag*/, const std::vector<t_BatchCmd> batch_list)
+int batch_mode(pci_bar_handle_t* pci_bar_handle, const std::string& credentialFile, const std::string& configurationFile, const std::vector<t_BatchCmd> batch_list)
 {
     int ret = -1;
     DrmManager *pDrmManager = nullptr;
@@ -661,7 +660,6 @@ int main(int argc, char **argv) {
     std::string credentialFile( DEFAULT_CREDENTIAL_FILE );
     std::string configurationFile( DEFAULT_CONFIGURATION_FILE );
     static int interactive_flag = 0;
-    static int noretry_flag = 0;
     std::vector<t_BatchCmd> batch_cmd_list;
     int slotID = 0;
     std::string batch_str;
@@ -675,7 +673,6 @@ int main(int argc, char **argv) {
                 {"cred", required_argument, NULL, 'r'},
                 {"conf", required_argument, NULL, 'o'},
                 {"slot", required_argument, NULL, 's'},
-                {"no-retry", no_argument, &noretry_flag, 1},
                 {"batch", required_argument, NULL, 'b'},
                 {"verbosity", required_argument, NULL, 'v'},
                 {"help", no_argument, NULL, 'h'},
@@ -735,9 +732,9 @@ int main(int argc, char **argv) {
 
     try {
         if (interactive_flag)
-            ret = interactive_mode(&pci_bar_handle, credentialFile, configurationFile, noretry_flag);
+            ret = interactive_mode(&pci_bar_handle, credentialFile, configurationFile);
         else
-            ret = batch_mode(&pci_bar_handle, credentialFile, configurationFile, noretry_flag, batch_cmd_list);
+            ret = batch_mode(&pci_bar_handle, credentialFile, configurationFile, batch_cmd_list);
     } catch (const std::runtime_error& e) {
         printf("Caught exception: %s\n", e.what());
     }
