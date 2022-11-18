@@ -30,7 +30,6 @@ namespace DRM {
 
 
 std::string getDirName( const std::string& full_path ) {
-
     size_t i = full_path.rfind( PATH_SEP, full_path.length() );
     if ( i != std::string::npos ) {
         return full_path.substr( 0, i );
