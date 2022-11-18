@@ -324,7 +324,8 @@ void DrmWSClient::getOAuth2token( int32_t timeout_msec ) {
     Debug( "Saved token to file {}: {}", mTokenFilePath, json_resp.toStyledString() );
 }
 
-Json::Value DrmWSClient::postSaas( const Json::Value& json_req, int32_t timeout_msec ) {
+// TODO Verify it's really necessaryJson::Value DrmWSClient::postSaas( const Json::Value& json_req, int32_t timeout_msec ) {
+Json::Value DrmWSClient::postSaas( Json::Value json_req, int32_t timeout_msec ) {
     std::string url;
     if ( json_req["request"] == "open" ) {
         url = mUrl + fmt::format( "/customer/product/{}/entitlement_session", json_req["product_id"].asString() );
@@ -332,6 +333,12 @@ Json::Value DrmWSClient::postSaas( const Json::Value& json_req, int32_t timeout_
         url = mUrl + fmt::format( "/customer/entitlement_session/{}", json_req["entitlement_id"].asString() );
     }
     Debug( "Starting Saas request to {} with data:\n{}", url, json_req.toStyledString() );
+    if ( json_req.isMember("product_id") ) {
+        json_req.removeMember("product_id");
+    }
+    if ( json_req.isMember("request") ) {
+        json_req.removeMember("request");
+    }
 
     // Create new request
     CurlEasyPost req( mConnectionTimeoutMS );

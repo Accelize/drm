@@ -1217,14 +1217,14 @@ protected:
             // If a floating/metering session is still running, try to close it gracefully.
             if ( isDrmCtrlInMetering() && isSessionRunning() ) {
                 Debug( "A floating/metering session is still pending: trying to close it gracefully before switching to nodelocked license." );
-                mHeaderJsonRequest["drm_config"]["license_type"] = (uint8_t)eLicenseType::METERED;
+//TODO verify where to add this                mHeaderJsonRequest["drm_config"]["license_type"] = (uint8_t)eLicenseType::METERED;
                 try {
                     mWsClient.reset( new DrmWSClient( mConfFilePath, mCredFilePath ) );
                     stopSession();
                 } catch( const Exception& e ) {
                     Debug( "Failed to stop gracefully the pending session because: {}", e.what() );
                 }
-                mHeaderJsonRequest["drm_config"]["license_type"] = (uint8_t)eLicenseType::NODE_LOCKED;
+//TODO verify where it add this                mHeaderJsonRequest["drm_config"]["license_type"] = (uint8_t)eLicenseType::NODE_LOCKED;
             }
 
             // Create license request file
@@ -1320,7 +1320,7 @@ Json::Value product_id_json = "AGCIL36AYZ4E7K3KCLEINMOVBY";
 // TODO: verify float is accepted by removing the int()
             drm_config["drm_frequency"] = int(mFrequencyCurr);
         }
-        drm_config["license_type"] = (uint8_t)mLicenseType;
+// TODO: verify where to add this        drm_config["license_type"] = (uint8_t)mLicenseType;
         drm_config["drm_type"] = mIsHybrid ? 2:1;
         for ( uint32_t i = 0; i < vlnvFile.size(); i++ ) {
             std::string v_str = vlnvFile[i].substr(0, 4);
@@ -1361,7 +1361,7 @@ Json::Value product_id_json = "AGCIL36AYZ4E7K3KCLEINMOVBY";
         Json::Value &drm_config = json_request["drm_config"];
         drm_config["saas_challenge"] = saasChallenge;
         drm_config["metering_file"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
-        drm_config["license_type"] = (uint8_t)mLicenseType;
+//TODO: verify where to add this        drm_config["license_type"] = (uint8_t)mLicenseType;
 
         json_request["request"] = "open";
 

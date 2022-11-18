@@ -264,7 +264,8 @@ public:
 
     std::string escape( std::string str ) const;
     void getOAuth2token( int32_t timeout_msec );
-    Json::Value postSaas( const Json::Value& json_req, int32_t timeout_msec );
+// TODO: verify it is really necessary    Json::Value postSaas( const Json::Value& json_req, int32_t timeout_msec );
+    Json::Value postSaas( Json::Value json_req, int32_t timeout_msec );
 };
 
 }
