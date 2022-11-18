@@ -47,7 +47,6 @@
 #define ERROR(format, ...) do { if (sCurrentVerbosity >= LOG_ERROR) __LOG__("ERROR", COLOR_RED    , format, ##__VA_ARGS__); } while(0)
 
 
-#define DRM_NB_PAGES    6
 #define MAX_BATCH_CMD   32
 
 #define PCI_VENDOR_ID   0x1D0F /* Amazon PCI Vendor ID */
@@ -61,6 +60,7 @@
 #define ACT_STATUS_REG_OFFSET 0x38
 #define MAILBOX_REG_OFFSET    0x3C
 #define INC_EVENT_REG_OFFSET  0x40
+#define CNT_EVENT_REG_OFFSET  0x44
 
 
 typedef enum {LOG_ERROR, LOG_WARN, LOG_INFO, LOG_DEBUG} t_LogLevel;
@@ -198,27 +198,37 @@ int tokenize(char str[], t_BatchCmd tokens[], uint32_t* tokens_len)
 }
 
 
-/** Define Three callback for the DRM Lib **/
-/* Callback function for DRM library to perform a thread safe register read */
+/* Register read function */
 int read_register( uint32_t offset, uint32_t* p_value, void* user_p ) {
-    if (fpga_pci_peek(*(pci_bar_handle_t*)user_p, DRM_CTRL_ADDR+offset, p_value)) {
+    if (fpga_pci_peek(*(pci_bar_handle_t*)user_p, offset, p_value)) {
         ERROR("%s", "Unable to read from the fpga!");
         return 1;
     }
     return 0;
 }
 
-/* Callback function for DRM library to perform a thread safe register write */
+/* Register write function */
 int write_register( uint32_t offset, uint32_t value, void* user_p ) {
-    if (fpga_pci_poke(*(pci_bar_handle_t*)user_p, DRM_CTRL_ADDR+offset, value)) {
+    if (fpga_pci_poke(*(pci_bar_handle_t*)user_p, offset, value)) {
         ERROR("%s", "Unable to write to the fpga.");
         return 1;
     }
     return 0;
 }
 
+/** Define Three callback for the DRM Lib **/
+/* Callback function for DRM library to perform a thread safe register read */
+int drm_read_register_callback( uint32_t offset, uint32_t* p_value, void* user_p ) {
+	return read_register( DRM_CTRL_ADDR + offset, p_value, user_p );
+}
+
+/* Callback function for DRM library to perform a thread safe register write */
+int drm_write_register_callback( uint32_t offset, uint32_t value, void* user_p ) {
+	return write_register( DRM_CTRL_ADDR + offset, value, user_p );
+}
+
 /* Callback function for DRM library in case of asynchronous error during operation */
-void print_drm_error( const char* errmsg, void* user_p ){
+void drm_error_callback( const char* errmsg, void* user_p ){
     (void)user_p;
     ERROR("From async callback: %s", errmsg);
 }
@@ -367,7 +377,7 @@ int test_custom_field( DrmManager* pDrmManager, uint32_t value ) {
 
 
 /*
-* check if the corresponding AFI for hello_world is loaded
+* check if the corresponding AFI is loaded
 */
 int check_afi_ready(int slot_id)
 {
@@ -375,7 +385,7 @@ int check_afi_ready(int slot_id)
     struct fpga_mgmt_image_info info = {0};
 
     /* get local image description, contains status, vendor id, and device id. */
-    if (fpga_mgmt_describe_local_image(slot_id, &info,0)) {
+    if (fpga_mgmt_describe_local_image(slot_id, &info, 0)) {
         ERROR("Unable to get AFI information from slot %d. Are you running as root?", slot_id);
         return 1;
     }
@@ -392,7 +402,7 @@ int check_afi_ready(int slot_id)
     if (info.spec.map[sPfID].vendor_id != PCI_VENDOR_ID ||
         info.spec.map[sPfID].device_id != PCI_DEVICE_ID) {
         INFO("%s: AFI does not show expected PCI vendor id and device ID. If the AFI "
-                "was just loaded, it might need a rescan. Rescanning now.\n", __FUNCTION__);
+             "was just loaded, it might need a rescan. Rescanning now.\n", __FUNCTION__);
 
         if(fpga_pci_rescan_slot_app_pfs(slot_id)) {
             ERROR("%s: Unable to update PF for slot %d",__FUNCTION__, slot_id);
@@ -406,16 +416,16 @@ int check_afi_ready(int slot_id)
         }
 
         INFO("%s: AFI PCI  Vendor ID: 0x%x, Device ID 0x%x",
-            __FUNCTION__,
-            info.spec.map[sPfID].vendor_id,
-            info.spec.map[sPfID].device_id);
+             __FUNCTION__,
+             info.spec.map[sPfID].vendor_id,
+             info.spec.map[sPfID].device_id);
 
         /* confirm that the AFI that we expect is in fact loaded after rescan */
         if (info.spec.map[sPfID].vendor_id != PCI_VENDOR_ID ||
             info.spec.map[sPfID].device_id != PCI_DEVICE_ID) {
             ret = 1;
             ERROR("%s: The PCI vendor id and device of the loaded AFI are not "
-                "the expected values.",__FUNCTION__);
+                  "the expected values.",__FUNCTION__);
         }
     }
 
@@ -451,7 +461,7 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFil
     /* Allocate a DrmManager, providing our previously defined callbacks */
     if (DRM_OK != DrmManager_alloc(&pDrmManager,
             configurationFile, credentialFile,
-            read_register, write_register, print_drm_error,
+            drm_read_register_callback, drm_read_register_callback, drm_error_callback,
             pci_bar_handle )) {
         ERROR("Error allocating DRM Manager object: %s", pDrmManager->error_message);
         return -1;
@@ -466,22 +476,18 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFil
         if ( (answer[0] == 'h') || (answer[0] == '?')) {
             print_interactive_menu();
         }
-
         else if (answer[0] == 'z') {
             if (print_drm_report(pDrmManager) == 0)
                 INFO("%s", COLOR_CYAN "HW report printed");
         }
-
         else if (answer[0] == 'a') {
             if (!DrmManager_activate(pDrmManager))
                 INFO("%s", COLOR_CYAN "Session started");
         }
-
         else if (answer[0] == 'd') {
             if (!DrmManager_deactivate(pDrmManager))
                 INFO("%s", COLOR_CYAN "Session stopped");
         }
-
         else if (answer[0] == 'g') {
             if (strlen(answer) < 2) {
                 print_interactive_menu();
@@ -492,7 +498,6 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFil
             if (!generate_coin(pci_bar_handle, 0, val))
                 INFO(COLOR_CYAN "%u coins generated", val);
         }
-
         else if (answer[0] == 'i') {
             print_license_type( pDrmManager );
             print_num_activators( pDrmManager );
@@ -500,22 +505,19 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFil
             print_metered_data( pDrmManager );
             test_custom_field( pDrmManager, rand() );
         }
-
         else if (answer[0] == 't') {
             print_all_information( pDrmManager );
         }
-
         else if (answer[0] == 's') {
             print_activators_status( pDrmManager, pci_bar_handle );
         }
-
         else if (answer[0] == 'q') {
             if (!DrmManager_deactivate( pDrmManager ))
                 INFO("%s", COLOR_CYAN "Stopped session if running and exit application");
         }
-
-        else
+        else {
             print_interactive_menu();
+		}
     }
 
     /* Stop session and free the DrmManager object */
@@ -609,8 +611,7 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, con
             }
 
             case GENERATE_COIN: {
-                INFO("%s", COLOR_CYAN
-                             "Generating coins ...");
+                INFO("%s", COLOR_CYAN "Generating coins ...");
                 /* Generate coins */
                 if (generate_coin(pci_bar_handle, 0, batch[i].value)) {
                     ERROR("%s", "Failed to generate coins");
@@ -621,9 +622,8 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, con
             }
 
             case STOP_SESSION: {
-                INFO("%s", COLOR_CYAN
-                             "Stopping current session ...");
                 /* Pause the current DRM session */
+                INFO("%s", COLOR_CYAN "Stopping current session ...");
                 if (DRM_OK != DrmManager_deactivate(pDrmManager)) {
                     ERROR("Failed to stop the DRM session: %s", pDrmManager->error_message);
                     goto batch_mode_free;
@@ -633,8 +633,7 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const char* credentialFile, con
             }
 
             case WAIT: {
-                INFO(COLOR_CYAN
-                             "Sleeping %u seconds ...", batch[i].value);
+                INFO(COLOR_CYAN "Sleeping %u seconds ...", batch[i].value);
                 sleep(batch[i].value);
                 DEBUG("%s", "Wake up from sleep");
                 break;
@@ -677,15 +676,15 @@ int main(int argc, char **argv) {
         int c;
         int option_index = 0;
         static struct option long_options[] = {
-            {"interactive", no_argument, NULL, 'i'},
-            {"cred", required_argument, NULL, 'r'},
-            {"conf", required_argument, NULL, 'o'},
-            {"slot", required_argument, NULL, 's'},
-            {"no-retry", no_argument, &noretry_flag, 1},
-            {"batch", required_argument, NULL, 'b'},
-            {"verbosity", required_argument, NULL, 'v'},
-            {"help", no_argument, NULL, 'h'},
-            {0, 0, 0, 0 }
+                {"interactive", no_argument, NULL, 'i'},
+                {"cred", required_argument, NULL, 'r'},
+                {"conf", required_argument, NULL, 'o'},
+                {"slot", required_argument, NULL, 's'},
+                {"no-retry", no_argument, &noretry_flag, 1},
+                {"batch", required_argument, NULL, 'b'},
+                {"verbosity", required_argument, NULL, 'v'},
+                {"help", no_argument, NULL, 'h'},
+                {0, 0, 0, 0 }
         };
 
         c = getopt_long(argc, argv, "ir:o:s:b:v:h", long_options, &option_index);

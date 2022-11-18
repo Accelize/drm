@@ -118,12 +118,12 @@ char* getFormattedTime(void) {
 
     time_t rawtime;
     struct tm* timeinfo;
+    static char _retval[20];
 
     time(&rawtime);
     timeinfo = localtime(&rawtime);
 
     /* Must be static, otherwise won't work */
-    static char _retval[20];
     strftime(_retval, sizeof(_retval), "%Y-%m-%d %H:%M:%S", timeinfo);
 
     return _retval;
@@ -144,9 +144,7 @@ void print_usage()
 
     printf("\nList of commands available in batch mode. List of commands are passed in CSV format:\n");
     printf("   a, activate              : Start a new session,\n");
-    printf("   r, resume                : Resume an opened session,\n");
     printf("   g<N>, generate=<N>       : Specify the number <N> of coins to generate,\n");
-    printf("   p, pause                 : Pause the current session, leaving it pending,\n");
     printf("   d, deactivate            : Stop the current session,\n");
     printf("   n<N>, activators=<N>     : Check the number of activators in the design equals <N>,\n");
     printf("   s<0|1>, status=<0|1>     : Check the activation status of all activators are either active <0> or inactive <1>,\n");
@@ -162,9 +160,7 @@ void print_interactive_menu()
     printf(" 'i' : display number of activators in design,\n");
     printf(" 's' : display activators status,\n");
     printf(" 'a' : activate session (default start),\n");
-    printf(" 'p' : pause session,\n");
     printf(" 'gN': generate N coins,\n");
-    printf(" 'r' : resume session,\n");
     printf(" 'd' : deactivate session (default stop),\n");
     printf(" 't' : get all paramters,\n");
     printf(" 'q' : stop session and exit\n");
@@ -183,12 +179,6 @@ std::vector<t_BatchCmd> tokenize( std::string str ) {
         if ( (cmd.rfind("a", 0) == 0) || (cmd.rfind("activate", 0) == 0) ) {
             token.name = std::string("START");
             token.id = START_SESSION;
-        } else if ( (cmd.rfind("r", 0) == 0) || (cmd.rfind("resume", 0) == 0) ) {
-            token.name = std::string("RESUME");
-            token.id = RESUME_SESSION;
-        } else if ( (cmd.rfind("p", 0) == 0) || (cmd.rfind("pause", 0) == 0) ) {
-            token.name = std::string("PAUSE");
-            token.id = PAUSE_SESSION;
         } else if ( (cmd.rfind("d", 0) == 0) || (cmd.rfind("deactivate", 0) == 0) ) {
             token.name = std::string("STOP");
             token.id = STOP_SESSION;
@@ -224,20 +214,19 @@ std::vector<t_BatchCmd> tokenize( std::string str ) {
 }
 
 
-/** Define Three callback for the DRM Lib **/
-/* Callback function for DRM library to perform a thread safe register read */
+/* Register read function */
 int read_register( uint32_t offset, uint32_t* p_value, void* user_p ) {
     if (fpga_pci_peek(*(pci_bar_handle_t*)user_p, offset, p_value)) {
-        ERROR("Unable to read from the fpga!");
+        ERROR("%s", "Unable to read from the fpga!");
         return 1;
     }
     return 0;
 }
 
-/* Callback function for DRM library to perform a thread safe register write */
+/* Register write function */
 int write_register( uint32_t offset, uint32_t value, void* user_p ) {
     if (fpga_pci_poke(*(pci_bar_handle_t*)user_p, offset, value)) {
-        ERROR("Unable to write to the fpga.");
+        ERROR("%s", "Unable to write to the fpga.");
         return 1;
     }
     return 0;
@@ -381,10 +370,10 @@ int test_custom_field( DrmManager* pDrmManager, uint32_t value ) {
 int check_afi_ready(int slot_id)
 {
     int ret=0;
-    struct fpga_mgmt_image_info info;
+    struct fpga_mgmt_image_info info = {0};
 
     /* get local image description, contains status, vendor id, and device id. */
-    if (fpga_mgmt_describe_local_image( slot_id, &info, 0)) {
+    if (fpga_mgmt_describe_local_image(slot_id, &info, 0)) {
         ERROR("Unable to get AFI information from slot %d. Are you running as root?", slot_id);
         return 1;
     }
@@ -443,7 +432,7 @@ int print_drm_report(DrmManager* pDrmManager)
 }
 
 
-int interactive_mode(pci_bar_handle_t* pci_bar_handle, const std::string& credentialFile, const std::string& configurationFile, const int& no_retry_flag)
+int interactive_mode(pci_bar_handle_t* pci_bar_handle, const std::string& credentialFile, const std::string& configurationFile, int /*no_retry_flag*/)
 {
     int ret;
     DrmManager *pDrmManager = nullptr;
@@ -485,46 +474,50 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const std::string& creden
 
             if ((answer[0] == 'h') || (answer[0] == '?')) {
                 print_interactive_menu();
-            } else if (cmd == 'z') {
+            }
+			else if (cmd == 'z') {
                 if (print_drm_report(pDrmManager) == 0)
-                    INFO(COLOR_CYAN "HW report printed");
-            } else if (cmd == 'a') {
-                pDrmManager->activate(false);
-                INFO(COLOR_CYAN "Session started");
-            } else if (cmd == 'r') {
-                pDrmManager->activate(true);
-                INFO(COLOR_CYAN "Session resumed");
-            } else if (cmd == 'p') {
-                pDrmManager->deactivate(true);
-                INFO(COLOR_CYAN "Session paused");
-            } else if (cmd == 'd') {
-                pDrmManager->deactivate(false);
-                INFO(COLOR_CYAN "Session stopped");
-            } else if (cmd == 'g') {
+                    INFO("%s", COLOR_CYAN "HW report printed");
+            }
+			else if (cmd == 'a') {
+                pDrmManager->activate();
+                INFO("%s", COLOR_CYAN "Session started");
+            }
+			else if (cmd == 'd') {
+                pDrmManager->deactivate();
+                INFO("%s", COLOR_CYAN "Session stopped");
+            }
+			else if (cmd == 'g') {
                 if (answer.size() < 2) {
                     print_interactive_menu();
                     continue;
                 }
                 if (!generate_coin(pci_bar_handle, 0, val))
                     INFO(COLOR_CYAN "%u coins generated", val);
-            } else if (cmd == 'i') {
+            }
+			else if (cmd == 'i') {
                 print_license_type(pDrmManager);
                 print_num_activators(pDrmManager);
                 print_session_id(pDrmManager);
                 print_metered_data(pDrmManager);
                 test_custom_field(pDrmManager, rand());
-            } else if (cmd == 't') {
+            }
+			else if (cmd == 't') {
                 print_all_information(pDrmManager);
-            } else if (cmd == 's') {
+            }
+			else if (cmd == 's') {
                 print_activators_status(pDrmManager, pci_bar_handle);
-            } else if (cmd == 'q') {
+            }
+			else if (cmd == 'q') {
                 pDrmManager->deactivate(false);
-                INFO(COLOR_CYAN "Stopped session if running and exit application");
-            } else
+                INFO("%s", COLOR_CYAN "Stopped session if running and exit application");
+            }
+			else {
                 print_interactive_menu();
+			}
 
         } catch(...) {
-            ERROR("Failed to execute last command");
+            ERROR("%s", "Failed to execute last command");
         }
     }
 
@@ -536,7 +529,7 @@ int interactive_mode(pci_bar_handle_t* pci_bar_handle, const std::string& creden
 
 
 
-int batch_mode(pci_bar_handle_t* pci_bar_handle, const std::string& credentialFile, const std::string& configurationFile, const int& no_retry_flag, const std::vector<t_BatchCmd> batch_list)
+int batch_mode(pci_bar_handle_t* pci_bar_handle, const std::string& credentialFile, const std::string& configurationFile, int /*no_retry_flag*/, const std::vector<t_BatchCmd> batch_list)
 {
     int ret = -1;
     DrmManager *pDrmManager = nullptr;
@@ -546,7 +539,6 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const std::string& credentialFi
 
     DEBUG("credential file is %s", credentialFile.c_str());
     DEBUG("configuration file is %s", configurationFile.c_str());
-    DEBUG("no-retry = %d", no_retry_flag);
     for(const auto& cmd: batch_list) {
         DEBUG("command #%u: name='%s', id=%u, value=%u", i, cmd.name.c_str(), cmd.id, cmd.value);
         i ++;
@@ -575,29 +567,21 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const std::string& credentialFi
 
             case START_SESSION: {
                 /* Start a new session */
-                INFO(COLOR_CYAN "Starting a new session ...");
-                pDrmManager->activate(true);
-                DEBUG("Start session done");
-                break;
-            }
-
-            case RESUME_SESSION: {
-                /* Resume an existing session */
-                INFO(COLOR_CYAN "Resuming an existing session ...");
-                pDrmManager->activate(true);
-                DEBUG("Resume session done");
+                INFO("%s", COLOR_CYAN "Starting a new session ...");
+                pDrmManager->activate();
+                DEBUG("%s", "Start session done");
                 break;
             }
 
             case NB_ACTIVATORS: {
-                INFO(COLOR_CYAN "Searching for activators ...");
-                if ( get_num_activators( pDrmManager, &val ) )
+                INFO("%s", COLOR_CYAN "Searching for activators ...");
+                if (get_num_activators(pDrmManager, &val))
                     goto batch_mode_free;
                 INFO(COLOR_GREEN "Num of activators in FPGA design: %u", val );
-                if (expVal == (uint32_t)(-1)) {
+                if (expVal == 0xFFFFFFFF) {
                     /* Only display number of activators */
                     INFO("Number of activators found: %u", val);
-                    WARN("No check made on the number of activators");
+                    WARN("%s", "No check made on the number of activators");
                     break;
                 }
                 /* Check number of activators */
@@ -610,11 +594,11 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const std::string& credentialFi
             }
 
             case ACTIVATORS_STATUS: {
-                INFO(COLOR_CYAN "Collecting activators status ...");
+                INFO("%s", COLOR_CYAN "Collecting activators status ...");
                 if (get_activators_status(pDrmManager, pci_bar_handle, &state))
                     goto batch_mode_free;
-                if (expVal == (uint32_t)(-1)) {
-                    WARN("No check made on the activation status");
+                if (expVal == 0xFFFFFFFF) {
+                    WARN("%s", "No check made on the activation status");
                     break;
                 }
                 /* Check activation status */
@@ -627,36 +611,28 @@ int batch_mode(pci_bar_handle_t* pci_bar_handle, const std::string& credentialFi
             }
 
             case GENERATE_COIN: {
-                INFO(COLOR_CYAN "Generating coins ...");
+                INFO("%s", COLOR_CYAN "Generating coins ...");
                 /* Generate coins */
                 if (generate_coin(pci_bar_handle, 0, batch.value)) {
-                    ERROR("Failed to generate coins");
+                    ERROR("%s", "Failed to generate coins");
                     goto batch_mode_free;
                 }
                 INFO("%u coins generated", batch.value);
                 break;
             }
 
-            case PAUSE_SESSION: {
-                /* Pause the current DRM session */
-                INFO(COLOR_CYAN "Pausing current session ...");
-                pDrmManager->deactivate(true);
-                DEBUG("Pause session done");
-                break;
-            }
-
             case STOP_SESSION: {
                 /* Pause the current DRM session */
-                INFO(COLOR_CYAN "Stopping current session ...");
-                pDrmManager->deactivate(false);
-                DEBUG("Stop session done");
+                INFO("%s", COLOR_CYAN "Stopping current session ...");
+                pDrmManager->deactivate();
+                DEBUG("%s", "Stop session done");
                 break;
             }
 
             case WAIT: {
                 INFO(COLOR_CYAN "Sleeping %u seconds ...", batch.value);
                 sleep(batch.value);
-                DEBUG("Wake up from sleep");
+                DEBUG("%s", "Wake up from sleep");
                 break;
             }
 
@@ -737,18 +713,18 @@ int main(int argc, char **argv) {
 
     /* initialize the fpga_mgmt library */
     if (fpga_mgmt_init()) {
-        ERROR("Unable to initialize the fpga_mgmt library");
+        ERROR("%s", "Unable to initialize the fpga_mgmt library");
         return -1;
     }
 
     /* initialize the fpga_pci library so we could have access to FPGA PCIe from this applications */
     if(fpga_pci_init()) {
-        ERROR("Unable to initialize the fpga_pci library");
+        ERROR("%s", "Unable to initialize the fpga_pci library");
         return -1;
     }
 
-    if(check_afi_ready(slotID)) {
-        ERROR("AFI not ready");
+    if (check_afi_ready(slotID)) {
+        ERROR("%s", "AFI not ready");
         return -1;
     }
 
