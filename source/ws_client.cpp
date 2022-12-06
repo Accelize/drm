@@ -46,9 +46,9 @@ CurlEasyPost::CurlEasyPost( const uint32_t& connection_timeout_ms ) {
 
 CurlEasyPost::~CurlEasyPost() {
     curl_easy_reset( mCurl );
-    curl_easy_cleanup( mCurl );
     curl_slist_free_all( mHeaders_p );
     curl_slist_free_all( mHostResolveList );
+    curl_easy_cleanup( mCurl );
     mHeaders_p = NULL;
     mHostResolveList = NULL;
 }
@@ -96,43 +96,61 @@ void CurlEasyPost::setPostFields( const std::string postfields ) {
     curl_easy_setopt( mCurl, CURLOPT_COPYPOSTFIELDS, postfields.c_str() );
 }
 
-uint32_t CurlEasyPost::perform( const std::string url, std::string* response, const int32_t timeout_msec ) {
-    uint32_t resp_code;
-    CURLcode res;
-    std::string recv_header("");
+std::string CurlEasyPost::request( const std::string& url, const tHttpRequestType& httpType, const uint32_t& timeout_ms ) {
+    std::string resp_body;
+    std::string resp_header;
 
-    if ( timeout_msec <= 0 )
-        Throw( DRM_WSTimedOut, "Did not perform HTTP request because timeout is reached. " );
+    if ( timeout_ms <= 0 )
+        ThrowSetLog( SPDLOG_LEVEL_DEBUG, DRM_WSTimedOut,
+            "Did not perform HTTP request because deadline is reached." );
 
     // Configure and execute CURL command
     curl_easy_setopt( mCurl, CURLOPT_URL, url.c_str() );
     if ( mHeaders_p ) {
         curl_easy_setopt( mCurl, CURLOPT_HTTPHEADER, mHeaders_p );
     }
-    curl_easy_setopt( mCurl, CURLOPT_WRITEDATA, response );
-    curl_easy_setopt( mCurl, CURLOPT_TIMEOUT_MS, timeout_msec );
-    curl_easy_setopt( mCurl, CURLOPT_HEADERDATA, &recv_header );
-    res = curl_easy_perform( mCurl );
+    if ( httpType == tHttpRequestType::GET )
+        (void)0;    // No-op
+    else if ( httpType == tHttpRequestType::POST )
+        (void)0;    // No-op
+    else if ( httpType == tHttpRequestType::PUT )
+        curl_easy_setopt( mCurl, CURLOPT_CUSTOMREQUEST, "PUT");
+    else if ( httpType == tHttpRequestType::PATCH )
+        curl_easy_setopt( mCurl, CURLOPT_CUSTOMREQUEST, "PATCH");
+    else
+        Unreachable( "Invalid HTTP type" );  //LCOV_EXCL_LINE
 
-    // Analyze libcurl response
+    curl_easy_setopt( mCurl, CURLOPT_WRITEDATA, (void*)&resp_body );
+    curl_easy_setopt( mCurl, CURLOPT_HEADERDATA, (void*)&resp_header );
+    curl_easy_setopt( mCurl, CURLOPT_TIMEOUT_MS, timeout_ms );
+    CURLcode res = curl_easy_perform( mCurl );
+
+    // Analyze HTTP answer
     if ( res != CURLE_OK ) {
-        // A libcurl error occurred
-        if ( res == CURLE_COULDNT_RESOLVE_PROXY
-          || res == CURLE_COULDNT_RESOLVE_HOST
-          || res == CURLE_COULDNT_CONNECT
-          || res == CURLE_OPERATION_TIMEDOUT ) {
-            Throw( DRM_WSMayRetry, "Failed to perform HTTP request {} ({}) : {}. ",
-                    recv_header, curl_easy_strerror( res ), mErrBuff.data() );
+        std::string err_msg = fmt::format("Error {} on HTTP request", (uint32_t)res);
+        if ( !resp_header.empty() )
+            err_msg += fmt::format(", {}", resp_header);
+        err_msg += fmt::format(", {}: {}", curl_easy_strerror( res ), mErrBuff.data());
+        if ( res == CURLE_COULDNT_RESOLVE_PROXY || res == CURLE_COULDNT_RESOLVE_HOST
+          || res == CURLE_COULDNT_CONNECT || res == CURLE_OPERATION_TIMEDOUT ) {
+            ThrowSetLog( SPDLOG_LEVEL_DEBUG, DRM_WSMayRetry, "{}", err_msg );
         } else {
-            Throw( DRM_ExternFail, "Failed to perform HTTP request {} ({}) : {}. ",
-                    recv_header, curl_easy_strerror( res ), mErrBuff.data() );
+            ThrowSetLog( SPDLOG_LEVEL_DEBUG, DRM_ExternFail, "{}", err_msg );
         }
     }
+    long resp_code = 0;
     curl_easy_getinfo( mCurl, CURLINFO_RESPONSE_CODE, &resp_code );
-    std::cout << "resp_code=" << resp_code << std::endl;
-//    std::cout << "recv_header=" << recv_header << std::endl;
-//    Debug( "Received response {} with code {} from {} in {} ms. ", recv_header, resp_code, url, getTotalTime() * 1000 );
-    return resp_code;
+    Debug( "Received HTTP response for request '{}' with code {} from {} in {} ms",
+            resp_header, resp_code, url, getTotalTime() * 1000 );
+
+    // Analyze HTTP response
+    DRM_ErrorCode drm_error = httpCode2DrmCode(resp_code);
+    if ( drm_error != DRM_OK ) {
+        // An error occurred
+        ThrowSetLog( SPDLOG_LEVEL_DEBUG, drm_error, "License Web Service error {} on HTTP request '{}': {}",
+                    resp_code, resp_header, resp_body );
+    }
+    return resp_body;
 }
 
 double CurlEasyPost::getTotalTime() {
@@ -268,7 +286,6 @@ std::string DrmWSClient::escape( std::string str ) const {
 }
 
 void DrmWSClient::getOAuth2token( int32_t timeout_msec ) {
-
     // Check if a token exists
     if ( !mOAuth2Token.empty() ) {
         // Yes a token already exists, check if it has expired or is about to expire
@@ -292,54 +309,29 @@ void DrmWSClient::getOAuth2token( int32_t timeout_msec ) {
         timeout_msec = mRequestTimeoutMS;
     std::string oauth_url = fmt::format( "{}/auth/token?{}", mUrl, qs.str() );
     Debug( "Starting OAuthentication request to {}", oauth_url );
-    std::string response;
-    long resp_code = req.perform( oauth_url, &response, timeout_msec );
+    std::string response_str = req.request( oauth_url, tHttpRequestType::GET, timeout_msec );
 
-    // Parse response
-    std::string error_msg;
-    Json::Value json_resp;
+    // Parse response string
+    Json::Value response_json;
     try {
-        json_resp = parseJsonString( response );
+         response_json = parseJsonString( response_str );
+         Debug( "Received JSON response: {}", response_json.toStyledString() );
     } catch ( const Exception& e ) {
-        json_resp = Json::nullValue;
-        error_msg = e.what();
+        Throw( DRM_WSRespError, "Failed to parse response from Metering Web Service because {}: {}. ",
+               e.what(), response_str);
     }
-    // Analyze response
-    DRM_ErrorCode drm_error = CurlEasyPost::httpCode2DrmCode( resp_code );
-    if ( drm_error != DRM_OK )
-        Throw( drm_error, "OAuth2 Web Service error {}: {}. ", resp_code, response );
-
-    // Verify response parsing
-    if ( json_resp == Json::nullValue )
-        Throw( DRM_WSRespError, "Failed to parse response from OAuth2 Web Service because {}: {}. ",
-                error_msg, response);
-
-    mOAuth2Token = JVgetRequired( json_resp, "access_token", Json::stringValue ).asString();
-    mTokenValidityPeriod = JVgetRequired( json_resp, "expires_in", Json::intValue ).asInt();
+    mOAuth2Token = JVgetRequired( response_json, "access_token", Json::stringValue ).asString();
+    mTokenValidityPeriod = JVgetRequired( response_json, "expires_in", Json::intValue ).asInt();
     mTokenExpirationTime = TClock::now() + std::chrono::seconds( mTokenValidityPeriod );
-    json_resp["expires_at"] = steady_clock_to_time_t( mTokenExpirationTime );
+    response_json["expires_at"] = steady_clock_to_time_t( mTokenExpirationTime );
 
     // Cache the token
-    saveJsonToFile(mTokenFilePath, json_resp);
-    Debug( "Saved token to file {}: {}", mTokenFilePath, json_resp.toStyledString() );
+    saveJsonToFile(mTokenFilePath, response_json);
+    Debug( "Saved token to file {}", mTokenFilePath );
 }
 
-// TODO Verify it's really necessaryJson::Value DrmWSClient::postSaas( const Json::Value& json_req, int32_t timeout_msec ) {
-Json::Value DrmWSClient::postSaas( Json::Value json_req, int32_t timeout_msec ) {
-    std::string url;
-    if ( json_req["request"] == "open" ) {
-        url = mUrl + fmt::format( "/customer/product/{}/entitlement_session", json_req["product_id"].asString() );
-    } else {
-        url = mUrl + fmt::format( "/customer/entitlement_session/{}", json_req["entitlement_id"].asString() );
-    }
-    Debug( "Starting Saas request to {} with data:\n{}", url, json_req.toStyledString() );
-    if ( json_req.isMember("product_id") ) {
-        json_req.removeMember("product_id");
-    }
-    if ( json_req.isMember("request") ) {
-        json_req.removeMember("request");
-    }
-
+Json::Value DrmWSClient::sendSaasRequest( const std::string &suburl, const tHttpRequestType &type,
+                                const Json::Value& json_req, int32_t timeout_msec ) const {
     // Create new request
     CurlEasyPost req( mConnectionTimeoutMS );
     req.setVerbosity( mVerbosity );
@@ -354,34 +346,22 @@ Json::Value DrmWSClient::postSaas( Json::Value json_req, int32_t timeout_msec ) 
     if ( timeout_msec >= mRequestTimeoutMS )
         timeout_msec = mRequestTimeoutMS;
     // Send request and wait response
-    std::string response;
-    long resp_code = req.perform( url, &response, timeout_msec );
+    std::string url = mUrl + suburl;
+    Debug( "Starting Saas request to {} with data:\n{}", url, json_req.toStyledString() );
+    std::string response = req.request( url, type, timeout_msec );
 
-    // Parse response
-    std::string error_msg;
-    Json::Value json_resp;
-    try {
-        json_resp = parseJsonString( response );
-    } catch ( const Exception& e ) {
-        json_resp = Json::nullValue;
-        error_msg = e.what();
+    // Parse response string
+    if ( !response.empty() ) {
+        try {
+             Json::Value json_resp = parseJsonString( response );
+             Debug( "Received JSON response: {}", json_resp.toStyledString() );
+             return json_resp;
+        } catch ( const Exception& e ) {
+            Throw( DRM_WSRespError, "Failed to parse response from Metering Web Service because {}: {}. ",
+                   e.what(), response);
+        }
     }
-
-    // Analyze response
-    DRM_ErrorCode drm_error = CurlEasyPost::httpCode2DrmCode( resp_code );
-    if ( resp_code == 401 )
-        drm_error = DRM_WSError;
-    // An error occurred
-    if ( drm_error != DRM_OK )
-        Throw( drm_error, "Metering Web Service error {}: {}. ", resp_code, response );
-
-    // Verify response parsing
-    if ( json_resp == Json::nullValue )
-        Throw( DRM_WSRespError, "Failed to parse response from Metering Web Service because {}: {}. ",
-               error_msg, response);
-
-    // No error: return the response as JSON object
-    return json_resp;
+    return Json::nullValue;
 }
 
 

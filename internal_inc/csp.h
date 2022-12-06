@@ -29,7 +29,7 @@ namespace Accelize {
 namespace DRM {
 
 
-Json::Value GetCspInfo( uint32_t verbosity );
+void GetCspInfo( Json::Value &json_info, uint32_t verbosity );
 
 
 /** \brief Interface to collect CSP metadata

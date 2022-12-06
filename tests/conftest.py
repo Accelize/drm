@@ -25,7 +25,7 @@ from tests.ws_admin_functions import WSListFunction
 _SESSION = dict()
 _LICENSING_SERVERS = dict(
     dev='https://api.dev.accelize.com',
-    prod='https://master.metering.accelize.com')
+    prod='https://api.accelize.com')
 
 ACT_STATUS_REG_OFFSET = 0x38
 MAILBOX_REG_OFFSET    = 0x3C
@@ -83,9 +83,6 @@ def get_default_conf_json(licensing_server_url, drm_frequency):
         },
         "drm": {
             "frequency_mhz": drm_frequency
-        },
-        "design": {
-            "boardType": "Running on AWS"
         },
         "settings": {
             "ws_connection_timeout": 3,
@@ -860,7 +857,7 @@ class ConfJson(_Json):
     def __init__(self, tmpdir, url, freq, **kwargs):
         content = get_default_conf_json(url, freq)
         for k, v in kwargs.items():
-            if isinstance(v, dict):
+            if isinstance(v, dict) and k in content.keys():
                 content[k].update(v)
             else:
                 content[k] = v

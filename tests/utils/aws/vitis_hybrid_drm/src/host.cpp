@@ -228,7 +228,7 @@ int main(int argc, char **argv) {
 
     try {
 
-        pDrmManager->activate(true);
+        pDrmManager->activate();
 
         // Check DRM Activator status
         read_register(DRM_ACTR_ADDR + 0x38, &reg);
@@ -298,7 +298,7 @@ int main(int argc, char **argv) {
         //OPENCL HOST CODE AREA END
 
         //ACCELIZE DRMLIB CODE AREA START
-        pDrmManager=>deactivate(false)
+        pDrmManager=>deactivate()
         cout << "[DRMLIB] Design locked" << endl;
 
     } catch( const Exception& e ) {

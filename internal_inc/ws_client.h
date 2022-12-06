@@ -24,10 +24,14 @@ limitations under the License.
 #include <curl/curl.h>
 
 #include "log.h"
+#include "utils.h"
 
 
 namespace Accelize {
 namespace DRM {
+
+typedef std::chrono::steady_clock TClock; /// Shortcut type def to steady clock which is monotonic (so unaffected by clock adjustments)
+typedef enum class tHttpRequestType: uint8_t { GET, POST, PUT, PATCH } tHttpRequestType;
 
 
 // RAII for Curl global init/cleanup
@@ -82,7 +86,7 @@ public:
                 ;
     }
     static DRM_ErrorCode httpCode2DrmCode( const uint32_t http_resp_code ) {
-        if ( http_resp_code == 200 )
+        if ( ( http_resp_code >= 200 ) && ( http_resp_code < 400 ) )
             return DRM_OK;
         if ( CurlEasyPost::is_error_retryable( http_resp_code ) )
             return DRM_WSMayRetry;
@@ -104,99 +108,7 @@ public:
 
     std::string escape( const std::string str ) const;
 
-    uint32_t perform( const std::string url, std::string* resp, const int32_t timeout_ms );
-
-    template<class T>
-    T perform_get( const std::string url, const uint32_t& timeout_ms ) {
-        T response;
-        uint32_t resp_code;
-        std::string recv_header("");
-
-        if ( timeout_ms <= 0 ) {
-            ThrowSetLog( SPDLOG_LEVEL_DEBUG, DRM_WSTimedOut,
-                "Did not perform HTTP request because deadline is reached." );
-        }
-
-        // Configure and execute CURL command
-        curl_easy_setopt( mCurl, CURLOPT_URL, url.c_str() );
-        if ( mHeaders_p ) {
-            curl_easy_setopt( mCurl, CURLOPT_HTTPHEADER, mHeaders_p );
-        }
-        curl_easy_setopt( mCurl, CURLOPT_WRITEDATA, (void*)&response );
-        curl_easy_setopt( mCurl, CURLOPT_HEADERDATA, (void*)&recv_header );
-        curl_easy_setopt( mCurl, CURLOPT_TIMEOUT_MS, timeout_ms );
-        CURLcode res = curl_easy_perform( mCurl );
-
-        // Analyze libcurl response
-        if ( res != CURLE_OK ) {
-            if ( res == CURLE_COULDNT_RESOLVE_PROXY
-              || res == CURLE_COULDNT_RESOLVE_HOST
-              || res == CURLE_COULDNT_CONNECT
-              || res == CURLE_OPERATION_TIMEDOUT ) {
-                ThrowSetLog( SPDLOG_LEVEL_DEBUG, DRM_WSMayRetry, "Failed to perform HTTP request {} ({}) : {}", recv_header, curl_easy_strerror( res ), mErrBuff.data() );  //LCOV_EXCL_LINE
-            } else {
-                ThrowSetLog( SPDLOG_LEVEL_DEBUG, DRM_ExternFail, "Failed to perform HTTP request {} ({}) : {}", recv_header, curl_easy_strerror( res ), mErrBuff.data() );  //LCOV_EXCL_LINE
-            }
-        }
-        curl_easy_getinfo( mCurl, CURLINFO_RESPONSE_CODE, &resp_code );
-        Debug( "Received request {} with code {} from {} in {} ms", recv_header, resp_code, url, getTotalTime() * 1000 );
-
-        // Analyze HTTP response
-        if ( resp_code != 200 ) {
-            // An error occurred
-            DRM_ErrorCode drm_error;
-            if ( CurlEasyPost::is_error_retryable( resp_code ) )
-                drm_error = DRM_WSMayRetry;
-            else if ( ( resp_code >= 400 ) && ( resp_code < 500 ) )
-                drm_error = DRM_WSReqError;
-            else
-                drm_error = DRM_WSError;
-            ThrowSetLog( SPDLOG_LEVEL_DEBUG, drm_error, "OAuth2 Web Service error {} on request {}: {}",
-                resp_code, recv_header, response );
-        }
-        return response;
-    }
-
-    template<class T>
-    T perform_put( const std::string url, const uint32_t& timeout_ms ) {
-        T response;
-        uint32_t resp_code;
-        std::string recv_header("");
-
-        if ( timeout_ms <= 0 )
-            ThrowSetLog( SPDLOG_LEVEL_DEBUG, DRM_WSTimedOut,
-                "Did not perform HTTP request because deadline is reached." );
-
-        // Configure and execute CURL command
-        curl_easy_setopt( mCurl, CURLOPT_URL, url.c_str() );
-        if ( mHeaders_p ) {
-            curl_easy_setopt( mCurl, CURLOPT_HTTPHEADER, mHeaders_p );
-        }
-        curl_easy_setopt( mCurl, CURLOPT_CUSTOMREQUEST, "PUT");
-        curl_easy_setopt( mCurl, CURLOPT_WRITEDATA, (void*)&response );
-        curl_easy_setopt( mCurl, CURLOPT_HEADERDATA, (void*)&recv_header );
-        curl_easy_setopt( mCurl, CURLOPT_TIMEOUT_MS, timeout_ms );
-        CURLcode res = curl_easy_perform( mCurl );
-
-        // Analyze HTTP answer
-        if ( res != CURLE_OK ) {
-            if ( res == CURLE_COULDNT_RESOLVE_PROXY
-              || res == CURLE_COULDNT_RESOLVE_HOST
-              || res == CURLE_COULDNT_CONNECT
-              || res == CURLE_OPERATION_TIMEDOUT ) {
-                ThrowSetLog( SPDLOG_LEVEL_DEBUG, DRM_WSMayRetry,
-                    "Failed to perform HTTP request {} ({}) : {}",
-                    recv_header, curl_easy_strerror( res ), mErrBuff.data() );
-            } else {
-                ThrowSetLog( SPDLOG_LEVEL_DEBUG, DRM_ExternFail,
-                    "Failed to perform HTTP request {} ({}) : {}",
-                    recv_header, curl_easy_strerror( res ), mErrBuff.data() );
-            }
-        }
-        curl_easy_getinfo( mCurl, CURLINFO_RESPONSE_CODE, &resp_code );
-        Debug( "Received request {} with code {} from {} in {} ms", recv_header, resp_code, url, getTotalTime() * 1000 );
-        return response;
-    }
+    std::string request( const std::string& suburl, const tHttpRequestType& type, const uint32_t& timeout_ms );
 
 protected:
 
@@ -210,10 +122,14 @@ protected:
         return realsize;
     }
 
-    static size_t curl_header_callback( char *buffer, size_t size, size_t nitems, std::string *userp ) {
+    static size_t curl_header_callback( void *contents, size_t size, size_t nitems, std::string *userp ) {
         size_t realsize = size * nitems;
         try {
-            userp->append( (const char*)buffer, realsize );
+            std::string header(reinterpret_cast<char*>(contents), realsize);
+            size_t request_id_str = header.find("x-request-id");
+            if ( std::string::npos != request_id_str ) {
+                *userp = rtrim(header);
+            }
         } catch( const std::bad_alloc& e ) {  //LCOV_EXCL_LINE
             Throw( DRM_ExternFail, "Curl header callback exception: {}", e.what() );  //LCOV_EXCL_LINE
         }
@@ -232,8 +148,6 @@ class DrmWSClient {
     const int32_t cConnectionTimeout = 15;       // In seconds
 
 protected:
-
-    typedef std::chrono::steady_clock TClock; /// Shortcut type def to steady clock which is monotonic (so unaffected by clock adjustments)
 
     uint32_t mVerbosity;
     std::string mClientId;
@@ -264,8 +178,8 @@ public:
 
     std::string escape( std::string str ) const;
     void getOAuth2token( int32_t timeout_msec );
-// TODO: verify it is really necessary    Json::Value postSaas( const Json::Value& json_req, int32_t timeout_msec );
-    Json::Value postSaas( Json::Value json_req, int32_t timeout_msec );
+    Json::Value sendSaasRequest( const std::string &url, const tHttpRequestType &type,
+                                 const Json::Value& json_req, int32_t timeout_msec ) const;
 };
 
 }

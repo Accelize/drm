@@ -90,9 +90,7 @@ typedef enum {LOG_ERROR, LOG_WARN, LOG_INFO, LOG_DEBUG} t_LogLevel;
 
 typedef enum {
     START_SESSION,
-    RESUME_SESSION,
     STOP_SESSION,
-    PAUSE_SESSION,
     GENERATE_COIN,
     NB_ACTIVATORS,
     ACTIVATORS_STATUS,
@@ -141,16 +139,13 @@ void print_usage()
     printf("   -v, --verbosity          : Specify level of vebosity from 0 (error only) to 4 (debug),\n");
     printf("   --cred                   : Specify path to credential file,\n");
     printf("   --conf                   : Specify path to configuration file,\n");
-    printf("   --no-retry               : Disable the retry mechanism if WebService is temporarily unavailable during the start/resume and stop operations\n");
     printf("   -i, --interactive        : Run application in interactive mode. This is mutually exclusive with -b,--batch option,\n");
     printf("   -b, --batch              : Batch mode: execute a set of commands passed in CSV format. This is mutually exclusive with -i,--interactive option\n");
     printf("   -s, --slot               : If server has multiple board, specify the slot ID of the target\n");
 
     printf("\nList of commands available in batch mode. List of commands are passed in CSV format:\n");
     printf("   a, activate              : Start a new session,\n");
-    printf("   r, resume                : Resume an opened session,\n");
     printf("   g<N>, generate=<N>       : Specify the number <N> of coins to generate,\n");
-    printf("   p, pause                 : Pause the current session, leaving it pending,\n");
     printf("   d, deactivate            : Stop the current session,\n");
     printf("   n<N>, activators=<N>     : Check the number of activators in the design equals <N>,\n");
     printf("   s<0|1>, status=<0|1>     : Check the activation status of all activators are either active <0> or inactive <1>,\n");
@@ -166,9 +161,7 @@ void print_interactive_menu()
     printf(" 'i' : display number of activators in design,\n");
     printf(" 's' : display activators status,\n");
     printf(" 'a' : activate session (default start),\n");
-    printf(" 'p' : pause session,\n");
     printf(" 'gN': generate N coins,\n");
-    printf(" 'r' : resume session,\n");
     printf(" 'd' : deactivate session (default stop),\n");
     printf(" 't' : get all paramters,\n");
     printf(" 'q' : stop session and exit\n");
@@ -189,12 +182,6 @@ std::vector<t_BatchCmd> tokenize( std::string str ) {
         if ( (cmd.rfind("a", 0) == 0) || (cmd.rfind("activate", 0) == 0) ) {
             token.name = std::string("START");
             token.id = START_SESSION;
-        } else if ( (cmd.rfind("r", 0) == 0) || (cmd.rfind("resume", 0) == 0) ) {
-            token.name = std::string("RESUME");
-            token.id = RESUME_SESSION;
-        } else if ( (cmd.rfind("p", 0) == 0) || (cmd.rfind("pause", 0) == 0) ) {
-            token.name = std::string("PAUSE");
-            token.id = PAUSE_SESSION;
         } else if ( (cmd.rfind("d", 0) == 0) || (cmd.rfind("deactivate", 0) == 0) ) {
             token.name = std::string("STOP");
             token.id = STOP_SESSION;
@@ -465,16 +452,10 @@ int interactive_mode(xclDeviceHandle* pci_bar_handle, const std::string& credent
                 if (print_drm_report(pDrmManager) == 0)
                     INFO(COLOR_CYAN "HW report printed");
             } else if (cmd == 'a') {
-                pDrmManager->activate(false);
+                pDrmManager->activate();
                 INFO(COLOR_CYAN "Session started");
-            } else if (cmd == 'r') {
-                pDrmManager->activate(true);
-                INFO(COLOR_CYAN "Session resumed");
-            } else if (cmd == 'p') {
-                pDrmManager->deactivate(true);
-                INFO(COLOR_CYAN "Session paused");
             } else if (cmd == 'd') {
-                pDrmManager->deactivate(false);
+                pDrmManager->deactivate();
                 INFO(COLOR_CYAN "Session stopped");
             } else if (cmd == 'g') {
                 if (answer.size() < 2) {
@@ -552,16 +533,8 @@ int batch_mode(xclDeviceHandle* pci_bar_handle, const std::string& credentialFil
             case START_SESSION: {
                 /* Start a new session */
                 INFO(COLOR_CYAN "Starting a new session ...");
-                pDrmManager->activate(true);
+                pDrmManager->activate();
                 DEBUG("Start session done");
-                break;
-            }
-
-            case RESUME_SESSION: {
-                /* Resume an existing session */
-                INFO(COLOR_CYAN "Resuming an existing session ...");
-                pDrmManager->activate(true);
-                DEBUG("Resume session done");
                 break;
             }
 
@@ -613,16 +586,8 @@ int batch_mode(xclDeviceHandle* pci_bar_handle, const std::string& credentialFil
                 break;
             }
 
-            case PAUSE_SESSION: {
-                /* Pause the current DRM session */
-                INFO(COLOR_CYAN "Pausing current session ...");
-                pDrmManager->deactivate(true);
-                DEBUG("Pause session done");
-                break;
-            }
-
             case STOP_SESSION: {
-                /* Pause the current DRM session */
+                /* Stop the current DRM session */
                 INFO(COLOR_CYAN "Stopping current session ...");
                 pDrmManager->deactivate(false);
                 DEBUG("Stop session done");

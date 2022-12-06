@@ -60,32 +60,6 @@ def run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_ha
         activators.check_coin(drm_manager.get('metered_data'))
         # Wait until 2 licenses are provisioned
         conftest.wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, lic_duration)
-        # Pause session
-        drm_manager.deactivate(True)
-        assert drm_manager.get('session_status')
-        assert drm_manager.get('license_status')
-        assert drm_manager.get('session_id') == session_id
-        activators.autotest(is_activated=True)
-        # Wait right before license expiration
-        conftest.wait_deadline(start, 2*lic_duration-3)
-        assert drm_manager.get('session_status')
-        assert drm_manager.get('license_status')
-        assert drm_manager.get('session_id') == session_id
-        activators.autotest(is_activated=True)
-        # Wait expiration
-        conftest.wait_deadline(start, 2*lic_duration+2)
-        assert drm_manager.get('session_status')
-        assert drm_manager.get('session_id') == session_id
-        assert not drm_manager.get('license_status')
-        activators.autotest(is_activated=False)
-        activators.generate_coin()
-        activators.check_coin(drm_manager.get('metered_data'))
-        # Resume session
-        drm_manager.activate(True)
-        assert drm_manager.get('session_status')
-        assert drm_manager.get('session_id') != session_id
-        assert drm_manager.get('license_status')
-        activators.reset_coin()
         activators.autotest(is_activated=True)
         activators.generate_coin()
         activators.check_coin(drm_manager.get('metered_data'))
@@ -99,10 +73,8 @@ def run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_ha
     log_content = logfile.read()
     # Check API calls
     assert search(r"Calling Impl public constructor", log_content, IGNORECASE)
-    assert search(r"Calling 'activate' with 'resume_session_request'=false", log_content, IGNORECASE)
-    assert search(r"Calling 'deactivate' with 'pause_session_request'=true", log_content, IGNORECASE)
-    assert search(r"Calling 'activate' with 'resume_session_request'=true", log_content, IGNORECASE)
-    assert search(r"Calling 'deactivate' with 'pause_session_request'=false", log_content, IGNORECASE)
+    assert search(r"Calling 'activate'", log_content, IGNORECASE)
+    assert search(r"Calling 'deactivate'", log_content, IGNORECASE)
     # Check DRM Controller frequencies
     drmclk_match = search(r'Frequency detection of drm_aclk counter after .+ => estimated frequency = (\d+) MHz', log_content)
     drmclk_freq_measure = int(drmclk_match.group(1))

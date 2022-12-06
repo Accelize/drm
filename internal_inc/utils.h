@@ -57,6 +57,7 @@ std::string toUpHex( const uint64_t& i );
 std::vector<std::string> splitByDelimiter( const std::string& str, char delimiter );
 std::vector<std::string> splitByLength( const std::string& str, uint32_t splitLength );
 uint64_t str2int64( std::string num_str );
+std::string rtrim(const std::string &s);
 
 }
 }

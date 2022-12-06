@@ -29,6 +29,9 @@ namespace Accelize {
 namespace DRM {
 
 
+const std::string WHITESPACE = " \n\r\t\f\v";
+
+
 std::string getDirName( const std::string& full_path ) {
     size_t i = full_path.rfind( PATH_SEP, full_path.length() );
     if ( i != std::string::npos ) {
@@ -344,6 +347,13 @@ uint64_t str2int64( std::string num_str )
             num_str );
     }
     return num_int;
+}
+
+
+std::string rtrim(const std::string &s)
+{
+    size_t end = s.find_last_not_of(WHITESPACE);
+    return (end == std::string::npos) ? "" : s.substr(0, end + 1);
 }
 
 

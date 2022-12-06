@@ -108,15 +108,15 @@ def test_topic1_corrupted_metering(accelize_drm, conf_json, cred_json, async_han
                         data = drm_manager.get('metered_data')
                         print("2nd read gives:", data)
                         activators.check_coin(drm_manager.get('metered_data'))
-                    drm_manager.deactivate(True)
-                    activators.autotest(is_activated=True)
+                    drm_manager.deactivate()
+                    activators.autotest(is_activated=False)
                     async_cb.assert_NoError()
-                    assert drm_manager.get('session_status')
-                    assert drm_manager.get('license_status')
+                    assert not drm_manager.get('session_status')
+                    assert not drm_manager.get('license_status')
                     # Wait for the limit of the expiration
                     random_wait = lic_duration*2
                     wait_deadline(start, random_wait)
-                    drm_manager.activate(True)
+                    drm_manager.activate()
                     start = datetime.now()
                 except:
                     raise
@@ -190,15 +190,15 @@ def test_topic1_corrupted_metering2(accelize_drm, conf_json, cred_json,
                         data = drm_manager.get('metered_data')
                         print("2nd read gives:", data)
                         activators.check_coin(drm_manager.get('metered_data'))
-                    drm_manager.deactivate(True)
+                    drm_manager.deactivate()
                     async_cb.assert_NoError()
-                    assert drm_manager.get('session_status')
-                    assert drm_manager.get('license_status')
+                    assert not drm_manager.get('session_status')
+                    assert not drm_manager.get('license_status')
                     assert drm_manager.get('session_id') == session_id
                     # Wait for the limit of the expiration
                     random_wait = lic_duration
                     wait_deadline(start, random_wait)
-                    drm_manager.activate(True)
+                    drm_manager.activate()
                     start = datetime.now()
                 except:
                     raise

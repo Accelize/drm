@@ -449,9 +449,9 @@ def test_nodelock_after_metering_mode(accelize_drm, conf_json, cred_json, async_
         session_id = drm_manager.get('session_id')
         assert len(session_id) > 0
         activators[0].generate_coin()
-        drm_manager.deactivate(True)    # Pause session
-        assert drm_manager.get('session_status')
-        assert session_id == drm_manager.get('session_id')
+        drm_manager.deactivate()    # Pause session
+        assert not drm_manager.get('session_status')
+        assert session_id != drm_manager.get('session_id')
 
         # Switch to nodelock
         conf_json.addNodelock()

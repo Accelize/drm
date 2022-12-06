@@ -189,7 +189,7 @@ def test_authentication_cache(accelize_drm, conf_json, cred_json,
 
     # 1- Remove the cache file
     clientid = cred_json['client_id']
-    token_cache_file = os.path.expanduser(join('~','.cache','accelize','drm',f'{clientid}.json')
+    token_cache_file = os.path.expanduser(join('~','.cache','accelize','drm',f'{clientid}.json'))
     if isfile(cache_file):
         remove(cache_file)
     assert not isfile(cache_file)

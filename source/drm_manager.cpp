@@ -191,7 +191,7 @@ private:
             ret = pnc_session_send_request_and_wait_response(s_pnc_session, PNC_DRM_INIT_SHM, 0, &response);
             Debug( "pnc_session_send_request_and_wait_response returned {} with response {}", ret, response );
             if ( (ret < 0) || (response != 0) ) {
-                std::string msg = fmt::format( "Failed to initialize DRM Controller TA: stderr={} / response={}. ", strerror(errno), response );
+                std::string msg = fmt::format( "Failed to initialize DRM Controller TA: retcode={}, stderr={} / response={}. ", ret, strerror(errno), response );
                 msg += DRM_CTRL_TA_INIT_ERROR_MESSAGE;
                 msg += fmt::format(
                     "For more details refer to the online documentation: {}/drm_hardware_integration.html#xilinx-r-som-boards",
@@ -217,9 +217,6 @@ private:
 
 
 protected:
-
-    // Helper typedef
-    typedef std::chrono::steady_clock TClock; /// Shortcut type def to steady clock which is monotonic (so unaffected by clock adjustments)
 
     // Enum
     enum class eLogFileType: uint8_t {NONE=0, BASIC, ROTATING};
@@ -249,6 +246,10 @@ protected:
             {eCtrlLogVerbosity::TRACE1 , PNC_DRM_LOG_TRACE1},
             {eCtrlLogVerbosity::TRACE2 , PNC_DRM_LOG_TRACE2}
     };
+
+    // DNA & Product
+    std::string mDeviceID;
+    std::string mProductID;
 
     // HDK version
     uint32_t mDrmVersionNum = 0;
@@ -332,7 +333,7 @@ protected:
 
     // Thread to maintain license alive
     uint32_t mLicenseCounter = 0;
-    std::future<void> mThreadKeepAlive;
+    std::future<void> mThreadLicense;
     TClock::time_point mExpirationTime;
 
     // Thread to maintain health alive
@@ -349,7 +350,7 @@ protected:
     std::string mXrtPath;
     std::string mXbutil;
 
-    Json::Value mDiagnostic = Json::nullValue;
+    Json::Value mDiagnostics = Json::nullValue;
     eHostDataVerbosity mHostDataVerbosity = eHostDataVerbosity::PARTIAL;
     Json::Value mSettings = Json::nullValue;
     Json::Value mMailboxRoData = Json::nullValue;
@@ -666,26 +667,26 @@ protected:
             std::string cmd = fmt::format( "{} dump", mXbutil );
             cmd_out = execCmd( cmd );
         } catch( const std::exception &e ) {
-            hostcard_node["xrt1"]["error"] = fmt::format( "Host and card information not collected with XRT method 1: execution error '{}'\n",
+            hostcard_node["xrt1"] = fmt::format( "Host and card information not collected with XRT method 1: execution error '{}'\n",
                                     e.what() );
             return false;
         }
         // Parse collected data and save to header
-        Json::Value xbutil_node;
+        Json::Value xbutil_json;
         try {
-            xbutil_node = parseJsonString( cmd_out );
+            xbutil_json = parseJsonString( cmd_out );
         } catch( const std::exception &e ) {
-            hostcard_node["xrt1"]["error"] = fmt::format( "Host and card information not collected with XRT method 1: error '{}' parsing:\n{}\n",
+            hostcard_node["xrt1"] = fmt::format( "Host and card information not collected with XRT method 1: error '{}' parsing:\n{}\n",
                                     e.what(), cmd_out );
             return false;
         }
         // Filtering meta-data
         if ( mHostDataVerbosity == eHostDataVerbosity::FULL ) {
             // Verbosity is FULL
-            hostcard_node["xrt1"] = xbutil_node;
+            hostcard_node["xrt1"] = xbutil_json;
         } else {
             // Verbosity is PARTIAL
-            for(Json::Value::iterator itr=xbutil_node.begin(); itr!=xbutil_node.end(); ++itr) {
+            for(Json::Value::iterator itr=xbutil_json.begin(); itr!=xbutil_json.end(); ++itr) {
                 std::string key = itr.key().asString();
                 try {
                     if (   ( key == "version" )
@@ -723,56 +724,27 @@ protected:
             std::string cmd = fmt::format( "{} examine -f JSON -o {} --force", mXbutil, xbutil_log );
             cmd_out = execCmd( cmd );
         } catch( const std::exception &e ) {
-            hostcard_node["xrt2"]["error"] = fmt::format( "Error executing XRT command: {}\n", e.what() );
+            hostcard_node["xrt2"] = fmt::format( "Error executing XRT command: {}\n", e.what() );
             return false;
         }
         // Parse available devices
+        Json::Value xbutil_json;
         try {
-            hostcard_node["xrt2"] = parseJsonFile( xbutil_log );
+            xbutil_json = parseJsonFile( xbutil_log );
         } catch( const std::exception &e ) {
-            hostcard_node["xrt2"]["error"] = fmt::format( "Error parsing XRT global data file {}: {}.\n",
+            hostcard_node["xrt2"] = fmt::format( "Error parsing XRT global data file {}: {}.\n",
                                                 xbutil_log, e.what() );
             return false;
         }
         removeFile( xbutil_log );
-        // Collect meta-data for each device found
-        bool is_ok( true );
-        hostcard_node["xrt2"]["devices"] = Json::nullValue;
-        for ( const auto &d: hostcard_node["xrt2"]["system"]["host"]["devices"] ) {
-            std::string bdf = d["bdf"].asString();
-            std::string xbutil_device_log = fmt::format( "xbutil_{}.log", bdf );
-            Json::Value device_info = Json::nullValue;
-            // Call xbutil report
-            try {
-                std::string cmd = fmt::format( "{} examine -f JSON -o {} --force -d {} ",
-                                                mXbutil, xbutil_device_log, bdf );
-                if ( mHostDataVerbosity == eHostDataVerbosity::FULL ) {
-                    cmd += std::string("-r all");
-                } else {
-                    cmd += std::string("-r dynamic-regions -r pcie-info -r platform");
-                }
-                std::string cmd_out = execCmd( cmd );
-            } catch( const std::exception &e ) {
-                device_info[bdf] = fmt::format( "Error executing XRT command: {}\n", e.what() );
-                hostcard_node["xrt2"]["devices"].append( device_info );
-                is_ok = false;
-                continue;
-            }
-            // Parse device report
-            try {
-                device_info = parseJsonFile( xbutil_device_log );
-                hostcard_node["xrt2"]["devices"].append( device_info["devices"][0] );
-            } catch( const std::exception &e ) {
-                device_info[bdf] = fmt::format( "Error parsing XRT meta-data file {}: {}.\n",
-                                                    xbutil_device_log, e.what() );
-                hostcard_node["xrt2"]["devices"].append( device_info );
-                is_ok = false;
-            }
-            removeFile( xbutil_device_log );
+        // Collect XRT meta-data
+        hostcard_node["device_driver_version"] = xbutil_json["system"]["host"]["xrt"]["version"];
+        // Filtering meta-data
+        if ( mHostDataVerbosity == eHostDataVerbosity::FULL ) {
+            // Verbosity is FULL
+            hostcard_node["xrt"] = xbutil_json["system"]["host"]["xrt"];
         }
-        if ( is_ok )
-            Debug( "Succeeded to gather host and card information with XRT method 2" );
-        return is_ok;
+        return true;
     }
 
     void getHostAndCardInfo() {
@@ -785,28 +757,25 @@ protected:
         }
 
         // Get host info
-        std::string os_version = execCmd( "grep -Po 'PRETTY_NAME=\"\\K[^\"]+' /etc/os-release" );
-        std::string kernel_version = execCmd( "uname -r" );
-        std::string cpu_version = execCmd( "uname -m" );
+        std::string os_version = rtrim( execCmd( "grep -Po 'PRETTY_NAME=\"\\K[^\"]+' /etc/os-release" ) );
+        std::string kernel_version = rtrim( execCmd( "uname -r" ) );
+        std::string cpu_version = rtrim( execCmd( "uname -m" ) );
 
         // Fulfill with DRM section
-        mDiagnostic["drm_library_version"] = DRMLIB_VERSION;
-        mDiagnostic["drm_controller_version"] = mDrmVersionNum;
-        mDiagnostic["os_version"] = os_version;
-        mDiagnostic["os_kernel_version"] = kernel_version;
-        mDiagnostic["cpu_architecture"] = cpu_version;
-        mDiagnostic["device_driver_version"] = "";
-        mDiagnostic["device_firmware_version"] = "";
+        mDiagnostics["drm_library_version"] = DRMLIB_VERSION;
+        mDiagnostics["os_version"] = os_version;
+        mDiagnostics["os_kernel_version"] = kernel_version;
+        mDiagnostics["cpu_architecture"] = cpu_version;
 
         // Gather host and card information if xbutil existing
         if ( findXrtUtility() ) {
             Json::Value hostcard_node = Json::nullValue;
-            if ( !getXrtPlatformInfoV2( hostcard_node ) ) {
-                getXrtPlatformInfoV1( hostcard_node );
+            if ( !getXrtPlatformInfoV2( mDiagnostics ) ) {
+                getXrtPlatformInfoV1( mDiagnostics );
             }
-            mDiagnostic["host_card"] = hostcard_node;
-            Debug( "Host and card information:\n{}", hostcard_node.toStyledString() );
         }
+
+        Debug( "Diagnostics: {}", mDiagnostics.toStyledString() );
     }
 
     void getCstInfo() {
@@ -817,15 +786,13 @@ protected:
         }
 
         // Gather CSP information if detected
-        Json::Value csp_node = Json::nullValue;
         try {
             uint32_t ws_verbosity = getDrmWSClient().getVerbosity();
-            csp_node = GetCspInfo( ws_verbosity );
+            GetCspInfo( mDiagnostics, ws_verbosity );
         } catch( const std::exception &e ) {
             Debug( "No CSP information collected: {}", e.what() );
         }
-        Debug( "CSP information:\n{}", csp_node.toStyledString() );
-        mDiagnostic.append( csp_node );
+        Debug( "CSP information:\n{}", mDiagnostics.toStyledString() );
     }
 
     Json::Value buildSettingsNode() {
@@ -1205,32 +1172,31 @@ protected:
         // Save header information
         mHeaderJsonRequest = getMeteringHeader();
 
+        // Create curl management object
+        mWsClient.reset( new DrmWSClient( mConfFilePath, mCredFilePath ) );
+
         // If node-locked license is requested, create license request file
         if ( isConfigInNodeLock() ) {
 
             // Check license directory exists
             if ( !isDir( mNodeLockLicenseDirPath ) )
                 Throw( DRM_BadArg,
-                        "License directory path '{}' specified in configuration file '{}' is not existing on file system",
-                        mNodeLockLicenseDirPath, mConfFilePath );
-
-            // If a floating/metering session is still running, try to close it gracefully.
-            if ( isDrmCtrlInMetering() && isSessionRunning() ) {
-                Debug( "A floating/metering session is still pending: trying to close it gracefully before switching to nodelocked license." );
-//TODO verify where to add this                mHeaderJsonRequest["drm_config"]["license_type"] = (uint8_t)eLicenseType::METERED;
-                try {
-                    mWsClient.reset( new DrmWSClient( mConfFilePath, mCredFilePath ) );
-                    stopSession();
-                } catch( const Exception& e ) {
-                    Debug( "Failed to stop gracefully the pending session because: {}", e.what() );
-                }
-//TODO verify where it add this                mHeaderJsonRequest["drm_config"]["license_type"] = (uint8_t)eLicenseType::NODE_LOCKED;
-            }
-
+                       "License directory path '{}' specified in configuration file '{}' is not existing on file system",
+                       mNodeLockLicenseDirPath, mConfFilePath );
             // Create license request file
             createNodelockedLicenseRequestFile();
         } else {
-            mWsClient.reset( new DrmWSClient( mConfFilePath, mCredFilePath ) );
+            // Anticipate by requesting a token.
+            TClock::time_point deadline;
+            int32_t short_retry_period_ms = -1;
+            if ( mWSApiRetryDuration == 0 ) {
+                deadline = TClock::now() + std::chrono::milliseconds( getDrmWSClient().getRequestTimeoutMS() );
+                short_retry_period_ms = -1;
+            } else {
+                deadline = TClock::now() + std::chrono::milliseconds( mWSApiRetryDuration * 1000 );
+                short_retry_period_ms = mWSRetryPeriodShort * 1000;
+            }
+            requestTokenUntilValid( deadline, short_retry_period_ms );
         }
     }
 
@@ -1242,21 +1208,21 @@ protected:
     }
 
     void checkSessionIDFromWS( const Json::Value license_json ) {
-        std::string ws_sessionID = license_json["drm_session_id"].asString();
-        if ( !mSessionID.empty() && ( mSessionID != ws_sessionID ) ) {
-            Warning( "Session ID mismatch: WebService returns '{}' but '{}' is expected", ws_sessionID, mSessionID ); //LCOV_EXCL_LINE
-        } else if ( mSessionID.empty() ) {
+        std::string ws_sessionID = JVgetOptional( license_json["drm_config"], "drm_session_id", Json::stringValue, mSessionID ).asString();
+        if ( mSessionID.empty() ) {
             mSessionID = ws_sessionID;
             Debug( "Saving session ID: {}", mSessionID );
+        } else if ( mSessionID != ws_sessionID ) {
+            Warning( "Session ID mismatch: WebService returns '{}' but '{}' is expected", ws_sessionID, mSessionID ); //LCOV_EXCL_LINE
         }
     }
 
     void checkSessionIDFromDRM( const Json::Value license_json ) {
-        std::string drm_sessionID = license_json["sessionId"].asString();
-        if ( !mSessionID.empty() && ( mSessionID != drm_sessionID ) ) {
-            Warning( "Session ID mismatch: DRM IP returns '{}' but '{}' is expected", drm_sessionID, mSessionID ); //LCOV_EXCL_LINE
-        } else if ( mSessionID.empty() ) {
+        std::string drm_sessionID = license_json["drm_config"]["drm_session_id"].asString();
+        if ( mSessionID.empty() ) {
             mSessionID = drm_sessionID;
+        } else if ( mSessionID != drm_sessionID ) {
+            Warning( "Session ID mismatch: DRM IP returns '{}' but '{}' is expected", drm_sessionID, mSessionID ); //LCOV_EXCL_LINE
         }
     }
 
@@ -1292,15 +1258,14 @@ protected:
         Json::Value &drm_config = json_output["drm_config"];
 
         // Get information from DRM Controller
-        getDesignInfo( drmVersion, dna, vlnvFile, mailboxReadOnly );
+        getDesignInfo( drmVersion, mDeviceID, vlnvFile, mailboxReadOnly );
         mMailboxRoData = parseJsonString( mailboxReadOnly );
 
-        json_output["device_id"] = dna;
 //TODO: UNCOMMENT THIS LINE AND REMOVE THE NEXT ONE       Json::Value product_id_json = mMailboxRoData["product_id"];
-Json::Value product_id_json = "AGCIL36AYZ4E7K3KCLEINMOVBY";
+Json::Value product_id_json = "AGCJ6WVJBFYODDFUEG2AGWNWZM";
         if ( product_id_json.isString() ) {
             // v2.x HDK
-            json_output["product_id"] = product_id_json.asString();
+            mProductID = product_id_json.asString();
         } else {
             // v1.x HDK
             std::string product_vendor = JVgetOptional( product_id_json, "vendor", Json::stringValue, "" ).asString();
@@ -1310,7 +1275,7 @@ Json::Value product_id_json = "AGCIL36AYZ4E7K3KCLEINMOVBY";
                 Throw( DRM_CtlrError, "Unsupported product ID: {}", product_id_json.toStyledString() );
             }
             std::string product_id = product_vendor + "::" + product_library + "::" + product_name;
-            json_output["product_id"] = getDrmWSClient().escape( product_id );
+            mProductID = getDrmWSClient().escape( product_id );
         }
 
         // Fulfill drm_config section
@@ -1343,33 +1308,35 @@ Json::Value product_id_json = "AGCIL36AYZ4E7K3KCLEINMOVBY";
 // TODO: Verify where to include this extra node            json_output["extra"] = mMailboxRoData["extra"];
 //            Debug( "HDK extra data: {}", mMailboxRoData["extra"].toStyledString() );
             drm_config["dualclk"] = mMailboxRoData["extra"]["dualclk"];
+            mDiagnostics["drm_controller_version"] = mMailboxRoData["extra"]["lgdn_full_version"];
         }
 
         return json_output;
     }
 
     Json::Value getMeteringStart() const {
-        Json::Value json_request( mHeaderJsonRequest );
+        Json::Value json_output( mHeaderJsonRequest );
         uint32_t numberOfDetectedIps;
         std::string saasChallenge;
         std::vector<std::string> meteringFile;
 
-        Debug( "Build license request #{} to create new session", mLicenseCounter );
+        Debug( "Build starting license request #{} to create new session", mLicenseCounter );
+
+        json_output["device_id"] = mDeviceID;
+        json_output["request"] = "open";
 
         // Request challenge and metering info for first request
         checkDRMCtlrRet( getDrmController().initialization( numberOfDetectedIps, saasChallenge, meteringFile ) );
-        Json::Value &drm_config = json_request["drm_config"];
+        Json::Value &drm_config = json_output["drm_config"];
         drm_config["saas_challenge"] = saasChallenge;
         drm_config["metering_file"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
 //TODO: verify where to add this        drm_config["license_type"] = (uint8_t)mLicenseType;
 
-        json_request["request"] = "open";
-
-        return json_request;
+        return json_output;
     }
 
     Json::Value getMeteringRunning() {
-        Json::Value json_request( mHeaderJsonRequest );
+        Json::Value json_output( mHeaderJsonRequest );
         uint32_t numberOfDetectedIps;
         std::string saasChallenge;
         std::vector<std::string> meteringFile;
@@ -1380,74 +1347,64 @@ Json::Value product_id_json = "AGCIL36AYZ4E7K3KCLEINMOVBY";
         uint32_t timeout = 5 * mCtrlTimeFactor;
         checkDRMCtlrRet( getDrmController().waitNotTimerInitLoaded( timeout ) );
         // Request challenge and metering info for new request
-        Json::Value drm_config = json_request["drm_config"];
         checkDRMCtlrRet( getDrmController().synchronousExtractMeteringFile( numberOfDetectedIps, saasChallenge, meteringFile ) );
+        Json::Value& drm_config = json_output["drm_config"];
         drm_config["saas_challenge"] = saasChallenge;
         drm_config["drm_session_id"] = meteringFile[0].substr( 0, 16 );
-        checkSessionIDFromDRM( json_request );
-
         drm_config["metering_file"] = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
-        json_request["entitlement_id"] = mEntitlementID;
-
-        if ( mLicenseCounter == 1 ) {
-            json_request["diagnostic"] = mDiagnostic;
-        }
-        return json_request;
+        checkSessionIDFromDRM( json_output );
+        return json_output;
     }
 
     Json::Value getMeteringStop() {
-        Json::Value json_request( mHeaderJsonRequest );
+        Json::Value json_output( mHeaderJsonRequest );
         uint32_t numberOfDetectedIps;
         std::string saasChallenge;
         std::vector<std::string> meteringFile;
 
-        Debug( "Build license request #{} to stop current session", mLicenseCounter );
+        Debug( "Build ending license request #{} to stop current session", mLicenseCounter );
+
+        json_output["is_closed"] = true;
 
         // Request challenge and metering info for first request
         checkDRMCtlrRet( getDrmController().endSessionAndExtractMeteringFile(
                 numberOfDetectedIps, saasChallenge, meteringFile ) );
-        json_request["saas_challenge"] = saasChallenge;
-        json_request["drm_session_id"] = meteringFile[0].substr( 0, 16 );
-        checkSessionIDFromDRM( json_request );
-
-        json_request["metering_file"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
-        json_request["is_closed"] = true;
-        return json_request;
+        Json::Value& drm_config = json_output["drm_config"];
+        drm_config["saas_challenge"] = saasChallenge;
+        drm_config["drm_session_id"] = meteringFile[0].substr( 0, 16 );
+        drm_config["metering_file"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
+        checkSessionIDFromDRM( json_output );
+        return json_output;
     }
 
     Json::Value getMeteringHealth() const {
-        Json::Value json_request( mHeaderJsonRequest );
+        Json::Value json_output( mHeaderJsonRequest );
         uint32_t numberOfDetectedIps;
         std::string saasChallenge;
         std::vector<std::string> meteringFile;
-        {
-            Debug( "Waiting metering access mutex from getMeteringHealth" );
-            std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
-            Debug( "Acquired metering access mutex from getMeteringHealth" );
 
-            Debug( "Build health request #{}", mHealthCounter );
-            {
-                std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-                if ( isConfigInNodeLock() || isSessionRunning() ) {
-                    checkDRMCtlrRet( getDrmController().asynchronousExtractMeteringFile(
-                            numberOfDetectedIps, saasChallenge, meteringFile ) );
-                } else {
-                    Warning( "Cannot access metering data when no session is running" );
-                }
+        Debug( "Build health request #{}", mHealthCounter );
+        {
+            std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+            if ( isConfigInNodeLock() || isSessionRunning() ) {
+                checkDRMCtlrRet( getDrmController().asynchronousExtractMeteringFile(
+                        numberOfDetectedIps, saasChallenge, meteringFile ) );
+            } else {
+                Warning( "Cannot access metering data when no session is running" );
             }
         }
         Debug( "Released metering access mutex from getMeteringHealth" );
-        json_request["saas_challenge"] = saasChallenge;
+        json_output["saas_challenge"] = saasChallenge;
         if ( meteringFile.size() ) {
-            json_request["sessionId"] = meteringFile[0].substr( 0, 16 );
+            json_output["sessionId"] = meteringFile[0].substr( 0, 16 );
         } else {
-            json_request["sessionId"] = "";
+            json_output["sessionId"] = "";
         }
         // Finalize the request with the collected data
-        json_request["metering_file"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
-        json_request["health_id"] = mHealthCounter++;
-        json_request["is_health"] = true;
-        return json_request;
+        json_output["metering_file"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
+        json_output["health_id"] = mHealthCounter++;
+        json_output["is_health"] = true;
+        return json_output;
     }
 
     // Get common info
@@ -1510,6 +1467,52 @@ Json::Value product_id_json = "AGCIL36AYZ4E7K3KCLEINMOVBY";
         return !isLicenseEmpty;
     }
 
+    void requestTokenUntilValid( const TClock::time_point& deadline, int32_t short_retry_period_ms = -1, int32_t long_retry_period_ms = -1 ) {
+        TClock::duration wait_duration;
+        TClock::duration long_duration = std::chrono::milliseconds( long_retry_period_ms );
+        TClock::duration short_duration = std::chrono::milliseconds( short_retry_period_ms );
+        bool token_valid(false);
+        uint32_t oauth_attempt = 0;
+        int32_t timeout_msec;
+        std::chrono::milliseconds timeout_chrono;
+
+        while ( !token_valid ) {
+            /// Get valid OAUth2 token
+            try {
+                timeout_chrono = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                 deadline - TClock::now() );
+                timeout_msec = timeout_chrono.count();
+                getDrmWSClient().getOAuth2token( timeout_msec );
+                token_valid = true;
+            } catch ( const Exception& e ) {
+                if ( e.getErrCode() == DRM_WSTimedOut ) {
+                    // Reached timeout
+                    Throw( DRM_WSTimedOut, "Timeout on Authentication request after {} attempts", oauth_attempt );
+                }
+                if ( e.getErrCode() != DRM_WSMayRetry ) {
+                    throw;
+                }
+                /// It is retryable
+                oauth_attempt ++;
+                if ( short_retry_period_ms == -1 ) {
+                    // No retry
+                    Debug( "OAuthentication retry mechanism is disabled" );
+                    throw;
+                }
+                if ( long_retry_period_ms == -1 )
+                     wait_duration = short_duration;
+                else if ( ( deadline - TClock::now() ) <= ( long_duration + 2*short_duration )  )
+                    wait_duration = short_duration;
+                else
+                    wait_duration = long_duration;
+                Warning( "Attempt #{} to obtain a new OAuth2 token failed with message: {}. New attempt planned in {} seconds",
+                        oauth_attempt, e.what(), wait_duration.count()/1000000000 );
+                /// Wait a bit before retrying
+                sleepOrExit( wait_duration );
+            }
+        }
+    }
+
     Json::Value getLicense( Json::Value& request_json, const uint32_t& timeout_ms,
                             int32_t short_retry_period_ms = -1, int32_t long_retry_period_ms = -1 ) {
         TClock::time_point deadline;
@@ -1528,61 +1531,39 @@ Json::Value product_id_json = "AGCIL36AYZ4E7K3KCLEINMOVBY";
         TClock::duration wait_duration;
         TClock::duration long_duration = std::chrono::milliseconds( long_retry_period_ms );
         TClock::duration short_duration = std::chrono::milliseconds( short_retry_period_ms );
-        bool token_valid(false);
-        uint32_t oauth_attempt = 0;
         uint32_t lic_attempt = 0;
         int32_t timeout_msec;
         std::chrono::milliseconds timeout_chrono;
+        std::string suburl;
+        tHttpRequestType httpType;
+
+        if ( request_json.isMember("request") ) {
+            request_json.removeMember("request");
+            request_json["settings"] = buildSettingsNode();     // Add settings parameters
+            suburl = fmt::format( "/customer/product/{}/entitlement_session", mProductID );
+            httpType = tHttpRequestType::POST;
+        } else {
+            suburl = fmt::format( "/customer/entitlement_session/{}", mEntitlementID );
+            httpType = tHttpRequestType::PATCH;
+        }
+
+        if ( mLicenseCounter == 1 ) {
+            request_json["diagnostic"] = mDiagnostics;
+            Debug( "Added diagnostics information to request" );
+        }
 
         while ( 1 ) {
-            token_valid = false;
-            // Get valid OAUth2 token
-            try {
-                timeout_chrono = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                 deadline - TClock::now() );
-                timeout_msec = timeout_chrono.count();
-                getDrmWSClient().getOAuth2token( timeout_msec );
-                token_valid = true;
-            } catch ( const Exception& e ) {
-                lic_attempt = 0;
-                if ( e.getErrCode() == DRM_WSTimedOut ) {
-                    // Reached timeout
-                    Throw( DRM_WSTimedOut, "Timeout on Authentication request after {} attempts", oauth_attempt );
-                }
-                if ( e.getErrCode() != DRM_WSMayRetry ) {
-                    throw;
-                }
-                // It is retryable
-                oauth_attempt ++;
-                if ( short_retry_period_ms == -1 ) {
-                    // No retry
-                    Debug( "OAuthentication retry mechanism is disabled" );
-                    throw;
-                }
-                if ( long_retry_period_ms == -1 )
-                     wait_duration = short_duration;
-                else if ( ( deadline - TClock::now() ) <= ( long_duration + 2*short_duration )  )
-                    wait_duration = short_duration;
-                else
-                    wait_duration = long_duration;
-                Warning( "Attempt #{} to obtain a new OAuth2 token failed with message: {}. New attempt planned in {} seconds",
-                        oauth_attempt, e.what(), wait_duration.count()/1000000000 );
-                // Wait a bit before retrying
-                sleepOrExit( wait_duration );
-            }
-            if ( !token_valid ) continue;
+            /// Get valid OAUth2 token
+            requestTokenUntilValid( deadline, short_retry_period_ms, long_retry_period_ms );
 
-            // Get new license
+            /// Get new license
             try {
-                // Add settings parameters
-// TODO Move this to another accepted location              request_json["settings"] = buildSettingsNode();
-                // Send license request and wait for the answer
+                /// Send license request and wait for the answer
                 timeout_chrono = std::chrono::duration_cast<std::chrono::milliseconds>(
                                  deadline - TClock::now() );
                 timeout_msec = timeout_chrono.count();
-                return getDrmWSClient().postSaas( request_json, timeout_msec );
+                return getDrmWSClient().sendSaasRequest( suburl, httpType, request_json, timeout_msec );
             } catch ( const Exception& e ) {
-                oauth_attempt = 0;
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
                     // Reached timeout
                     Throw( DRM_WSTimedOut, "Timeout on License request after {} attempts. ", lic_attempt );
@@ -1597,7 +1578,7 @@ Json::Value product_id_json = "AGCIL36AYZ4E7K3KCLEINMOVBY";
                     Debug( "Licensing retry mechanism is disabled" );
                     throw;
                 }
-                // Evaluate the next retry
+                /// Evaluate the next retry
                 if ( long_retry_period_ms == -1 )
                      wait_duration = short_duration;
                 else if ( ( deadline - TClock::now() ) <= ( long_duration + 2*short_duration ) )
@@ -1606,34 +1587,40 @@ Json::Value product_id_json = "AGCIL36AYZ4E7K3KCLEINMOVBY";
                     wait_duration = long_duration;
                 Warning( "Attempt #{} to obtain a new License failed with message: {}. New attempt planned in {} seconds",
                         lic_attempt, e.what(), wait_duration.count()/1000000000 );
-                // Wait a bit before retrying
+                /// Wait a bit before retrying
                 sleepOrExit( wait_duration );
             }
         }
     }
 
     void setLicense( const Json::Value& license_json ) {
-
         Debug( "Provisioning license #{} on DRM controller", mLicenseCounter );
 
-        std::string dna = mHeaderJsonRequest["device_id"].asString();
         std::string licenseKey, licenseTimer;
 
         try {
-            mEntitlementID = JVgetRequired( license_json, "id", Json::stringValue ).asString();
-            Json::Value drm_config_node = JVgetRequired( license_json, "drm_config", Json::objectValue );
+            /// Check session ID received from web service and check it if possible
+            checkSessionIDFromWS( license_json );
 
+            /// Get needed parameters from response
+            std::string entitlement_id = JVgetRequired( license_json, "id", Json::stringValue ).asString();
+            if ( mEntitlementID != entitlement_id ) {
+                mEntitlementID = entitlement_id;
+                Debug( "Entitlement ID '{}' is updated to '{}'", mEntitlementID, entitlement_id );
+            }
+            Json::Value drm_config_node = JVgetRequired( license_json, "drm_config", Json::objectValue );
             mLicenseDuration = JVgetOptional( drm_config_node, "license_period_second", Json::uintValue, mLicenseDuration ).asUInt();
             mHealthPeriod = JVgetOptional( drm_config_node, "health_period", Json::uintValue, mHealthPeriod ).asUInt();
             mHealthRetryTimeout = JVgetOptional( drm_config_node, "health_retry", Json::uintValue, mHealthRetryTimeout ).asUInt();
             mHealthRetrySleep = JVgetOptional( drm_config_node, "health_retry_sleep", Json::uintValue, mHealthRetrySleep ).asUInt();
+            Debug( "Health parameters update: healthPeriod={}s, healthRetry={}s, healthRetrySleep={}s",
+                                mHealthPeriod, mHealthRetryTimeout, mHealthRetrySleep );
+            if ( mHealthPeriod )
+                startHealthContinuityThread();
 
             /// Get license node
             Json::Value license_node = JVgetRequired( drm_config_node, "license", Json::objectValue );
-            Json::Value dna_node = JVgetRequired( license_node, dna.c_str(), Json::objectValue );
-
-            /// Get session ID received from web service and check it if possible
-            checkSessionIDFromWS( license_json );
+            Json::Value dna_node = JVgetRequired( license_node, mDeviceID.c_str(), Json::objectValue );
 
             /// Extract license key and license timer from web service response
             licenseKey = JVgetRequired( dna_node, "key", Json::stringValue ).asString();
@@ -1647,7 +1634,7 @@ Json::Value product_id_json = "AGCIL36AYZ4E7K3KCLEINMOVBY";
         if ( mLicenseCounter == 0 ) {
             // Load key
             checkDRMCtlrRet( getDrmController().activate( licenseKey ) );
-            Debug( "Wrote license key of session ID: {}", mSessionID );
+            Debug( "Wrote license key of session ID {}", mSessionID );
         }
 
         // Load license timer
@@ -1682,103 +1669,11 @@ Json::Value product_id_json = "AGCIL36AYZ4E7K3KCLEINMOVBY";
         mLicenseCounter ++;
     }
 
-    Json::Value postHealth( const Json::Value& request_json, const TClock::time_point& deadline,
-                            const int32_t& retry_period_ms = -1 ) {
-        bool token_valid(false);
-        uint32_t oauth_attempt = 0;
-        uint32_t lic_attempt = 0;
-        TClock::duration retry_duration = std::chrono::milliseconds( retry_period_ms );
-        int32_t timeout_msec;
-        std::chrono::milliseconds timeout_chrono;
-
-        while ( 1 ) {
-            token_valid = false;
-            // Get valid OAUth2 token
-            try {
-                timeout_chrono = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                 deadline - TClock::now() );
-                timeout_msec = timeout_chrono.count();
-                getDrmWSClient().getOAuth2token( timeout_msec );
-                token_valid = true;
-            } catch ( const Exception& e ) {
-                lic_attempt = 0;
-                if ( e.getErrCode() == DRM_WSTimedOut ) {
-                    // Reached timeout
-                    Warning( "Timeout on Authentication request after {} attempts", oauth_attempt );
-                    return Json::nullValue;
-                }
-                if ( e.getErrCode() != DRM_WSMayRetry ) {
-                    Error( "Health request error: {}", e.what() );
-                    return Json::nullValue;
-                }
-                // It is retryable
-                oauth_attempt ++;
-                if ( retry_period_ms == -1 ) {
-                    // No retry
-                    Debug( "OAuthentication retry mechanism is disabled" );
-                    return Json::nullValue;
-                }
-                Warning( "Attempt #{} to obtain a new OAuth2 token failed with message: {}. New attempt planned in {} seconds",
-                        oauth_attempt, e.what(), retry_duration.count()/1000000000 );
-                // Wait a bit before retrying
-                sleepOrExit( retry_duration );
-            }
-            if ( !token_valid ) continue;
-
-            // Send new metering
-            try {
-                timeout_chrono = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                 deadline - TClock::now() );
-                timeout_msec = timeout_chrono.count();
-                return getDrmWSClient().postSaas( request_json, timeout_msec );
-            } catch ( const Exception& e ) {
-                oauth_attempt = 0;
-                if ( e.getErrCode() == DRM_WSTimedOut ) {
-                    // Reached timeout
-                    Warning( "Timeout on Health request after {} attempts", lic_attempt );
-                    return Json::nullValue;
-                }
-                if ( e.getErrCode() != DRM_WSMayRetry ) {
-                    Error( "Health request error: {}", e.what() );
-                    return Json::nullValue;
-                }
-                // It is retryable
-                lic_attempt ++;
-                if ( retry_period_ms == -1 ) {
-                    // No retry
-                    Debug( "Health retry mechanism is disabled" );
-                    return Json::nullValue;
-                }
-                // Perform retry
-                Warning( "Attempt #{} to send a new Health request failed with message: {}. New attempt planned in {} seconds",
-                        lic_attempt, e.what(), retry_duration.count()/1000000000 );
-                // Wait a bit before retrying
-                sleepOrExit( retry_duration );
-            }
-        }
-    }
-
-    Json::Value performHealth( const uint32_t retry_timeout_ms, const uint32_t retry_sleep_ms) {
-        // Get next data from DRM Controller
-        Json::Value request_json = getMeteringHealth();
-        // Check session ID
-        checkSessionIDFromDRM( request_json );
-        if ( request_json["metering_file"].empty() )
-            Unreachable( "Received an empty metering file from DRM Controller" );  //LCOV_EXCL_LINE
-        // Compute retry period
-        TClock::time_point retry_deadline = TClock::now() + std::chrono::milliseconds( retry_timeout_ms );
-        // Post next data to server
-        return postHealth( request_json, retry_deadline, retry_sleep_ms );
-    }
-
     std::string getNodelockBaseName() {
-        std::string drmVersion, dna, mailboxReadOnly;
-        std::vector<std::string> vlnvFile;
-        getDesignInfo( drmVersion, dna, vlnvFile, mailboxReadOnly );
         std::string name = mHeaderJsonRequest["product"]["vendor"].asString();
         name += "_" + mHeaderJsonRequest["product"]["library"].asString();
         name += "_" + mHeaderJsonRequest["product"]["name"].asString();
-        name += "_" + dna;
+        name += "_" + mDeviceID;
         return name;
     }
 
@@ -1834,7 +1729,7 @@ Json::Value product_id_json = "AGCIL36AYZ4E7K3KCLEINMOVBY";
                 /// - Add diagnostic info
                 getCstInfo();
                 getHostAndCardInfo();
-                request_json["diagnostic"] = mDiagnostic;
+                request_json["diagnostic"] = mDiagnostics;
                 Debug( "Parsed Node-locked License Request file: {}", request_json .toStyledString() );
                 /// - Send request to web service and receive the new license
                 license_json = getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
@@ -2043,14 +1938,17 @@ Json::Value product_id_json = "AGCIL36AYZ4E7K3KCLEINMOVBY";
     void checkDrmFrequency( int32_t measuredFrequency ) {
         // Compute precision error compared to config file
         double precisionError = 100.0 * abs( measuredFrequency - mFrequencyInit ) / mFrequencyInit ; // At that point mFrequencyCurr = mFrequencyInit
-        mFrequencyCurr = measuredFrequency;
-        if ( precisionError >= mFrequencyDetectionThreshold ) {
-            Throw( DRM_BadFrequency,
-                   "Estimated DRM frequency ({} MHz) differs from the value ({} MHz) defined in the configuration file '{}' by more than {}%: From now on the estimated frequency will be used.",
-                    mFrequencyCurr, mFrequencyInit, mConfFilePath, mFrequencyDetectionThreshold, mFrequencyCurr);
-        }
         Debug( "Estimated DRM frequency = {} MHz, config frequency = {} MHz: gap = {}%",
-                mFrequencyCurr, mFrequencyInit, precisionError );
+                measuredFrequency, mFrequencyInit, precisionError );
+        if ( precisionError >= mFrequencyDetectionThreshold ) {
+            mFrequencyCurr = measuredFrequency;
+            Throw( DRM_BadFrequency,
+                   "Estimated DRM frequency ({} MHz) differs from the value ({} MHz) defined in the configuration file '{}' by {}% (threshold is {}%): From now on the estimated frequency will be used.",
+                    mFrequencyCurr, mFrequencyInit, mConfFilePath, precisionError, mFrequencyDetectionThreshold);
+        } else {
+            mFrequencyCurr = mFrequencyInit;
+        }
+        mFrequencyCurr = measuredFrequency;
     }
 
     template< class Clock, class Duration >
@@ -2083,12 +1981,12 @@ Json::Value product_id_json = "AGCIL36AYZ4E7K3KCLEINMOVBY";
 
     void startLicenseContinuityThread() {
 
-        if ( mThreadKeepAlive.valid() ) {
+        if ( mThreadLicense.valid() ) {
             Warning( "Licensing thread already started" );
             return;
         }
 
-        mThreadKeepAlive = std::async( std::launch::async, [ this ]() {
+        mThreadLicense = std::async( std::launch::async, [ this ]() {
             Debug( "Starting background thread which maintains licensing" );
             try {
                 // Collect CSP information if possible
@@ -2152,7 +2050,7 @@ Json::Value product_id_json = "AGCIL36AYZ4E7K3KCLEINMOVBY";
                     f_asynch_error( errmsg );
                 }
             } catch( const std::exception &e ) {
-                std::string errmsg = fmt::format( "[errCode={}] Unexpected error: {}", DRM_ExternFail, e.what() );
+                std::string errmsg = fmt::format( "[errCode={}] Unexpected error: {}", (uint32_t)DRM_ExternFail, e.what() );
                 Error( errmsg );
                 f_asynch_error( errmsg );
             }
@@ -2173,11 +2071,10 @@ Json::Value product_id_json = "AGCIL36AYZ4E7K3KCLEINMOVBY";
         mThreadHealth = std::async( std::launch::async, [ this ]() {
             Debug( "Starting background thread which checks health" );
             try {
-                uint32_t retry_sleep_ms = mWSRetryPeriodShort * 1000;
-                int32_t retry_timeout_ms = getDrmWSClient().getRequestTimeoutMS();
-                mHealthCounter = 0;
+                uint32_t retry_sleep_ms;
+                int32_t retry_timeout_ms;
 
-                /// Starting async metering post loop
+                /// Starting async metering update loop
                 while( 1 ) {
 
                     /// Sleep until it's time to collect the next metering data
@@ -2185,46 +2082,36 @@ Json::Value product_id_json = "AGCIL36AYZ4E7K3KCLEINMOVBY";
                     Debug( "Health thread sleeping {} seconds before gathering new metering", mHealthPeriod );
                     sleepOrExit( wakeup_time );
 
-                    /// Collect the next metering data and send them to the Health Web Service
-                    Debug( "Health thread collecting new metering data" );
-                    Json::Value response_json = performHealth( retry_timeout_ms, retry_sleep_ms );
-
-                    if ( response_json != Json::nullValue ) {
-                        /// Extract asynchronous metering parameters from response
-                        Json::Value drm_config_node = JVgetOptional( response_json, "drm_config", Json::objectValue, Json::nullValue );
-                        uint32_t healthPeriod = JVgetOptional( drm_config_node, "health_period", Json::uintValue, mHealthPeriod ).asUInt();
-                        uint32_t healthRetryTimeout = JVgetOptional( drm_config_node, "health_retry", Json::uintValue, mHealthRetryTimeout ).asUInt();
-                        uint32_t healthRetrySleep = JVgetOptional( drm_config_node, "health_retry_sleep", Json::uintValue, mHealthRetrySleep ).asUInt();
-
-                        /// Reajust async metering thread if needed
-                        if ( ( healthPeriod != mHealthPeriod ) || ( healthRetryTimeout != mHealthRetryTimeout)
-                                || ( healthRetrySleep != mHealthRetrySleep) ) {
-                            mHealthPeriod = healthPeriod;
-                            mHealthRetryTimeout = healthRetryTimeout;
-                            mHealthRetrySleep = healthRetrySleep;
-                            Debug( "Updating Health parameters with new values: healthPeriod={}s, healthRetry={}s, healthRetrySleep={}s",
-                                mHealthPeriod, mHealthRetryTimeout, mHealthRetrySleep );
-                            if ( mHealthPeriod == 0 ) {
-                                Warning( "Health thread is disabled" );
-                                break;
-                            }
-                            if ( mHealthRetryTimeout == 0 ) {
-                                retry_timeout_ms = getDrmWSClient().getRequestTimeoutMS();
-                                retry_sleep_ms = 0;
-                                Debug( "Health retry is disabled" );
-                            } else {
-                                retry_timeout_ms = mHealthRetryTimeout * 1000;
-                                retry_sleep_ms = mHealthRetrySleep * 1000;
-                                Debug( "Health retry is enabled" );
-                            }
-                        } else {
-                            Debug( "Keep same Health parameters: healthPeriod={}s, healthRetry={}s, healthRetrySleep={}s",
-                                mHealthPeriod, mHealthRetryTimeout, mHealthRetrySleep );
-                        }
-                    } else {
-                        Debug( "Keep same Health parameters: healthPeriod={}s, healthRetry={}s, healthRetrySleep={}s",
-                            mHealthPeriod, mHealthRetryTimeout, mHealthRetrySleep );
+                    if ( mHealthPeriod == 0 ) {
+                        Warning( "Health thread is disabled" );
+                        break;
                     }
+                    if ( mHealthRetryTimeout == 0 ) {
+                        retry_timeout_ms = getDrmWSClient().getRequestTimeoutMS();
+                        retry_sleep_ms = 0;
+                        Debug( "Health retry is disabled" );
+                    } else {
+                        retry_timeout_ms = mHealthRetryTimeout * 1000;
+                        retry_sleep_ms = mHealthRetrySleep * 1000;
+                        Debug( "Health retry is enabled" );
+                    }
+                    {
+                        Debug( "Waiting metering access mutex from health thread" );
+                        std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
+                        Debug( "Acquired metering access mutex from health thread" );
+
+                        // Get next data from DRM Controller
+                        Debug( "Requesting new health info #{} now", mHealthCounter );
+                        Json::Value request_json = getMeteringHealth();
+
+                        // Check session ID
+                        checkSessionIDFromDRM( request_json );
+
+                        // Post next data to server
+                        Json::Value license_json = getLicense( request_json, retry_timeout_ms, retry_sleep_ms );
+                        std::cout << "From health thread, license_json=" << license_json.toStyledString() << std::endl;
+                    }
+                    Debug( "Released metering access mutex from health thread" );
                 }
             } catch( const Exception& e ) {
                 DRM_ErrorCode errcode = e.getErrCode();
@@ -2248,7 +2135,7 @@ Json::Value product_id_json = "AGCIL36AYZ4E7K3KCLEINMOVBY";
     }
 
     void stopThread() {
-        if ( ( mThreadKeepAlive.valid() == 0 ) && ( mThreadHealth.valid() == 0 ) ) {
+        if ( ( mThreadLicense.valid() == 0 ) && ( mThreadHealth.valid() == 0 ) ) {
             Debug( "Background threads are not running" );
             return;
         }
@@ -2258,8 +2145,8 @@ Json::Value product_id_json = "AGCIL36AYZ4E7K3KCLEINMOVBY";
             mThreadExit = true;
         }
         mThreadExitCondVar.notify_all();
-        if ( mThreadKeepAlive.valid() )
-            mThreadKeepAlive.get();     // Wait until the License thread ends
+        if ( mThreadLicense.valid() )
+            mThreadLicense.get();     // Wait until the License thread ends
         if ( mThreadHealth.valid() )
             mThreadHealth.get();     // Wait until the Health thread ends
         Debug( "Background threads stopped" );
@@ -2349,6 +2236,7 @@ Json::Value product_id_json = "AGCIL36AYZ4E7K3KCLEINMOVBY";
                 Unreachable( "To start a new session the DRM Controller shall be ready to accept a new license" ); //LCOV_EXCL_LINE
 
             mLicenseCounter = 0;
+            mHealthCounter = 0;
 
             // Build start request message for new license
             Json::Value request_json = getMeteringStart();
@@ -2381,15 +2269,10 @@ Json::Value product_id_json = "AGCIL36AYZ4E7K3KCLEINMOVBY";
             request_json = getMeteringStop();
 
             // Send last metering information
-            Json::Value license_json = getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
-            checkSessionIDFromWS( license_json );
+            getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
             Debug( "Session ID {} stopped and last metering data uploaded", mSessionID );
         }
         Debug( "Released metering access mutex from stopSession" );
-        // Clear Session ID
-        Debug2( "Clearing session ID: {}", mSessionID );
-        std::string sessionID = mSessionID;
-        mSessionID = std::string("");
         // Clear mailbox
         writeMailbox<uint64_t>( eMailboxOffset::MB_SESSION_0, 0 );
         Debug( "Reseting expiration time" );
@@ -2398,8 +2281,9 @@ Json::Value product_id_json = "AGCIL36AYZ4E7K3KCLEINMOVBY";
         // Clear security flag
         Debug( "Clearing stop security flag" );
         mSecurityStop = false;
-
-        Info( "DRM session {} stopped.", sessionID );
+        // Clear Session ID
+        Info( "DRM session {} stopped.", mSessionID );
+        mSessionID = std::string("");
     }
 
     ParameterKey findParameterKey( const std::string& key_string ) const {
@@ -2415,7 +2299,7 @@ Json::Value product_id_json = "AGCIL36AYZ4E7K3KCLEINMOVBY";
         std::map<ParameterKey, std::string>::const_iterator it;
         it = mParameterKeyMap.find( key_id );
         if ( it == mParameterKeyMap.end() )
-            Throw( DRM_BadArg, "Cannot find parameter with ID: {}. ", key_id );
+            Throw( DRM_BadArg, "Cannot find parameter with ID: {}. ", (uint32_t)key_id );
         return it->second;
     }
 
@@ -2534,6 +2418,18 @@ public:
         TRY
             Debug( "Calling 'activate'" );
 
+            // If a floating/metering session is still running, try to close it gracefully.
+            if ( isSessionRunning() ) {
+                // Recover pending session if any
+                if ( mSessionID.empty() )
+                    mSessionID = toUpHex( readMailbox<uint64_t>( eMailboxOffset::MB_SESSION_0 ) );
+                Debug( "The floating/metering session '{}' is still pending: trying to close it gracefully.", mSessionID );
+                try {
+                    stopSession();
+                } catch( const Exception& e ) {
+                    Debug( "Failed to stop gracefully the pending session because: {}", e.what() );
+                }
+            }
             if ( isConfigInNodeLock() ) {
                 // Install the node-locked license
                 installNodelockedLicense();
@@ -2543,27 +2439,10 @@ public:
                 Throw( DRM_BadUsage, "DRM Controller is locked in Node-Locked licensing mode: "
                                     "To use other modes you must reprogram the FPGA device. " );
             }
-
-            if ( !isSessionRunning() ) {
-                // Start new session if no session is currently pending
-                startSession();
-
-            } else {
-                // Recover pending session
-                if ( mSessionID.empty() )
-                    mSessionID = toUpHex( readMailbox<uint64_t>( eMailboxOffset::MB_SESSION_0 ) );
-
-                Debug( "A session is still pending but latest license has expired: "
-                       "pending session is stopped and a new one is created" );
-                stopSession();
-                startSession();
-            }
+            // Start new session and the background threads
             mThreadExit = false;
+            startSession();
             startLicenseContinuityThread();
-            if ( mHealthPeriod )
-                startHealthContinuityThread();
-            else
-                Debug( "Health background thread is not started ");
             mSecurityStop = true;
         CATCH_AND_THROW
     }
@@ -2592,50 +2471,50 @@ public:
                     case ParameterKey::log_verbosity: {
                         uint32_t logVerbosity = static_cast<uint32_t>( sLogConsoleVerbosity );
                         json_value[key_str] = logVerbosity;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                 logVerbosity );
                         break;
                     }
                     case ParameterKey::log_format: {
                         json_value[key_str] = sLogConsoleFormat;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                 sLogConsoleFormat );
                         break;
                     }
                     case ParameterKey::log_file_verbosity: {
                         uint32_t logVerbosity = static_cast<uint32_t>( sLogFileVerbosity );
                         json_value[key_str] = logVerbosity;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                 logVerbosity );
                         break;
                     }
                     case ParameterKey::log_file_format: {
                         json_value[key_str] = sLogFileFormat;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                 sLogFileFormat );
                         break;
                     }
                     case ParameterKey::log_file_path: {
                         json_value[key_str] = sLogFilePath;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                 sLogFilePath );
                         break;
                     }
                     case ParameterKey::log_file_type: {
                         json_value[key_str] = (uint32_t)sLogFileType;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                (uint32_t)sLogFileType );
                         break;
                     }
                     case ParameterKey::log_file_rotating_num: {
                         json_value[key_str] = (uint32_t)sLogFileRotatingNum;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                sLogFileRotatingNum );
                         break;
                     }
                     case ParameterKey::log_file_rotating_size: {
                         json_value[key_str] = (uint32_t)sLogFileRotatingSize;
-                        Debug( "Get value of parameter '{}' (ID={}): {} KB", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {} KB", key_str, (uint32_t)key_id,
                                sLogFileRotatingSize );
                         break;
                     }
@@ -2645,13 +2524,13 @@ public:
                             Unreachable( "License_type '{}' is missing in LicenseTypeStringMap. ", (uint32_t)mLicenseType ); //LCOV_EXCL_LINE
                         std::string license_type_str = it->second;
                         json_value[key_str] = license_type_str;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                 license_type_str );
                         break;
                     }
                     case ParameterKey::license_duration: {
                         json_value[key_str] = mLicenseDuration;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                 mLicenseDuration );
                         break;
                     }
@@ -2659,27 +2538,27 @@ public:
                         uint32_t nbActivators = 0;
                         getNumActivator( nbActivators );
                         json_value[key_str] = nbActivators;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                 nbActivators );
                         break;
                     }
                     case ParameterKey::session_id: {
                         json_value[key_str] = mSessionID;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                 mSessionID );
                         break;
                     }
                     case ParameterKey::session_status: {
                         bool status = isSessionRunning();
                         json_value[key_str] = status;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                status );
                         break;
                     }
                     case ParameterKey::license_status: {
                         bool status = isLicenseActive();
                         json_value[key_str] = status;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                status );
                         break;
                     }
@@ -2705,7 +2584,7 @@ public:
                         } else {
                             json_value[key_str].append(0);
                         }
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                json_value[key_str].toStyledString() );
                         break;
                     }
@@ -2716,20 +2595,20 @@ public:
                         } else {
                             json_value[key_str] = mNodeLockRequestFilePath;
                             Debug( "Get value of parameter '{}' (ID={}): Node-locked license request file is saved in {}",
-                                    key_str, key_id, mNodeLockRequestFilePath );
+                                    key_str, (uint32_t)key_id, mNodeLockRequestFilePath );
                         }
                         break;
                     }
                     case ParameterKey::hw_report: {
                         std::string str = getDrmReport();
                         json_value[key_str] = str;
-                        Debug( "Get value of parameter '{}' (ID={})", key_str, key_id );
+                        Debug( "Get value of parameter '{}' (ID={})", key_str, (uint32_t)key_id );
                         Info( "Print HW report:\n{}", str );
                         break;
                     }
                     case ParameterKey::drm_frequency: {
                         json_value[key_str] = mFrequencyCurr;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                mFrequencyCurr );
                         break;
                     }
@@ -2746,65 +2625,65 @@ public:
                         auto it = LicenseTypeStringMap.find( lic_type );
                         std::string status = it->second;
                         json_value[key_str] = status;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                status );
                         break;
                     }
                     case ParameterKey::bypass_frequency_detection: {
                         json_value[key_str] = mBypassFrequencyDetection;
-                        Debug( "Get value of parameter '{}' (ID={}): Method {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): Method {}", key_str, (uint32_t)key_id,
                                mBypassFrequencyDetection );
                         break;
                     }
                     case ParameterKey::frequency_detection_method: {
                         json_value[key_str] = mFreqDetectionMethod;
-                        Debug( "Get value of parameter '{}' (ID={}): Method {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): Method {}", key_str, (uint32_t)key_id,
                                mFreqDetectionMethod );
                         break;
                     }
                     case ParameterKey::frequency_detection_threshold: {
                         json_value[key_str] = mFrequencyDetectionThreshold;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                mFrequencyDetectionThreshold );
                         break;
                     }
                     case ParameterKey::frequency_detection_period: {
                         json_value[key_str] = mFrequencyDetectionPeriod;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                mFrequencyDetectionPeriod );
                         break;
                     }
                     case ParameterKey::product_info: {
                         json_value[key_str] = mHeaderJsonRequest["product"];
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                mHeaderJsonRequest["product"].toStyledString() );
                         break;
                     }
                     case ParameterKey::token_string: {
                         std::string token_str = getDrmWSClient().getTokenString();
                         json_value[key_str] = token_str;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                token_str );
                         break;
                     }
                     case ParameterKey::token_validity: {
                         uint32_t validity = getDrmWSClient().getTokenValidity();
                         json_value[key_str] = validity ;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                validity  );
                         break;
                     }
                     case ParameterKey::token_time_left: {
                         uint32_t time_left = getDrmWSClient().getTokenTimeLeft();
                         json_value[key_str] = time_left;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                time_left );
                         break;
                     }
                     case ParameterKey::mailbox_size: {
                         uint32_t mbSize = getUserMailboxSize();
                         json_value[key_str] = mbSize;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                mbSize );
                         break;
                     }
@@ -2813,107 +2692,107 @@ public:
                         std::vector<uint32_t> data_array = readMailbox( eMailboxOffset::MB_USER, mbSize );
                         for( const auto& val: data_array )
                             json_value[key_str].append( val );
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                json_value[key_str].toStyledString() );
                         break;
                     }
                     case ParameterKey::ws_retry_period_long: {
                         json_value[key_str] = mWSRetryPeriodLong;
-                        Debug( "Get value of parameter '", key_str,
-                                "' (ID=", key_id, "): ", mWSRetryPeriodLong );
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
+                                mWSRetryPeriodLong );
                         break;
                     }
                     case ParameterKey::ws_retry_period_short: {
                         json_value[key_str] = mWSRetryPeriodShort;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                mWSRetryPeriodShort );
                         break;
                     }
                     case ParameterKey::ws_api_retry_duration: {
                         json_value[key_str] = mWSApiRetryDuration ;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                mWSApiRetryDuration );
                         break;
                     }
                     case ParameterKey::ws_request_timeout: {
                         int32_t req_timeout_sec = (int32_t)(getDrmWSClient().getRequestTimeoutMS() / 1000);
                         json_value[key_str] = req_timeout_sec;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id, req_timeout_sec );
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id, req_timeout_sec );
                         break;
                     }
                     case ParameterKey::log_message_level: {
                         uint32_t msgLevel = static_cast<uint32_t>( mDebugMessageLevel );
                         json_value[key_str] = msgLevel;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                msgLevel );
                         break;
                     }
                     case ParameterKey::custom_field: {
                         uint32_t customField = readMailbox<uint32_t>( eMailboxOffset::MB_CUSTOM_FIELD );
                         json_value[key_str] = customField;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                customField );
                         break;
                     }
                     case ParameterKey ::list_all: {
                         Json::Value list = list_parameter_key();
                         json_value[key_str] = list;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                list.toStyledString() );
                         break;
                     }
                     case ParameterKey::dump_all: {
                         Json::Value list = dump_parameter_key();
                         json_value[key_str] = list;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                list.toStyledString() );
                         break;
                     }
                     case ParameterKey::hdk_compatibility: {
                         std::string hdk_limit = fmt::format( "{}.{}", HDK_COMPATIBILITY_LIMIT_MAJOR, HDK_COMPATIBILITY_LIMIT_MINOR );
                         json_value[key_str] = hdk_limit;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                hdk_limit );
                         break;
                     }
                     case ParameterKey::health_period: {
                         json_value[key_str] = mHealthPeriod;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id, mHealthPeriod );
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id, mHealthPeriod );
                         break;
                     }
                     case ParameterKey::health_retry: {
                         json_value[key_str] = mHealthRetryTimeout;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id, mHealthRetryTimeout );
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id, mHealthRetryTimeout );
                         break;
                     }
                     case ParameterKey::health_retry_sleep: {
                         json_value[key_str] = mHealthRetrySleep;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id, mHealthRetrySleep );
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id, mHealthRetrySleep );
                         break;
                     }
                     case ParameterKey::host_data_verbosity: {
                         uint32_t dataLevel = static_cast<uint32_t>( mHostDataVerbosity );
                         json_value[key_str] = dataLevel;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                dataLevel );
                         break;
                     }
                     case ParameterKey::host_data: {
-                        json_value[key_str] = mDiagnostic;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
-                               mDiagnostic.toStyledString() );
+                        json_value[key_str] = mDiagnostics;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
+                               mDiagnostics.toStyledString() );
                         break;
                     }
                     case ParameterKey::log_file_append: {
                         json_value[key_str] = sLogFileAppend;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                sLogFileAppend );
                         break;
                     }
                     case ParameterKey::ws_verbosity: {
                         uint32_t wsVerbosity = getDrmWSClient().getVerbosity();
                         json_value[key_str] = wsVerbosity;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                wsVerbosity );
                         break;
                     }
@@ -2926,7 +2805,7 @@ public:
                         trng_status_json["adaptive_proportion_test_error"] = adaptiveProportionTestError;
                         trng_status_json["repetition_count_test_error"] = repetitionCountTestError;
                         json_value[key_str] = trng_status_json;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                trng_status_json.toStyledString() );
                         break;
                     }
@@ -2935,45 +2814,45 @@ public:
                         checkDRMCtlrRet( getDrmController().readNumberOfLicenseTimerLoadedStatusRegister(
                                     numberOfLicenseProvisioned ) );
                         json_value[key_str] = numberOfLicenseProvisioned;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                numberOfLicenseProvisioned );
                         break;
                     }
                     case ParameterKey::ws_connection_timeout: {
                         int32_t con_timeout_sec = (int32_t)(getDrmWSClient().getConnectionTimeoutMS() / 1000);
                         json_value[key_str] = con_timeout_sec;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id, con_timeout_sec );
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id, con_timeout_sec );
                         break;
                     }
                     case ParameterKey::log_ctrl_verbosity: {
                         uint32_t logVerbosity = static_cast<uint32_t>( sLogCtrlVerbosity );
                         json_value[key_str] = logVerbosity;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                 logVerbosity );
                         break;
                     }
                     case ParameterKey::is_drm_software: {
                         json_value[key_str] = mIsHybrid;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                 mIsHybrid );
                         break;
                     }
                     case ParameterKey::controller_version: {
                         json_value[key_str] = mDrmVersionStr;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                 mDrmVersionStr );
                         break;
                     }
                     case ParameterKey::controller_rom: {
                         json_value[key_str] = mMailboxRoData;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                 mMailboxRoData.toStyledString() );
                         break;
                     }
                     case ParameterKey::ParameterKeyCount: {
                         uint32_t count = static_cast<uint32_t>( ParameterKeyCount );
                         json_value[key_str] = count;
-                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, key_id,
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                count );
                         break;
                     }
@@ -3011,7 +2890,7 @@ public:
                         sLogger->sinks()[0]->set_level( sLogConsoleVerbosity );
                         if ( sLogConsoleVerbosity < sLogger->level() )
                             sLogger->set_level( sLogConsoleVerbosity );
-                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
+                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, (uint32_t)key_id,
                                 verbosityInt );
                         break;
                     }
@@ -3019,7 +2898,7 @@ public:
                         std::string logFormat = (*it).asString();
                         sLogger->sinks()[0]->set_pattern( logFormat );
                         sLogConsoleFormat = logFormat;
-                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
+                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, (uint32_t)key_id,
                                 sLogConsoleFormat );
                         break;
                     }
@@ -3029,7 +2908,7 @@ public:
                         sLogger->sinks()[1]->set_level( sLogFileVerbosity );
                         if ( sLogFileVerbosity < sLogger->level() )
                             sLogger->set_level( sLogFileVerbosity );
-                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
+                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, (uint32_t)key_id,
                                verbosityInt);
                         break;
                     }
@@ -3038,26 +2917,26 @@ public:
                         if ( sLogger->sinks().size() > 1 ) {
                             sLogger->sinks()[1]->set_pattern( sLogFileFormat );
                         }
-                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
+                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, (uint32_t)key_id,
                                sLogFileFormat );
                         break;
                     }
                     case ParameterKey::frequency_detection_threshold: {
                         mFrequencyDetectionThreshold = (*it).asDouble();
-                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
+                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, (uint32_t)key_id,
                                mFrequencyDetectionThreshold );
                         break;
                     }
                     case ParameterKey::frequency_detection_period: {
                         mFrequencyDetectionPeriod = (*it).asUInt();
-                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
+                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, (uint32_t)key_id,
                                mFrequencyDetectionPeriod );
                         break;
                     }
                     case ParameterKey::custom_field: {
                         uint32_t customField = (*it).asUInt();
                         writeMailbox<uint32_t>( eMailboxOffset::MB_CUSTOM_FIELD, customField );
-                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
+                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, (uint32_t)key_id,
                                customField );
                         break;
                     }
@@ -3068,7 +2947,7 @@ public:
                         for( Json::ValueConstIterator itr = (*it).begin(); itr != (*it).end(); itr++ )
                             data_array.push_back( (*itr).asUInt() );
                         writeMailbox( eMailboxOffset::MB_USER, data_array );
-                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
+                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, (uint32_t)key_id,
                                (*it).toStyledString());
                         break;
                     }
@@ -3079,7 +2958,7 @@ public:
                                     "ws_retry_period_long ({}) must be greater than ws_retry_period_short ({}). ",
                                     retry_period, mWSRetryPeriodShort );
                         mWSRetryPeriodLong = retry_period;
-                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
+                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, (uint32_t)key_id,
                                mWSRetryPeriodLong );
                         break;
                     }
@@ -3090,13 +2969,13 @@ public:
                                     "ws_retry_period_long ({}) must be greater than ws_retry_period_short ({}). ",
                                     mWSRetryPeriodLong, retry_period );
                         mWSRetryPeriodShort = retry_period;
-                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
+                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, (uint32_t)key_id,
                                mWSRetryPeriodShort );
                         break;
                     }
                     case ParameterKey::ws_api_retry_duration: {
                         mWSApiRetryDuration = (*it).asUInt();
-                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
+                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, (uint32_t)key_id,
                                mWSApiRetryDuration );
                         break;
                     }
@@ -3105,7 +2984,7 @@ public:
                         Exception e( DRM_Debug, custom_msg );
                         f_asynch_error( e.what() );
                         sLogger->flush();
-                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
+                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, (uint32_t)key_id,
                                custom_msg );
                         break;
                     }
@@ -3116,7 +2995,7 @@ public:
                             Throw( DRM_BadArg, "log_message_level ({}) is out of range [{:d}:{:d}] ",
                                     message_level, (int32_t)spdlog::level::trace, (int32_t)spdlog::level::off );
                         mDebugMessageLevel = static_cast<spdlog::level::level_enum>( message_level );
-                        Debug( "Set parameter '{}' (ID={}) to value {}", key_str, key_id,
+                        Debug( "Set parameter '{}' (ID={}) to value {}", key_str, (uint32_t)key_id,
                                 message_level );
                         break;
                     }
@@ -3129,7 +3008,7 @@ public:
                         int32_t verbosityInt = (*it).asInt();
                         eCtrlLogVerbosity level_e = static_cast<eCtrlLogVerbosity>( verbosityInt );
                         updateCtrlLogLevel( level_e );
-                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, key_id,
+                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, (uint32_t)key_id,
                                verbosityInt);
                         break;
                     }

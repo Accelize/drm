@@ -23,32 +23,30 @@ namespace Accelize {
 namespace DRM {
 
 
-Json::Value GetCspInfo( uint32_t verbosity ) {
-    Json::Value csp_info = Json::nullValue;
+void GetCspInfo( Json::Value& json_info, uint32_t verbosity ) {
     std::unique_ptr<Csp> csp_obj( new Csp(verbosity, 2000, 2000) );
     // Try EC2 metadata service
-    csp_obj->get_metadata_ec2( csp_info );
+    csp_obj->get_metadata_ec2( json_info );
     // Try OpenStack metadata service
-    csp_obj->get_metadata_openstack( csp_info );
+    csp_obj->get_metadata_openstack( json_info );
     // Determine CSP name
-    if ( csp_obj->get_metadata_aws( csp_info ) ) {
-        return csp_info;
+    if ( csp_obj->get_metadata_aws( json_info ) ) {
+        return;
     }
-    if ( csp_obj->get_metadata_azure( csp_info ) ) {
-        return csp_info;
+    if ( csp_obj->get_metadata_azure( json_info ) ) {
+        return;
     }
-    if ( csp_obj->get_metadata_vmaccel( csp_info ) ) {
-        return csp_info;
+    if ( csp_obj->get_metadata_vmaccel( json_info ) ) {
+        return;
     }
-    if ( csp_obj->get_metadata_alibaba( csp_info ) ) {
-        return csp_info;
+    if ( csp_obj->get_metadata_alibaba( json_info ) ) {
+        return;
     }
-    if ( csp_obj->get_metadata_azure( csp_info ) ) {
-        return csp_info;
+    if ( csp_obj->get_metadata_azure( json_info ) ) {
+        return;
     }
     //  Not a supported CSP or this is On-Prem system
     Debug( "Could not determined CSP" );
-    return csp_info;
 }
 
 
@@ -69,12 +67,11 @@ void Csp::get_metadata_ec2( Json::Value &csp_info ) const {
     std::string result_str;
     Json::Value result_json;
     try {
-        result_str = req.perform_get<std::string>( base_url, mRequestTimeoutMS );
-        Debug( "List of available EC2 instance metadata:\n{}", result_str );
+        result_str = req.request( base_url, tHttpRequestType::GET, mRequestTimeoutMS );
+        Debug2( "List of available EC2 instance metadata:\n{}", result_str );
         csp_info["instance_provider"] = "Unknown EC2";
-        csp_info["instance_image"] = req.perform_get<std::string>( fmt::format( "{}/ami-id", base_url ), mRequestTimeoutMS );
-        csp_info["instance_type"] = req.perform_get<std::string>( fmt::format( "{}/instance-type", base_url ), mRequestTimeoutMS );
-        csp_info["extra"]["hostname"] = req.perform_get<std::string>( fmt::format( "{}/hostname", base_url ), mRequestTimeoutMS );
+        csp_info["instance_image"] = req.request( fmt::format( "{}/ami-id", base_url ), tHttpRequestType::GET, mRequestTimeoutMS );
+        csp_info["instance_type"] = req.request( fmt::format( "{}/instance-type", base_url ), tHttpRequestType::GET, mRequestTimeoutMS );
     } catch(std::runtime_error const&) {
         Debug( "Could not access instance metadata using EC2 url" );
     }
@@ -87,12 +84,11 @@ void Csp::get_metadata_openstack( Json::Value &csp_info ) const {
     std::string result_str;
     Json::Value result_json;
     try {
-        result_str = req.perform_get<std::string>( base_url, mRequestTimeoutMS );
+        result_str = req.request( base_url, tHttpRequestType::GET, mRequestTimeoutMS );
+        Debug2( "OpenStack metadata results: {}", result_str );
         result_json = parseJsonString( result_str );
-        Debug( "List of available openstack instance metadata:\n{}", result_json.toStyledString() );
+        Debug2( "List of available openstack instance metadata:\n{}", result_json.toStyledString() );
         csp_info["instance_provider"] = "Unknown OpenStack";
-        //csp_info["openstack"] = Json::nullValue;
-        csp_info["extra"]["hostname"] = result_json["hostname"];
         csp_info["extra"]["availability_zone"] = result_json["availability_zone"];
         csp_info["extra"]["devices"] = result_json["devices"];
         csp_info["extra"]["dedicated_cpus"] = result_json["dedicated_cpus"];
@@ -101,22 +97,21 @@ void Csp::get_metadata_openstack( Json::Value &csp_info ) const {
     }
 }
 
-
 // Check and collect AWS instance metadata
 bool Csp::get_metadata_aws(Json::Value &csp_info) const {
     CurlEasyPost req( mConnectionTimeoutMS );
     req.setVerbosity( mVerbosity );
     Json::Value result_json = Json::nullValue;
     try {
-        std::string result_str = req.perform_get<std::string>( "http://169.254.169.254/latest/meta-data/services/domain", mRequestTimeoutMS );
+        std::string result_str = req.request( "http://169.254.169.254/latest/meta-data/services/domain", tHttpRequestType::GET, mRequestTimeoutMS );
+        Debug( "AWS metadata results: {}", result_str );
         if ( result_str.find( "aws" ) != std::string::npos) {
             csp_info["instance_provider"] = "AWS";
-            csp_info["instance_region"] = result_json["region"];
             // Add AWS specific fields
-            result_str = req.perform_get<std::string>( "http://169.254.169.254/latest/dynamic/instance-identity/document", mRequestTimeoutMS );
+            result_str = req.request( "http://169.254.169.254/latest/dynamic/instance-identity/document", tHttpRequestType::GET, mRequestTimeoutMS );
+            Debug( "AWS dynamic results: {}", result_str );
             result_json = parseJsonString( result_str );
-            csp_info["extra"]["architecture"] = result_json["architecture"];
-            csp_info["extra"]["version"] = result_json["version"];
+            csp_info["instance_region"] = result_json["region"];
             Debug( "Instance is running on AWS" );
             return true;
         }
@@ -148,13 +143,14 @@ bool Csp::get_metadata_alibaba(Json::Value &csp_info) const {
     std::string base_url = std::string("http://100.100.100.200/latest/meta-data");
     try {
         csp_info["instance_provider"] = "Alibaba";
-        csp_info["instance_type"] = req.perform_get<std::string>( fmt::format( "{}/instance/instance-type", base_url ), mRequestTimeoutMS );
-        csp_info["instance_image"] = req.perform_get<std::string>( fmt::format( "{}/image-id", base_url ), mRequestTimeoutMS );
-        csp_info["instance_region"] = req.perform_get<std::string>( fmt::format( "{}/region-id", base_url ), mRequestTimeoutMS );
-        csp_info["extra"]["hostname"] = req.perform_get<std::string>( fmt::format( "{}/hostname", base_url ), mRequestTimeoutMS );
-        csp_info["extra"]["product-code"] = req.perform_get<std::string>( fmt::format( "{}/image/market-place/product-code", base_url ), mRequestTimeoutMS );
-        csp_info["extra"]["charge-type"] = req.perform_get<std::string>( fmt::format( "{}/image/market-place/charge-type", base_url ), mRequestTimeoutMS );
-        csp_info["extra"]["zone-id"] = req.perform_get<std::string>( fmt::format( "{}/zone-id", base_url ), mRequestTimeoutMS );
+        csp_info["instance_type"] = req.request( fmt::format( "{}/instance/instance-type", base_url ), tHttpRequestType::GET, mRequestTimeoutMS );
+        csp_info["instance_image"] = req.request( fmt::format( "{}/image-id", base_url ), tHttpRequestType::GET, mRequestTimeoutMS );
+        csp_info["instance_region"] = req.request( fmt::format( "{}/region-id", base_url ), tHttpRequestType::GET, mRequestTimeoutMS );
+        csp_info["extra"]["hostname"] = req.request( fmt::format( "{}/hostname", base_url ), tHttpRequestType::GET, mRequestTimeoutMS );
+        csp_info["extra"]["product-code"] = req.request( fmt::format( "{}/image/market-place/product-code", base_url ), tHttpRequestType::GET, mRequestTimeoutMS );
+        csp_info["extra"]["charge-type"] = req.request( fmt::format( "{}/image/market-place/charge-type", base_url ), tHttpRequestType::GET, mRequestTimeoutMS );
+        csp_info["extra"]["zone-id"] = req.request( fmt::format( "{}/zone-id", base_url ), tHttpRequestType::GET, mRequestTimeoutMS );
+
         Debug( "Instance is running on Alibaba" );
         return true;
     } catch(std::runtime_error const&) {}
@@ -169,7 +165,8 @@ bool Csp::get_metadata_azure(Json::Value &csp_info) const {
     req.appendHeader( "Metadata:true" );
     Json::Value result_json = Json::nullValue;
     try {
-        std::string result_str = req.perform_get<std::string>( "http://169.254.169.254/metadata/instance?api-version=2021-02-01", mRequestTimeoutMS );
+        std::string result_str = req.request( "http://169.254.169.254/metadata/instance?api-version=2021-02-01", tHttpRequestType::GET, mRequestTimeoutMS );
+        Debug( "Azure metadata results: {}", result_str );
         if ( result_str.find( "AzurePublicCloud" ) != std::string::npos ) {
             csp_info["instance_provider"] = "Azure";
             result_json = parseJsonString( result_str );

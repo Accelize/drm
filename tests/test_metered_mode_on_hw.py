@@ -102,86 +102,12 @@ def test_metered_start_stop_long_time(accelize_drm, conf_json, cred_json, async_
     logfile.remove()
 
 
-@pytest.mark.hwtst
-def test_metered_pause_resume(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
-    """
-    Test no error occurs in normal start/stop metering mode
-    """
-    driver = accelize_drm.pytest_fpga_driver[0]
-    async_cb = async_handler.create()
-    async_cb.reset()
-    activators = accelize_drm.pytest_fpga_activators[0]
-    activators.reset_coin()
-    activators.autotest()
-    cred_json.set_user('accelize_accelerator_test_02')
-    logfile = log_file_factory.create(2)
-    conf_json['settings'].update(logfile.json)
-    conf_json.save()
-
-    with accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            ) as drm_manager:
-        nb_pause_resume = 2
-        assert not drm_manager.get('session_status')
-        assert not drm_manager.get('license_status')
-        activators.autotest(is_activated=False)
-        async_cb.assert_NoError()
-        drm_manager.activate()
-        start = datetime.now()
-        assert sum(drm_manager.get('metered_data')) == 0
-        assert drm_manager.get('session_status')
-        assert drm_manager.get('license_status')
-        session_id = drm_manager.get('session_id')
-        assert len(session_id) > 0
-        lic_duration = drm_manager.get('license_duration')
-        wait_numbers = [lic_duration*2-5,lic_duration*2+1]
-        activators.autotest(is_activated=True)
-        for i in range(nb_pause_resume):
-            activators.generate_coin()
-            activators.check_coin(drm_manager.get('metered_data'))
-            wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, 10)
-            drm_manager.deactivate(True)
-            async_cb.assert_NoError()
-            assert drm_manager.get('session_status')
-            assert drm_manager.get('license_status')
-            assert drm_manager.get('session_id') == session_id
-            # Wait randomly at the limit of the expiration
-            random_wait = choice(wait_numbers)
-            wait_deadline(start, random_wait)
-            drm_manager.activate(True)
-            if random_wait > lic_duration*2:
-                start = datetime.now()
-                assert drm_manager.get('session_id') != session_id
-                activators.reset_coin()
-                session_id = drm_manager.get('session_id')
-            else:
-                assert drm_manager.get('session_id') == session_id, 'after loop #%d' % i
-                wait_deadline(start, 2*lic_duration+1)
-                start += timedelta(seconds=2*lic_duration)
-        assert drm_manager.get('session_status')
-        assert drm_manager.get('session_id') == session_id
-        assert drm_manager.get('license_status')
-        activators.autotest(is_activated=True)
-        drm_manager.deactivate()
-        assert not drm_manager.get('session_status')
-        assert not drm_manager.get('license_status')
-        activators.autotest(is_activated=False)
-        assert drm_manager.get('session_id') != session_id
-        async_cb.assert_NoError()
-    logfile.remove()
-
-
 @pytest.mark.minimum
 @pytest.mark.hwtst
-def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, conf_json_second,
+def test_metered_from_new_objects(accelize_drm, conf_json, conf_json_second,
                     cred_json, async_handler, log_file_factory):
     """
-    Test no error occurs in normal pause/resume metering mode when the resume
-    is executed from a new object and before the license expires
+    Test no error occurs in normal metering mode when 2 objects are created
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -217,13 +143,12 @@ def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, conf_json
         activators.generate_coin()
         activators.check_coin(drm_manager1.get('metered_data'))
         assert sum(drm_manager1.get('metered_data')) != 0
-        # Wait enough time to be sure the 2nd license has been provisioned
-        wait_deadline(start, lic_duration/2)
-        drm_manager1.deactivate(True)
-        assert drm_manager1.get('session_status')
-        assert drm_manager1.get('license_status')
-        assert drm_manager1.get('session_id') == session_id
-        activators.autotest(is_activated=True)
+        wait_func_true(lambda: drm_manager1.get('num_license_loaded') == 2, lic_duration)
+        drm_manager1.deactivate()
+        assert not drm_manager1.get('session_status')
+        assert not drm_manager1.get('license_status')
+        assert drm_manager1.get('session_id') != session_id
+        activators.autotest(is_activated=False)
         async_cb.assert_NoError()
         sleep(1)
 
@@ -240,12 +165,12 @@ def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, conf_json
                     async_cb.callback
                 )
         assert drm_manager1 != drm_manager2
-        assert drm_manager2.get('session_status')
-        assert drm_manager2.get('license_status')
-        activators.autotest(is_activated=True)
+        assert not drm_manager2.get('session_status')
+        assert not drm_manager2.get('license_status')
+        activators.autotest(is_activated=False)
         assert drm_manager2.get('session_id') == ''
         # Resume session
-        drm_manager2.activate(True)
+        drm_manager2.activate()
         assert drm_manager2.get('session_status')
         assert drm_manager2.get('license_status')
         activators.autotest(is_activated=True)
@@ -264,102 +189,6 @@ def test_metered_pause_resume_from_new_object(accelize_drm, conf_json, conf_json
         logfile2.remove()
     logfile1.remove()
     async_cb.assert_NoError()
-
-
-@pytest.mark.minimum
-@pytest.mark.hwtst
-def test_async_on_pause(accelize_drm, conf_json, cred_json, async_handler, log_file_factory, request):
-    """
-    Test an async health commande is executed on pause.
-    """
-    driver = accelize_drm.pytest_fpga_driver[0]
-    async_cb = async_handler.create()
-    async_cb.reset()
-    activators = accelize_drm.pytest_fpga_activators[0]
-    cred_json.set_user('accelize_accelerator_test_02')
-    conf_json.reset()
-    logfile = log_file_factory.create(0)
-    conf_json['settings'].update(logfile.json)
-    conf_json.save()
-
-    with accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            ) as drm_manager:
-        assert not drm_manager.get('session_status')
-        assert not drm_manager.get('license_status')
-        activators.autotest(is_activated=False)
-        drm_manager.activate()
-        start = datetime.now()
-        if drm_manager.get('health_period') == 0:
-            logfile.remove()
-            pytest.skip('Health is not active: skip async test')
-        lic_duration = drm_manager.get('license_duration')
-        assert drm_manager.get('session_status')
-        assert drm_manager.get('license_status')
-        session_id = drm_manager.get('session_id')
-        assert len(session_id) > 0
-        activators.autotest(is_activated=True)
-        drm_manager.deactivate(True) # Pause session
-        assert drm_manager.get('session_status')
-        assert drm_manager.get('license_status')
-        assert drm_manager.get('session_id') == session_id
-        activators.autotest(is_activated=True)
-        drm_manager.deactivate()
-    log_content = logfile.read()
-    assert len(list(findall(r'"request"\s*:\s*"health"', log_content))) == 1
-    async_cb.assert_NoError()
-    logfile.remove()
-
-
-@pytest.mark.minimum
-@pytest.mark.hwtst
-def test_stop_after_pause(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
-    """
-    Test an async health commande is executed on pause.
-    """
-    driver = accelize_drm.pytest_fpga_driver[0]
-    async_cb = async_handler.create()
-    async_cb.reset()
-    activators = accelize_drm.pytest_fpga_activators[0]
-    cred_json.set_user('accelize_accelerator_test_02')
-    conf_json.reset()
-    logfile = log_file_factory.create(2)
-    conf_json['settings'].update(logfile.json)
-    conf_json.save()
-    with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        ) as drm_manager:
-        assert not drm_manager.get('session_status')
-        assert not drm_manager.get('license_status')
-        activators.autotest(is_activated=False)
-        drm_manager.activate()
-        start = datetime.now()
-        lic_duration = drm_manager.get('license_duration')
-        assert drm_manager.get('session_status')
-        assert drm_manager.get('license_status')
-        session_id = drm_manager.get('session_id')
-        assert len(session_id) > 0
-        activators.autotest(is_activated=True)
-        drm_manager.deactivate(True) # Pause session
-        assert drm_manager.get('session_status')
-        assert drm_manager.get('license_status')
-        assert drm_manager.get('session_id') == session_id
-        activators.autotest(is_activated=True)
-        drm_manager.deactivate()
-        assert not drm_manager.get('session_status')
-        assert not drm_manager.get('license_status')
-        assert drm_manager.get('session_id') != session_id
-        assert drm_manager.get('session_id') == ''
-        activators.autotest(is_activated=False)
-    logfile.remove()
 
 
 @pytest.mark.minimum
@@ -553,60 +382,6 @@ def test_floating_limits(accelize_drm, conf_json, conf_json_second, cred_json, a
         async_cb0.assert_Error(accelize_drm.exceptions.DRMWSTimedOut.error_code, 'Timeout on License request after')
         async_cb0.reset()
     async_cb1.assert_NoError()
-
-
-def test_async_call_during_pause(accelize_drm, conf_json, cred_json, async_handler, log_file_factory, request):
-    driver = accelize_drm.pytest_fpga_driver[0]
-    async_cb = async_handler.create()
-    async_cb.reset()
-    activators = accelize_drm.pytest_fpga_activators[0]
-    activators.reset_coin()
-    activators.autotest()
-    cred_json.set_user('accelize_accelerator_test_02')
-    conf_json.reset()
-    logfile = log_file_factory.create(2)
-    conf_json['settings'].update(logfile.json)
-    conf_json.save()
-
-    with accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            ) as drm_manager:
-        activators.reset_coin()
-        assert not drm_manager.get('session_status')
-        assert not drm_manager.get('license_status')
-        activators.autotest(is_activated=False)
-        activators.generate_coin()
-        drm_manager.activate()
-        assert sum(drm_manager.get('metered_data')) == 0
-        activators.generate_coin()
-        activators.check_coin(drm_manager.get('metered_data'))
-        drm_manager.deactivate(True)
-        sleep(1)
-        activators.check_coin(drm_manager.get('metered_data'))
-        assert drm_manager.get('session_status')
-        assert drm_manager.get('license_status')
-        session_id = drm_manager.get('session_id')
-        assert len(session_id) > 0
-        lic_duration = drm_manager.get('license_duration')
-        activators.autotest(is_activated=True)
-        sleep(lic_duration * 2 + 1)
-        activators.autotest(is_activated=False)
-        assert not drm_manager.get('license_status')
-        assert drm_manager.get('session_status')
-        assert session_id == drm_manager.get('session_id')
-        activators.check_coin(drm_manager.get('metered_data'))
-        activators.generate_coin()
-        activators.check_coin(drm_manager.get('metered_data'))
-        drm_manager.deactivate()
-        assert sum(drm_manager.get('metered_data')) == 0
-    log_content = logfile.read()
-    assert findall(r'warning\b.*\bCannot access metering data when no session is running', log_content)
-    async_cb.assert_NoError()
-    logfile.remove()
 
 
 @pytest.mark.skip
