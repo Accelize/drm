@@ -136,14 +136,14 @@ def test_metered_from_new_objects(accelize_drm, conf_json, conf_json_second,
         assert drm_manager1.get('session_status')
         assert drm_manager1.get('license_status')
         session_id = drm_manager1.get('session_id')
+        license_duration = drm_manager1.get('license_duration')
         assert len(session_id) > 0
         activators.autotest(is_activated=True)
-        lic_duration = drm_manager1.get('license_duration')
         assert sum(drm_manager1.get('metered_data')) == 0
         activators.generate_coin()
         activators.check_coin(drm_manager1.get('metered_data'))
         assert sum(drm_manager1.get('metered_data')) != 0
-        wait_func_true(lambda: drm_manager1.get('num_license_loaded') == 2, lic_duration)
+        wait_func_true(lambda: drm_manager1.get('num_license_loaded') == 2, license_duration)
         drm_manager1.deactivate()
         assert not drm_manager1.get('session_status')
         assert not drm_manager1.get('license_status')
@@ -153,6 +153,7 @@ def test_metered_from_new_objects(accelize_drm, conf_json, conf_json_second,
         sleep(1)
 
         # Create new object
+        activators.reset_coin()
         logfile2 = log_file_factory.create(2)
         conf_json_second['settings'].update(logfile2.json)
         conf_json_second.save()
@@ -169,7 +170,7 @@ def test_metered_from_new_objects(accelize_drm, conf_json, conf_json_second,
         assert not drm_manager2.get('license_status')
         activators.autotest(is_activated=False)
         assert drm_manager2.get('session_id') == ''
-        # Resume session
+        # Start session
         drm_manager2.activate()
         assert drm_manager2.get('session_status')
         assert drm_manager2.get('license_status')
@@ -177,7 +178,7 @@ def test_metered_from_new_objects(accelize_drm, conf_json, conf_json_second,
         activators.check_coin(drm_manager2.get('metered_data'))
         # Wait for license renewal
         sleep(lic_duration+2)
-        assert drm_manager2.get('session_id') == session_id
+        assert drm_manager2.get('session_id') != session_id
         assert drm_manager2.get('license_duration') == lic_duration
         activators.generate_coin()
         activators.check_coin(drm_manager2.get('metered_data'))
@@ -438,3 +439,71 @@ def test_heart_beat(accelize_drm, conf_json, cred_json, async_handler, log_file_
         async_cb.assert_Error(accelize_drm.exceptions.DRMCtlrError.error_code, 'Status Bit: 0b0')
         async_cb.reset()
     logfile.remove()
+
+
+@pytest.mark.minimum
+@pytest.mark.hwtst
+def test_session_autoclose(accelize_drm, conf_json, conf_json_second,
+                    cred_json, async_handler, log_file_factory):
+    """
+    Test any pending session is close before staritng a new one
+    """
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    async_cb.reset()
+    activators = accelize_drm.pytest_fpga_activators[0]
+    activators.reset_coin()
+    activators.autotest()
+    cred_json.set_user('accelize_accelerator_test_02')
+    logfile1 = log_file_factory.create(2)
+    conf_json['settings'].update(logfile1.json)
+    conf_json.save()
+
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager1:
+        assert not drm_manager1.get('session_status')
+        assert not drm_manager1.get('license_status')
+        activators.autotest(is_activated=False)
+        drm_manager1.activate()
+        start = datetime.now()
+        assert sum(drm_manager1.get('metered_data')) == 0
+        assert drm_manager1.get('session_status')
+        assert drm_manager1.get('license_status')
+        session_id = drm_manager1.get('session_id')
+        license_duration = drm_manager1.get('license_duration')
+        assert len(session_id) > 0
+        activators.autotest(is_activated=True)
+        assert sum(drm_manager1.get('metered_data')) == 0
+        activators.generate_coin()
+        activators.check_coin(drm_manager1.get('metered_data'))
+        assert sum(drm_manager1.get('metered_data')) != 0
+        wait_func_true(lambda: drm_manager1.get('num_license_loaded') == 2, license_duration)
+        async_cb.assert_NoError()
+        sleep(1)
+
+        # Create new object
+        logfile2 = log_file_factory.create(2)
+        conf_json_second['settings'].update(logfile2.json)
+        conf_json_second.save()
+        with accelize_drm.DrmManager(
+                    conf_json_second.path,
+                    cred_json.path,
+                    driver.read_register_callback,
+                    driver.write_register_callback,
+                    async_cb.callback
+                ) as drm_manager2:
+            assert drm_manager2.get('session_status')
+            assert drm_manager2.get('license_status')
+            activators.autotest(is_activated=True)
+            drm_manager2.activate()
+            assert drm_manager2.get('session_id') != session_id
+            activators.autotest(is_activated=True)
+        activators.autotest(is_activated=False)
+        logfile2.remove()
+    logfile1.remove()
+    async_cb.assert_NoError()
