@@ -43,7 +43,7 @@ def test_env_var_ONEPORTAL_URL(accelize_drm, conf_json, cred_json, async_handler
         ) as drm_manager:
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
-        assert "OAuth2 Web Service error 404" in str(excinfo.value)
+        assert "License Web Service error 404 on HTTP request" in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'OAuth2 Web Service error 404')
     async_cb.reset()

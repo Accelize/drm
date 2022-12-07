@@ -147,7 +147,7 @@ std::string CurlEasyPost::request( const std::string& url, const tHttpRequestTyp
     DRM_ErrorCode drm_error = httpCode2DrmCode(resp_code);
     if ( drm_error != DRM_OK ) {
         // An error occurred
-        ThrowSetLog( SPDLOG_LEVEL_DEBUG, drm_error, "License Web Service error {} on HTTP request '{}': {}",
+        ThrowSetLog( SPDLOG_LEVEL_DEBUG, drm_error, "Accelize Web Service error {} on HTTP request '{}': {}",
                     resp_code, resp_header, resp_body );
     }
     return resp_body;
@@ -317,7 +317,7 @@ void DrmWSClient::getOAuth2token( int32_t timeout_msec ) {
          response_json = parseJsonString( response_str );
          Debug( "Received JSON response: {}", response_json.toStyledString() );
     } catch ( const Exception& e ) {
-        Throw( DRM_WSRespError, "Failed to parse response from Metering Web Service because {}: {}. ",
+        Throw( DRM_WSRespError, "Failed to parse response from Authentication Web Service because {}: {}. ",
                e.what(), response_str);
     }
     mOAuth2Token = JVgetRequired( response_json, "access_token", Json::stringValue ).asString();
@@ -357,7 +357,7 @@ Json::Value DrmWSClient::sendSaasRequest( const std::string &suburl, const tHttp
              Debug( "Received JSON response: {}", json_resp.toStyledString() );
              return json_resp;
         } catch ( const Exception& e ) {
-            Throw( DRM_WSRespError, "Failed to parse response from Metering Web Service because {}: {}. ",
+            Throw( DRM_WSRespError, "Failed to parse response from Accelize Web Service because {}: {}. ",
                    e.what(), response);
         }
     }

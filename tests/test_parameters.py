@@ -540,7 +540,6 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     # Test parameter: derived_product
     async_cb.reset()
     conf_json.reset()
-    deriv_prod = ''
     with accelize_drm.DrmManager(
             conf_json.path, cred_json.path,
             driver.read_register_callback,
@@ -548,17 +547,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
             async_cb.callback
         ) as drm_manager:
         deriv_prod += drm_manager.get('derived_product')
-    deriv_prod += '_subproduct'
-    conf_json['derived_product'] = deriv_prod
-    conf_json.save()
-    with accelize_drm.DrmManager(
-            conf_json.path, cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        ) as drm_manager:
-        assert drm_manager.get('derived_product') == deriv_prod
-    async_cb.assert_NoError()
+    async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, "Parameter 'derived_product' cannot be read")
     print("Test parameter 'derived_product': PASS")
 
     # Test parameter: ws_connection_timeout
