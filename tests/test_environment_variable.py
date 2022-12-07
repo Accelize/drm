@@ -33,19 +33,20 @@ def test_env_var_ONEPORTAL_URL(accelize_drm, conf_json, cred_json, async_handler
     # Check when ONEPORTAL_URL is unset
     del environ['ONEPORTAL_URL']
     assert 'ONEPORTAL_URL' not in  environ.keys()
+    cred_json.flush_cache()
 
-    with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        ) as drm_manager:
-        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
-            drm_manager.activate()
-        assert "License Web Service error 404 on HTTP request" in str(excinfo.value)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
-    async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'OAuth2 Web Service error 404')
+    with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+        with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+            pass
+    assert "Accelize Web Service error 404 on HTTP request" in str(excinfo.value)
+    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Accelize Web Service error 404')
     async_cb.reset()
 
 
@@ -58,9 +59,10 @@ def test_env_var_ONEPORTAL_CLIENT_ID(accelize_drm, conf_json, cred_json, async_h
 
     # Check when ONEPORTAL_CLIENT_ID is set
     environ['ONEPORTAL_CLIENT_ID'] = cred_json['client_id']
-    cred_json['client_id'] = 'acme_is_a_great_company'
+    cred_json['client_id'] = 'acme_is_a_great_company' #'A2B3C4D5E6F7G2H3I4J5K6L7M2'
     cred_json.save()
     assert cred_json['client_id'] != environ['ONEPORTAL_CLIENT_ID']
+    cred_json.flush_cache()
 
     with accelize_drm.DrmManager(
             conf_json.path,
@@ -76,6 +78,37 @@ def test_env_var_ONEPORTAL_CLIENT_ID(accelize_drm, conf_json, cred_json, async_h
     # Check when ONEPORTAL_CLIENT_ID is unset
     del environ['ONEPORTAL_CLIENT_ID']
     assert 'ONEPORTAL_CLIENT_ID' not in  environ.keys()
+    cred_json.flush_cache()
+
+    with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+        with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+            pass
+    assert "Accelize Web Service error 401" in str(excinfo.value)
+    assert "invalid_client" in str(excinfo.value)
+    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Accelize Web Service error 401')
+    async_cb.reset()
+
+
+def test_env_var_ONEPORTAL_CLIENT_SECRET(accelize_drm, conf_json, cred_json, async_handler):
+    """
+    Test ONEPORTAL_CLIENT_SECRET environment variable overwrite value in cred file
+    """
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+
+    # Check when ONEPORTAL_CLIENT_SECRET is set
+    environ['ONEPORTAL_CLIENT_SECRET'] = cred_json['client_secret']
+    cred_json['client_secret'] = 'acme_is_a_great_company'
+    cred_json.save()
+    assert cred_json['client_secret'] != environ['ONEPORTAL_CLIENT_SECRET']
+    cred_json.flush_cache()
 
     with accelize_drm.DrmManager(
             conf_json.path,
@@ -84,11 +117,26 @@ def test_env_var_ONEPORTAL_CLIENT_ID(accelize_drm, conf_json, cred_json, async_h
             driver.write_register_callback,
             async_cb.callback
         ) as drm_manager:
-        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
-            drm_manager.activate()
-        assert "OAuth2 Web Service error 401" in str(excinfo.value)
-        assert "invalid_client" in str(excinfo.value)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
-    async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'OAuth2 Web Service error 401')
-    async_cb.reset()
+        drm_manager.activate()
+        drm_manager.deactivate()
+    async_cb.assert_NoError()
 
+    # Check when ONEPORTAL_CLIENT_SECRET is unset
+    del environ['ONEPORTAL_CLIENT_SECRET']
+    assert 'ONEPORTAL_CLIENT_SECRET' not in  environ.keys()
+    cred_json.flush_cache()
+
+    with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+        with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+            pass
+    assert "Accelize Web Service error 401" in str(excinfo.value)
+    assert "invalid_client" in str(excinfo.value)
+    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Accelize Web Service error 401')
+    async_cb.reset()

@@ -25,6 +25,10 @@ limitations under the License.
 #include "utils.h"
 #include "ws_client.h"
 
+#define DRMLIB_ENVVAR_URL           "ONEPORTAL_URL"
+#define DRMLIB_ENVVAR_CLIENT_ID     "ONEPORTAL_CLIENT_ID"
+#define DRMLIB_ENVVAR_CLIENT_SECRET "ONEPORTAL_CLIENT_SECRET"
+
 using namespace fmt::literals;
 
 namespace Accelize {
@@ -96,7 +100,7 @@ void CurlEasyPost::setPostFields( const std::string postfields ) {
     curl_easy_setopt( mCurl, CURLOPT_COPYPOSTFIELDS, postfields.c_str() );
 }
 
-std::string CurlEasyPost::request( const std::string& url, const tHttpRequestType& httpType, const uint32_t& timeout_ms ) {
+std::string CurlEasyPost::request( const std::string& url, const tHttpRequestType& httpType, const int32_t& timeout_ms ) {
     std::string resp_body;
     std::string resp_header;
 
@@ -222,13 +226,13 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
         logFileHandler->set_level( logFileLevel );
 
     // Overwrite properties with Environment Variables if defined
-    const char* url_var = std::getenv( "ONEPORTAL_URL" );
+    const char* url_var = std::getenv( DRMLIB_ENVVAR_URL );
     if ( url_var != NULL )
         url = std::string( url_var );
-    const char* client_id_var = std::getenv( "ONEPORTAL_CLIENT_ID" );
+    const char* client_id_var = std::getenv( DRMLIB_ENVVAR_CLIENT_ID );
     if ( client_id_var != NULL )
         mClientId = std::string( client_id_var );
-    const char* secret_id_var = std::getenv( "ONEPORTAL_CLIENT_SECRET" );
+    const char* secret_id_var = std::getenv( DRMLIB_ENVVAR_CLIENT_SECRET );
     if ( secret_id_var != NULL )
         mClientSecret = std::string( secret_id_var );
 
@@ -308,7 +312,7 @@ void DrmWSClient::getOAuth2token( int32_t timeout_msec ) {
     if ( timeout_msec >= mRequestTimeoutMS )
         timeout_msec = mRequestTimeoutMS;
     std::string oauth_url = fmt::format( "{}/auth/token?{}", mUrl, qs.str() );
-    Debug( "Starting OAuthentication request to {}", oauth_url );
+    Debug( "Starting Authentication request to {}", oauth_url );
     std::string response_str = req.request( oauth_url, tHttpRequestType::GET, timeout_msec );
 
     // Parse response string
@@ -336,7 +340,6 @@ Json::Value DrmWSClient::sendSaasRequest( const std::string &suburl, const tHttp
     CurlEasyPost req( mConnectionTimeoutMS );
     req.setVerbosity( mVerbosity );
     req.setHostResolves( mHostResolvesJson );
-//    req.appendHeader( "Accept: application/vnd.accelize.v1+json" );
     req.appendHeader( "Content-Type: application/json" );
     req.appendHeader( fmt::format("User-Agent: libaccelize_drm/{}", DRMLIB_VERSION ) );
     req.appendHeader( fmt::format( "Authorization: Bearer {}", mOAuth2Token ) );

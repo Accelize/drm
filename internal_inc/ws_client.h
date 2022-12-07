@@ -108,7 +108,7 @@ public:
 
     std::string escape( const std::string str ) const;
 
-    std::string request( const std::string& suburl, const tHttpRequestType& type, const uint32_t& timeout_ms );
+    std::string request( const std::string& suburl, const tHttpRequestType& type, const int32_t& timeout_ms );
 
 protected:
 

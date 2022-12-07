@@ -944,6 +944,14 @@ class CredJson(_Json):
             raise ValueError('User "%s" not found in "%s"' % (user, self._init_cred_path))
         return content
 
+    def flush_cache(self):
+        home = environ.get('HOME')
+        if not home:
+            return
+        cache_file = join(home,'.cache','accelize','drm',self.client_id+'.json')
+        if isfile(cache_file):
+            remove(cache_file)
+
     @property
     def user(self):
         return self._user

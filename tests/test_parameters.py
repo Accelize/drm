@@ -1211,9 +1211,9 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
             ) as drm_manager:
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
-    assert "OAuth2 Web Service error 404" in str(excinfo.value)
+    assert "Accelize Web Service error 404" in str(excinfo.value)
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
-    async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code,"OAuth2 Web Service error 404")
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code,"Accelize Web Service error 404")
     async_cb.reset()
     print('Test when authentication url in configuration file is wrong: PASS')
 
@@ -1234,10 +1234,10 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
             ) as drm_manager:
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
-    assert "OAuth2 Web Service error 401" in str(excinfo.value)
+    assert "Accelize Web Service error 401" in str(excinfo.value)
     assert "invalid_client" in str(excinfo.value)
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
-    async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'OAuth2 Web Service error 401')
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Accelize Web Service error 401')
     async_cb.reset()
     print('Test when client_id is wrong: PASS')
 
@@ -1258,9 +1258,9 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
             ) as drm_manager:
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
-    assert "OAuth2 Web Service error 401" in str(excinfo.value)
+    assert "Accelize Web Service error 401" in str(excinfo.value)
     assert "invalid_client" in str(excinfo.value)
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
-    async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'OAuth2 Web Service error 401')
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Accelize Web Service error 401')
     async_cb.reset()
     print('Test when client_secret is wrong: PASS')

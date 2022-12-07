@@ -1505,7 +1505,7 @@ Json::Value product_id_json = "AGCJ6WVJBFYODDFUEG2AGWNWZM";
                     wait_duration = short_duration;
                 else
                     wait_duration = long_duration;
-                Warning( "Attempt #{} to obtain a new OAuth2 token failed with message: {}. New attempt planned in {} seconds",
+                Warning( "Attempt #{} to obtain a new authentication token failed with message: {}. New attempt planned in {} seconds",
                         oauth_attempt, e.what(), wait_duration.count()/1000000000 );
                 /// Wait a bit before retrying
                 sleepOrExit( wait_duration );
