@@ -414,7 +414,7 @@ protected:
         mDebugMessageLevel = spdlog::level::trace;
 
         // Define default asynchronous error callback
-        f_asynch_error = [](std::string msg) { std::cout << "ERROR: " << msg << std::endl; };
+        f_asynch_error = [](std::string msg) { std::cerr << "ERROR: " << msg << std::endl; };
 
         // Parse configuration file
         conf_json = parseJsonFile( conf_file_path );
@@ -517,7 +517,7 @@ protected:
             spdlog::set_default_logger( sLogger );
         }
         catch( const spdlog::spdlog_ex& ex ) { //LCOV_EXCL_LINE
-            std::cout << "Failed to initialize logging: " << ex.what() << std::endl; //LCOV_EXCL_LINE
+            std::cerr << "Failed to initialize logging: " << ex.what() << std::endl; //LCOV_EXCL_LINE
         }
     }
 
@@ -568,7 +568,7 @@ protected:
                     sLogFileRotatingSize, sLogFileRotatingNum, sLogFileAppend );
         }
         catch( const spdlog::spdlog_ex& ex ) {  //LCOV_EXCL_LINE
-            std::cout << "Failed to update logging settings: " << ex.what() << std::endl; //LCOV_EXCL_LINE
+            std::cerr << "Failed to update logging settings: " << ex.what() << std::endl; //LCOV_EXCL_LINE
         }
     }
 
@@ -2109,7 +2109,6 @@ Json::Value product_id_json = "AGCJ6WVJBFYODDFUEG2AGWNWZM";
 
                         // Post next data to server
                         Json::Value license_json = getLicense( request_json, retry_timeout_ms, retry_sleep_ms );
-                        std::cout << "From health thread, license_json=" << license_json.toStyledString() << std::endl;
                     }
                     Debug( "Released metering access mutex from health thread" );
                 }
