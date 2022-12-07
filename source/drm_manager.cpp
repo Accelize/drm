@@ -227,7 +227,7 @@ protected:
 
     // Design constants
     const uint32_t HDK_COMPATIBILITY_LIMIT_MAJOR = 3;
-    const uint32_t HDK_COMPATIBILITY_LIMIT_MINOR = 1;
+    const uint32_t HDK_COMPATIBILITY_LIMIT_MINOR = 2;
 
     const std::map<eLicenseType, std::string> LicenseTypeStringMap = {
             {eLicenseType::NONE       , "Idle"},
