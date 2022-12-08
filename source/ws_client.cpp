@@ -25,9 +25,9 @@ limitations under the License.
 #include "utils.h"
 #include "ws_client.h"
 
-#define DRMLIB_ENVVAR_URL           "ONEPORTAL_URL"
-#define DRMLIB_ENVVAR_CLIENT_ID     "ONEPORTAL_CLIENT_ID"
-#define DRMLIB_ENVVAR_CLIENT_SECRET "ONEPORTAL_CLIENT_SECRET"
+#define DRMLIB_ENVVAR_URL           "DRMSAAS_URL"
+#define DRMLIB_ENVVAR_CLIENT_ID     "DRMSAAS_CLIENT_ID"
+#define DRMLIB_ENVVAR_CLIENT_SECRET "DRMSAAS_CLIENT_SECRET"
 
 using namespace fmt::literals;
 

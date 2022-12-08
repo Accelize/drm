@@ -662,12 +662,17 @@ protected:
     bool getXrtPlatformInfoV1( Json::Value& hostcard_node ) {
         Debug( "Attempt to gather host and card information with XRT method 1" );
         std::string cmd_out;
+        Json::Value details_json;
+
+        details_json["method"] = 1;
+        hostcard_node["xrt_details"].append(details_json);
+
+        // Call xbutil to collect host and card data
         try {
-            // Call xbutil to collect host and card data
             std::string cmd = fmt::format( "{} dump", mXbutil );
             cmd_out = execCmd( cmd );
         } catch( const std::exception &e ) {
-            hostcard_node["xrt1"] = fmt::format( "Host and card information not collected with XRT method 1: execution error '{}'\n",
+            details_json["msg"] = fmt::format( "Host and card information not collected with XRT method 1: execution error '{}'\n",
                                     e.what() );
             return false;
         }
@@ -676,14 +681,15 @@ protected:
         try {
             xbutil_json = parseJsonString( cmd_out );
         } catch( const std::exception &e ) {
-            hostcard_node["xrt1"] = fmt::format( "Host and card information not collected with XRT method 1: error '{}' parsing:\n{}\n",
+            details_json["msg"] = fmt::format( "Host and card information not collected with XRT method 1: error '{}' parsing:\n{}\n",
                                     e.what(), cmd_out );
             return false;
         }
         // Filtering meta-data
         if ( mHostDataVerbosity == eHostDataVerbosity::FULL ) {
             // Verbosity is FULL
-            hostcard_node["xrt1"] = xbutil_json;
+            details_json = xbutil_json;
+            details_json["method"] = 1;
         } else {
             // Verbosity is PARTIAL
             for(Json::Value::iterator itr=xbutil_json.begin(); itr!=xbutil_json.end(); ++itr) {
@@ -693,18 +699,18 @@ protected:
                         || ( key == "system" )
                         || ( key == "runtime" )
                        )
-                        hostcard_node["xrt1"][key] = *itr;
+                        details_json[key] = *itr;
                     else if ( key == "board" ) {
                         //  Add general info node
-                        hostcard_node["xrt1"][key]["info"] = itr->get("info", Json::nullValue);
+                        details_json[key]["info"] = itr->get("info", Json::nullValue);
                         // Try to get the number of kernels
                         Json::Value compute_unit_node = itr->get("compute_unit", Json::nullValue);
                         if ( compute_unit_node != Json::nullValue )
-                            hostcard_node["xrt1"][key]["compute_unit"] = compute_unit_node.size();
+                            details_json[key]["compute_unit"] = compute_unit_node.size();
                         else
-                            hostcard_node["xrt1"][key]["compute_unit"] = -1;
+                            details_json[key]["compute_unit"] = -1;
                         // Add XCLBIN UUID
-                        hostcard_node["xrt1"][key]["xclbin"] = itr->get("xclbin", Json::nullValue);
+                        details_json[key]["xclbin"] = itr->get("xclbin", Json::nullValue);
                     }
                 } catch( const std::exception &e ) {
                     Debug( "Could not extract Host Information for key {}", key );
@@ -719,12 +725,17 @@ protected:
         Debug( "Attempt to gather host and card information with XRT method 2" );
         std::string xbutil_log("xbutil.log");
         std::string cmd_out;
+        Json::Value details_json;
+
+        details_json["method"] = 2;
+        hostcard_node["xrt_details"].append(details_json);
+
         // Call xbutil to examine the platform
         try {
             std::string cmd = fmt::format( "{} examine -f JSON -o {} --force", mXbutil, xbutil_log );
             cmd_out = execCmd( cmd );
         } catch( const std::exception &e ) {
-            hostcard_node["xrt2"] = fmt::format( "Error executing XRT command: {}\n", e.what() );
+            details_json["msg"] = fmt::format( "Error executing XRT command: {}\n", e.what() );
             return false;
         }
         // Parse available devices
@@ -732,7 +743,7 @@ protected:
         try {
             xbutil_json = parseJsonFile( xbutil_log );
         } catch( const std::exception &e ) {
-            hostcard_node["xrt2"] = fmt::format( "Error parsing XRT global data file {}: {}.\n",
+            details_json["msg"] = fmt::format( "Error parsing XRT global data file {}: {}.\n",
                                                 xbutil_log, e.what() );
             return false;
         }
@@ -742,7 +753,8 @@ protected:
         // Filtering meta-data
         if ( mHostDataVerbosity == eHostDataVerbosity::FULL ) {
             // Verbosity is FULL
-            hostcard_node["xrt"] = xbutil_json["system"]["host"]["xrt"];
+            details_json = xbutil_json["system"]["host"]["xrt"]
+            details_json["method"] = 2;
         }
         return true;
     }
@@ -766,6 +778,8 @@ protected:
         mDiagnostics["os_version"] = os_version;
         mDiagnostics["os_kernel_version"] = kernel_version;
         mDiagnostics["cpu_architecture"] = cpu_version;
+        if ( mMailboxRoData.isMember( "extra" ) )
+            mDiagnostics["drm_controller_version"] = mMailboxRoData["extra"]["lgdn_full_version"];
 
         // Gather host and card information if xbutil existing
         if ( findXrtUtility() ) {
@@ -1308,7 +1322,6 @@ Json::Value product_id_json = "AGCJ6WVJBFYODDFUEG2AGWNWZM";
 // TODO: Verify where to include this extra node            json_output["extra"] = mMailboxRoData["extra"];
 //            Debug( "HDK extra data: {}", mMailboxRoData["extra"].toStyledString() );
             drm_config["dualclk"] = mMailboxRoData["extra"]["dualclk"];
-            mDiagnostics["drm_controller_version"] = mMailboxRoData["extra"]["lgdn_full_version"];
         }
 
         return json_output;
@@ -1670,10 +1683,11 @@ Json::Value product_id_json = "AGCJ6WVJBFYODDFUEG2AGWNWZM";
     }
 
     std::string getNodelockBaseName() {
-        std::string name = mHeaderJsonRequest["product"]["vendor"].asString();
+        /*std::string name = mHeaderJsonRequest["product"]["vendor"].asString();
         name += "_" + mHeaderJsonRequest["product"]["library"].asString();
         name += "_" + mHeaderJsonRequest["product"]["name"].asString();
-        name += "_" + mDeviceID;
+        */
+        std::string name = mProductID + "_" + mDeviceID;
         return name;
     }
 

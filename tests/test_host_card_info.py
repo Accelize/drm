@@ -26,8 +26,8 @@ def test_host_data_verbosity(accelize_drm, conf_json, cred_json, async_handler,
     """
     Test all supported verbosity
     """
-    if 'XILINX_XRT' not in environ:
-        pytest.skip("XILINX_XRT is not defined: skip host and card tests")
+    #if 'XILINX_XRT' not in environ:
+    #    pytest.skip("XILINX_XRT is not defined: skip host and card tests")
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -47,6 +47,9 @@ def test_host_data_verbosity(accelize_drm, conf_json, cred_json, async_handler,
             async_cb.callback
         ) as drm_manager:
         assert drm_manager.get('host_data_verbosity') == 0
+        drm_manager.activate()
+        license_duration = drm_manager.get('license_duration')
+        wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, license_duration)
         data_full = drm_manager.get('host_data')
         assert type(data_full) == dict
         assert len(str(data_full))
@@ -63,10 +66,14 @@ def test_host_data_verbosity(accelize_drm, conf_json, cred_json, async_handler,
             async_cb.callback
         ) as drm_manager:
         assert drm_manager.get('host_data_verbosity') == 1
+        drm_manager.activate()
+        license_duration = drm_manager.get('license_duration')
+        wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, license_duration)
         data_partial = drm_manager.get('host_data')
         assert type(data_partial) == dict
         assert len(str(data_partial))
         assert len(str(data_full)) >= len(str(data_partial)) > 0
+    async_cb.assert_NoError()
 
     # Get none data
     conf_json['settings']['host_data_verbosity'] = 2
@@ -79,17 +86,20 @@ def test_host_data_verbosity(accelize_drm, conf_json, cred_json, async_handler,
             async_cb.callback
         ) as drm_manager:
         assert drm_manager.get('host_data_verbosity') == 2
+        drm_manager.activate()
+        license_duration = drm_manager.get('license_duration')
+        wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, license_duration)
         data_none = drm_manager.get('host_data')
         assert type(data_none) == type(None)
 
 
-def test_host_format(accelize_drm, conf_json, cred_json, async_handler,
+def test_diagnostics_format(accelize_drm, conf_json, cred_json, async_handler,
                      log_file_factory):
     """
-    Test the format in the request is as expected
+    Test the format in the diagnostics
     """
-    if 'XILINX_XRT' not in environ:
-        pytest.skip("XILINX_XRT is not defined: skip host and card data tests")
+    #if 'XILINX_XRT' not in environ:
+    #    pytest.skip("XILINX_XRT is not defined: skip host and card data tests")
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -107,8 +117,19 @@ def test_host_format(accelize_drm, conf_json, cred_json, async_handler,
             async_cb.callback
         ) as drm_manager:
         assert drm_manager.get('host_data_verbosity') == 0
+        drm_manager.activate()
+        license_duration = drm_manager.get('license_duration')
+        wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, license_duration)
         data = drm_manager.get('host_data')
-    assert data.get('csp') is None
+    assert 'drm_library_version' in data_full
+    assert 'os_version' in data_full
+    assert 'os_kernel_version' in data_full
+    assert 'cpu_architecture' in data_full
+    assert 'drm_controller_version' in data_full
+    assert 'device_driver_version' in data_full
+    assert 'xrt' in data_full
+
+assert data.get('csp') is None
     host_card = data['host_card']
     assert host_card
     if host_card.get('xrt2'):
