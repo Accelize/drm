@@ -120,7 +120,7 @@ def test_diagnostics_format(accelize_drm, conf_json, cred_json, async_handler,
         drm_manager.activate()
         license_duration = drm_manager.get('license_duration')
         wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, license_duration)
-        data = drm_manager.get('host_data')
+        data_full = drm_manager.get('host_data')
     assert 'drm_library_version' in data_full
     assert 'os_version' in data_full
     assert 'os_kernel_version' in data_full
@@ -129,29 +129,27 @@ def test_diagnostics_format(accelize_drm, conf_json, cred_json, async_handler,
     assert 'device_driver_version' in data_full
     assert 'xrt' in data_full
 
-assert data.get('csp') is None
-    host_card = data['host_card']
-    assert host_card
-    if host_card.get('xrt2'):
-        host_card = host_card['xrt2']
-        assert host_card['system']
-        host = host_card['system']['host']
-        assert host
-        assert host['os']
-        assert host['xrt']
-    else:
-        if host_card.get('xrt1'):
-            host_card = host_card['xrt1']
-        assert host_card.get('runtime')
-        assert host_card.get('system')
-        board = host_card.get('board')
-        assert board
-        if not accelize_drm.is_ctrl_sw:
-            assert board.get('error')
-        assert board.get('xclbin')
-        info = board.get('info')
-        assert info
-        assert info.get('dsa_name') is not None
+    if data_full.get('xrt_details'):
+        xrt_details = data_full['xrt_details']
+        assert xrt_details
+        if xrt_details['method'] == 2:
+            assert xrt_details['system']
+            host = xrt_details['system']['host']
+            assert host
+            assert host['os']
+            assert host['xrt']
+        else:
+            assert xrt_details['method'] == 1
+            assert xrt_details.get('runtime')
+            assert xrt_details.get('system')
+            board = xrt_details.get('board')
+            assert board
+            if not accelize_drm.is_ctrl_sw:
+                assert board.get('error')
+            assert board.get('xclbin')
+            info = board.get('info')
+            assert info
+            assert info.get('dsa_name') is not None
     # Check no xbutil log files are left over
     assert len(find_files( regex=r'xbutil.*\.log')) == 0
     async_cb.assert_NoError()
