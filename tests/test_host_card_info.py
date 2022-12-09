@@ -127,29 +127,30 @@ def test_diagnostics_format(accelize_drm, conf_json, cred_json, async_handler,
     assert 'cpu_architecture' in data_full
     assert 'drm_controller_version' in data_full
     assert 'device_driver_version' in data_full
-    assert 'xrt' in data_full
+    assert 'xrt_details' in data_full
 
     if data_full.get('xrt_details'):
         xrt_details = data_full['xrt_details']
         assert xrt_details
-        if xrt_details['method'] == 2:
-            assert xrt_details['system']
-            host = xrt_details['system']['host']
-            assert host
-            assert host['os']
-            assert host['xrt']
-        else:
-            assert xrt_details['method'] == 1
-            assert xrt_details.get('runtime')
-            assert xrt_details.get('system')
-            board = xrt_details.get('board')
-            assert board
-            if not accelize_drm.is_ctrl_sw:
-                assert board.get('error')
-            assert board.get('xclbin')
-            info = board.get('info')
-            assert info
-            assert info.get('dsa_name') is not None
+        for i in xrt_details:
+            if xrt_details['method'] == 2:
+                assert xrt_details['system']
+                host = xrt_details['system']['host']
+                assert host
+                assert host['os']
+                assert host['xrt']
+            else:
+                assert xrt_details['method'] == 1
+                assert xrt_details.get('runtime')
+                assert xrt_details.get('system')
+                board = xrt_details.get('board')
+                assert board
+                if not accelize_drm.is_ctrl_sw:
+                    assert board.get('error')
+                assert board.get('xclbin')
+                info = board.get('info')
+                assert info
+                assert info.get('dsa_name') is not None
     # Check no xbutil log files are left over
     assert len(find_files( regex=r'xbutil.*\.log')) == 0
     async_cb.assert_NoError()

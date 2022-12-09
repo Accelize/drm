@@ -753,7 +753,11 @@ protected:
         // Filtering meta-data
         if ( mHostDataVerbosity == eHostDataVerbosity::FULL ) {
             // Verbosity is FULL
-            details_json = xbutil_json["system"]["host"]["xrt"]
+            details_json = xbutil_json;
+            details_json["method"] = 2;
+        } else {
+            // Verbosity is PARTIAL
+            details_json = xbutil_json["system"]["host"]["xrt"];
             details_json["method"] = 2;
         }
         return true;
@@ -1552,7 +1556,7 @@ Json::Value product_id_json = "AGCJ6WVJBFYODDFUEG2AGWNWZM";
 
         if ( request_json.isMember("request") ) {
             request_json.removeMember("request");
-            request_json["settings"] = buildSettingsNode();     // Add settings parameters
+// TODO: check where to add these            request_json["settings"] = buildSettingsNode();     // Add settings parameters
             suburl = fmt::format( "/customer/product/{}/entitlement_session", mProductID );
             httpType = tHttpRequestType::POST;
         } else {
