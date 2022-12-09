@@ -728,7 +728,6 @@ protected:
         Json::Value details_json;
 
         details_json["method"] = 2;
-        hostcard_node["xrt_details"].append(details_json);
 
         // Call xbutil to examine the platform
         try {
@@ -736,6 +735,7 @@ protected:
             cmd_out = execCmd( cmd );
         } catch( const std::exception &e ) {
             details_json["msg"] = fmt::format( "Error executing XRT command: {}\n", e.what() );
+            hostcard_node["xrt_details"].append(details_json);
             return false;
         }
         // Parse available devices
@@ -745,6 +745,7 @@ protected:
         } catch( const std::exception &e ) {
             details_json["msg"] = fmt::format( "Error parsing XRT global data file {}: {}.\n",
                                                 xbutil_log, e.what() );
+            hostcard_node["xrt_details"].append(details_json);
             return false;
         }
         removeFile( xbutil_log );
@@ -760,6 +761,7 @@ protected:
             details_json = xbutil_json["system"]["host"]["xrt"];
             details_json["method"] = 2;
         }
+        hostcard_node["xrt_details"].append(details_json);
         return true;
     }
 
