@@ -72,7 +72,7 @@ def test_host_data_verbosity(accelize_drm, conf_json, cred_json, async_handler,
         data_partial = drm_manager.get('host_data')
         assert type(data_partial) == dict
         assert len(str(data_partial))
-        assert len(str(data)) >= len(str(data_partial)) > 0
+        assert len(str(data_full)) >= len(str(data_partial)) > 0
     async_cb.assert_NoError()
 
     # Get none data

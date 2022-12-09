@@ -239,35 +239,6 @@ def test_improve_coverage_runBistLevel2_bad_data(accelize_drm, conf_json, cred_j
     logfile.remove()
 
 
-def test_improve_coverage_getMeteringHeader(accelize_drm, conf_json, cred_json, async_handler,
-                                            log_file_factory):
-    """
-    Improve coverage of the getMeteringHeader function
-    """
-    driver = accelize_drm.pytest_fpga_driver[0]
-    async_cb = async_handler.create()
-    async_cb.reset()
-    conf_json['design']['udid'] = '2fb8d54f-920e-4d69-aa56-197c7c72d8a3';
-    logfile = log_file_factory.create(1)
-    conf_json['settings'].update(logfile.json)
-    conf_json.save()
-
-    with accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            ) as drm_manager:
-        drm_manager.activate()
-        drm_manager.deactivate()
-    content = logfile.read()
-    assert search(r'Found parameter \'udid\' of type String: return its value "([0-9a-f]+-?)+"', content, IGNORECASE)
-    assert len(findall(r'"udid"\s*:\s*"([0-9a-f]+-?)+"', content, IGNORECASE)) >= 2
-    async_cb.assert_NoError()
-    logfile.remove()
-
-
 def test_improve_coverage_getDesignInfo(accelize_drm, conf_json, cred_json, async_handler,
                                         log_file_factory):
     """
