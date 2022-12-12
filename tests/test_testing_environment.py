@@ -57,11 +57,8 @@ def test_credentials(cred_json, conf_json):
         connection = HTTPSConnection(
             conf_json['licensing']['url'].split('//', 1)[1])
         connection.request(
-            "POST", "/o/token/",
-            "client_id=%s&client_secret=%s&grant_type=client_credentials" % (
-                client_id, client_secret),
-            {'Content-type': 'application/x-www-form-urlencoded',
-             'Accept': 'application/json'})
+            "POST", "/auth/token?grant_type=client_credentials&client_id=%s&client_secret=%s" % (
+                client_id, client_secret))
         return connection.getresponse()
 
     for i in range(3):
