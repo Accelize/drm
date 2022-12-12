@@ -38,15 +38,15 @@ def create_app(url):
         with lock:
             context = request.get_json()
         return 'OK'
-
+    '''
     # Functions calling the real web services
-    @app.route('/o/token/', methods=['GET', 'POST'])
+    @app.route('/auth/token/', methods=['GET'])
     def otoken():
-        new_url = url + '/o/token/'
+        new_url = url + '/auth/token/'
         return redirect(new_url, code=307)
 
-    @app.route('/auth/metering/genlicense/', methods=['GET', 'POST'])
-    def genlicense():
+    @app.route('/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
+    def genLicense(product_id):
         request_json = request.get_json()
         new_url = url + '/auth/metering/genlicense/'
         response = post(new_url, json=request_json, headers=request.headers)
@@ -55,7 +55,7 @@ def create_app(url):
         response_json = response.json()
         return Response(dumps(response_json), response.status_code, headers)
 
-    @app.route('/auth/metering/health/', methods=['GET', 'POST'])
+    @app.route('/auth/metering/health/', methods=['PATCH', 'POST'])
     def health():
         request_json = request.get_json()
         new_url = url + '/auth/metering/health/'
@@ -64,12 +64,12 @@ def create_app(url):
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         return Response(dumps(response_json), response.status_code, headers)
-
+    '''
     ##############################################################################
     # test_authentication.py
 
     # test_authentication_bad_token
-    @app.route('/test_authentication_bad_token/o/token/', methods=['GET', 'POST'])
+    @app.route('/test_authentication_bad_token/auth/token/', methods=['GET', 'POST'])
     def otoken__test_authentication_bad_token():
         global context, lock
         new_url = request.url.replace(request.url_root+'test_authentication_bad_token', url)
@@ -83,19 +83,16 @@ def create_app(url):
             response_json['access_token'] = context['access_token']
         return Response(dumps(response_json), response.status_code, headers)
 
-    @app.route('/test_authentication_bad_token/auth/metering/genlicense/', methods=['GET', 'POST'])
-    def genlicense__test_authentication_bad_token_genlicense():
-        return redirect(request.url_root + '/auth/metering/genlicense/', code=307)
-
-    @app.route('/test_authentication_bad_token/auth/metering/health/', methods=['GET', 'POST'])
-    def health__test_authentication_bad_token():
-        return redirect(request.url_root + '/auth/metering/health/', code=307)
+    @app.route('/test_authentication_bad_token/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
+    def genlicense__test_authentication_bad_token(product_id):
+        new_url = request.url.replace(request.url_root+'test_authentication_bad_token', url)
+        return redirect(new_url, code=307)
 
     # test_authentication_token_renewal
-    @app.route('/test_authentication_token_renewal/o/token/', methods=['GET', 'POST'])
+    @app.route('/test_authentication_token_renewal/auth/token/', methods=['GET', 'POST'])
     def otoken__test_authentication_token_renewal():
         global context, lock
-        new_url = url + '/o/token/'
+        new_url = url + '/auth/token/'
         response = post(new_url, data=request.form, headers=request.headers)
         assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request.form,
                 indent=4, sort_keys=True), response.status_code, response.text)
@@ -118,9 +115,9 @@ def create_app(url):
     # test_drm_license_error.py
 
     # test_header_error_on_key functions
-    @app.route('/test_header_error_on_key/o/token/', methods=['GET', 'POST'])
+    @app.route('/test_header_error_on_key/auth/token/', methods=['GET', 'POST'])
     def otoken__test_header_error_on_key():
-        return redirect(request.url_root + '/o/token/', code=307)
+        return redirect(request.url_root + '/auth/token/', code=307)
 
     @app.route('/test_header_error_on_key/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_header_error_on_key_genlicense():
@@ -148,9 +145,9 @@ def create_app(url):
         return redirect(request.url_root + '/auth/metering/health/', code=307)
 
     # test_header_error_on_key2 functions
-    @app.route('/test_header_error_on_key2/o/token/', methods=['GET', 'POST'])
+    @app.route('/test_header_error_on_key2/auth/token/', methods=['GET', 'POST'])
     def otoken__test_header_error_on_key2():
-        return redirect(request.url_root + '/o/token/', code=307)
+        return redirect(request.url_root + '/auth/token/', code=307)
 
     @app.route('/test_header_error_on_key2/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_header_error_on_key2_genlicense():
@@ -178,9 +175,9 @@ def create_app(url):
         return redirect(request.url_root + '/auth/metering/health/', code=307)
 
     # test_header_error_on_licenseTimer functions
-    @app.route('/test_header_error_on_licenseTimer/o/token/', methods=['GET', 'POST'])
+    @app.route('/test_header_error_on_licenseTimer/auth/token/', methods=['GET', 'POST'])
     def otoken__test_header_error_on_licenseTimer():
-        return redirect(request.url_root + '/o/token/', code=307)
+        return redirect(request.url_root + '/auth/token/', code=307)
 
     @app.route('/test_header_error_on_licenseTimer/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_header_error_on_licenseTimer():
@@ -211,9 +208,9 @@ def create_app(url):
         return redirect(request.url_root + '/auth/metering/health/', code=307)
 
     # test_header_error_on_licenseTimer2 functions
-    @app.route('/test_header_error_on_licenseTimer2/o/token/', methods=['GET', 'POST'])
+    @app.route('/test_header_error_on_licenseTimer2/auth/token/', methods=['GET', 'POST'])
     def otoken__test_header_error_on_licenseTimer2():
-        return redirect(request.url_root + '/o/token/', code=307)
+        return redirect(request.url_root + '/auth/token/', code=307)
 
     @app.route('/test_header_error_on_licenseTimer2/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_header_error_on_licenseTimer2():
@@ -244,9 +241,9 @@ def create_app(url):
         return redirect(request.url_root + '/auth/metering/health/', code=307)
 
     # test_replay_request functions
-    @app.route('/test_replay_request/o/token/', methods=['GET', 'POST'])
+    @app.route('/test_replay_request/auth/token/', methods=['GET', 'POST'])
     def otoken__test_replay_request():
-        return redirect(request.url_root + '/o/token/', code=307)
+        return redirect(request.url_root + '/auth/token/', code=307)
 
     @app.route('/test_replay_request/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_replay_request():
@@ -284,9 +281,9 @@ def create_app(url):
     # test_async_health.py
 
     # test_health_period_disabled functions
-    @app.route('/test_health_period_disabled/o/token/', methods=['GET', 'POST'])
+    @app.route('/test_health_period_disabled/auth/token/', methods=['GET', 'POST'])
     def otoken__test_health_period_disabled():
-        return redirect(request.url_root + '/o/token/', code=307)
+        return redirect(request.url_root + '/auth/token/', code=307)
 
     @app.route('/test_health_period_disabled/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_health_period_disabled():
@@ -324,9 +321,9 @@ def create_app(url):
         return Response(dumps(response_json), response.status_code, headers)
 
     # test_health_period_modification functions
-    @app.route('/test_health_period_modification/o/token/', methods=['GET', 'POST'])
+    @app.route('/test_health_period_modification/auth/token/', methods=['GET', 'POST'])
     def otoken__test_health_period_modification():
-        return redirect(request.url_root + '/o/token/', code=307)
+        return redirect(request.url_root + '/auth/token/', code=307)
 
     @app.route('/test_health_period_modification/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_health_period_modification():
@@ -364,9 +361,9 @@ def create_app(url):
         return Response(dumps(response_json), response.status_code, headers)
 
     # test_health_retry_disabled functions
-    @app.route('/test_health_retry_disabled/o/token/', methods=['GET', 'POST'])
+    @app.route('/test_health_retry_disabled/auth/token/', methods=['GET', 'POST'])
     def otoken__test_health_retry_disabled():
-        return redirect(request.url_root + '/o/token/', code=307)
+        return redirect(request.url_root + '/auth/token/', code=307)
 
     @app.route('/test_health_retry_disabled/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_health_retry_disabled():
@@ -409,9 +406,9 @@ def create_app(url):
         return Response(dumps(response_json), response_status_code, headers)
 
     # test_health_retry_modification functions
-    @app.route('/test_health_retry_modification/o/token/', methods=['GET', 'POST'])
+    @app.route('/test_health_retry_modification/auth/token/', methods=['GET', 'POST'])
     def otoken__test_health_retry_modification():
-        return redirect(request.url_root + '/o/token/', code=307)
+        return redirect(request.url_root + '/auth/token/', code=307)
 
     @app.route('/test_health_retry_modification/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_health_retry_modification():
@@ -458,9 +455,9 @@ def create_app(url):
         return Response(dumps(response_json), response_status_code, headers)
 
     # test_health_retry_sleep_modification functions
-    @app.route('/test_health_retry_sleep_modification/o/token/', methods=['GET', 'POST'])
+    @app.route('/test_health_retry_sleep_modification/auth/token/', methods=['GET', 'POST'])
     def otoken__test_health_retry_sleep_modification():
-        return redirect(request.url_root + '/o/token/', code=307)
+        return redirect(request.url_root + '/auth/token/', code=307)
 
     @app.route('/test_health_retry_sleep_modification/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_health_retry_sleep_modification():
@@ -507,9 +504,9 @@ def create_app(url):
         return Response(dumps(response_json), response_status_code, headers)
 
     # test_health_metering_data functions
-    @app.route('/test_health_metering_data/o/token/', methods=['GET', 'POST'])
+    @app.route('/test_health_metering_data/auth/token/', methods=['GET', 'POST'])
     def otoken__test_health_metering_data():
-        return redirect(request.url_root + '/o/token/', code=307)
+        return redirect(request.url_root + '/auth/token/', code=307)
 
     @app.route('/test_health_metering_data/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_health_metering_data():
@@ -545,9 +542,9 @@ def create_app(url):
         return Response(dumps(response_json), response.status_code, headers)
 
     # test_segment_index functions
-    @app.route('/test_segment_index/o/token/', methods=['GET', 'POST'])
+    @app.route('/test_segment_index/auth/token/', methods=['GET', 'POST'])
     def otoken__test_segment_index():
-        return redirect(request.url_root + '/o/token/', code=307)
+        return redirect(request.url_root + '/auth/token/', code=307)
 
     @app.route('/test_segment_index/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_segment_index():
@@ -583,9 +580,9 @@ def create_app(url):
         return Response(dumps(response_json), response.status_code, headers)
 
     # test_async_call_on_pause_when_health_is_enabled and test_no_async_call_on_pause_when_health_is_disabled functions
-    @app.route('/test_async_call_on_pause_depending_on_health_status/o/token/', methods=['GET', 'POST'])
+    @app.route('/test_async_call_on_pause_depending_on_health_status/auth/token/', methods=['GET', 'POST'])
     def otoken__test_async_call_on_pause_depending_on_health_status():
-        return redirect(request.url_root + '/o/token/', code=307)
+        return redirect(request.url_root + '/auth/token/', code=307)
 
     @app.route('/test_async_call_on_pause_depending_on_health_status/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_async_call_on_pause_depending_on_health_status():
@@ -624,9 +621,9 @@ def create_app(url):
     # test_retry_mechanism.py
 
     # test_api_retry_disabled and test_api_retry_enabled functions
-    @app.route('/test_api_retry/o/token/', methods=['GET', 'POST'])
+    @app.route('/test_api_retry/auth/token/', methods=['GET', 'POST'])
     def otoken__test_api_retry():
-        return redirect(request.url_root + '/o/token/', code=307)
+        return redirect(request.url_root + '/auth/token/', code=307)
 
     @app.route('/test_api_retry/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_api_retry():
@@ -637,11 +634,11 @@ def create_app(url):
         return redirect(request.url_root + '/auth/metering/health/', code=307)
 
     # test_long_to_short_retry_switch_on_authentication functions
-    @app.route('/test_long_to_short_retry_switch_on_authentication/o/token/', methods=['GET', 'POST'])
+    @app.route('/test_long_to_short_retry_switch_on_authentication/auth/token/', methods=['GET', 'POST'])
     def otoken__test_long_to_short_retry_switch_on_authentication():
         global context, lock
         start = str(datetime.now())
-        new_url = url + '/o/token/'
+        new_url = url + '/auth/token/'
         with lock:
             try:
                 if context['cnt'] == 0 or context['exit']:
@@ -681,9 +678,9 @@ def create_app(url):
         return redirect(request.url_root + '/auth/metering/health/', code=307)
 
     # test_long_to_short_retry_switch_on_license functions
-    @app.route('/test_long_to_short_retry_switch_on_license/o/token/', methods=['GET', 'POST'])
+    @app.route('/test_long_to_short_retry_switch_on_license/auth/token/', methods=['GET', 'POST'])
     def otoken__test_long_to_short_retry_switch_on_license():
-        return redirect(request.url_root + '/o/token/', code=307)
+        return redirect(request.url_root + '/auth/token/', code=307)
 
     @app.route('/test_long_to_short_retry_switch_on_license/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_long_to_short_retry_switch_on_license():
@@ -714,9 +711,9 @@ def create_app(url):
         return redirect(request.url_root + '/auth/metering/health/', code=307)
 
     # test_api_retry_on_lost_connection functions
-    @app.route('/test_api_retry_on_lost_connection/o/token/', methods=['GET', 'POST'])
+    @app.route('/test_api_retry_on_lost_connection/auth/token/', methods=['GET', 'POST'])
     def otoken__test_api_retry_on_lost_connection():
-        return redirect(request.url_root + '/o/token/', code=307)
+        return redirect(request.url_root + '/auth/token/', code=307)
 
     @app.route('/test_api_retry_on_lost_connection/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_api_retry_on_lost_connection():
@@ -733,9 +730,9 @@ def create_app(url):
         return redirect(request.url_root + '/auth/metering/health/', code=307)
 
     # test_thread_retry_on_lost_connection functions
-    @app.route('/test_thread_retry_on_lost_connection/o/token/', methods=['GET', 'POST'])
+    @app.route('/test_thread_retry_on_lost_connection/auth/token/', methods=['GET', 'POST'])
     def otoken__test_thread_retry_on_lost_connection():
-        return redirect(request.url_root + '/o/token/', code=307)
+        return redirect(request.url_root + '/auth/token/', code=307)
 
     @app.route('/test_thread_retry_on_lost_connection/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_thread_retry_on_lost_connection():
@@ -766,9 +763,9 @@ def create_app(url):
     # test_unittest_on_hw.py
 
     # test_http_header_api_version functions
-    @app.route('/test_http_header_api_version/o/token/', methods=['GET', 'POST'])
+    @app.route('/test_http_header_api_version/auth/token/', methods=['GET', 'POST'])
     def otoken__test_http_header_api_version():
-        return redirect(request.url_root + '/o/token/', code=307)
+        return redirect(request.url_root + '/auth/token/', code=307)
 
     @app.route('/test_http_header_api_version/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_http_header_api_version():
@@ -789,9 +786,9 @@ def create_app(url):
     # test_lgdn_topics.py
 
     # test_topic0_corrupted_segment_index functions
-    @app.route('/test_topic0_corrupted_segment_index/o/token/', methods=['GET', 'POST'])
+    @app.route('/test_topic0_corrupted_segment_index/auth/token/', methods=['GET', 'POST'])
     def otoken__test_topic0_corrupted_segment_index():
-        return redirect(request.url_root + '/o/token/', code=307)
+        return redirect(request.url_root + '/auth/token/', code=307)
 
     @app.route('/test_topic0_corrupted_segment_index/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_topic0_corrupted_segment_index():
@@ -836,9 +833,9 @@ def create_app(url):
         return Response(dumps(response_json), response.status_code, headers)
 
     # test_topic1_corrupted_metering functions
-    @app.route('/test_topic1_corrupted_metering/o/token/', methods=['GET', 'POST'])
+    @app.route('/test_topic1_corrupted_metering/auth/token/', methods=['GET', 'POST'])
     def otoken__test_topic1_corrupted_metering():
-        return redirect(request.url_root + '/o/token/', code=307)
+        return redirect(request.url_root + '/auth/token/', code=307)
 
     @app.route('/test_topic1_corrupted_metering/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_topic1_corrupted_metering():
@@ -863,9 +860,9 @@ def create_app(url):
     # test_improve_coverage.py
 
     # test_improve_coverage_ws_client functions
-    @app.route('/test_improve_coverage_ws_client/o/token/', methods=['GET', 'POST'])
+    @app.route('/test_improve_coverage_ws_client/auth/token/', methods=['GET', 'POST'])
     def otoken__test_improve_coverage_ws_client():
-        return redirect(request.url_root + '/o/token/', code=307)
+        return redirect(request.url_root + '/auth/token/', code=307)
 
     @app.route('/test_improve_coverage_ws_client/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_improve_coverage_ws_client():
@@ -878,32 +875,30 @@ def create_app(url):
         return redirect(request.url_root + '/auth/metering/health/', code=307)
 
     # test_improve_coverage_setLicense functions
-    @app.route('/test_improve_coverage_setLicense/o/token/', methods=['GET', 'POST'])
+    @app.route('/test_improve_coverage_setLicense/auth/token/', methods=['GET'])
     def otoken__test_improve_coverage_setLicense():
-        return redirect(request.url_root + '/o/token/', code=307)
+        return redirect(request.url_root + '/auth/token/', code=307)
 
-    @app.route('/test_improve_coverage_setLicense/auth/metering/genlicense/', methods=['GET', 'POST'])
-    def genlicense__test_improve_coverage_setLicense():
+    @app.route('/test_improve_coverage_setLicense/customer/product/<product_id>/entitlement_session', methods=['POST', 'PATCH'])
+    def create__test_improve_coverage_setLicense(product_id):
         new_url = request.url.replace(request.url_root+'test_improve_coverage_setLicense', url)
         request_json = request.get_json()
         response = post(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+        assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
             indent=4, sort_keys=True), response.status_code, response.text)
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
-        response_json['metering']['healthPeriod'] = 0
-        if request_json['request'] == 'running':
-            response_json['metering'] = 'test'
+        del response_json['drm_config']['license']
         return Response(dumps(response_json), response.status_code, headers)
 
     ##############################################################################
     # test_valgrind.py
 
     # test_normal_usage functions
-    @app.route('/test_normal_usage/o/token/', methods=['GET', 'POST'])
+    @app.route('/test_normal_usage/auth/token/', methods=['GET', 'POST'])
     def otoken__test_normal_usage():
-        return redirect(request.url_root + '/o/token/', code=307)
+        return redirect(request.url_root + '/auth/token/', code=307)
 
     @app.route('/test_normal_usage/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_normal_usage():
@@ -939,9 +934,9 @@ def create_app(url):
     # test_derived_product.py
 
     # test_valid_derived_product function
-    @app.route('/test_valid_derived_product/o/token/', methods=['GET', 'POST'])
+    @app.route('/test_valid_derived_product/auth/token/', methods=['GET', 'POST'])
     def otoken__test_valid_derived_product():
-        return redirect(request.url_root + '/o/token/', code=307)
+        return redirect(request.url_root + '/auth/token/', code=307)
 
     @app.route('/test_valid_derived_product/auth/metering/genlicense/', methods=['GET', 'POST'])
     def genlicense__test_valid_derived_product():
@@ -968,7 +963,7 @@ def create_app(url):
     # test_ws_timeout.py
 
     # test_request_timeout functions
-    @app.route('/test_request_timeout/o/token/', methods=['GET', 'POST'])
+    @app.route('/test_request_timeout/auth/token/', methods=['GET', 'POST'])
     def otoken__test_request_timeout():
         global context, lock
         start = str(datetime.now())
@@ -976,7 +971,7 @@ def create_app(url):
             sleep_s = context['sleep']
         sleep( sleep_s)
         return ('This is the expected behavior', 408)
-        return redirect(request.url_root + '/o/token/', code=307)
+        return redirect(request.url_root + '/auth/token/', code=307)
 
     ##############################################################################
 
