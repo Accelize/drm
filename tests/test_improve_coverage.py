@@ -239,57 +239,8 @@ def test_improve_coverage_runBistLevel2_bad_data(accelize_drm, conf_json, cred_j
     logfile.remove()
 
 
-def test_improve_coverage_getDesignInfo(accelize_drm, conf_json, cred_json, async_handler,
-                                        log_file_factory):
-    """
-    Improve coverage of the getDesignInfo function
-    """
-    if accelize_drm.is_ctrl_sw:
-        pytest.skip("Test involves callbacks modification: skipped on SoM target (no callback provided for SoM)")
-
-    driver = accelize_drm.pytest_fpga_driver[0]
-    async_cb = async_handler.create()
-    async_cb.reset()
-    logfile = log_file_factory.create(1)
-    conf_json['settings'].update(logfile.json)
-    conf_json.save()
-
-    version_major = int(match(r'(\d+)\..+', accelize_drm.pytest_hdk_version).group(1))
-
-    def my_read_register(register_offset, returned_data, ctx):
-        ret = driver.read_register_callback(register_offset, returned_data)
-        if (version_major >= 8 and register_offset == 0xA004) or (
-                version_major < 8 and ctx['page'] == 5 and register_offset == 4):
-            ctx['cnt'] += 1
-            if ctx['cnt'] == 12:
-                returned_data.contents.value &= 0xFFFF
-        return ret
-
-    def my_write_register(register_offset, data_to_write, ctx):
-        if register_offset == 0:
-            ctx['page'] = data_to_write
-        return driver.write_register_callback(register_offset, data_to_write)
-
-    context = {'page':0, 'cnt':0}
-
-    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-        accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            lambda x,y: my_read_register(x,y, context),
-            lambda x,y: my_write_register(x,y, context),
-            async_cb.callback
-        )
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
-    assert search(r'UDID and Product ID cannot be both missing', str(excinfo.value), IGNORECASE)
-    assert search(r'Mailbox sizes: read-only=0', logfile.read(), IGNORECASE)
-    async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, 'UDID and Product ID cannot be both missing')
-    async_cb.reset()
-    logfile.remove()
-
-
 def test_improve_coverage_setLicense(accelize_drm, conf_json, cred_json, async_handler,
-                            live_server, request):
+                            live_server, request, log_file_factory):
     """
     Improve coverage of the setLicense function
     """
@@ -297,21 +248,23 @@ def test_improve_coverage_setLicense(accelize_drm, conf_json, cred_json, async_h
     async_cb = async_handler.create()
     async_cb.reset()
     conf_json['licensing']['url'] = _request.url + request.function.__name__
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
     conf_json.save()
 
-    with accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            ) as drm_manager:
-        drm_manager.activate()
-        sleep(4)
-        drm_manager.deactivate()
+    with pytest.raises(accelize_drm.exceptions.DRMWSRespError) as excinfo:
+        with accelize_drm.DrmManager(
+                    conf_json.path,
+                    cred_json.path,
+                    driver.read_register_callback,
+                    driver.write_register_callback,
+                    async_cb.callback
+                ) as drm_manager:
+            drm_manager.activate()
     assert async_cb.was_called
     assert async_cb.errcode == accelize_drm.exceptions.DRMWSRespError.error_code
     assert 'Malformed response from License Web Service:' in async_cb.message
+    logfile.remove()
 
 
 def test_improve_coverage_detectDrmFrequencyMethod1(accelize_drm, conf_json, cred_json, async_handler,
