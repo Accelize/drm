@@ -3,11 +3,10 @@
 Test logging mechanism of DRM Library.
 """
 import pytest
-from glob import glob
-from os import remove, getpid, makedirs, access, R_OK, W_OK
-from os.path import getsize, isfile, dirname, join, realpath, isdir, expanduser
+from os import remove, getpid, makedirs, access, W_OK
+from os.path import isfile, dirname, join, realpath, isdir, expanduser
 from re import search, findall, finditer, MULTILINE
-from time import time, sleep
+from time import time
 from shutil import rmtree
 from random import randrange
 
@@ -472,33 +471,6 @@ def test_log_file_without_credential_data_in_debug(accelize_drm, conf_json, cred
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    logfile = log_file_factory.create(1, type=1)
-    conf_json.reset()
-    conf_json['settings'].update(logfile.json)
-    conf_json.save()
-    with accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            ) as drm_manager:
-        drm_manager.activate()
-        sleep(1)
-        drm_manager.deactivate()
-    log_content = logfile.read()
-    assert not search(cred_json['client_id'], log_content)
-    assert not search(cred_json['client_secret'], log_content)
-    async_cb.assert_NoError()
-    logfile.remove()
-
-
-def test_log_file_without_credential_data_in_debug2(accelize_drm, conf_json, cred_json, async_handler,
-                                        log_file_factory, request):
-    """ Test no credential information is saved into log file """
-    driver = accelize_drm.pytest_fpga_driver[0]
-    async_cb = async_handler.create()
-    async_cb.reset()
     logfile = log_file_factory.create(0, type=1)
     conf_json.reset()
     conf_json['settings'].update(logfile.json)
@@ -511,10 +483,9 @@ def test_log_file_without_credential_data_in_debug2(accelize_drm, conf_json, cre
                 async_cb.callback
             ) as drm_manager:
         drm_manager.activate()
-        sleep(1)
-        drm_manager.deactivate()
+        license_duration = drm_manager.get('license_duration')
+        wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, license_duration)
     log_content = logfile.read()
-    assert not search(cred_json['client_id'], log_content)
     assert not search(cred_json['client_secret'], log_content)
     async_cb.assert_NoError()
     logfile.remove()

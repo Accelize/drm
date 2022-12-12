@@ -546,7 +546,10 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
             driver.write_register_callback,
             async_cb.callback
         ) as drm_manager:
-        deriv_prod += drm_manager.get('derived_product')
+        with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+            drm_manager.get('derived_product')
+        assert "Parameter 'derived_product' cannot be read" in str(excinfo.value)
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
     async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, "Parameter 'derived_product' cannot be read")
     print("Test parameter 'derived_product': PASS")
 
@@ -791,14 +794,6 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         async_cb.assert_NoError()
         print("Test parameter 'drm_frequency': PASS")
 
-        # Test parameter: product_info
-        from pprint import pformat
-        product_id = pformat(drm_manager.get('product_info'))
-        exp_product_id = pformat(activators.product_id)
-        assert product_id == exp_product_id, 'Unexpected product ID'
-        async_cb.assert_NoError()
-        print("Test parameter 'product_info': PASS")
-
         # Test parameter: mailbox_size
         mailbox_size = drm_manager.get('mailbox_size')
         assert mailbox_size == MAILBOX_SIZE, 'Unexpected Mailbox size'
@@ -1039,11 +1034,11 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
             driver.write_register_callback,
             async_cb.callback
         ) as drm_manager:
-        if 'XRT_PATH' in environ:
-            assert type(drm_manager.get('host_data')) == dict
-            assert len(drm_manager.get('host_data'))
-        else:
-            assert drm_manager.get('host_data')['host_card'] is not None
+        assert drm_manager.get('host_data') is None
+        drm_manager.activate()
+        wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, drm_manager.get('license_duration'))
+        assert type(drm_manager.get('host_data')) == dict
+        assert len(drm_manager.get('host_data'))
         with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
             drm_manager.set(host_data={'test':'test'})
     async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code," cannot be overwritten")
@@ -1124,6 +1119,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         async_cb.reset()
         print("Test parameter 'num_license_loaded': PASS")
 
+        '''
         # Test parameter: derived_product
         deriv_prod = drm_manager.get('derived_product')
         deriv_prod += '_subproduct'
@@ -1131,6 +1127,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         assert drm_manager.get('derived_product') == deriv_prod
         async_cb.assert_NoError()
         print("Test parameter 'derived_product': PASS")
+        '''
 
         # Test parameter: ws_connection_timeout
         ref_timeout = drm_manager.get('ws_connection_timeout')
@@ -1226,14 +1223,14 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
     cred_json.client_id = orig_client_id.replace(orig_client_id[0], replaced_char)
     assert orig_client_id != cred_json.client_id
     cred_json.save()
-    with accelize_drm.DrmManager(
-                conf_json.path, cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            ) as drm_manager:
-        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
-            drm_manager.activate()
+    cred_json.clear_cache()
+    with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+        accelize_drm.DrmManager(
+            conf_json.path, cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
     assert "Accelize Web Service error 401" in str(excinfo.value)
     assert "invalid_client" in str(excinfo.value)
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
@@ -1249,15 +1246,15 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
     replaced_char = 'A' if orig_client_secret[0]!='A' else 'B'
     cred_json.client_secret = orig_client_secret.replace(orig_client_secret[0], replaced_char)
     cred_json.save()
+    cred_json.clear_cache()
     assert orig_client_secret != cred_json.client_secret
-    with accelize_drm.DrmManager(
-                conf_json.path, cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            ) as drm_manager:
-        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
-            drm_manager.activate()
+    with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+        accelize_drm.DrmManager(
+            conf_json.path, cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
     assert "Accelize Web Service error 401" in str(excinfo.value)
     assert "invalid_client" in str(excinfo.value)
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code

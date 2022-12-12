@@ -177,6 +177,7 @@ def test_metered_from_new_objects(accelize_drm, conf_json, conf_json_second,
         activators.autotest(is_activated=True)
         activators.check_coin(drm_manager2.get('metered_data'))
         # Wait for license renewal
+        lic_duration = drm_manager2.get('license_duration')
         sleep(lic_duration+2)
         assert drm_manager2.get('session_id') != session_id
         assert drm_manager2.get('license_duration') == lic_duration
