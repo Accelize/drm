@@ -27,22 +27,20 @@ def test_connection_timeout(accelize_drm, conf_json, cred_json, async_handler,
     conf_json['settings']['ws_request_timeout'] = request_timeout
     conf_json['licensing']['url'] = 'http://100.100.100.100'
     conf_json.save()
-    with accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            ) as drm_manager:
-        assert drm_manager.get('ws_connection_timeout') == connection_timeout
-        assert drm_manager.get('ws_request_timeout') == request_timeout
-        start = datetime.now()
-        with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
-            drm_manager.activate()
-        end = datetime.now()
-        assert connection_timeout - 1 <= int((end - start).total_seconds()) <= connection_timeout
-        assert search(r'\[errCode=\d+\]\s*Failed to perform HTTP request .* \(Timeout was reached\) : Connection timed out after [%d%d]\d{3} milliseconds' % (connection_timeout-1,connection_timeout),
-                str(excinfo.value), IGNORECASE)
+    start = datetime.now()
+    with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+        accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+    end = datetime.now()
+    assert connection_timeout - 1 <= int((end - start).total_seconds()) <= connection_timeout
+    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+    assert search(r'\[errCode=\d+\]\s*Failed to perform HTTP request .* \(Timeout was reached\) : Connection timed out after [%d%d]\d{3} milliseconds' % (connection_timeout-1,connection_timeout),
+            str(excinfo.value), IGNORECASE)
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, '')
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, HTTP_TIMEOUT_ERR_MSG)
     async_cb.reset()

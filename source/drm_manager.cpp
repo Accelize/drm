@@ -2868,6 +2868,13 @@ public:
                                 mMailboxRoData.toStyledString() );
                         break;
                     }
+                    case ParameterKey::ws_url: {
+                        std::string url = getDrmWSClient().getUrl();
+                        json_value[key_str] = url;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
+                                url );
+                        break;
+                    }
                     case ParameterKey::ParameterKeyCount: {
                         uint32_t count = static_cast<uint32_t>( ParameterKeyCount );
                         json_value[key_str] = count;
@@ -3029,6 +3036,13 @@ public:
                         updateCtrlLogLevel( level_e );
                         Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, (uint32_t)key_id,
                                verbosityInt);
+                        break;
+                    }
+                    case ParameterKey::ws_url: {
+                        std::string url = (*it).asString();
+                        getDrmWSClient().setUrl( url );
+                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, (uint32_t)key_id,
+                               url);
                         break;
                     }
                     default:

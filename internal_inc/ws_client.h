@@ -169,12 +169,15 @@ public:
     DrmWSClient(const std::string &conf_file_path, const std::string &cred_file_path);
     ~DrmWSClient() = default;
 
+    std::string getUrl() const { return mUrl; }
     uint32_t getVerbosity() const { return mVerbosity; }
     uint32_t getTokenValidity() const { return mTokenValidityPeriod; }
     int32_t getTokenTimeLeft() const;
     std::string getTokenString() const { return mOAuth2Token; }
     int32_t getRequestTimeoutMS() const { return mRequestTimeoutMS; }
     int32_t getConnectionTimeoutMS() const { return mConnectionTimeoutMS; }
+
+    void setUrl( std::string& url ) { mUrl = url; }
 
     std::string escape( std::string str ) const;
     void getOAuth2token( int32_t timeout_msec );
