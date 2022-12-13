@@ -62,7 +62,6 @@ def test_env_var_DRMSAAS_CLIENT_ID(accelize_drm, conf_json, cred_json, async_han
     cred_json['client_id'] = 'acme_is_a_great_company' #'A2B3C4D5E6F7G2H3I4J5K6L7M2'
     cred_json.save()
     assert cred_json['client_id'] != environ['DRMSAAS_CLIENT_ID']
-    cred_json.clear_cache()
 
     with accelize_drm.DrmManager(
             conf_json.path,
@@ -108,7 +107,6 @@ def test_env_var_DRMSAAS_CLIENT_SECRET(accelize_drm, conf_json, cred_json, async
     cred_json['client_secret'] = 'acme_is_a_great_company'
     cred_json.save()
     assert cred_json['client_secret'] != environ['DRMSAAS_CLIENT_SECRET']
-    cred_json.clear_cache()
 
     with accelize_drm.DrmManager(
             conf_json.path,

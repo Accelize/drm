@@ -1223,7 +1223,6 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
     cred_json.client_id = orig_client_id.replace(orig_client_id[0], replaced_char)
     assert orig_client_id != cred_json.client_id
     cred_json.save()
-    cred_json.clear_cache()
     with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
         accelize_drm.DrmManager(
             conf_json.path, cred_json.path,
@@ -1246,7 +1245,6 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
     replaced_char = 'A' if orig_client_secret[0]!='A' else 'B'
     cred_json.client_secret = orig_client_secret.replace(orig_client_secret[0], replaced_char)
     cred_json.save()
-    cred_json.clear_cache()
     assert orig_client_secret != cred_json.client_secret
     with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
         accelize_drm.DrmManager(

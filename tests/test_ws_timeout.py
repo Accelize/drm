@@ -28,7 +28,7 @@ def test_connection_timeout(accelize_drm, conf_json, cred_json, async_handler,
     conf_json['licensing']['url'] = 'http://100.100.100.100'
     conf_json.save()
     start = datetime.now()
-    with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+    with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
         accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
@@ -38,10 +38,11 @@ def test_connection_timeout(accelize_drm, conf_json, cred_json, async_handler,
         )
     end = datetime.now()
     assert connection_timeout - 1 <= int((end - start).total_seconds()) <= connection_timeout
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
-    assert search(r'\[errCode=\d+\]\s*Failed to perform HTTP request .* \(Timeout was reached\) : Connection timed out after [%d%d]\d{3} milliseconds' % (connection_timeout-1,connection_timeout),
-            str(excinfo.value), IGNORECASE)
-    async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, '')
+    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
+    m = search(r'Timeout was reached.+Connection timed out after (\d+) milliseconds', str(excinfo.value), IGNORECASE)
+    assert m
+    assert (connection_timeout*1000 - 50) < int(m.group(1)) < (connection_timeout*1000 + 50)
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, 'Timeout was reached')
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, HTTP_TIMEOUT_ERR_MSG)
     async_cb.reset()
 
@@ -62,28 +63,23 @@ def test_request_timeout(accelize_drm, conf_json, cred_json, async_handler,
     conf_json['settings']['ws_request_timeout'] = request_timeout
     conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
-    with accelize_drm.DrmManager(
+    context = {'sleep': request_timeout + 10}
+    set_context(context)
+    assert get_context() == context
+    start = datetime.now()
+    with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
+        accelize_drm.DrmManager(
                 conf_json.path,
                 cred_json.path,
                 driver.read_register_callback,
                 driver.write_register_callback,
                 async_cb.callback
-            ) as drm_manager:
-        assert drm_manager.get('ws_connection_timeout') == connection_timeout
-        assert drm_manager.get('ws_request_timeout') == request_timeout
-
-        context = {'sleep': request_timeout + 10}
-        set_context(context)
-        assert get_context() == context
-
-        start = datetime.now()
-        with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
-            drm_manager.activate()
-        end = datetime.now()
-
+        )
+    end = datetime.now()
     assert request_timeout - 1 <= int((end - start).total_seconds()) <= request_timeout
-    assert search(r'\[errCode=\d+\]\s*Failed to perform HTTP request .* \(Timeout was reached\) : Operation timed out after [%d%d]\d+ milliseconds' % (request_timeout-1,request_timeout),
-            str(excinfo.value), IGNORECASE)
-    async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, 'Failed to perform HTTP request ')
+    m = search(r'Timeout was reached.+Operation timed out after (\d+) milliseconds', str(excinfo.value), IGNORECASE)
+    assert m
+    assert (request_timeout*1000 - 50) < int(m.group(1)) < (request_timeout*1000 + 50)
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, 'Timeout was reached')
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, HTTP_TIMEOUT_ERR_MSG)
     async_cb.reset()

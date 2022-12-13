@@ -900,6 +900,10 @@ class CredJson(_Json):
         _Json.__init__(self, tmpdir, 'cred.json', cred)
         self._user = ''
 
+    def save(self):
+        self.clear_cache()
+        _Json.save(self)
+
     def set_user(self, user=None):
         """
         Set user to use.
@@ -1022,8 +1026,10 @@ def cred_json(pytestconfig, tmpdir):
     """
     Manage "cred.json" in testing environment.
     """
-    return CredJson(
+    cred = CredJson(
         tmpdir, realpath(expanduser(pytestconfig.getoption("cred"))))
+    cred.clear_cache()
+    return cred
 
 
 def _get_session_info():

@@ -40,7 +40,7 @@ def create_app(url):
         return 'OK'
     '''
     # Functions calling the real web services
-    @app.route('/auth/token/', methods=['GET'])
+    @app.route('/auth/token/', methods=['GET', 'POST'])
     def otoken():
         new_url = url + '/auth/token/'
         return redirect(new_url, code=307)
@@ -875,7 +875,7 @@ def create_app(url):
         return redirect(request.url_root + '/auth/metering/health/', code=307)
 
     # test_improve_coverage_setLicense functions
-    @app.route('/test_improve_coverage_setLicense/auth/token/', methods=['GET'])
+    @app.route('/test_improve_coverage_setLicense/auth/token/', methods=['GET', 'POST'])
     def otoken__test_improve_coverage_setLicense():
         return redirect(request.url_root + '/auth/token/', code=307)
 
@@ -963,7 +963,7 @@ def create_app(url):
     # test_ws_timeout.py
 
     # test_request_timeout functions
-    @app.route('/test_request_timeout/auth/token/', methods=['GET', 'POST'])
+    @app.route('/test_request_timeout/auth/token', methods=['GET', 'POST'])
     def otoken__test_request_timeout():
         global context, lock
         start = str(datetime.now())
