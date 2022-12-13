@@ -22,9 +22,9 @@ def test_normal_usage(accelize_drm, request, exec_func, live_server, tmpdir,
 
     # Set initial context on the live server
     nb_running = 2
-    healthPeriod = 2
+    health_period = 2
 
-    context = {'healthPeriod':healthPeriod}
+    context = {'health_period':health_period}
     set_context(context)
     assert get_context() == context
 
