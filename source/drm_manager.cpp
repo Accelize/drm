@@ -1382,15 +1382,14 @@ Json::Value product_id_json = "AGCJ6WVJBFYODDFUEG2AGWNWZM";
 
         Debug( "Build ending license request #{} to stop current session", mLicenseCounter );
 
-        json_output["is_closed"] = true;
-
-        // Request challenge and metering info for first request
+        // Request challenge and metering info for latest request
         checkDRMCtlrRet( getDrmController().endSessionAndExtractMeteringFile(
                 numberOfDetectedIps, saasChallenge, meteringFile ) );
         Json::Value& drm_config = json_output["drm_config"];
         drm_config["saas_challenge"] = saasChallenge;
         drm_config["drm_session_id"] = meteringFile[0].substr( 0, 16 );
         drm_config["metering_file"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
+        json_output["is_closed"] = true;
         checkSessionIDFromDRM( json_output );
         return json_output;
     }
@@ -2584,7 +2583,10 @@ public:
                         unsigned long long int ip_metering = 0;
                         #endif
                         Json::Value json_request = getMeteringHealth();
-                        std::string meteringFileStr = json_request["metering_file"].asString();
+                        if ( !json_request["drm_config"].isMember("metering_file") ) {
+                            break;
+                        }
+                        std::string meteringFileStr = json_request["drm_config"]["metering_file"].asString();
                         if  ( meteringFileStr.size() ) {
                             std::vector<std::string> meteringFileList = splitByLength( meteringFileStr, 32 );
                             std::vector<std::string> meteringDataList = std::vector<std::string>(meteringFileList.begin() + 2, meteringFileList.end()-1);

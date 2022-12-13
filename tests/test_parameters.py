@@ -71,7 +71,9 @@ _PARAM_LIST = ('license_type',
                'log_ctrl_verbosity',
                'is_drm_software',
                'controller_version',
-               'controller_rom'
+               'controller_rom',
+               'license_counter',
+               'health_counter'
 )
 
 
@@ -638,6 +640,10 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     async_cb.reset()
     cred_json.set_user('accelize_accelerator_test_02')
     conf_json.reset()
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
+    conf_json.save()
+
     with accelize_drm.DrmManager(
             conf_json.path, cred_json.path,
             driver.read_register_callback,
@@ -950,6 +956,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         assert drm_manager.get('ParameterKeyCount') == len(_PARAM_LIST)
         async_cb.assert_NoError()
         print("Test parameter 'ParameterKeyCount': PASS")
+    logfile.remove()
 
     # Test parameter: log_message
     async_cb.reset()

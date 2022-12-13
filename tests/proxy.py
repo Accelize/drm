@@ -877,7 +877,8 @@ def create_app(url):
     # test_improve_coverage_setLicense functions
     @app.route('/test_improve_coverage_setLicense/auth/token', methods=['GET', 'POST'])
     def otoken__test_improve_coverage_setLicense():
-        return redirect(request.url_root + '/auth/token', code=307)
+        new_url = request.url.replace(request.url_root+'test_improve_coverage_setLicense', url)
+        return redirect(new_url, code=307)
 
     @app.route('/test_improve_coverage_setLicense/customer/product/<product_id>/entitlement_session', methods=['POST', 'PATCH'])
     def create__test_improve_coverage_setLicense(product_id):

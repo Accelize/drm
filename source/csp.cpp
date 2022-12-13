@@ -24,6 +24,7 @@ namespace DRM {
 
 
 void GetCspInfo( Json::Value& json_info, uint32_t verbosity ) {
+    Debug( "Detecting CSP" );
     std::unique_ptr<Csp> csp_obj( new Csp(verbosity, 2000, 2000) );
     // Try EC2 metadata service
     csp_obj->get_metadata_ec2( json_info );

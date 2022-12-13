@@ -144,8 +144,8 @@ std::string CurlEasyPost::request( const std::string& url, const tHttpRequestTyp
     }
     long resp_code = 0;
     curl_easy_getinfo( mCurl, CURLINFO_RESPONSE_CODE, &resp_code );
-    Debug( "Received HTTP response for request '{}' with code {} from {} in {} ms",
-            resp_header, resp_code, url, getTotalTime() * 1000 );
+    Debug( "Received HTTP response for request '{}' with code {} in {} ms",
+            resp_header, resp_code, getTotalTime() * 1000 );
 
     // Analyze HTTP response
     DRM_ErrorCode drm_error = httpCode2DrmCode(resp_code);
@@ -302,18 +302,18 @@ void DrmWSClient::getOAuth2token( int32_t timeout_msec ) {
     CurlEasyPost req( mConnectionTimeoutMS );
     req.setVerbosity( mVerbosity );
     req.setHostResolves( mHostResolvesJson );
-    std::stringstream qs;
-    qs << "grant_type=client_credentials";
-    qs << "&client_id=" << mClientId;
-    qs << "&client_secret=" << mClientSecret;
     req.setPostFields();
 
     // Send request and wait response
     if ( timeout_msec >= mRequestTimeoutMS )
         timeout_msec = mRequestTimeoutMS;
-    std::string oauth_url = fmt::format( "{}/auth/token?{}", mUrl, qs.str() );
+    std::string oauth_url = fmt::format( "{}/auth/token", mUrl );
     Debug( "Starting Authentication request to {}", oauth_url );
-    std::string response_str = req.request( oauth_url, tHttpRequestType::GET, timeout_msec );
+    std::stringstream qs;
+    qs << "?grant_type=client_credentials";
+    qs << "&client_id=" << mClientId;
+    qs << "&client_secret=" << mClientSecret;
+    std::string response_str = req.request( oauth_url + qs.str(), tHttpRequestType::GET, timeout_msec );
 
     // Parse response string
     Json::Value response_json;

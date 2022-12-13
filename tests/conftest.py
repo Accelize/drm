@@ -950,7 +950,7 @@ class CredJson(_Json):
 
     def clear_cache(self):
         home = environ.get('HOME')
-        if not home:
+        if not home or not self._content.get('client_id'):
             return
         cache_file = join(home,'.cache','accelize','drm',self.client_id+'.json')
         if isfile(cache_file):
