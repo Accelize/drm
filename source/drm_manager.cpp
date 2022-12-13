@@ -1238,12 +1238,10 @@ protected:
         }
     }
 
-    void checkSessionIDFromDRM( const Json::Value license_json ) {
-        std::string drm_sessionID = license_json["drm_config"]["drm_session_id"].asString();
-        if ( mSessionID.empty() ) {
-            mSessionID = drm_sessionID;
-        } else if ( mSessionID != drm_sessionID ) {
-            Warning( "Session ID mismatch: DRM IP returns '{}' but '{}' is expected", drm_sessionID, mSessionID ); //LCOV_EXCL_LINE
+    void checkSessionIDFromDRM( const Json::Value license_json ) const {
+        std::string drm_session_id = license_json["drm_config"]["drm_session_id"].asString();
+        if ( mSessionID != drm_session_id ) {
+            Throw( DRM_CtlrError, "Session ID mismatch: DRM IP returns '{}' but '{}' is expected", drm_session_id, mSessionID );
         }
     }
 
@@ -1414,15 +1412,14 @@ Json::Value product_id_json = "AGCJ6WVJBFYODDFUEG2AGWNWZM";
             }
         }
         Debug( "Released metering access mutex from getMeteringHealth" );
-        json_output["saas_challenge"] = saasChallenge;
-        if ( meteringFile.size() ) {
-            json_output["sessionId"] = meteringFile[0].substr( 0, 16 );
-        } else {
-            json_output["sessionId"] = "";
-        }
-        // Finalize the request with the collected data
-        json_output["metering_file"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
+
+        // Add metering info and health marker
+        Json::Value& drm_config = json_output["drm_config"];
+        drm_config["saas_challenge"] = saasChallenge;
+        drm_config["drm_session_id"] = meteringFile[0].substr( 0, 16 );
+        drm_config["metering_file"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
         json_output["is_health"] = true;
+        checkSessionIDFromDRM( json_output );
         return json_output;
     }
 
@@ -2122,9 +2119,6 @@ Json::Value product_id_json = "AGCJ6WVJBFYODDFUEG2AGWNWZM";
 
                         // Get next data from DRM Controller
                         Json::Value request_json = getMeteringHealth();
-
-                        // Check session ID
-                        checkSessionIDFromDRM( request_json );
 
                         // Post next data to server
                         Debug( "Sending new health info #{}", mHealthCounter );
