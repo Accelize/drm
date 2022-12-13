@@ -2587,10 +2587,6 @@ public:
                         unsigned long long int ip_metering = 0;
                         #endif
                         Json::Value json_request = getMeteringHealth();
-                        if ( !json_request["drm_config"].isMember("metering_file") ) {
-                            json_value[key_str].append( ip_metering );
-                            break;
-                        }
                         std::string meteringFileStr = json_request["drm_config"]["metering_file"].asString();
                         if  ( meteringFileStr.size() ) {
                             std::vector<std::string> meteringFileList = splitByLength( meteringFileStr, 32 );
