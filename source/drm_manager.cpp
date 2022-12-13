@@ -399,8 +399,9 @@ protected:
         mSecurityStop = false;
         mIsLockedToDrm = false;
 
-        mLicenseCounter = 0;
         mLicenseDuration = 0;
+        mLicenseCounter = 0;
+        mHealthCounter = 0;
 
         mConfFilePath = conf_file_path;
         mCredFilePath = cred_file_path;
@@ -1421,7 +1422,6 @@ Json::Value product_id_json = "AGCJ6WVJBFYODDFUEG2AGWNWZM";
         }
         // Finalize the request with the collected data
         json_output["metering_file"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
-        json_output["health_id"] = mHealthCounter++;
         json_output["is_health"] = true;
         return json_output;
     }
@@ -2121,14 +2121,15 @@ Json::Value product_id_json = "AGCJ6WVJBFYODDFUEG2AGWNWZM";
                         Debug( "Acquired metering access mutex from health thread" );
 
                         // Get next data from DRM Controller
-                        Debug( "Requesting new health info #{} now", mHealthCounter );
                         Json::Value request_json = getMeteringHealth();
 
                         // Check session ID
                         checkSessionIDFromDRM( request_json );
 
                         // Post next data to server
+                        Debug( "Sending new health info #{}", mHealthCounter );
                         Json::Value license_json = getLicense( request_json, retry_timeout_ms, retry_sleep_ms );
+                        mHealthCounter ++;
                     }
                     Debug( "Released metering access mutex from health thread" );
                 }
@@ -2868,11 +2869,16 @@ public:
                                 mMailboxRoData.toStyledString() );
                         break;
                     }
-                    case ParameterKey::ws_url: {
-                        std::string url = getDrmWSClient().getUrl();
-                        json_value[key_str] = url;
+                    case ParameterKey::license_counter: {
+                        json_value[key_str] = mLicenseCounter;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
-                                url );
+                                mLicenseCounter );
+                        break;
+                    }
+                    case ParameterKey::health_counter: {
+                        json_value[key_str] = mHealthCounter;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
+                                mHealthCounter );
                         break;
                     }
                     case ParameterKey::ParameterKeyCount: {
@@ -3036,13 +3042,6 @@ public:
                         updateCtrlLogLevel( level_e );
                         Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, (uint32_t)key_id,
                                verbosityInt);
-                        break;
-                    }
-                    case ParameterKey::ws_url: {
-                        std::string url = (*it).asString();
-                        getDrmWSClient().setUrl( url );
-                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, (uint32_t)key_id,
-                               url);
                         break;
                     }
                     default:
