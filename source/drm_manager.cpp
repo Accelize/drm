@@ -1414,9 +1414,13 @@ Json::Value product_id_json = "AGCJ6WVJBFYODDFUEG2AGWNWZM";
 
         // Add metering info and health marker
         Json::Value& drm_config = json_output["drm_config"];
-        drm_config["saas_challenge"] = saasChallenge;
-        drm_config["drm_session_id"] = meteringFile[0].substr( 0, 16 );
-        drm_config["metering_file"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
+        if ( meteringFile.size() ) {
+            drm_config["saas_challenge"] = saasChallenge;
+            drm_config["drm_session_id"] = meteringFile[0].substr( 0, 16 );
+            drm_config["metering_file"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
+        } else {
+            drm_config["metering_file"]  = std::string("");
+        }
         json_output["is_health"] = true;
         checkSessionIDFromDRM( json_output );
         return json_output;
@@ -2584,6 +2588,7 @@ public:
                         #endif
                         Json::Value json_request = getMeteringHealth();
                         if ( !json_request["drm_config"].isMember("metering_file") ) {
+                            json_value[key_str].append( ip_metering );
                             break;
                         }
                         std::string meteringFileStr = json_request["drm_config"]["metering_file"].asString();

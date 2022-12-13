@@ -1207,14 +1207,13 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
     conf_json['settings']['ws_retry_period_short'] = 1
     conf_json.save()
     assert conf_json['licensing']['url'] == "http://acme.com"
-    with accelize_drm.DrmManager(
-                conf_json.path, cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            ) as drm_manager:
-        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
-            drm_manager.activate()
+    with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+        accelize_drm.DrmManager(
+            conf_json.path, cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
     assert "Accelize Web Service error 404" in str(excinfo.value)
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code,"Accelize Web Service error 404")
