@@ -15,7 +15,7 @@ from tests.conftest import wait_deadline, wait_func_true
 @pytest.mark.cosim
 def test_hybrid_fast_start_stop(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
-    Test no error occurs witha quick start/stop
+    Test no error occurs with a quick start/stop
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()

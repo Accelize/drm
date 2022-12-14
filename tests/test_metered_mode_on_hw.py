@@ -196,7 +196,8 @@ def test_metered_from_new_objects(accelize_drm, conf_json, conf_json_second,
 @pytest.mark.minimum
 @pytest.mark.no_parallel
 @pytest.mark.hwtst
-def test_metering_limits_on_activate(accelize_drm, conf_json, cred_json, async_handler, log_file_factory, ws_admin):
+def test_metering_limits_on_activate(accelize_drm, conf_json, cred_json, async_handler, log_file_factory,
+                                    ws_admin):
     """
     Test an error is returned by the activate function and the design is locked when the limit is reached.
     """
@@ -213,7 +214,7 @@ def test_metering_limits_on_activate(accelize_drm, conf_json, cred_json, async_h
     conf_json['settings'].update(logfile.json)
     conf_json.save()
     cred_json.set_user('accelize_accelerator_test_03')
-    accelize_drm.clean_metering_env(cred_json, ws_admin)
+    ws_admin.load(conf_json, cred_json)
     with accelize_drm.DrmManager(
                 conf_json.path,
                 cred_json.path,
@@ -271,7 +272,7 @@ def test_metering_limits_on_licensing_thread(accelize_drm, conf_json, cred_json,
     conf_json['settings'].update(logfile.json)
     conf_json.save()
     cred_json.set_user('accelize_accelerator_test_03')
-    accelize_drm.clean_metering_env(cred_json, ws_admin)
+    ws_admin.load(conf_json, cred_json)
     with accelize_drm.DrmManager(
                 conf_json.path,
                 cred_json.path,

@@ -248,7 +248,7 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
                 "sep"_a=PATH_SEP, "home"_a=home, "clientid"_a=mClientId );
     mTokenFilePath = fmt::format( "{}{}{}.json", tokenDir, PATH_SEP, mClientId );
 
-    // Check if a cached token exists
+    // Check if a cached token exists and load it
     if ( isFile( mTokenFilePath ) ) {
         Json::Value token_json = parseJsonFile( mTokenFilePath );
         mOAuth2Token = JVgetRequired( token_json, "access_token", Json::stringValue ).asString();

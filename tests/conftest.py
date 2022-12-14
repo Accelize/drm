@@ -16,10 +16,10 @@ from time import time, sleep
 from shutil import rmtree
 from datetime import datetime, timedelta
 from glob import glob
+from requests import post, delete
 import types
 
 from tests.proxy import create_app, get_context, set_context
-from tests.ws_admin_functions import WSListFunction
 
 
 _SESSION = dict()
@@ -92,38 +92,52 @@ def get_default_conf_json(licensing_server_url, drm_frequency):
     }
 
 
-def clean_nodelock_env(drm_manager=None, driver=None,
-                       conf_json=None, cred_json=None, ws_admin=None,  product_name=None):
-    """
-    Clean nodelock related residues
-    """
-    # Clean license directory for nodelock
-    if conf_json is not None:
-        conf_json.cleanNodelockDir()
-    # Clear nodelock request from WS DB (not to hit the limit)
-    if product_name is None:
-        product_name = 'drm_1activator'
-    if (ws_admin is not None) and (cred_json is not None):
-        ws_admin.remove_product_information(library='refdesign', name=product_name,
-                                            user=cred_json.email)
-    # Reprogram FPGA
-    if driver is not None:
-        if drm_manager is None:
-            driver.program_fpga()
-        elif drm_manager.get('drm_license_type') == 'Node-Locked':
-            driver.program_fpga()
+class DB_AccessFunction:
+    # Get token
+    @staticmethod
+    def get_token(base_url, client_id, client_secret):
+        url = base_url + '/auth/token?grant_type=client_credentials&client_id=%s&client_secret=%s' % (
+            client_id, client_secret)
+        response = post(url)
+        return response.json()['access_token']
+
+    # Get info
+    @staticmethod
+    def get_db(base_url, route, token):
+        url = base_url + route
+        response = get(url, headers={"Authorization":f"Bearer {token}"})
+        print('[get_info] response=', response)
+        return response.json()
+
+    # delete info
+    @staticmethod
+    def delete_db(base_url, route, token):
+        url = base_url + route
+        response = delete(url, headers={"Authorization":f"Bearer {token}"})
+        print('[delete_info] response=', response)
+        return
+
+    def load(self, conf_json, cred_json)
+        self.conf_json = conf_json
+        baseurl = conf_json['licensing']['url']
+        self.token = self.get_token(baseurl, cred_json.client_id, cred_json.client_secret)
+        self.clear_entitlements()
+
+    def clear_entitlements(self):
+        """
+        Clear all entitlement sessions for all entitlement associated to user
+        """
+        # Clean license directory for nodelock
+        self.conf_json.cleanNodelockDir()
+        # Delete all entitlements from DB
+        for item in self.get_db(base_url, '/customer/entitlement', token):
+            print('item=', item)
+            self.delete_db(baseurl, f'/customer/entitlement/{item["id"]}/entitlement_session', self.token)
 
 
-def clean_metering_env(cred_json=None, ws_admin=None, product_name=None):
-    """
-    Clean floating related residues
-    """
-    if product_name is None:
-        product_name = 'drm_1activator'
-    # Clear metering request from WS DB (not to hit the limit)
-    if (ws_admin is not None) and (cred_json is not None):
-        ws_admin.remove_product_information(library='refdesign',
-            name=product_name, user=cred_json.email)
+@pytest.fixture
+def ws_admin():
+    return DB_AccessFunction()
 
 
 def param2dict(param_list):
@@ -222,8 +236,8 @@ def pytest_addoption(parser):
         help='Specify extra option to the fpga driver')
 
 
-
-def pytest_runtest_setup(item):
+#def pytest_runtest_setup(item):
+def pytest_runtest_makereport(item, call):
     """
     Configure test initialization
     """
@@ -267,13 +281,25 @@ def pytest_runtest_setup(item):
         hybrid_test = True
 
     if not hybrid_test:
+
+        # Check on_2_fpga tests
+        markers = tuple(item.iter_markers(name='on_2_fpga'))
+        accelize_drm_fixture = item.funcargs["accelize_drm"]
+        if not item.config.getoption("--noparallel") and markers:
+            pytest.skip("Don't run 'noparallel' tests.")
+        elif item.config.getoption("--noparallel") and not markers:
+            pytest.skip("Run only 'noparallel' tests.")
+        elif item.config.getoption("--noparallel") and markers
+                and len(accelize_drm_fixture.pytest_fpga_driver) != 2:
+            pytest.skip("Need 2 FPGAs to run test.")
+
         # Check noparallel tests
         markers = tuple(item.iter_markers(name='no_parallel'))
-        markers += tuple(item.iter_markers(name='on_2_fpga'))
-        if not item.config.getoption("noparallel") and markers:
+        if not item.config.getoption("--noparallel") and markers:
             pytest.skip("Don't run 'noparallel' tests.")
-        elif item.config.getoption("noparallel") and not markers:
+        elif item.config.getoption("--noparallel") and not markers:
             pytest.skip("Run only 'noparallel' tests.")
+
         # Check som tests
         if tuple(item.iter_markers(name='som')):
             pytest.skip("Don't run SoM specific tests.")
@@ -600,6 +626,7 @@ def scanAllActivators(fpga_driver, actr_base_address):
         fpga_activators.append(scanActivatorsByCard(driver, actr_base_address))
     return fpga_activators
 
+
 # Pytest Fixtures
 @pytest.fixture(scope='session')
 def accelize_drm(pytestconfig, tmpdir_factory):
@@ -735,6 +762,8 @@ def accelize_drm(pytestconfig, tmpdir_factory):
                     **fpga_driver_extra
                 )
             )
+        except RuntimeError:
+            print(f'Slot #{slot_id} is not available')
         except:
             raise IOError("Failed to load driver on slot %d" % slot_id)
 
@@ -787,16 +816,15 @@ def accelize_drm(pytestconfig, tmpdir_factory):
     _accelize_drm.pytest_backend = backend
     _accelize_drm.pytest_fpga_driver = fpga_driver
     _accelize_drm.pytest_fpga_driver_name = fpga_driver_name
-    _accelize_drm.pytest_fpga_slot_id = fpga_slot_id
     _accelize_drm.pytest_fpga_image = fpga_image
     _accelize_drm.pytest_hdk_version = ctrl_versions[0]
     _accelize_drm.pytest_actr_base_address = actr_base_address
     _accelize_drm.pytest_fpga_activators = fpga_activators
     _accelize_drm.pytest_ref_designs = ref_designs
-    _accelize_drm.clean_nodelock_env = lambda *kargs, **kwargs: clean_nodelock_env(
-        *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
-    _accelize_drm.clean_metering_env = lambda *kargs, **kwargs: clean_metering_env(
-        *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
+    #_accelize_drm.clean_nodelock_env = lambda *kargs, **kwargs: clean_nodelock_env(
+    #    *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
+    #_accelize_drm.clean_metering_env = lambda *kargs, **kwargs: clean_metering_env(
+    #    *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
     _accelize_drm.scanActivators = types.MethodType( scan, _accelize_drm )
     _accelize_drm.pytest_params = param2dict(pytestconfig.getoption("params"))
     _accelize_drm.pytest_artifacts_dir = pytest_artifacts_dir
@@ -871,19 +899,20 @@ class ConfJson(_Json):
         self.save()
 
     def removeNodelock(self):
-        if 'nodelocked' in self['licensing']:
+        if self['licensing'].get('nodelocked'):
             del self['licensing']['nodelocked']
-        assert 'nodelocked' not in self['licensing']
-        if 'license_dir' in self['licensing'].keys():
+        assert not self['licensing'].get('nodelocked')
+        if self['licensing'].get('license_dir'):
             del self['licensing']['license_dir']
-        assert 'license_dir' not in self['licensing']
+        assert not self['licensing'].get('license_dir')
         self.save()
 
     def cleanNodelockDir(self):
-        file_list = glob(join(self._dirname, '*.req'))
-        file_list.extend(glob(join(self._dirname, '*.lic')))
-        for e in file_list:
-            remove(e)
+        if self['licensing'].get('nodelocked'):
+            file_list = glob(join(self._dirname, '*.req'))
+            file_list.extend(glob(join(self._dirname, '*.lic')))
+            for e in file_list:
+                remove(e)
 
 
 class CredJson(_Json):
@@ -1219,38 +1248,6 @@ class AsyncErrorHandlerList(list):
 @pytest.fixture
 def async_handler():
     return AsyncErrorHandlerList()
-
-
-class WSAdmin:
-    """
-    Handle Web Service administration for test and debug of the DRM Lib
-    """
-    def __init__(self, url, client_id, client_secret):
-        self._functions = WSListFunction(url, client_id, client_secret)
-
-    def remove_product_information(self, library, name, user):
-        self._functions._get_user_token()
-        data = {'library': library, 'name': name, 'user': user}
-        text, status = self._functions.remove_product_information(data)
-        assert status == 200, text
-
-    def get_last_metering_information(self, session_id):
-        self._functions._get_user_token()
-        text, status = self._functions.metering_lastinformation({'session': session_id})
-        assert status == 200, text
-        return text
-
-    @property
-    def functions(self):
-        return self._functions
-
-
-@pytest.fixture
-def ws_admin(cred_json, conf_json):
-    cred = cred_json.get_user('admin')
-    assert cred['user'] == 'admin'
-    return WSAdmin(conf_json['licensing']['url'], cred['client_id'],
-                   cred['client_secret'])
 
 
 class ExecFunction:
