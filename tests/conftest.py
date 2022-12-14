@@ -117,7 +117,7 @@ class DB_AccessFunction:
         print('[delete_info] response=', response)
         return
 
-    def load(self, conf_json, cred_json)
+    def load(self, conf_json, cred_json):
         self.conf_json = conf_json
         baseurl = conf_json['licensing']['url']
         self.token = self.get_token(baseurl, cred_json.client_id, cred_json.client_secret)
@@ -236,8 +236,7 @@ def pytest_addoption(parser):
         help='Specify extra option to the fpga driver')
 
 
-#def pytest_runtest_setup(item):
-def pytest_runtest_makereport(item, call):
+def pytest_runtest_setup(item):
     """
     Configure test initialization
     """
@@ -289,9 +288,6 @@ def pytest_runtest_makereport(item, call):
             pytest.skip("Don't run 'noparallel' tests.")
         elif item.config.getoption("--noparallel") and not markers:
             pytest.skip("Run only 'noparallel' tests.")
-        elif item.config.getoption("--noparallel") and markers
-                and len(accelize_drm_fixture.pytest_fpga_driver) != 2:
-            pytest.skip("Need 2 FPGAs to run test.")
 
         # Check noparallel tests
         markers = tuple(item.iter_markers(name='no_parallel'))
@@ -821,10 +817,6 @@ def accelize_drm(pytestconfig, tmpdir_factory):
     _accelize_drm.pytest_actr_base_address = actr_base_address
     _accelize_drm.pytest_fpga_activators = fpga_activators
     _accelize_drm.pytest_ref_designs = ref_designs
-    #_accelize_drm.clean_nodelock_env = lambda *kargs, **kwargs: clean_nodelock_env(
-    #    *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
-    #_accelize_drm.clean_metering_env = lambda *kargs, **kwargs: clean_metering_env(
-    #    *kargs, **kwargs, product_name=fpga_activators[0].product_id['name'])
     _accelize_drm.scanActivators = types.MethodType( scan, _accelize_drm )
     _accelize_drm.pytest_params = param2dict(pytestconfig.getoption("params"))
     _accelize_drm.pytest_artifacts_dir = pytest_artifacts_dir
