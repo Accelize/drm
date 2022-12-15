@@ -51,7 +51,7 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json,
         assert drm_manager.get('health_period') == health_period
         wait_func_true(lambda: get_context()['exit'],
                 timeout=health_period * (nb_health + 1) * 2)
-        assert drm_manager.get('health_period') == 0
+        assert drm_manager.get('health_period') == health_period
         assert get_context()['cnt'] == nb_health
         sleep(health_period + 1)
         assert get_context()['cnt'] == nb_health

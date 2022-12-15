@@ -18,6 +18,7 @@ limitations under the License.
 #include <future>
 #include <numeric>
 #include <fstream>
+#include <dirent.h>
 
 #include "accelize/drm/drm_manager.h"
 #include "accelize/drm/version.h"
@@ -635,6 +636,25 @@ protected:
                 securityAlertBit, adaptiveProportionTestError, repetitionCountTestError );
     }
 
+    void findBoards() {
+        /*
+        // Get list of known boards
+        std::string suburl = "/customer/boards";
+        std::string response = getDrmWSClient().sendSaasRequest( suburl,
+                    tHttpRequestType::GET, Json::nullValue );
+        Json::Value known_boards = parseJsonString( response );
+        */
+        Json::Value known_boards;
+        known_boards["0x8061"].append("0x10FE");
+        known_boards["0x8061"].append("0xF1F2");
+        Debug( "Listing device tree:" );
+        std::string devices;
+        for( const auto &entry: listDir( "/sys/bus/pci/devices/" ) ) {
+            devices += entry + ",";
+            std::cout << entry << std::endl;
+        }
+    }
+
     bool findXrtUtility() {
         // Check XILINX_XRT environment variable existence
         char* env_val = getenv( "XILINX_XRT" );
@@ -774,6 +794,8 @@ protected:
         if ( mHostDataVerbosity == eHostDataVerbosity::NONE ) {
             return;
         }
+
+        findBoards();
 
         // Get host info
         std::string os_version = rtrim( execCmd( "grep -Po 'PRETTY_NAME=\"\\K[^\"]+' /etc/os-release" ) );
@@ -1281,7 +1303,8 @@ protected:
         mMailboxRoData = parseJsonString( mailboxReadOnly );
 
 //TODO: UNCOMMENT THIS LINE AND REMOVE THE NEXT ONE       Json::Value product_id_json = mMailboxRoData["product_id"];
-Json::Value product_id_json = "AGCJ6WVJBFYODDFUEG2AGWNWZM";
+//Json::Value product_id_json = "AGCJ6WVJBFYODDFUEG2AGWNWZM";
+Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         if ( product_id_json.isString() ) {
             // v2.x HDK
             mProductID = product_id_json.asString();
@@ -2083,7 +2106,7 @@ Json::Value product_id_json = "AGCJ6WVJBFYODDFUEG2AGWNWZM";
     void startHealthContinuityThread() {
 
         if ( mThreadHealth.valid() ) {
-            Warning( "Asynchronous metering thread already started" );
+            Debug( "Asynchronous metering thread already started" );
             return;
         }
 

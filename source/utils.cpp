@@ -20,6 +20,7 @@ limitations under the License.
 #if defined(_WIN32)
 #include <direct.h>   // _mkdir
 #endif
+#include <dirent.h>
 
 #include "utils.h"
 #include "log.h"
@@ -53,6 +54,29 @@ bool isDir( const std::string& dir_path ) {
     return ( info.st_mode & S_IFDIR ) != 0;
 #endif
 }
+
+
+std::vector<std::string> listDir( const std::string path ) {
+    std::vector<std::string> file_list;
+    DIR *dir;
+    struct dirent *ent;
+
+    if ( !isDir( path ) ) {
+        Unreachable( "{} is not a valid directory", path ); //LCOV_EXCL_LINE
+    }
+    if ( (dir = opendir( path.c_str() )) != NULL ) {
+        // print all the files and directories within directory
+        while( (ent = readdir( dir )) != NULL ) {
+            file_list.push_back( ent->d_name );
+        }
+        closedir( dir );
+    } else {
+      // could not open directory
+      Debug( "Could not access directory {}", path );
+    }
+    return file_list;
+}
+
 
 
 bool isFile( const std::string& file_path ) {

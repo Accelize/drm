@@ -34,6 +34,7 @@ const char PATH_SEP =
 // Path related functions
 std::string getDirName( const std::string& full_path );
 bool isDir( const std::string& dir_path );
+std::vector<std::string> listDir( const std::string path );
 bool isFile( const std::string& file_path );
 bool removeFile( const std::string& file_path );
 bool makeDirs( const std::string& dir_path, mode_t mode = 744 );
