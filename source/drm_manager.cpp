@@ -647,11 +647,11 @@ protected:
         Json::Value boards;
         std::string sys_path = "/sys/bus/pci/devices/";
         for( const auto &entry: listDir( sys_path ) ) {
-            std::string vendor = readFile( sys_path + entry + "/vendor" );
+            std::string vendor = rtrim( readFile( sys_path + entry + "/vendor" ) );
             if ( !boards.isMember(vendor) ) {
                 boards[vendor] = Json::arrayValue;
             }
-            std::string device = readFile( sys_path + entry + "/device" );
+            std::string device = rtrim( readFile( sys_path + entry + "/device" ) );
             boards[vendor].append( device );
         }
         std::cout << "boards=" << boards.toStyledString() << std::endl;
