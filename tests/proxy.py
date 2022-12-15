@@ -310,7 +310,7 @@ def create_app(url):
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
-            response_json['metering']['healthPeriod'] = context['healthPeriod']
+            response_json['drm_config']['health_period'] = context['health_period']
         return Response(dumps(response_json), response.status_code, headers)
 
     @app.route('/test_health_period_disabled/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
@@ -327,9 +327,9 @@ def create_app(url):
         with lock:
             context['cnt'] += 1
             if context['cnt'] < context['nb_health']:
-                response_json['metering']['healthPeriod'] = context['healthPeriod']
+                response_json['metering']['health_period'] = context['health_period']
             else:
-                response_json['metering']['healthPeriod'] = 0
+                response_json['metering']['health_period'] = 0
                 context['exit'] = True
         return Response(dumps(response_json), response.status_code, headers)
 
@@ -351,7 +351,7 @@ def create_app(url):
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
-            response_json['metering']['healthPeriod'] = context['healthPeriod']
+            response_json['metering']['health_period'] = context['health_period']
         return Response(dumps(response_json), response.status_code, headers)
 
     @app.route('/test_health_period_modification/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
@@ -367,10 +367,10 @@ def create_app(url):
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
-            response_json['metering']['healthPeriod'] = context['healthPeriod']
-            response_json['metering']['healthRetry'] = context['healthRetry']
-            response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
-            context['healthPeriod'] += 1
+            response_json['metering']['health_period'] = context['health_period']
+            response_json['metering']['health_retry'] = context['health_retry']
+            response_json['metering']['health_retry_sleep'] = context['health_retry_sleep']
+            context['health_period'] += 1
             context['data'].append( (start,str(datetime.now())) )
         return Response(dumps(response_json), response.status_code, headers)
 
@@ -392,7 +392,7 @@ def create_app(url):
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
-            response_json['metering']['healthPeriod'] = context['healthPeriod']
+            response_json['metering']['health_period'] = context['health_period']
         return Response(dumps(response_json), response.status_code, headers)
 
     @app.route('/test_health_retry_disabled/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
@@ -410,9 +410,9 @@ def create_app(url):
                 excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
                 headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
                 response_json = response.json()
-                response_json['metering']['healthPeriod'] = context['healthPeriod']
-                response_json['metering']['healthRetry'] = 0
-                response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
+                response_json['metering']['health_period'] = context['health_period']
+                response_json['metering']['health_retry'] = 0
+                response_json['metering']['health_retry_sleep'] = context['health_retry_sleep']
                 response_status_code = response.status_code
                 context['post'] = (response_json, headers)
             else:
@@ -439,7 +439,7 @@ def create_app(url):
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
-            response_json['metering']['healthPeriod'] = context['healthPeriod']
+            response_json['metering']['health_period'] = context['health_period']
         return Response(dumps(response_json), response.status_code, headers)
 
     @app.route('/test_health_retry_modification/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
@@ -457,9 +457,9 @@ def create_app(url):
                 excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
                 headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
                 response_json = response.json()
-                response_json['metering']['healthPeriod'] = context['healthPeriod']
-                response_json['metering']['healthRetry'] = context['healthRetry']
-                response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
+                response_json['metering']['health_period'] = context['health_period']
+                response_json['metering']['health_retry'] = context['health_retry']
+                response_json['metering']['health_retry_sleep'] = context['health_retry_sleep']
                 response_status_code = response.status_code
                 context['post'] = (response_json, headers)
             else:
@@ -489,7 +489,7 @@ def create_app(url):
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
-            response_json['metering']['healthPeriod'] = context['healthPeriod']
+            response_json['metering']['health_period'] = context['health_period']
         return Response(dumps(response_json), response.status_code, headers)
 
     @app.route('/test_health_retry_sleep_modification/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
@@ -507,9 +507,9 @@ def create_app(url):
                 excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
                 headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
                 response_json = response.json()
-                response_json['metering']['healthPeriod'] = context['healthPeriod']
-                response_json['metering']['healthRetry'] = context['healthRetry']
-                response_json['metering']['healthRetrySleep'] = context['healthRetrySleep']
+                response_json['metering']['health_period'] = context['health_period']
+                response_json['metering']['health_retry'] = context['health_retry']
+                response_json['metering']['health_retry_sleep'] = context['health_retry_sleep']
                 response_status_code = response.status_code
                 context['post'] = (response_json, headers)
             else:
@@ -539,7 +539,7 @@ def create_app(url):
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
-            response_json['metering']['healthPeriod'] = context['healthPeriod']
+            response_json['metering']['health_period'] = context['health_period']
         return Response(dumps(response_json), response.status_code, headers)
 
     @app.route('/test_health_metering_data/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
@@ -555,8 +555,8 @@ def create_app(url):
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
-            response_json['metering']['healthPeriod'] = context['healthPeriod']
-            response_json['metering']['healthRetry'] = context['healthRetry']
+            response_json['metering']['health_period'] = context['health_period']
+            response_json['metering']['health_retry'] = context['health_retry']
             context['health_id']= health_id
         return Response(dumps(response_json), response.status_code, headers)
 
@@ -578,8 +578,8 @@ def create_app(url):
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
-            response_json['metering']['healthPeriod'] = context['healthPeriod']
-            response_json['metering']['healthRetry'] = context['healthRetry']
+            response_json['metering']['health_period'] = context['health_period']
+            response_json['metering']['health_retry'] = context['health_retry']
             context['nb_genlic'] += 1
         return Response(dumps(response_json), response.status_code, headers)
 
@@ -595,8 +595,8 @@ def create_app(url):
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
-            response_json['metering']['healthPeriod'] = context['healthPeriod']
-            response_json['metering']['healthRetry'] = context['healthRetry']
+            response_json['metering']['health_period'] = context['health_period']
+            response_json['metering']['health_retry'] = context['health_retry']
         return Response(dumps(response_json), response.status_code, headers)
 
     # test_async_call_on_pause_when_health_is_enabled and test_no_async_call_on_pause_when_health_is_disabled functions
@@ -617,8 +617,8 @@ def create_app(url):
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
-            response_json['metering']['healthPeriod'] = context['healthPeriod']
-            response_json['metering']['healthRetry'] = context['healthRetry']
+            response_json['metering']['health_period'] = context['health_period']
+            response_json['metering']['health_retry'] = context['health_retry']
         return Response(dumps(response_json), response.status_code, headers)
 
     @app.route('/test_async_call_on_pause_depending_on_health_status/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
@@ -634,8 +634,8 @@ def create_app(url):
         response_json = response.json()
         with lock:
             context['health_cnt'] += 1
-            response_json['metering']['healthPeriod'] = context['healthPeriod']
-            response_json['metering']['healthRetry'] = context['healthRetry']
+            response_json['metering']['health_period'] = context['health_period']
+            response_json['metering']['health_retry'] = context['health_retry']
         return Response(dumps(response_json), response.status_code, headers)
 
     ##############################################################################
@@ -841,7 +841,7 @@ def create_app(url):
         response_json = response.json()
         if 'metering' in response_json.keys():
             with lock:
-                response_json['metering']['healthPeriod'] = context['healthPeriod']
+                response_json['metering']['health_period'] = context['health_period']
         return Response(dumps(response_json), response.status_code, headers)
 
     @app.route('/test_topic0_corrupted_segment_index/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
@@ -862,7 +862,7 @@ def create_app(url):
         response_json = response.json()
         if 'metering' in response_json.keys():
             with lock:
-                response_json['metering']['healthPeriod'] = context['healthPeriod']
+                response_json['metering']['health_period'] = context['health_period']
         return Response(dumps(response_json), response.status_code, headers)
 
     # test_topic1_corrupted_metering functions
@@ -883,7 +883,7 @@ def create_app(url):
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
-            response_json['metering']['healthPeriod'] = context['healthPeriod']
+            response_json['metering']['health_period'] = context['health_period']
         return Response(dumps(response_json), response.status_code, headers)
 
     @app.route('/test_topic1_corrupted_metering/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
