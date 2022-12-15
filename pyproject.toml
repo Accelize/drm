@@ -22,7 +22,7 @@ cython = "*"
 addopts = ["--strict-markers", "--cov=accelize_drm"]
 markers = [
     "no_parallel: Cannont be run in parallel.",
-    "on_2_fpga: Require 2 FPGA",
+    "on_2_fpga: Require 2 FPGA boards",
     "aws: Require AWS.",
     "endurance: Endurance test.",
     "long_run: Long run tests.",

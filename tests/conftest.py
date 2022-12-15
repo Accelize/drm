@@ -281,16 +281,9 @@ def pytest_runtest_setup(item):
 
     if not hybrid_test:
 
-        # Check on_2_fpga tests
-        markers = tuple(item.iter_markers(name='on_2_fpga'))
-        accelize_drm_fixture = item.funcargs["accelize_drm"]
-        if not item.config.getoption("--noparallel") and markers:
-            pytest.skip("Don't run 'noparallel' tests.")
-        elif item.config.getoption("--noparallel") and not markers:
-            pytest.skip("Run only 'noparallel' tests.")
-
         # Check noparallel tests
-        markers = tuple(item.iter_markers(name='no_parallel'))
+        markers  = tuple(item.iter_markers(name='no_parallel'))
+        markers += tuple(item.iter_markers(name='on_2_fpga'))
         if not item.config.getoption("--noparallel") and markers:
             pytest.skip("Don't run 'noparallel' tests.")
         elif item.config.getoption("--noparallel") and not markers:

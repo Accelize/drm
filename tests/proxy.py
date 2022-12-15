@@ -132,7 +132,7 @@ def create_app(url):
                 return ({'error':'Test did not run as expected'}, 408)
             context['cnt'] += 1
         response = post(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+        assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
         dna, lic_json = list(response_json['license'].items())[0]
@@ -164,7 +164,7 @@ def create_app(url):
                 return ({'error':'Test did not run as expected'}, 408)
             context['cnt'] += 1
         response = post(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+        assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
         dna, lic_json = list(response_json['license'].items())[0]
@@ -198,7 +198,7 @@ def create_app(url):
                 return ({'error':'Test did not run as expected'}, 408)
             context['cnt'] += 1
         response = post(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+        assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
         if cnt == 1 and response_json.get('license'):
@@ -233,7 +233,7 @@ def create_app(url):
                 return ({'error':'Test did not run as expected'}, 408)
             context['cnt'] += 1
         response = post(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+        assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
         if cnt == 1 and response_json.get('license'):
@@ -263,7 +263,7 @@ def create_app(url):
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         request_json = request.get_json()
         response = post(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+        assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
         response_session_id = response_json['metering']['sessionId']
@@ -304,7 +304,7 @@ def create_app(url):
         new_url = request.url.replace(request.url_root+'test_health_period_disabled', url)
         request_json = request.get_json()
         response = post(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+        assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
@@ -345,7 +345,7 @@ def create_app(url):
         new_url = request.url.replace(request.url_root+'test_health_period_modification', url)
         request_json = request.get_json()
         response = post(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+        assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
@@ -386,7 +386,7 @@ def create_app(url):
         new_url = request.url.replace(request.url_root+'test_health_retry_disabled', url)
         request_json = request.get_json()
         response = post(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+        assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
@@ -433,7 +433,7 @@ def create_app(url):
         new_url = request.url.replace(request.url_root+'test_health_retry_modification', url)
         request_json = request.get_json()
         response = post(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+        assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
@@ -483,7 +483,7 @@ def create_app(url):
         new_url = request.url.replace(request.url_root+'test_health_retry_sleep_modification', url)
         request_json = request.get_json()
         response = post(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+        assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
@@ -533,7 +533,7 @@ def create_app(url):
         new_url = request.url.replace(request.url_root+'test_health_metering_data', url)
         request_json = request.get_json()
         response = post(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+        assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
@@ -572,7 +572,7 @@ def create_app(url):
         new_url = request.url.replace(request.url_root+'test_segment_index', url)
         request_json = request.get_json()
         response = post(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+        assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
@@ -611,7 +611,7 @@ def create_app(url):
         new_url = request.url.replace(request.url_root+'test_async_call_on_pause_depending_on_health_status', url)
         request_json = request.get_json()
         response = post(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+        assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
@@ -687,7 +687,7 @@ def create_app(url):
         new_url = request.url.replace(request.url_root+'test_long_to_short_retry_switch_on_authentication', url)
         request_json = request.get_json()
         response = post(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+        assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                     indent=4, sort_keys=True), response.status_code, response.text)
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
@@ -718,7 +718,7 @@ def create_app(url):
             try:
                 if context['cnt'] < 1 or request_type == 'close':
                     response = post(new_url, json=request_json, headers=request.headers)
-                    assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                    assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                             indent=4, sort_keys=True), response.status_code, response.text)
                     excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
                     headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
@@ -830,7 +830,7 @@ def create_app(url):
         request_json = request.get_json()
         response = post(new_url, json=request_json, headers=request.headers)
         try:
-            assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+            assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         except AssertionError as e:
             if 'Metering information is not consistent' in str(e):
@@ -877,7 +877,7 @@ def create_app(url):
         new_url = request.url.replace(request.url_root+'test_topic1_corrupted_metering', url)
         request_json = request.get_json()
         response = post(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+        assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
             indent=4, sort_keys=True), response.status_code, response.text)
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
@@ -993,7 +993,7 @@ def create_app(url):
             context['derived_product'] = deriv_prod
             request_json['product']['name'] = request_json['product']['name'].replace(context['product_suffix'], '')
         response = post(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+        assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
             indent=4, sort_keys=True), response.status_code, response.text)
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
