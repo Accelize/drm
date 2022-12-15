@@ -636,7 +636,7 @@ protected:
                 securityAlertBit, adaptiveProportionTestError, repetitionCountTestError );
     }
 
-    void detectBoards() {
+    Json::Value detectBoards() {
         /*
         // Get list of known boards
         std::string suburl = "/customer/boards";
@@ -644,19 +644,19 @@ protected:
                     tHttpRequestType::GET, Json::nullValue );
         Json::Value known_boards = parseJsonString( response );
         */
-        Json::Value boards;
+        Json::Value devices;
         std::string sys_path = "/sys/bus/pci/devices/";
         for( const auto &entry: listDir( sys_path ) ) {
             std::string vendor = rtrim( readFile( sys_path + entry + "/vendor" ) );
-            if ( !boards.isMember(vendor) ) {
-                boards[vendor] = Json::arrayValue;
+            if ( !devices.isMember(vendor) ) {
+                devices[vendor] = Json::arrayValue;
             }
             std::string device = rtrim( readFile( sys_path + entry + "/device" ) );
-            boards[vendor].append( device );
+            devices[vendor].append( device );
         }
-        std::cout << "boards=" << boards.toStyledString() << std::endl;
-        Debug( "Listing device tree: {}", boards.toStyledString() );
-
+        std::cout << "devices=" << devices.toStyledString() << std::endl;
+        Debug( "Listing devices on PCIe tree: {}", devices.toStyledString() );
+        return devices;
     }
 
     bool findXrtUtility() {
@@ -799,7 +799,7 @@ protected:
             return;
         }
 
-        detectBoards();
+        mDiagnostics["pcie_devices"] = detectBoards();
 
         // Get host info
         std::string os_version = rtrim( execCmd( "grep -Po 'PRETTY_NAME=\"\\K[^\"]+' /etc/os-release" ) );
