@@ -318,18 +318,23 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_health_period_disabled', url)
         request_json = request.get_json()
+        is_health = request_json.get('is_health')
+        is_closed = request_json.get('is_closed')
         response = post(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
-                indent=4, sort_keys=True), response.status_code, response.text)
+        assert response.status_code == 204 if is_health else 200, (
+                "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text))
+        if is_health or is_closed:
+            return Response(status = 204)
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
             context['cnt'] += 1
             if context['cnt'] < context['nb_health']:
-                response_json['metering']['health_period'] = context['health_period']
+                response_json['drm_config']['health_period'] = context['health_period']
             else:
-                response_json['metering']['health_period'] = 0
+                response_json['drm_config']['health_period'] = 0
                 context['exit'] = True
         return Response(dumps(response_json), response.status_code, headers)
 
@@ -360,16 +365,21 @@ def create_app(url):
         start = str(datetime.now())
         new_url = request.url.replace(request.url_root+'test_health_period_modification', url)
         request_json = request.get_json()
+        is_health = request_json.get('is_health')
+        is_closed = request_json.get('is_closed')
         response = post(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
-                indent=4, sort_keys=True), response.status_code, response.text)
+        assert response.status_code == 204 if is_health else 200, (
+                "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text))
+        if is_health or is_closed:
+            return Response(status = 204)
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
-            response_json['metering']['health_period'] = context['health_period']
-            response_json['metering']['health_retry'] = context['health_retry']
-            response_json['metering']['health_retry_sleep'] = context['health_retry_sleep']
+            response_json['drm_config']['health_period'] = context['health_period']
+            response_json['drm_config']['health_retry'] = context['health_retry']
+            response_json['drm_config']['health_retry_sleep'] = context['health_retry_sleep']
             context['health_period'] += 1
             context['data'].append( (start,str(datetime.now())) )
         return Response(dumps(response_json), response.status_code, headers)
