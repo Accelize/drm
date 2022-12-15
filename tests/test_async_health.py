@@ -36,8 +36,9 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json,
 
     # Set initial context on the live server
     nb_health = 2
-    health_period = 2
-    context = {'cnt':0, 'health_period':health_period, 'nb_health':nb_health, 'exit':False}
+    health_period = 3
+    license_period = 2
+    context = {'cnt':0, 'license_period':license_period, 'health_period':health_period, 'nb_health':nb_health, 'exit':False}
     set_context(context)
     assert get_context() == context
 
