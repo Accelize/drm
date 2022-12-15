@@ -636,7 +636,7 @@ protected:
                 securityAlertBit, adaptiveProportionTestError, repetitionCountTestError );
     }
 
-    void findBoards() {
+    void detectBoards() {
         /*
         // Get list of known boards
         std::string suburl = "/customer/boards";
@@ -644,17 +644,19 @@ protected:
                     tHttpRequestType::GET, Json::nullValue );
         Json::Value known_boards = parseJsonString( response );
         */
-        Json::Value known_boards;
-        known_boards["0x8061"].append("0x10FE");
-        known_boards["0x8061"].append("0xF1F2");
-        Debug( "Listing device tree:" );
-        std::string devices;
-        for( const auto &entry: listDir( "/sys/bus/pci/devices/" ) ) {
-            std::string file_content = readFile( entry + "/vendor" );
-            devices += entry + ",";
-            std::cout << file_content << std::endl;
+        Json::Value boards;
+        std::string sys_path = "/sys/bus/pci/devices/";
+        for( const auto &entry: listDir( sys_path ) ) {
+            std::string vendor = readFile( sys_path + entry + "/vendor" );
+            if ( !boards.isMember(vendor) ) {
+                boards[vendor] = Json::arrayValue;
+            }
+            std::string device = readFile( sys_path + entry + "/device" );
+            boards[vendor].append( device );
         }
-        std::cout << "devices=" << devices << std::endl;
+        std::cout << "boards=" << boards.toStyledString() << std::endl;
+        Debug( "Listing device tree: {}", boards.toStyledString() );
+
     }
 
     bool findXrtUtility() {
@@ -797,7 +799,7 @@ protected:
             return;
         }
 
-        findBoards();
+        detectBoards();
 
         // Get host info
         std::string os_version = rtrim( execCmd( "grep -Po 'PRETTY_NAME=\"\\K[^\"]+' /etc/os-release" ) );
