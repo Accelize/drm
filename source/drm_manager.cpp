@@ -1968,7 +1968,6 @@ Json::Value product_id_json = "AGCJ6WVJBFYODDFUEG2AGWNWZM";
         } else {
             mFrequencyCurr = mFrequencyInit;
         }
-        mFrequencyCurr = measuredFrequency;
     }
 
     template< class Clock, class Duration >

@@ -320,7 +320,7 @@ def create_app(url):
         request_json = request.get_json()
         is_health = request_json.get('is_health')
         is_closed = request_json.get('is_closed')
-        response = post(new_url, json=request_json, headers=request.headers)
+        response = patch(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 204 if is_health else 200, (
                 "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text))
@@ -367,7 +367,7 @@ def create_app(url):
         request_json = request.get_json()
         is_health = request_json.get('is_health')
         is_closed = request_json.get('is_closed')
-        response = post(new_url, json=request_json, headers=request.headers)
+        response = patch(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 204 if is_health else 200, (
                 "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text))
@@ -414,7 +414,7 @@ def create_app(url):
         health_id = request_json['health_id']
         with lock:
             if len(context['data']) <= 1:
-                response = post(new_url, json=request_json, headers=request.headers)
+                response = patch(new_url, json=request_json, headers=request.headers)
                 assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                         indent=4, sort_keys=True), response.status_code, response.text)
                 excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
@@ -461,7 +461,7 @@ def create_app(url):
         health_id = request_json['health_id']
         with lock:
             if len(context['data']) < 1:
-                response = post(new_url, json=request_json, headers=request.headers)
+                response = patch(new_url, json=request_json, headers=request.headers)
                 assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                         indent=4, sort_keys=True), response.status_code, response.text)
                 excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
@@ -511,7 +511,7 @@ def create_app(url):
         health_id = request_json['health_id']
         with lock:
             if len(context['data']) < 1:
-                response = post(new_url, json=request_json, headers=request.headers)
+                response = patch(new_url, json=request_json, headers=request.headers)
                 assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                         indent=4, sort_keys=True), response.status_code, response.text)
                 excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
@@ -558,7 +558,7 @@ def create_app(url):
         new_url = request.url.replace(request.url_root+'test_health_metering_data', url)
         request_json = request.get_json()
         health_id = request_json['health_id']
-        response = post(new_url, json=request_json, headers=request.headers)
+        response = patch(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
@@ -598,7 +598,7 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_segment_index', url)
         request_json = request.get_json()
-        response = post(new_url, json=request_json, headers=request.headers)
+        response = patch(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
@@ -636,7 +636,7 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_async_call_on_pause_depending_on_health_status', url)
         request_json = request.get_json()
-        response = post(new_url, json=request_json, headers=request.headers)
+        response = patch(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
@@ -859,7 +859,7 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_topic0_corrupted_segment_index', url)
         request_json = request.get_json()
-        response = post(new_url, json=request_json, headers=request.headers)
+        response = patch(new_url, json=request_json, headers=request.headers)
         try:
             assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
