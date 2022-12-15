@@ -56,7 +56,7 @@ bool isDir( const std::string& dir_path ) {
 }
 
 
-std::vector<std::string> listDir( const std::string path ) {
+std::vector<std::string> listDir( const std::string& path ) {
     std::vector<std::string> file_list;
     DIR *dir;
     struct dirent *ent;
@@ -67,7 +67,8 @@ std::vector<std::string> listDir( const std::string path ) {
     if ( (dir = opendir( path.c_str() )) != NULL ) {
         // print all the files and directories within directory
         while( (ent = readdir( dir )) != NULL ) {
-            file_list.push_back( ent->d_name );
+            if ( ( strcmp(ent->d_name, ".") != 0 ) && ( strcmp(ent->d_name, "..") != 0 ) )
+                file_list.push_back( ent->d_name );
         }
         closedir( dir );
     } else {
@@ -76,7 +77,6 @@ std::vector<std::string> listDir( const std::string path ) {
     }
     return file_list;
 }
-
 
 
 bool isFile( const std::string& file_path ) {
@@ -91,6 +91,27 @@ bool isFile( const std::string& file_path ) {
         return false;
     return ( info.st_mode & S_IFDIR ) == 0;
 #endif
+}
+
+
+std::string readFile( const std::string& file_path ) {
+    std::string file_content;
+    // Check path is a file
+    if ( !isFile(file_path) ) {
+        Throw( DRM_BadArg, "Path is not a valid file: {}", file_path );
+    }
+    // Open file
+    std::ifstream fh( file_path );
+    if ( !fh.good() ) {
+        Throw( DRM_BadArg, "Cannot find file: {}", file_path );
+    }
+    // Read file content
+    fh.seekg( 0, std::ios::end );
+    file_content.reserve( fh.tellg() );
+    fh.seekg( 0, std::ios::beg );
+    file_content.assign( (std::istreambuf_iterator<char>(fh)), std::istreambuf_iterator<char>() );
+    Debug("Read file: {}", file_path);
+    return file_content;
 }
 
 
@@ -213,22 +234,8 @@ Json::Value parseJsonString( const std::string &json_string ) {
 
 Json::Value parseJsonFile( const std::string& file_path ) {
     Json::Value json_node;
-    std::string file_content;
-
-    // Check path is a file
-    if ( !isFile(file_path) ) {
-        Throw( DRM_BadArg, "Path is not a valid file: {}", file_path );
-    }
-
-    // Open file
-    std::ifstream fh( file_path );
-    if ( !fh.good() )
-        Throw( DRM_BadArg, "Cannot find JSON file: {}", file_path );
-    // Read file content
-    fh.seekg( 0, std::ios::end );
-    file_content.reserve( fh.tellg() );
-    fh.seekg( 0, std::ios::beg );
-    file_content.assign( (std::istreambuf_iterator<char>(fh)), std::istreambuf_iterator<char>() );
+    // Read file
+    std::string file_content = readFile( file_path );
     // Parse content as a JSON object
     try {
         json_node = parseJsonString( file_content );
@@ -236,7 +243,6 @@ Json::Value parseJsonFile( const std::string& file_path ) {
         Throw( e.getErrCode(), "Cannot parse JSON file {}: {}", file_path, e.what() );
     }
     Debug("Found and loaded JSON file: {}", file_path);
-
     return json_node;
 }
 

@@ -650,9 +650,11 @@ protected:
         Debug( "Listing device tree:" );
         std::string devices;
         for( const auto &entry: listDir( "/sys/bus/pci/devices/" ) ) {
+            std::string file_content = readFile( entry + "/vendor" );
             devices += entry + ",";
-            std::cout << entry << std::endl;
+            std::cout << file_content << std::endl;
         }
+        std::cout << "devices=" << devices << std::endl;
     }
 
     bool findXrtUtility() {
