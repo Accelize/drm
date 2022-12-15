@@ -175,9 +175,9 @@ class FpgaDriverBase:
         else:
             self._fpga_image = fpga_image
 
-        print('Programming FPGA on slot #%d with FPGA image %s' % (self._fpga_slot_id, fpga_image))
         with self._augment_exception('program'):
-            return self._program_fpga(fpga_image)
+            self._program_fpga(fpga_image)
+            print('FPGA programmed on slot #%d with FPGA image %s' % (self._fpga_slot_id, fpga_image))
 
     def reset_fpga(self):
         """
