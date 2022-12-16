@@ -222,7 +222,7 @@ protected:
     // Enum
     enum class eLogFileType: uint8_t {NONE=0, BASIC, ROTATING};
     enum class eLicenseType: uint8_t {METERED, NODE_LOCKED, NONE};
-    enum class eMailboxOffset: uint8_t {MB_LOCK_DRM=0, MB_CUSTOM_FIELD, MB_SESSION_0, MB_SESSION_1, MB_LIC_EXP_0, MB_LIC_EXP_1, MB_USER};
+    enum class eMailboxOffset: uint8_t {MB_LOCK_DRM=0, MB_CUSTOM_FIELD, MB_USER};
     enum class eHostDataVerbosity: uint8_t {FULL=0, PARTIAL, NONE};
     enum class eCtrlLogVerbosity: uint8_t {ERROR=0, WARN, INFO, DEBUG, TRACE1, TRACE2};
 
@@ -1781,9 +1781,8 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
             /// No license has been found locally, request one to License WS:
             Debug( "Could not find nodelocked license file: {}", mNodeLockLicenseFilePath );
             /// - Clear Session IS
-            Debug( "Clearing session ID: {}", mSessionID );
             mSessionID = std::string("");
-            writeMailbox<uint64_t>( eMailboxOffset::MB_SESSION_0, 0 );
+            Debug( "Cleared session ID: {}", mSessionID );
             /// - Create WS access
             mWsClient.reset( new DrmWSClient( mConfFilePath, mCredFilePath ) );
             try {
@@ -2320,7 +2319,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         // Stop background thread
         stopThread();
 
-        {
+        try {
             // Get and send metering data to web service
             Debug( "Waiting metering access mutex from stopSession" );
             std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
@@ -2330,13 +2329,12 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
             // Send last metering information
             getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
             Debug( "Session ID {} stopped and last metering data uploaded", mSessionID );
+        } catch( const Exception& e ) {
+            Debug( e.what() );
         }
         Debug( "Released metering access mutex from stopSession" );
-        // Clear mailbox
-        writeMailbox<uint64_t>( eMailboxOffset::MB_SESSION_0, 0 );
-        Debug( "Reseting expiration time" );
         mExpirationTime = TClock::time_point();
-        writeMailbox<time_t>( eMailboxOffset::MB_LIC_EXP_0, steady_clock_to_time_t( mExpirationTime ) );
+        Debug( "Reset expiration time" );
         // Clear security flag
         Debug( "Clearing stop security flag" );
         mSecurityStop = false;
@@ -2483,7 +2481,7 @@ public:
                 try {
                     stopSession();
                 } catch( const Exception& e ) {
-                    Debug( "Failed to stop gracefully the pending session because: {}", e.what() );
+                    Debug( "Failed to stop gracefully the pending session" );
                 }
             }
             if ( isConfigInNodeLock() ) {
