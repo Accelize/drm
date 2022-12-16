@@ -16,7 +16,7 @@ from time import time, sleep
 from shutil import rmtree
 from datetime import datetime, timedelta
 from glob import glob
-from requests import post, delete
+from requests import get, post, delete
 import types
 
 from tests.proxy import create_app, get_context, set_context
@@ -128,7 +128,7 @@ class DB_AccessFunction:
         # Clean license directory for nodelock
         self.conf_json.cleanNodelockDir()
         # Delete all entitlements from DB
-        for item in self.get_db(self.base_url + '/customer/entitlement', token):
+        for item in self.get_db(self.base_url + '/customer/entitlement', self.token):
             print('item=', item)
             #self.delete_db(self.base_url + f'/customer/entitlement/{item["id"]}/entitlement_session', self.token)
 

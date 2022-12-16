@@ -12,7 +12,7 @@ from random import choice
 from tests.conftest import wait_func_true
 
 
-MAILBOX_SIZE = 10
+MAILBOX_SIZE = 14
 
 LOG_FORMAT_SHORT = "[%^%=8l%$] %-6t, %v"
 LOG_FORMAT_LONG = "%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v"

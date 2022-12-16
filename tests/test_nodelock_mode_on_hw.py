@@ -79,12 +79,11 @@ def test_nodelock_license_is_not_given_to_inactive_user(accelize_drm, conf_json,
         assert not drm_manager.get('license_status')
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
-        assert 'Metering Web Service error 400' in str(excinfo.value)
-        assert search(r'No Entitlement.* with PT DRM Ref Design .+ for \S+_test_01@accelize.com', str(excinfo.value))
-        assert 'User account has no entitlement. Purchase additional licenses via your portal.' in str(excinfo.value)
+        assert 'Accelize Web Service error 403' in str(excinfo.value)
+        assert search(r'No valid entitlement available for this product', str(excinfo.value))
         err_code = async_handler.get_error_code(str(excinfo.value))
         assert err_code == accelize_drm.exceptions.DRMWSReqError.error_code
-    async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Metering Web Service error 400')
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Accelize Web Service error 403')
     async_cb.reset()
 
 
