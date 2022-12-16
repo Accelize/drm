@@ -657,10 +657,10 @@ protected:
             known_boards["0x10ee"] = Json::nullValue;
             known_boards["0x1d0f"].append("0x1041");
             known_boards["0x1d0f"].append("0xcd01");
-            for( const auto& entry: devices ) {
+            /*for( const auto& entry: devices ) {
                 if ( known_boards.isMember(entry) ) {
                 }
-            }
+            }*/
         }
         Debug( "Listing devices on PCIe tree: {}", devices.toStyledString() );
         return devices;
