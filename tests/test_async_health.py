@@ -53,19 +53,20 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json,
         timeout = max(lic_duration, health_period)
         wait_func_true(lambda: get_context()['exit'],
                 timeout=timeout * (nb_health + 1))
-        assert drm_manager.get('health_period') == 0
-        assert drm_manager.get('health_counter') == nb_health
-        assert get_context()['cnt'] == nb_health
         sleep(health_period + 1)
-        assert get_context()['cnt'] == nb_health
-        assert drm_manager.get('health_counter') == nb_health
+        assert drm_manager.get('health_period') == 0
+        health_cnt = drm_manager.get('health_counter')
+        assert health_cnt >= nb_health
+        assert get_context()['cnt'] >= nb_health
+        assert get_context()['cnt'] == health_cnt
         drm_manager.deactivate()
     log_content = logfile.read()
-    assert search(r'Exiting background thread which checks health', log_content, MULTILINE)
+    assert search(r'Starting background thread which checks health', log_content, MULTILINE)
     assert search(r'Health thread is disabled', log_content, MULTILINE)
     assert search(r'Exiting background thread which checks health', log_content, MULTILINE)
-    health_req = findall(r'"request"\s*:\s*"health"', log_content)
-    assert len(list(health_req)) == nb_health
+    health_req = findall(r'Build health request', log_content)
+    assert len(list(health_req)) >= nb_health
+    assert len(list(health_req)) == health_cnt
     assert get_proxy_error() is None
     async_cb.assert_NoError()
     logfile.remove()

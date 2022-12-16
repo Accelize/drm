@@ -655,7 +655,9 @@ protected:
             std::string device = rtrim( readFile( sys_path + entry + "/device" ) );
             if ( ( mHostDataVerbosity == eHostDataVerbosity::FULL ) ||
                 known_boards.isMember(vendor) ) {
-                devices[vendor] = Json::arrayValue;
+                if ( !devices.isMember( vendor ) ) {
+                    devices[vendor] = Json::arrayValue;
+                }
             }
             if ( devices.isMember(vendor) ) {
                 for( const auto& known_device: known_boards[vendor] ) {
@@ -2140,7 +2142,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
                     sleepOrExit( wakeup_time );
 
                     if ( mHealthPeriod == 0 ) {
-                        Warning( "Health thread is disabled" );
+                        Debug( "Health thread is disabled" );
                         break;
                     }
                     if ( mHealthRetryTimeout == 0 ) {
