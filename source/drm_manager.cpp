@@ -638,29 +638,33 @@ protected:
 
     Json::Value detectBoards() {
         Json::Value devices;
+        // Get list of known boards
+/*        std::string suburl = "/customer/boards";
+        std::string response = getDrmWSClient().sendSaasRequest( suburl,
+                    tHttpRequestType::GET, Json::nullValue );
+        Json::Value known_boards = parseJsonString( response );*/
+        Json::Value known_boards;
+        known_boards["0x10ee"] = Json::nullValue;
+        known_boards["0x1d0f"].append("0x1041");
+        known_boards["0x1d0f"].append("0xcd01");
+
+        // Gather detected boards
         std::string sys_path = "/sys/bus/pci/devices/";
         for( const auto &entry: listDir( sys_path ) ) {
             std::string vendor = rtrim( readFile( sys_path + entry + "/vendor" ) );
-            if ( !devices.isMember(vendor) ) {
+            std::string device = rtrim( readFile( sys_path + entry + "/device" ) );
+            if ( ( mHostDataVerbosity == eHostDataVerbosity::FULL ) ||
+                known_boards.isMember(vendor) ) {
                 devices[vendor] = Json::arrayValue;
             }
-            std::string device = rtrim( readFile( sys_path + entry + "/device" ) );
-            devices[vendor].append( device );
-        }
-        if ( mHostDataVerbosity == eHostDataVerbosity::PARTIAL ) {
-/*            // Get list of known boards
-            std::string suburl = "/customer/boards";
-            std::string response = getDrmWSClient().sendSaasRequest( suburl,
-                        tHttpRequestType::GET, Json::nullValue );
-            Json::Value known_boards = parseJsonString( response );*/
-            Json::Value known_boards;
-            known_boards["0x10ee"] = Json::nullValue;
-            known_boards["0x1d0f"].append("0x1041");
-            known_boards["0x1d0f"].append("0xcd01");
-            /*for( const auto& entry: devices ) {
-                if ( known_boards.isMember(entry) ) {
+            if ( devices.isMember(vendor) ) {
+                for( const auto& known_device: known_boards[vendor] ) {
+                    if ( ( mHostDataVerbosity == eHostDataVerbosity::FULL ) ||
+                         ( known_device == device ) ) {
+                        devices[vendor].append( device );
+                    }
                 }
-            }*/
+            }
         }
         Debug( "Listing devices on PCIe tree: {}", devices.toStyledString() );
         return devices;
@@ -806,7 +810,7 @@ protected:
             return;
         }
 
-        mDiagnostics["pcie_devices"] = detectBoards();
+        mDiagnostics["pci_devices"] = detectBoards();
 
         // Get host info
         std::string os_version = rtrim( execCmd( "grep -Po 'PRETTY_NAME=\"\\K[^\"]+' /etc/os-release" ) );

@@ -103,24 +103,22 @@ class DB_AccessFunction:
 
     # Get info
     @staticmethod
-    def get_db(base_url, route, token):
-        url = base_url + route
+    def get_db(url, token):
         response = get(url, headers={"Authorization":f"Bearer {token}"})
         print('[get_info] response=', response)
         return response.json()
 
     # delete info
     @staticmethod
-    def delete_db(base_url, route, token):
-        url = base_url + route
+    def delete_db(url, token):
         response = delete(url, headers={"Authorization":f"Bearer {token}"})
         print('[delete_info] response=', response)
         return
 
     def load(self, conf_json, cred_json):
         self.conf_json = conf_json
-        baseurl = conf_json['licensing']['url']
-        self.token = self.get_token(baseurl, cred_json.client_id, cred_json.client_secret)
+        self.base_url = conf_json['licensing']['url']
+        self.token = self.get_token(self.base_url, cred_json.client_id, cred_json.client_secret)
         self.clear_entitlements()
 
     def clear_entitlements(self):
@@ -130,9 +128,9 @@ class DB_AccessFunction:
         # Clean license directory for nodelock
         self.conf_json.cleanNodelockDir()
         # Delete all entitlements from DB
-        for item in self.get_db(base_url, '/customer/entitlement', token):
+        for item in self.get_db(self.base_url + '/customer/entitlement', token):
             print('item=', item)
-            self.delete_db(baseurl, f'/customer/entitlement/{item["id"]}/entitlement_session', self.token)
+            #self.delete_db(self.base_url + f'/customer/entitlement/{item["id"]}/entitlement_session', self.token)
 
 
 @pytest.fixture
