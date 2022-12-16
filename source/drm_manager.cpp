@@ -1277,9 +1277,12 @@ protected:
         }
     }
 
-    void checkSessionIDFromDRM( const Json::Value license_json ) const {
+    void checkSessionIDFromDRM( const Json::Value license_json )  {
         std::string drm_session_id = license_json["drm_config"]["drm_session_id"].asString();
-        if ( mSessionID != drm_session_id ) {
+        if ( mSessionID.empty() ) {
+            mSessionID = drm_session_id;
+            Debug( "Saving session ID: {}", mSessionID );
+        } else if ( mSessionID != drm_session_id ) {
             Throw( DRM_CtlrError, "Session ID mismatch: DRM IP returns '{}' but '{}' is expected", drm_session_id, mSessionID );
         }
     }
@@ -1462,7 +1465,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
             drm_config["metering_file"]  = std::string("");
         }
         json_output["is_health"] = true;
-        checkSessionIDFromDRM( json_output );
+
         return json_output;
     }
 
@@ -2476,10 +2479,11 @@ public:
 
             // If a floating/metering session is still running, try to close it gracefully.
             if ( isSessionRunning() ) {
-                // Recover pending session if any
+                /*// Recover pending session if any
                 if ( mSessionID.empty() )
                     mSessionID = toUpHex( readMailbox<uint64_t>( eMailboxOffset::MB_SESSION_0 ) );
-                Debug( "The floating/metering session '{}' is still pending: trying to close it gracefully.", mSessionID );
+                Debug( "The floating/metering session '{}' is still pending: trying to close it gracefully.", mSessionID );*/
+                Debug( "The floating/metering session is still pending: trying to close it gracefully." );
                 try {
                     stopSession();
                 } catch( const Exception& e ) {
