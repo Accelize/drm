@@ -637,13 +637,6 @@ protected:
     }
 
     Json::Value detectBoards() {
-        /*
-        // Get list of known boards
-        std::string suburl = "/customer/boards";
-        std::string response = getDrmWSClient().sendSaasRequest( suburl,
-                    tHttpRequestType::GET, Json::nullValue );
-        Json::Value known_boards = parseJsonString( response );
-        */
         Json::Value devices;
         std::string sys_path = "/sys/bus/pci/devices/";
         for( const auto &entry: listDir( sys_path ) ) {
@@ -654,7 +647,21 @@ protected:
             std::string device = rtrim( readFile( sys_path + entry + "/device" ) );
             devices[vendor].append( device );
         }
-        std::cout << "devices=" << devices.toStyledString() << std::endl;
+        if ( mHostDataVerbosity == eHostDataVerbosity::PARTIAL ) {
+/*            // Get list of known boards
+            std::string suburl = "/customer/boards";
+            std::string response = getDrmWSClient().sendSaasRequest( suburl,
+                        tHttpRequestType::GET, Json::nullValue );
+            Json::Value known_boards = parseJsonString( response );*/
+            Json::Value known_boards;
+            known_boards["0x10ee"] = Json::nullValue;
+            known_boards["0x1d0f"].append("0x1041");
+            known_boards["0x1d0f"].append("0xcd01");
+            for( const auto& entry: devices ) {
+                if ( known_boards.isMember(entry) ) {
+                }
+            }
+        }
         Debug( "Listing devices on PCIe tree: {}", devices.toStyledString() );
         return devices;
     }

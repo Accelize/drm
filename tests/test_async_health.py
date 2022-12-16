@@ -36,9 +36,8 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json,
 
     # Set initial context on the live server
     nb_health = 2
-    health_period = 3
-    license_period = 2
-    context = {'cnt':0, 'license_period':license_period, 'health_period':health_period, 'nb_health':nb_health, 'exit':False}
+    health_period = 2
+    context = {'cnt':0, 'health_period':health_period, 'nb_health':nb_health, 'exit':False}
     set_context(context)
     assert get_context() == context
 
@@ -49,13 +48,17 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json,
                 async_cb.callback
             ) as drm_manager:
         drm_manager.activate()
+        lic_duration = drm_manager.get('license_duration')
         assert drm_manager.get('health_period') == health_period
+        timeout = max(lic_duration, health_period)
         wait_func_true(lambda: get_context()['exit'],
-                timeout=health_period * (nb_health + 1) * 2)
-        assert drm_manager.get('health_period') == health_period
+                timeout=timeout * (nb_health + 1))
+        assert drm_manager.get('health_period') == 0
+        assert drm_manager.get('health_counter') == nb_health
         assert get_context()['cnt'] == nb_health
         sleep(health_period + 1)
         assert get_context()['cnt'] == nb_health
+        assert drm_manager.get('health_counter') == nb_health
         drm_manager.deactivate()
     log_content = logfile.read()
     assert search(r'Exiting background thread which checks health', log_content, MULTILINE)
