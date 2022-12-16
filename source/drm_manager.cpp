@@ -2479,10 +2479,6 @@ public:
 
             // If a floating/metering session is still running, try to close it gracefully.
             if ( isSessionRunning() ) {
-                /*// Recover pending session if any
-                if ( mSessionID.empty() )
-                    mSessionID = toUpHex( readMailbox<uint64_t>( eMailboxOffset::MB_SESSION_0 ) );
-                Debug( "The floating/metering session '{}' is still pending: trying to close it gracefully.", mSessionID );*/
                 Debug( "The floating/metering session is still pending: trying to close it gracefully." );
                 try {
                     stopSession();
