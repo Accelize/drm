@@ -1702,7 +1702,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         // Load license timer
         if ( !isConfigInNodeLock() ) {
             if ( mLicenseDuration == 0 ) {
-                Warning( "'license_period_second' field sent by License WS must not be 0" );
+                Warning( "'license_period_second' field sent by License Server must not be 0" );
             }
             uint32_t timeout = 5 * mCtrlTimeFactor;
             checkDRMCtlrRet( getDrmController().loadLicenseTimerInit( licenseTimer, mIsHybrid, timeout ) );
