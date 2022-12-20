@@ -128,8 +128,9 @@ class DB_AccessFunction:
         # Clean license directory for nodelock
         self.conf_json.cleanNodelockDir()
         # Delete all entitlements from DB
-        for item in self.get_db(self.base_url + '/customer/entitlement', self.token):
-            print('item=', item)
+        r = self.get_db(self.base_url + '/customer/entitlement', self.token)
+        for item in r['items']:
+            print(self.get_db(self.base_url + f'/customer/entitlement/{item["id"]}/entitlement_session', self.token))
             #self.delete_db(self.base_url + f'/customer/entitlement/{item["id"]}/entitlement_session', self.token)
 
 

@@ -44,10 +44,13 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
             assert isfile(lic_request_file)
             with open(lic_request_file) as f:
                 data = loads(f.read())
-            mandatory_fields = ['dna', 'drmlibVersion', 'lgdnVersion', 'meteringFile', 'request',
-                                'saasChallenge', 'vlnvFile', 'product']
-            assert all([e in data.keys() for e in mandatory_fields])
-            assert data['request'] == 'open'
+            assert data.get('device_id')
+            assert data.get('drm_config')
+            assert data['drm_config'].get('drm_type') == 1
+            assert data['drm_config'].get('lgdn_version')
+            assert data['drm_config'].get('metering_file')
+            assert data['drm_config'].get('saas_challenge')
+            assert data['drm_config'].get('vlnv_file')
             drm_manager.activate()
             assert drm_manager.get('drm_license_type') == 'Node-Locked'
             drm_manager.deactivate()
