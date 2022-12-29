@@ -2302,12 +2302,6 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
             // Send request and receive new license
             Json::Value license_json = getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
             setLicense( license_json );
-
-            // Extract asynchronous health parameters from response
-            Json::Value metering_node = JVgetOptional( license_json, "metering", Json::objectValue, Json::nullValue );
-            mHealthPeriod = JVgetOptional( metering_node, "healthPeriod", Json::uintValue, mHealthPeriod ).asUInt();
-            mHealthRetryTimeout = JVgetOptional( metering_node, "healthRetry", Json::uintValue, mHealthRetryTimeout ).asUInt();
-            mHealthRetrySleep = JVgetOptional( metering_node, "healthRetrySleep", Json::uintValue, mHealthRetrySleep ).asUInt();
         }
         Debug( "Released metering access mutex from startSession" );
         Info( "DRM session {} started.", mSessionID );

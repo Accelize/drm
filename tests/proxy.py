@@ -310,6 +310,9 @@ def create_app(url):
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
+            context['cnt_health'] = 0
+            context['cnt_license'] =1
+            context['health_period'] = int(response_json['drm_config']['license_period_second'] / (context['nb_health']+1) + 1)
             response_json['drm_config']['health_period'] = context['health_period']
         return Response(dumps(response_json), response.status_code, headers)
 
@@ -326,7 +329,7 @@ def create_app(url):
                 indent=4, sort_keys=True), response.status_code, response.text))
         if is_health:
             with lock:
-                context['cnt'] += 1
+                context['cnt_health'] += 1
             return Response(status = 204)
         if is_closed:
             return Response(status = 204)
@@ -334,11 +337,12 @@ def create_app(url):
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
-            if context['cnt'] >= context['nb_health']:
-                response_json['drm_config']['health_period'] = 0
-                context['exit'] = True
+            context['cnt_license'] += 1
+            if context['cnt_license'] == 3:
+                context['health_period'] = 0
             else:
-                response_json['drm_config']['health_period'] = context['health_period']
+                context['health_period'] = int(response_json['drm_config']['license_period_second'] / (context['nb_health']+1) + 1)
+            response_json['drm_config']['health_period'] = context['health_period']
         return Response(dumps(response_json), response.status_code, headers)
 
     # test_health_period_modification functions
