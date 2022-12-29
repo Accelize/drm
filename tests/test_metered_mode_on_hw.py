@@ -177,10 +177,10 @@ def test_metered_from_new_objects(accelize_drm, conf_json, conf_json_second,
         activators.autotest(is_activated=True)
         activators.check_coin(drm_manager2.get('metered_data'))
         # Wait for license renewal
-        lic_duration = drm_manager2.get('license_duration')
-        sleep(lic_duration+2)
+        license_duration = drm_manager2.get('license_duration')
+        sleep(license_duration+2)
         assert drm_manager2.get('session_id') != session_id
-        assert drm_manager2.get('license_duration') == lic_duration
+        assert drm_manager2.get('license_duration') == license_duration
         activators.generate_coin()
         activators.check_coin(drm_manager2.get('metered_data'))
         drm_manager2.deactivate()
@@ -287,15 +287,15 @@ def test_metering_limits_on_licensing_thread(accelize_drm, conf_json, cred_json,
         assert drm_manager.get('drm_license_type') == 'Floating/Metering'
         assert drm_manager.get('license_status')
         assert sum(drm_manager.get('metered_data')) == 0
-        lic_duration = drm_manager.get('license_duration')
-        sleep(int(lic_duration/2) + 1)
+        license_duration = drm_manager.get('license_duration')
+        wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, license_duration)
         activators[0].generate_coin(1000)
         activators.check_coin(drm_manager.get('metered_data'))
         # Wait right before lock
-        wait_deadline(start, 3*lic_duration-3)
+        wait_deadline(start, 3*license_duration-3)
         assert drm_manager.get('license_status')
         activators.autotest(is_activated=True)
-        wait_deadline(start, 3*lic_duration+3)
+        wait_deadline(start, 3*license_duration+3)
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
         # Verify asynchronous callback has been called

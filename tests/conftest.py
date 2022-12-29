@@ -99,21 +99,21 @@ class DB_AccessFunction:
         url = base_url + '/auth/token?grant_type=client_credentials&client_id=%s&client_secret=%s' % (
             client_id, client_secret)
         response = post(url)
+        assert response.status_code == 200
         return response.json()['access_token']
 
     # Get info
     @staticmethod
     def get_db(url, token):
         response = get(url, headers={"Authorization":f"Bearer {token}"})
-        print('[get_info] response=', response)
+        assert response.status_code == 200
         return response.json()
 
     # delete info
     @staticmethod
     def delete_db(url, token):
         response = delete(url, headers={"Authorization":f"Bearer {token}"})
-        print('[delete_info] response=', response)
-        return
+        assert response.status_code == 204
 
     def load(self, conf_json, cred_json):
         self.conf_json = conf_json
@@ -130,8 +130,7 @@ class DB_AccessFunction:
         # Delete all entitlements from DB
         r = self.get_db(self.base_url + '/customer/entitlement', self.token)
         for item in r['items']:
-            print(self.get_db(self.base_url + f'/customer/entitlement/{item["id"]}/entitlement_session', self.token))
-            #self.delete_db(self.base_url + f'/customer/entitlement/{item["id"]}/entitlement_session', self.token)
+            self.delete_db(self.base_url + f'/customer/entitlement/{item["id"]}/entitlement_session', self.token)
 
 
 @pytest.fixture

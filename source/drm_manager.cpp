@@ -236,8 +236,8 @@ protected:
             {eLicenseType::NODE_LOCKED, "Node-Locked"}
     };
 
-    uint32_t SDK_CTRL_TIMEOUT_IN_US = 10000000;
-    uint32_t SDK_CTRL_SLEEP_IN_US = 100;
+    uint32_t SDK_CTRL_TIMEOUT_IN_US = 2000000;
+    uint32_t SDK_CTRL_SLEEP_IN_US = 1000;
 
     const std::map<eCtrlLogVerbosity, uint32_t> LogCtrlLevelMap = {
             {eCtrlLogVerbosity::ERROR  , PNC_DRM_LOG_ERROR},
@@ -298,7 +298,7 @@ protected:
     eLicenseType mLicenseType = eLicenseType::METERED;
     uint32_t mLicenseDuration = 0;        ///< Time duration in seconds of the license
 
-    double mActivationTransmissionTimeoutMS = 0;  ///< Timeout in milliseconds to complete the transmission of the activation code to the Activator's interface
+    uint32_t mActivationTransmissionTimeoutMS = 0;  ///< Timeout in milliseconds to complete the transmission of the activation code to the Activator's interface
 
     uint32_t mCtrlTimeoutInUS = 0;
     uint32_t mCtrlSleepInUS = 0;
@@ -1177,7 +1177,7 @@ protected:
         const char* ctrl_timeout = getenv( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS" );
         mCtrlTimeoutInUS = std::stoul(std::string(ctrl_timeout));
         Debug("DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS environment variable is {}", mCtrlTimeoutInUS);
-        mActivationTransmissionTimeoutMS = 20.0 * mCtrlTimeoutInUS;
+        mActivationTransmissionTimeoutMS = int( 2 * mCtrlTimeoutInUS / 1000 );
 
         const char* ctrl_sleep = getenv( "DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS" );
         mCtrlSleepInUS = std::stoul(std::string(ctrl_sleep));
@@ -2222,23 +2222,23 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         }
         bool activationCodesTransmitted( false );
         TClock::duration timeSpan;
-        double mseconds( 0.0 );
-        uint32_t sleep_period = mCtrlSleepInUS * 100;
+        uint32_t mseconds( 0 );
+        uint32_t sleep_period = mCtrlSleepInUS * 200;
         TClock::time_point timeStart = TClock::now();
         while( mseconds < mActivationTransmissionTimeoutMS ) {
             checkDRMCtlrRet( getDrmController().readActivationCodesTransmittedStatusRegister(
                     activationCodesTransmitted ) );
             timeSpan = TClock::now() - timeStart;
-            mseconds = 1000.0 * double( timeSpan.count() ) * TClock::period::num / TClock::period::den;
+            mseconds = int( 1000 * double( timeSpan.count() ) * TClock::period::num / TClock::period::den );
             if ( activationCodesTransmitted ) {
-                Debug( "License #{} transmitted after {:f} ms", mLicenseCounter, mseconds );
+                Debug( "License #{} transmitted after {} ms", mLicenseCounter, mseconds );
                 break;
             }
-            Debug2( "License #{} not transmitted yet after {:f} ms", mLicenseCounter, mseconds );
+            Debug2( "License #{} not transmitted yet after {} ms", mLicenseCounter, mseconds );
             usleep(sleep_period);
         }
         if ( !activationCodesTransmitted ) {
-            Throw( DRM_CtlrError, "DRM Controller could not transmit Licence #{} to activators after {:f} ms. ", mLicenseCounter, mseconds ); //LCOV_EXCL_LINE
+            Throw( DRM_CtlrError, "DRM Controller could not transmit Licence #{} to activators after {} ms. ", mLicenseCounter, mseconds ); //LCOV_EXCL_LINE
         }
     }
 
@@ -2263,7 +2263,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
             Debug( "There is no session in Node-Locked licensing mode" );
             return;
         }
-        double mseconds( 0.0 );
+        uint32_t mseconds( 0 );
         bool is_running(false);
         TClock::duration timeSpan;
         uint32_t sleep_period = mCtrlSleepInUS * 100;
@@ -2271,16 +2271,16 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         while( mseconds < mActivationTransmissionTimeoutMS ) {
             is_running = isSessionRunning();
             timeSpan = TClock::now() - timeStart;
-            mseconds = 1000.0 * double( timeSpan.count() ) * TClock::period::num / TClock::period::den;
+            mseconds = int( 1000 * double( timeSpan.count() ) * TClock::period::num / TClock::period::den );
             if ( is_running ) {
-                Debug( "Session ID {} is now running after {:f} ms", mSessionID, mseconds );
+                Debug( "Session ID {} is now running after {} ms", mSessionID, mseconds );
                 break;
             }
-            Debug2( "Session ID {} is not running yet after {:f} ms", mSessionID, mseconds );
+            Debug2( "Session ID {} is not running yet after {} ms", mSessionID, mseconds );
             usleep(sleep_period);
         }
         if ( !is_running ) {
-            Throw( DRM_CtlrError, "DRM Controller could not run Session ID {} after {:f} ms. ", mSessionID, mseconds ); //LCOV_EXCL_LINE
+            Throw( DRM_CtlrError, "DRM Controller could not run Session ID {} after {} ms. ", mSessionID, mseconds ); //LCOV_EXCL_LINE
         }
     }
 
