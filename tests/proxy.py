@@ -414,6 +414,8 @@ def create_app(url):
         response_json = response.json()
         with lock:
             response_json['metering']['health_period'] = context['health_period']
+            response_json['metering']['health_retry'] = context['health_retry']
+            response_json['metering']['health_retry_sleep'] = context['health_retry_sleep']
         return Response(dumps(response_json), response.status_code, headers)
 
     @app.route('/test_health_period_modification/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
@@ -428,7 +430,10 @@ def create_app(url):
         assert response.status_code == 204 if is_health else 200, (
                 "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text))
-        if is_health or is_closed:
+        if is_health:
+            context['data'].append( (start,str(datetime.now())) )
+            return Response(status = 204)
+        if is_closed:
             return Response(status = 204)
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
@@ -438,7 +443,6 @@ def create_app(url):
             response_json['drm_config']['health_retry'] = context['health_retry']
             response_json['drm_config']['health_retry_sleep'] = context['health_retry_sleep']
             context['health_period'] += 1
-            context['data'].append( (start,str(datetime.now())) )
         return Response(dumps(response_json), response.status_code, headers)
 
     # test_health_retry_disabled functions
