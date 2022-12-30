@@ -160,8 +160,9 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
                 async_cb.callback
             ) as drm_manager:
         drm_manager.activate()
+        lic_duration = drm_manager.get('license_duration')
         wait_func_true(lambda: len(get_context()['data']) >= nb_health,
-                timeout=(health_period+3) * (nb_health+2))
+                timeout=int(nb_health / (lic_duration % health_period)) + 1 )
         drm_manager.deactivate()
     async_cb.assert_NoError()
     data_list = get_context()['data']
@@ -169,7 +170,10 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
     wait_start = data_list.pop(0)[1]
     for i, (start, end) in enumerate(data_list):
         delta = parser.parse(start) - parser.parse(wait_start)
-        assert int(delta.total_seconds()) >= health_period
+        if i < 2:
+            assert health_period <= int(delta.total_seconds()) <= health_period + 1
+        else:
+            assert 2*health_period <= int(delta.total_seconds()) <= 2*health_period + 1
         wait_start = end
     assert get_proxy_error() is None
 
