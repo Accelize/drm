@@ -345,6 +345,56 @@ def create_app(url):
             response_json['drm_config']['health_period'] = context['health_period']
         return Response(dumps(response_json), response.status_code, headers)
 
+    # test_health_counter_is_reset_on_new_session
+    @app.route('/test_health_counter_is_reset_on_new_session/auth/token', methods=['GET', 'POST'])
+    def gettoken__test_health_counter_is_reset_on_new_session():
+        new_url = request.url.replace(request.url_root+'test_health_counter_is_reset_on_new_session', url)
+        return redirect(new_url, code=307)
+
+    @app.route('/test_health_counter_is_reset_on_new_session/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
+    def create__test_health_counter_is_reset_on_new_session(product_id):
+        global context, lock
+        new_url = request.url.replace(request.url_root+'test_health_counter_is_reset_on_new_session', url)
+        request_json = request.get_json()
+        response = post(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        with lock:
+            context['cnt_health'] = 0
+            context['cnt_license'] =1
+            context['health_period'] = int(response_json['drm_config']['license_period_second'] / (context['nb_health']+1) + 1)
+            response_json['drm_config']['health_period'] = context['health_period']
+        return Response(dumps(response_json), response.status_code, headers)
+
+    @app.route('/test_health_counter_is_reset_on_new_session/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
+    def update__test_health_counter_is_reset_on_new_session(entitlement_id):
+        global context, lock
+        new_url = request.url.replace(request.url_root+'test_health_counter_is_reset_on_new_session', url)
+        request_json = request.get_json()
+        is_health = request_json.get('is_health')
+        is_closed = request_json.get('is_closed')
+        response = patch(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 204 if is_health else 200, (
+                "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text))
+        if is_health:
+            with lock:
+                context['cnt_health'] += 1
+            return Response(status = 204)
+        if is_closed:
+            return Response(status = 204)
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+        response_json = response.json()
+        with lock:
+            context['cnt_license'] += 1
+            context['health_period'] = int(response_json['drm_config']['license_period_second'] / (context['nb_health']+1) + 1)
+            response_json['drm_config']['health_period'] = context['health_period']
+        return Response(dumps(response_json), response.status_code, headers)
+
     # test_health_period_modification functions
     @app.route('/test_health_period_modification/auth/token', methods=['GET', 'POST'])
     def gettoken__test_health_period_modification():
