@@ -4,6 +4,7 @@ Test asynchronous metering behaviors of DRM Library.
 """
 import pytest
 from time import sleep
+from datetime import datetime
 from random import randrange, randint
 from re import search, findall, MULTILINE, IGNORECASE
 from dateutil import parser
@@ -13,7 +14,7 @@ from requests import get, post
 from os import remove
 from os.path import realpath, isfile
 
-from tests.conftest import wait_func_true
+from tests.conftest import wait_deadline, wait_func_true
 from tests.proxy import get_context, set_context, get_proxy_error
 
 
@@ -53,7 +54,7 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json,
         wait_deadline(start, lic_duration)
         wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, lic_duration)
         assert drm_manager.get('health_period') == get_context()['health_period'] == 0
-        assert drm_manager.get('health_counter') = nb_health
+        assert drm_manager.get('health_counter') == nb_health
         wait_deadline(start, 2*lic_duration)
         wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, lic_duration)
         assert drm_manager.get('health_period') == get_context()['health_period'] > 0
