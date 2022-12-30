@@ -148,7 +148,8 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
     context = {'data': list(),
                'health_period':health_period,
                'health_retry':health_retry,
-               'health_retry_sleep':health_retry_sleep
+               'health_retry_sleep':health_retry_sleep,
+               'exit': False
     }
     set_context(context)
     assert get_context() == context
@@ -161,26 +162,22 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
             ) as drm_manager:
         drm_manager.activate()
         lic_duration = drm_manager.get('license_duration')
-        wait_func_true(lambda: len(get_context()['data']) >= nb_health,
-                timeout=int(nb_health / (lic_duration // health_period)) + 1 )
+        wait_func_true(lambda: get_context()['exit'], timeout=2*lic_duration)
         drm_manager.deactivate()
     async_cb.assert_NoError()
     data_list = get_context()['data']
     assert len(data_list) >= nb_health
-    wait_start = data_list.pop(0)[1]
     delta_cnt = [0,0]
     for i, (start, end) in enumerate(data_list):
-        delta = parser.parse(start) - parser.parse(wait_start)
-        delta_list.append(delta.total_seconds())
+        delta = parser.parse(end) - parser.parse(start)
         if delta.total_seconds() >= 2*health_period:
             delta_cnt[1] += 1
             assert 2*health_period <= int(delta.total_seconds()) <= 2*health_period + 1
         else:
             delta_cnt[0] += 1
             assert health_period <= int(delta.total_seconds()) <= health_period + 1
-        wait_start = end
     assert delta_cnt[0]
-    assert delta_cnt[1]
+    assert delta_cnt[1] == 1
     assert get_proxy_error() is None
 
 

@@ -413,7 +413,9 @@ def create_app(url):
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
+            context['hit'] = False
             context['start'] = str(datetime.now())
+            context['health_period_ref'] = context['health_period']
             response_json['drm_config']['health_period'] = context['health_period']
             response_json['drm_config']['health_retry'] = context['health_retry']
             response_json['drm_config']['health_retry_sleep'] = context['health_retry_sleep']
@@ -435,6 +437,8 @@ def create_app(url):
             context['start'] = str(datetime.now())
             if len(context['data']) >= 2:
                 context['health_period'] *= 2
+            if context['hit']:
+                context['exit'] = True
             return Response(status = 204)
         if is_closed:
             return Response(status = 204)
@@ -445,6 +449,8 @@ def create_app(url):
             response_json['drm_config']['health_period'] = context['health_period']
             response_json['drm_config']['health_retry'] = context['health_retry']
             response_json['drm_config']['health_retry_sleep'] = context['health_retry_sleep']
+            if context['health_period'] == 2*context['health_period_ref']:
+                context['hit'] = True
         return Response(dumps(response_json), response.status_code, headers)
 
     # test_health_retry_disabled functions
