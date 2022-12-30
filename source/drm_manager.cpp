@@ -80,6 +80,15 @@ limitations under the License.
     }
 
 
+#define MTX_ACQUIRE( mtx ) {                               \
+    Debug( "Waiting mutex {} from {}", #mtx, __func__ );  \
+    std::lock_guard<std::mutex> lock( mtx );               \
+    Debug( "Acquired mutex {} from {}", #mtx, __func__ );
+
+#define MTX_RELEASE( mtx ) }                               \
+    Debug( "Released mutex {} from {}", #mtx, __func__ );
+
+
 pnc_session_t *Accelize::DRM::DrmManager::s_pnc_session = nullptr;
 uint32_t *Accelize::DRM::DrmManager::s_pnc_tzvaddr = nullptr;
 size_t Accelize::DRM::DrmManager::s_pnc_tzsize = 0;
@@ -327,19 +336,18 @@ protected:
     // Web service communication
     Json::Value mHeaderJsonRequest;
 
-    // Health/Asynchronous metering parameters
-    uint32_t mHealthPeriod;             ///< Time in seconds before performing the next health request
-    uint32_t mHealthRetryTimeout;       ///< Timeout in seconds for the health request
-    uint32_t mHealthRetrySleep;         ///< Time in seconds before perforing a new health retry
+    // Health/Asynchronous metering
+    uint32_t mHealthPeriod;                 ///< Time in seconds before performing the next health request
+    uint32_t mHealthRetryTimeout;           ///< Timeout in seconds for the health request
+    uint32_t mHealthRetrySleep;             ///< Time in seconds before perforing a new health retry
+    mutable uint32_t mHealthCounter = 0;
+    mutable std::mutex mHealthAccessMutex;  ///< To protect access to the health parameters
+    std::future<void> mHealthThread;        ///< Thread to maintain health alive
 
     // Thread to maintain license alive
     uint32_t mLicenseCounter = 0;
-    std::future<void> mThreadLicense;
+    std::future<void> mLicenseThread;
     TClock::time_point mExpirationTime;
-
-    // Thread to maintain health alive
-    mutable uint32_t mHealthCounter = 0;
-    std::future<void> mThreadHealth;
 
     // Threads exit elements
     bool mSecurityStop{false};
@@ -873,9 +881,11 @@ protected:
         settings["ws_retry_period_long"] = mWSRetryPeriodLong;
         settings["ws_retry_period_short"] = mWSRetryPeriodShort;
         settings["ws_request_timeout"] = (int32_t)(getDrmWSClient().getRequestTimeoutMS() / 1000);
+        MTX_ACQUIRE( mHealthAccessMutex )
         settings["health_period"] = mHealthPeriod;
         settings["health_retry"] = mHealthRetryTimeout;
         settings["health_retry_sleep"] = mHealthRetrySleep;
+        MTX_RELEASE( mHealthAccessMutex )
         settings["ws_api_retry_duration"] = mWSApiRetryDuration;
         settings["host_data_verbosity"] = static_cast<uint32_t>( mHostDataVerbosity );
         settings["drm_ctrl_time_factor"] = mCtrlTimeFactor;
@@ -1028,18 +1038,19 @@ protected:
 
     void lockDrmToInstance() {
         return;
-        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+/*        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
         uint32_t isLocked = readMailbox<uint32_t>( eMailboxOffset::MB_LOCK_DRM );
         if ( isLocked )
             Throw( DRM_BadUsage, "Another instance of the DRM Manager is currently owning the HW. " );
         writeMailbox<uint32_t>( eMailboxOffset::MB_LOCK_DRM, 1 );
         mIsLockedToDrm = true;
         Debug( "DRM Controller is now locked to this object instance" );
+*/
     }
 
     void unlockDrmToInstance() {
         return;
-        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+/*        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
         if ( !mIsLockedToDrm )
             return;
         uint32_t isLocked = readMailbox<uint32_t>( eMailboxOffset::MB_LOCK_DRM );
@@ -1047,6 +1058,7 @@ protected:
             writeMailbox<uint32_t>( eMailboxOffset::MB_LOCK_DRM, 0 );
             Debug( "DRM Controller is now unlocked to this object instance" );
         }
+*/
     }
 
     // Check compatibility of the DRM Version with Algodone version
@@ -1672,13 +1684,17 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
             }
             Json::Value drm_config_node = JVgetRequired( license_json, "drm_config", Json::objectValue );
             mLicenseDuration = JVgetOptional( drm_config_node, "license_period_second", Json::uintValue, mLicenseDuration ).asUInt();
+
+            /// Get health parameters
+            MTX_ACQUIRE( mHealthAccessMutex );
             mHealthPeriod = JVgetOptional( drm_config_node, "health_period", Json::uintValue, mHealthPeriod ).asUInt();
             mHealthRetryTimeout = JVgetOptional( drm_config_node, "health_retry", Json::uintValue, mHealthRetryTimeout ).asUInt();
             mHealthRetrySleep = JVgetOptional( drm_config_node, "health_retry_sleep", Json::uintValue, mHealthRetrySleep ).asUInt();
             Debug( "Health parameters update: healthPeriod={}s, healthRetry={}s, healthRetrySleep={}s",
-                                mHealthPeriod, mHealthRetryTimeout, mHealthRetrySleep );
+                            mHealthPeriod, mHealthRetryTimeout, mHealthRetrySleep );
             if ( mHealthPeriod )
                 startHealthContinuityThread();
+            MTX_RELEASE( mHealthAccessMutex );
 
             /// Get license node
             Json::Value license_node = JVgetRequired( drm_config_node, "license", Json::objectValue );
@@ -2042,12 +2058,12 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
 
     void startLicenseContinuityThread() {
 
-        if ( mThreadLicense.valid() ) {
+        if ( mLicenseThread.valid() ) {
             Warning( "Licensing thread already started" );
             return;
         }
 
-        mThreadLicense = std::async( std::launch::async, [ this ]() {
+        mLicenseThread = std::async( std::launch::async, [ this ]() {
             Debug( "Starting background thread which maintains licensing" );
             try {
                 // Collect CSP information if possible
@@ -2065,28 +2081,25 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
                 while( 1 ) {
                     if ( isStopRequested() )
                         break;
-                    {
-                        Debug( "Waiting metering access mutex from licensing thread" );
-                        std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
-                        Debug( "Acquired metering access mutex from licensing thread" );
 
-                        // Check DRM licensing queue
-                        if ( !isReadyForNewLicense() ) {
-                            go_sleeping = true;
+                    // Check DRM licensing queue
+                    MTX_ACQUIRE( mMeteringAccessMutex );
+                    if ( !isReadyForNewLicense() ) {
+                        go_sleeping = true;
 
-                        } else {
-                            go_sleeping = false;
-                            Debug( "Requesting new license #{} now", mLicenseCounter );
-                            Json::Value request_json = getMeteringRunning();
+                    } else {
+                        go_sleeping = false;
+                        Debug( "Requesting new license #{} now", mLicenseCounter );
+                        Json::Value request_json = getMeteringRunning();
 
-                            /// Attempt to get the next license
-                            Json::Value license_json = getLicense( request_json, mExpirationTime, mWSRetryPeriodShort*1000, mWSRetryPeriodLong*1000 );
+                        /// Attempt to get the next license
+                        Json::Value license_json = getLicense( request_json, mExpirationTime, mWSRetryPeriodShort*1000, mWSRetryPeriodLong*1000 );
 
-                            /// New license has been received: now send it to the DRM Controller
-                            setLicense( license_json );
-                        }
+                        /// New license has been received: now send it to the DRM Controller
+                        setLicense( license_json );
                     }
-                    Debug( "Released metering access mutex from licensing thread" );
+                    MTX_RELEASE( mMeteringAccessMutex );
+
                     if ( go_sleeping ) {
                         // DRM license queue is full, wait until current license expires
                         uint32_t licenseTimeLeft = getCurrentLicenseTimeLeft();
@@ -2124,52 +2137,64 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
 
     void startHealthContinuityThread() {
 
-        if ( mThreadHealth.valid() ) {
+        if ( mHealthThread.valid() ) {
             Debug( "Asynchronous metering thread already started" );
             return;
         }
 
-        mThreadHealth = std::async( std::launch::async, [ this ]() {
+        mHealthThread = std::async( std::launch::async, [ this ]() {
             Debug( "Starting background thread which checks health" );
             try {
                 uint32_t retry_sleep_ms;
                 int32_t retry_timeout_ms;
+                uint32_t health_period, health_retry_timeout, health_retry_sleep;
+
+                MTX_ACQUIRE( mHealthAccessMutex );
+                health_period = mHealthPeriod;
+                health_retry_timeout = mHealthRetryTimeout;
+                health_retry_sleep = mHealthRetrySleep;
+                MTX_RELEASE( mHealthAccessMutex );
 
                 /// Starting async metering update loop
                 while( 1 ) {
-
                     /// Sleep until it's time to collect the next metering data
-                    TClock::time_point wakeup_time = TClock::now() + std::chrono::seconds( mHealthPeriod );
-                    Debug( "Health thread sleeping {} seconds before gathering new metering", mHealthPeriod );
+                    TClock::time_point wakeup_time = TClock::now() + std::chrono::seconds( health_period );
+                    Debug( "Health thread sleeping {} seconds before gathering new metering", health_period );
                     sleepOrExit( wakeup_time );
 
-                    if ( mHealthPeriod == 0 ) {
+                    MTX_ACQUIRE( mHealthAccessMutex );
+                    health_period = mHealthPeriod;
+                    health_retry_timeout = mHealthRetryTimeout;
+                    health_retry_sleep = mHealthRetrySleep;
+                    MTX_RELEASE( mHealthAccessMutex );
+
+                    if ( health_period == 0 ) {
                         Debug( "Health thread is disabled" );
                         break;
                     }
-                    if ( mHealthRetryTimeout == 0 ) {
+                    if ( health_retry_timeout == 0 ) {
                         retry_timeout_ms = getDrmWSClient().getRequestTimeoutMS();
                         retry_sleep_ms = 0;
                         Debug( "Health retry is disabled" );
                     } else {
-                        retry_timeout_ms = mHealthRetryTimeout * 1000;
-                        retry_sleep_ms = mHealthRetrySleep * 1000;
+                        retry_timeout_ms = health_retry_timeout * 1000;
+                        retry_sleep_ms = health_retry_sleep * 1000;
                         Debug( "Health retry is enabled" );
                     }
-                    {
-                        Debug( "Waiting metering access mutex from health thread" );
-                        std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
-                        Debug( "Acquired metering access mutex from health thread" );
 
-                        // Get next data from DRM Controller
-                        Json::Value request_json = getMeteringHealth();
+                    // Get next data from DRM Controller
+                    MTX_ACQUIRE( mMeteringAccessMutex )
+                    Json::Value request_json = getMeteringHealth();
 
-                        // Post next data to server
-                        Debug( "Sending new health info #{}", mHealthCounter );
-                        Json::Value license_json = getLicense( request_json, retry_timeout_ms, retry_sleep_ms );
-                        mHealthCounter ++;
-                    }
-                    Debug( "Released metering access mutex from health thread" );
+                    // Post next data to server
+                    Debug( "Sending new health info #{}", mHealthCounter );
+                    Json::Value license_json = getLicense( request_json, retry_timeout_ms, retry_sleep_ms );
+                    MTX_RELEASE( mMeteringAccessMutex )
+
+                    // Increment health request counter
+                    MTX_ACQUIRE( mHealthAccessMutex );
+                    mHealthCounter ++;
+                    MTX_RELEASE( mHealthAccessMutex );
                 }
             } catch( const Exception& e ) {
                 DRM_ErrorCode errcode = e.getErrCode();
@@ -2193,7 +2218,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
     }
 
     void stopThread() {
-        if ( ( mThreadLicense.valid() == 0 ) && ( mThreadHealth.valid() == 0 ) ) {
+        if ( ( mLicenseThread.valid() == 0 ) && ( mHealthThread.valid() == 0 ) ) {
             Debug( "Background threads are not running" );
             return;
         }
@@ -2203,10 +2228,10 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
             mThreadExit = true;
         }
         mThreadExitCondVar.notify_all();
-        if ( mThreadLicense.valid() )
-            mThreadLicense.get();     // Wait until the License thread ends
-        if ( mThreadHealth.valid() )
-            mThreadHealth.get();     // Wait until the Health thread ends
+        if ( mLicenseThread.valid() )
+            mLicenseThread.get();     // Wait until the License thread ends
+        if ( mHealthThread.valid() )
+            mHealthThread.get();     // Wait until the Health thread ends
         Debug( "Background threads stopped" );
         {
             std::lock_guard<std::mutex> lock( mThreadExitMtx );
@@ -2231,10 +2256,10 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
             timeSpan = TClock::now() - timeStart;
             mseconds = int( 1000 * double( timeSpan.count() ) * TClock::period::num / TClock::period::den );
             if ( activationCodesTransmitted ) {
-                Debug( "License #{} transmitted after {} ms", mLicenseCounter, mseconds );
+                Debug( "License #{} transmitted (latency = {} ms)", mLicenseCounter, mseconds );
                 break;
             }
-            Debug2( "License #{} not transmitted yet after {} ms", mLicenseCounter, mseconds );
+            Debug2( "License #{} not transmitted yet (latency = {} ms)", mLicenseCounter, mseconds );
             usleep(sleep_period);
         }
         if ( !activationCodesTransmitted ) {
@@ -2273,10 +2298,10 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
             timeSpan = TClock::now() - timeStart;
             mseconds = int( 1000 * double( timeSpan.count() ) * TClock::period::num / TClock::period::den );
             if ( is_running ) {
-                Debug( "Session ID {} is now running after {} ms", mSessionID, mseconds );
+                Debug( "Session ID {} is now running (latency = {} ms)", mSessionID, mseconds );
                 break;
             }
-            Debug2( "Session ID {} is not running yet after {} ms", mSessionID, mseconds );
+            Debug2( "Session ID {} is not running yet (latency = {} ms)", mSessionID, mseconds );
             usleep(sleep_period);
         }
         if ( !is_running ) {
@@ -2285,25 +2310,22 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
     }
 
     void startSession() {
-        {
-            Debug( "Waiting metering access mutex from startSession" );
-            std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
-            Debug( "Acquired metering access mutex from startSession" );
+        MTX_ACQUIRE( mMeteringAccessMutex );
 
-            if ( !isReadyForNewLicense() )
-                Unreachable( "To start a new session the DRM Controller shall be ready to accept a new license" ); //LCOV_EXCL_LINE
+        if ( !isReadyForNewLicense() )
+            Unreachable( "To start a new session the DRM Controller shall be ready to accept a new license" ); //LCOV_EXCL_LINE
 
-            mLicenseCounter = 0;
-            mHealthCounter = 0;
+        mHealthCounter = 0;
+        mLicenseCounter = 0;
 
-            // Build start request message for new license
-            Json::Value request_json = getMeteringStart();
+        // Build start request message for new license
+        Json::Value request_json = getMeteringStart();
 
-            // Send request and receive new license
-            Json::Value license_json = getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
-            setLicense( license_json );
-        }
-        Debug( "Released metering access mutex from startSession" );
+        // Send request and receive new license
+        Json::Value license_json = getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
+        setLicense( license_json );
+        MTX_RELEASE( mMeteringAccessMutex )
+
         Info( "DRM session {} started.", mSessionID );
     }
 
@@ -2313,20 +2335,17 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         // Stop background thread
         stopThread();
 
-        try {
-            // Get and send metering data to web service
-            Debug( "Waiting metering access mutex from stopSession" );
-            std::lock_guard<std::mutex> lockMetering( mMeteringAccessMutex );
-            Debug( "Acquired metering access mutex from stopSession" );
-            request_json = getMeteringStop();
+        try
+            MTX_ACQUIRE( mMeteringAccessMutex );
 
-            // Send last metering information
+            // Get and send metering data to web service
+            request_json = getMeteringStop();
             getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
             Debug( "Session ID {} stopped and last metering data uploaded", mSessionID );
         } catch( const Exception& e ) {
             Debug( e.what() );
-        }
-        Debug( "Released metering access mutex from stopSession" );
+        MTX_RELEASE( mMeteringAccessMutex );
+
         mExpirationTime = TClock::time_point();
         Debug( "Reset expiration time" );
         // Clear security flag
@@ -2804,18 +2823,24 @@ public:
                         break;
                     }
                     case ParameterKey::health_period: {
+                        MTX_ACQUIRE( mHealthAccessMutex );
                         json_value[key_str] = mHealthPeriod;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id, mHealthPeriod );
+                        MTX_RELEASE( mHealthAccessMutex );
                         break;
                     }
                     case ParameterKey::health_retry: {
+                        MTX_ACQUIRE( mHealthAccessMutex );
                         json_value[key_str] = mHealthRetryTimeout;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id, mHealthRetryTimeout );
+                        MTX_RELEASE( mHealthAccessMutex );
                         break;
                     }
                     case ParameterKey::health_retry_sleep: {
+                        MTX_ACQUIRE( mHealthAccessMutex );
                         json_value[key_str] = mHealthRetrySleep;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id, mHealthRetrySleep );
+                        MTX_RELEASE( mHealthAccessMutex );
                         break;
                     }
                     case ParameterKey::host_data_verbosity: {
@@ -2904,9 +2929,11 @@ public:
                         break;
                     }
                     case ParameterKey::health_counter: {
+                        MTX_ACQUIRE( mHealthAccessMutex );
                         json_value[key_str] = mHealthCounter;
                         Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
                                 mHealthCounter );
+                        MTX_RELEASE( mHealthAccessMutex );
                         break;
                     }
                     case ParameterKey::ParameterKeyCount: {
