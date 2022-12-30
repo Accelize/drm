@@ -101,25 +101,24 @@ def test_health_counter_is_reset_on_new_session(accelize_drm, conf_json, cred_js
                 driver.write_register_callback,
                 async_cb.callback
             ) as drm_manager:
-        assert drm_manager.get('health_counter') == get_context()['cnt_health'] == 0
+        assert drm_manager.get('health_counter') == 0
         drm_manager.activate()
-        start = datetime.now()
         assert drm_manager.get('health_counter') == get_context()['cnt_health'] == 0
         lic_duration = drm_manager.get('license_duration')
-        wait_deadline(start, lic_duration+1)
+        sleep(lic_duration+1)
         assert drm_manager.get('health_counter') == get_context()['cnt_health'] == nb_health
         drm_manager.deactivate()
         assert drm_manager.get('health_counter') == get_context()['cnt_health'] == nb_health
         drm_manager.activate()
         assert drm_manager.get('health_counter') == get_context()['cnt_health'] == 0
-        sleep(lic_duration)
+        sleep(lic_duration+1)
         drm_manager.deactivate()
         assert drm_manager.get('health_counter') == get_context()['cnt_health'] == nb_health
 
     log_content = logfile.read()
     assert search(r'Starting background thread which checks health', log_content, MULTILINE)
     assert search(r'Exiting background thread which checks health', log_content, MULTILINE)
-    assert len(findall(r'Build health request', log_content)) == nb_health
+    assert len(findall(r'Build health request', log_content)) == 2*nb_health
     assert get_proxy_error() is None
     async_cb.assert_NoError()
     logfile.remove()
