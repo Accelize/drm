@@ -37,7 +37,7 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json,
 
     # Set initial context on the live server
     nb_health = 2
-    context = {'cnt':0, 'nb_health':nb_health, 'exit':False}
+    context = {'nb_health':nb_health}
     set_context(context)
     assert get_context() == context
 
@@ -91,7 +91,7 @@ def test_health_counter_is_reset_on_new_session(accelize_drm, conf_json, cred_js
 
     # Set initial context on the live server
     nb_health = 2
-    context = {'cnt':0, 'nb_health':nb_health, 'exit':False}
+    context = {'nb_health':nb_health}
     set_context(context)
     assert get_context() == context
 
@@ -101,18 +101,20 @@ def test_health_counter_is_reset_on_new_session(accelize_drm, conf_json, cred_js
                 driver.write_register_callback,
                 async_cb.callback
             ) as drm_manager:
-        assert drm_manager.get('health_counter') == get_context()['cnt'] == 0
+        assert drm_manager.get('health_counter') == get_context()['cnt_health'] == 0
         drm_manager.activate()
-        assert drm_manager.get('health_counter') == get_context()['cnt'] == 0
+        start = datetime.now()
+        assert drm_manager.get('health_counter') == get_context()['cnt_health'] == 0
         lic_duration = drm_manager.get('license_duration')
-        sleep(lic_duration)
+        wait_deadline(start, lic_duration+1)
+        assert drm_manager.get('health_counter') == get_context()['cnt_health'] == nb_health
         drm_manager.deactivate()
-        assert drm_manager.get('health_counter') == get_context()['cnt'] == nb_health
+        assert drm_manager.get('health_counter') == get_context()['cnt_health'] == nb_health
         drm_manager.activate()
-        assert drm_manager.get('health_counter') == get_context()['cnt'] == 0
+        assert drm_manager.get('health_counter') == get_context()['cnt_health'] == 0
         sleep(lic_duration)
         drm_manager.deactivate()
-        assert drm_manager.get('health_counter') == get_context()['cnt'] == nb_health
+        assert drm_manager.get('health_counter') == get_context()['cnt_health'] == nb_health
 
     log_content = logfile.read()
     assert search(r'Starting background thread which checks health', log_content, MULTILINE)
