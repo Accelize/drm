@@ -1465,7 +1465,6 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
                 Warning( "Cannot access metering data when no session is running" );
             }
         }
-        Debug( "Released metering access mutex from getMeteringHealth" );
 
         // Add metering info and health marker
         Json::Value& drm_config = json_output["drm_config"];
@@ -2082,24 +2081,26 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
                     if ( isStopRequested() )
                         break;
 
-                    // Close health thread if it's been disabled
-                    MTX_ACQUIRE( mHealthAccessMutex );
-                    if ( ( mHealthPeriod == 0 ) && mHealthThread.valid() ) {
-                        mHealthThread.get();  // Wait until the Health thread ends
-                    }
-                    MTX_RELEASE( mHealthAccessMutex );
-
-                    // Check DRM licensing queue
+                    /// Check DRM licensing queue
                     MTX_ACQUIRE( mMeteringAccessMutex );
                     if ( !isReadyForNewLicense() ) {
                         go_sleeping = true;
 
                     } else {
                         go_sleeping = false;
+
+                        /// Close health thread if it's been disabled
+                        MTX_ACQUIRE( mHealthAccessMutex );
+                        if ( ( mHealthPeriod == 0 ) && mHealthThread.valid() ) {
+                            mHealthThread.get();  // Wait until the Health thread ends
+                        }
+                        MTX_RELEASE( mHealthAccessMutex );
+
+                        /// Build new license request
                         Debug( "Requesting new license #{} now", mLicenseCounter );
                         Json::Value request_json = getMeteringRunning();
 
-                        /// Attempt to get the next license
+                        /// Attempt to get the next license from server
                         Json::Value license_json = getLicense( request_json, mExpirationTime, mWSRetryPeriodShort*1000, mWSRetryPeriodLong*1000 );
 
                         /// New license has been received: now send it to the DRM Controller
