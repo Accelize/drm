@@ -58,14 +58,14 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json,
         wait_deadline(start, 2*lic_duration)
         wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, lic_duration)
         assert drm_manager.get('health_period') == get_context()['health_period'] > 0
-        wait_deadline(start, 3*lic_duration)
+        wait_deadline(start, 3*lic_duration + 2)
         drm_manager.deactivate()
         health_cnt = drm_manager.get('health_counter')
         assert health_cnt == 2*nb_health == get_context()['cnt_health']
     log_content = logfile.read()
     assert len(findall(r'Starting background thread which checks health', log_content, MULTILINE)) == 2
     assert len(findall(r'Health thread is disabled', log_content, MULTILINE)) == 1
-    assert len(findall(r'Exiting background thread which checks health', log_content, MULTILINE)) == 1
+    assert len(findall(r'Exiting background thread which checks health', log_content, MULTILINE)) == 2
     assert health_cnt == 2*nb_health == len(findall(r'Build health request', log_content))
     assert get_proxy_error() is None
     async_cb.assert_NoError()

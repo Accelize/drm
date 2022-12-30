@@ -2082,6 +2082,13 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
                     if ( isStopRequested() )
                         break;
 
+                    // Close health thread if it's been disabled
+                    MTX_ACQUIRE( mHealthAccessMutex );
+                    if ( ( mHealthPeriod == 0 ) && mHealthThread.valid() ) {
+                        mHealthThread.get();  // Wait until the Health thread ends
+                    }
+                    MTX_RELEASE( mHealthAccessMutex );
+
                     // Check DRM licensing queue
                     MTX_ACQUIRE( mMeteringAccessMutex );
                     if ( !isReadyForNewLicense() ) {
