@@ -433,14 +433,15 @@ def create_app(url):
                 "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text))
         if is_health:
-            context['data'].append( (context['start'],str(datetime.now())) )
-            context['start'] = str(datetime.now())
-            if len(context['data']) == 3:
-                context['health_period']= 2*context['health_period_ref']
-            if context['hit']:
-                context['hit'] += 1
-                if context['hit'] >= 3:
-                    context['exit'] = True
+            with lock:
+                context['data'].append( (context['start'],str(datetime.now())) )
+                context['start'] = str(datetime.now())
+                if len(context['data']) == 3:
+                    context['health_period']= 2*context['health_period_ref']
+                if context['hit']:
+                    context['hit'] += 1
+                    if context['hit'] >= 3:
+                        context['exit'] = True
             return Response(status = 204)
         if is_closed:
             return Response(status = 204)
