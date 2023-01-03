@@ -435,11 +435,11 @@ def create_app(url):
         if is_health:
             context['data'].append( (context['start'],str(datetime.now())) )
             context['start'] = str(datetime.now())
-            if len(context['data']) >= 2:
+            if len(context['data']) == 3:
                 context['health_period']= 2*context['health_period_ref']
             if context['hit']:
                 context['hit'] += 1
-                if context['hit'] >= 2:
+                if context['hit'] >= 3:
                     context['exit'] = True
             return Response(status = 204)
         if is_closed:
