@@ -470,9 +470,11 @@ def create_app(url):
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
+            context['exit'] = False
+            context['cnt'] = 0
             context['start'] = datetime.now()
             response_json['drm_config']['health_period'] = context['health_period']
-            response_json['drm_config']['health_retry'] = 0
+            response_json['drm_config']['health_retry'] = context['health_retry']
         return Response(dumps(response_json), response.status_code, headers)
 
     @app.route('/test_health_retry_disabled/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
@@ -487,15 +489,31 @@ def create_app(url):
             assert response.status_code == 204 if is_health else 200, (
                 "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text))
+            with lock:
+                response_json['drm_config']['health_period'] = context['health_period']
+                response_json['drm_config']['health_retry'] = context['health_retry']
+                if context['health_retry'] == 0 and context['cnt'] == 0:
+                    context['cnt'] = 1
         print('request_json=', request_json)
         if is_health:
+            chlg = request_json['drm_config']['saas_challenge']
+            if context.get('challenge', 0) == 0:
+                context['challenge'] = chlg
+            elif context['challenge'] == chlg:
+                context['health_retry'] = 0
             context['data'].append( (request_json['drm_config']['saas_challenge'],context['start'],datetime.now()) )
             context['start'] = datetime.now()
+            if context['cnt']:
+                if context['cnt'] >= 2:
+                    context['exit'] = True
+                context['cnt'] += 1
             if len(context['data']) == 1:
                 context['save_health'] = reponse
             else:
                 response = context['post']
-                return Response(dumps(response.json()), 408)
+                return Response(dumps(response.json()), 408, response.headers)
+        if not is_closed:
+            return Response(dumps(response_json), response.status_code, request.headers)
         return response
         '''
         with lock:
