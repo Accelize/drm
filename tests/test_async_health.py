@@ -196,40 +196,35 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
+    # Set initial context on the live server
+    health_period = 4
+    health_retry_sleep = 1
+    context = {'data': list(),
+               'health_period': health_period
+    }
+    set_context(context)
+    assert get_context() == context
+
     with accelize_drm.DrmManager(
             conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
         ) as drm_manager:
-
-        # Set initial context on the live server
-        nb_health = 2
-        health_period = 3
-        health_retry_sleep = 1
-        context = {'data': list(),
-                   'health_period':health_period,
-                   'health_retry_sleep':health_retry_sleep
-        }
-        set_context(context)
-        assert get_context() == context
-
         drm_manager.activate()
-        wait_func_true(lambda: len(get_context()['data']) >= nb_health,
-                timeout=(health_period+3) * (nb_health+2))
+        lic_duration = drm_manager.get('license_duration')
+        wait_func_true(lambda: len(get_context()['data']) >= 3,
+                timeout=2*lic_duration)
         drm_manager.deactivate()
     async_cb.assert_NoError()
     data_list = get_context()['data']
-    assert len(data_list) >= nb_health
-    # Check there is no duplicated health_id
-    id_list = tuple(map(lambda x: x[0], data_list))
-    assert id_list == tuple(set(id_list))
-    # Check the time between 2 period
-    wait_start = data_list.pop(0)[2]
-    for hid, start, end in data_list:
-        delta = parser.parse(start) - parser.parse(wait_start)
-        assert int(delta.total_seconds()) == health_period
-        wait_start = end
+    assert len(data_list) >= 3
+    challenge_list = list()
+    for challenge, start, end in data_list:
+        challenge_list.append(challenge)
+        delta = parser.parse(end) - parser.parse(start)
+        assert health_period <= int(delta.total_seconds()) <= health_period + 1
+    assert len(challenge_list) == len(set(challenge_list))
     assert get_proxy_error() is None
     logfile.remove()
 
