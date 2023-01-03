@@ -414,10 +414,10 @@ def create_app(url):
         response_json = response.json()
         with lock:
             context['cnt_double_health'] = 0
-            context['start'] = str(datetime.now())
+            context['start'] = datetime.now()
             context['health_period_ref'] = context['health_period']
             response_json['drm_config']['health_period'] = context['health_period']
-            rn Response(dumps(response_json), response.status_code, headers)
+        return Response(dumps(response_json), response.status_code, headers)
 
     @app.route('/test_health_period_modification/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_health_period_modification(entitlement_id):
@@ -432,12 +432,12 @@ def create_app(url):
                 indent=4, sort_keys=True), response.status_code, response.text))
         if is_health:
             with lock:
-                context['data'].append( (context['start'],str(datetime.now())) )
-                context['start'] = str(datetime.now())
+                context['data'].append( (context['start'],datetime.now()) )
+                context['start'] = datetime.now()
                 if len(context['data']) == 2:
                     context['health_period']= 2*context['health_period_ref']
                 if context['cnt_double_health']:
-                    if context['cnt_double_health'] == 3:
+                    if context['cnt_double_health'] == 2:
                         context['exit'] = True
                     context['cnt_double_health'] += 1
             return Response(status = 204)
@@ -448,7 +448,7 @@ def create_app(url):
         response_json = response.json()
         with lock:
             response_json['drm_config']['health_period'] = context['health_period']
-            if context['health_period'] == 2*context['health_period_ref']:
+            if context['health_period'] == 2*context['health_period_ref'] and context['cnt_double_health'] == 0:
                 context['cnt_double_health'] = 1
         return Response(dumps(response_json), response.status_code, headers)
 

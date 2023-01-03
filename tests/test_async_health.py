@@ -164,7 +164,7 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
         drm_manager.deactivate()
     async_cb.assert_NoError()
     data_list = get_context()['data']
-    assert len(data_list) >= nb_health + 2
+    assert len(data_list) >= nb_health + 1
     delta_cnt = [0,0]
     for i, (start, end) in enumerate(data_list):
         delta = parser.parse(end) - parser.parse(start)
@@ -175,7 +175,7 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
             delta_cnt[0] += 1
             assert health_period <= int(delta.total_seconds()) <= health_period + 1
     assert delta_cnt[0] >= nb_health
-    assert delta_cnt[1] == 2
+    assert delta_cnt[1] == 1
     assert get_proxy_error() is None
     logfile.remove()
 
