@@ -141,14 +141,11 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
     conf_json.save()
 
     # Set initial context on the live server
-    nb_health = 4
     health_period = 2
     health_retry = 0  # no retry
     health_retry_sleep = 1
     context = {'data': list(),
                'health_period':health_period,
-               'health_retry':health_retry,
-               'health_retry_sleep':health_retry_sleep,
                'exit': False
     }
     set_context(context)
@@ -162,11 +159,12 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
             ) as drm_manager:
         drm_manager.activate()
         lic_duration = drm_manager.get('license_duration')
-        wait_func_true(lambda: get_context()['exit'], timeout=2*lic_duration)
+        nb_health = lic_duration // health_period
+        wait_func_true(lambda: get_context()['exit'], timeout=3*lic_duration)
         drm_manager.deactivate()
     async_cb.assert_NoError()
     data_list = get_context()['data']
-    assert len(data_list) >= nb_health
+    assert len(data_list) >= nb_health + 2
     delta_cnt = [0,0]
     for i, (start, end) in enumerate(data_list):
         delta = parser.parse(end) - parser.parse(start)
@@ -176,9 +174,10 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
         else:
             delta_cnt[0] += 1
             assert health_period <= int(delta.total_seconds()) <= health_period + 1
-    assert delta_cnt[0]
-    assert delta_cnt[1]
+    assert delta_cnt[0] >= nb_health
+    assert delta_cnt[1] == 2
     assert get_proxy_error() is None
+    logfile.remove()
 
 
 @pytest.mark.no_parallel
@@ -232,6 +231,7 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
         assert int(delta.total_seconds()) == health_period
         wait_start = end
     assert get_proxy_error() is None
+    logfile.remove()
 
 
 @pytest.mark.no_parallel
@@ -294,6 +294,7 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json,
         delta = parser.parse(end) - parser.parse(start)
         assert retry_timeout - error_gap <= int(delta.total_seconds()) <= retry_timeout + error_gap
         assert get_proxy_error() is None
+    logfile.remove()
 
 
 @pytest.mark.no_parallel
@@ -357,6 +358,7 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json,
                 assert int(delta.total_seconds()) == health_retry_sleep
                 start = lend
         assert get_proxy_error() is None
+    logfile.remove()
 
 
 @pytest.mark.no_parallel
@@ -421,6 +423,7 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
         assert not drm_manager.get('license_status')
     assert get_proxy_error() is None
     async_cb.assert_NoError()
+    logfile.remove()
 
 
 @pytest.mark.no_parallel

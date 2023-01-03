@@ -413,13 +413,11 @@ def create_app(url):
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
-            context['hit'] = 0
+            context['cnt_double_health'] = 0
             context['start'] = str(datetime.now())
             context['health_period_ref'] = context['health_period']
             response_json['drm_config']['health_period'] = context['health_period']
-            response_json['drm_config']['health_retry'] = context['health_retry']
-            response_json['drm_config']['health_retry_sleep'] = context['health_retry_sleep']
-        return Response(dumps(response_json), response.status_code, headers)
+            rn Response(dumps(response_json), response.status_code, headers)
 
     @app.route('/test_health_period_modification/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_health_period_modification(entitlement_id):
@@ -436,12 +434,12 @@ def create_app(url):
             with lock:
                 context['data'].append( (context['start'],str(datetime.now())) )
                 context['start'] = str(datetime.now())
-                if len(context['data']) == 3:
+                if len(context['data']) == 2:
                     context['health_period']= 2*context['health_period_ref']
-                if context['hit']:
-                    context['hit'] += 1
-                    if context['hit'] >= 3:
+                if context['cnt_double_health']:
+                    if context['cnt_double_health'] == 3:
                         context['exit'] = True
+                    context['cnt_double_health'] += 1
             return Response(status = 204)
         if is_closed:
             return Response(status = 204)
@@ -450,10 +448,8 @@ def create_app(url):
         response_json = response.json()
         with lock:
             response_json['drm_config']['health_period'] = context['health_period']
-            response_json['drm_config']['health_retry'] = context['health_retry']
-            response_json['drm_config']['health_retry_sleep'] = context['health_retry_sleep']
             if context['health_period'] == 2*context['health_period_ref']:
-                context['hit'] = 1
+                context['cnt_double_health'] = 1
         return Response(dumps(response_json), response.status_code, headers)
 
     # test_health_retry_disabled functions
