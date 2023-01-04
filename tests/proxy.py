@@ -470,6 +470,7 @@ def create_app(url):
         headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
+            context['challenge'] = ''
             context['exit'] = False
             context['cnt'] = 0
             context['start'] = datetime.now()
@@ -484,59 +485,31 @@ def create_app(url):
         request_json = request.get_json()
         is_health = request_json.get('is_health')
         is_closed = request_json.get('is_closed')
-        if not is_health or len(context['data']) == 0:
+        if not is_health:
             response = patch(new_url, json=request_json, headers=request.headers)
             assert response.status_code == 204 if is_health else 200, (
                 "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text))
+            response_json = response.json()
             with lock:
                 response_json['drm_config']['health_period'] = context['health_period']
                 response_json['drm_config']['health_retry'] = context['health_retry']
                 if context['health_retry'] == 0 and context['cnt'] == 0:
                     context['cnt'] = 1
-        print('request_json=', request_json)
-        if is_health:
-            chlg = request_json['drm_config']['saas_challenge']
-            if context.get('challenge', 0) == 0:
-                context['challenge'] = chlg
-            elif context['challenge'] == chlg:
-                context['health_retry'] = 0
-            context['data'].append( (request_json['drm_config']['saas_challenge'],context['start'],datetime.now()) )
-            context['start'] = datetime.now()
-            if context['cnt']:
-                if context['cnt'] >= 2:
-                    context['exit'] = True
-                context['cnt'] += 1
-            if len(context['data']) == 1:
-                context['save_health'] = reponse
-            else:
-                response = context['post']
-                return Response(dumps(response.json()), 408, response.headers)
-        if not is_closed:
-            return Response(dumps(response_json), response.status_code, request.headers)
-        return response
-        '''
-        with lock:
-            start = context['start']
-            context['start'] = datetime.now()
-            if len(context['data']) <= 1:
-                response = patch(new_url, json=request_json, headers=request.headers)
-                assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
-                        indent=4, sort_keys=True), response.status_code, response.text)
-                excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-                headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-                response_json = response.json()
-                response_json['drm_config']['health_period'] = context['health_period']
-                response_json['drm_config']['health_retry'] = 0
-                response_json['drm_config']['health_retry_sleep'] = context['health_retry_sleep']
-                response_status_code = response.status_code
-                context['post'] = (response_json, headers)
-            else:
-                response_json, headers = context['post']
-                response_status_code = 408
-            context['data'].append( (health_id,start,datetime.now()) )
-        return Response(dumps(response_json), response_status_code, headers)
-        '''
+            return Response(dumps(response_json), response.status_code, headers)
+        # is_health = True
+        chlg = request_json['drm_config']['saas_challenge']
+        if context['challenge'] == ''
+            context['challenge'] = chlg
+        elif context['challenge'] == chlg:
+            context['health_retry'] = 0
+        context['data'].append( (chlg, context['start'], datetime.now()) )
+        context['start'] = datetime.now()
+        if context['cnt']:
+            if context['cnt'] >= 2:
+                context['exit'] = True
+            context['cnt'] += 1
+        return Response('Timeout', 408)
 
     # test_health_retry_modification functions
     @app.route('/test_health_retry_modification/auth/token', methods=['GET', 'POST'])
