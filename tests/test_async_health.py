@@ -202,7 +202,8 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
     health_retry_sleep = 1
     context = {'data': list(),
                'health_period': health_period,
-               'health_retry': health_retry
+               'health_retry': health_retry,
+               'health_retry_sleep': health_retry_sleep
     }
     set_context(context)
     assert get_context() == context
@@ -215,7 +216,7 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
         ) as drm_manager:
         drm_manager.activate()
         lic_duration = drm_manager.get('license_duration')
-        wait_func_true(lambda: get_context()['exit'], timeout=2*lic_duration)
+        wait_func_true(lambda: get_context()['exit'], timeout=3*lic_duration)
         drm_manager.deactivate()
     async_cb.assert_NoError()
     data_list = get_context()['data']

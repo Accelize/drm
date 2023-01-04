@@ -321,8 +321,8 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_health_period_disabled', url)
         request_json = request.get_json()
-        is_health = request_json.get('is_health')
-        is_closed = request_json.get('is_closed')
+        is_health = request_json.get('is_health', False)
+        is_closed = request_json.get('is_closed', False)
         response = patch(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 204 if is_health else 200, (
                 "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
@@ -374,8 +374,8 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_health_counter_is_reset_on_new_session', url)
         request_json = request.get_json()
-        is_health = request_json.get('is_health')
-        is_closed = request_json.get('is_closed')
+        is_health = request_json.get('is_health', False)
+        is_closed = request_json.get('is_closed', False)
         response = patch(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 204 if is_health else 200, (
                 "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
@@ -424,8 +424,8 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_health_period_modification', url)
         request_json = request.get_json()
-        is_health = request_json.get('is_health')
-        is_closed = request_json.get('is_closed')
+        is_health = request_json.get('is_health', False)
+        is_closed = request_json.get('is_closed', False)
         response = patch(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 204 if is_health else 200, (
                 "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
@@ -466,8 +466,6 @@ def create_app(url):
         response = post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
             context['challenge'] = ''
@@ -476,30 +474,35 @@ def create_app(url):
             context['start'] = datetime.now()
             response_json['drm_config']['health_period'] = context['health_period']
             response_json['drm_config']['health_retry'] = context['health_retry']
-        return Response(dumps(response_json), response.status_code, headers)
+            response_json['drm_config']['health_retry_sleep'] = context['health_retry_sleep']
+        response.encoding, response._content = 'utf8', dumps(response_json).encode('utf-8')
+        return Response(response)
 
     @app.route('/test_health_retry_disabled/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_health_retry_disabled(entitlement_id):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_health_retry_disabled', url)
         request_json = request.get_json()
-        is_health = request_json.get('is_health')
-        is_closed = request_json.get('is_closed')
+        is_health = request_json.get('is_health', False)
+        is_closed = request_json.get('is_closed', False)
         if not is_health:
             response = patch(new_url, json=request_json, headers=request.headers)
             assert response.status_code == 204 if is_health else 200, (
                 "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text))
-            response_json = response.json()
-            with lock:
-                response_json['drm_config']['health_period'] = context['health_period']
-                response_json['drm_config']['health_retry'] = context['health_retry']
-                if context['health_retry'] == 0 and context['cnt'] == 0:
-                    context['cnt'] = 1
-            return Response(dumps(response_json), response.status_code, headers)
+            if not is_closed:
+                response_json = response.json()
+                with lock:
+                    response_json['drm_config']['health_period'] = context['health_period']
+                    response_json['drm_config']['health_retry'] = context['health_retry']
+                    response_json['drm_config']['health_retry_sleep'] = context['health_retry_sleep']
+                    if context['health_retry'] == 0 and context['cnt'] == 0:
+                        context['cnt'] = 1
+                response.encoding, response._content = 'utf8', dumps(response_json).encode('utf-8')
+            return Response(response)
         # is_health = True
         chlg = request_json['drm_config']['saas_challenge']
-        if context['challenge'] == ''
+        if context['challenge'] == '':
             context['challenge'] = chlg
         elif context['challenge'] == chlg:
             context['health_retry'] = 0
@@ -1049,8 +1052,8 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_normal_usage', url)
         request_json = request.get_json()
-        is_health = request_json.get('is_health')
-        is_closed = request_json.get('is_closed')
+        is_health = request_json.get('is_health', False)
+        is_closed = request_json.get('is_closed', False)
         response = patch(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 204 if is_health else 200, (
                 "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,

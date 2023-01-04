@@ -2112,7 +2112,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
                         // DRM license queue is full, wait until current license expires
                         uint32_t licenseTimeLeft = getCurrentLicenseTimeLeft();
                         TClock::duration wait_duration = std::chrono::seconds( licenseTimeLeft + 1 );
-                        Debug( "License thread sleeping {} seconds before checking DRM Controller readiness", licenseTimeLeft );
+                        Debug( "License thread sleeping {} seconds", licenseTimeLeft );
                         sleepOrExit( wait_duration );
                         // Resync expiration time
                         licenseTimeLeft = getCurrentLicenseTimeLeft();
@@ -2153,8 +2153,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         mHealthThread = std::async( std::launch::async, [ this ]() {
             Debug( "Starting background thread which checks health" );
             try {
-                uint32_t retry_sleep_ms;
-                int32_t retry_timeout_ms;
+                int32_t retry_timeout_ms, retry_sleep_ms;
                 uint32_t health_period, health_retry_timeout, health_retry_sleep;
 
                 MTX_ACQUIRE( mHealthAccessMutex );
@@ -2181,8 +2180,8 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
                         break;
                     }
                     if ( health_retry_timeout == 0 ) {
-                        retry_timeout_ms = getDrmWSClient().getRequestTimeoutMS();
-                        retry_sleep_ms = 0;
+                        retry_timeout_ms = 0;
+                        retry_sleep_ms = -1;
                         Debug( "Health retry is disabled" );
                     } else {
                         retry_timeout_ms = health_retry_timeout * 1000;
@@ -2190,13 +2189,14 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
                         Debug( "Health retry is enabled" );
                     }
 
-                    // Get next data from DRM Controller
-                    MTX_ACQUIRE( mMeteringAccessMutex )
-                    Json::Value request_json = getMeteringHealth();
-
-                    // Post next data to server
-                    Debug( "Sending new health info #{}", mHealthCounter );
-                    Json::Value license_json = getLicense( request_json, retry_timeout_ms, retry_sleep_ms );
+                    // Report metering to service
+                    try MTX_ACQUIRE( mMeteringAccessMutex )
+                        // Get next data from DRM Controller
+                        Json::Value request_json = getMeteringHealth();
+                        // Post next data to server
+                        Debug( "Sending new health info #{}", mHealthCounter );
+                        Json::Value license_json = getLicense( request_json, retry_timeout_ms, retry_sleep_ms );
+                    } catch( const Exception& e ) {
                     MTX_RELEASE( mMeteringAccessMutex )
 
                     // Increment health request counter
