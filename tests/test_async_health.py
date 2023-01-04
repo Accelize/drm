@@ -200,6 +200,7 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
     health_period = 4
     health_retry = 3
     health_retry_sleep = 1
+    nb_attempts = health_retry // health_retry_sleep
     context = {'data': list(),
                'health_period': health_period,
                'health_retry': health_retry,
@@ -220,13 +221,14 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
         drm_manager.deactivate()
     async_cb.assert_NoError()
     data_list = get_context()['data']
-    assert len(data_list) >= 3
-    print('data_list=', data_list)
-    challenge_list = list()
-    for challenge, start, end in data_list:
-        challenge_list.append(challenge)
+    assert len(data_list) >= (nb_attempts + 2)
+    for _, start, end in data_list:
         delta = parser.parse(end) - parser.parse(start)
-        assert health_period <= int(delta.total_seconds()) <= health_period + 1
+        if chlg_n_1 == '' or chlg_n_1 != challenge:
+            assert health_period <= int(delta.total_seconds()) <= health_period + 1
+        else:
+            assert health_retry_sleep <= int(delta.total_seconds()) <= health_retry_sleep + 1
+        chlg_n_1 = challenge
     assert len(challenge_list) == len(set(challenge_list))
     assert get_proxy_error() is None
     logfile.remove()

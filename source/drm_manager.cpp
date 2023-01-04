@@ -1545,7 +1545,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         TClock::duration long_duration = std::chrono::milliseconds( long_retry_period_ms );
         TClock::duration short_duration = std::chrono::milliseconds( short_retry_period_ms );
         bool token_valid(false);
-        uint32_t oauth_attempt = 0;
+        uint32_t http_attempts = 0;
         int32_t timeout_msec;
         std::chrono::milliseconds timeout_chrono;
 
@@ -1560,13 +1560,13 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
             } catch ( const Exception& e ) {
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
                     // Reached timeout
-                    Throw( DRM_WSTimedOut, "Timeout on Authentication request after {} attempts", oauth_attempt );
+                    Throw( DRM_WSTimedOut, "Timeout on Authentication request after {} attempts", http_attempts );
                 }
                 if ( e.getErrCode() != DRM_WSMayRetry ) {
                     throw;
                 }
                 /// It is retryable
-                oauth_attempt ++;
+                http_attempts ++;
                 if ( short_retry_period_ms == -1 ) {
                     // No retry
                     Debug( "OAuthentication retry mechanism is disabled" );
@@ -1579,7 +1579,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
                 else
                     wait_duration = long_duration;
                 Warning( "Attempt #{} to obtain a new authentication token failed with message: {}. New attempt planned in {} seconds",
-                        oauth_attempt, e.what(), wait_duration.count()/1000000000 );
+                        http_attempts, e.what(), wait_duration.count()/1000000000 );
                 /// Wait a bit before retrying
                 sleepOrExit( wait_duration );
             }
@@ -1604,11 +1604,12 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         TClock::duration wait_duration;
         TClock::duration long_duration = std::chrono::milliseconds( long_retry_period_ms );
         TClock::duration short_duration = std::chrono::milliseconds( short_retry_period_ms );
-        uint32_t lic_attempt = 0;
+        uint32_t http_attempts = 0;
         int32_t timeout_msec;
         std::chrono::milliseconds timeout_chrono;
         std::string suburl;
         tHttpRequestType httpType;
+        std::string request_type = request_json.isMember("is_health") ? "Health":"License";
 
         if ( request_json.isMember("request") ) {
             request_json.removeMember("request");
@@ -1639,16 +1640,15 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
             } catch ( const Exception& e ) {
                 if ( e.getErrCode() == DRM_WSTimedOut ) {
                     // Reached timeout
-                    Throw( DRM_WSTimedOut, "Timeout on License request after {} attempts. ", lic_attempt );
+                    Throw( DRM_WSTimedOut, "Timeout on {} request after {} attempts. ", request_type, http_attempts );
                 }
                 if ( e.getErrCode() != DRM_WSMayRetry ) {
                     throw;
                 }
                 // It is retryable
-                lic_attempt ++;
+                http_attempts ++;
                 if ( short_retry_period_ms == -1 ) {
-                    // No retry
-                    Debug( "Licensing retry mechanism is disabled" );
+                    Warning( "Attempt on {} request failed with message: {}.", request_type, e.what() );
                     throw;
                 }
                 /// Evaluate the next retry
@@ -1658,8 +1658,8 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
                     wait_duration = short_duration;
                 else
                     wait_duration = long_duration;
-                Warning( "Attempt #{} to obtain a new License failed with message: {}. New attempt planned in {} seconds",
-                        lic_attempt, e.what(), wait_duration.count()/1000000000 );
+                Warning( "Attempt #{} on {} request failed with message: {}. New attempt planned in {} seconds",
+                        http_attempts, request_type, e.what(), wait_duration.count()/1000000000 );
                 /// Wait a bit before retrying
                 sleepOrExit( wait_duration );
             }
@@ -2146,7 +2146,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
     void startHealthContinuityThread() {
 
         if ( mHealthThread.valid() ) {
-            Debug( "Asynchronous metering thread already started" );
+            Debug( "Health thread already started" );
             return;
         }
 
