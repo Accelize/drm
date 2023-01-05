@@ -392,9 +392,8 @@ def create_app(url):
                 indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
         with lock:
-            context['cnt_double_health'] = 0
+            context['step'] = 0
             context['start'] = datetime.now()
-            context['health_period_ref'] = context['health_period']
             response_json['drm_config']['health_period'] = context['health_period']
         response._content = dumps(response_json).encode('utf-8')
         return Response(response)
@@ -415,19 +414,20 @@ def create_app(url):
                 context['data'].append( (context['start'],datetime.now()) )
                 context['start'] = datetime.now()
                 if len(context['data']) == 2:
-                    context['health_period']= 2*context['health_period_ref']
-                if context['cnt_double_health']:
-                    if context['cnt_double_health'] == 2:
+                    context['health_period'] *= 2
+                    context['step'] = 1
+                if context['step'] >= 2:
+                    if context['step'] == 4:
                         context['exit'] = True
-                    context['cnt_double_health'] += 1
+                    context['step'] += 1
             return Response(status = 204)
         if is_closed:
             return Response(status = 204)
         response_json = response.json()
         with lock:
             response_json['drm_config']['health_period'] = context['health_period']
-            if context['health_period'] == 2*context['health_period_ref'] and context['cnt_double_health'] == 0:
-                context['cnt_double_health'] = 1
+            if context['step'] == 1:
+                context['step'] = 2
         response._content = dumps(response_json).encode('utf-8')
         return Response(response)
 
