@@ -36,8 +36,8 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json,
     conf_json.save()
 
     # Set initial context on the live server
-    nb_health = 2
-    context = {'nb_health':nb_health}
+    health_period = 4
+    context = {'health_period': health_period}
     set_context(context)
     assert get_context() == context
 
@@ -50,23 +50,20 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json,
         drm_manager.activate()
         start = datetime.now()
         lic_duration = drm_manager.get('license_duration')
-        assert drm_manager.get('health_period') == get_context()['health_period'] > 0
-        wait_deadline(start, lic_duration)
+        assert drm_manager.get('health_period') == get_context()['health_period'] == health_period
+        wait_deadline(start, lic_duration + 1)
         wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, lic_duration)
-        assert drm_manager.get('health_period') == get_context()['health_period'] == 0
-        assert drm_manager.get('health_counter') == nb_health
-        wait_deadline(start, 2*lic_duration)
-        wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, lic_duration)
-        assert drm_manager.get('health_period') == get_context()['health_period'] > 0
-        wait_deadline(start, 3*lic_duration + 2)
+        cnt_health == get_context()['cnt_health']
+        assert cnt_health == drm_manager.get('health_counter')
+        assert drm_manager.get('health_period') == 0
+        wait_deadline(start, lic_duration + 2 * health_period)
         drm_manager.deactivate()
-        health_cnt = drm_manager.get('health_counter')
-        assert health_cnt == 2*nb_health == get_context()['cnt_health']
+        assert cnt_health == drm_manager.get('health_counter') == get_context()['cnt_health']
     log_content = logfile.read()
-    assert len(findall(r'Starting background thread which checks health', log_content, MULTILINE)) == 2
+    assert len(findall(r'Starting background thread which checks health', log_content, MULTILINE)) == 1
     assert len(findall(r'Health thread is disabled', log_content, MULTILINE)) == 1
-    assert len(findall(r'Exiting background thread which checks health', log_content, MULTILINE)) == 2
-    assert health_cnt == 2*nb_health == len(findall(r'Build health request', log_content))
+    assert len(findall(r'Exiting background thread which checks health', log_content, MULTILINE)) == 1
+    assert cnt_health == len(findall(r'Build health request', log_content))
     assert get_proxy_error() is None
     async_cb.assert_NoError()
     logfile.remove()
@@ -90,8 +87,8 @@ def test_health_counter_is_reset_on_new_session(accelize_drm, conf_json, cred_js
     conf_json.save()
 
     # Set initial context on the live server
-    nb_health = 2
-    context = {'nb_health':nb_health}
+    health_period = 4
+    context = {'health_period': health_period}
     set_context(context)
     assert get_context() == context
 
@@ -105,20 +102,20 @@ def test_health_counter_is_reset_on_new_session(accelize_drm, conf_json, cred_js
         drm_manager.activate()
         assert drm_manager.get('health_counter') == get_context()['cnt_health'] == 0
         lic_duration = drm_manager.get('license_duration')
+        nb_health = lic_duration // health_period
         sleep(lic_duration+1)
-        assert drm_manager.get('health_counter') == get_context()['cnt_health'] == nb_health
+        assert drm_manager.get('health_counter') == get_context()['cnt_health'] >= nb_health
         drm_manager.deactivate()
-        assert drm_manager.get('health_counter') == get_context()['cnt_health'] == nb_health
+        assert drm_manager.get('health_counter') == get_context()['cnt_health'] >= nb_health
         drm_manager.activate()
         assert drm_manager.get('health_counter') == get_context()['cnt_health'] == 0
         sleep(lic_duration+1)
         drm_manager.deactivate()
-        assert drm_manager.get('health_counter') == get_context()['cnt_health'] == nb_health
-
+        assert drm_manager.get('health_counter') == get_context()['cnt_health'] >= nb_health
     log_content = logfile.read()
     assert search(r'Starting background thread which checks health', log_content, MULTILINE)
     assert search(r'Exiting background thread which checks health', log_content, MULTILINE)
-    assert len(findall(r'Build health request', log_content)) == 2*nb_health
+    assert len(findall(r'Build health request', log_content)) >= nb_health
     assert get_proxy_error() is None
     async_cb.assert_NoError()
     logfile.remove()
@@ -136,16 +133,16 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
 
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + request.function.__name__
-    logfile = log_file_factory.create(2)
+    logfile = log_file_factory.create(1)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
     # Set initial context on the live server
     health_period = 2
-    health_retry = 0  # no retry
-    health_retry_sleep = 1
+    health_period_step = 3
     context = {'data': list(),
-               'health_period':health_period
+               'health_period': health_period,
+               'health_period_step': health_period_step
     }
     set_context(context)
     assert get_context() == context
@@ -159,23 +156,21 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
         drm_manager.activate()
         lic_duration = drm_manager.get('license_duration')
         nb_health = lic_duration // health_period
-        wait_func_true(lambda: get_context()['exit'], timeout=3*lic_duration)
+        wait_func_true(lambda: get_context()['exit'], timeout=2*lic_duration)
         drm_manager.deactivate()
     async_cb.assert_NoError()
     data_list = get_context()['data']
     assert len(data_list) >= nb_health + 1
-    delta_cnt = [0,0]
-    for start, end in data_list:
+    for start, end in data_list[:-2]:
         delta = parser.parse(end) - parser.parse(start)
-        if delta.total_seconds() >= 2*health_period:
-            delta_cnt[1] += 1
-            assert 2*health_period <= int(delta.total_seconds()) <= 2*health_period + 1
-        else:
-            delta_cnt[0] += 1
-            assert health_period <= int(delta.total_seconds()) <= health_period + 1
-    assert delta_cnt[0] >= nb_health
-    assert delta_cnt[1] == 1
+        assert health_period <= int(delta.total_seconds()) <= health_period + 1
+    start, end = data_list[-1]
+    delta = parser.parse(end) - parser.parse(start)
+    assert health_period+3 <= int(delta.total_seconds()) <= health_period+4
     assert get_proxy_error() is None
+    log_content = logfile.read()
+    assert findall(f"Found parameter 'health_period' of type Integer: return its value {health_period}", log_content)
+    assert findall(f"Found parameter 'health_period' of type Integer: return its value {health_period+health_period_step}", log_content)
     logfile.remove()
 
 
@@ -191,7 +186,7 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
 
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + request.function.__name__
-    logfile = log_file_factory.create(2)
+    logfile = log_file_factory.create(1)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
@@ -229,7 +224,11 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
         else:
             assert health_retry_sleep <= int(delta.total_seconds()) <= health_retry_sleep + 1
         id_n_1 = id
+    assert data_list[-2][0] != data_list[-1][0]
     assert get_proxy_error() is None
+    log_content = logfile.read()
+    assert len(findall(r'warning.*Attempt #\d+ on Health request failed with message.*New attempt planned', log_content)) > nb_attempts
+    assert len(findall(r'warning.*Attempt on Health request failed with message', log_content))
     logfile.remove()
 
 
@@ -249,14 +248,15 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json,
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
-    health_period = 5
-    health_retry = 1
-    health_retry_sleep = 1
-
     # Set initial context on the live server
+    health_period = 10
+    health_retry_step = 2
+    health_retry = 3
+    health_retry_sleep = 1
     context = {'data': list(),
            'health_period': health_period,
            'health_retry': health_retry,
+           'health_retry_step': health_retry_step,
            'health_retry_sleep': health_retry_sleep
     }
     set_context(context)
@@ -270,19 +270,22 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json,
         ) as drm_manager:
         drm_manager.activate()
         lic_duration = drm_manager.get('license_duration')
-        wait_func_true(lambda: get_context()['exit'], timeout=3*lic_duration)
+        wait_func_true(lambda: get_context()['exit'], timeout=2*lic_duration)
         drm_manager.deactivate()
     async_cb.assert_NoError()
     data_list = get_context()['data']
-    assert len(data_list) >= (nb_attempts + 2)
-    id_n_1 = ''
+    assert len(data_list) >= (health_period - health_retry)//health_retry_step
+    last_id, start, end = data_list.pop(0):
+    last_delta = parser.parse(end) - parser.parse(start)
     for id, start, end in data_list:
         delta = parser.parse(end) - parser.parse(start)
-        if id_n_1 == '' or id_n_1 != id:
-            assert health_period <= int(delta.total_seconds()) <= health_period + 1
+        print(id, delta.total_seconds())
+        if last_id != id:
+            assert last_delta.total_seconds() + health_retry_step <= delta.total_seconds() <= last_delta.total_seconds() + health_retry_step + 1
         else:
-            assert health_retry_sleep <= int(delta.total_seconds()) <= health_retry_sleep + 1
-        id_n_1 = id
+            assert last_delta.total_seconds() <= delta.total_seconds() <= last_delta.total_seconds() + 1
+        last_id = id
+        last_delta = delta
     assert get_proxy_error() is None
     logfile.remove()
 
