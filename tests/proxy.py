@@ -50,20 +50,14 @@ def create_app(url):
         request_json = request.get_json()
         new_url = request.url.replace(request.url_root, url)
         response = post(new_url, json=request_json, headers=request.headers)
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-        response_json = response.json()
-        return Response(dumps(response_json), response.status_code, headers)
+        return Response(response)
 
     @app.route('/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update(entitlement_id):
         request_json = request.get_json()
         new_url = request.url.replace(request.url_root, url)
         response = post(new_url, json=request_json, headers=request.headers)
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-        response_json = response.json()
-        return Response(dumps(response_json), response.status_code, headers)
+        return Response(response)
     '''
     ##############################################################################
     # test_authentication.py
@@ -76,12 +70,12 @@ def create_app(url):
         response = post(new_url, data=request.form, headers=request.headers)
         assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request.form,
                 indent=4, sort_keys=True), response.status_code, response.text)
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
+
         response_json = response.json()
         with lock:
             response_json['access_token'] = context['access_token']
-        return Response(dumps(response_json), response.status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     @app.route('/test_authentication_bad_token/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
     def create__test_authentication_bad_token(product_id):
@@ -96,12 +90,11 @@ def create_app(url):
         response = post(new_url, data=request.form, headers=request.headers)
         assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request.form,
                 indent=4, sort_keys=True), response.status_code, response.text)
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
             response_json['expires_in'] = context['expires_in']
-        return Response(dumps(response_json), response.status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     @app.route('/test_authentication_token_renewal/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
     def create__test_authentication_token_renewal(product_id):
@@ -139,9 +132,8 @@ def create_app(url):
         key = lic_json['key']
         key = '1' + key[1:] if key[0] == '0' else '0' + key[1:]
         response_json['license'][dna]['key'] = key
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-        return Response(dumps(response_json), response.status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     @app.route('/test_header_error_on_key/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_header_error_on_key(entitlement_id):
@@ -171,9 +163,8 @@ def create_app(url):
         key = lic_json['key']
         key = key[0:-1] + '1' if key[-1] == '0' else key[0:-1] + '0'
         response_json['license'][dna]['key'] = key
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-        return Response(dumps(response_json), response.status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     @app.route('/test_header_error_on_key2/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_header_error_on_key2(entitlement_id):
@@ -206,9 +197,8 @@ def create_app(url):
             timer = lic_json['licenseTimer']
             timer = '1' + timer[1:] if timer[0] == '0' else '0' + timer[1:]
             response_json['license'][dna]['licenseTimer'] = timer
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-        return Response(dumps(response_json), response.status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     @app.route('/test_header_error_on_licenseTimer/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_header_error_on_licenseTimer(entitlement_id):
@@ -241,9 +231,8 @@ def create_app(url):
             timer = lic_json['licenseTimer']
             timer = timer[0:-1] + '1' if timer[-1] == '0' else timer[0:-1] + '0'
             response_json['license'][dna]['licenseTimer'] = timer
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-        return Response(dumps(response_json), response.status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     @app.route('/test_header_error_on_licenseTimer2/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_header_error_on_licenseTimer2(entitlement_id):
@@ -260,7 +249,6 @@ def create_app(url):
     def create__test_replay_request(product_id):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_replay_request', url)
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         request_json = request.get_json()
         response = post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
@@ -276,13 +264,10 @@ def create_app(url):
             if context['session_cnt'] == 2:
                 if context['request_cnt'] == 2:
                     response = context['replay']
-                headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-                return Response(response.content, response.status_code, headers)
             else:
-                headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
                 if context['request_cnt'] == 2:
                    context['replay'] = response
-                return Response(response.content, response.status_code, headers)
+            return Response(response)
 
     @app.route('/test_replay_request/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_replay_request(entitlement_id):
@@ -306,15 +291,14 @@ def create_app(url):
         response = post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
             context['cnt_health'] = 0
             context['cnt_license'] =1
             context['health_period'] = int(response_json['drm_config']['license_period_second'] / (context['nb_health']+1) + 1)
             response_json['drm_config']['health_period'] = context['health_period']
-        return Response(dumps(response_json), response.status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     @app.route('/test_health_period_disabled/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_health_period_disabled(entitlement_id):
@@ -333,8 +317,6 @@ def create_app(url):
             return Response(status = 204)
         if is_closed:
             return Response(status = 204)
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
             context['cnt_license'] += 1
@@ -343,7 +325,8 @@ def create_app(url):
             else:
                 context['health_period'] = int(response_json['drm_config']['license_period_second'] / (context['nb_health']+1) + 1)
             response_json['drm_config']['health_period'] = context['health_period']
-        return Response(dumps(response_json), response.status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     # test_health_counter_is_reset_on_new_session
     @app.route('/test_health_counter_is_reset_on_new_session/auth/token', methods=['GET', 'POST'])
@@ -359,15 +342,14 @@ def create_app(url):
         response = post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
             context['cnt_health'] = 0
             context['cnt_license'] =1
             context['health_period'] = int(response_json['drm_config']['license_period_second'] / (context['nb_health']+1) + 1)
             response_json['drm_config']['health_period'] = context['health_period']
-        return Response(dumps(response_json), response.status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     @app.route('/test_health_counter_is_reset_on_new_session/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_health_counter_is_reset_on_new_session(entitlement_id):
@@ -386,14 +368,13 @@ def create_app(url):
             return Response(status = 204)
         if is_closed:
             return Response(status = 204)
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
             context['cnt_license'] += 1
             context['health_period'] = int(response_json['drm_config']['license_period_second'] / (context['nb_health']+1) + 1)
             response_json['drm_config']['health_period'] = context['health_period']
-        return Response(dumps(response_json), response.status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     # test_health_period_modification functions
     @app.route('/test_health_period_modification/auth/token', methods=['GET', 'POST'])
@@ -409,15 +390,14 @@ def create_app(url):
         response = post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
             context['cnt_double_health'] = 0
             context['start'] = datetime.now()
             context['health_period_ref'] = context['health_period']
             response_json['drm_config']['health_period'] = context['health_period']
-        return Response(dumps(response_json), response.status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     @app.route('/test_health_period_modification/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_health_period_modification(entitlement_id):
@@ -443,14 +423,13 @@ def create_app(url):
             return Response(status = 204)
         if is_closed:
             return Response(status = 204)
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
             response_json['drm_config']['health_period'] = context['health_period']
             if context['health_period'] == 2*context['health_period_ref'] and context['cnt_double_health'] == 0:
                 context['cnt_double_health'] = 1
-        return Response(dumps(response_json), response.status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     # test_health_retry_disabled functions
     @app.route('/test_health_retry_disabled/auth/token', methods=['GET', 'POST'])
@@ -475,7 +454,7 @@ def create_app(url):
             response_json['drm_config']['health_period'] = context['health_period']
             response_json['drm_config']['health_retry'] = context['health_retry']
             response_json['drm_config']['health_retry_sleep'] = context['health_retry_sleep']
-        response.encoding, response._content = 'utf8', dumps(response_json).encode('utf-8')
+        response._content = dumps(response_json).encode('utf-8')
         return Response(response)
 
     @app.route('/test_health_retry_disabled/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
@@ -528,12 +507,11 @@ def create_app(url):
         response = post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
             response_json['drm_config']['health_period'] = context['health_period']
-        return Response(dumps(response_json), response.status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     @app.route('/test_health_retry_modification/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_health_retry_modification(entitlement_id):
@@ -546,8 +524,6 @@ def create_app(url):
                 response = patch(new_url, json=request_json, headers=request.headers)
                 assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                         indent=4, sort_keys=True), response.status_code, response.text)
-                excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-                headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
                 response_json = response.json()
                 response_json['drm_config']['health_period'] = context['health_period']
                 response_json['drm_config']['health_retry'] = context['health_retry']
@@ -558,7 +534,8 @@ def create_app(url):
                 response_json, headers = context['post']
                 response_status_code = 408
             context['data'].append( (start,str(datetime.now())) )
-        return Response(dumps(response_json), response_status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     # test_health_retry_sleep_modification functions
     @app.route('/test_health_retry_sleep_modification/auth/token', methods=['GET', 'POST'])
@@ -574,12 +551,11 @@ def create_app(url):
         response = post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
             response_json['drm_config']['health_period'] = context['health_period']
-        return Response(dumps(response_json), response.status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     @app.route('/test_health_retry_sleep_modification/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_health_retry_sleep_modification(entitlement_id):
@@ -592,8 +568,6 @@ def create_app(url):
                 response = patch(new_url, json=request_json, headers=request.headers)
                 assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                         indent=4, sort_keys=True), response.status_code, response.text)
-                excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-                headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
                 response_json = response.json()
                 response_json['drm_config']['health_period'] = context['health_period']
                 response_json['drm_config']['health_retry'] = context['health_retry']
@@ -604,7 +578,8 @@ def create_app(url):
                 response_json, headers = context['post']
                 response_status_code = 408
             context['data'].append( (start,str(datetime.now())) )
-        return Response(dumps(response_json), response_status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     # test_health_metering_data functions
     @app.route('/test_health_metering_data/auth/token', methods=['GET', 'POST'])
@@ -620,12 +595,11 @@ def create_app(url):
         response = post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
             response_json['drm_config']['health_period'] = context['health_period']
-        return Response(dumps(response_json), response.status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     @app.route('/test_health_metering_data/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_health_metering_data(entitlement_id):
@@ -635,13 +609,12 @@ def create_app(url):
         response = patch(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
             response_json['drm_config']['health_period'] = context['health_period']
             response_json['drm_config']['health_retry'] = context['health_retry']
-        return Response(dumps(response_json), response.status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     # test_segment_index functions
     @app.route('/test_segment_index/auth/token', methods=['GET', 'POST'])
@@ -657,14 +630,13 @@ def create_app(url):
         response = post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
             response_json['drm_config']['health_period'] = context['health_period']
             response_json['drm_config']['health_retry'] = context['health_retry']
             context['nb_genlic'] += 1
-        return Response(dumps(response_json), response.status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     @app.route('/test_segment_index/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_segment_index(entitlement_id):
@@ -674,13 +646,12 @@ def create_app(url):
         response = patch(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
             response_json['drm_config']['health_period'] = context['health_period']
             response_json['drm_config']['health_retry'] = context['health_retry']
-        return Response(dumps(response_json), response.status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     # test_async_call_on_pause_when_health_is_enabled and test_no_async_call_on_pause_when_health_is_disabled functions
     @app.route('/test_async_call_on_pause_depending_on_health_status/auth/token', methods=['GET', 'POST'])
@@ -696,13 +667,12 @@ def create_app(url):
         response = post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
             response_json['drm_config']['health_period'] = context['health_period']
             response_json['drm_config']['health_retry'] = context['health_retry']
-        return Response(dumps(response_json), response.status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     @app.route('/test_async_call_on_pause_depending_on_health_status/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_async_call_on_pause_depending_on_health_status(entitlement_id):
@@ -712,14 +682,13 @@ def create_app(url):
         response = patch(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
             context['health_cnt'] += 1
             response_json['drm_config']['health_period'] = context['health_period']
             response_json['drm_config']['health_retry'] = context['health_retry']
-        return Response(dumps(response_json), response.status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     ##############################################################################
     # test_retry_mechanism.py
@@ -751,15 +720,13 @@ def create_app(url):
                     response = post(new_url, data=request.form, headers=request.headers)
                     assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request.form,
                             indent=4, sort_keys=True), response.status_code, response.text)
-                    excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-                    headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
                     response_json = response.json()
                     response_json['expires_in'] = context['expires_in']
                     context['response_json'] = dumps(response_json)
-                    context['headers'] = headers
-                    return Response(dumps(response_json), response.status_code, headers)
+                    response._content = dumps(response_json).encode('utf-8')
+                    return Response(response)
                 else:
-                    return Response(context['response_json'], 408, context['headers'])
+                    return Response(context['response_json'], 408)
             finally:
                 context['data'].append( (start,str(datetime.now())) )
                 context['cnt'] += 1
@@ -772,12 +739,11 @@ def create_app(url):
         response = post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                     indent=4, sort_keys=True), response.status_code, response.text)
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
             response_json['metering']['timeoutSecond'] = context['timeoutSecond']
-        return Response(dumps(response_json), response.status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     @app.route('/test_long_to_short_retry_switch_on_authentication/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_long_to_short_retry_switch_on_authentication(entitlement_id):
@@ -803,11 +769,10 @@ def create_app(url):
                     response = post(new_url, json=request_json, headers=request.headers)
                     assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                             indent=4, sort_keys=True), response.status_code, response.text)
-                    excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-                    headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
                     response_json = response.json()
                     response_json['metering']['timeoutSecond'] = context['timeoutSecond']
-                    return Response(dumps(response_json), response.status_code, headers)
+                    response._content = dumps(response_json).encode('utf-8')
+                    return Response(response)
                 else:
                     return ({'error':'Test retry mechanism'}, 408)
             finally:
@@ -858,11 +823,10 @@ def create_app(url):
         if cnt < 1 or request_type == 'close':
             new_url = request.url.replace(request.url_root+'test_thread_retry_on_lost_connection', url)
             response = post(new_url, json=request_json, headers=request.headers)
-            excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-            headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
             response_json = response.json()
             response_json['metering']['timeoutSecond'] = timeoutSecond
-            return Response(dumps(response_json), response.status_code, headers)
+            response._content = dumps(response_json).encode('utf-8')
+            return Response(response)
         else:
             sleep(timeoutSecond)
             return ('', 204)
@@ -887,10 +851,7 @@ def create_app(url):
         request_json = request.get_json()
         assert search(r'Accept:.*application/vnd\.accelize\.v1\+json', str(request.headers))
         response = post(new_url, json=request_json, headers=request.headers)
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-        response_json = response.json()
-        return Response(dumps(response_json), response.status_code, headers)
+        return Response(response)
 
     @app.route('/test_http_header_api_version/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_http_header_api_version(entitlement_id):
@@ -919,13 +880,12 @@ def create_app(url):
             if 'Metering information is not consistent' in str(e):
                 with lock:
                     context['error'] += 1
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         if 'metering' in response_json.keys():
             with lock:
                 response_json['drm_config']['health_period'] = context['health_period']
-        return Response(dumps(response_json), response.status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     @app.route('/test_topic0_corrupted_segment_index/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_topic0_corrupted_segment_index(entitlement_id):
@@ -940,13 +900,12 @@ def create_app(url):
             if 'Metering information is not consistent' in str(e):
                 with lock:
                     context['error'] += 1
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         if 'metering' in response_json.keys():
             with lock:
                 response_json['drm_config']['health_period'] = context['health_period']
-        return Response(dumps(response_json), response.status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     # test_topic1_corrupted_metering functions
     @app.route('/test_topic1_corrupted_metering/auth/token', methods=['GET', 'POST'])
@@ -962,12 +921,11 @@ def create_app(url):
         response = post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
             indent=4, sort_keys=True), response.status_code, response.text)
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
             response_json['drm_config']['health_period'] = context['health_period']
-        return Response(dumps(response_json), response.status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     @app.route('/test_topic1_corrupted_metering/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_topic1_corrupted_metering(entitlement_id):
@@ -1007,11 +965,10 @@ def create_app(url):
         response = post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
             indent=4, sort_keys=True), response.status_code, response.text)
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         del response_json['drm_config']['license']
-        return Response(dumps(response_json), response.status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     ##############################################################################
     # test_valgrind.py
@@ -1030,12 +987,11 @@ def create_app(url):
         response = post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
             indent=4, sort_keys=True), response.status_code, response.text)
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
             response_json['drm_config']['health_period'] = context['health_period']
-        return Response(dumps(response_json), response.status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     @app.route('/test_normal_usage/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_normal_usage(entitlement_id):
@@ -1050,12 +1006,11 @@ def create_app(url):
                 indent=4, sort_keys=True), response.status_code, response.text))
         if is_health or is_closed:
             return Response(status = 204)
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
         response_json = response.json()
         with lock:
             response_json['drm_config']['health_period'] = context['health_period']
-        return Response(dumps(response_json), response.status_code, headers)
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response)
 
     ##############################################################################
     # test_derived_product.py
@@ -1078,10 +1033,7 @@ def create_app(url):
         response = post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
             indent=4, sort_keys=True), response.status_code, response.text)
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in response.raw.headers.items() if name.lower() not in excluded_headers]
-        response_json = response.json()
-        return Response(dumps(response_json), response.status_code, headers)
+        return Response(response)
 
     @app.route('/test_valid_derived_product/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_valid_derived_product(entitlement_id):

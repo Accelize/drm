@@ -250,50 +250,41 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json,
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
-    health_period = 3
-    health_retry = 10
+    health_period = 5
+    health_retry = 1
     health_retry_sleep = 1
-    nb_run = 3
 
-    for i in range(nb_run):
+    # Set initial context on the live server
+    context = {'data': list(),
+           'health_period': health_period,
+           'health_retry': health_retry,
+           'health_retry_sleep': health_retry_sleep
+    }
+    set_context(context)
+    assert get_context() == context
 
-        retry_timeout = health_retry+5*i
-
-        # Set initial context on the live server
-        context = {'data': list(),
-               'health_period':health_period,
-               'health_retry':retry_timeout,
-               'health_retry_sleep':health_retry_sleep,
-               'exit':False
-        }
-        set_context(context)
-        assert get_context() == context
-
-        with accelize_drm.DrmManager(
-                conf_json.path, cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            ) as drm_manager:
-            drm_manager.activate()
-            wait_func_true(lambda: get_context()['exit'],
-                timeout=(retry_timeout+3) * 2)
-            drm_manager.deactivate()
-            error_gap = drm_manager.get('health_retry_sleep') + 1
-
-        async_cb.assert_NoError()
-        data_list = get_context()['data']
-        data0 = data_list.pop(0)
-        assert len(data_list) > 1
-        assert data0[0] == 0
-        # Check health_id is unchanged during the retry period
-        assert sum(map(lambda x: x[0], data_list)) == len(data_list)
-        # Check the retry period is correct
-        start = data_list[0][1]
-        end = data_list[-1][2]
+    with accelize_drm.DrmManager(
+            conf_json.path, cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        drm_manager.activate()
+        lic_duration = drm_manager.get('license_duration')
+        wait_func_true(lambda: get_context()['exit'], timeout=3*lic_duration)
+        drm_manager.deactivate()
+    async_cb.assert_NoError()
+    data_list = get_context()['data']
+    assert len(data_list) >= (nb_attempts + 2)
+    id_n_1 = ''
+    for id, start, end in data_list:
         delta = parser.parse(end) - parser.parse(start)
-        assert retry_timeout - error_gap <= int(delta.total_seconds()) <= retry_timeout + error_gap
-        assert get_proxy_error() is None
+        if id_n_1 == '' or id_n_1 != id:
+            assert health_period <= int(delta.total_seconds()) <= health_period + 1
+        else:
+            assert health_retry_sleep <= int(delta.total_seconds()) <= health_retry_sleep + 1
+        id_n_1 = id
+    assert get_proxy_error() is None
     logfile.remove()
 
 
