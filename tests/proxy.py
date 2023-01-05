@@ -541,7 +541,6 @@ def create_app(url):
         start = str(datetime.now())
         new_url = request.url.replace(request.url_root+'test_health_retry_modification', url)
         request_json = request.get_json()
-        health_id = request_json['health_id']
         with lock:
             if len(context['data']) < 1:
                 response = patch(new_url, json=request_json, headers=request.headers)
@@ -558,10 +557,7 @@ def create_app(url):
             else:
                 response_json, headers = context['post']
                 response_status_code = 408
-            if health_id <= 1:
-                context['data'].append( (health_id,start,str(datetime.now())) )
-            else:
-                context['exit'] = True
+            context['data'].append( (start,str(datetime.now())) )
         return Response(dumps(response_json), response_status_code, headers)
 
     # test_health_retry_sleep_modification functions
@@ -591,7 +587,6 @@ def create_app(url):
         start = str(datetime.now())
         new_url = request.url.replace(request.url_root+'test_health_retry_sleep_modification', url)
         request_json = request.get_json()
-        health_id = request_json['health_id']
         with lock:
             if len(context['data']) < 1:
                 response = patch(new_url, json=request_json, headers=request.headers)
@@ -608,10 +603,7 @@ def create_app(url):
             else:
                 response_json, headers = context['post']
                 response_status_code = 408
-            if health_id <= 1:
-                context['data'].append( (health_id,start,str(datetime.now())) )
-            else:
-                context['exit'] = True
+            context['data'].append( (start,str(datetime.now())) )
         return Response(dumps(response_json), response_status_code, headers)
 
     # test_health_metering_data functions
@@ -640,7 +632,6 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_health_metering_data', url)
         request_json = request.get_json()
-        health_id = request_json['health_id']
         response = patch(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
@@ -650,7 +641,6 @@ def create_app(url):
         with lock:
             response_json['drm_config']['health_period'] = context['health_period']
             response_json['drm_config']['health_retry'] = context['health_retry']
-            context['health_id']= health_id
         return Response(dumps(response_json), response.status_code, headers)
 
     # test_segment_index functions
