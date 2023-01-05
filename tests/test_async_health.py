@@ -165,7 +165,7 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
     data_list = get_context()['data']
     assert len(data_list) >= nb_health + 1
     delta_cnt = [0,0]
-    for i, (start, end) in enumerate(data_list):
+    for start, end in data_list:
         delta = parser.parse(end) - parser.parse(start)
         if delta.total_seconds() >= 2*health_period:
             delta_cnt[1] += 1

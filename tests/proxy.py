@@ -418,9 +418,12 @@ def create_app(url):
                     context['health_period'] *= 2
                     context['step'] = 1
                 if context['step'] >= 2:
-                    if context['step'] == 4:
+                    if context['step'] == 3:
                         context['exit'] = True
                     context['step'] += 1
+            for k,v in context.items():
+                print(k,v)
+            print('------------------')
             return Response(status = 204)
         if is_closed:
             return Response(status = 204)
@@ -429,6 +432,9 @@ def create_app(url):
             response_json['drm_config']['health_period'] = context['health_period']
             if context['step'] == 1:
                 context['step'] = 2
+        for k,v in context.items():
+            print(k,v)
+        print('===============')
         response._content = dumps(response_json).encode('utf-8')
         return Response(response)
 
