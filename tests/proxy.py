@@ -392,6 +392,7 @@ def create_app(url):
                 indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
         with lock:
+            context['exit'] = False
             context['step'] = 0
             context['start'] = datetime.now()
             response_json['drm_config']['health_period'] = context['health_period']

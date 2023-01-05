@@ -145,8 +145,7 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
     health_retry = 0  # no retry
     health_retry_sleep = 1
     context = {'data': list(),
-               'health_period':health_period,
-               'exit': False
+               'health_period':health_period
     }
     set_context(context)
     assert get_context() == context
@@ -317,8 +316,7 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json,
         context = {'data': list(),
                'health_period':health_period,
                'health_retry':health_retry,
-               'health_retry_sleep':health_retry_sleep,
-               'exit':False
+               'health_retry_sleep':health_retry_sleep
         }
         set_context(context)
         assert get_context() == context
