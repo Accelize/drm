@@ -275,7 +275,7 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json,
     async_cb.assert_NoError()
     data_list = get_context()['data']
     assert len(data_list) >= (health_period - health_retry)//health_retry_step
-    last_id, start, end = data_list.pop(0):
+    last_id, start, end = data_list.pop(0)
     last_delta = parser.parse(end) - parser.parse(start)
     for id, start, end in data_list:
         delta = parser.parse(end) - parser.parse(start)

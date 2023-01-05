@@ -295,7 +295,6 @@ def create_app(url):
         with lock:
             context['cnt_health'] = 0
             context['cnt_license'] =1
-            context['health_period'] = int(response_json['drm_config']['license_period_second'] / (context['nb_health']+1) + 1)
             response_json['drm_config']['health_period'] = context['health_period']
             response._content = dumps(response_json).encode('utf-8')
         return Response(response)
