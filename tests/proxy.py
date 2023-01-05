@@ -468,7 +468,7 @@ def create_app(url):
                 indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
         with lock:
-            context['challenge'] = ''
+            context['sgmt_idx'] = ''
             context['exit'] = False
             context['cnt'] = 0
             context['start'] = datetime.now()
@@ -501,13 +501,12 @@ def create_app(url):
                 response.encoding, response._content = 'utf8', dumps(response_json).encode('utf-8')
             return Response(response)
         # is_health = True
-        chlg = request_json['drm_config']['saas_challenge']
-        sgmt_idx = request_json['drm_config']['metering_file'][] #1F67C7F5CD54066A00000002000000040000000000000000000000003DDB6DCD0000000000000001000000000000000000000000000000020000000000000000D28C9CC33A7CD9C0ADEF6CE7A5335EBC
-        if context['challenge'] == '':
-            context['challenge'] = chlg
-        elif context['challenge'] == chlg:
+        sgmt_idx = request_json['drm_config']['metering_file'][24:32]
+        if context['sgmt_idx'] == '':
+            context['sgmt_idx'] = sgmt_idx
+        elif context['sgmt_idx'] == sgmt_idx:
             context['health_retry'] = 0
-        context['data'].append( (chlg, context['start'], datetime.now()) )
+        context['data'].append( (sgmt_idx, context['start'], datetime.now()) )
         context['start'] = datetime.now()
         if context['cnt']:
             if context['cnt'] >= 2:
