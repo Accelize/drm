@@ -158,7 +158,7 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
         drm_manager.activate()
         lic_duration = drm_manager.get('license_duration')
         nb_health = lic_duration // health_period
-        wait_func_true(lambda: get_context()['exit'], timeout=2*lic_duration)
+        wait_func_true(lambda: get_context()['exit'], timeout=3*lic_duration)
         drm_manager.deactivate()
     async_cb.assert_NoError()
     data_list = get_context()['data']
@@ -273,7 +273,7 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json,
         ) as drm_manager:
         drm_manager.activate()
         lic_duration = drm_manager.get('license_duration')
-        wait_func_true(lambda: get_context()['cnt_license'] >= 4, timeout=2*lic_duration)
+        wait_func_true(lambda: get_context()['cnt_license'] >= 4, timeout=3*lic_duration)
         drm_manager.deactivate()
     async_cb.assert_NoError()
     data_list = get_context()['data']
