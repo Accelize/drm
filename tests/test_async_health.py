@@ -20,6 +20,58 @@ from tests.proxy import get_context, set_context, get_proxy_error
 
 @pytest.mark.no_parallel
 @pytest.mark.minimum
+def test_health_counter_is_reset_on_new_session(accelize_drm, conf_json, cred_json,
+                    async_handler, live_server, log_file_factory, request):
+    """
+    Test the asynchronous health counter in the DRMLib is reset on new sessions.
+    """
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    async_cb.reset()
+
+    conf_json.reset()
+    conf_json['licensing']['url'] = _request.url + request.function.__name__
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
+    conf_json.save()
+
+    # Set initial context on the live server
+    health_period = 4
+    context = {'health_period': health_period}
+    set_context(context)
+    assert get_context() == context
+
+    with accelize_drm.DrmManager(
+                conf_json.path, cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+        assert drm_manager.get('health_counter') == 0
+        drm_manager.activate()
+        assert drm_manager.get('health_counter') == get_context()['cnt_health'] == 0
+        lic_duration = drm_manager.get('license_duration')
+        nb_health = lic_duration // health_period
+        sleep(lic_duration+1)
+        assert drm_manager.get('health_counter') == get_context()['cnt_health'] >= nb_health
+        drm_manager.deactivate()
+        assert drm_manager.get('health_counter') == get_context()['cnt_health'] >= nb_health
+        drm_manager.activate()
+        assert drm_manager.get('health_counter') == get_context()['cnt_health'] == 0
+        sleep(lic_duration+1)
+        drm_manager.deactivate()
+        assert drm_manager.get('health_counter') == get_context()['cnt_health'] >= nb_health
+    log_content = logfile.read()
+    assert search(r'Starting background thread which checks health', log_content, MULTILINE)
+    assert search(r'Exiting background thread which checks health', log_content, MULTILINE)
+    assert len(findall(r'Build health request', log_content)) >= nb_health
+    assert get_proxy_error() is None
+    async_cb.assert_NoError()
+    logfile.remove()
+
+
+@pytest.mark.no_parallel
+@pytest.mark.minimum
 def test_health_period_disabled(accelize_drm, conf_json, cred_json,
                     async_handler, live_server, log_file_factory, request):
     """
@@ -66,58 +118,6 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json,
     assert len(findall(r'Health thread is disabled', log_content, MULTILINE))
     assert len(findall(r'Exiting background thread which checks health', log_content, MULTILINE))
     assert cnt_health == len(findall(r'Build health request', log_content))
-    assert get_proxy_error() is None
-    async_cb.assert_NoError()
-    logfile.remove()
-
-
-@pytest.mark.no_parallel
-@pytest.mark.minimum
-def test_health_counter_is_reset_on_new_session(accelize_drm, conf_json, cred_json,
-                    async_handler, live_server, log_file_factory, request):
-    """
-    Test the asynchronous health counter in the DRMLib is reset on new sessions.
-    """
-    driver = accelize_drm.pytest_fpga_driver[0]
-    async_cb = async_handler.create()
-    async_cb.reset()
-
-    conf_json.reset()
-    conf_json['licensing']['url'] = _request.url + request.function.__name__
-    logfile = log_file_factory.create(1)
-    conf_json['settings'].update(logfile.json)
-    conf_json.save()
-
-    # Set initial context on the live server
-    health_period = 4
-    context = {'health_period': health_period}
-    set_context(context)
-    assert get_context() == context
-
-    with accelize_drm.DrmManager(
-                conf_json.path, cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            ) as drm_manager:
-        assert drm_manager.get('health_counter') == 0
-        drm_manager.activate()
-        assert drm_manager.get('health_counter') == get_context()['cnt_health'] == 0
-        lic_duration = drm_manager.get('license_duration')
-        nb_health = lic_duration // health_period
-        sleep(lic_duration+1)
-        assert drm_manager.get('health_counter') == get_context()['cnt_health'] >= nb_health
-        drm_manager.deactivate()
-        assert drm_manager.get('health_counter') == get_context()['cnt_health'] >= nb_health
-        drm_manager.activate()
-        assert drm_manager.get('health_counter') == get_context()['cnt_health'] == 0
-        sleep(lic_duration+1)
-        drm_manager.deactivate()
-        assert drm_manager.get('health_counter') == get_context()['cnt_health'] >= nb_health
-    log_content = logfile.read()
-    assert search(r'Starting background thread which checks health', log_content, MULTILINE)
-    assert search(r'Exiting background thread which checks health', log_content, MULTILINE)
-    assert len(findall(r'Build health request', log_content)) >= nb_health
     assert get_proxy_error() is None
     async_cb.assert_NoError()
     logfile.remove()

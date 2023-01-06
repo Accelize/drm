@@ -2190,19 +2190,19 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
                     }
 
                     // Report metering to service
-                    try MTX_ACQUIRE( mMeteringAccessMutex )
+                    try {
+                        MTX_ACQUIRE( mMeteringAccessMutex )
                         // Get next data from DRM Controller
                         Json::Value request_json = getMeteringHealth();
                         // Post next data to server
                         Debug( "Sending new health info #{}", mHealthCounter );
                         Json::Value license_json = getLicense( request_json, retry_timeout_ms, retry_sleep_ms );
-                    } catch( const Exception& e ) {
-                    MTX_RELEASE( mMeteringAccessMutex )
-
-                    // Increment health request counter
-                    MTX_ACQUIRE( mHealthAccessMutex );
-                    mHealthCounter ++;
-                    MTX_RELEASE( mHealthAccessMutex );
+                        MTX_RELEASE( mMeteringAccessMutex )
+                        // Increment health request counter
+                        MTX_ACQUIRE( mHealthAccessMutex );
+                        mHealthCounter ++;
+                        MTX_RELEASE( mHealthAccessMutex );
+                    } catch( const Exception& e ) {}
                 }
             } catch( const Exception& e ) {
                 DRM_ErrorCode errcode = e.getErrCode();
@@ -2332,6 +2332,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         // Send request and receive new license
         Json::Value license_json = getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
         setLicense( license_json );
+
         MTX_RELEASE( mMeteringAccessMutex )
 
         Info( "DRM session {} started.", mSessionID );
@@ -2343,9 +2344,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         // Stop background thread
         stopThread();
 
-        try
-            MTX_ACQUIRE( mMeteringAccessMutex );
-
+        try MTX_ACQUIRE( mMeteringAccessMutex );
             // Get and send metering data to web service
             request_json = getMeteringStop();
             getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
