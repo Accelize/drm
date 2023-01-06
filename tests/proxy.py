@@ -294,7 +294,7 @@ def create_app(url):
         response_json = response.json()
         with lock:
             context['cnt_health'] = 0
-            context['cnt_license'] =1
+            context['cnt_license'] = 1
             response_json['drm_config']['health_period'] = context['health_period']
             response._content = dumps(response_json).encode('utf-8')
         return Response(response)
@@ -310,13 +310,16 @@ def create_app(url):
         assert response.status_code == 204 if is_health else 200, (
                 "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text))
-        if not is_health and not is_closed:
-            with lock:
-                context['cnt_license'] += 1
-                response_json = response.json()
-                if context['cnt_license'] >= 3:
-                    response_json['drm_config']['health_period'] = 0
-                response._content = dumps(response_json).encode('utf-8')
+        if not is_health:
+            if not is_closed:
+                with lock:
+                    context['cnt_license'] += 1
+                    response_json = response.json()
+                    if context['cnt_license'] < 3:
+                        response_json['drm_config']['health_period'] = context['health_period']
+                    else:
+                        response_json['drm_config']['health_period'] = 0
+                    response._content = dumps(response_json).encode('utf-8')
         else:
             # is_health = True
             with lock:
@@ -356,12 +359,13 @@ def create_app(url):
         assert response.status_code == 204 if is_health else 200, (
                 "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text))
-        if not is_health and not is_closed:
-            with lock:
-                context['cnt_license'] += 1
-                response_json = response.json()
-                response_json['drm_config']['health_period'] = context['health_period']
-                response._content = dumps(response_json).encode('utf-8')
+        if not is_health:
+            if not is_closed:
+                with lock:
+                    context['cnt_license'] += 1
+                    response_json = response.json()
+                    response_json['drm_config']['health_period'] = context['health_period']
+                    response._content = dumps(response_json).encode('utf-8')
         else:
             # is_health = True
             with lock:
@@ -409,8 +413,9 @@ def create_app(url):
                 with lock:
                     context['cnt_license'] += 1
                     if context['cnt_license'] >= 3:
-                        response_json['drm_config']['health_period'] += context['health_period_step']
+                        context['health_period'] += context['health_period_step']
                         context['step'] += 1
+                    response_json['drm_config']['health_period'] = context['health_period']
                 response._content = dumps(response_json).encode('utf-8')
         else:
             # is_health = True

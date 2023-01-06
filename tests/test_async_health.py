@@ -53,16 +53,18 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json,
         assert drm_manager.get('health_period') == get_context()['health_period'] == health_period
         wait_deadline(start, lic_duration + 1)
         wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, lic_duration)
-        cnt_health == get_context()['cnt_health']
+        cnt_health = get_context()['cnt_health']
         assert cnt_health == drm_manager.get('health_counter')
         assert drm_manager.get('health_period') == 0
-        wait_deadline(start, lic_duration + 2 * health_period)
+        wait_deadline(start, lic_duration + health_period + 2)
         drm_manager.deactivate()
         assert cnt_health == drm_manager.get('health_counter') == get_context()['cnt_health']
     log_content = logfile.read()
-    assert len(findall(r'Starting background thread which checks health', log_content, MULTILINE)) == 1
-    assert len(findall(r'Health thread is disabled', log_content, MULTILINE)) == 1
-    assert len(findall(r'Exiting background thread which checks health', log_content, MULTILINE)) == 1
+    assert findall(f"Found parameter 'health_period' of type Integer: return its value {health_period}", log_content)
+    assert findall(f"Found parameter 'health_period' of type Integer: return its value 0", log_content)
+    assert len(findall(r'Starting background thread which checks health', log_content, MULTILINE))
+    assert len(findall(r'Health thread is disabled', log_content, MULTILINE))
+    assert len(findall(r'Exiting background thread which checks health', log_content, MULTILINE))
     assert cnt_health == len(findall(r'Build health request', log_content))
     assert get_proxy_error() is None
     async_cb.assert_NoError()

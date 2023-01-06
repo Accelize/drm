@@ -2455,11 +2455,11 @@ public:
             std::string s_timeout_period = std::to_string(timeout_period);
             std::string s_sleep_period = std::to_string(sleep_period);
             if (ctrl_timeout == NULL) {
-                Debug( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS variable is not defined" );
+                Debug( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS variable is not defined, use default {}", s_timeout_period.c_str() );
                 setenv("DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS", s_timeout_period.c_str() , 0);
             }
             if (ctrl_sleep == NULL) {
-                Debug( "DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS variable is not defined" );
+                Debug( "DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS variable is not defined, use default {}", s_sleep_period.c_str() );
                 setenv("DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS", s_sleep_period.c_str(), 0);
             }
             if ( !f_read_register )
