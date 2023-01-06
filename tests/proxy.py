@@ -474,7 +474,8 @@ def create_app(url):
                     response_json['drm_config']['health_retry_sleep'] = context['health_retry_sleep']
                     if context['cnt_license'] >= 3:
                         response_json['drm_config']['health_retry'] = 0
-                        context['step'] += 1
+                        if context['step'] == 0:
+                            context['step'] += 1
                     else:
                         response_json['drm_config']['health_retry'] = context['health_retry']
                 response._content = dumps(response_json).encode('utf-8')
@@ -505,13 +506,12 @@ def create_app(url):
                 indent=4, sort_keys=True), response.status_code, response.text)
         with lock:
             context['cnt_license'] = 1
-            context['exit'] = False
-            context['step'] = 0
             context['start'] = datetime.now()
+            response_json = response.json()
             response_json['drm_config']['health_period'] = context['health_period']
             response_json['drm_config']['health_retry'] = context['health_retry']
             response_json['drm_config']['health_retry_sleep'] = context['health_retry_sleep']
-        response._content = dumps(response_json).encode('utf-8')
+            response._content = dumps(response_json).encode('utf-8')
         return Response(response)
 
     @app.route('/test_health_retry_modification/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
@@ -528,18 +528,15 @@ def create_app(url):
                 "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text))
             if not is_closed:
-                response_json = response.json()
                 with lock:
                     context['cnt_license'] += 1
+                    if context['cnt_license'] >= 3:
+                        context['health_retry'] += context['health_retry_step']
+                    response_json = response.json()
                     response_json['drm_config']['health_period'] = context['health_period']
                     response_json['drm_config']['health_retry'] = context['health_retry']
                     response_json['drm_config']['health_retry_sleep'] = context['health_retry_sleep']
-                    if context['cnt_license'] >= 3:
-                        if context['health_retry'] + context['health_retry_step'] < context['health_period']:
-                            context['health_retry'] += context['health_retry_step']
-                        else:
-                            context['exit'] = True
-                response._content = dumps(response_json).encode('utf-8')
+                    response._content = dumps(response_json).encode('utf-8')
             return Response(response)
         # is_health = True
         sgmt_idx = request_json['drm_config']['metering_file'][24:32]

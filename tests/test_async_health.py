@@ -140,7 +140,7 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
     conf_json.save()
 
     # Set initial context on the live server
-    health_period = 2
+    health_period = 3
     health_period_step = 3
     context = {'data': list(),
                'health_period': health_period,
@@ -229,6 +229,7 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
     assert data_list[-2][0] != data_list[-1][0]
     assert get_proxy_error() is None
     log_content = logfile.read()
+    assert findall(r'Health retry is disabled', log_content)
     assert len(findall(r'warning.*Attempt #\d+ on Health request failed with message.*New attempt planned', log_content)) > nb_attempts
     assert len(findall(r'warning.*Attempt on Health request failed with message', log_content))
     logfile.remove()
@@ -246,13 +247,13 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json,
 
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + request.function.__name__
-    logfile = log_file_factory.create(2)
+    logfile = log_file_factory.create(1)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
     # Set initial context on the live server
-    health_period = 10
-    health_retry_step = 2
+    health_period = 2
+    health_retry_step = 3
     health_retry = 3
     health_retry_sleep = 1
     context = {'data': list(),
@@ -272,23 +273,38 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json,
         ) as drm_manager:
         drm_manager.activate()
         lic_duration = drm_manager.get('license_duration')
-        wait_func_true(lambda: get_context()['exit'], timeout=2*lic_duration)
+        wait_func_true(lambda: get_context()['cnt_license'] >= 4, timeout=2*lic_duration)
         drm_manager.deactivate()
     async_cb.assert_NoError()
     data_list = get_context()['data']
-    assert len(data_list) >= (health_period - health_retry)//health_retry_step
-    last_id, start, end = data_list.pop(0)
-    last_delta = parser.parse(end) - parser.parse(start)
+    assert len(data_list) >= 2
+    last_id = ''
+    ref_start = None
+    retry_list = list()
     for id, start, end in data_list:
         delta = parser.parse(end) - parser.parse(start)
-        print(id, delta.total_seconds())
         if last_id != id:
-            assert last_delta.total_seconds() + health_retry_step <= delta.total_seconds() <= last_delta.total_seconds() + health_retry_step + 1
+            assert health_period <= delta.total_seconds() <= health_period + 2
+            if ref_start is not None:
+                delta = parser.parse(ref_end) - parser.parse(ref_start)
+                retry_list.append(int(delta.total_seconds()))
+            ref_start = end
         else:
-            assert last_delta.total_seconds() <= delta.total_seconds() <= last_delta.total_seconds() + 1
+            assert health_retry_sleep <= delta.total_seconds() <= health_retry_sleep + 1
+        ref_end = end
         last_id = id
-        last_delta = delta
+    delta = parser.parse(ref_end) - parser.parse(ref_start)
+    retry_list.append(int(delta.total_seconds()))
+    ref_delta = health_retry-1
+    for delta in retry_list:
+        if ref_delta != delta:
+           ref_delta += health_retry_step
+        assert delta == ref_delta
     assert get_proxy_error() is None
+    log_content = logfile.read()
+    assert findall(f"Found parameter 'health_retry' of type Integer: return its value {health_retry}", log_content)
+    assert findall(f"Found parameter 'health_retry' of type Integer: return its value {health_retry+health_retry_step}", log_content)
+    assert findall(r'warning.*Attempt #\d+ on Health request failed with message.*New attempt planned', log_content)
     logfile.remove()
 
 
@@ -304,7 +320,7 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json,
 
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + request.function.__name__
-    logfile = log_file_factory.create(2)
+    logfile = log_file_factory.create(1)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
@@ -352,6 +368,10 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json,
                 assert int(delta.total_seconds()) == health_retry_sleep
                 start = lend
         assert get_proxy_error() is None
+    log_content = logfile.read()
+    assert findall(r'Health retry is disabled', log_content)
+    assert len(findall(r'warning.*Attempt #\d+ on Health request failed with message.*New attempt planned', log_content)) > nb_attempts
+    assert len(findall(r'warning.*Attempt on Health request failed with message', log_content))
     logfile.remove()
 
 
@@ -371,7 +391,7 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
 
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + request.function.__name__
-    logfile = log_file_factory.create(2)
+    logfile = log_file_factory.create(1)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
@@ -417,6 +437,10 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
         assert not drm_manager.get('license_status')
     assert get_proxy_error() is None
     async_cb.assert_NoError()
+    log_content = logfile.read()
+    assert findall(r'Health retry is disabled', log_content)
+    assert len(findall(r'warning.*Attempt #\d+ on Health request failed with message.*New attempt planned', log_content)) > nb_attempts
+    assert len(findall(r'warning.*Attempt on Health request failed with message', log_content))
     logfile.remove()
 
 
@@ -432,7 +456,7 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler,
 
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + request.function.__name__
-    logfile = log_file_factory.create(2)
+    logfile = log_file_factory.create(1)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
@@ -495,4 +519,8 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler,
         if close_flag == '1':
             segment_idx_expected = 0
     assert get_proxy_error() is None
+    log_content = logfile.read()
+    assert findall(r'Health retry is disabled', log_content)
+    assert len(findall(r'warning.*Attempt #\d+ on Health request failed with message.*New attempt planned', log_content)) > nb_attempts
+    assert len(findall(r'warning.*Attempt on Health request failed with message', log_content))
     logfile.remove()

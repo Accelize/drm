@@ -83,10 +83,10 @@ limitations under the License.
 #define MTX_ACQUIRE( mtx ) {                               \
     Debug( "Waiting mutex {} from {}", #mtx, __func__ );  \
     std::lock_guard<std::mutex> lock( mtx );               \
-    Debug( "Acquired mutex {} from {}", #mtx, __func__ );
+    Debug( "Acquired mutex {} from {}", #mtx, __func__ )
 
 #define MTX_RELEASE( mtx ) }                               \
-    Debug( "Released mutex {} from {}", #mtx, __func__ );
+    Debug( "Released mutex {} from {}", #mtx, __func__ )
 
 
 pnc_session_t *Accelize::DRM::DrmManager::s_pnc_session = nullptr;
@@ -881,11 +881,11 @@ protected:
         settings["ws_retry_period_long"] = mWSRetryPeriodLong;
         settings["ws_retry_period_short"] = mWSRetryPeriodShort;
         settings["ws_request_timeout"] = (int32_t)(getDrmWSClient().getRequestTimeoutMS() / 1000);
-        MTX_ACQUIRE( mHealthAccessMutex )
+        MTX_ACQUIRE( mHealthAccessMutex );
         settings["health_period"] = mHealthPeriod;
         settings["health_retry"] = mHealthRetryTimeout;
         settings["health_retry_sleep"] = mHealthRetrySleep;
-        MTX_RELEASE( mHealthAccessMutex )
+        MTX_RELEASE( mHealthAccessMutex );
         settings["ws_api_retry_duration"] = mWSApiRetryDuration;
         settings["host_data_verbosity"] = static_cast<uint32_t>( mHostDataVerbosity );
         settings["drm_ctrl_time_factor"] = mCtrlTimeFactor;
@@ -2090,11 +2090,9 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
                         go_sleeping = false;
 
                         /// Close health thread if it's been disabled
-                        MTX_ACQUIRE( mHealthAccessMutex );
                         if ( ( mHealthPeriod == 0 ) && mHealthThread.valid() ) {
                             mHealthThread.get();  // Wait until the Health thread ends
                         }
-                        MTX_RELEASE( mHealthAccessMutex );
 
                         /// Build new license request
                         Debug( "Requesting new license #{} now", mLicenseCounter );
@@ -2158,8 +2156,6 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
 
                 MTX_ACQUIRE( mHealthAccessMutex );
                 health_period = mHealthPeriod;
-                health_retry_timeout = mHealthRetryTimeout;
-                health_retry_sleep = mHealthRetrySleep;
                 MTX_RELEASE( mHealthAccessMutex );
 
                 /// Starting async metering update loop
@@ -2191,13 +2187,13 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
 
                     // Report metering to service
                     try {
-                        MTX_ACQUIRE( mMeteringAccessMutex )
+                        MTX_ACQUIRE( mMeteringAccessMutex );
                         // Get next data from DRM Controller
                         Json::Value request_json = getMeteringHealth();
                         // Post next data to server
                         Debug( "Sending new health info #{}", mHealthCounter );
                         Json::Value license_json = getLicense( request_json, retry_timeout_ms, retry_sleep_ms );
-                        MTX_RELEASE( mMeteringAccessMutex )
+                        MTX_RELEASE( mMeteringAccessMutex );
                         // Increment health request counter
                         MTX_ACQUIRE( mHealthAccessMutex );
                         mHealthCounter ++;
@@ -2333,7 +2329,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         Json::Value license_json = getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
         setLicense( license_json );
 
-        MTX_RELEASE( mMeteringAccessMutex )
+        MTX_RELEASE( mMeteringAccessMutex );
 
         Info( "DRM session {} started.", mSessionID );
     }
@@ -2344,14 +2340,14 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         // Stop background thread
         stopThread();
 
-        try MTX_ACQUIRE( mMeteringAccessMutex );
+        try {
+            MTX_ACQUIRE( mMeteringAccessMutex );
             // Get and send metering data to web service
             request_json = getMeteringStop();
             getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
+            MTX_RELEASE( mMeteringAccessMutex );
             Debug( "Session ID {} stopped and last metering data uploaded", mSessionID );
-        } catch( const Exception& e ) {
-            Debug( e.what() );
-        MTX_RELEASE( mMeteringAccessMutex );
+        } catch( const Exception& e ) {}
 
         mExpirationTime = TClock::time_point();
         Debug( "Reset expiration time" );
