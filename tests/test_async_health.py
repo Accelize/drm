@@ -61,12 +61,13 @@ def test_health_counter_is_reset_on_new_session(accelize_drm, conf_json, cred_js
         sleep(lic_duration+1)
         drm_manager.deactivate()
         assert drm_manager.get('health_counter') == get_context()['cnt_health'] >= nb_health
+    async_cb.assert_NoError()
+    assert get_proxy_error() is None
+    # Analyze results
     log_content = logfile.read()
     assert search(r'Starting background thread which checks health', log_content, MULTILINE)
     assert search(r'Exiting background thread which checks health', log_content, MULTILINE)
     assert len(findall(r'Build health request', log_content)) >= nb_health
-    assert get_proxy_error() is None
-    async_cb.assert_NoError()
     logfile.remove()
 
 
@@ -111,6 +112,9 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json,
         wait_deadline(start, lic_duration + health_period + 2)
         drm_manager.deactivate()
         assert cnt_health == drm_manager.get('health_counter') == get_context()['cnt_health']
+    async_cb.assert_NoError()
+    assert get_proxy_error() is None
+    # Analyze results
     log_content = logfile.read()
     assert findall(f"Found parameter 'health_period' of type Integer: return its value {health_period}", log_content)
     assert findall(f"Found parameter 'health_period' of type Integer: return its value 0", log_content)
@@ -118,8 +122,6 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json,
     assert len(findall(r'Health thread is disabled', log_content, MULTILINE))
     assert len(findall(r'Exiting background thread which checks health', log_content, MULTILINE))
     assert cnt_health == len(findall(r'Build health request', log_content))
-    assert get_proxy_error() is None
-    async_cb.assert_NoError()
     logfile.remove()
 
 
@@ -161,6 +163,8 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
         wait_func_true(lambda: get_context()['exit'], timeout=3*lic_duration)
         drm_manager.deactivate()
     async_cb.assert_NoError()
+    assert get_proxy_error() is None
+    # Analyze results
     data_list = get_context()['data']
     assert len(data_list) >= nb_health + 1
     for start, end in data_list[:-2]:
@@ -169,7 +173,6 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
     start, end = data_list[-1]
     delta = int((parser.parse(end) - parser.parse(start)).total_seconds())
     assert health_period+3 <= delta <= health_period+4
-    assert get_proxy_error() is None
     log_content = logfile.read()
     assert findall(f"Found parameter 'health_period' of type Integer: return its value {health_period}", log_content)
     assert findall(f"Found parameter 'health_period' of type Integer: return its value {health_period+health_period_step}", log_content)
@@ -216,6 +219,8 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
         wait_func_true(lambda: get_context()['exit'], timeout=3*lic_duration)
         drm_manager.deactivate()
     async_cb.assert_NoError()
+    assert get_proxy_error() is None
+    # Analyze results
     data_list = get_context()['data']
     assert len(data_list) >= (nb_attempts + 2)
     id_n_1 = ''
@@ -227,7 +232,6 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
             assert health_retry_sleep <= delta <= health_retry_sleep + 1
         id_n_1 = id
     assert data_list[-2][0] != data_list[-1][0]
-    assert get_proxy_error() is None
     log_content = logfile.read()
     assert findall(r'Health retry is disabled', log_content)
     assert len(findall(r'warning.*Attempt #\d+ on Health request failed with message.*New attempt planned', log_content)) > nb_attempts
@@ -276,6 +280,8 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json,
         wait_func_true(lambda: get_context()['cnt_license'] >= 4, timeout=3*lic_duration)
         drm_manager.deactivate()
     async_cb.assert_NoError()
+    assert get_proxy_error() is None
+    # Analyze results
     data_list = get_context()['data']
     assert len(data_list) >= 2
     last_id = ''
@@ -300,7 +306,6 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json,
         if ref_delta != d:
            ref_delta += health_retry_step
         assert d == ref_delta
-    assert get_proxy_error() is None
     log_content = logfile.read()
     assert findall(f"Found parameter 'health_retry' of type Integer: return its value {health_retry}", log_content)
     assert findall(f"Found parameter 'health_retry' of type Integer: return its value {health_retry+health_retry_step}", log_content)
@@ -349,6 +354,8 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json,
         wait_func_true(lambda: get_context()['cnt_license'] >= 4, timeout=3*lic_duration)
         drm_manager.deactivate()
     async_cb.assert_NoError()
+    assert get_proxy_error() is None
+    # Analyze results
     data_list = get_context()['data']
     assert len(data_list) >= 2
     last_id = ''
@@ -375,7 +382,6 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json,
         if ref_delta != d:
            ref_delta += health_retry_sleep_step
         assert d == ref_delta
-    assert get_proxy_error() is None
     log_content = logfile.read()
     assert findall(f"Found parameter 'health_retry_sleep' of type Integer: return its value {health_retry_sleep}", log_content)
     assert findall(f"Found parameter 'health_retry_sleep' of type Integer: return its value {health_retry_sleep+health_retry_sleep_step}", log_content)
@@ -404,6 +410,7 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
     conf_json.save()
 
     # Set initial context on the live server
+    loop = 4
     health_period = 2
     health_retry = 0  # No retry
     context = {'health_period': health_period,
@@ -419,12 +426,12 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
         ) as drm_manager:
 
         def wait_and_check_on_next_health(drm):
-            cnt_health = drm.get('health_cnt')
+            cnt_health = drm.get('health_counter')
             session_id = drm.get('session_id')
             metering_data = drm.get('metered_data')
-            wait_func_true(lambda: drm.get('health_cnt') > cnt_health)
+            wait_func_true(lambda: drm.get('health_counter') > cnt_health)
             assert session_id == drm.get('session_id')
-            assert metering_data <= sum(drm.get('metered_data'))
+            assert sum(metering_data) <= sum(drm.get('metered_data'))
 
         assert not drm_manager.get('license_status')
         drm_manager.activate()
@@ -450,7 +457,7 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
 
 @pytest.mark.no_parallel
 def test_segment_index(accelize_drm, conf_json, cred_json, async_handler,
-                    live_server, log_file_factory, request):
+                        live_server, log_file_factory, request):
     """
     Test the DRM Controller capacity to handle stressfully health and license requests
     """
@@ -464,51 +471,33 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler,
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
+    # Adjust health period to license duration
+    nb_samples = 4
+    health_period = 2
+    context = {'health_period': health_period,
+               'health_retry': 0}
+    set_context(context)
+    assert get_context() == context
+
     with accelize_drm.DrmManager(
             conf_json.path, cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
         ) as drm_manager:
-
-        # Set initial context on the live server
-        nb_genlic = 3
-        health_period = 300
-        health_retry = 0  # no retry
-        context = {'nb_genlic':0,
-                   'health_period':health_period,
-                   'health_retry':health_retry
-        }
-        set_context(context)
-        assert get_context() == context
-
-        # First, get license duration to align health period on it
         drm_manager.activate()
-        lic_dur = drm_manager.get('license_duration')
-        drm_manager.deactivate()
-
-        # Adjust health period to license duration
-        health_period = lic_dur
-        context = {'nb_genlic':0,
-                   'health_period':health_period,
-                   'health_retry':health_retry
-        }
-        set_context(context)
-        assert get_context() == context
-
-        drm_manager.activate()
+        lic_duration = drm_manager.get('license_duration')
         assert drm_manager.get('health_period') == health_period
-        wait_func_true(lambda: get_context()['nb_genlic'] >= nb_genlic,
-                timeout=lic_dur * nb_genlic + 2)
+        wait_func_true(lambda: get_context()['cnt_health'] >= nb_samples,
+                timeout=nb_samples // (lic_duration // health_period) + 1)
         drm_manager.deactivate()
     async_cb.assert_NoError()
-    log_content = logfile.read()
+    assert get_proxy_error() is None
+    # Analyze results
+    data_list = get_context()['data']
     segment_idx_expected = 0
-    for m in findall(r'"meteringFile"\s*:\s*"([^"]*)"', log_content):
-        assert len(m) > 0
-        session_id = m[0:16]
-        close_flag = m[19]
-        segment_idx = int(m[24:32],16)
+    for metering_file in data_list:
+        print(metering_file)
         if session_id == "0000000000000000":
             assert close_flag == '0'
             assert segment_idx == 0
@@ -522,9 +511,8 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler,
         segment_idx_expected += 1
         if close_flag == '1':
             segment_idx_expected = 0
-    assert get_proxy_error() is None
     log_content = logfile.read()
     assert findall(r'Health retry is disabled', log_content)
-    assert len(findall(r'warning.*Attempt #\d+ on Health request failed with message.*New attempt planned', log_content)) > nb_attempts
-    assert len(findall(r'warning.*Attempt on Health request failed with message', log_content))
+    assert search(r'Starting background thread which checks health', log_content)
+    assert len(findall(r'Sending new health info', log_content)) ==  len(data_list)
     logfile.remove()
