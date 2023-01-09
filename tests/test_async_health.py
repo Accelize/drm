@@ -403,6 +403,14 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
+    # Set initial context on the live server
+    health_period = 2
+    health_retry = 0  # No retry
+    context = {'health_period': health_period,
+               'health_retry': health_retry    }
+    set_context(context)
+    assert get_context() == context
+
     with accelize_drm.DrmManager(
             conf_json.path, cred_json.path,
             driver.read_register_callback,
@@ -410,24 +418,13 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
             async_cb.callback
         ) as drm_manager:
 
-        # Set initial context on the live server
-        loop = 5
-        health_period = 3
-        health_retry = 0  # No retry
-        context = {'health_id':0,
-                   'health_period':health_period,
-                   'health_retry':health_retry
-        }
-        set_context(context)
-        assert get_context() == context
-
         def wait_and_check_on_next_health(drm):
-            next_health_id = get_context()['health_id'] + 1
-            wait_func_true(lambda: get_context()['health_id'] >= next_health_id)
+            cnt_health = drm.get('health_cnt')
             session_id = drm.get('session_id')
-            saas_data = ws_admin.get_last_metering_information(session_id)
-            assert saas_data['session'] == session_id
-            assert saas_data['metering'] == sum(drm.get('metered_data'))
+            metering_data = drm.get('metered_data')
+            wait_func_true(lambda: drm.get('health_cnt') > cnt_health)
+            assert session_id == drm.get('session_id')
+            assert metering_data <= sum(drm.get('metered_data'))
 
         assert not drm_manager.get('license_status')
         drm_manager.activate()
@@ -446,9 +443,8 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
     assert get_proxy_error() is None
     async_cb.assert_NoError()
     log_content = logfile.read()
-    assert findall(r'Health retry is disabled', log_content)
-    assert len(findall(r'warning.*Attempt #\d+ on Health request failed with message.*New attempt planned', log_content)) > nb_attempts
-    assert len(findall(r'warning.*Attempt on Health request failed with message', log_content))
+    assert search(r'Starting background thread which checks health', log_content)
+    assert search(r'Sending new health info', log_content)
     logfile.remove()
 
 

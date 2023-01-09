@@ -574,7 +574,6 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_health_retry_sleep_modification', url)
         request_json = request.get_json()
-        request_json = request.get_json()
         is_health = request_json.get('is_health', False)
         is_closed = request_json.get('is_closed', False)
         if not is_health:
@@ -616,8 +615,12 @@ def create_app(url):
                 indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
         with lock:
+            context['cnt_license'] = 1
+            context['cnt_health'] = 1
+            response_json = response.json()
             response_json['drm_config']['health_period'] = context['health_period']
-        response._content = dumps(response_json).encode('utf-8')
+            response_json['drm_config']['health_retry'] = context['health_retry']
+            response._content = dumps(response_json).encode('utf-8')
         return Response(response)
 
     @app.route('/test_health_metering_data/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
@@ -625,14 +628,28 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_health_metering_data', url)
         request_json = request.get_json()
+        is_health = request_json.get('is_health', False)
+        is_closed = request_json.get('is_closed', False)
         response = patch(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
-                indent=4, sort_keys=True), response.status_code, response.text)
-        response_json = response.json()
-        with lock:
-            response_json['drm_config']['health_period'] = context['health_period']
-            response_json['drm_config']['health_retry'] = context['health_retry']
-        response._content = dumps(response_json).encode('utf-8')
+        assert response.status_code == 204 if is_health else 200, (
+                "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text))
+        if not is_health:
+            if not is_closed:
+                response_json = response.json()
+                with lock:
+                    context['cnt_license'] += 1
+                    response_json['drm_config']['health_period'] = context['health_period']
+                    response_json['drm_config']['health_retry'] = context['health_retry']
+                response._content = dumps(response_json).encode('utf-8')
+        else:
+            # is_health = True
+            with lock:
+                sgmt_idx = request_json['drm_config']['metering_file'][24:32]
+                print('metering_file=', request_json['drm_config']['metering_file'])
+                metering_data = request_json['drm_config']['metering_file'][24:32]
+                context['data'].append((sgmt_idx, metering_data))
+                context['cnt_health'] += 1
         return Response(response)
 
     # test_segment_index functions

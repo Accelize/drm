@@ -2939,6 +2939,12 @@ public:
                         MTX_RELEASE( mHealthAccessMutex );
                         break;
                     }
+                    case ParameterKey::entitlement_session_id: {
+                        json_value[key_str] = mEntitlementID;
+                        Debug( "Get value of parameter '{}' (ID={}): {}", key_str, (uint32_t)key_id,
+                                mEntitlementID );
+                        break;
+                    }
                     case ParameterKey::ParameterKeyCount: {
                         uint32_t count = static_cast<uint32_t>( ParameterKeyCount );
                         json_value[key_str] = count;

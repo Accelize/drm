@@ -73,7 +73,8 @@ _PARAM_LIST = ('license_type',
                'controller_version',
                'controller_rom',
                'license_counter',
-               'health_counter'
+               'health_counter',
+               'entitlement_session_id'
 )
 
 
@@ -1187,6 +1188,33 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         assert rom.get('drm_software') == accelize_drm.is_ctrl_sw
         async_cb.assert_NoError()
         print("Test parameter 'controller_version': PASS")
+
+        # Test parameter: license_counter
+        with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+            drm_manager.set(license_counter="{}")
+        async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code," cannot be overwritten")
+        async_cb.reset()
+        assert drm_manager.get('license_counter') = 0
+        async_cb.assert_NoError()
+        print("Test parameter 'license_counter': PASS")
+
+        # Test parameter: health_counter
+        with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+            drm_manager.set(health_counter="{}")
+        async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code," cannot be overwritten")
+        async_cb.reset()
+        assert drm_manager.get('health_counter') = 0
+        async_cb.assert_NoError()
+        print("Test parameter 'health_counter': PASS")
+
+        # Test parameter: health_counter
+        with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+            drm_manager.set(entitlement_session_id="{}")
+        async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code," cannot be overwritten")
+        async_cb.reset()
+        assert drm_manager.get('entitlement_session_id') = ''
+        async_cb.assert_NoError()
+        print("Test parameter 'health_counter': PASS")
 
 
 def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cred_json,
