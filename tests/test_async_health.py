@@ -326,14 +326,14 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json,
 
     # Set initial context on the live server
     health_period = 2
-    health_retry = 5
+    health_retry = 8
     health_retry_sleep = 1
-    health_retry_sleep_step = 3
+    health_retry_sleep_step = 2
     context = {'data': list(),
            'health_period': health_period,
            'health_retry': health_retry,
-           'health_retry_step': health_retry_step,
-           'health_retry_sleep': health_retry_sleep
+           'health_retry_sleep': health_retry_sleep,
+           'health_retry_sleep_step': health_retry_sleep_step
     }
     set_context(context)
     assert get_context() == context
@@ -346,7 +346,7 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json,
         ) as drm_manager:
         drm_manager.activate()
         lic_duration = drm_manager.get('license_duration')
-        wait_func_true(lambda: get_context()['cnt_license'] >= 4, timeout=3*lic_duration)
+        wait_func_true(lambda: get_context()['cnt_health'] >= 8, timeout=3*lic_duration)
         drm_manager.deactivate()
     async_cb.assert_NoError()
     data_list = get_context()['data']
@@ -362,6 +362,8 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json,
                 delta = parser.parse(ref_end) - parser.parse(ref_start)
                 retry_list.append(int(delta.total_seconds()))
             ref_start = end
+            if last_id:
+                health_retry_sleep += health_retry_sleep_step
         else:
             assert health_retry_sleep <= delta.total_seconds() <= health_retry_sleep + 1
         ref_end = end
@@ -371,7 +373,7 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json,
     ref_delta = health_retry-1
     for delta in retry_list:
         if ref_delta != delta:
-           ref_delta += health_retry_step
+           ref_delta += health_retry_sleep_step
         assert delta == ref_delta
     assert get_proxy_error() is None
     log_content = logfile.read()

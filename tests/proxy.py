@@ -517,7 +517,6 @@ def create_app(url):
     @app.route('/test_health_retry_modification/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_health_retry_modification(entitlement_id):
         global context, lock
-        start = str(datetime.now())
         new_url = request.url.replace(request.url_root+'test_health_retry_modification', url)
         request_json = request.get_json()
         is_health = request_json.get('is_health', False)
@@ -561,6 +560,7 @@ def create_app(url):
         response_json = response.json()
         with lock:
             context['cnt_license'] = 1
+            context['cnt_health'] = 1
             context['start'] = datetime.now()
             response_json = response.json()
             response_json['drm_config']['health_period'] = context['health_period']
@@ -572,7 +572,6 @@ def create_app(url):
     @app.route('/test_health_retry_sleep_modification/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_health_retry_sleep_modification(entitlement_id):
         global context, lock
-        start = str(datetime.now())
         new_url = request.url.replace(request.url_root+'test_health_retry_sleep_modification', url)
         request_json = request.get_json()
         request_json = request.get_json()
@@ -598,6 +597,7 @@ def create_app(url):
         sgmt_idx = request_json['drm_config']['metering_file'][24:32]
         context['data'].append( (sgmt_idx, context['start'], datetime.now()) )
         context['start'] = datetime.now()
+        context['cnt_health'] += 1
         return Response('Timeout', 408)
 
     # test_health_metering_data functions
