@@ -489,13 +489,13 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler,
         ) as drm_manager:
         drm_manager.activate()
         session_id_ref = drm_manager.get('session_id')
-        assert len(session_id) == 16
+        assert len(session_id_ref) == 16
         lic_duration = drm_manager.get('license_duration')
         assert drm_manager.get('health_period') == health_period
         max_base = max(health_period, lic_duration)
         min_base = min(health_period, lic_duration)
         wait_func_true(lambda: len(get_context()['data']) >= nb_samples,
-                timeout=(max_base // (nb_samples * min_base + 1)*max_base)
+                timeout=(max_base // (nb_samples * min_base + 1))*max_base)
         drm_manager.deactivate()
     async_cb.assert_NoError()
     assert get_proxy_error() is None
@@ -503,17 +503,17 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler,
     data_list = get_context()['data']
     assert len(data_list) >= nb_samples
     metering_file = data_list.pop(0)
-    segment_idx = metering_file[20:24]
+    segment_idx = int(metering_file[24:32], 16)
     assert segment_idx == 0
     segment_idx_expected = segment_idx + 1
     for metering_file in data_list:
         print(metering_file)
         session_id = metering_file[0:16]
-        segment_idx = metering_file[20:24]
+        segment_idx = int(metering_file[24:32], 16)
         assert session_id == session_id_ref
         assert segment_idx == segment_idx_expected
         segment_idx_expected += 1
-    assert data_list[-1][19] == 1  # Check close flag
+    assert data_list[-1][19] == '1'  # Check close flag
     log_content = logfile.read()
     assert findall(r'Health retry is disabled', log_content)
     assert search(r'Starting background thread which maintains licensing', log_content)

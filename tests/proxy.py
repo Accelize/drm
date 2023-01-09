@@ -481,7 +481,7 @@ def create_app(url):
                 response._content = dumps(response_json).encode('utf-8')
             return Response(response)
         # is_health = True
-        sgmt_idx = request_json['drm_config']['metering_file'][20:24]
+        sgmt_idx = request_json['drm_config']['metering_file'][24:32]
         context['data'].append( (sgmt_idx, context['start'], datetime.now()) )
         context['start'] = datetime.now()
         if context['step'] >= 1:
@@ -538,7 +538,7 @@ def create_app(url):
                     response._content = dumps(response_json).encode('utf-8')
             return Response(response)
         # is_health = True
-        sgmt_idx = request_json['drm_config']['metering_file'][20:24]
+        sgmt_idx = request_json['drm_config']['metering_file'][24:32]
         context['data'].append( (sgmt_idx, context['start'], datetime.now()) )
         context['start'] = datetime.now()
         return Response('Timeout', 408)
@@ -593,7 +593,7 @@ def create_app(url):
                     response._content = dumps(response_json).encode('utf-8')
             return Response(response)
         # is_health = True
-        sgmt_idx = request_json['drm_config']['metering_file'][20:24]
+        sgmt_idx = request_json['drm_config']['metering_file'][24:32]
         context['data'].append( (sgmt_idx, context['start'], datetime.now()) )
         context['start'] = datetime.now()
         context['cnt_health'] += 1
