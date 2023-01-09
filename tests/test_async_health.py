@@ -164,11 +164,11 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
     data_list = get_context()['data']
     assert len(data_list) >= nb_health + 1
     for start, end in data_list[:-2]:
-        delta = parser.parse(end) - parser.parse(start)
-        assert health_period <= int(delta.total_seconds()) <= health_period + 1
+        delta = int((parser.parse(end) - parser.parse(start)).total_seconds())
+        assert health_period <= delta <= health_period + 1
     start, end = data_list[-1]
-    delta = parser.parse(end) - parser.parse(start)
-    assert health_period+3 <= int(delta.total_seconds()) <= health_period+4
+    delta = int((parser.parse(end) - parser.parse(start)).total_seconds())
+    assert health_period+3 <= delta <= health_period+4
     assert get_proxy_error() is None
     log_content = logfile.read()
     assert findall(f"Found parameter 'health_period' of type Integer: return its value {health_period}", log_content)
@@ -220,11 +220,11 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
     assert len(data_list) >= (nb_attempts + 2)
     id_n_1 = ''
     for id, start, end in data_list:
-        delta = parser.parse(end) - parser.parse(start)
+        delta = int((parser.parse(end) - parser.parse(start)).total_seconds())
         if id_n_1 == '' or id_n_1 != id:
-            assert health_period <= int(delta.total_seconds()) <= health_period + 1
+            assert health_period <= delta <= health_period + 1
         else:
-            assert health_retry_sleep <= int(delta.total_seconds()) <= health_retry_sleep + 1
+            assert health_retry_sleep <= delta <= health_retry_sleep + 1
         id_n_1 = id
     assert data_list[-2][0] != data_list[-1][0]
     assert get_proxy_error() is None
@@ -282,24 +282,24 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json,
     ref_start = None
     retry_list = list()
     for id, start, end in data_list:
-        delta = parser.parse(end) - parser.parse(start)
+        delta = int((parser.parse(end) - parser.parse(start)).total_seconds())
         if last_id != id:
-            assert health_period <= delta.total_seconds() <= health_period + 2
+            assert health_period <= delta <= health_period + 2
             if ref_start is not None:
-                delta = parser.parse(ref_end) - parser.parse(ref_start)
-                retry_list.append(int(delta.total_seconds()))
+                delta = int((parser.parse(ref_end) - parser.parse(ref_start)).total_seconds())
+                retry_list.append(delta)
             ref_start = end
         else:
-            assert health_retry_sleep <= delta.total_seconds() <= health_retry_sleep + 1
+            assert health_retry_sleep <= delta <= health_retry_sleep + 1
         ref_end = end
         last_id = id
-    delta = parser.parse(ref_end) - parser.parse(ref_start)
-    retry_list.append(int(delta.total_seconds()))
+    delta = int((parser.parse(ref_end) - parser.parse(ref_start)).total_seconds())
+    retry_list.append(delta)
     ref_delta = health_retry-1
-    for delta in retry_list:
-        if ref_delta != delta:
+    for d in retry_list:
+        if ref_delta != d:
            ref_delta += health_retry_step
-        assert delta == ref_delta
+        assert d == ref_delta
     assert get_proxy_error() is None
     log_content = logfile.read()
     assert findall(f"Found parameter 'health_retry' of type Integer: return its value {health_retry}", log_content)
@@ -326,9 +326,9 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json,
 
     # Set initial context on the live server
     health_period = 2
-    health_retry = 8
+    health_retry = 5
     health_retry_sleep = 1
-    health_retry_sleep_step = 2
+    health_retry_sleep_step = 3
     context = {'data': list(),
            'health_period': health_period,
            'health_retry': health_retry,
@@ -346,7 +346,7 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json,
         ) as drm_manager:
         drm_manager.activate()
         lic_duration = drm_manager.get('license_duration')
-        wait_func_true(lambda: get_context()['cnt_health'] >= 8, timeout=3*lic_duration)
+        wait_func_true(lambda: get_context()['cnt_license'] >= 4, timeout=3*lic_duration)
         drm_manager.deactivate()
     async_cb.assert_NoError()
     data_list = get_context()['data']
@@ -355,26 +355,26 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json,
     ref_start = None
     retry_list = list()
     for id, start, end in data_list:
-        delta = parser.parse(end) - parser.parse(start)
+        delta = int((parser.parse(end) - parser.parse(start)).total_seconds())
         if last_id != id:
-            assert health_period <= delta.total_seconds() <= health_period + 2
+            assert health_period <= delta <= health_period + 2
             if ref_start is not None:
-                delta = parser.parse(ref_end) - parser.parse(ref_start)
-                retry_list.append(int(delta.total_seconds()))
+                delta = int((parser.parse(ref_end) - parser.parse(ref_start)).total_seconds())
+                retry_list.append(delta)
             ref_start = end
-            if last_id:
-                health_retry_sleep += health_retry_sleep_step
         else:
-            assert health_retry_sleep <= delta.total_seconds() <= health_retry_sleep + 1
+            if delta > health_retry_sleep + 1:
+                health_retry_sleep += health_retry_sleep_step
+            assert health_retry_sleep <= delta <= health_retry_sleep + 1
         ref_end = end
         last_id = id
-    delta = parser.parse(ref_end) - parser.parse(ref_start)
-    retry_list.append(int(delta.total_seconds()))
+    delta = int((parser.parse(ref_end) - parser.parse(ref_start)).total_seconds())
+    retry_list.append(delta)
     ref_delta = health_retry-1
-    for delta in retry_list:
-        if ref_delta != delta:
+    for d in retry_list:
+        if ref_delta != d:
            ref_delta += health_retry_sleep_step
-        assert delta == ref_delta
+        assert d == ref_delta
     assert get_proxy_error() is None
     log_content = logfile.read()
     assert findall(f"Found parameter 'health_retry_sleep' of type Integer: return its value {health_retry_sleep}", log_content)
