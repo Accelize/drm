@@ -2323,6 +2323,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         mLicenseCounter = 0;
 
         // Build start request message for new license
+        Debug( "Requesting new license #{} now", mLicenseCounter );
         Json::Value request_json = getMeteringStart();
 
         // Send request and receive new license

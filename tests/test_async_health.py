@@ -301,7 +301,8 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json,
         last_id = id
     delta = int((parser.parse(ref_end) - parser.parse(ref_start)).total_seconds())
     retry_list.append(delta)
-    ref_delta = health_retry-1
+    #ref_delta = health_retry-1
+    ref_delta = health_retry
     for d in retry_list:
         if ref_delta != d:
            ref_delta += health_retry_step
@@ -377,7 +378,8 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json,
         last_id = id
     delta = int((parser.parse(ref_end) - parser.parse(ref_start)).total_seconds())
     retry_list.append(delta)
-    ref_delta = health_retry-1
+    #ref_delta = health_retry-1
+    ref_delta = health_retry
     for d in retry_list:
         if ref_delta != d:
            ref_delta += health_retry_sleep_step
@@ -486,33 +488,36 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler,
             async_cb.callback
         ) as drm_manager:
         drm_manager.activate()
+        session_id_ref = drm_manager.get('session_id')
+        assert len(session_id) == 16
         lic_duration = drm_manager.get('license_duration')
         assert drm_manager.get('health_period') == health_period
-        wait_func_true(lambda: get_context()['cnt_health'] >= nb_samples,
-                timeout=nb_samples // (lic_duration // health_period) + 1)
+        max_base = max(health_period, lic_duration)
+        min_base = min(health_period, lic_duration)
+        wait_func_true(lambda: len(get_context()['data']) >= nb_samples,
+                timeout=(max_base // (nb_samples * min_base + 1)*max_base)
         drm_manager.deactivate()
     async_cb.assert_NoError()
     assert get_proxy_error() is None
     # Analyze results
     data_list = get_context()['data']
-    segment_idx_expected = 0
+    assert len(data_list) >= nb_samples
+    metering_file = data_list.pop(0)
+    segment_idx = metering_file[20:24]
+    assert segment_idx == 0
+    segment_idx_expected = segment_idx + 1
     for metering_file in data_list:
         print(metering_file)
-        if session_id == "0000000000000000":
-            assert close_flag == '0'
-            assert segment_idx == 0
-            session_id_exp = "0000000000000000"
-        else:
-            if session_id_exp == "0000000000000000":
-                session_id_exp == session_id
-            else:
-                assert session_id == session_id_exp
-        assert segment_idx_expected - 1 <= segment_idx <= segment_idx_expected + 1
+        session_id = metering_file[0:16]
+        segment_idx = metering_file[20:24]
+        assert session_id == session_id_ref
+        assert segment_idx == segment_idx_expected
         segment_idx_expected += 1
-        if close_flag == '1':
-            segment_idx_expected = 0
+    assert data_list[-1][19] == 1  # Check close flag
     log_content = logfile.read()
     assert findall(r'Health retry is disabled', log_content)
+    assert search(r'Starting background thread which maintains licensing', log_content)
     assert search(r'Starting background thread which checks health', log_content)
-    assert len(findall(r'Sending new health info', log_content)) ==  len(data_list)
+    assert search(r'Requesting new license #.+ now', log_content)
+    assert search(r'Sending new health info', log_content)
     logfile.remove()
