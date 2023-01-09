@@ -324,54 +324,60 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json,
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
-    health_period = 3
-    health_retry = 10
+    # Set initial context on the live server
+    health_period = 2
+    health_retry = 5
     health_retry_sleep = 1
-    nb_run = 3
+    health_retry_sleep_step = 3
+    context = {'data': list(),
+           'health_period': health_period,
+           'health_retry': health_retry,
+           'health_retry_step': health_retry_step,
+           'health_retry_sleep': health_retry_sleep
+    }
+    set_context(context)
+    assert get_context() == context
 
-    for i in range(nb_run):
-
-        health_retry_sleep = health_retry_sleep + i
-
-        # Set initial context on the live server
-        context = {'data': list(),
-               'health_period':health_period,
-               'health_retry':health_retry,
-               'health_retry_sleep':health_retry_sleep
-        }
-        set_context(context)
-        assert get_context() == context
-
-        with accelize_drm.DrmManager(
-                conf_json.path, cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            ) as drm_manager:
-            drm_manager.activate()
-            wait_func_true(lambda: get_context()['exit'],
-                timeout=(health_retry + health_retry)*2)
-            drm_manager.deactivate()
-
-        async_cb.assert_NoError()
-        data_list = get_context()['data']
-        data0 = data_list.pop(0)
-        nb_sleep_prev = 0
-        # Check the retry sleep period is correct
-        for health_id, group in groupby(data_list, lambda x: x[0]):
-            group = list(group)
-            assert len(group) > nb_sleep_prev
-            nb_sleep_prev = len(group)
-            start = group.pop(0)[2]
-            for _, lstart, lend in group:
-                delta = parser.parse(lstart) - parser.parse(start)
-                assert int(delta.total_seconds()) == health_retry_sleep
-                start = lend
-        assert get_proxy_error() is None
+    with accelize_drm.DrmManager(
+            conf_json.path, cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        drm_manager.activate()
+        lic_duration = drm_manager.get('license_duration')
+        wait_func_true(lambda: get_context()['cnt_license'] >= 4, timeout=3*lic_duration)
+        drm_manager.deactivate()
+    async_cb.assert_NoError()
+    data_list = get_context()['data']
+    assert len(data_list) >= 2
+    last_id = ''
+    ref_start = None
+    retry_list = list()
+    for id, start, end in data_list:
+        delta = parser.parse(end) - parser.parse(start)
+        if last_id != id:
+            assert health_period <= delta.total_seconds() <= health_period + 2
+            if ref_start is not None:
+                delta = parser.parse(ref_end) - parser.parse(ref_start)
+                retry_list.append(int(delta.total_seconds()))
+            ref_start = end
+        else:
+            assert health_retry_sleep <= delta.total_seconds() <= health_retry_sleep + 1
+        ref_end = end
+        last_id = id
+    delta = parser.parse(ref_end) - parser.parse(ref_start)
+    retry_list.append(int(delta.total_seconds()))
+    ref_delta = health_retry-1
+    for delta in retry_list:
+        if ref_delta != delta:
+           ref_delta += health_retry_step
+        assert delta == ref_delta
+    assert get_proxy_error() is None
     log_content = logfile.read()
-    assert findall(r'Health retry is disabled', log_content)
-    assert len(findall(r'warning.*Attempt #\d+ on Health request failed with message.*New attempt planned', log_content)) > nb_attempts
-    assert len(findall(r'warning.*Attempt on Health request failed with message', log_content))
+    assert findall(f"Found parameter 'health_retry_sleep' of type Integer: return its value {health_retry_sleep}", log_content)
+    assert findall(f"Found parameter 'health_retry_sleep' of type Integer: return its value {health_retry_sleep+health_retry_sleep_step}", log_content)
+    assert findall(r'warning.*Attempt #\d+ on Health request failed with message.*New attempt planned', log_content)
     logfile.remove()
 
 
