@@ -46,7 +46,7 @@ def test_authentication_bad_token(accelize_drm, conf_json, cred_json,
         assert drm_manager.get('token_string') == access_token
     file_log_content = logfile.read()
     assert search(r'Not authenticated', file_log_content)
-    async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Authentication credentials were not provided')
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Not authenticated')
     async_cb.reset()
     logfile.remove()
 

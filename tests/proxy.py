@@ -1,7 +1,7 @@
 import os
 from json import dumps
 from flask import Flask, request, session, redirect, Response, jsonify, url_for
-from requests import get, post, patch
+from requests import get as _get, post as _post, patch as _patch
 from datetime import datetime
 from threading import Lock
 from re import search
@@ -38,27 +38,27 @@ def create_app(url):
         with lock:
             context = request.get_json()
         return 'OK'
-    '''
+
     # Functions calling the real web services
     @app.route('/auth/token', methods=['GET', 'POST'])
-    def otoken():
-        new_url = request.url.replace(request.url_root, url)
+    def gettoken():
+        new_url = request.url.replace(request.url_root, url+'/')
         return redirect(new_url, code=307)
 
     @app.route('/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
     def create(product_id):
         request_json = request.get_json()
-        new_url = request.url.replace(request.url_root, url)
-        response = post(new_url, json=request_json, headers=request.headers)
+        new_url = request.url.replace(request.url_root, url+'/')
+        response = _post(new_url, json=request_json, headers=request.headers)
         return Response(response)
 
     @app.route('/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update(entitlement_id):
         request_json = request.get_json()
-        new_url = request.url.replace(request.url_root, url)
-        response = post(new_url, json=request_json, headers=request.headers)
+        new_url = request.url.replace(request.url_root, url+'/')
+        response = _patch(new_url, json=request_json, headers=request.headers)
         return Response(response)
-    '''
+
     ##############################################################################
     # test_authentication.py
 
@@ -67,10 +67,9 @@ def create_app(url):
     def gettoken__test_authentication_bad_token():
         global context, lock
         new_url = request.url.replace(request.url_root+'test_authentication_bad_token', url)
-        response = post(new_url, data=request.form, headers=request.headers)
+        response = _post(new_url, data=request.form, headers=request.headers)
         assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request.form,
                 indent=4, sort_keys=True), response.status_code, response.text)
-
         response_json = response.json()
         with lock:
             response_json['access_token'] = context['access_token']
@@ -79,7 +78,7 @@ def create_app(url):
 
     @app.route('/test_authentication_bad_token/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
     def create__test_authentication_bad_token(product_id):
-        new_url = request.url.replace(request.url_root+'test_authentication_bad_token', url)
+        new_url = url_for('create', product_id=product_id)
         return redirect(new_url, code=307)
 
     # test_authentication_token_renewal
@@ -87,7 +86,7 @@ def create_app(url):
     def gettoken__test_authentication_token_renewal():
         global context, lock
         new_url = request.url.replace(request.url_root+'test_authentication_token_renewal', url)
-        response = post(new_url, data=request.form, headers=request.headers)
+        response = _post(new_url, data=request.form, headers=request.headers)
         assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request.form,
                 indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
@@ -98,12 +97,12 @@ def create_app(url):
 
     @app.route('/test_authentication_token_renewal/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
     def create__test_authentication_token_renewal(product_id):
-        new_url = request.url.replace(request.url_root+'test_authentication_token_renewal', url)
+        new_url = url_for('create', product_id=product_id)
         return redirect(new_url, code=307)
 
     @app.route('/test_authentication_token_renewal/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_authentication_token_renewal(entitlement_id):
-        new_url = request.url.replace(request.url_root+'test_authentication_token_renewal', url)
+        new_url = url_for('update', entitlement_id=entitlement_id)
         return redirect(new_url, code=307)
 
     ##############################################################################
@@ -124,7 +123,7 @@ def create_app(url):
             if context['cnt'] > 0:
                 return ({'error':'Test did not run as expected'}, 408)
             context['cnt'] += 1
-        response = post(new_url, json=request_json, headers=request.headers)
+        response = _post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
@@ -155,7 +154,7 @@ def create_app(url):
             if context['cnt'] > 0:
                 return ({'error':'Test did not run as expected'}, 408)
             context['cnt'] += 1
-        response = post(new_url, json=request_json, headers=request.headers)
+        response = _post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
@@ -188,7 +187,7 @@ def create_app(url):
             if request_type != 'close' and cnt > 1:
                 return ({'error':'Test did not run as expected'}, 408)
             context['cnt'] += 1
-        response = post(new_url, json=request_json, headers=request.headers)
+        response = _post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
@@ -222,7 +221,7 @@ def create_app(url):
             if request_type != 'close' and cnt > 1:
                 return ({'error':'Test did not run as expected'}, 408)
             context['cnt'] += 1
-        response = post(new_url, json=request_json, headers=request.headers)
+        response = _post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
@@ -250,7 +249,7 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_replay_request', url)
         request_json = request.get_json()
-        response = post(new_url, json=request_json, headers=request.headers)
+        response = _post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
@@ -288,7 +287,7 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_health_counter_is_reset_on_new_session', url)
         request_json = request.get_json()
-        response = post(new_url, json=request_json, headers=request.headers)
+        response = _post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         with lock:
@@ -306,7 +305,7 @@ def create_app(url):
         request_json = request.get_json()
         is_health = request_json.get('is_health', False)
         is_closed = request_json.get('is_closed', False)
-        response = patch(new_url, json=request_json, headers=request.headers)
+        response = _patch(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 204 if is_health else 200, (
                 "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text))
@@ -334,7 +333,7 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_health_period_disabled', url)
         request_json = request.get_json()
-        response = post(new_url, json=request_json, headers=request.headers)
+        response = _post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
@@ -352,7 +351,7 @@ def create_app(url):
         request_json = request.get_json()
         is_health = request_json.get('is_health', False)
         is_closed = request_json.get('is_closed', False)
-        response = patch(new_url, json=request_json, headers=request.headers)
+        response = _patch(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 204 if is_health else 200, (
                 "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text))
@@ -383,7 +382,7 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_health_period_modification', url)
         request_json = request.get_json()
-        response = post(new_url, json=request_json, headers=request.headers)
+        response = _post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
@@ -403,7 +402,7 @@ def create_app(url):
         request_json = request.get_json()
         is_health = request_json.get('is_health', False)
         is_closed = request_json.get('is_closed', False)
-        response = patch(new_url, json=request_json, headers=request.headers)
+        response = _patch(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 204 if is_health else 200, (
                 "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text))
@@ -439,7 +438,7 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_health_retry_disabled', url)
         request_json = request.get_json()
-        response = post(new_url, json=request_json, headers=request.headers)
+        response = _post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
@@ -462,7 +461,7 @@ def create_app(url):
         is_health = request_json.get('is_health', False)
         is_closed = request_json.get('is_closed', False)
         if not is_health:
-            response = patch(new_url, json=request_json, headers=request.headers)
+            response = _patch(new_url, json=request_json, headers=request.headers)
             assert response.status_code == 204 if is_health else 200, (
                 "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text))
@@ -501,7 +500,7 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_health_retry_modification', url)
         request_json = request.get_json()
-        response = post(new_url, json=request_json, headers=request.headers)
+        response = _post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         with lock:
@@ -522,7 +521,7 @@ def create_app(url):
         is_health = request_json.get('is_health', False)
         is_closed = request_json.get('is_closed', False)
         if not is_health:
-            response = patch(new_url, json=request_json, headers=request.headers)
+            response = _patch(new_url, json=request_json, headers=request.headers)
             assert response.status_code == 204 if is_health else 200, (
                 "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text))
@@ -554,7 +553,7 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_health_retry_sleep_modification', url)
         request_json = request.get_json()
-        response = post(new_url, json=request_json, headers=request.headers)
+        response = _post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
@@ -577,7 +576,7 @@ def create_app(url):
         is_health = request_json.get('is_health', False)
         is_closed = request_json.get('is_closed', False)
         if not is_health:
-            response = patch(new_url, json=request_json, headers=request.headers)
+            response = _patch(new_url, json=request_json, headers=request.headers)
             assert response.status_code == 204 if is_health else 200, (
                 "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text))
@@ -610,7 +609,7 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_health_metering_data', url)
         request_json = request.get_json()
-        response = post(new_url, json=request_json, headers=request.headers)
+        response = _post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
@@ -630,7 +629,7 @@ def create_app(url):
         request_json = request.get_json()
         is_health = request_json.get('is_health', False)
         is_closed = request_json.get('is_closed', False)
-        response = patch(new_url, json=request_json, headers=request.headers)
+        response = _patch(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 204 if is_health else 200, (
                 "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text))
@@ -659,7 +658,7 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_segment_index', url)
         request_json = request.get_json()
-        response = post(new_url, json=request_json, headers=request.headers)
+        response = _post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
@@ -681,7 +680,7 @@ def create_app(url):
         with lock:
             if 'drm_config' in request_json:
                 context['data'].append( request_json['drm_config']['metering_file'] )
-        response = patch(new_url, json=request_json, headers=request.headers)
+        response = _patch(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 204 if is_health else 200, (
                 "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text))
@@ -705,7 +704,7 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_async_call_on_pause_depending_on_health_status', url)
         request_json = request.get_json()
-        response = post(new_url, json=request_json, headers=request.headers)
+        response = _post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
@@ -720,7 +719,7 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_async_call_on_pause_depending_on_health_status', url)
         request_json = request.get_json()
-        response = patch(new_url, json=request_json, headers=request.headers)
+        response = _patch(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
@@ -758,7 +757,7 @@ def create_app(url):
         with lock:
             try:
                 if context['cnt'] == 0 or context['exit']:
-                    response = post(new_url, data=request.form, headers=request.headers)
+                    response = _post(new_url, data=request.form, headers=request.headers)
                     assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request.form,
                             indent=4, sort_keys=True), response.status_code, response.text)
                     response_json = response.json()
@@ -777,7 +776,7 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_long_to_short_retry_switch_on_authentication', url)
         request_json = request.get_json()
-        response = post(new_url, json=request_json, headers=request.headers)
+        response = _post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                     indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
@@ -807,7 +806,7 @@ def create_app(url):
         with lock:
             try:
                 if context['cnt'] < 1 or request_type == 'close':
-                    response = post(new_url, json=request_json, headers=request.headers)
+                    response = _post(new_url, json=request_json, headers=request.headers)
                     assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                             indent=4, sort_keys=True), response.status_code, response.text)
                     response_json = response.json()
@@ -863,7 +862,7 @@ def create_app(url):
             context['cnt'] += 1
         if cnt < 1 or request_type == 'close':
             new_url = request.url.replace(request.url_root+'test_thread_retry_on_lost_connection', url)
-            response = post(new_url, json=request_json, headers=request.headers)
+            response = _post(new_url, json=request_json, headers=request.headers)
             response_json = response.json()
             response_json['metering']['timeoutSecond'] = timeoutSecond
             response._content = dumps(response_json).encode('utf-8')
@@ -891,7 +890,7 @@ def create_app(url):
         new_url = request.url.replace(request.url_root+'test_http_header_api_version', url)
         request_json = request.get_json()
         assert search(r'Accept:.*application/vnd\.accelize\.v1\+json', str(request.headers))
-        response = post(new_url, json=request_json, headers=request.headers)
+        response = _post(new_url, json=request_json, headers=request.headers)
         return Response(response)
 
     @app.route('/test_http_header_api_version/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
@@ -913,7 +912,7 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_topic0_corrupted_segment_index', url)
         request_json = request.get_json()
-        response = post(new_url, json=request_json, headers=request.headers)
+        response = _post(new_url, json=request_json, headers=request.headers)
         try:
             assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
@@ -933,7 +932,7 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_topic0_corrupted_segment_index', url)
         request_json = request.get_json()
-        response = patch(new_url, json=request_json, headers=request.headers)
+        response = _patch(new_url, json=request_json, headers=request.headers)
         try:
             assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
@@ -959,7 +958,7 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_topic1_corrupted_metering', url)
         request_json = request.get_json()
-        response = post(new_url, json=request_json, headers=request.headers)
+        response = _post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
             indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
@@ -1003,7 +1002,7 @@ def create_app(url):
     def create__test_improve_coverage_setLicense(product_id):
         new_url = request.url.replace(request.url_root+'test_improve_coverage_setLicense', url)
         request_json = request.get_json()
-        response = post(new_url, json=request_json, headers=request.headers)
+        response = _post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
             indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
@@ -1025,7 +1024,7 @@ def create_app(url):
         global context, lock
         new_url = request.url.replace(request.url_root+'test_normal_usage', url)
         request_json = request.get_json()
-        response = post(new_url, json=request_json, headers=request.headers)
+        response = _post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
             indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
@@ -1041,7 +1040,7 @@ def create_app(url):
         request_json = request.get_json()
         is_health = request_json.get('is_health', False)
         is_closed = request_json.get('is_closed', False)
-        response = patch(new_url, json=request_json, headers=request.headers)
+        response = _patch(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 204 if is_health else 200, (
                 "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text))
@@ -1071,7 +1070,7 @@ def create_app(url):
         with lock:
             context['derived_product'] = deriv_prod
             request_json['product']['name'] = request_json['product']['name'].replace(context['product_suffix'], '')
-        response = post(new_url, json=request_json, headers=request.headers)
+        response = _post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
             indent=4, sort_keys=True), response.status_code, response.text)
         return Response(response)
@@ -1106,7 +1105,7 @@ def get_context():
 
 
 def set_context(data):
-    r = post(url_for('set', _external=True), json=data)
+    r = _post(url_for('set', _external=True), json=data)
     assert r.status_code == 200
 
 
