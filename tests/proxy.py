@@ -81,6 +81,11 @@ def create_app(url):
         new_url = url_for('create', product_id=product_id)
         return redirect(new_url, code=307)
 
+    @app.route('/test_authentication_bad_token/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
+    def update__test_authentication_bad_token(entitlement_id):
+        new_url = url_for('update', entitlement_id=entitlement_id)
+        return redirect(new_url, code=307)
+
     # test_authentication_token_renewal
     @app.route('/test_authentication_token_renewal/auth/token', methods=['GET', 'POST'])
     def gettoken__test_authentication_token_renewal():

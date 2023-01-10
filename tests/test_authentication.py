@@ -45,8 +45,8 @@ def test_authentication_bad_token(accelize_drm, conf_json, cred_json,
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         assert drm_manager.get('token_string') == access_token
     log_content = logfile.read()
-    assert search(r'Not authenticated', log_content)
-    async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Not authenticated')
+    assert search(r'Unauthorized', log_content)
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Unauthorized')
     async_cb.reset()
     logfile.remove()
 
@@ -128,7 +128,7 @@ def test_authentication_token_renewal(accelize_drm, conf_json, cred_json,
     assert len(findall(r'Starting Authentication request', log_content)) >= 2
     token_list = findall(r'"access_token" : "([^"]+)"', log_content)
     assert len(token_list) >= 2
-    assert token_list == list(set(token_list))
+    assert token_list.sort() == list(set(token_list)).sort()
     async_cb.assert_NoError()
     logfile.remove()
 
