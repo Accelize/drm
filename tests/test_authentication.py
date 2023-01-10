@@ -5,7 +5,7 @@ Test node-locked behavior of DRM Library.
 import pytest
 from os import remove
 from os.path import isfile, expanduser
-from re import search
+from re import search, findall
 from time import sleep
 from json import loads
 from datetime import datetime
@@ -44,8 +44,8 @@ def test_authentication_bad_token(accelize_drm, conf_json, cred_json,
             drm_manager.activate()
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         assert drm_manager.get('token_string') == access_token
-    file_log_content = logfile.read()
-    assert search(r'Not authenticated', file_log_content)
+    log_content = logfile.read()
+    assert search(r'Not authenticated', log_content)
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Not authenticated')
     async_cb.reset()
     logfile.remove()
@@ -129,8 +129,11 @@ def test_authentication_token_renewal(accelize_drm, conf_json, cred_json,
         next_lic_expiration = ((q+1) * lic_duration) % expires_in
         sleep(next_lic_expiration + 5)  # Wait current license expiration
         assert drm_manager.get('token_string') != token_string
-    file_log_content = logfile.read()
-    assert search(r'Not authenticated', file_log_content)
+    log_content = logfile.read()
+    assert len(findall(r'Starting Authentication request', log_content)) >= 2
+    token_list = findall(r'"access_token" : "([^"]+)"', log_content)
+    assert len(token_list) >= 2
+    assert token_list == list(set(token_list))
     async_cb.assert_NoError()
     logfile.remove()
 

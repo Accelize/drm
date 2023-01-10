@@ -1099,7 +1099,7 @@ def create_app(url):
 
 
 def get_context():
-    r = get(url_for('get', _external=True))
+    r = _get(url_for('get', _external=True))
     assert r.status_code == 200
     return r.json()
 
