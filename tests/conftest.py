@@ -911,9 +911,9 @@ class CredJson(_Json):
         # Load from user specified cred.json
         _Json.__init__(self, tmpdir, 'cred.json', cred)
         self._user = ''
+        self.set_user()
 
     def save(self):
-        self.clear_cache()
         _Json.save(self)
 
     def set_user(self, user=None):
@@ -925,7 +925,7 @@ class CredJson(_Json):
         """
         self._content = {}
         if user is None:
-            for k, v in [e for e in self._initial_content.items() if not e.endswith('__')]:
+            for k, v in [e for e in self._initial_content.items() if not e[0].endswith('__')]:
                 self[k] = v
             self._user = ''
         else:
@@ -937,6 +937,12 @@ class CredJson(_Json):
         if ('client_id' not in self._content) or ('client_secret' not in self._content):
             raise ValueError('User "%s" not found in "%s"' % (user, self._init_cred_path))
         self.save()
+        # Build cache file path
+        home = environ.get('HOME')
+        if not home:
+            raise RuntimeException('No HOME environment variable found')
+        self.cache_file = join(home,'.cache','accelize','drm',self.client_id+'.json')
+        self.clear_cache()
 
     def get_user(self, user=None):
         """
@@ -961,12 +967,8 @@ class CredJson(_Json):
         return content
 
     def clear_cache(self):
-        home = environ.get('HOME')
-        if not home or not self._content.get('client_id'):
-            return
-        cache_file = join(home,'.cache','accelize','drm',self.client_id+'.json')
-        if isfile(cache_file):
-            remove(cache_file)
+        if isfile(self.cache_file):
+            remove(self.cache_file)
 
     @property
     def user(self):

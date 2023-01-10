@@ -4,7 +4,7 @@ Test node-locked behavior of DRM Library.
 """
 import pytest
 from os import remove
-from os.path import isfile, expanduser
+from os.path import isfile, join, expanduser
 from re import search, findall
 from time import sleep
 from json import loads
@@ -190,14 +190,7 @@ def test_authentication_cache(accelize_drm, conf_json, cred_json,
     logfile = log_file_factory.create(1)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-
-    # 1- Remove the cache file
-    clientid = cred_json['client_id']
-    token_cache_file = os.path.expanduser(join('~','.cache','accelize','drm',f'{clientid}.json'))
-    if isfile(cache_file):
-        remove(cache_file)
-    assert not isfile(cache_file)
-    # 2- Verify a new cache file is created
+    assert not isfile(cred_json.cache_file)
     with accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
@@ -206,16 +199,33 @@ def test_authentication_cache(accelize_drm, conf_json, cred_json,
             async_cb.callback
         ) as drm_manager:
         drm_manager.activate()
-        assert isfile(cache_file)
+        token_ref = drm_manager.get('token_string')
+        assert isfile(cred_json.cache_file)
         drm_manager.deactivate()
-    assert not isfile(cache_file)
-    token_json = loads(cache_file)
+    assert isfile(cred_json.cache_file)
+    with open(cred_json.cache_file, 'rt') as f:
+        token_json = loads(f.read())
     assert 'access_token' in token_json.keys()
     assert 'expires_in' in token_json.keys()
     assert 'expires_at' in token_json.keys()
-    # 3- Verify log messages
+    assert token_ref == token_json['access_token']
     log_content = logfile.read()
-    assert search(r'Saved token to file ' + cache_file, log_content)
-    assert search(r'Loaded token from file ' + cache_file, log_content)
+    assert search(r'Saved token to file ' + cred_json.cache_file, log_content)
+    assert search(token_ref, log_content)
+    # Open a second time and verify the cache file is used.
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        drm_manager.activate()
+        assert token_ref == drm_manager.get('token_string')
+        assert isfile(cred_json.cache_file)
+        drm_manager.deactivate()
+    log_content = logfile.read()
+    assert search(token_ref, log_content)
+    assert search(r'Loaded token from file ' + cred_json.cache_file, log_content)
     async_cb.assert_NoError()
     logfile.remove()
