@@ -301,8 +301,7 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json,
         last_id = id
     delta = int((parser.parse(ref_end) - parser.parse(ref_start)).total_seconds())
     retry_list.append(delta)
-    #ref_delta = health_retry-1
-    ref_delta = health_retry
+    ref_delta = health_retry-1
     for d in retry_list:
         if ref_delta != d:
            ref_delta += health_retry_step
@@ -378,8 +377,7 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json,
         last_id = id
     delta = int((parser.parse(ref_end) - parser.parse(ref_start)).total_seconds())
     retry_list.append(delta)
-    #ref_delta = health_retry-1
-    ref_delta = health_retry
+    ref_delta = health_retry-1
     for d in retry_list:
         if ref_delta != d:
            ref_delta += health_retry_sleep_step
