@@ -40,13 +40,13 @@ def test_authentication_bad_token(accelize_drm, conf_json, cred_json,
             driver.write_register_callback,
             async_cb.callback
         ) as drm_manager:
-        with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
+        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
         assert drm_manager.get('token_string') == access_token
     file_log_content = logfile.read()
-    assert search(r'\bAuthentication credentials were not provided\b', file_log_content)
-    async_cb.assert_Error(accelize_drm.exceptions.DRMWSError.error_code, 'Authentication credentials were not provided')
+    assert search(r'Not authenticated', file_log_content)
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Authentication credentials were not provided')
     async_cb.reset()
     logfile.remove()
 
@@ -92,7 +92,7 @@ def test_authentication_validity_after_deactivation(accelize_drm, conf_json, cre
 @pytest.mark.no_parallel
 @pytest.mark.hwtst
 def test_authentication_token_renewal(accelize_drm, conf_json, cred_json,
-                async_handler, live_server, request):
+                async_handler, live_server, request, log_file_factory):
     """Test a different authentication token is given after expiration"""
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -101,11 +101,13 @@ def test_authentication_token_renewal(accelize_drm, conf_json, cred_json,
 
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + request.function.__name__
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
     conf_json.save()
 
     # Set initial context on the live server
     expires_in = 6
-    context = {'expires_in':expires_in}
+    context = {'expires_in': expires_in}
     set_context(context)
     assert get_context() == context
 
@@ -127,6 +129,10 @@ def test_authentication_token_renewal(accelize_drm, conf_json, cred_json,
         next_lic_expiration = ((q+1) * lic_duration) % expires_in
         sleep(next_lic_expiration + 5)  # Wait current license expiration
         assert drm_manager.get('token_string') != token_string
+    file_log_content = logfile.read()
+    assert search(r'Not authenticated', file_log_content)
+    async_cb.assert_NoError()
+    logfile.remove()
 
 
 @pytest.mark.endurance
