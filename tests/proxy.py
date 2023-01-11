@@ -49,13 +49,13 @@ def create_app(url):
     def create(product_id):
         new_url = request.url.replace(request.url_root, url+'/')
         response = _post(new_url, json=request.get_json(), headers=request.headers)
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     @app.route('/customer/entitlement_session/<entitlement_id>', methods=['POST', 'PATCH'])
     def update(entitlement_id):
         new_url = request.url.replace(request.url_root, url+'/')
         response = _patch(new_url, json=request.get_json(), headers=request.headers)
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     ##############################################################################
     # test_authentication.py
@@ -72,7 +72,7 @@ def create_app(url):
         with lock:
             response_json['access_token'] = context['access_token']
         response._content = dumps(response_json).encode('utf-8')
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     @app.route('/test_authentication_bad_token/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
     def create__test_authentication_bad_token(product_id):
@@ -94,7 +94,7 @@ def create_app(url):
         with lock:
             response_json['expires_in'] = context['expires_in']
         response._content = dumps(response_json).encode('utf-8')
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     @app.route('/test_authentication_token_renewal/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
     def create__test_authentication_token_renewal(product_id):
@@ -126,7 +126,7 @@ def create_app(url):
         key = '1' + key[1:] if key[0] == '0' else '0' + key[1:]
         response_json['drm_config']['license'][dna]['key'] = key
         response._content = dumps(response_json).encode('utf-8')
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     @app.route('/test_header_error_on_key/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_header_error_on_key(entitlement_id):
@@ -151,7 +151,7 @@ def create_app(url):
         key = key[0:-1] + '1' if key[-1] == '0' else key[0:-1] + '0'
         response_json['drm_config']['license'][dna]['key'] = key
         response._content = dumps(response_json).encode('utf-8')
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     @app.route('/test_header_error_on_key2/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_header_error_on_key2(entitlement_id):
@@ -167,30 +167,13 @@ def create_app(url):
     def create__test_header_error_on_licenseTimer(product_id):
         global context, lock
         with lock:
-            context['cnt_license'] = 1
+            context = {'cnt_license': 1}
         return redirect(url_for('create', product_id=product_id), code=307)
-
-        with lock:
-            cnt = context['cnt']
-            if request_type != 'close' and cnt > 1:
-                return ({'error':'Test did not run as expected'}, 408)
-            context['cnt'] += 1
-        response = _post(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
-                indent=4, sort_keys=True), response.status_code, response.text)
-        response_json = response.json()
-        if cnt == 1 and response_json.get('license'):
-            dna, lic_json = list(response_json['license'].items())[0]
-            timer = lic_json['licenseTimer']
-            timer = '1' + timer[1:] if timer[0] == '0' else '0' + timer[1:]
-            response_json['license'][dna]['licenseTimer'] = timer
-        response._content = dumps(response_json).encode('utf-8')
-        return Response(response, response.status_code, response.headers.items())
 
     @app.route('/test_header_error_on_licenseTimer/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_header_error_on_licenseTimer(entitlement_id):
         global context, lock
-        new_url = request.url.replace(request.url_root+'test_health_counter_is_reset_on_new_session', url)
+        new_url = request.url.replace(request.url_root+'test_header_error_on_licenseTimer', url)
         request_json = request.get_json()
         is_health = request_json.get('is_health', False)
         is_closed = request_json.get('is_closed', False)
@@ -201,17 +184,18 @@ def create_app(url):
         if not is_health:
             if not is_closed:
                 with lock:
-                    cnt = context['cnt_license']:
+                    cnt = context['cnt_license']
                     context['cnt_license'] += 1
                 if cnt > 2:
                     return ({'error':'Test did not run as expected'}, 408)
                 else:
+                    response_json = response.json()
                     dna, lic_json = list(response_json['drm_config']['license'].items())[0]
-                    timer = lic_json['licenseTimer']
+                    timer = lic_json['timer']
                     timer = '1' + timer[1:] if timer[0] == '0' else '0' + timer[1:]
-                    response_json['drm_config']['license'][dna]['licenseTimer'] = timer
+                    response_json['drm_config']['license'][dna]['timer'] = timer
                     response._content = dumps(response_json).encode('utf-8')
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     # test_header_error_on_licenseTimer2 functions
     @app.route('/test_header_error_on_licenseTimer2/auth/token', methods=['GET', 'POST'])
@@ -222,29 +206,36 @@ def create_app(url):
     @app.route('/test_header_error_on_licenseTimer2/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
     def create__test_header_error_on_licenseTimer2(product_id):
         global context, lock
-        new_url = request.url.replace(request.url_root+'test_header_error_on_licenseTimer2', url)
-        request_json = request.get_json()
-        request_type = request_json['request']
         with lock:
-            cnt = context['cnt']
-            if request_type != 'close' and cnt > 1:
-                return ({'error':'Test did not run as expected'}, 408)
-            context['cnt'] += 1
-        response = _post(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
-                indent=4, sort_keys=True), response.status_code, response.text)
-        response_json = response.json()
-        if cnt == 1 and response_json.get('license'):
-            dna, lic_json = list(response_json['license'].items())[0]
-            timer = lic_json['licenseTimer']
-            timer = timer[0:-1] + '1' if timer[-1] == '0' else timer[0:-1] + '0'
-            response_json['license'][dna]['licenseTimer'] = timer
-        response._content = dumps(response_json).encode('utf-8')
-        return Response(response, response.status_code, response.headers.items())
+            context = {'cnt_license': 1}
+        return redirect(url_for('create', product_id=product_id), code=307)
 
     @app.route('/test_header_error_on_licenseTimer2/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_header_error_on_licenseTimer2(entitlement_id):
-        return redirect(url_for('update', entitlement_id=entitlement_id), code=307)
+        global context, lock
+        new_url = request.url.replace(request.url_root+'test_header_error_on_licenseTimer', url)
+        request_json = request.get_json()
+        is_health = request_json.get('is_health', False)
+        is_closed = request_json.get('is_closed', False)
+        response = _patch(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 204 if is_health else 200, (
+                "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text))
+        if not is_health:
+            if not is_closed:
+                with lock:
+                    cnt = context['cnt_license']
+                    context['cnt_license'] += 1
+                if cnt > 2:
+                    return ({'error':'Test did not run as expected'}, 408)
+                else:
+                    response_json = response.json()
+                    dna, lic_json = list(response_json['license'].items())[0]
+                    timer = lic_json['timer']
+                    timer = timer[0:-1] + '1' if timer[-1] == '0' else timer[0:-1] + '0'
+                    response_json['license'][dna]['timer'] = timer
+                    response._content = dumps(response_json).encode('utf-8')
+        return Response(response, response.status_code)
 
     # test_replay_request functions
     @app.route('/test_replay_request/auth/token', methods=['GET', 'POST'])
@@ -274,7 +265,7 @@ def create_app(url):
             else:
                 if context['request_cnt'] == 2:
                    context['replay'] = response
-            return Response(response, response.status_code, response.headers.items())
+            return Response(response, response.status_code)
 
     @app.route('/test_replay_request/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_replay_request(entitlement_id):
@@ -303,7 +294,7 @@ def create_app(url):
             response_json = response.json()
             response_json['drm_config']['health_period'] = context['health_period']
             response._content = dumps(response_json).encode('utf-8')
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     @app.route('/test_health_counter_is_reset_on_new_session/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_health_counter_is_reset_on_new_session(entitlement_id):
@@ -327,7 +318,7 @@ def create_app(url):
             # is_health = True
             with lock:
                 context['cnt_health'] += 1
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     # test_health_period_disabled functions
     @app.route('/test_health_period_disabled/auth/token', methods=['GET', 'POST'])
@@ -349,7 +340,7 @@ def create_app(url):
             context['cnt_health'] = 0
             response_json['drm_config']['health_period'] = context['health_period']
             response._content = dumps(response_json).encode('utf-8')
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     @app.route('/test_health_period_disabled/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_health_period_disabled(entitlement_id):
@@ -376,7 +367,7 @@ def create_app(url):
             # is_health = True
             with lock:
                 context['cnt_health'] += 1
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     # test_health_period_modification functions
     @app.route('/test_health_period_modification/auth/token', methods=['GET', 'POST'])
@@ -400,7 +391,7 @@ def create_app(url):
             context['start'] = datetime.now()
             response_json['drm_config']['health_period'] = context['health_period']
         response._content = dumps(response_json).encode('utf-8')
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     @app.route('/test_health_period_modification/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_health_period_modification(entitlement_id):
@@ -432,7 +423,7 @@ def create_app(url):
                 if context['step'] >= 2:
                     context['exit'] = True
                 context['step'] += 1
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     # test_health_retry_disabled functions
     @app.route('/test_health_retry_disabled/auth/token', methods=['GET', 'POST'])
@@ -458,7 +449,7 @@ def create_app(url):
             response_json['drm_config']['health_retry'] = context['health_retry']
             response_json['drm_config']['health_retry_sleep'] = context['health_retry_sleep']
         response._content = dumps(response_json).encode('utf-8')
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     @app.route('/test_health_retry_disabled/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_health_retry_disabled(entitlement_id):
@@ -485,7 +476,7 @@ def create_app(url):
                     else:
                         response_json['drm_config']['health_retry'] = context['health_retry']
                 response._content = dumps(response_json).encode('utf-8')
-            return Response(response, response.status_code, response.headers.items())
+            return Response(response, response.status_code)
         # is_health = True
         sgmt_idx = request_json['drm_config']['metering_file'][24:32]
         context['data'].append( (sgmt_idx, context['start'], datetime.now()) )
@@ -518,7 +509,7 @@ def create_app(url):
             response_json['drm_config']['health_retry'] = context['health_retry']
             response_json['drm_config']['health_retry_sleep'] = context['health_retry_sleep']
             response._content = dumps(response_json).encode('utf-8')
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     @app.route('/test_health_retry_modification/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_health_retry_modification(entitlement_id):
@@ -542,7 +533,7 @@ def create_app(url):
                     response_json['drm_config']['health_retry'] = context['health_retry']
                     response_json['drm_config']['health_retry_sleep'] = context['health_retry_sleep']
                     response._content = dumps(response_json).encode('utf-8')
-            return Response(response, response.status_code, response.headers.items())
+            return Response(response, response.status_code)
         # is_health = True
         sgmt_idx = request_json['drm_config']['metering_file'][24:32]
         context['data'].append( (sgmt_idx, context['start'], datetime.now()) )
@@ -573,7 +564,7 @@ def create_app(url):
             response_json['drm_config']['health_retry'] = context['health_retry']
             response_json['drm_config']['health_retry_sleep'] = context['health_retry_sleep']
             response._content = dumps(response_json).encode('utf-8')
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     @app.route('/test_health_retry_sleep_modification/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_health_retry_sleep_modification(entitlement_id):
@@ -597,7 +588,7 @@ def create_app(url):
                     response_json['drm_config']['health_retry'] = context['health_retry']
                     response_json['drm_config']['health_retry_sleep'] = context['health_retry_sleep']
                     response._content = dumps(response_json).encode('utf-8')
-            return Response(response, response.status_code, response.headers.items())
+            return Response(response, response.status_code)
         # is_health = True
         sgmt_idx = request_json['drm_config']['metering_file'][24:32]
         context['data'].append( (sgmt_idx, context['start'], datetime.now()) )
@@ -627,7 +618,7 @@ def create_app(url):
             response_json['drm_config']['health_period'] = context['health_period']
             response_json['drm_config']['health_retry'] = context['health_retry']
             response._content = dumps(response_json).encode('utf-8')
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     @app.route('/test_health_metering_data/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_health_metering_data(entitlement_id):
@@ -652,7 +643,7 @@ def create_app(url):
             # is_health = True
             with lock:
                 context['cnt_health'] += 1
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     # test_segment_index functions
     @app.route('/test_segment_index/auth/token', methods=['GET', 'POST'])
@@ -675,7 +666,7 @@ def create_app(url):
             response_json['drm_config']['health_period'] = context['health_period']
             response_json['drm_config']['health_retry'] = context['health_retry']
         response._content = dumps(response_json).encode('utf-8')
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     @app.route('/test_segment_index/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_segment_index(entitlement_id):
@@ -698,7 +689,7 @@ def create_app(url):
                     response_json['drm_config']['health_period'] = context['health_period']
                     response_json['drm_config']['health_retry'] = context['health_retry']
                 response._content = dumps(response_json).encode('utf-8')
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     # test_async_call_on_pause_when_health_is_enabled and test_no_async_call_on_pause_when_health_is_disabled functions
     @app.route('/test_async_call_on_pause_depending_on_health_status/auth/token', methods=['GET', 'POST'])
@@ -719,7 +710,7 @@ def create_app(url):
             response_json['drm_config']['health_period'] = context['health_period']
             response_json['drm_config']['health_retry'] = context['health_retry']
         response._content = dumps(response_json).encode('utf-8')
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     @app.route('/test_async_call_on_pause_depending_on_health_status/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_async_call_on_pause_depending_on_health_status(entitlement_id):
@@ -735,7 +726,7 @@ def create_app(url):
             response_json['drm_config']['health_period'] = context['health_period']
             response_json['drm_config']['health_retry'] = context['health_retry']
         response._content = dumps(response_json).encode('utf-8')
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     ##############################################################################
     # test_retry_mechanism.py
@@ -770,7 +761,7 @@ def create_app(url):
                     response_json['expires_in'] = context['expires_in']
                     context['response_json'] = dumps(response_json)
                     response._content = dumps(response_json).encode('utf-8')
-                    return Response(response, response.status_code, response.headers.items())
+                    return Response(response, response.status_code)
                 else:
                     return Response(context['response_json'], 408)
             finally:
@@ -789,7 +780,7 @@ def create_app(url):
         with lock:
             response_json['metering']['timeoutSecond'] = context['timeoutSecond']
         response._content = dumps(response_json).encode('utf-8')
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     @app.route('/test_long_to_short_retry_switch_on_authentication/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_long_to_short_retry_switch_on_authentication(entitlement_id):
@@ -817,7 +808,7 @@ def create_app(url):
                     response_json = response.json()
                     response_json['metering']['timeoutSecond'] = context['timeoutSecond']
                     response._content = dumps(response_json).encode('utf-8')
-                    return Response(response, response.status_code, response.headers.items())
+                    return Response(response, response.status_code)
                 else:
                     return ({'error':'Test retry mechanism'}, 408)
             finally:
@@ -869,7 +860,7 @@ def create_app(url):
             response_json = response.json()
             response_json['metering']['timeoutSecond'] = timeoutSecond
             response._content = dumps(response_json).encode('utf-8')
-            return Response(response, response.status_code, response.headers.items())
+            return Response(response, response.status_code)
         else:
             sleep(timeoutSecond)
             return ('', 204)
@@ -893,7 +884,7 @@ def create_app(url):
         request_json = request.get_json()
         assert search(r'Accept:.*application/vnd\.accelize\.v1\+json', str(request.headers))
         response = _post(new_url, json=request_json, headers=request.headers)
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     @app.route('/test_http_header_api_version/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_http_header_api_version(entitlement_id):
@@ -926,7 +917,7 @@ def create_app(url):
             with lock:
                 response_json['drm_config']['health_period'] = context['health_period']
         response._content = dumps(response_json).encode('utf-8')
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     @app.route('/test_topic0_corrupted_segment_index/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_topic0_corrupted_segment_index(entitlement_id):
@@ -946,7 +937,7 @@ def create_app(url):
             with lock:
                 response_json['drm_config']['health_period'] = context['health_period']
         response._content = dumps(response_json).encode('utf-8')
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     # test_topic1_corrupted_metering functions
     @app.route('/test_topic1_corrupted_metering/auth/token', methods=['GET', 'POST'])
@@ -966,7 +957,7 @@ def create_app(url):
         with lock:
             response_json['drm_config']['health_period'] = context['health_period']
         response._content = dumps(response_json).encode('utf-8')
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     @app.route('/test_topic1_corrupted_metering/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_topic1_corrupted_metering(entitlement_id):
@@ -1007,7 +998,7 @@ def create_app(url):
         response_json = response.json()
         del response_json['drm_config']['license']
         response._content = dumps(response_json).encode('utf-8')
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     ##############################################################################
     # test_valgrind.py
@@ -1030,7 +1021,7 @@ def create_app(url):
         with lock:
             response_json['drm_config']['health_period'] = context['health_period']
         response._content = dumps(response_json).encode('utf-8')
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     @app.route('/test_normal_usage/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_normal_usage(entitlement_id):
@@ -1049,7 +1040,7 @@ def create_app(url):
         with lock:
             response_json['drm_config']['health_period'] = context['health_period']
         response._content = dumps(response_json).encode('utf-8')
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     ##############################################################################
     # test_derived_product.py
@@ -1072,7 +1063,7 @@ def create_app(url):
         response = _post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
             indent=4, sort_keys=True), response.status_code, response.text)
-        return Response(response, response.status_code, response.headers.items())
+        return Response(response, response.status_code)
 
     @app.route('/test_valid_derived_product/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_valid_derived_product(entitlement_id):
