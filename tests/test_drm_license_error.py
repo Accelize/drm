@@ -34,11 +34,6 @@ def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler,
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
-    # Set initial context on the live server
-    context = {'cnt':0}
-    set_context(context)
-    assert get_context() == context
-
     with accelize_drm.DrmManager(
             conf_json.path, cred_json.path,
             driver.read_register_callback,
@@ -73,11 +68,6 @@ def test_header_error_on_key2(accelize_drm, conf_json, cred_json, async_handler,
     logfile = log_file_factory.create(1)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-
-    # Set initial context on the live server
-    context = {'cnt':0}
-    set_context(context)
-    assert get_context() == context
 
     with accelize_drm.DrmManager(
             conf_json.path, cred_json.path,
@@ -117,11 +107,6 @@ def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-
-    # Set initial context on the live server
-    context = {'cnt':0}
-    set_context(context)
-    assert get_context() == context
 
     with accelize_drm.DrmManager(
             conf_json.path, cred_json.path,
@@ -168,11 +153,6 @@ def test_header_error_on_licenseTimer2(accelize_drm, conf_json, cred_json, async
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-
-    # Set initial context on the live server
-    context = {'cnt':0}
-    set_context(context)
-    assert get_context() == context
 
     with accelize_drm.DrmManager(
             conf_json.path, cred_json.path,
