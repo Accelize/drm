@@ -40,29 +40,22 @@ def create_app(url):
         return 'OK'
 
     # Functions calling the real web services
-    @app.route('/auth/token', methods=['GET', 'POST'])
+    '''
+    @app.route('/auth/token', methods=['POST'])
     def gettoken():
         new_url = request.url.replace(request.url_root, url+'/')
         return redirect(new_url, code=307)
-
+    '''
     @app.route('/customer/product/<product_id>/entitlement_session', methods=['POST', 'PATCH'])
     def create(product_id):
-        new_url = request.url.replace(request.url_root+'test_health_counter_is_reset_on_new_session', url)
-        request_json = request.get_json()
+        new_url = request.url.replace(request.url_root, url+'/')
         response = _post(new_url, json=request.get_json(), headers=request.headers)
         return Response(response)
-        '''
-        request_json = request.get_json()
-        new_url = request.url.replace(request.url_root, url+'/')
-        response = _post(new_url, json=request_json, headers=request.headers)
-        return Response(response)
-        '''
 
     @app.route('/customer/entitlement_session/<entitlement_id>', methods=['POST', 'PATCH'])
     def update(entitlement_id):
-        request_json = request.get_json()
         new_url = request.url.replace(request.url_root, url+'/')
-        response = _patch(new_url, json=request_json, headers=request.headers)
+        response = _patch(new_url, json=request.get_json(), headers=request.headers)
         return Response(response)
 
     ##############################################################################
@@ -84,10 +77,8 @@ def create_app(url):
 
     @app.route('/test_authentication_bad_token/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
     def create__test_authentication_bad_token(product_id):
-        new_url = request.url.replace(request.url_root+'test_health_counter_is_reset_on_new_session', url)
-        request_json = request.get_json()
-        response = _post(new_url, json=request.get_json(), headers=request.headers)
-        return Response(response)
+        new_url = url_for('create', product_id=product_id)
+        return redirect(new_url, code=307)
 
     @app.route('/test_authentication_bad_token/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_authentication_bad_token(entitlement_id):
@@ -149,7 +140,7 @@ def create_app(url):
 
     @app.route('/test_header_error_on_key/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_header_error_on_key(entitlement_id):
-        new_url = request.url.replace(request.url_root+'test_header_error_on_key', url)
+        new_url = url_for('update', entitlement_id=entitlement_id)
         return redirect(new_url, code=307)
 
     # test_header_error_on_key2 functions
@@ -180,7 +171,7 @@ def create_app(url):
 
     @app.route('/test_header_error_on_key2/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_header_error_on_key2(entitlement_id):
-        new_url = request.url.replace(request.url_root+'test_header_error_on_key2', url)
+        new_url = url_for('update', entitlement_id=entitlement_id)
         return redirect(new_url, code=307)
 
     # test_header_error_on_licenseTimer functions
@@ -214,7 +205,7 @@ def create_app(url):
 
     @app.route('/test_header_error_on_licenseTimer/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_header_error_on_licenseTimer(entitlement_id):
-        new_url = request.url.replace(request.url_root+'test_header_error_on_licenseTimer', url)
+        new_url = url_for('update', entitlement_id=entitlement_id)
         return redirect(new_url, code=307)
 
     # test_header_error_on_licenseTimer2 functions
@@ -248,7 +239,7 @@ def create_app(url):
 
     @app.route('/test_header_error_on_licenseTimer2/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_header_error_on_licenseTimer2(entitlement_id):
-        new_url = request.url.replace(request.url_root+'test_header_error_on_licenseTimer2', url)
+        new_url = url_for('update', entitlement_id=entitlement_id)
         return redirect(new_url, code=307)
 
     # test_replay_request functions
@@ -283,7 +274,7 @@ def create_app(url):
 
     @app.route('/test_replay_request/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_replay_request(entitlement_id):
-        new_url = request.url.replace(request.url_root+'test_replay_request', url)
+        new_url = url_for('update', entitlement_id=entitlement_id)
         return redirect(new_url, code=307)
 
     ##############################################################################
@@ -758,7 +749,7 @@ def create_app(url):
 
     @app.route('/test_api_retry/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_api_retry(entitlement_id):
-        new_url = request.url.replace(request.url_root+'test_api_retry', url)
+        new_url = url_for('update', entitlement_id=entitlement_id)
         return redirect(new_url, code=307)
 
     # test_long_to_short_retry_switch_on_authentication functions
@@ -800,7 +791,7 @@ def create_app(url):
 
     @app.route('/test_long_to_short_retry_switch_on_authentication/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_long_to_short_retry_switch_on_authentication(entitlement_id):
-        new_url = request.url.replace(request.url_root+'test_long_to_short_retry_switch_on_authentication', url)
+        new_url = url_for('update', entitlement_id=entitlement_id)
         return redirect(new_url, code=307)
 
     # test_long_to_short_retry_switch_on_license functions
@@ -834,7 +825,7 @@ def create_app(url):
 
     @app.route('/test_long_to_short_retry_switch_on_license/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_long_to_short_retry_switch_on_license(entitlement_id):
-        new_url = request.url.replace(request.url_root+'test_long_to_short_retry_switch_on_license', url)
+        new_url = url_for('update', entitlement_id=entitlement_id)
         return redirect(new_url, code=307)
 
     # test_api_retry_on_lost_connection functions
@@ -855,7 +846,7 @@ def create_app(url):
 
     @app.route('/test_api_retry_on_lost_connection/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_api_retry_on_lost_connection(entitlement_id):
-        new_url = request.url.replace(request.url_root+'test_api_retry_on_lost_connection', url)
+        new_url = url_for('update', entitlement_id=entitlement_id)
         return redirect(new_url, code=307)
 
     # test_thread_retry_on_lost_connection functions
@@ -886,7 +877,7 @@ def create_app(url):
 
     @app.route('/test_thread_retry_on_lost_connection/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_thread_retry_on_lost_connection(entitlement_id):
-        new_url = request.url.replace(request.url_root+'test_thread_retry_on_lost_connection', url)
+        new_url = url_for('update', entitlement_id=entitlement_id)
         return redirect(new_url, code=307)
 
     ##############################################################################
@@ -908,7 +899,7 @@ def create_app(url):
 
     @app.route('/test_http_header_api_version/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_http_header_api_version(entitlement_id):
-        new_url = request.url.replace(request.url_root+'test_http_header_api_version', url)
+        new_url = url_for('update', entitlement_id=entitlement_id)
         return redirect(new_url, code=307)
 
     ##############################################################################
@@ -982,7 +973,7 @@ def create_app(url):
 
     @app.route('/test_topic1_corrupted_metering/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_topic1_corrupted_metering(entitlement_id):
-        new_url = request.url.replace(request.url_root+'test_topic1_corrupted_metering', url)
+        new_url = url_for('update', entitlement_id=entitlement_id)
         return redirect(new_url, code=307)
 
     ##############################################################################
@@ -1002,7 +993,7 @@ def create_app(url):
 
     @app.route('/test_improve_coverage_ws_client/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_improve_coverage_ws_client(entitlement_id):
-        new_url = request.url.replace(request.url_root+'test_improve_coverage_ws_client', url)
+        new_url = url_for('update', entitlement_id=entitlement_id)
         return redirect(new_url, code=307)
 
     # test_improve_coverage_setLicense functions
@@ -1090,7 +1081,7 @@ def create_app(url):
 
     @app.route('/test_valid_derived_product/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_valid_derived_product(entitlement_id):
-        new_url = request.url.replace(request.url_root+'test_valid_derived_product', url)
+        new_url = url_for('update', entitlement_id=entitlement_id)
         return redirect(new_url, code=307)
     """
     ##############################################################################
