@@ -81,7 +81,10 @@ def create_app(url):
         print('============= CREATE ===========', new_url)
         response = _post(new_url, json=request.get_json(), headers=request.headers)
         print('response=', str(response))
-        return Response(response)
+        ret = Response(response, response.status_code)
+        print('ret=', ret.status_code, ret.text)
+        return response
+        return Response(response, response.status_code)
 
     @app.route('/test_authentication_bad_token/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_authentication_bad_token(entitlement_id):
