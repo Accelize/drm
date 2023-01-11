@@ -134,8 +134,7 @@ def create_app(url):
 
     @app.route('/test_header_error_on_key/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_header_error_on_key(entitlement_id):
-        new_url = url_for('update', entitlement_id=entitlement_id)
-        return redirect(new_url, code=307)
+        return redirect(url_for('update', entitlement_id=entitlement_id), code=307)
 
     # test_header_error_on_key2 functions
     @app.route('/test_header_error_on_key2/auth/token', methods=['GET', 'POST'])
@@ -164,8 +163,7 @@ def create_app(url):
 
     @app.route('/test_header_error_on_key2/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_header_error_on_key2(entitlement_id):
-        new_url = url_for('update', entitlement_id=entitlement_id)
-        return redirect(new_url, code=307)
+        return redirect(url_for('update', entitlement_id=entitlement_id), code=307)
 
     # test_header_error_on_licenseTimer functions
     @app.route('/test_header_error_on_licenseTimer/auth/token', methods=['GET', 'POST'])
@@ -197,8 +195,7 @@ def create_app(url):
 
     @app.route('/test_header_error_on_licenseTimer/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_header_error_on_licenseTimer(entitlement_id):
-        new_url = url_for('update', entitlement_id=entitlement_id)
-        return redirect(new_url, code=307)
+        return redirect(url_for('update', entitlement_id=entitlement_id), code=307)
 
     # test_header_error_on_licenseTimer2 functions
     @app.route('/test_header_error_on_licenseTimer2/auth/token', methods=['GET', 'POST'])
@@ -230,8 +227,7 @@ def create_app(url):
 
     @app.route('/test_header_error_on_licenseTimer2/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_header_error_on_licenseTimer2(entitlement_id):
-        new_url = url_for('update', entitlement_id=entitlement_id)
-        return redirect(new_url, code=307)
+        return redirect(url_for('update', entitlement_id=entitlement_id), code=307)
 
     # test_replay_request functions
     @app.route('/test_replay_request/auth/token', methods=['GET', 'POST'])
@@ -264,8 +260,7 @@ def create_app(url):
 
     @app.route('/test_replay_request/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_replay_request(entitlement_id):
-        new_url = url_for('update', entitlement_id=entitlement_id)
-        return redirect(new_url, code=307)
+        return redirect(url_for('update', entitlement_id=entitlement_id), code=307)
 
     ##############################################################################
     # test_async_health.py
@@ -729,8 +724,7 @@ def create_app(url):
 
     @app.route('/test_api_retry/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_api_retry(entitlement_id):
-        new_url = url_for('update', entitlement_id=entitlement_id)
-        return redirect(new_url, code=307)
+        return redirect(url_for('update', entitlement_id=entitlement_id), code=307)
 
     # test_long_to_short_retry_switch_on_authentication functions
     @app.route('/test_long_to_short_retry_switch_on_authentication/auth/token', methods=['GET', 'POST'])
@@ -771,8 +765,7 @@ def create_app(url):
 
     @app.route('/test_long_to_short_retry_switch_on_authentication/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_long_to_short_retry_switch_on_authentication(entitlement_id):
-        new_url = url_for('update', entitlement_id=entitlement_id)
-        return redirect(new_url, code=307)
+        return redirect(url_for('update', entitlement_id=entitlement_id), code=307)
 
     # test_long_to_short_retry_switch_on_license functions
     @app.route('/test_long_to_short_retry_switch_on_license/auth/token', methods=['GET', 'POST'])
@@ -804,8 +797,7 @@ def create_app(url):
 
     @app.route('/test_long_to_short_retry_switch_on_license/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_long_to_short_retry_switch_on_license(entitlement_id):
-        new_url = url_for('update', entitlement_id=entitlement_id)
-        return redirect(new_url, code=307)
+        return redirect(url_for('update', entitlement_id=entitlement_id), code=307)
 
     # test_api_retry_on_lost_connection functions
     @app.route('/test_api_retry_on_lost_connection/auth/token', methods=['GET', 'POST'])
@@ -824,8 +816,7 @@ def create_app(url):
 
     @app.route('/test_api_retry_on_lost_connection/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_api_retry_on_lost_connection(entitlement_id):
-        new_url = url_for('update', entitlement_id=entitlement_id)
-        return redirect(new_url, code=307)
+        return redirect(url_for('update', entitlement_id=entitlement_id), code=307)
 
     # test_thread_retry_on_lost_connection functions
     @app.route('/test_thread_retry_on_lost_connection/auth/token', methods=['GET', 'POST'])
@@ -854,8 +845,7 @@ def create_app(url):
 
     @app.route('/test_thread_retry_on_lost_connection/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_thread_retry_on_lost_connection(entitlement_id):
-        new_url = url_for('update', entitlement_id=entitlement_id)
-        return redirect(new_url, code=307)
+        return redirect(url_for('update', entitlement_id=entitlement_id), code=307)
 
     ##############################################################################
     # test_unittest_on_hw.py
@@ -875,8 +865,7 @@ def create_app(url):
 
     @app.route('/test_http_header_api_version/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_http_header_api_version(entitlement_id):
-        new_url = url_for('update', entitlement_id=entitlement_id)
-        return redirect(new_url, code=307)
+        return redirect(url_for('update', entitlement_id=entitlement_id), code=307)
 
     ##############################################################################
     # test_lgdn_topics.py
@@ -947,8 +936,7 @@ def create_app(url):
 
     @app.route('/test_topic1_corrupted_metering/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_topic1_corrupted_metering(entitlement_id):
-        new_url = url_for('update', entitlement_id=entitlement_id)
-        return redirect(new_url, code=307)
+        return redirect(url_for('update', entitlement_id=entitlement_id), code=307)
 
     ##############################################################################
     # test_improve_coverage.py
@@ -966,8 +954,7 @@ def create_app(url):
 
     @app.route('/test_improve_coverage_ws_client/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_improve_coverage_ws_client(entitlement_id):
-        new_url = url_for('update', entitlement_id=entitlement_id)
-        return redirect(new_url, code=307)
+        return redirect(url_for('update', entitlement_id=entitlement_id), code=307)
 
     # test_improve_coverage_setLicense functions
     @app.route('/test_improve_coverage_setLicense/auth/token', methods=['GET', 'POST'])
@@ -1051,8 +1038,7 @@ def create_app(url):
 
     @app.route('/test_valid_derived_product/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_valid_derived_product(entitlement_id):
-        new_url = url_for('update', entitlement_id=entitlement_id)
-        return redirect(new_url, code=307)
+        return redirect(url_for('update', entitlement_id=entitlement_id), code=307)
     """
     ##############################################################################
     # test_ws_timeout.py
