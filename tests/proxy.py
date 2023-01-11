@@ -77,13 +77,19 @@ def create_app(url):
 
     @app.route('/test_authentication_bad_token/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
     def create__test_authentication_bad_token(product_id):
-        new_url = url_for('create', product_id=product_id)
-        return redirect(new_url, code=307)
+        new_url = url + f'/customer/product/{product_id}/entitlement_session'
+        print('============= CREATE ===========', new_url)
+        response = _post(new_url, json=request.get_json(), headers=request.headers)
+        print('response=', str(response))
+        return Response(response)
 
     @app.route('/test_authentication_bad_token/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_authentication_bad_token(entitlement_id):
-        new_url = url_for('update', entitlement_id=entitlement_id)
-        return redirect(new_url, code=307)
+        new_url = url + f'/customer/entitlement_session/{entitlement_id}'
+        print('============= UDPATE ===========', new_url)
+        response = _patch(new_url, json=request.get_json(), headers=request.headers)
+        print('response=', str(response))
+        return Response(response)
 
     # test_authentication_token_renewal
     @app.route('/test_authentication_token_renewal/auth/token', methods=['GET', 'POST'])
