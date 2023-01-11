@@ -45,14 +45,20 @@ def create_app(url):
         new_url = request.url.replace(request.url_root, url+'/')
         return redirect(new_url, code=307)
 
-    @app.route('/customer/product/<product_id>/entitlement_session', methods=['GET', 'POST', 'PATCH'])
+    @app.route('/customer/product/<product_id>/entitlement_session', methods=['POST', 'PATCH'])
     def create(product_id):
+        new_url = request.url.replace(request.url_root+'test_health_counter_is_reset_on_new_session', url)
+        request_json = request.get_json()
+        response = _post(new_url, json=request.get_json(), headers=request.headers)
+        return Response(response)
+        '''
         request_json = request.get_json()
         new_url = request.url.replace(request.url_root, url+'/')
         response = _post(new_url, json=request_json, headers=request.headers)
         return Response(response)
+        '''
 
-    @app.route('/customer/entitlement_session/<entitlement_id>', methods=['GET', 'POST', 'PATCH'])
+    @app.route('/customer/entitlement_session/<entitlement_id>', methods=['POST', 'PATCH'])
     def update(entitlement_id):
         request_json = request.get_json()
         new_url = request.url.replace(request.url_root, url+'/')
