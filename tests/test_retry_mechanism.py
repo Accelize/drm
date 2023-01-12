@@ -150,20 +150,18 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
     assert async_cb.was_called
     assert async_cb.errcode == accelize_drm.exceptions.DRMWSTimedOut.error_code
     assert search(r'Timeout on Authentication request after', async_cb.message, IGNORECASE)
-    context = get_context()
+    assert get_context('data')
     data_list = context['data']
-    data = data_list.pop(0)
-    data = data_list.pop(-1)
+    print('data_list=', data_list)
     assert len(data_list) >= 3
-    data = data_list.pop(0)
-    prev_lic = parser.parse(data[1])
-    for start, end in data_list:
-        lic_delta = int((parser.parse(start) - prev_lic).total_seconds())
-        prev_lic = parser.parse(end)
-        if lic_delta > retryShortPeriod:
-            assert (retryLongPeriod-1) <= lic_delta <= retryLongPeriod
+    prev_data = data_list.pop(0)
+    for data in data_list:
+        delta = int(data - prev_data).total_seconds())
+        prev_data = end
+        if delta > retryShortPeriod:
+            assert (retryLongPeriod-1) <= delta <= retryLongPeriod
         else:
-            assert (retryShortPeriod-1) <= lic_delta <= retryShortPeriod
+            assert (retryShortPeriod-1) <= delta <= retryShortPeriod
 
 
 @pytest.mark.no_parallel
@@ -216,11 +214,11 @@ def test_long_to_short_retry_switch_on_license(accelize_drm, conf_json, cred_jso
     assert len(data_list) >= 3
     data = data_list.pop(0)
     assert data[0] == 'running'
-    prev_lic = parser.parse(data[2])
+    prev_lic = data[2]
     for type, start, end in data_list:
         assert type == 'running'
-        lic_delta = int((parser.parse(start) - prev_lic).total_seconds())
-        prev_lic = parser.parse(end)
+        lic_delta = int((start - prev_lic).total_seconds())
+        prev_lic = end
         if lic_delta > retryShortPeriod:
             assert (retryLongPeriod-1) <= lic_delta <= retryLongPeriod
         else:
@@ -272,13 +270,13 @@ def test_api_retry_on_lost_connection(accelize_drm, conf_json, cred_json, async_
     assert len(attempts_list) == nb_attempts_expected
     assert sorted(list(attempts_list)) == list(range(1,nb_attempts + 1))
     # Check time between each call
-    data = get_context()['data']
+    data = get_context('data')
     assert len(data) == nb_attempts_expected
-    prev_time = parser.parse(data.pop(0))
+    prev_time = data.pop(0)
     for time in data:
-        delta = int((parser.parse(time) - prev_time).total_seconds())
+        delta = int((time - prev_time).total_seconds())
         assert retry_timeout + retry_sleep - 1 <= delta <= retry_timeout + retry_sleep
-        prev_time = parser.parse(time)
+        prev_time = time
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSTimedOut.error_code, HTTP_TIMEOUT_ERR_MSG)
     async_cb.reset()
     logfile.remove()

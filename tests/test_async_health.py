@@ -168,10 +168,10 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
     data_list = get_context()['data']
     assert len(data_list) >= nb_health + 1
     for start, end in data_list[:-2]:
-        delta = int((parser.parse(end) - parser.parse(start)).total_seconds())
+        delta = int((end - start).total_seconds())
         assert health_period <= delta <= health_period + 1
     start, end = data_list[-1]
-    delta = int((parser.parse(end) - parser.parse(start)).total_seconds())
+    delta = int((end - start).total_seconds())
     assert health_period+3 <= delta <= health_period+4
     log_content = logfile.read()
     assert findall(f"Found parameter 'health_period' of type Integer: return its value {health_period}", log_content)
@@ -225,7 +225,7 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
     assert len(data_list) >= (nb_attempts + 2)
     id_n_1 = ''
     for id, start, end in data_list:
-        delta = int((parser.parse(end) - parser.parse(start)).total_seconds())
+        delta = int((end - start).total_seconds())
         if id_n_1 == '' or id_n_1 != id:
             assert health_period <= delta <= health_period + 1
         else:
@@ -287,15 +287,15 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json,
     last_idx, ref_start, ref_end = data_list.pop(0)
     retry_list = list()
     for idx, start, end in data_list:
-        delta = int((parser.parse(end) - parser.parse(start)).total_seconds())
+        delta = int((end - start).total_seconds())
         assert health_retry_sleep <= delta <= health_retry_sleep + 1
         if last_idx != idx:
-            delta = int((parser.parse(ref_end) - parser.parse(ref_start)).total_seconds())
+            delta = int((ref_end - ref_start).total_seconds())
             retry_list.append(delta)
             ref_start = start
         ref_end = end
         last_idx = idx
-    delta = int((parser.parse(ref_end) - parser.parse(ref_start)).total_seconds())
+    delta = int((ref_end - ref_start).total_seconds())
     retry_list.append(delta)
     ref_delta = health_retry-1
     for d in retry_list:
@@ -358,11 +358,11 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json,
     ref_start = None
     retry_list = list()
     for id, start, end in data_list:
-        delta = int((parser.parse(end) - parser.parse(start)).total_seconds())
+        delta = int((end - start).total_seconds())
         if last_idx != id:
             assert health_period <= delta <= health_period + 2
             if ref_start is not None:
-                delta = int((parser.parse(ref_end) - parser.parse(ref_start)).total_seconds())
+                delta = int((ref_end - ref_start).total_seconds())
                 retry_list.append(delta)
             ref_start = end
         else:
@@ -371,7 +371,7 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json,
             assert health_retry_sleep <= delta <= health_retry_sleep + 1
         ref_end = end
         last_idx = id
-    delta = int((parser.parse(ref_end) - parser.parse(ref_start)).total_seconds())
+    delta = int((ref_end - ref_start).total_seconds())
     retry_list.append(delta)
     ref_delta = health_retry-1
     for d in retry_list:

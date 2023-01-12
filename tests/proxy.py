@@ -766,7 +766,7 @@ def create_app(url):
     @app.route('/test_long_to_short_retry_switch_on_authentication/auth/token', methods=['GET', 'POST'])
     def gettoken__test_long_to_short_retry_switch_on_authentication():
         global context, lock
-        start = str(datetime.now())
+        start = datetime.now()
         new_url = request.url.replace(request.url_root+'test_long_to_short_retry_switch_on_authentication', url)
         with lock:
             if 'cnt' not in context:
@@ -778,14 +778,12 @@ def create_app(url):
                 response_json['expires_in'] = context['expires_in']
                 context['response_json'] = dumps(response_json)
                 response._content = dumps(response_json).encode('utf-8')
-                context['data'].append(str(datetime.now())
+                context['data'].append(datetime.now())
                 return Response(response, response.status_code)
             else:
                 context['cnt'] += 1
-                context['data'].append(str(datetime.now())
+                context['data'].append(datetime.now())
                 return Response('Request timeout', 408)
-            finally:
-
 
     @app.route('/test_long_to_short_retry_switch_on_authentication/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
     def create__test_long_to_short_retry_switch_on_authentication(product_id):
@@ -810,7 +808,7 @@ def create_app(url):
     @app.route('/test_long_to_short_retry_switch_on_license/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
     def create__test_long_to_short_retry_switch_on_license(product_id):
         global context, lock
-        start = str(datetime.now())
+        start = datetime.now()
         new_url = request.url.replace(request.url_root+'test_long_to_short_retry_switch_on_license', url)
         request_json = request.get_json()
         request_type = request_json['request']
@@ -828,7 +826,7 @@ def create_app(url):
                     return ({'error':'Test retry mechanism'}, 408)
             finally:
                 context['cnt'] += 1
-                context['data'].append( (request_type, start, str(datetime.now())) )
+                context['data'].append( (request_type, start, datetime.now()) )
 
     @app.route('/test_long_to_short_retry_switch_on_license/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_long_to_short_retry_switch_on_license(entitlement_id):
@@ -843,7 +841,7 @@ def create_app(url):
     @app.route('/test_api_retry_on_lost_connection/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
     def create__test_api_retry_on_lost_connection(product_id):
         global context, lock
-        start = str(datetime.now())
+        start = datetime.now()
         with lock:
             sleep_s = context['sleep']
             context['data'].append(start)
@@ -1091,7 +1089,7 @@ def create_app(url):
     @app.route('/test_request_timeout/auth/token', methods=['GET', 'POST'])
     def gettoken__test_request_timeout():
         global context, lock
-        start = str(datetime.now())
+        start = datetime.now()
         with lock:
             sleep_s = context['sleep']
         sleep( sleep_s)
