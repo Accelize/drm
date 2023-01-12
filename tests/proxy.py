@@ -520,7 +520,7 @@ def create_app(url):
                 indent=4, sort_keys=True), response.status_code, response.text)
         with lock:
             context['cnt_license'] = 1
-            context['start'] = datetime.now()
+            context['segment_idx'] = 0
             response_json = response.json()
             response_json['drm_config']['health_period'] = context['health_period']
             response_json['drm_config']['health_retry'] = context['health_retry']
@@ -552,9 +552,13 @@ def create_app(url):
                     response._content = dumps(response_json).encode('utf-8')
             return Response(response, response.status_code)
         # is_health = True
-        sgmt_idx = request_json['drm_config']['metering_file'][24:32]
-        context['data'].append( (sgmt_idx, context['start'], datetime.now()) )
-        context['start'] = datetime.now()
+        sgmt_idx = int(request_json['drm_config']['metering_file'][24:32], 16)
+        with lock:
+            if context['segment_idx'] == sgmt_idx:
+                context['data'].append( (sgmt_idx, context['start'], datetime.now()) )
+            else:
+                context['segment_idx'] = sgmt_idx
+            context['start'] = datetime.now()
         return Response('Timeout', 408)
 
     # test_health_retry_sleep_modification functions

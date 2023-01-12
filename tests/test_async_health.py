@@ -257,8 +257,8 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json,
 
     # Set initial context on the live server
     health_period = 2
-    health_retry_step = 3
     health_retry = 3
+    health_retry_step = 3
     health_retry_sleep = 1
     context = {'data': list(),
            'health_period': health_period,
@@ -284,21 +284,18 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json,
     # Analyze results
     data_list = get_context()['data']
     assert len(data_list) >= 2
-    last_id = ''
+    last_idx = ''
     ref_start = None
     retry_list = list()
-    for id, start, end in data_list:
+    for idx, start, end in data_list:
         delta = int((parser.parse(end) - parser.parse(start)).total_seconds())
-        if last_id != id:
-            assert health_period <= delta <= health_period + 2
-            if ref_start is not None:
-                delta = int((parser.parse(ref_end) - parser.parse(ref_start)).total_seconds())
-                retry_list.append(delta)
-            ref_start = end
-        else:
-            assert health_retry_sleep <= delta <= health_retry_sleep + 1
+        assert health_retry_sleep <= delta <= health_retry_sleep + 1
+        if last_idx != idx:
+            delta = int((parser.parse(ref_end) - parser.parse(ref_start)).total_seconds())
+            retry_list.append(delta)
+            ref_start = start
         ref_end = end
-        last_id = id
+        last_idx = idx
     delta = int((parser.parse(ref_end) - parser.parse(ref_start)).total_seconds())
     retry_list.append(delta)
     ref_delta = health_retry-1
@@ -358,12 +355,12 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json,
     # Analyze results
     data_list = get_context()['data']
     assert len(data_list) >= 2
-    last_id = ''
+    last_idx = ''
     ref_start = None
     retry_list = list()
     for id, start, end in data_list:
         delta = int((parser.parse(end) - parser.parse(start)).total_seconds())
-        if last_id != id:
+        if last_idx != id:
             assert health_period <= delta <= health_period + 2
             if ref_start is not None:
                 delta = int((parser.parse(ref_end) - parser.parse(ref_start)).total_seconds())
@@ -374,7 +371,7 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json,
                 health_retry_sleep += health_retry_sleep_step
             assert health_retry_sleep <= delta <= health_retry_sleep + 1
         ref_end = end
-        last_id = id
+        last_idx = id
     delta = int((parser.parse(ref_end) - parser.parse(ref_start)).total_seconds())
     retry_list.append(delta)
     ref_delta = health_retry-1
