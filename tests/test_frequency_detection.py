@@ -6,8 +6,6 @@ import pytest
 from time import sleep
 from re import search
 
-from tests.conftest import wait_func_true
-
 
 def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_json, async_handler):
     """Test errors when wrong frequency is given to DRM Controller Constructor"""

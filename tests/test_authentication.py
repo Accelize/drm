@@ -12,7 +12,7 @@ from datetime import datetime
 from flask import request as _request
 
 from tests.proxy import get_context, set_context
-from tests.conftest import wait_func_true
+from tests.conftest import wait_until_true
 
 @pytest.mark.no_parallel
 def test_authentication_bad_token(accelize_drm, conf_json, cred_json,
@@ -122,7 +122,7 @@ def test_authentication_token_renewal(accelize_drm, conf_json, cred_json,
         start = datetime.now()
         lic_duration = drm_manager.get('license_duration')
         token_string = drm_manager.get('token_string')
-        wait_func_true(lambda: drm_manager.get('token_string') != token_string, 2*lic_duration)
+        wait_until_true(lambda: drm_manager.get('token_string') != token_string, 2*lic_duration)
         assert drm_manager.get('token_string') != token_string
     log_content = logfile.read()
     assert len(findall(r'Starting Authentication request', log_content)) >= 2

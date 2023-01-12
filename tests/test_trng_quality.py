@@ -13,7 +13,6 @@ from time import sleep, time
 from json import loads, dumps
 from datetime import datetime, timedelta
 from random import randrange
-from tests.conftest import wait_func_true
 
 
 SAMPLES_DUPLICATE_THRESHOLD = 2

@@ -13,7 +13,6 @@ from requests import get, post
 from os import remove
 from os.path import realpath, isfile
 
-from tests.conftest import wait_func_true
 from tests.proxy import get_context, set_context, get_proxy_error
 
 

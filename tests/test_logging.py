@@ -10,7 +10,7 @@ from time import time
 from shutil import rmtree
 from random import randrange
 
-from tests.conftest import wait_func_true
+from tests.conftest import wait_until_true
 
 
 LOG_FORMAT_SHORT = "[%^%=8l%$] %-6t, %v"
@@ -429,7 +429,7 @@ def test_log_file_on_existing_directory(accelize_drm, conf_json, cred_json, asyn
                 async_cb.callback
             ) as drm_manager:
         pass
-    wait_func_true(lambda: isfile(log_path), 10)
+    wait_until_true(lambda: isfile(log_path), 10)
     if isdir(log_dir):
         rmtree(log_dir)
 
@@ -459,7 +459,7 @@ def test_log_file_directory_creation(accelize_drm, conf_json, cred_json, async_h
                     async_cb.callback
                 ) as drm_manager:
             pass
-        wait_func_true(lambda: isfile(log_path), 10)
+        wait_until_true(lambda: isfile(log_path), 10)
     finally:
         if isdir(log_dir):
             rmtree(log_dir)
@@ -484,7 +484,7 @@ def test_log_file_without_credential_data_in_debug(accelize_drm, conf_json, cred
             ) as drm_manager:
         drm_manager.activate()
         license_duration = drm_manager.get('license_duration')
-        wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, license_duration)
+        wait_until_true(lambda: drm_manager.get('num_license_loaded') == 2, license_duration)
     log_content = logfile.read()
     assert not search(cred_json['client_secret'], log_content)
     async_cb.assert_NoError()

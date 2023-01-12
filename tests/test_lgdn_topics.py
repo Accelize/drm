@@ -10,7 +10,7 @@ from re import match
 from flask import request as _request
 from datetime import datetime, timedelta
 
-from tests.conftest import wait_deadline, wait_func_true
+from tests.conftest import wait_deadline, wait_until_true
 from tests.proxy import get_context, set_context
 
 
@@ -49,7 +49,7 @@ def test_topic0_corrupted_segment_index(accelize_drm, conf_json, cred_json,
         assert get_context() == context
 
         drm_manager.activate()
-        wait_func_true(lambda: get_context()['error'], timeout=60)
+        wait_until_true(lambda: get_context()['error'], timeout=60)
         drm_manager.deactivate()
     async_cb.assert_NoError()
 
@@ -328,7 +328,7 @@ def test_run_for_a_period_of_time(accelize_drm, conf_json, cred_json, async_hand
         drm_manager.activate()
         assert drm_manager.get('license_status')
         try:
-            wait_func_true(lambda: not drm_manager.get('license_status'), timeout=period, sleep_time=1)
+            wait_until_true(lambda: not drm_manager.get('license_status'), timeout=period, sleep_time=1)
         except RuntimeError:
             pass
         drm_manager.deactivate()

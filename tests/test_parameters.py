@@ -9,7 +9,7 @@ from re import match, search, finditer, IGNORECASE
 from time import sleep, time
 from random import choice
 
-from tests.conftest import wait_func_true
+from tests.conftest import wait_until_true
 
 
 MAILBOX_SIZE = 14
@@ -1044,7 +1044,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         ) as drm_manager:
         assert drm_manager.get('host_data') is None
         drm_manager.activate()
-        wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, drm_manager.get('license_duration'))
+        wait_until_true(lambda: drm_manager.get('num_license_loaded') == 2, drm_manager.get('license_duration'))
         assert type(drm_manager.get('host_data')) == dict
         assert len(drm_manager.get('host_data'))
         with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:

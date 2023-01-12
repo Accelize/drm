@@ -9,8 +9,6 @@ from datetime import datetime, timedelta
 from re import search, findall
 from os.path import realpath, isfile
 
-from tests.conftest import wait_deadline, wait_func_true
-
 
 @pytest.mark.cosim
 def test_hybrid_fast_start_stop(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):

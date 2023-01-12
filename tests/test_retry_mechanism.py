@@ -15,7 +15,7 @@ from flask import request as _request
 from dateutil import parser
 from math import ceil
 
-from tests.conftest import wait_func_true, HTTP_TIMEOUT_ERR_MSG
+from tests.conftest import wait_until_true, HTTP_TIMEOUT_ERR_MSG
 from tests.proxy import get_context, set_context
 
 
@@ -137,21 +137,22 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
     set_context(context)
     assert get_context() == context
 
-    with pytest.raises(accelize_drm.exceptions.DRMWSTimedOut) as excinfo:
-        accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+        drm_manager.activate()
+        lic_duration = drm_manager.get('license_duration')
+        wait_until_true(lambda: return get_context('exit'), lic_duration)
     assert async_cb.was_called
     assert async_cb.errcode == accelize_drm.exceptions.DRMWSTimedOut.error_code
     assert search(r'Timeout on Authentication request after', async_cb.message, IGNORECASE)
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSTimedOut.error_code
-    assert search(r'Timeout on License request after (\d+) attempts', str(excinfo.value))
     async_cb.reset()
     log_content = logfile.read()
+
     # Analyze retry periods
     assert get_context('data')
     data_list = context['data']
@@ -205,7 +206,7 @@ def test_long_to_short_retry_switch_on_license(accelize_drm, conf_json, cred_jso
             ) as drm_manager:
         drm_manager.activate()
         lic_duration = drm_manager.get('license_duration')
-        wait_func_true(lambda: async_cb.was_called,
+        wait_until_true(lambda: async_cb.was_called,
                     timeout= lic_duration + 2*license_period_second)
         drm_manager.deactivate()
     assert async_cb.was_called
@@ -329,7 +330,7 @@ def test_thread_retry_on_lost_connection(accelize_drm, conf_json, cred_json, asy
                 async_cb.callback
             ) as drm_manager:
         drm_manager.activate()
-        wait_func_true(lambda: async_cb.was_called,
+        wait_until_true(lambda: async_cb.was_called,
                 timeout=licDuration*2)
         drm_manager.deactivate()
     assert async_cb.was_called

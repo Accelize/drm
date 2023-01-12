@@ -6,7 +6,7 @@ import pytest
 from datetime import datetime
 from re import search, match, IGNORECASE
 
-import tests.conftest as conftest
+from tests.conftest import wait_until_true
 
 
 def run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_handler,
@@ -59,7 +59,7 @@ def run_test_on_design(accelize_drm, design_name, conf_json, cred_json, async_ha
         activators.generate_coin()
         activators.check_coin(drm_manager.get('metered_data'))
         # Wait until 2 licenses are provisioned
-        conftest.wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, lic_duration)
+        wait_until_true(lambda: drm_manager.get('num_license_loaded') == 2, lic_duration)
         activators.autotest(is_activated=True)
         activators.generate_coin()
         activators.check_coin(drm_manager.get('metered_data'))

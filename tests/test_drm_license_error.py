@@ -11,7 +11,7 @@ from json import loads, dumps
 from flask import request as _request
 from requests import get, post
 from tests.proxy import get_context, set_context, update_context
-from tests.conftest import wait_deadline, wait_func_true
+from tests.conftest import wait_deadline, wait_until_true
 
 
 @pytest.mark.no_parallel
@@ -211,7 +211,7 @@ def test_replay_request(accelize_drm, conf_json, cred_json, async_handler,
         assert drm_manager.get('license_status')
         activators.autotest(is_activated=True)
         lic_duration = drm_manager.get('license_duration')
-        wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, lic_duration)
+        wait_until_true(lambda: drm_manager.get('num_license_loaded') == 2, lic_duration)
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
@@ -226,7 +226,7 @@ def test_replay_request(accelize_drm, conf_json, cred_json, async_handler,
         activators.autotest(is_activated=True)
         lic_duration = drm_manager.get('license_duration')
         sleep(lic_duration)
-        wait_func_true(lambda: async_cb.was_called, lic_duration)
+        wait_until_true(lambda: async_cb.was_called, lic_duration)
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
         drm_manager.deactivate()

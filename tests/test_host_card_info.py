@@ -7,7 +7,7 @@ from os import environ, getcwd, walk
 from time import sleep
 from re import match, compile
 
-from tests.conftest import wait_func_true
+from tests.conftest import wait_until_true
 
 
 
@@ -49,7 +49,7 @@ def test_host_data_verbosity(accelize_drm, conf_json, cred_json, async_handler,
         assert drm_manager.get('host_data_verbosity') == 0
         drm_manager.activate()
         license_duration = drm_manager.get('license_duration')
-        wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, license_duration)
+        wait_until_true(lambda: drm_manager.get('num_license_loaded') == 2, license_duration)
         data_full = drm_manager.get('host_data')
         assert type(data_full) == dict
         assert len(str(data_full))
@@ -68,7 +68,7 @@ def test_host_data_verbosity(accelize_drm, conf_json, cred_json, async_handler,
         assert drm_manager.get('host_data_verbosity') == 1
         drm_manager.activate()
         license_duration = drm_manager.get('license_duration')
-        wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, license_duration)
+        wait_until_true(lambda: drm_manager.get('num_license_loaded') == 2, license_duration)
         data_partial = drm_manager.get('host_data')
         assert type(data_partial) == dict
         assert len(str(data_partial))
@@ -88,7 +88,7 @@ def test_host_data_verbosity(accelize_drm, conf_json, cred_json, async_handler,
         assert drm_manager.get('host_data_verbosity') == 2
         drm_manager.activate()
         license_duration = drm_manager.get('license_duration')
-        wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, license_duration)
+        wait_until_true(lambda: drm_manager.get('num_license_loaded') == 2, license_duration)
         data_none = drm_manager.get('host_data')
         assert type(data_none) == type(None)
 
@@ -119,7 +119,7 @@ def test_diagnostics_full_format(accelize_drm, conf_json, cred_json, async_handl
         assert drm_manager.get('host_data_verbosity') == 0
         drm_manager.activate()
         license_duration = drm_manager.get('license_duration')
-        wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, license_duration)
+        wait_until_true(lambda: drm_manager.get('num_license_loaded') == 2, license_duration)
         data = drm_manager.get('host_data')
     assert 'drm_library_version' in data
     assert 'os_version' in data
@@ -185,7 +185,7 @@ def test_diagnostics_partial_format(accelize_drm, conf_json, cred_json, async_ha
         assert drm_manager.get('host_data_verbosity') == 1
         drm_manager.activate()
         license_duration = drm_manager.get('license_duration')
-        wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, license_duration)
+        wait_until_true(lambda: drm_manager.get('num_license_loaded') == 2, license_duration)
         data = drm_manager.get('host_data')
     assert 'drm_library_version' in data
     assert 'os_version' in data
@@ -245,7 +245,7 @@ def test_csp_format(accelize_drm, conf_json, cred_json, async_handler,
         ) as drm_manager:
         drm_manager.activate()
         license_duration = drm_manager.get('license_duration')
-        wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, license_duration)
+        wait_until_true(lambda: drm_manager.get('num_license_loaded') == 2, license_duration)
         data = drm_manager.get('host_data')
         assert drm_manager.get('host_data_verbosity') == 1
         data = drm_manager.get('host_data')

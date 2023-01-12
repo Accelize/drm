@@ -7,7 +7,7 @@ from re import match, search, finditer, findall, MULTILINE, IGNORECASE
 from datetime import datetime, timedelta
 from flask import request as _request
 
-from tests.conftest import wait_func_true, HTTP_TIMEOUT_ERR_MSG
+from tests.conftest import HTTP_TIMEOUT_ERR_MSG
 from tests.proxy import get_context, set_context
 
 

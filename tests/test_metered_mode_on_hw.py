@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from re import search, findall
 from os.path import realpath, isfile
 
-from tests.conftest import wait_deadline, wait_func_true
+from tests.conftest import wait_deadline, wait_until_true
 
 
 @pytest.mark.minimum
@@ -143,7 +143,7 @@ def test_metered_from_new_objects(accelize_drm, conf_json, conf_json_second,
         activators.generate_coin()
         activators.check_coin(drm_manager1.get('metered_data'))
         assert sum(drm_manager1.get('metered_data')) != 0
-        wait_func_true(lambda: drm_manager1.get('num_license_loaded') == 2, license_duration)
+        wait_until_true(lambda: drm_manager1.get('num_license_loaded') == 2, license_duration)
         drm_manager1.deactivate()
         assert not drm_manager1.get('session_status')
         assert not drm_manager1.get('license_status')
@@ -288,7 +288,7 @@ def test_metering_limits_on_licensing_thread(accelize_drm, conf_json, cred_json,
         assert drm_manager.get('license_status')
         assert sum(drm_manager.get('metered_data')) == 0
         license_duration = drm_manager.get('license_duration')
-        wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, license_duration)
+        wait_until_true(lambda: drm_manager.get('num_license_loaded') == 2, license_duration)
         activators[0].generate_coin(1000)
         activators.check_coin(drm_manager.get('metered_data'))
         # Wait right before lock
@@ -422,19 +422,19 @@ def test_heart_beat(accelize_drm, conf_json, cred_json, async_handler, log_file_
         assert drm_manager.get('license_status')
         activators.autotest(is_activated=True)
         license_duration = drm_manager.get('license_duration')
-        wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, license_duration)
+        wait_until_true(lambda: drm_manager.get('num_license_loaded') == 2, license_duration)
         # Temporarily cut communication between Controller and activator 1
         drm_manager.set(log_message_level=2)
         drm_manager.set(log_message='Disconnecting DRM chain')
         assert print_status(True)
         act.write_register(0x38, 1)
-        wait_func_true(lambda: print_status(False), license_duration)
+        wait_until_true(lambda: print_status(False), license_duration)
         drm_manager.set(log_message='Lock detected on activator status')
         activators.autotest(is_activated=False)
         assert not drm_manager.get('license_status')
         drm_manager.set(log_message='Reconnecting DRM chain')
         act.write_register(0x38, 0)
-        wait_func_true(lambda: print_status(True), license_duration)
+        wait_until_true(lambda: print_status(True), license_duration)
         drm_manager.set(log_message='Unlock detected on activator status')
         activators.autotest(is_activated=True)
         assert drm_manager.get('license_status')
@@ -484,7 +484,7 @@ def test_session_autoclose(accelize_drm, conf_json, conf_json_second,
         activators.generate_coin()
         activators.check_coin(drm_manager1.get('metered_data'))
         assert sum(drm_manager1.get('metered_data')) != 0
-        wait_func_true(lambda: drm_manager1.get('num_license_loaded') == 2, license_duration)
+        wait_until_true(lambda: drm_manager1.get('num_license_loaded') == 2, license_duration)
         async_cb.assert_NoError()
         sleep(1)
 

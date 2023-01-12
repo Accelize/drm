@@ -1137,7 +1137,7 @@ def perform_once(test_name):
             pass
 
 
-def wait_func_true(func, timeout=None, sleep_time=1):
+def wait_until_true(func, timeout=None, sleep_time=1):
     """
     Wait until the func retursn a none 0 value
 
@@ -1350,7 +1350,7 @@ class LogFile:
         return log_param
 
     def read(self, index=0):
-        wait_func_true(lambda: not is_file_busy(self.path), 10)
+        wait_until_true(lambda: not is_file_busy(self.path), 10)
         if index == 0:
             with open(self.path, 'rt') as f:
                 log_content = f.read()

@@ -14,7 +14,7 @@ from requests import get, post
 from os import remove
 from os.path import realpath, isfile
 
-from tests.conftest import wait_deadline, wait_func_true
+from tests.conftest import wait_deadline, wait_until_true
 from tests.proxy import get_context, set_context, get_proxy_error
 
 
@@ -105,7 +105,7 @@ def test_health_period_disabled(accelize_drm, conf_json, cred_json,
         lic_duration = drm_manager.get('license_duration')
         assert drm_manager.get('health_period') == get_context()['health_period'] == health_period
         wait_deadline(start, lic_duration + 1)
-        wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, lic_duration)
+        wait_until_true(lambda: drm_manager.get('num_license_loaded') == 2, lic_duration)
         cnt_health = get_context()['cnt_health']
         assert cnt_health == drm_manager.get('health_counter')
         assert drm_manager.get('health_period') == 0
@@ -160,7 +160,7 @@ def test_health_period_modification(accelize_drm, conf_json, cred_json, async_ha
         drm_manager.activate()
         lic_duration = drm_manager.get('license_duration')
         nb_health = lic_duration // health_period
-        wait_func_true(lambda: get_context()['exit'], timeout=3*lic_duration)
+        wait_until_true(lambda: get_context()['exit'], timeout=3*lic_duration)
         drm_manager.deactivate()
     async_cb.assert_NoError()
     assert get_proxy_error() is None
@@ -216,7 +216,7 @@ def test_health_retry_disabled(accelize_drm, conf_json, cred_json, async_handler
         ) as drm_manager:
         drm_manager.activate()
         lic_duration = drm_manager.get('license_duration')
-        wait_func_true(lambda: get_context()['exit'], timeout=3*lic_duration)
+        wait_until_true(lambda: get_context()['exit'], timeout=3*lic_duration)
         drm_manager.deactivate()
     async_cb.assert_NoError()
     assert get_proxy_error() is None
@@ -277,7 +277,7 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json,
         ) as drm_manager:
         drm_manager.activate()
         lic_duration = drm_manager.get('license_duration')
-        wait_func_true(lambda: get_context()['cnt_license'] >= 4, timeout=3*lic_duration)
+        wait_until_true(lambda: get_context()['cnt_license'] >= 4, timeout=3*lic_duration)
         drm_manager.deactivate()
     async_cb.assert_NoError()
     assert get_proxy_error() is None
@@ -347,7 +347,7 @@ def test_health_retry_sleep_modification(accelize_drm, conf_json, cred_json,
         ) as drm_manager:
         drm_manager.activate()
         lic_duration = drm_manager.get('license_duration')
-        wait_func_true(lambda: get_context()['cnt_license'] >= 4, timeout=3*lic_duration)
+        wait_until_true(lambda: get_context()['cnt_license'] >= 4, timeout=3*lic_duration)
         drm_manager.deactivate()
     async_cb.assert_NoError()
     assert get_proxy_error() is None
@@ -425,7 +425,7 @@ def test_health_metering_data(accelize_drm, conf_json, cred_json, async_handler,
             cnt_health = drm.get('health_counter')
             session_id = drm.get('session_id')
             metering_data = drm.get('metered_data')
-            wait_func_true(lambda: drm.get('health_counter') > cnt_health)
+            wait_until_true(lambda: drm.get('health_counter') > cnt_health)
             assert session_id == drm.get('session_id')
             assert sum(metering_data) <= sum(drm.get('metered_data'))
 
@@ -488,7 +488,7 @@ def test_segment_index(accelize_drm, conf_json, cred_json, async_handler,
         assert drm_manager.get('health_period') == health_period
         max_base = max(health_period, lic_duration)
         min_base = min(health_period, lic_duration)
-        wait_func_true(lambda: len(get_context()['data']) >= nb_samples,
+        wait_until_true(lambda: len(get_context()['data']) >= nb_samples,
                 timeout=(max_base // (nb_samples * min_base + 1))*max_base)
         drm_manager.deactivate()
     async_cb.assert_NoError()
