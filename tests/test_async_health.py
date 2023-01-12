@@ -284,8 +284,7 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json,
     # Analyze results
     data_list = get_context()['data']
     assert len(data_list) >= 2
-    last_idx = ''
-    ref_start = None
+    last_idx, ref_start, ref_end = data_list.pop(0)
     retry_list = list()
     for idx, start, end in data_list:
         delta = int((parser.parse(end) - parser.parse(start)).total_seconds())

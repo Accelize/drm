@@ -13,22 +13,18 @@ from tests.proxy import get_context, set_context, get_proxy_error
 
 
 @pytest.mark.no_parallel
-def test_improve_coverage_ws_client(accelize_drm, conf_json, cred_json,
-                        async_handler, live_server, request):
+def test_improve_coverage_ws_client_on_code_600(accelize_drm, conf_json, cred_json,
+                        async_handler, live_server, request, log_file_factory):
     """
-    Improve coverage of the httpCode2DrmCode function
+    Improve coverage of the httpCode2DrmCode function when the server returns an error code 600
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
     conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json.save()
-
-    # Set initial context on the live server
-    error_code = 600
-    context = {'error_code':error_code}
-    set_context(context)
-    assert get_context() == context
 
     with accelize_drm.DrmManager(
             conf_json.path,
@@ -41,7 +37,39 @@ def test_improve_coverage_ws_client(accelize_drm, conf_json, cred_json,
             drm_manager.activate()
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
         assert get_proxy_error() is None
-    async_cb.assert_Error(accelize_drm.exceptions.DRMWSError.error_code, 'Metering Web Service error 600')
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSError.error_code, 'Accelize Web Service error 600 on HTTP request')
+    async_cb.reset()
+    log_content = logfile.read()
+    assert search(r'Accelize Web Service error 600 on HTTP request', log_content)
+    assert search(r'Generate error on purpose', log_content)
+    logfile.remove()
+
+
+@pytest.mark.no_parallel
+def test_improve_coverage_wsclient_http_address_error(accelize_drm, conf_json, cred_json, async_handler, live_server):
+    """
+    Improve coverage of the request function
+    """
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    async_cb.reset()
+    conf_json['licensing']['url'] = 'http://100.100.100.100'
+    conf_json['settings']['ws_api_retry_duration'] = 0
+    conf_json['settings']['ws_request_timeout'] = 5
+    conf_json.save()
+
+    with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
+        accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
+    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
+    assert search(r'Failed to perform HTTP request ', str(excinfo.value), IGNORECASE)
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, HTTP_TIMEOUT_ERR_MSG)
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, 'Failed to perform HTTP request ')
     async_cb.reset()
 
 
@@ -297,33 +325,3 @@ def test_improve_coverage_detectDrmFrequencyMethod1(accelize_drm, conf_json, cre
     assert search(r'Frequency detection counter after', log_content, IGNORECASE) is None
     async_cb.assert_NoError()
     logfile.remove()
-
-
-@pytest.mark.no_parallel
-def test_improve_coverage_perform(accelize_drm, conf_json, cred_json, async_handler, live_server):
-    """
-    Improve coverage of the perform function
-    """
-    driver = accelize_drm.pytest_fpga_driver[0]
-    async_cb = async_handler.create()
-    async_cb.reset()
-    conf_json['licensing']['url'] = 'http://100.100.100.100'
-    conf_json['settings']['ws_api_retry_duration'] = 0
-    conf_json['settings']['ws_request_timeout'] = 5
-    conf_json.save()
-
-    with accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            ) as drm_manager:
-        with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
-            drm_manager.activate()
-        drm_manager.deactivate()
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
-    assert search(r'Failed to perform HTTP request ', str(excinfo.value), IGNORECASE)
-    async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, HTTP_TIMEOUT_ERR_MSG)
-    async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, 'Failed to perform HTTP request ')
-    async_cb.reset()

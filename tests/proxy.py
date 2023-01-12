@@ -987,21 +987,21 @@ def create_app(url):
     ##############################################################################
     # test_improve_coverage.py
 
-    # test_improve_coverage_ws_client functions
-    @app.route('/test_improve_coverage_ws_client/auth/token', methods=['GET', 'POST'])
-    def gettoken__test_improve_coverage_ws_client():
-        new_url = request.url.replace(request.url_root+'test_improve_coverage_ws_client', url)
+    # test_improve_coverage_ws_client_on_code_600 functions
+    @app.route('/test_improve_coverage_ws_client_on_code_600/auth/token', methods=['GET', 'POST'])
+    def gettoken__test_improve_coverage_ws_client_on_code_600():
+        new_url = request.url.replace(request.url_root+'test_improve_coverage_ws_client_on_code_600', url)
         return redirect(new_url, code=307)
 
-    @app.route('/test_improve_coverage_ws_client/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
-    def create__test_improve_coverage_ws_client(product_id):
-        global context, lock
-        with lock:
-            return ({'error':'Generate error on purpose'}, context['error_code'])
+    @app.route('/test_improve_coverage_ws_client_on_code_600/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
+    def create__test_improve_coverage_ws_client_on_code_600(product_id):
+        return ({'error':'Generate error on purpose'}, 600)
 
-    @app.route('/test_improve_coverage_ws_client/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
-    def update__test_improve_coverage_ws_client(entitlement_id):
-        return redirect(url_for('update', entitlement_id=entitlement_id), code=307)
+    # test_improve_coverage_wsclient_http_address_error functions
+    @app.route('/test_improve_coverage_wsclient_http_address_error/auth/token', methods=['GET', 'POST'])
+    def gettoken__test_improve_coverage_wsclient_http_address_error():
+        new_url = request.url.replace(request.url_root+'test_improve_coverage_wsclient_http_address_error', url)
+        return redirect(new_url, code=307)
 
     # test_improve_coverage_setLicense functions
     @app.route('/test_improve_coverage_setLicense/auth/token', methods=['GET', 'POST'])
@@ -1132,8 +1132,6 @@ def update_context(data):
 
 def get_proxy_error():
     r = get_context()
-    try:
-        return r['exception']
-    except KeyError:
+    if not isinstance(r, dict):
         return None
-
+    return r.get('exception', None)
