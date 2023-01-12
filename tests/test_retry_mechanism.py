@@ -132,8 +132,8 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
     # Set initial context on the live server
     context = {'expires_in': expires_in,
                'license_period_second': license_period_second}
-    set_context(context)
-    assert get_context() == context
+    set_context(expires_in=expires_in, license_period_second=license_period_second)
+    assert get_context('expires_in', 'license_period_second') == (expires_in, expires_in)
 
     with accelize_drm.DrmManager(
                 conf_json.path,

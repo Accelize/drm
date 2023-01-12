@@ -1109,7 +1109,7 @@ def get_context(*args):
         l = list()
         for e in args:
             l.append(data[e])
-        return *l
+        return l
     return data
 
 
