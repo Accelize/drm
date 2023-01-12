@@ -49,9 +49,9 @@ def test_api_retry_disabled(accelize_drm, conf_json, cred_json, async_handler,
         end = datetime.now()
         assert (end - start).total_seconds() < 2
     log_content = logfile.read()
-    assert search(r'\[\s*critical\s*\]\s*\d+\s*,\s*\[errCode=\d+\]\s*Metering Web Service error 408',
+    assert search(r'\[\s*critical\s*\]\s*.+\[errCode=\d+\]\s*Accelize Web Service error 408 on HTTP request',
             log_content, IGNORECASE)
-    assert not search(r'attempt', log_content, IGNORECASE)
+    assert len(findall(r'attempt', log_content, IGNORECASE)) == 1
     assert search(HTTP_TIMEOUT_ERR_MSG, log_content, IGNORECASE)
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, HTTP_TIMEOUT_ERR_MSG)
     async_cb.reset()
@@ -95,7 +95,7 @@ def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler,
     assert retry_duration - 1 <= total_seconds <= retry_duration + 1
     log_content = logfile.read()
     assert search(HTTP_TIMEOUT_ERR_MSG, log_content, IGNORECASE)
-    m = search(r'\[\s*critical\s*\]\s*\d+\s*,\s*\[errCode=\d+\]\s*Timeout on License request after (\d+) attempts',
+    m = search(r'\[\s*critical\s*\]\s*.+\[errCode=\d+\]\s*Timeout on License request after (\d+) attempts',
             log_content, IGNORECASE)
     assert m is not None
     nb_attempts = int(m.group(1))
@@ -121,13 +121,19 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
     expires_in = 1
     retryShortPeriod = 3
     retryLongPeriod = 10
-    timeoutSecond = 25
+    license_period_second = 25
 
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json['settings']['ws_retry_period_short'] = retryShortPeriod
     conf_json['settings']['ws_retry_period_long'] = retryLongPeriod
     conf_json.save()
+
+    # Set initial context on the live server
+    context = {'expires_in': expires_in,
+               'license_period_second': license_period_second}
+    set_context(context)
+    assert get_context() == context
 
     with accelize_drm.DrmManager(
                 conf_json.path,
@@ -136,20 +142,10 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
                 driver.write_register_callback,
                 async_cb.callback
             ) as drm_manager:
-        context = {'data':list(),
-                   'cnt':0,
-                   'expires_in':expires_in,
-                   'timeoutSecond':timeoutSecond,
-                   'exit': False
-        }
-        set_context(context)
-        assert get_context() == context
         drm_manager.activate()
-        wait_func_true(lambda: async_cb.was_called, timeout=timeoutSecond*2)
-        context = get_context()
-        context['exit'] = True
-        set_context(context)
-        assert get_context() == context
+        wait_func_true(lambda: async_cb.was_called, timeout=license_period_second*2)
+        update_context(exit=True)
+        assert get_context('exit')
         drm_manager.deactivate()
     assert async_cb.was_called
     assert async_cb.errcode == accelize_drm.exceptions.DRMWSTimedOut.error_code
@@ -183,7 +179,7 @@ def test_long_to_short_retry_switch_on_license(accelize_drm, conf_json, cred_jso
 
     retryShortPeriod = 3
     retryLongPeriod = 10
-    timeoutSecond = 25
+    license_period_second = 25
 
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + request.function.__name__
@@ -193,7 +189,7 @@ def test_long_to_short_retry_switch_on_license(accelize_drm, conf_json, cred_jso
 
     context = {'data':list(),
                'cnt':0,
-               'timeoutSecond':timeoutSecond
+               'license_period_second':license_period_second
     }
     set_context(context)
     assert get_context() == context
@@ -208,7 +204,7 @@ def test_long_to_short_retry_switch_on_license(accelize_drm, conf_json, cred_jso
         drm_manager.activate()
         lic_duration = drm_manager.get('license_duration')
         wait_func_true(lambda: async_cb.was_called,
-                    timeout= lic_duration + 2*timeoutSecond)
+                    timeout= lic_duration + 2*license_period_second)
         drm_manager.deactivate()
     assert async_cb.was_called
     assert 'Timeout on License' in async_cb.message
@@ -318,7 +314,7 @@ def test_thread_retry_on_lost_connection(accelize_drm, conf_json, cred_json, asy
     conf_json.save()
 
     context = {'cnt':0,
-               'timeoutSecond':licDuration
+               'license_period_second': licDuration
     }
     set_context(context)
     assert get_context() == context

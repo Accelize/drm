@@ -762,10 +762,6 @@ def create_app(url):
     def create__test_api_retry(product_id):
         return ({'error':'Force retry for testing'}, 408)
 
-    @app.route('/test_api_retry/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
-    def update__test_api_retry(entitlement_id):
-        return redirect(url_for('update', entitlement_id=entitlement_id), code=307)
-
     # test_long_to_short_retry_switch_on_authentication functions
     @app.route('/test_long_to_short_retry_switch_on_authentication/auth/token', methods=['GET', 'POST'])
     def gettoken__test_long_to_short_retry_switch_on_authentication():
@@ -773,21 +769,23 @@ def create_app(url):
         start = str(datetime.now())
         new_url = request.url.replace(request.url_root+'test_long_to_short_retry_switch_on_authentication', url)
         with lock:
-            try:
-                if context['cnt'] == 0 or context['exit']:
-                    response = _post(new_url, data=request.form, headers=request.headers)
-                    assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request.form,
-                            indent=4, sort_keys=True), response.status_code, response.text)
-                    response_json = response.json()
-                    response_json['expires_in'] = context['expires_in']
-                    context['response_json'] = dumps(response_json)
-                    response._content = dumps(response_json).encode('utf-8')
-                    return Response(response, response.status_code)
-                else:
-                    return Response(context['response_json'], 408)
-            finally:
-                context['data'].append( (start,str(datetime.now())) )
+            if 'cnt' not in context:
+                context['cnt'] = 0
+                response = _post(new_url, data=request.form, headers=request.headers)
+                assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request.form,
+                        indent=4, sort_keys=True), response.status_code, response.text)
+                response_json = response.json()
+                response_json['expires_in'] = context['expires_in']
+                context['response_json'] = dumps(response_json)
+                response._content = dumps(response_json).encode('utf-8')
+                context['data'].append(str(datetime.now())
+                return Response(response, response.status_code)
+            else:
                 context['cnt'] += 1
+                context['data'].append(str(datetime.now())
+                return Response('Request timeout', 408)
+            finally:
+
 
     @app.route('/test_long_to_short_retry_switch_on_authentication/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
     def create__test_long_to_short_retry_switch_on_authentication(product_id):
@@ -799,13 +797,9 @@ def create_app(url):
                     indent=4, sort_keys=True), response.status_code, response.text)
         response_json = response.json()
         with lock:
-            response_json['metering']['timeoutSecond'] = context['timeoutSecond']
+            response_json['drm_config']['license_period_second'] = context['license_period_second']
         response._content = dumps(response_json).encode('utf-8')
         return Response(response, response.status_code)
-
-    @app.route('/test_long_to_short_retry_switch_on_authentication/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
-    def update__test_long_to_short_retry_switch_on_authentication(entitlement_id):
-        return redirect(url_for('update', entitlement_id=entitlement_id), code=307)
 
     # test_long_to_short_retry_switch_on_license functions
     @app.route('/test_long_to_short_retry_switch_on_license/auth/token', methods=['GET', 'POST'])
@@ -1108,15 +1102,16 @@ def create_app(url):
     return app
 
 
-def get_context(key=None):
-    params = {}
-    if key:
-        params[key] = ''
+def get_context(*args):
+    params = {key: '' for key in args}
     r = _get(url_for('get_ctx', _external=True), params=params)
     assert r.status_code == 200
     data = r.json()
-    if key is not None and len(data) == 1:
-        return data[key]
+    if args:
+        l = list()
+        for e in args:
+            l.append(data[e])
+        return *l
     return data
 
 
@@ -1125,8 +1120,8 @@ def set_context(data):
     assert r.status_code == 200
 
 
-def update_context(data):
-    r = _patch(url_for('update_ctx', _external=True), json=data)
+def update_context(**kwargs):
+    r = _patch(url_for('update_ctx', _external=True), json=kwargs)
     assert r.status_code == 200
 
 
