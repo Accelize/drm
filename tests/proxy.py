@@ -789,7 +789,7 @@ def create_app(url):
     @app.route('/test_long_to_short_retry_switch_on_authentication/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_long_to_short_retry_switch_on_authentication(entitlement_id):
         global context, lock
-        new_url = request.url.replace(request.url_root+'test_segment_index', url)
+        new_url = request.url.replace(request.url_root+'test_long_to_short_retry_switch_on_authentication', url)
         request_json = request.get_json()
         is_health = request_json.get('is_health', False)
         is_closed = request_json.get('is_closed', False)
