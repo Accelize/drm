@@ -70,13 +70,14 @@ def test_improve_coverage_wsclient_http_address_error(accelize_drm, conf_json, c
             async_cb.callback
         )
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
-    assert search(r'Failed to perform HTTP request ', str(excinfo.value), IGNORECASE)
+    assert search(r'Error .+ on HTTP request, Timeout was reached: Connection timed out after', str(excinfo.value), IGNORECASE)
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, HTTP_TIMEOUT_ERR_MSG)
-    async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, 'Failed to perform HTTP request ')
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, (
+            'Error .+ on HTTP request, Timeout was reached: Connection timed out after'))
     async_cb.reset()
     log_content = logfile.read()
-    assert search(r'Accelize Web Service error 600 on HTTP request', log_content)
-    assert search(r'Generate error on purpose', log_content)
+    assert search(HTTP_TIMEOUT_ERR_MSG, log_content)
+    assert search(r'\[critical\] .+ Error .+ on HTTP request, Timeout was reached: Connection timed out after', log_content)
     logfile.remove()
 
 
