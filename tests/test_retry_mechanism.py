@@ -148,7 +148,8 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
                 async_cb.callback
             ) as drm_manager:
         drm_manager.activate()
-        wait_until_true(lambda: async_cb.was_called, 2*retry_timeout)
+        lic_duration = drm_manager.get('license_duration')
+        wait_until_true(lambda: async_cb.was_called, lic_duration + 2*retry_timeout)
         update_context(allow=True)
         assert get_context('allow')
     assert async_cb.was_called
