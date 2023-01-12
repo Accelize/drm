@@ -771,6 +771,7 @@ def create_app(url):
         with lock:
             if 'cnt' not in context:
                 context['cnt'] = 0
+                context['data'] = list()
                 response = _post(new_url, data=request.form, headers=request.headers)
                 assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request.form,
                         indent=4, sort_keys=True), response.status_code, response.text)

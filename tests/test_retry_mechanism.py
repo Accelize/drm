@@ -109,7 +109,7 @@ def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler,
 
 @pytest.mark.no_parallel
 def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
-                        cred_json, async_handler, live_server, request):
+            cred_json, async_handler, live_server, request, log_file_factory):
     """
     Test the number of expected retries and the gap between 2 retries
     on authentication requests occurring in the background thread
@@ -124,6 +124,8 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
     license_period_second = 25
 
     conf_json.reset()
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
     conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json['settings']['ws_retry_period_short'] = retryShortPeriod
     conf_json['settings']['ws_retry_period_long'] = retryLongPeriod
@@ -132,36 +134,38 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
     # Set initial context on the live server
     context = {'expires_in': expires_in,
                'license_period_second': license_period_second}
-    set_context(expires_in=expires_in, license_period_second=license_period_second)
-    assert get_context('expires_in', 'license_period_second') == (expires_in, expires_in)
+    set_context(context)
+    assert get_context() == context
 
-    with accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            ) as drm_manager:
-        drm_manager.activate()
-        wait_func_true(lambda: async_cb.was_called, timeout=license_period_second*2)
-        update_context(exit=True)
-        assert get_context('exit')
-        drm_manager.deactivate()
+    with pytest.raises(accelize_drm.exceptions.DRMWSTimedOut) as excinfo:
+        accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
     assert async_cb.was_called
     assert async_cb.errcode == accelize_drm.exceptions.DRMWSTimedOut.error_code
     assert search(r'Timeout on Authentication request after', async_cb.message, IGNORECASE)
+    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSTimedOut.error_code
+    assert search(r'Timeout on License request after (\d+) attempts', str(excinfo.value))
+    async_cb.reset()
+    log_content = logfile.read()
+    # Analyze retry periods
     assert get_context('data')
     data_list = context['data']
     print('data_list=', data_list)
     assert len(data_list) >= 3
     prev_data = data_list.pop(0)
     for data in data_list:
-        delta = int(data - prev_data).total_seconds())
+        delta = int((data - prev_data).total_seconds())
         prev_data = end
         if delta > retryShortPeriod:
             assert (retryLongPeriod-1) <= delta <= retryLongPeriod
         else:
             assert (retryShortPeriod-1) <= delta <= retryShortPeriod
+    logfile.remove()
 
 
 @pytest.mark.no_parallel
