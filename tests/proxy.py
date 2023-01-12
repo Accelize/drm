@@ -27,16 +27,30 @@ def create_app(url):
         return 'Proxy caught exception: %s' % str(error), 500
     '''
     @app.route('/get/', methods=['GET'])
-    def get():
+    def get_ctx():
         global lock
         with lock:
+            d = request.args.to_dict(flat=True)
+            if request.args:
+                ret = {}
+                for k in d.keys():
+                    ret[k] = context.get(k)
+                return ret
             return jsonify(context)
 
     @app.route('/set/', methods=['POST'])
-    def set():
+    def set_ctx():
         global context, lock
         with lock:
             context = request.get_json()
+        return 'OK'
+
+    @app.route('/update/', methods=['PATCH'])
+    def update_ctx():
+        global context, lock
+        with lock:
+            for k, v in request.get_json().items():
+                context[k] = v
         return 'OK'
 
     # Functions calling the real web services
@@ -181,20 +195,19 @@ def create_app(url):
         assert response.status_code == 204 if is_health else 200, (
                 "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text))
-        if not is_health:
-            if not is_closed:
-                with lock:
-                    cnt = context['cnt_license']
-                    context['cnt_license'] += 1
-                if cnt > 2:
-                    return ({'error':'Test did not run as expected'}, 408)
-                else:
-                    response_json = response.json()
-                    dna, lic_json = list(response_json['drm_config']['license'].items())[0]
-                    timer = lic_json['timer']
-                    timer = '1' + timer[1:] if timer[0] == '0' else '0' + timer[1:]
-                    response_json['drm_config']['license'][dna]['timer'] = timer
-                    response._content = dumps(response_json).encode('utf-8')
+        if not is_health and not is_closed:
+            with lock:
+                cnt = context['cnt_license']
+                context['cnt_license'] += 1
+            if cnt > 2:
+                return ({'error':'Test did not run as expected'}, 408)
+            else:
+                response_json = response.json()
+                dna, lic_json = list(response_json['drm_config']['license'].items())[0]
+                timer = lic_json['timer']
+                timer = '1' + timer[1:] if timer[0] == '0' else '0' + timer[1:]
+                response_json['drm_config']['license'][dna]['timer'] = timer
+                response._content = dumps(response_json).encode('utf-8')
         return Response(response, response.status_code)
 
     # test_header_error_on_licenseTimer2 functions
@@ -213,7 +226,7 @@ def create_app(url):
     @app.route('/test_header_error_on_licenseTimer2/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_header_error_on_licenseTimer2(entitlement_id):
         global context, lock
-        new_url = request.url.replace(request.url_root+'test_header_error_on_licenseTimer', url)
+        new_url = request.url.replace(request.url_root+'test_header_error_on_licenseTimer2', url)
         request_json = request.get_json()
         is_health = request_json.get('is_health', False)
         is_closed = request_json.get('is_closed', False)
@@ -221,20 +234,19 @@ def create_app(url):
         assert response.status_code == 204 if is_health else 200, (
                 "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text))
-        if not is_health:
-            if not is_closed:
-                with lock:
-                    cnt = context['cnt_license']
-                    context['cnt_license'] += 1
-                if cnt > 2:
-                    return ({'error':'Test did not run as expected'}, 408)
-                else:
-                    response_json = response.json()
-                    dna, lic_json = list(response_json['license'].items())[0]
-                    timer = lic_json['timer']
-                    timer = timer[0:-1] + '1' if timer[-1] == '0' else timer[0:-1] + '0'
-                    response_json['license'][dna]['timer'] = timer
-                    response._content = dumps(response_json).encode('utf-8')
+        if not is_health and not is_closed:
+            with lock:
+                cnt = context['cnt_license']
+                context['cnt_license'] += 1
+            if cnt > 2:
+                return ({'error':'Test did not run as expected'}, 408)
+            else:
+                response_json = response.json()
+                dna, lic_json = list(response_json['drm_config']['license'].items())[0]
+                timer = lic_json['timer']
+                timer = timer[0:-1] + '1' if timer[-1] == '0' else timer[0:-1] + '0'
+                response_json['drm_config']['license'][dna]['timer'] = timer
+                response._content = dumps(response_json).encode('utf-8')
         return Response(response, response.status_code)
 
     # test_replay_request functions
@@ -251,25 +263,30 @@ def create_app(url):
         response = _post(new_url, json=request_json, headers=request.headers)
         assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text)
-        response_json = response.json()
-        response_session_id = response_json['metering']['sessionId']
         with lock:
-            if context['session_id'] != response_session_id:
-                context['session_cnt'] += 1
-                context['request_cnt'] = 0
-            context['request_cnt'] += 1
-            context['session_id'] = response_session_id
-            if context['session_cnt'] == 2:
-                if context['request_cnt'] == 2:
-                    response = context['replay']
-            else:
-                if context['request_cnt'] == 2:
-                   context['replay'] = response
-            return Response(response, response.status_code)
+            context['cnt_license'] = 1
+        return Response(response, response.status_code)
 
     @app.route('/test_replay_request/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_replay_request(entitlement_id):
-        return redirect(url_for('update', entitlement_id=entitlement_id), code=307)
+        global context, lock
+        new_url = request.url.replace(request.url_root+'test_replay_request', url)
+        request_json = request.get_json()
+        is_health = request_json.get('is_health', False)
+        is_closed = request_json.get('is_closed', False)
+        response = _patch(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 204 if is_health else 200, (
+                "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text))
+        if not is_health and not is_closed:
+            with lock:
+                context['cnt_license'] += 1
+                if context['cnt_license'] == 2:
+                    if context['record']:
+                        context['replay'] = response
+                    else:
+                        response = context['replay']
+        return Response(response, response.status_code)
 
     ##############################################################################
     # test_async_health.py
@@ -1087,14 +1104,25 @@ def create_app(url):
     return app
 
 
-def get_context():
-    r = _get(url_for('get', _external=True))
+def get_context(key=None):
+    params = {}
+    if key:
+        params[key] = ''
+    r = _get(url_for('get_ctx', _external=True), params=params)
     assert r.status_code == 200
-    return r.json()
+    data = r.json()
+    if key is not None and len(data) == 1:
+        return data[key]
+    return data
 
 
 def set_context(data):
-    r = _post(url_for('set', _external=True), json=data)
+    r = _post(url_for('set_ctx', _external=True), json=data)
+    assert r.status_code == 200
+
+
+def update_context(data):
+    r = _patch(url_for('update_ctx', _external=True), json=data)
     assert r.status_code == 200
 
 

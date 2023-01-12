@@ -10,7 +10,8 @@ from re import search
 from json import loads, dumps
 from flask import request as _request
 from requests import get, post
-from tests.proxy import get_context, set_context
+from tests.proxy import get_context, set_context, update_context
+from tests.conftest import wait_deadline, wait_func_true
 
 
 @pytest.mark.no_parallel
@@ -97,7 +98,6 @@ def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_
 
     async_cb = async_handler.create()
     async_cb.reset()
-
     activators = accelize_drm.pytest_fpga_activators[0]
     activators.reset_coin()
     activators.autotest()
@@ -143,7 +143,6 @@ def test_header_error_on_licenseTimer2(accelize_drm, conf_json, cred_json, async
 
     async_cb = async_handler.create()
     async_cb.reset()
-
     activators = accelize_drm.pytest_fpga_activators[0]
     activators.reset_coin()
     activators.autotest()
@@ -196,7 +195,7 @@ def test_replay_request(accelize_drm, conf_json, cred_json, async_handler,
     conf_json.save()
 
     # Set initial context on the live server
-    context = {'session_id':'0', 'session_cnt':0, 'request_cnt':0}
+    context = {'record': True}
     set_context(context)
     assert get_context() == context
 
@@ -208,26 +207,25 @@ def test_replay_request(accelize_drm, conf_json, cred_json, async_handler,
         ) as drm_manager:
         # Start session #1 to record
         drm_manager.activate()
-        start = datetime.now()
+        assert drm_manager.get('license_status')
         assert drm_manager.get('license_status')
         activators.autotest(is_activated=True)
         lic_duration = drm_manager.get('license_duration')
-        wait_period = start + timedelta(seconds=lic_duration+2) - datetime.now()
-        sleep(wait_period.total_seconds())
-        assert drm_manager.get('license_status')
+        wait_func_true(lambda: drm_manager.get('num_license_loaded') == 2, lic_duration)
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
         async_cb.assert_NoError()
+        assert get_context('cnt_license') >= 2
 
         # Start session #2 to replay session #1
+        update_context({'record':False})
+        assert not get_context('record')
         drm_manager.activate()
-        start = datetime.now()
         assert drm_manager.get('license_status')
         activators.autotest(is_activated=True)
         lic_duration = drm_manager.get('license_duration')
-        wait_period = start + timedelta(seconds=lic_duration+2) - datetime.now()
-        sleep(wait_period.total_seconds())
+        wait_func_true(lambda: async_cb.was_called, lic_duration)
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
         drm_manager.deactivate()
