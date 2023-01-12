@@ -1797,6 +1797,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
             Debug( "Could not find nodelocked license file: {}", mNodeLockLicenseFilePath );
             /// - Clear Session IS
             mSessionID = std::string("");
+            mEntitlementID = std::string("");
             Debug( "Cleared session ID: {}", mSessionID );
             /// - Create WS access
             mWsClient.reset( new DrmWSClient( mConfFilePath, mCredFilePath ) );
@@ -2358,6 +2359,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         // Clear Session ID
         Info( "DRM session {} stopped.", mSessionID );
         mSessionID = std::string("");
+        mEntitlementID = std::string("");
     }
 
     ParameterKey findParameterKey( const std::string& key_string ) const {

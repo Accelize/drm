@@ -225,6 +225,7 @@ def test_replay_request(accelize_drm, conf_json, cred_json, async_handler,
         assert drm_manager.get('license_status')
         activators.autotest(is_activated=True)
         lic_duration = drm_manager.get('license_duration')
+        sleep(lic_duration)
         wait_func_true(lambda: async_cb.was_called, lic_duration)
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
