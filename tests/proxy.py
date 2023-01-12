@@ -1114,7 +1114,7 @@ def get_context(*kargs):
     if len(kargs) == 0:
         return data
     elif len(kargs) == 1:
-        return data.values()[0]
+        return data[kargs[0]]
     else:
         l = list()
         for e in kargs:
