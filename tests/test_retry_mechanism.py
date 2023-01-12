@@ -16,7 +16,7 @@ from dateutil import parser
 from math import ceil
 
 from tests.conftest import wait_until_true, HTTP_TIMEOUT_ERR_MSG
-from tests.proxy import get_context, set_context
+from tests.proxy import get_context, set_context, update_context
 
 
 @pytest.mark.no_parallel
@@ -118,9 +118,10 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
     async_cb = async_handler.create()
     async_cb.reset()
 
-    expires_in = 1
+    expires_in = 5
     retryShortPeriod = 3
     retryLongPeriod = 10
+    retry_timeout = 25
     license_period_second = 25
 
     conf_json.reset()
@@ -129,6 +130,7 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
     conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json['settings']['ws_retry_period_short'] = retryShortPeriod
     conf_json['settings']['ws_retry_period_long'] = retryLongPeriod
+    conf_json['settings']['ws_request_timeout'] = retry_timeout
     conf_json.save()
 
     # Set initial context on the live server
@@ -146,8 +148,7 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
                 async_cb.callback
             ) as drm_manager:
         drm_manager.activate()
-        lic_duration = drm_manager.get('license_duration')
-        wait_until_true(lambda: async_cb.was_called, license_period_second)
+        wait_until_true(lambda: async_cb.was_called, 2*retry_timeout)
         update_context(allow=True)
         assert get_context('allow')
     assert async_cb.was_called
@@ -155,16 +156,17 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
     assert search(r'Timeout on Authentication request after', async_cb.message, IGNORECASE)
     async_cb.reset()
     log_content = logfile.read()
-
+    assert len(findall(r'Attempt #\d+ to obtain a new authentication token failed with message', log_content, IGNORECASE)) >= 3
+    assert search(r'Timeout on Authentication request after', log_content, IGNORECASE)
     # Analyze retry periods
     assert get_context('data')
-    data_list = context['data']
+    data_list = get_context('data')
     print('data_list=', data_list)
     assert len(data_list) >= 3
-    prev_data = data_list.pop(0)
+    prev_data = parser.parse(data_list.pop(0))
     for data in data_list:
-        delta = int((data - prev_data).total_seconds())
-        prev_data = end
+        delta = int((parser.parse(data) - parser.parse(prev_data)).total_seconds())
+        prev_data = data
         if delta > retryShortPeriod:
             assert (retryLongPeriod-1) <= delta <= retryLongPeriod
         else:

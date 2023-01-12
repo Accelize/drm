@@ -766,7 +766,6 @@ def create_app(url):
     @app.route('/test_long_to_short_retry_switch_on_authentication/auth/token', methods=['GET', 'POST'])
     def gettoken__test_long_to_short_retry_switch_on_authentication():
         global context, lock
-        start = datetime.now()
         new_url = request.url.replace(request.url_root+'test_long_to_short_retry_switch_on_authentication', url)
         with lock:
             if context.get('allow', True):
@@ -778,7 +777,6 @@ def create_app(url):
                 response_json['expires_in'] = context['expires_in']
                 context['response_json'] = dumps(response_json)
                 response._content = dumps(response_json).encode('utf-8')
-                context['data'].append(datetime.now())
                 return Response(response, response.status_code)
             else:
                 context['data'].append(datetime.now())
@@ -786,17 +784,26 @@ def create_app(url):
 
     @app.route('/test_long_to_short_retry_switch_on_authentication/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
     def create__test_long_to_short_retry_switch_on_authentication(product_id):
+        return redirect(url_for('create', product_id=product_id), code=307)
+
+    @app.route('/test_long_to_short_retry_switch_on_authentication/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
+    def update__test_long_to_short_retry_switch_on_authentication(entitlement_id):
         global context, lock
-        new_url = request.url.replace(request.url_root+'test_long_to_short_retry_switch_on_authentication', url)
+        new_url = request.url.replace(request.url_root+'test_segment_index', url)
         request_json = request.get_json()
-        response = _post(new_url, json=request_json, headers=request.headers)
-        assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
-                    indent=4, sort_keys=True), response.status_code, response.text)
-        response_json = response.json()
-        with lock:
-            response_json['drm_config']['license_period_second'] = context['license_period_second']
-        response._content = dumps(response_json).encode('utf-8')
+        is_health = request_json.get('is_health', False)
+        is_closed = request_json.get('is_closed', False)
+        response = _patch(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 204 if is_health else 200, (
+                "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text))
+        if not is_health and not is_closed:
+            response_json = response.json()
+            with lock:
+                response_json['drm_config']['license_period_second'] = context['license_period_second']
+            response._content = dumps(response_json).encode('utf-8')
         return Response(response, response.status_code)
+
 
     # test_long_to_short_retry_switch_on_license functions
     @app.route('/test_long_to_short_retry_switch_on_license/auth/token', methods=['GET', 'POST'])
@@ -1099,17 +1106,20 @@ def create_app(url):
     return app
 
 
-def get_context(*args):
-    params = {key: '' for key in args}
+def get_context(*kargs):
+    params = {key: '' for key in kargs}
     r = _get(url_for('get_ctx', _external=True), params=params)
     assert r.status_code == 200
     data = r.json()
-    if args:
+    if len(kargs) == 0:
+        return data
+    elif len(kargs) == 1:
+        return data.values()[0]
+    else:
         l = list()
-        for e in args:
+        for e in kargs:
             l.append(data[e])
         return l
-    return data
 
 
 def set_context(data):
