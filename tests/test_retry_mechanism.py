@@ -133,7 +133,8 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
 
     # Set initial context on the live server
     context = {'expires_in': expires_in,
-               'license_period_second': license_period_second}
+               'license_period_second': license_period_second,
+               'data': list()}
     set_context(context)
     assert get_context() == context
 
@@ -146,7 +147,9 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
             ) as drm_manager:
         drm_manager.activate()
         lic_duration = drm_manager.get('license_duration')
-        wait_until_true(lambda: return get_context('exit'), lic_duration)
+        wait_until_true(lambda: async_cb.was_called, license_period_second)
+        update_context(allow=True)
+        assert get_context('allow')
     assert async_cb.was_called
     assert async_cb.errcode == accelize_drm.exceptions.DRMWSTimedOut.error_code
     assert search(r'Timeout on Authentication request after', async_cb.message, IGNORECASE)
@@ -330,8 +333,7 @@ def test_thread_retry_on_lost_connection(accelize_drm, conf_json, cred_json, asy
                 async_cb.callback
             ) as drm_manager:
         drm_manager.activate()
-        wait_until_true(lambda: async_cb.was_called,
-                timeout=licDuration*2)
+        wait_until_true(lambda: async_cb.was_called, timeout=licDuration*2)
         drm_manager.deactivate()
     assert async_cb.was_called
     assert async_cb.errcode == accelize_drm.exceptions.DRMWSTimedOut.error_code

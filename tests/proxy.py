@@ -769,9 +769,8 @@ def create_app(url):
         start = datetime.now()
         new_url = request.url.replace(request.url_root+'test_long_to_short_retry_switch_on_authentication', url)
         with lock:
-            if 'cnt' not in context:
-                context['cnt'] = 0
-                context['data'] = list()
+            if context.get('allow', True):
+                context['allow'] = False
                 response = _post(new_url, data=request.form, headers=request.headers)
                 assert response.status_code == 200, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request.form,
                         indent=4, sort_keys=True), response.status_code, response.text)
@@ -782,7 +781,6 @@ def create_app(url):
                 context['data'].append(datetime.now())
                 return Response(response, response.status_code)
             else:
-                context['cnt'] += 1
                 context['data'].append(datetime.now())
                 return Response('Request timeout', 408)
 
