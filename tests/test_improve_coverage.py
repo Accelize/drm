@@ -46,13 +46,16 @@ def test_improve_coverage_ws_client_on_code_600(accelize_drm, conf_json, cred_js
 
 
 @pytest.mark.no_parallel
-def test_improve_coverage_wsclient_http_address_error(accelize_drm, conf_json, cred_json, async_handler, live_server):
+def test_improve_coverage_wsclient_http_address_error(accelize_drm, conf_json, cred_json,
+                async_handler, live_server, log_file_factory):
     """
     Improve coverage of the request function
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
     conf_json['licensing']['url'] = 'http://100.100.100.100'
     conf_json['settings']['ws_api_retry_duration'] = 0
     conf_json['settings']['ws_request_timeout'] = 5
@@ -71,6 +74,10 @@ def test_improve_coverage_wsclient_http_address_error(accelize_drm, conf_json, c
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, HTTP_TIMEOUT_ERR_MSG)
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, 'Failed to perform HTTP request ')
     async_cb.reset()
+    log_content = logfile.read()
+    assert search(r'Accelize Web Service error 600 on HTTP request', log_content)
+    assert search(r'Generate error on purpose', log_content)
+    logfile.remove()
 
 
 def test_improve_coverage_getHostAndCardInfo(accelize_drm, conf_json, cred_json, async_handler,
