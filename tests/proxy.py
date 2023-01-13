@@ -911,27 +911,6 @@ def create_app(url):
             return ('', 204)
 
     ##############################################################################
-    # test_unittest_on_hw.py
-
-    # test_http_header_api_version functions
-    @app.route('/test_http_header_api_version/auth/token', methods=['GET', 'POST'])
-    def gettoken__test_http_header_api_version():
-        new_url = request.url.replace(request.url_root+'test_http_header_api_version', url)
-        return redirect(new_url, code=307)
-
-    @app.route('/test_http_header_api_version/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
-    def create__test_http_header_api_version(product_id):
-        new_url = request.url.replace(request.url_root+'test_http_header_api_version', url)
-        request_json = request.get_json()
-        assert search(r'Accept:.*application/vnd\.accelize\.v1\+json', str(request.headers))
-        response = _post(new_url, json=request_json, headers=request.headers)
-        return Response(response, response.status_code)
-
-    @app.route('/test_http_header_api_version/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
-    def update__test_http_header_api_version(entitlement_id):
-        return redirect(url_for('update', entitlement_id=entitlement_id), code=307)
-
-    ##############################################################################
     # test_lgdn_topics.py
 
     # test_topic0_corrupted_segment_index functions

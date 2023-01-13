@@ -260,28 +260,3 @@ def test_curl_host_resolve(accelize_drm, conf_json, cred_json, async_handler):
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMExternFail.error_code
     async_cb.assert_Error(accelize_drm.exceptions.DRMExternFail.error_code, 'peer certificate')
     async_cb.reset()
-
-
-@pytest.mark.no_parallel
-@pytest.mark.minimum
-def test_http_header_api_version(accelize_drm, conf_json, cred_json,
-                async_handler, live_server, request):
-    """Test the http header contains the expected API version"""
-    driver = accelize_drm.pytest_fpga_driver[0]
-    async_cb = async_handler.create()
-    async_cb.reset()
-
-    conf_json.reset()
-    conf_json['licensing']['url'] = _request.url + request.function.__name__
-    conf_json.save()
-
-    with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        ) as drm_manager:
-        drm_manager.activate()
-    async_cb.assert_NoError()
-

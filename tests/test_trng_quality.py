@@ -337,6 +337,8 @@ def test_saas_challenge_quality_through_instances(accelize_drm, conf_json,
                     async_cb.callback
                 ) as drm_manager:
             drm_manager.activate()
+            lic_period = drm_manager.get('license_duration')
+            wait_until_true(lambda: drm_manager.get('num_license_loaded') == 2, lic_period)
     log_content = logfile.read()
     challenge_list = parse_and_save_challenge(log_content, REGEX_PATTERN)
     challenge_list = list(filter(lambda x: not x.get('is_closed', False), challenge_list))
