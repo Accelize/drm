@@ -325,9 +325,9 @@ def test_thread_retry_on_lost_connection(accelize_drm, conf_json, cred_json, asy
     async_cb.reset()
 
     retryShortPeriod = 2
-    retryLongPeriod = 20
-    licDuration = 60
+    retryLongPeriod = 10
     requestTimeout = 5
+    license_period_second = 60
 
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + request.function.__name__
@@ -339,12 +339,12 @@ def test_thread_retry_on_lost_connection(accelize_drm, conf_json, cred_json, asy
     conf_json.save()
 
     # Set initial context on the live server
-    context = {'license_period_second': licDuration}
+    context = {'license_period_second': license_period_second}
     set_context(context)
     assert get_context() == context
 
-    nb_long_retry = ceil((licDuration - retryLongPeriod - 2*retryShortPeriod) / (retryLongPeriod + requestTimeout))
-    nb_short_retry = ceil((licDuration - nb_long_retry*(retryLongPeriod + requestTimeout)) / (retryShortPeriod + requestTimeout))
+    nb_long_retry = ceil((license_period_second - retryLongPeriod - 2*retryShortPeriod) / (retryLongPeriod + requestTimeout))
+    nb_short_retry = ceil((license_period_second - nb_long_retry*(retryLongPeriod + requestTimeout)) / (retryShortPeriod + requestTimeout))
     nb_retry = nb_long_retry + nb_short_retry
 
 
@@ -356,7 +356,7 @@ def test_thread_retry_on_lost_connection(accelize_drm, conf_json, cred_json, asy
                 async_cb.callback
             ) as drm_manager:
         drm_manager.activate()
-        wait_until_true(lambda: async_cb.was_called, timeout=2*licDuration)
+        wait_until_true(lambda: async_cb.was_called, timeout=2*license_period_second)
     assert async_cb.was_called
     assert async_cb.errcode == accelize_drm.exceptions.DRMWSTimedOut.error_code
     m = search(r'Timeout on License request after (\d+) attempts', async_cb.message)

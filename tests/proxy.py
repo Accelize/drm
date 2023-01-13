@@ -878,7 +878,17 @@ def create_app(url):
 
     @app.route('/test_thread_retry_on_lost_connection/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
     def create__test_thread_retry_on_lost_connection(product_id):
-        return redirect(url_for('create', product_id=product_id), code=307)
+        global context, lock
+        new_url = request.url.replace(request.url_root+'test_thread_retry_on_lost_connection', url)
+        request_json = request.get_json()
+        response = _post(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text)
+        response_json = response.json()
+        with lock:
+            response_json['drm_config']['license_period_second'] = context['license_period_second']
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response, response.status_code)
 
     @app.route('/test_thread_retry_on_lost_connection/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_thread_retry_on_lost_connection(entitlement_id):
