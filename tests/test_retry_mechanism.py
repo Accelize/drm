@@ -121,8 +121,8 @@ def test_long_to_short_retry_on_authentication(accelize_drm, conf_json,
     expires_in = 5
     retryShortPeriod = 3
     retryLongPeriod = 10
-    retry_timeout = 25
-    license_period_second = 25
+    retry_timeout = 20
+    license_period_second = 18
 
     conf_json.reset()
     logfile = log_file_factory.create(1)
@@ -163,16 +163,22 @@ def test_long_to_short_retry_on_authentication(accelize_drm, conf_json,
     # Analyze retry periods
     assert get_context('data')
     data_list = get_context('data')
-    print('data_list=', data_list)
     assert len(data_list) >= 3
+    delta_list = list()
     prev_data = data_list.pop(0)
     for data in data_list:
         delta = int((parser.parse(data) - parser.parse(prev_data)).total_seconds())
+        delta_list.append(delta)
         prev_data = data
-        if delta > retryShortPeriod:
-            assert (retryLongPeriod-1) <= delta <= retryLongPeriod
-        else:
-            assert (retryShortPeriod-1) <= delta <= retryShortPeriod
+    assert len(set(delta_list)) == 2
+    delta_exp = retryLongPeriod
+    for delta in delta_list:
+        print('delta=', delta, 'exp=', delta_exp)
+        try:
+            assert delta_exp == delta
+        except AssertionError:
+            delta_exp = retryShortPeriod
+            assert delta_exp == delta
     async_cb.assert_NoError()
     logfile.remove()
 
@@ -190,8 +196,8 @@ def test_long_to_short_retry_on_license(accelize_drm, conf_json, cred_json,
 
     retryShortPeriod = 3
     retryLongPeriod = 10
-    retry_timeout = 25
-    license_period_second = 25
+    retry_timeout = 20
+    license_period_second = 18
 
     conf_json.reset()
     logfile = log_file_factory.create(1)
@@ -218,10 +224,9 @@ def test_long_to_short_retry_on_license(accelize_drm, conf_json, cred_json,
         drm_manager.activate()
         lic_duration = drm_manager.get('license_duration')
         wait_until_true(lambda: async_cb.was_called, lic_duration + 2*retry_timeout)
-        drm_manager.deactivate()
     assert async_cb.was_called
     assert async_cb.errcode == accelize_drm.exceptions.DRMWSTimedOut.error_code
-    assert search(r'Timeout on Authentication request after', async_cb.message, IGNORECASE)
+    assert search(r'Timeout on License request after \d+ attempts', async_cb.message, IGNORECASE)
     async_cb.reset()
     log_content = logfile.read()
     assert len(findall(r'Attempt #\d+ on License request failed with message: .+ New attempt planned in \d+ seconds',
@@ -230,16 +235,22 @@ def test_long_to_short_retry_on_license(accelize_drm, conf_json, cred_json,
     # Analyze retry periods
     assert get_context('data')
     data_list = get_context('data')
-    print('data_list=', data_list)
     assert len(data_list) >= 3
+    delta_list = list()
     prev_data = data_list.pop(0)
     for data in data_list:
         delta = int((parser.parse(data) - parser.parse(prev_data)).total_seconds())
+        delta_list.append(delta)
         prev_data = data
-        if delta > retryShortPeriod:
-            assert (retryLongPeriod-1) <= delta <= retryLongPeriod
-        else:
-            assert (retryShortPeriod-1) <= delta <= retryShortPeriod
+    assert len(set(delta_list)) == 2
+    delta_exp = retryLongPeriod
+    for delta in delta_list:
+        print('delta=', delta, 'exp=', delta_exp)
+        try:
+            assert delta_exp == delta
+        except AssertionError:
+            delta_exp = retryShortPeriod
+            assert delta_exp == delta
     async_cb.assert_NoError()
     logfile.remove()
 
