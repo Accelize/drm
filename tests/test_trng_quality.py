@@ -24,7 +24,7 @@ DISPERSION_THRESHOLD = 0.1
 
 LOG_FORMAT_LONG = "%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v"
 
-REGEX_PATTERN = r'Starting Saas request to .+ with data:\n(^{.+?\n}$)'
+REGEX_PATTERN = r'Starting Saas request to \S+ with data:\n(^{.+?\n}$)'
 
 
 def parse_and_save_challenge(text, pattern, save_path=None):
@@ -299,6 +299,8 @@ def test_saas_challenge_quality_through_activates(accelize_drm, conf_json,
     log_content = logfile.read()
     # Parse log file
     challenge_list = parse_and_save_challenge(log_content, REGEX_PATTERN)
+    # Remove close request
+    challenge_list = list(filter(lambda x: not x.get('is_closed', False), challenge_list))
     assert len(challenge_list) >= nb_loop * 2
     challenge_list = list(map(lambda x: x['drm_config']['saas_challenge'], challenge_list))
     challenge_set = set(challenge_list)
@@ -337,6 +339,7 @@ def test_saas_challenge_quality_through_instances(accelize_drm, conf_json,
             drm_manager.activate()
     log_content = logfile.read()
     challenge_list = parse_and_save_challenge(log_content, REGEX_PATTERN)
+    challenge_list = list(filter(lambda x: not x.get('is_closed', False), challenge_list))
     assert len(challenge_list) >= nb_loop * 2
     challenge_list = list(map(lambda x: x['drm_config']['saas_challenge'], challenge_list))
     challenge_set = set(challenge_list)
