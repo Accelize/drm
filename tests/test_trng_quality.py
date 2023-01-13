@@ -300,6 +300,7 @@ def test_saas_challenge_quality_through_activates(accelize_drm, conf_json,
     # Parse log file
     challenge_list = parse_and_save_challenge(log_content, REGEX_PATTERN)
     assert len(challenge_list) >= nb_loop * 2
+    challenge_list = list(map(lambda x: x['drm_config']['saas_challenge'], challenge_list))
     challenge_set = set(challenge_list)
     try:
         assert len(challenge_list) == len( challenge_set), "Found duplicate saas challenge"
@@ -337,12 +338,7 @@ def test_saas_challenge_quality_through_instances(accelize_drm, conf_json,
     log_content = logfile.read()
     challenge_list = parse_and_save_challenge(log_content, REGEX_PATTERN)
     assert len(challenge_list) >= nb_loop * 2
-    if accelize_drm.is_ctrl_sw:
-        challenge_list = list(map(lambda x: x['saasChallenge'], challenge_list))
-    else:
-        # Remove close & health requests (that are duplicate of latest sync request)
-        challenge_list = list(filter(lambda x: x['request'] not in ['close','health'], challenge_list))
-        challenge_list = list(map(lambda x: x['saasChallenge'], challenge_list))
+    challenge_list = list(map(lambda x: x['drm_config']['saas_challenge'], challenge_list))
     challenge_set = set(challenge_list)
     try:
         assert len(challenge_list) == len( challenge_set), "Found duplicate saas challenge"
