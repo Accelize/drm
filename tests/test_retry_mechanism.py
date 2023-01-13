@@ -325,9 +325,9 @@ def test_thread_retry_on_lost_connection(accelize_drm, conf_json, cred_json, asy
     async_cb.reset()
 
     retryShortPeriod = 2
-    retryLongPeriod = 10
+    retryLongPeriod = 8
     requestTimeout = 5
-    license_period_second = 60
+    license_period_second = 20
 
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + request.function.__name__
@@ -339,7 +339,8 @@ def test_thread_retry_on_lost_connection(accelize_drm, conf_json, cred_json, asy
     conf_json.save()
 
     # Set initial context on the live server
-    context = {'license_period_second': license_period_second}
+    context = {'data': list(),
+               'license_period_second': license_period_second}
     set_context(context)
     assert get_context() == context
 

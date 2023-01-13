@@ -14,6 +14,8 @@ from json import loads, dumps
 from datetime import datetime, timedelta
 from random import randrange
 
+from tests.conftest import wait_until_true
+
 
 SAMPLES_DUPLICATE_THRESHOLD = 2
 SAMPLES_DISPERSION_THRESHOLD = 10
@@ -22,7 +24,7 @@ DISPERSION_THRESHOLD = 0.1
 
 LOG_FORMAT_LONG = "%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v"
 
-REGEX_PATTERN = r'Starting (?:license|Health) request to \S+ with data:\n(^{.+?\n}$)'
+REGEX_PATTERN = r'Starting Saas request to .+ with data:\n(^{.+?\n}$)'
 
 
 def parse_and_save_challenge(text, pattern, save_path=None):
@@ -292,28 +294,12 @@ def test_saas_challenge_quality_through_activates(accelize_drm, conf_json,
         for i in range(nb_loop):
             drm_manager.activate()
             lic_period = drm_manager.get('license_duration')
-            if accelize_drm.is_ctrl_sw:
-                health_period = drm_manager.get('health_period')
-            else:
-                health_period = lic_period
-            max_period = max(lic_period, health_period)
-            while True:
-                if drm_manager.get('num_license_loaded') == 2:
-                    sleep(nb_req*max_period + 2)
-                    break
-                sleep(0.1)
+            wait_until_true(lambda: drm_manager.get('num_license_loaded') == 2, lic_period)
             drm_manager.deactivate()
     log_content = logfile.read()
     # Parse log file
     challenge_list = parse_and_save_challenge(log_content, REGEX_PATTERN)
-    ratio = int(max_period / min(lic_period, health_period))
-    assert len(challenge_list) >= nb_loop * (nb_req + ratio + 2)
-    if accelize_drm.is_ctrl_sw:
-        challenge_list = list(map(lambda x: x['saasChallenge'], challenge_list))
-    else:
-        # Remove close & health requests (that are duplicate of latest sync request)
-        challenge_list = list(filter(lambda x: x['request'] not in ['close','health'], challenge_list))
-        challenge_list = list(map(lambda x: x['saasChallenge'], challenge_list))
+    assert len(challenge_list) >= nb_loop * 2
     challenge_set = set(challenge_list)
     try:
         assert len(challenge_list) == len( challenge_set), "Found duplicate saas challenge"
@@ -348,7 +334,6 @@ def test_saas_challenge_quality_through_instances(accelize_drm, conf_json,
                     async_cb.callback
                 ) as drm_manager:
             drm_manager.activate()
-            drm_manager.deactivate()
     log_content = logfile.read()
     challenge_list = parse_and_save_challenge(log_content, REGEX_PATTERN)
     assert len(challenge_list) >= nb_loop * 2
