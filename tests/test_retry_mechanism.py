@@ -165,7 +165,7 @@ def test_long_to_short_retry_on_authentication(accelize_drm, conf_json,
     data_list = get_context('data')
     print('data_list=', data_list)
     assert len(data_list) >= 3
-    prev_data = parser.parse(data_list.pop(0))
+    prev_data = data_list.pop(0)
     for data in data_list:
         delta = int((parser.parse(data) - parser.parse(prev_data)).total_seconds())
         prev_data = data
@@ -232,7 +232,7 @@ def test_long_to_short_retry_on_license(accelize_drm, conf_json, cred_json,
     data_list = get_context('data')
     print('data_list=', data_list)
     assert len(data_list) >= 3
-    prev_data = parser.parse(data_list.pop(0))
+    prev_data = data_list.pop(0)
     for data in data_list:
         delta = int((parser.parse(data) - parser.parse(prev_data)).total_seconds())
         prev_data = data
