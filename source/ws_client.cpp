@@ -305,7 +305,6 @@ void DrmWSClient::getOAuth2token( int32_t timeout_msec ) {
     req.setPostFields();
 
     // Send request and wait response
-    //if ( timeout_msec >= mRequestTimeoutMS )
     if ( (timeout_msec == -1 ) || ( timeout_msec >= mRequestTimeoutMS ) )
         timeout_msec = mRequestTimeoutMS;
     std::string oauth_url = fmt::format( "{}/auth/token", mUrl );

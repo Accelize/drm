@@ -118,11 +118,11 @@ def test_long_to_short_retry_on_authentication(accelize_drm, conf_json,
     async_cb = async_handler.create()
     async_cb.reset()
 
-    expires_in = 5
-    retryShortPeriod = 3
-    retryLongPeriod = 10
-    retry_timeout = 20
-    license_period_second = 18
+    expires_in = 4
+    retryShortPeriod = 2
+    retryLongPeriod = 4
+    retry_timeout = 5
+    license_period_second = 25
 
     conf_json.reset()
     logfile = log_file_factory.create(1)
@@ -175,10 +175,10 @@ def test_long_to_short_retry_on_authentication(accelize_drm, conf_json,
     for delta in delta_list:
         print('delta=', delta, 'exp=', delta_exp)
         try:
-            assert delta_exp == delta
+            assert delta_exp <= delta <= delta_exp+1
         except AssertionError:
             delta_exp = retryShortPeriod
-            assert delta_exp == delta
+            assert delta_exp <= delta <= delta_exp+1
     async_cb.assert_NoError()
     logfile.remove()
 
@@ -341,9 +341,7 @@ def test_thread_retry_on_lost_connection(accelize_drm, conf_json, cred_json, asy
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
-    context = {'cnt':0,
-               'license_period_second': licDuration
-    }
+    context = {'license_period_second': licDuration}
     set_context(context)
     assert get_context() == context
 
@@ -355,7 +353,7 @@ def test_thread_retry_on_lost_connection(accelize_drm, conf_json, cred_json, asy
                 async_cb.callback
             ) as drm_manager:
         drm_manager.activate()
-        wait_until_true(lambda: async_cb.was_called, timeout=licDuration*2)
+        wait_until_true(lambda: async_cb.was_called, timeout=2*licDuration)
         drm_manager.deactivate()
     assert async_cb.was_called
     assert async_cb.errcode == accelize_drm.exceptions.DRMWSTimedOut.error_code

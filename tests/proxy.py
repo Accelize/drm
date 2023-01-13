@@ -783,7 +783,17 @@ def create_app(url):
 
     @app.route('/test_long_to_short_retry_on_authentication/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
     def create__test_long_to_short_retry_on_authentication(product_id):
-        return redirect(url_for('create', product_id=product_id), code=307)
+        global context, lock
+        new_url = request.url.replace(request.url_root+'test_long_to_short_retry_on_authentication', url)
+        request_json = request.get_json()
+        response = _post(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text)
+        response_json = response.json()
+        with lock:
+            response_json['drm_config']['license_period_second'] = context['license_period_second']
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response, response.status_code)
 
     @app.route('/test_long_to_short_retry_on_authentication/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_long_to_short_retry_on_authentication(entitlement_id):
@@ -869,27 +879,26 @@ def create_app(url):
 
     @app.route('/test_thread_retry_on_lost_connection/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
     def create__test_thread_retry_on_lost_connection(product_id):
-        global context, lock
-        request_json = request.get_json()
-        request_type = request_json['request']
-        with lock:
-            cnt = context['cnt']
-            timeoutSecond = context['timeoutSecond'] + 1
-            context['cnt'] += 1
-        if cnt < 1 or request_type == 'close':
-            new_url = request.url.replace(request.url_root+'test_thread_retry_on_lost_connection', url)
-            response = _post(new_url, json=request_json, headers=request.headers)
-            response_json = response.json()
-            response_json['metering']['timeoutSecond'] = timeoutSecond
-            response._content = dumps(response_json).encode('utf-8')
-            return Response(response, response.status_code)
-        else:
-            sleep(timeoutSecond)
-            return ('', 204)
+        return redirect(url_for('create', product_id=product_id), code=307)
 
     @app.route('/test_thread_retry_on_lost_connection/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_thread_retry_on_lost_connection(entitlement_id):
-        return redirect(url_for('update', entitlement_id=entitlement_id), code=307)
+        global context, lock
+        new_url = request.url.replace(request.url_root+'test_thread_retry_on_lost_connection', url)
+        request_json = request.get_json()
+        is_health = request_json.get('is_health', False)
+        is_closed = request_json.get('is_closed', False)
+        if is_health or is_closed:
+            response = _patch(new_url, json=request_json, headers=request.headers)
+            assert response.status_code == 204 if is_health else 200, (
+                    "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                    indent=4, sort_keys=True), response.status_code, response.text))
+            return Response(response, response.status_code)
+        else:
+            with lock:
+                timeoutSecond = context['license_period_second'] + 1
+            sleep(timeoutSecond)
+            return ('', 204)
 
     ##############################################################################
     # test_unittest_on_hw.py
