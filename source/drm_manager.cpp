@@ -1578,7 +1578,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
                     wait_duration = short_duration;
                 else
                     wait_duration = long_duration;
-                Warning( "Attempt #{} to obtain a new authentication token failed with message: {}. New attempt planned in {} seconds",
+                Warning( "Attempt #{} on Authentication request failed with message: {}. New attempt planned in {} seconds",
                         http_attempts, e.what(), wait_duration.count()/1000000000 );
                 /// Wait a bit before retrying
                 sleepOrExit( wait_duration );

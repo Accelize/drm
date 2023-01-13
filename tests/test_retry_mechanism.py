@@ -108,7 +108,7 @@ def test_api_retry_enabled(accelize_drm, conf_json, cred_json, async_handler,
 
 
 @pytest.mark.no_parallel
-def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
+def test_long_to_short_retry_on_authentication(accelize_drm, conf_json,
             cred_json, async_handler, live_server, request, log_file_factory):
     """
     Test the number of expected retries and the gap between 2 retries
@@ -157,8 +157,9 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
     assert search(r'Timeout on Authentication request after', async_cb.message, IGNORECASE)
     async_cb.reset()
     log_content = logfile.read()
-    assert len(findall(r'Attempt #\d+ to obtain a new authentication token failed with message', log_content, IGNORECASE)) >= 3
-    assert search(r'Timeout on Authentication request after', log_content, IGNORECASE)
+    assert len(findall(r'Attempt #\d+ on Authentication request failed with message: .+ New attempt planned in \d+ seconds',
+                log_content, IGNORECASE)) >= 3
+    assert search(r'Timeout on Authentication request after \d+ attempts', log_content, IGNORECASE)
     # Analyze retry periods
     assert get_context('data')
     data_list = get_context('data')
@@ -172,12 +173,13 @@ def test_long_to_short_retry_switch_on_authentication(accelize_drm, conf_json,
             assert (retryLongPeriod-1) <= delta <= retryLongPeriod
         else:
             assert (retryShortPeriod-1) <= delta <= retryShortPeriod
+    async_cb.assert_NoError()
     logfile.remove()
 
 
 @pytest.mark.no_parallel
-def test_long_to_short_retry_switch_on_license(accelize_drm, conf_json, cred_json,
-                           async_handler, live_server, request):
+def test_long_to_short_retry_on_license(accelize_drm, conf_json, cred_json,
+                       async_handler, live_server, request, log_file_factory):
     """
     Test the number of expected retries and the gap between 2 retries
     on license requests occurring in the background thread
@@ -188,16 +190,19 @@ def test_long_to_short_retry_switch_on_license(accelize_drm, conf_json, cred_jso
 
     retryShortPeriod = 3
     retryLongPeriod = 10
+    retry_timeout = 25
     license_period_second = 25
 
     conf_json.reset()
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
     conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json['settings']['ws_retry_period_short'] = retryShortPeriod
     conf_json['settings']['ws_retry_period_long'] = retryLongPeriod
+    conf_json['settings']['ws_request_timeout'] = retry_timeout
     conf_json.save()
 
     context = {'data':list(),
-               'cnt':0,
                'license_period_second':license_period_second
     }
     set_context(context)
@@ -212,28 +217,31 @@ def test_long_to_short_retry_switch_on_license(accelize_drm, conf_json, cred_jso
             ) as drm_manager:
         drm_manager.activate()
         lic_duration = drm_manager.get('license_duration')
-        wait_until_true(lambda: async_cb.was_called,
-                    timeout= lic_duration + 2*license_period_second)
+        wait_until_true(lambda: async_cb.was_called, lic_duration + 2*retry_timeout)
         drm_manager.deactivate()
     assert async_cb.was_called
-    assert 'Timeout on License' in async_cb.message
     assert async_cb.errcode == accelize_drm.exceptions.DRMWSTimedOut.error_code
-    context = get_context()
-    data_list = context['data']
-    data = data_list.pop(0)
-    data = data_list.pop(-1)
+    assert search(r'Timeout on Authentication request after', async_cb.message, IGNORECASE)
+    async_cb.reset()
+    log_content = logfile.read()
+    assert len(findall(r'Attempt #\d+ on License request failed with message: .+ New attempt planned in \d+ seconds',
+                log_content, IGNORECASE)) >= 3
+    assert search(r'Timeout on License request after \d+ attempts', log_content, IGNORECASE)
+    # Analyze retry periods
+    assert get_context('data')
+    data_list = get_context('data')
+    print('data_list=', data_list)
     assert len(data_list) >= 3
-    data = data_list.pop(0)
-    assert data[0] == 'running'
-    prev_lic = data[2]
-    for type, start, end in data_list:
-        assert type == 'running'
-        lic_delta = int((start - prev_lic).total_seconds())
-        prev_lic = end
-        if lic_delta > retryShortPeriod:
-            assert (retryLongPeriod-1) <= lic_delta <= retryLongPeriod
+    prev_data = parser.parse(data_list.pop(0))
+    for data in data_list:
+        delta = int((parser.parse(data) - parser.parse(prev_data)).total_seconds())
+        prev_data = data
+        if delta > retryShortPeriod:
+            assert (retryLongPeriod-1) <= delta <= retryLongPeriod
         else:
-            assert (retryShortPeriod-1) <= lic_delta <= retryShortPeriod
+            assert (retryShortPeriod-1) <= delta <= retryShortPeriod
+    async_cb.assert_NoError()
+    logfile.remove()
 
 
 @pytest.mark.no_parallel
@@ -277,7 +285,7 @@ def test_api_retry_on_lost_connection(accelize_drm, conf_json, cred_json, async_
     nb_attempts = int(m.group(1))
     assert nb_attempts_expected == nb_attempts
     log_content = logfile.read()
-    attempts_list = [int(e) for e in findall(r'Attempt #(\d+) to obtain a new License failed with message', log_content)]
+    attempts_list = [int(e) for e in findall(r'Attempt #(\d+) on License request failed with message', log_content)]
     assert len(attempts_list) == nb_attempts_expected
     assert sorted(list(attempts_list)) == list(range(1,nb_attempts + 1))
     # Check time between each call
@@ -345,7 +353,7 @@ def test_thread_retry_on_lost_connection(accelize_drm, conf_json, cred_json, asy
     nb_attempts = int(m.group(1))
     assert nb_retry == nb_attempts
     log_content = logfile.read()
-    attempts_list = [int(e) for e in findall(r'Attempt #(\d+) to obtain a new License failed with message', log_content)]
+    attempts_list = [int(e) for e in findall(r'Attempt #(\d+) on License request failed with message', log_content)]
     assert len(attempts_list) == nb_retry
     assert sorted(list(attempts_list)) == list(range(1,nb_retry+1))
     logfile.remove()

@@ -762,11 +762,11 @@ def create_app(url):
     def create__test_api_retry(product_id):
         return ({'error':'Force retry for testing'}, 408)
 
-    # test_long_to_short_retry_switch_on_authentication functions
-    @app.route('/test_long_to_short_retry_switch_on_authentication/auth/token', methods=['GET', 'POST'])
-    def gettoken__test_long_to_short_retry_switch_on_authentication():
+    # test_long_to_short_retry_on_authentication functions
+    @app.route('/test_long_to_short_retry_on_authentication/auth/token', methods=['GET', 'POST'])
+    def gettoken__test_long_to_short_retry_on_authentication():
         global context, lock
-        new_url = request.url.replace(request.url_root+'test_long_to_short_retry_switch_on_authentication', url)
+        new_url = request.url.replace(request.url_root+'test_long_to_short_retry_on_authentication', url)
         with lock:
             if context.get('allow', True):
                 context['allow'] = False
@@ -782,14 +782,14 @@ def create_app(url):
                 context['data'].append(datetime.now())
                 return Response('Request timeout', 408)
 
-    @app.route('/test_long_to_short_retry_switch_on_authentication/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
-    def create__test_long_to_short_retry_switch_on_authentication(product_id):
+    @app.route('/test_long_to_short_retry_on_authentication/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
+    def create__test_long_to_short_retry_on_authentication(product_id):
         return redirect(url_for('create', product_id=product_id), code=307)
 
-    @app.route('/test_long_to_short_retry_switch_on_authentication/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
-    def update__test_long_to_short_retry_switch_on_authentication(entitlement_id):
+    @app.route('/test_long_to_short_retry_on_authentication/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
+    def update__test_long_to_short_retry_on_authentication(entitlement_id):
         global context, lock
-        new_url = request.url.replace(request.url_root+'test_long_to_short_retry_switch_on_authentication', url)
+        new_url = request.url.replace(request.url_root+'test_long_to_short_retry_on_authentication', url)
         request_json = request.get_json()
         is_health = request_json.get('is_health', False)
         is_closed = request_json.get('is_closed', False)
@@ -805,19 +805,18 @@ def create_app(url):
         return Response(response, response.status_code)
 
 
-    # test_long_to_short_retry_switch_on_license functions
-    @app.route('/test_long_to_short_retry_switch_on_license/auth/token', methods=['GET', 'POST'])
-    def gettoken__test_long_to_short_retry_switch_on_license():
-        new_url = request.url.replace(request.url_root+'test_long_to_short_retry_switch_on_license', url)
+    # test_long_to_short_retry_on_license functions
+    @app.route('/test_long_to_short_retry_on_license/auth/token', methods=['GET', 'POST'])
+    def gettoken__test_long_to_short_retry_on_license():
+        new_url = request.url.replace(request.url_root+'test_long_to_short_retry_on_license', url)
         return redirect(new_url, code=307)
 
-    @app.route('/test_long_to_short_retry_switch_on_license/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
-    def create__test_long_to_short_retry_switch_on_license(product_id):
+    @app.route('/test_long_to_short_retry_on_license/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
+    def create__test_long_to_short_retry_on_license(product_id):
         global context, lock
         start = datetime.now()
-        new_url = request.url.replace(request.url_root+'test_long_to_short_retry_switch_on_license', url)
+        new_url = request.url.replace(request.url_root+'test_long_to_short_retry_on_license', url)
         request_json = request.get_json()
-        request_type = request_json['request']
         with lock:
             try:
                 if context['cnt'] < 1 or request_type == 'close':
@@ -834,8 +833,8 @@ def create_app(url):
                 context['cnt'] += 1
                 context['data'].append( (request_type, start, datetime.now()) )
 
-    @app.route('/test_long_to_short_retry_switch_on_license/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
-    def update__test_long_to_short_retry_switch_on_license(entitlement_id):
+    @app.route('/test_long_to_short_retry_on_license/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
+    def update__test_long_to_short_retry_on_license(entitlement_id):
         return redirect(url_for('update', entitlement_id=entitlement_id), code=307)
 
     # test_api_retry_on_lost_connection functions
