@@ -860,10 +860,9 @@ def create_app(url):
     @app.route('/test_api_retry_on_lost_connection/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
     def create__test_api_retry_on_lost_connection(product_id):
         global context, lock
-        start = datetime.now()
         with lock:
             sleep_s = context['sleep']
-            context['data'].append(start)
+            context['data'].append(datetime.now())
         sleep( sleep_s)
         return ('', 204)
 
@@ -897,6 +896,7 @@ def create_app(url):
         else:
             with lock:
                 timeoutSecond = context['license_period_second'] + 1
+                context['data'].append(datetime.now())
             sleep(timeoutSecond)
             return ('', 204)
 

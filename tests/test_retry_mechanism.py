@@ -208,6 +208,7 @@ def test_long_to_short_retry_on_license(accelize_drm, conf_json, cred_json,
     conf_json['settings']['ws_request_timeout'] = retry_timeout
     conf_json.save()
 
+    # Set initial context on the live server
     context = {'data':list(),
                'license_period_second':license_period_second
     }
@@ -328,10 +329,6 @@ def test_thread_retry_on_lost_connection(accelize_drm, conf_json, cred_json, asy
     licDuration = 60
     requestTimeout = 5
 
-    nb_long_retry = ceil((licDuration - retryLongPeriod - 2*retryShortPeriod) / (retryLongPeriod + requestTimeout))
-    nb_short_retry = ceil((licDuration - nb_long_retry*(retryLongPeriod + requestTimeout)) / (retryShortPeriod + requestTimeout))
-    nb_retry = nb_long_retry + nb_short_retry
-
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + request.function.__name__
     conf_json['settings']['ws_retry_period_short'] = retryShortPeriod
@@ -341,9 +338,15 @@ def test_thread_retry_on_lost_connection(accelize_drm, conf_json, cred_json, asy
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
+    # Set initial context on the live server
     context = {'license_period_second': licDuration}
     set_context(context)
     assert get_context() == context
+
+    nb_long_retry = ceil((licDuration - retryLongPeriod - 2*retryShortPeriod) / (retryLongPeriod + requestTimeout))
+    nb_short_retry = ceil((licDuration - nb_long_retry*(retryLongPeriod + requestTimeout)) / (retryShortPeriod + requestTimeout))
+    nb_retry = nb_long_retry + nb_short_retry
+
 
     with accelize_drm.DrmManager(
                 conf_json.path,
@@ -354,7 +357,6 @@ def test_thread_retry_on_lost_connection(accelize_drm, conf_json, cred_json, asy
             ) as drm_manager:
         drm_manager.activate()
         wait_until_true(lambda: async_cb.was_called, timeout=2*licDuration)
-        drm_manager.deactivate()
     assert async_cb.was_called
     assert async_cb.errcode == accelize_drm.exceptions.DRMWSTimedOut.error_code
     m = search(r'Timeout on License request after (\d+) attempts', async_cb.message)
