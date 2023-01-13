@@ -703,13 +703,12 @@ def create_app(url):
         assert response.status_code == 204 if is_health else 200, (
                 "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
                 indent=4, sort_keys=True), response.status_code, response.text))
-        if not is_health:
-            if not is_closed:
-                response_json = response.json()
-                with lock:
-                    response_json['drm_config']['health_period'] = context['health_period']
-                    response_json['drm_config']['health_retry'] = context['health_retry']
-                response._content = dumps(response_json).encode('utf-8')
+        if not is_health and not is_closed:
+            response_json = response.json()
+            with lock:
+                response_json['drm_config']['health_period'] = context['health_period']
+                response_json['drm_config']['health_retry'] = context['health_retry']
+            response._content = dumps(response_json).encode('utf-8')
         return Response(response, response.status_code)
 
     # test_async_call_on_pause_when_health_is_enabled and test_no_async_call_on_pause_when_health_is_disabled functions
@@ -780,7 +779,7 @@ def create_app(url):
                 return Response(response, response.status_code)
             else:
                 context['data'].append(datetime.now())
-                return Response('Request timeout', 408)
+                return Response({'error':'Test retry mechanism'}, 408)
 
     @app.route('/test_long_to_short_retry_on_authentication/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
     def create__test_long_to_short_retry_on_authentication(product_id):
@@ -814,28 +813,33 @@ def create_app(url):
     @app.route('/test_long_to_short_retry_on_license/customer/product/<product_id>/entitlement_session', methods=['PATCH', 'POST'])
     def create__test_long_to_short_retry_on_license(product_id):
         global context, lock
-        start = datetime.now()
         new_url = request.url.replace(request.url_root+'test_long_to_short_retry_on_license', url)
         request_json = request.get_json()
+        response = _post(new_url, json=request_json, headers=request.headers)
+        assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                indent=4, sort_keys=True), response.status_code, response.text)
+        response_json = response.json()
         with lock:
-            try:
-                if context['cnt'] < 1 or request_type == 'close':
-                    response = _post(new_url, json=request_json, headers=request.headers)
-                    assert response.status_code == 201, "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
-                            indent=4, sort_keys=True), response.status_code, response.text)
-                    response_json = response.json()
-                    response_json['metering']['timeoutSecond'] = context['timeoutSecond']
-                    response._content = dumps(response_json).encode('utf-8')
-                    return Response(response, response.status_code)
-                else:
-                    return ({'error':'Test retry mechanism'}, 408)
-            finally:
-                context['cnt'] += 1
-                context['data'].append( (request_type, start, datetime.now()) )
+            response_json['drm_config']['license_period_second'] = context['license_period_second']
+        response._content = dumps(response_json).encode('utf-8')
+        return Response(response, response.status_code)
 
     @app.route('/test_long_to_short_retry_on_license/customer/entitlement_session/<entitlement_id>', methods=['PATCH', 'POST'])
     def update__test_long_to_short_retry_on_license(entitlement_id):
-        return redirect(url_for('update', entitlement_id=entitlement_id), code=307)
+        global context, lock
+        new_url = request.url.replace(request.url_root+'test_long_to_short_retry_on_license', url)
+        request_json = request.get_json()
+        is_health = request_json.get('is_health', False)
+        is_closed = request_json.get('is_closed', False)
+        if is_health or is_closed:
+            response = _patch(new_url, json=request_json, headers=request.headers)
+            assert response.status_code == 204 if is_health else 200, (
+                    "Request:\n'%s'\nfailed with code %d and message: %s" % (dumps(request_json,
+                    indent=4, sort_keys=True), response.status_code, response.text))
+            return Response(response, response.status_code)
+        else:
+            context['data'].append(datetime.now())
+            return Response({'error':'Test retry mechanism'}, 408)
 
     # test_api_retry_on_lost_connection functions
     @app.route('/test_api_retry_on_lost_connection/auth/token', methods=['GET', 'POST'])
