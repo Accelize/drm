@@ -106,7 +106,7 @@ def test_nodelock_normal_case(accelize_drm, conf_json, cred_json, async_handler,
 
     cred_json.set_user('accelize_accelerator_test_03')
     conf_json.addNodelock()
-    logfile = log_file_factory.create(2, append=True)
+    logfile = log_file_factory.create(1)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
     ws_admin.load(conf_json, cred_json)
@@ -134,8 +134,9 @@ def test_nodelock_normal_case(accelize_drm, conf_json, cred_json, async_handler,
             activators.check_coin(drm_manager.get('metered_data'))
             drm_manager.deactivate()
         async_cb.assert_NoError()
-        assert search(r'Looking for local node-locked license file', logfile, IGNORECASE)
-        assert search(r'Installed node-locked license successfully', logfile, IGNORECASE)
+        log_content = logfile.read()
+        assert search(r'Looking for local node-locked license file', log_content, IGNORECASE)
+        assert search(r'Installed node-locked license successfully', log_content, IGNORECASE)
         logfile.remove()
     finally:
         driver.program_fpga()
@@ -353,7 +354,7 @@ def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, c
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     cred_json.set_user('accelize_accelerator_test_03')        # User with a single nodelock license
-    logfile = log_file_factory.create(2, append=True)
+    logfile = log_file_factory.create(1, append=True)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
@@ -415,6 +416,9 @@ def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, c
         assert drm_manager.get('drm_license_type') == 'Floating/Metering'
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
+    log_content = logfile.read()
+    assert search(r'Looking for local node-locked license file', log_content, IGNORECASE)
+    assert search(r'Installed node-locked license successfully', log_content, IGNORECASE)
     logfile.remove()
 
 
@@ -475,7 +479,6 @@ def test_nodelock_after_metering_mode(accelize_drm, conf_json, cred_json, async_
         assert drm_manager.get('drm_license_type') == 'Node-Locked'
         drm_manager.deactivate()
         async_cb.assert_NoError()
-
         log_content = logfile.read()
         assert 'A floating/metering session is still pending: trying to close it gracefully before switching to nodelocked license' in log_content
         logfile.remove()
