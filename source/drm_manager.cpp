@@ -1394,8 +1394,6 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         std::vector<std::string> meteringFile;
 
         Debug( "Build starting license request #{} to create new session", mLicenseCounter );
-
-        json_output["device_id"] = mDeviceID;
         json_output["request"] = "open";
 
         // Request challenge and metering info for first request
@@ -1767,25 +1765,26 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         }
         // Build request for node-locked license
         Json::Value request_json = getMeteringStart();
+        request_json["device_id"] = mDeviceID;
         Debug( "License request JSON:\n{}", request_json.toStyledString() );
 
         // Save license request to file
         saveJsonToFile( mNodeLockRequestFilePath, request_json );
-        Debug( "License request file saved on: {}", mNodeLockRequestFilePath );
+        Debug( "Node-locked license request file saved on: {}", mNodeLockRequestFilePath );
     }
 
     void installNodelockedLicense() {
         Json::Value license_json;
             std::ifstream ifs;
 
-        Debug ( "Looking for local node-locked license file: {}", mNodeLockLicenseFilePath );
+        Debug( "Looking for local node-locked license file: {}", mNodeLockLicenseFilePath );
 
         // Check if license file exists
         if ( isFile( mNodeLockLicenseFilePath ) ) {
             try {
                 // Try to load the local license file
                 license_json = parseJsonFile( mNodeLockLicenseFilePath );
-                Debug( "Parsed Node-locked License file: {}", license_json .toStyledString() );
+                Debug( "Parsed existing node-locked License file: {}", license_json .toStyledString() );
             } catch( const Exception& e ) {
                 Throw( e.getErrCode(), "Invalid local license file {} because {}. "
                      "If this machine is connected to the License server network, rename the file and retry. "
@@ -1808,7 +1807,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
                 getCstInfo();
                 getHostAndCardInfo();
                 request_json["diagnostic"] = mDiagnostics;
-                Debug( "Parsed Node-locked License Request file: {}", request_json .toStyledString() );
+                Debug( "Parsed newly created node-locked License Request file: {}", request_json .toStyledString() );
                 /// - Send request to web service and receive the new license
                 license_json = getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
                 /// - Save the license to file

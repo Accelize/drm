@@ -6,7 +6,7 @@ from re import search
 from json import loads
 from glob import glob
 from os.path import join
-from re import search, IGNORECASE
+from re import search, findall, IGNORECASE
 
 import pytest
 
@@ -205,8 +205,8 @@ def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, asy
 
 @pytest.mark.hwtst
 def test_nodelock_without_server_access(accelize_drm, conf_json, cred_json, async_handler,
-                                        ws_admin):
-    """Test error is returned when no url is provided"""
+                                        ws_admin, log_file_factory):
+    """Test error is not returned when no url is provided and a local license is available"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -215,23 +215,50 @@ def test_nodelock_without_server_access(accelize_drm, conf_json, cred_json, asyn
     # Switch to nodelock
     conf_json.reset()
     conf_json.addNodelock()
+    logfile = log_file_factory.create(1, append=True)
+    conf_json['settings'].update(logfile.json)
+    conf_json.save()
+
+    # Download the nodelock license
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+        assert drm_manager.get('license_type') == 'Node-Locked'
+        assert drm_manager.get('license_type') == 'Floating/Metering'
+        drm_manager.activate()
+        assert drm_manager.get('drm_license_type') == 'Node-Locked'
+
+
+    # Remove url from conf to be sure no request is made to license server
     del conf_json['licensing']['url']
     conf_json.save()
 
-    with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
-        accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-    assert search(r"Error with service configuration file .* Missing parameter 'url' of type String",
-                  str(excinfo.value))
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
-    async_cb.assert_Error(accelize_drm.exceptions.DRMBadFormat.error_code, "Missing parameter 'url' of type String")
-    async_cb.reset()
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+        assert drm_manager.get('license_type') == 'Node-Locked'
+        assert drm_manager.get('license_type') == 'Node-Locked'
+        drm_manager.activate()
+        assert drm_manager.get('drm_license_type') == 'Node-Locked'
+    async_cb.assert_NoError()
+
+    log_content = logfile.read()
+    assert search(r'Looking for local node-locked license file', log_content, IGNORECASE)
+    assert search(r'Could not find nodelocked license file', log_content, IGNORECASE)
+    assert search(r'Cleared session ID', log_content, IGNORECASE)
+    assert search(r'Parsed newly created node-locked License Request file', log_content, IGNORECASE)
+    assert search(r'Requested and saved new node-locked license file', log_content, IGNORECASE)
+    assert len(findall(r'Installed node-locked license successfully', log_content, IGNORECASE)) == 2
+    assert search(r'Parsed existing node-locked License filee', log_content, IGNORECASE)
+    logfile.remove()
 
 
 @pytest.mark.no_parallel
