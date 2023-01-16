@@ -6,6 +6,7 @@ from re import search
 from json import loads
 from glob import glob
 from os.path import join
+from re import search, IGNORECASE
 
 import pytest
 
@@ -93,7 +94,8 @@ def test_nodelock_license_is_not_given_to_inactive_user(accelize_drm, conf_json,
 @pytest.mark.minimum
 @pytest.mark.no_parallel
 @pytest.mark.hwtst
-def test_nodelock_normal_case(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
+def test_nodelock_normal_case(accelize_drm, conf_json, cred_json, async_handler, ws_admin,
+                log_file_factory):
     """Test normal nodelock license usage"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -104,6 +106,9 @@ def test_nodelock_normal_case(accelize_drm, conf_json, cred_json, async_handler,
 
     cred_json.set_user('accelize_accelerator_test_03')
     conf_json.addNodelock()
+    logfile = log_file_factory.create(2, append=True)
+    conf_json['settings'].update(logfile.json)
+    conf_json.save()
     ws_admin.load(conf_json, cred_json)
 
     try:
@@ -129,6 +134,9 @@ def test_nodelock_normal_case(accelize_drm, conf_json, cred_json, async_handler,
             activators.check_coin(drm_manager.get('metered_data'))
             drm_manager.deactivate()
         async_cb.assert_NoError()
+        assert search(r'Looking for local node-locked license file', logfile, IGNORECASE)
+        assert search(r'Installed node-locked license successfully', logfile, IGNORECASE)
+        logfile.remove()
     finally:
         driver.program_fpga()
 
@@ -194,7 +202,6 @@ def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, asy
         driver.program_fpga()
 
 
-@pytest.mark.no_parallel
 @pytest.mark.hwtst
 def test_nodelock_without_server_access(accelize_drm, conf_json, cred_json, async_handler,
                                         ws_admin):
@@ -209,17 +216,15 @@ def test_nodelock_without_server_access(accelize_drm, conf_json, cred_json, asyn
     conf_json.addNodelock()
     del conf_json['licensing']['url']
     conf_json.save()
-    ws_admin.load(conf_json, cred_json)
 
-    with accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            ) as drm_manager:
-        with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
-            drm_manager.activate()
+    with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
+        accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        )
     assert search(r"Error with service configuration file .* Missing parameter 'url' of type String",
                   str(excinfo.value))
     err_code = async_handler.get_error_code(str(excinfo.value))

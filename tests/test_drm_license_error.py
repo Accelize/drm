@@ -219,7 +219,7 @@ def test_replay_request(accelize_drm, conf_json, cred_json, async_handler,
         assert get_context('cnt_license') >= 2
 
         # Start session #2 to replay session #1
-        update_context(record=False})
+        update_context(record=False)
         assert not get_context('record')
         drm_manager.activate()
         assert drm_manager.get('license_status')
