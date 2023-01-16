@@ -203,6 +203,7 @@ def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, asy
         driver.program_fpga()
 
 
+@pytest.mark.no_parallel
 @pytest.mark.hwtst
 def test_nodelock_without_server_access(accelize_drm, conf_json, cred_json, async_handler,
                                         ws_admin, log_file_factory):
@@ -228,13 +229,12 @@ def test_nodelock_without_server_access(accelize_drm, conf_json, cred_json, asyn
                 async_cb.callback
             ) as drm_manager:
         assert drm_manager.get('license_type') == 'Node-Locked'
-        assert drm_manager.get('license_type') == 'Floating/Metering'
         drm_manager.activate()
         assert drm_manager.get('drm_license_type') == 'Node-Locked'
 
 
     # Remove url from conf to be sure no request is made to license server
-    del conf_json['licensing']['url']
+    conf_json['licensing']['url'] = "bad_http"
     conf_json.save()
 
     with accelize_drm.DrmManager(
@@ -257,7 +257,7 @@ def test_nodelock_without_server_access(accelize_drm, conf_json, cred_json, asyn
     assert search(r'Parsed newly created node-locked License Request file', log_content, IGNORECASE)
     assert search(r'Requested and saved new node-locked license file', log_content, IGNORECASE)
     assert len(findall(r'Installed node-locked license successfully', log_content, IGNORECASE)) == 2
-    assert search(r'Parsed existing node-locked License filee', log_content, IGNORECASE)
+    assert search(r'Parsed existing node-locked License file', log_content, IGNORECASE)
     logfile.remove()
 
 
@@ -401,7 +401,6 @@ def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, c
             # Start application
             drm_manager.activate()
             assert drm_manager.get('drm_license_type') == 'Node-Locked'
-            drm_manager.deactivate()
 
         # Set metering configuration
         conf_json.removeNodelock()

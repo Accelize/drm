@@ -32,15 +32,15 @@ def test_entitlement_user1_metering(accelize_drm, conf_json, cred_json, async_ha
         assert drm_manager.get('license_type') == 'Floating/Metering'
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
-        assert "Metering Web Service error 400" in str(excinfo.value)
-        assert "DRM WS request failed" in str(excinfo.value)
-        assert search(r'No Entitlement.* with PT DRM Ref Design .+ for \S+_test_01@accelize.com', str(excinfo.value))
-        assert "User account has no entitlement. Purchase additional licenses via your portal" in str(excinfo.value)
+        assert search(r'Accelize Web Service error 403', str(excinfo.value))
+        assert search(r"No valid entitlement available for this product", str(excinfo.value))
+        assert search(r"You can use this product by subscribing new entitlements", str(excinfo.value))
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
-        async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'User account has no entitlement. Purchase additional licenses via your portal')
+        async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, "You can use this product by subscribing new entitlements")
         async_cb.reset()
     log_content = logfile.read()
-    assert search(r'User account has no entitlement.', log_content, MULTILINE)
+    assert search(r'No valid entitlement available for this product', log_content, MULTILINE)
+    assert search(r'You can use this product by subscribing new entitlements', log_content, MULTILINE)
     logfile.remove()
 
 
@@ -61,6 +61,7 @@ def test_entitlement_user1_nodelock(accelize_drm, conf_json, cred_json, async_ha
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
+    ws_admin.load(conf_json, cred_json)
     try:
         with accelize_drm.DrmManager(
                 conf_json.path,
@@ -84,7 +85,7 @@ def test_entitlement_user1_nodelock(accelize_drm, conf_json, cred_json, async_ha
         assert search(r'User account has no entitlement.', log_content, MULTILINE)
         logfile.remove()
     finally:
-        accelize_drm.clean_nodelock_env(conf_json=conf_json)
+        driver.program_fpga()
 
 
 @pytest.mark.minimum
@@ -137,6 +138,7 @@ def test_entitlement_user2_nodelock(accelize_drm, conf_json, cred_json, async_ha
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
+    ws_admin.load(conf_json, cred_json)
     try:
         with accelize_drm.DrmManager(
                 conf_json.path,
@@ -160,7 +162,7 @@ def test_entitlement_user2_nodelock(accelize_drm, conf_json, cred_json, async_ha
         assert search(r'No valid NodeLocked entitlement found for your account', log_content, MULTILINE)
         logfile.remove()
     finally:
-        accelize_drm.clean_nodelock_env(conf_json=conf_json)
+        driver.program_fpga()
 
 
 @pytest.mark.minimum
@@ -179,7 +181,7 @@ def test_entitlement_user3_metering(accelize_drm, conf_json, cred_json, async_ha
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-    accelize_drm.clean_metering_env(cred_json, ws_admin)
+    ws_admin.load(conf_json, cred_json)
     with accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
@@ -214,7 +216,7 @@ def test_entitlement_user3_nodelock(accelize_drm, conf_json, cred_json, async_ha
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-    accelize_drm.clean_nodelock_env(None, driver, conf_json, cred_json, ws_admin)
+    ws_admin.load(conf_json, cred_json)
     try:
         with accelize_drm.DrmManager(
                 conf_json.path,
@@ -232,7 +234,6 @@ def test_entitlement_user3_nodelock(accelize_drm, conf_json, cred_json, async_ha
         assert search(r'Installed node-locked license successfully', log_content, MULTILINE)
         logfile.remove()
     finally:
-        accelize_drm.clean_nodelock_env(None, driver, conf_json, cred_json, ws_admin)
         driver.program_fpga()
 
 
@@ -286,6 +287,7 @@ def test_entitlement_user4_nodelock(accelize_drm, conf_json, cred_json, async_ha
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
+    ws_admin.load(conf_json, cred_json)
     try:
         with accelize_drm.DrmManager(
                 conf_json.path,
@@ -309,4 +311,4 @@ def test_entitlement_user4_nodelock(accelize_drm, conf_json, cred_json, async_ha
         assert search(r'No valid NodeLocked entitlement found for your account', log_content, MULTILINE)
         logfile.remove()
     finally:
-        accelize_drm.clean_nodelock_env(conf_json=conf_json)
+        driver.program_fpga()

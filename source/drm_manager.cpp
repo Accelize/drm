@@ -1395,6 +1395,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
 
         Debug( "Build starting license request #{} to create new session", mLicenseCounter );
         json_output["request"] = "open";
+        json_output["device_id"] = mDeviceID;
 
         // Request challenge and metering info for first request
         checkDRMCtlrRet( getDrmController().initialization( numberOfDetectedIps, saasChallenge, meteringFile ) );
@@ -1765,7 +1766,6 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         }
         // Build request for node-locked license
         Json::Value request_json = getMeteringStart();
-        request_json["device_id"] = mDeviceID;
         Debug( "License request JSON:\n{}", request_json.toStyledString() );
 
         // Save license request to file
@@ -1798,8 +1798,6 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
             mSessionID = std::string("");
             mEntitlementID = std::string("");
             Debug( "Cleared session ID: {}", mSessionID );
-            /// - Create WS access
-            mWsClient.reset( new DrmWSClient( mConfFilePath, mCredFilePath ) );
             try {
                 /// - Read request file
                 Json::Value request_json = parseJsonFile( mNodeLockRequestFilePath );
