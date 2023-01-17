@@ -3,7 +3,7 @@
 Test node-locked behavior of DRM Library.
 """
 import pytest
-from re import search, MULTILINE
+from re import search, IGNORECASE
 
 
 @pytest.mark.minimum
@@ -22,6 +22,7 @@ def test_entitlement_user1_metering(accelize_drm, conf_json, cred_json, async_ha
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
+
     with accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
@@ -39,8 +40,8 @@ def test_entitlement_user1_metering(accelize_drm, conf_json, cred_json, async_ha
         async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, "You can use this product by subscribing new entitlements")
         async_cb.reset()
     log_content = logfile.read()
-    assert search(r'No valid entitlement available for this product', log_content, MULTILINE)
-    assert search(r'You can use this product by subscribing new entitlements', log_content, MULTILINE)
+    assert search(r'No valid entitlement available for this product', log_content, IGNORECASE)
+    assert search(r'You can use this product by subscribing new entitlements', log_content, IGNORECASE)
     logfile.remove()
 
 
@@ -61,31 +62,27 @@ def test_entitlement_user1_nodelock(accelize_drm, conf_json, cred_json, async_ha
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-    ws_admin.load(conf_json, cred_json)
-    try:
-        with accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            ) as drm_manager:
-            assert drm_manager.get('license_type') == 'Node-Locked'
-            with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
-                drm_manager.activate()
-            assert "Metering Web Service error 400" in str(excinfo.value)
-            assert "DRM WS request failed" in str(excinfo.value)
-            assert search(r'No Entitlement.* with PT DRM Ref Design .+ for \S+_test_01@accelize.com', str(excinfo.value))
-            assert "User account has no entitlement. Purchase additional licenses via your portal" in str(excinfo.value)
-            assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
-        async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'User account has no entitlement. Purchase additional licenses via your portal')
+
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        assert drm_manager.get('license_type') == 'Node-Locked'
+        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+            drm_manager.activate()
+        assert search(r'Accelize Web Service error 403', str(excinfo.value))
+        assert search(r"No valid entitlement available for this product", str(excinfo.value))
+        assert search(r"You can use this product by subscribing new entitlements", str(excinfo.value))
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+        async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, "You can use this product by subscribing new entitlements")
         async_cb.reset()
-        log_content = logfile.read()
-        assert search(r'Failed to request license file', log_content, MULTILINE)
-        assert search(r'User account has no entitlement.', log_content, MULTILINE)
-        logfile.remove()
-    finally:
-        driver.program_fpga()
+    log_content = logfile.read()
+    assert search(r'No valid entitlement available for this product', log_content, IGNORECASE)
+    assert search(r'You can use this product by subscribing new entitlements', log_content, IGNORECASE)
+    logfile.remove()
 
 
 @pytest.mark.minimum
