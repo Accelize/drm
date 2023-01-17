@@ -214,7 +214,7 @@ def test_metering_limits_on_activate(accelize_drm, conf_json, cred_json, async_h
     conf_json['settings'].update(logfile.json)
     conf_json.save()
     cred_json.set_user('accelize_accelerator_test_03')
-    ws_admin.load(conf_json, cred_json)
+    ws_admin.clean_user(conf_json, cred_json)
     with accelize_drm.DrmManager(
                 conf_json.path,
                 cred_json.path,
@@ -272,7 +272,7 @@ def test_metering_limits_on_licensing_thread(accelize_drm, conf_json, cred_json,
     conf_json['settings'].update(logfile.json)
     conf_json.save()
     cred_json.set_user('accelize_accelerator_test_03')
-    ws_admin.load(conf_json, cred_json)
+    ws_admin.clean_user(conf_json, cred_json)
     with accelize_drm.DrmManager(
                 conf_json.path,
                 cred_json.path,

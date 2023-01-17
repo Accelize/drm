@@ -29,7 +29,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     async_cb.reset()
     cred_json.set_user('accelize_accelerator_test_03')
     conf_json.addNodelock()
-    ws_admin.load(conf_json, cred_json)
+    ws_admin.clean_user(conf_json, cred_json)
 
     try:
         with accelize_drm.DrmManager(
@@ -69,7 +69,7 @@ def test_nodelock_license_is_not_given_to_inactive_user(accelize_drm, conf_json,
     async_cb = async_handler.create()
     cred_json.set_user('accelize_accelerator_test_01')
     conf_json.addNodelock()
-    ws_admin.load(conf_json, cred_json)
+    ws_admin.clean_user(conf_json, cred_json)
 
     # Start application
     with accelize_drm.DrmManager(
@@ -109,7 +109,7 @@ def test_nodelock_normal_case(accelize_drm, conf_json, cred_json, async_handler,
     logfile = log_file_factory.create(1)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-    ws_admin.load(conf_json, cred_json)
+    ws_admin.clean_user(conf_json, cred_json)
 
     try:
         # Load a user who has a valid nodelock license
@@ -156,7 +156,7 @@ def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, asy
     cred_json.set_user('accelize_accelerator_test_03')
     conf_json.addNodelock()
     activators.autotest()
-    ws_admin.load(conf_json, cred_json)
+    ws_admin.clean_user(conf_json, cred_json)
 
     try:
         # Load a user who has a valid nodelock license
@@ -275,7 +275,7 @@ def test_nodelock_without_malformed_license_file(accelize_drm, conf_json, cred_j
     conf_json.reset()
     conf_json.addNodelock()
     license_dir = conf_json['licensing']['license_dir']
-    ws_admin.load(conf_json, cred_json)
+    ws_admin.clean_user(conf_json, cred_json)
 
     try:
         with accelize_drm.DrmManager(
@@ -323,7 +323,7 @@ def test_nodelock_limits(accelize_drm, conf_json, conf_json_second, cred_json, a
 
     cred_json.set_user('accelize_accelerator_test_03')
     conf_json.addNodelock()
-    ws_admin.load(conf_json, cred_json)
+    ws_admin.clean_user(conf_json, cred_json)
 
     try:
         # Create the first instance
@@ -387,7 +387,7 @@ def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, c
 
     # Set nodelock configuration
     conf_json.addNodelock()
-    ws_admin.load(conf_json, cred_json)
+    ws_admin.clean_user(conf_json, cred_json)
 
     try:
         with accelize_drm.DrmManager(
@@ -462,7 +462,7 @@ def test_nodelock_after_metering_mode(accelize_drm, conf_json, cred_json, async_
     conf_json.reset()
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-    ws_admin.load(conf_json, cred_json)
+    ws_admin.clean_user(conf_json, cred_json)
 
     # Set metering configuration
     drm_manager = accelize_drm.DrmManager(
@@ -488,7 +488,7 @@ def test_nodelock_after_metering_mode(accelize_drm, conf_json, cred_json, async_
 
     # Switch to nodelock
     conf_json.addNodelock()
-    ws_admin.load(conf_json, cred_json)
+    ws_admin.clean_user(conf_json, cred_json)
     try:
         drm_manager = accelize_drm.DrmManager(
                     conf_json.path,
@@ -527,7 +527,7 @@ def test_parsing_of_nodelock_files(accelize_drm, conf_json, cred_json, async_han
     cred_json.set_user('accelize_accelerator_test_03')  # User with a single nodelock license
     conf_json.reset()
     conf_json.addNodelock()
-    ws_admin.load(conf_json, cred_json)
+    ws_admin.clean_user(conf_json, cred_json)
 
     try:
         with accelize_drm.DrmManager(

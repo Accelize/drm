@@ -115,7 +115,7 @@ class DB_AccessFunction:
         response = delete(url, headers={"Authorization":f"Bearer {token}"})
         assert response.status_code == 204
 
-    def load(self, conf_json, cred_json):
+    def clean_user(self, conf_json, cred_json):
         self.conf_json = conf_json
         self.base_url = conf_json['licensing']['url']
         self.token = self.get_token(self.base_url, cred_json.client_id, cred_json.client_secret)
