@@ -251,6 +251,7 @@ def test_entitlement_user4_metering(accelize_drm, conf_json, cred_json, async_ha
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
+    ws_admin.load(conf_json, cred_json)
     with accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
@@ -261,7 +262,6 @@ def test_entitlement_user4_metering(accelize_drm, conf_json, cred_json, async_ha
         assert drm_manager.get('license_type') == 'Floating/Metering'
         drm_manager.activate()
         assert drm_manager.get('drm_license_type') == 'Floating/Metering'
-        drm_manager.deactivate()
     async_cb.assert_NoError()
     log_content = logfile.read()
     assert search(r'DRM session .{16} started', log_content, IGNORECASE)

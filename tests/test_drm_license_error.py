@@ -36,11 +36,11 @@ def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler,
     conf_json.save()
 
     with accelize_drm.DrmManager(
-            conf_json.path, cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        ) as drm_manager:
+                conf_json.path, cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         # Check failure is detected
         with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
             drm_manager.activate()
@@ -71,11 +71,11 @@ def test_header_error_on_key2(accelize_drm, conf_json, cred_json, async_handler,
     conf_json.save()
 
     with accelize_drm.DrmManager(
-            conf_json.path, cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        ) as drm_manager:
+                conf_json.path, cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         # Check failure is detected
         with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
             drm_manager.activate()
@@ -109,21 +109,19 @@ def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_
     conf_json.save()
 
     with accelize_drm.DrmManager(
-            conf_json.path, cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        ) as drm_manager:
+                conf_json.path, cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         drm_manager.activate()
-        start = datetime.now()
         lic_duration = drm_manager.get('license_duration')
         assert drm_manager.get('license_status')
         activators.autotest(is_activated=True)
-        wait_period = start + timedelta(seconds=lic_duration+2) - datetime.now()
-        sleep(wait_period.total_seconds())
+        wait_until_true(lambda: async_cb.was_called, lic_duration+2)
+        sleep(1)
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
-    activators.autotest(is_activated=False)
     assert async_cb.was_called
     assert async_cb.errcode == accelize_drm.exceptions.DRMCtlrError.error_code
     assert search(r"License (header|MAC) check error", async_cb.message)
@@ -154,21 +152,19 @@ def test_header_error_on_licenseTimer2(accelize_drm, conf_json, cred_json, async
     conf_json.save()
 
     with accelize_drm.DrmManager(
-            conf_json.path, cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        ) as drm_manager:
+                conf_json.path, cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         drm_manager.activate()
-        start = datetime.now()
         lic_duration = drm_manager.get('license_duration')
         assert drm_manager.get('license_status')
         activators.autotest(is_activated=True)
-        wait_period = start + timedelta(seconds=lic_duration+2) - datetime.now()
-        sleep(wait_period.total_seconds())
+        wait_until_true(lambda: async_cb.was_called, lic_duration+2)
+        sleep(1)
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
-    activators.autotest(is_activated=False)
     assert async_cb.was_called
     assert async_cb.errcode == accelize_drm.exceptions.DRMCtlrError.error_code
     assert search(r"License (header|MAC) check error", async_cb.message)
@@ -200,11 +196,11 @@ def test_replay_request(accelize_drm, conf_json, cred_json, async_handler,
     assert get_context() == context
 
     with accelize_drm.DrmManager(
-            conf_json.path, cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        ) as drm_manager:
+                conf_json.path, cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
         # Start session #1 to record
         drm_manager.activate()
         assert drm_manager.get('license_status')
