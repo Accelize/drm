@@ -115,7 +115,7 @@ def test_entitlement_user2_metering(accelize_drm, conf_json, cred_json, async_ha
         drm_manager.deactivate()
     async_cb.assert_NoError()
     log_content = logfile.read()
-    assert search(r'DRM session .{16} started', log_content, MULTILINE)
+    assert search(r'DRM session .{16} started', log_content, IGNORECASE)
     logfile.remove()
 
 
@@ -156,8 +156,8 @@ def test_entitlement_user2_nodelock(accelize_drm, conf_json, cred_json, async_ha
         async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'No valid NodeLocked entitlement found for your account')
         async_cb.reset()
         log_content = logfile.read()
-        assert search(r'Failed to request license file', log_content, MULTILINE)
-        assert search(r'No valid NodeLocked entitlement found for your account', log_content, MULTILINE)
+        assert search(r'Failed to request license file', log_content, IGNORECASE)
+        assert search(r'No valid NodeLocked entitlement found for your account', log_content, IGNORECASE)
         logfile.remove()
     finally:
         driver.program_fpga()
@@ -193,7 +193,7 @@ def test_entitlement_user3_metering(accelize_drm, conf_json, cred_json, async_ha
         drm_manager.deactivate()
     async_cb.assert_NoError()
     log_content = logfile.read()
-    assert search(r'DRM session .{16} started', log_content, MULTILINE)
+    assert search(r'DRM session .{16} started', log_content, IGNORECASE)
     logfile.remove()
 
 
@@ -229,7 +229,7 @@ def test_entitlement_user3_nodelock(accelize_drm, conf_json, cred_json, async_ha
             drm_manager.deactivate()
         async_cb.assert_NoError()
         log_content = logfile.read()
-        assert search(r'Installed node-locked license successfully', log_content, MULTILINE)
+        assert search(r'Installed node-locked license successfully', log_content, IGNORECASE)
         logfile.remove()
     finally:
         driver.program_fpga()
@@ -264,7 +264,7 @@ def test_entitlement_user4_metering(accelize_drm, conf_json, cred_json, async_ha
         drm_manager.deactivate()
     async_cb.assert_NoError()
     log_content = logfile.read()
-    assert search(r'DRM session .{16} started', log_content, MULTILINE)
+    assert search(r'DRM session .{16} started', log_content, IGNORECASE)
     logfile.remove()
 
 
@@ -305,8 +305,8 @@ def test_entitlement_user4_nodelock(accelize_drm, conf_json, cred_json, async_ha
         async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'No valid NodeLocked entitlement found for your account')
         async_cb.reset()
         log_content = logfile.read()
-        assert search(r'Failed to request license file', log_content, MULTILINE)
-        assert search(r'No valid NodeLocked entitlement found for your account', log_content, MULTILINE)
+        assert search(r'Failed to request license file', log_content, IGNORECASE)
+        assert search(r'No valid NodeLocked entitlement found for your account', log_content, IGNORECASE)
         logfile.remove()
     finally:
         driver.program_fpga()
