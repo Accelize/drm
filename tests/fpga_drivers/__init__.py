@@ -161,13 +161,16 @@ class FpgaDriverBase:
         with self._augment_exception('clear'):
             return self._clear_fpga()
 
-    def program_fpga(self, fpga_image=None):
+    def program_fpga(self, fpga_image=None, reset=False):
         """
         Program FPGA with specified image.
 
         Args:
             fpga_image (str): FPGA image to program.
         """
+        if reset:
+            self.reset_fpga()
+
         if fpga_image is None:
             if not self._fpga_image:
                 raise RuntimeError('Unspecified fpga_image')

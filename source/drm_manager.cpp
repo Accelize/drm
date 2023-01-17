@@ -525,6 +525,8 @@ protected:
             sLogger = std::make_shared<spdlog::logger>( "drmlib_logger", sinks.begin(), sinks.end() );
             sLogger->set_level( sLogConsoleVerbosity );
             spdlog::set_default_logger( sLogger );
+
+            //spdlog::flush_on(spdlog::level::trace); TO UNCOMMENT ONLY FOR DEBUG
         }
         catch( const spdlog::spdlog_ex& ex ) { //LCOV_EXCL_LINE
             std::cerr << "Failed to initialize logging: " << ex.what() << std::endl; //LCOV_EXCL_LINE
