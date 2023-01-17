@@ -201,13 +201,12 @@ def create_app(url):
                 context['cnt_license'] += 1
             if cnt > 2:
                 return ({'error':'Test did not run as expected'}, 408)
-            else:
-                response_json = response.json()
-                dna, lic_json = list(response_json['drm_config']['license'].items())[0]
-                timer = lic_json['timer']
-                timer = '1' + timer[1:] if timer[0] == '0' else '0' + timer[1:]
-                response_json['drm_config']['license'][dna]['timer'] = timer
-                response._content = dumps(response_json).encode('utf-8')
+            response_json = response.json()
+            dna, lic_json = list(response_json['drm_config']['license'].items())[0]
+            timer = lic_json['timer']
+            timer = '1' + timer[1:] if timer[0] == '0' else '0' + timer[1:]
+            response_json['drm_config']['license'][dna]['timer'] = timer
+            response._content = dumps(response_json).encode('utf-8')
         return Response(response, response.status_code)
 
     # test_header_error_on_licenseTimer2 functions
@@ -240,13 +239,12 @@ def create_app(url):
                 context['cnt_license'] += 1
             if cnt > 2:
                 return ({'error':'Test did not run as expected'}, 408)
-            else:
-                response_json = response.json()
-                dna, lic_json = list(response_json['drm_config']['license'].items())[0]
-                timer = lic_json['timer']
-                timer = timer[0:-1] + '1' if timer[-1] == '0' else timer[0:-1] + '0'
-                response_json['drm_config']['license'][dna]['timer'] = timer
-                response._content = dumps(response_json).encode('utf-8')
+            response_json = response.json()
+            dna, lic_json = list(response_json['drm_config']['license'].items())[0]
+            timer = lic_json['timer']
+            timer = timer[0:-1] + '1' if timer[-1] == '0' else timer[0:-1] + '0'
+            response_json['drm_config']['license'][dna]['timer'] = timer
+            response._content = dumps(response_json).encode('utf-8')
         return Response(response, response.status_code)
 
     # test_replay_request functions
