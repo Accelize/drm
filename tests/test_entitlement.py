@@ -61,7 +61,7 @@ def test_entitlement_user_noentitlement_nodelock(accelize_drm, conf_json, cred_j
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-    ws_admin.clean_user(conf_json, cred_json)
+    ws_admin.clean_user_db(conf_json, cred_json)
     try:
         with accelize_drm.DrmManager(
                     conf_json.path,
@@ -103,7 +103,7 @@ def test_entitlement_user_metering_metering(accelize_drm, conf_json, cred_json, 
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-    ws_admin.clean_user(conf_json, cred_json)
+    ws_admin.clean_user_db(conf_json, cred_json)
     try:
         with accelize_drm.DrmManager(
                     conf_json.path,
@@ -141,7 +141,7 @@ def test_entitlement_user_metering_nodelock(accelize_drm, conf_json, cred_json, 
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-    ws_admin.clean_user(conf_json, cred_json)
+    ws_admin.clean_user_db(conf_json, cred_json)
     try:
         with accelize_drm.DrmManager(
                 conf_json.path,
@@ -183,7 +183,7 @@ def test_entitlement_user_nodelock_metering(accelize_drm, conf_json, cred_json, 
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-    ws_admin.clean_user(conf_json, cred_json)
+    ws_admin.clean_user_db(conf_json, cred_json)
     try:
         with accelize_drm.DrmManager(
                     conf_json.path,
@@ -220,7 +220,7 @@ def test_entitlement_user_nodelock_nodelock(accelize_drm, conf_json, cred_json, 
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-    ws_admin.clean_user(conf_json, cred_json)
+    ws_admin.clean_user_db(conf_json, cred_json)
     try:
         with accelize_drm.DrmManager(
                     conf_json.path,
@@ -256,7 +256,7 @@ def test_entitlement_user_limited_metering(accelize_drm, conf_json, cred_json, a
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-    ws_admin.clean_user(conf_json, cred_json)
+    ws_admin.clean_user_db(conf_json, cred_json)
     try:
         with accelize_drm.DrmManager(
                     conf_json.path,
@@ -298,7 +298,7 @@ def test_entitlement_user_limited_nodelock(accelize_drm, conf_json, cred_json, a
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-    ws_admin.clean_user(conf_json, cred_json)
+    ws_admin.clean_user_db(conf_json, cred_json)
     try:
         with accelize_drm.DrmManager(
                 conf_json.path,
@@ -341,7 +341,7 @@ def test_entitlement_user_floating_metering(accelize_drm, conf_json, cred_json, 
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-    ws_admin.clean_user(conf_json, cred_json)
+    ws_admin.clean_user_db(conf_json, cred_json)
     try:
         with accelize_drm.DrmManager(
                 conf_json.path,
@@ -384,7 +384,7 @@ def test_entitlement_user_floating_nodelock(accelize_drm, conf_json, cred_json, 
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-    ws_admin.clean_user(conf_json, cred_json)
+    ws_admin.clean_user_db(conf_json, cred_json)
     try:
         with accelize_drm.DrmManager(
                 conf_json.path,

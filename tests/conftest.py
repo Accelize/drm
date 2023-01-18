@@ -99,23 +99,23 @@ class DB_AccessFunction:
         url = base_url + '/auth/token?grant_type=client_credentials&client_id=%s&client_secret=%s' % (
             client_id, client_secret)
         response = post(url)
-        assert response.status_code == 200
+        assert response.status_code == 200, f'Following POST request failed: {url}'
         return response.json()['access_token']
 
     # Get info
     @staticmethod
     def get_db(url, token):
         response = get(url, headers={"Authorization":f"Bearer {token}"})
-        assert response.status_code == 200
+        assert response.status_code == 200, f'Following GET request failed: {url}'
         return response.json()
 
     # delete info
     @staticmethod
     def delete_db(url, token):
         response = delete(url, headers={"Authorization":f"Bearer {token}"})
-        assert response.status_code == 204
+        assert response.status_code == 204, f'Following DELETE request failed: {url}'
 
-    def clean_user(self, conf_json, cred_json):
+    def clean_user_db(self, conf_json, cred_json):
         self.conf_json = conf_json
         self.base_url = conf_json['licensing']['url']
         self.token = self.get_token(self.base_url, cred_json.client_id, cred_json.client_secret)
