@@ -518,7 +518,8 @@ def create_app(url):
                 indent=4, sort_keys=True), response.status_code, response.text)
         with lock:
             context['cnt_license'] = 1
-            context['segment_idx'] = 0
+            context['segment_idx'] = -1
+            context['start'] = datetime.now()
             response_json = response.json()
             response_json['drm_config']['health_period'] = context['health_period']
             response_json['drm_config']['health_retry'] = context['health_retry']
@@ -553,8 +554,9 @@ def create_app(url):
         sgmt_idx = int(request_json['drm_config']['metering_file'][24:32], 16)
         with lock:
             if context['segment_idx'] == sgmt_idx:
-                context['data'].append( (sgmt_idx, context['start'], datetime.now()) )
+                context['data_retry'].append( (sgmt_idx, context['start'], datetime.now()) )
             else:
+                context['data_first'].append( (sgmt_idx, context['start'], datetime.now()) )
                 context['segment_idx'] = sgmt_idx
             context['start'] = datetime.now()
         return Response('Timeout', 408)

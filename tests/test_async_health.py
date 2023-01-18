@@ -260,11 +260,12 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json,
     health_retry = 3
     health_retry_step = 3
     health_retry_sleep = 1
-    context = {'data': list(),
-           'health_period': health_period,
-           'health_retry': health_retry,
-           'health_retry_step': health_retry_step,
-           'health_retry_sleep': health_retry_sleep
+    context = {'data_first': list(),
+               'data_retry': list(),
+               'health_period': health_period,
+               'health_retry': health_retry,
+               'health_retry_step': health_retry_step,
+               'health_retry_sleep': health_retry_sleep
     }
     set_context(context)
     assert get_context() == context
@@ -282,26 +283,33 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json,
     async_cb.assert_NoError()
     assert get_proxy_error() is None
     # Analyze results
-    data_list = get_context()['data']
-    assert len(data_list) >= 2
-    last_idx, ref_start, ref_end = data_list.pop(0)
-    retry_list = list()
-    for idx, start, end in data_list:
+    first_list = get_context()['data_first']
+    assert len(first_list) >= 2
+    last_idx = -1
+    for idx, start, end in first_list:
+        delta = int((parser.parse(end) - parser.parse(start)).total_seconds())
+        assert health_retry <= delta <= health_retry + 1
+        assert last_idx != idx
+        last_idx = idx
+    retry_list = get_context()['data_retry']
+    assert len(retry_list) >= 2
+    ref_delta = health_retry - 1
+    last_idx, ref_start, ref_end = retry_list.pop(0)
+    delta = int((parser.parse(ref_end) - parser.parse(ref_start)).total_seconds())
+    assert health_retry_sleep <= delta <= health_retry_sleep + 1
+    for idx, start, end in retry_list:
         delta = int((parser.parse(end) - parser.parse(start)).total_seconds())
         assert health_retry_sleep <= delta <= health_retry_sleep + 1
         if last_idx != idx:
             delta = int((parser.parse(ref_end) - parser.parse(ref_start)).total_seconds())
-            retry_list.append(delta)
+            try:
+                assert ref_delta <= delta <= ref_delta + 1
+            except AssertionError:
+                ref_delta += health_retry_step
+                assert ref_delta <= delta <= ref_delta + 1
             ref_start = start
+            last_idx = idx
         ref_end = end
-        last_idx = idx
-    delta = int((parser.parse(ref_end) - parser.parse(ref_start)).total_seconds())
-    retry_list.append(delta)
-    ref_delta = health_retry-1
-    for d in retry_list:
-        if ref_delta != d:
-           ref_delta += health_retry_step
-        assert d == ref_delta
     log_content = logfile.read()
     assert findall(f"Found parameter 'health_retry' of type Integer: return its value {health_retry}", log_content)
     assert findall(f"Found parameter 'health_retry' of type Integer: return its value {health_retry+health_retry_step}", log_content)
