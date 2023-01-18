@@ -64,7 +64,6 @@ def test_topic1_corrupted_metering(accelize_drm, conf_json, cred_json, async_han
     activators = accelize_drm.pytest_fpga_activators[0]
     activators.reset_coin()
     activators.autotest()
-    cred_json.set_user('accelize_accelerator_test_02')
 
     async_cb.reset()
     conf_json.reset()

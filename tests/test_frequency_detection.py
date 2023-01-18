@@ -15,7 +15,6 @@ def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_jso
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-    cred_json.set_user('accelize_accelerator_test_02')
     conf_json.reset()
 
     # Before any test, get the real DRM frequency and the gap threshold

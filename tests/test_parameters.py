@@ -639,7 +639,6 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     # Test with a floating/metered user
 
     async_cb.reset()
-    cred_json.set_user('accelize_accelerator_test_02')
     conf_json.reset()
     logfile = log_file_factory.create(1)
     conf_json['settings'].update(logfile.json)
@@ -1228,7 +1227,6 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
 
     # Test when authentication url in configuration file is wrong
     async_cb.reset()
-    cred_json.set_user('accelize_accelerator_test_02')
     conf_json.reset()
     conf_json['licensing']['url'] = "http://acme.com"
     conf_json['settings']['ws_api_retry_duration'] = 5
@@ -1251,7 +1249,6 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
     # Test when client_id is wrong
     async_cb.reset()
     conf_json.reset()
-    cred_json.set_user('accelize_accelerator_test_02')
     orig_client_id = cred_json.client_id
     replaced_char = 'A' if orig_client_id[0]!='A' else 'B'
     cred_json.client_id = orig_client_id.replace(orig_client_id[0], replaced_char)
@@ -1274,7 +1271,6 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
     # Test when client_secret is wrong
     async_cb.reset()
     conf_json.reset()
-    cred_json.set_user('accelize_accelerator_test_02')
     orig_client_secret = cred_json.client_secret
     replaced_char = 'A' if orig_client_secret[0]!='A' else 'B'
     cred_json.client_secret = orig_client_secret.replace(orig_client_secret[0], replaced_char)

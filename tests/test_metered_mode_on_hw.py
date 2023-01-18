@@ -23,7 +23,7 @@ def test_metered_start_stop_short_time(accelize_drm, conf_json, cred_json, async
     activators = accelize_drm.pytest_fpga_activators[0]
     activators.reset_coin()
     activators.autotest()
-    cred_json.set_user('accelize_accelerator_test_02')
+    cred_json.set_user('test+metering')
     async_cb.reset()
     conf_json.reset()
     logfile = log_file_factory.create(2)
@@ -63,7 +63,7 @@ def test_metered_start_stop_long_time(accelize_drm, conf_json, cred_json, async_
     activators = accelize_drm.pytest_fpga_activators[0]
     activators.reset_coin()
     activators.autotest()
-    cred_json.set_user('accelize_accelerator_test_02')
+    cred_json.set_user('test+metering')
 
     async_cb.reset()
     conf_json.reset()
@@ -115,7 +115,7 @@ def test_metered_from_new_objects(accelize_drm, conf_json, conf_json_second,
     activators = accelize_drm.pytest_fpga_activators[0]
     activators.reset_coin()
     activators.autotest()
-    cred_json.set_user('accelize_accelerator_test_02')
+    cred_json.set_user('test+metering')
     logfile1 = log_file_factory.create(2)
     conf_json['settings'].update(logfile1.json)
     conf_json.save()
@@ -213,7 +213,7 @@ def test_metering_limits_on_activate(accelize_drm, conf_json, cred_json, async_h
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-    cred_json.set_user('accelize_accelerator_test_03')
+    cred_json.set_user('test+limited')
     ws_admin.clean_user_db(conf_json, cred_json)
     with accelize_drm.DrmManager(
                 conf_json.path,
@@ -271,7 +271,7 @@ def test_metering_limits_on_licensing_thread(accelize_drm, conf_json, cred_json,
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-    cred_json.set_user('accelize_accelerator_test_03')
+    cred_json.set_user('test+limited')
     ws_admin.clean_user_db(conf_json, cred_json)
     with accelize_drm.DrmManager(
                 conf_json.path,
@@ -326,7 +326,7 @@ def test_floating_limits(accelize_drm, conf_json, conf_json_second, cred_json, a
     async_cb0.reset()
     async_cb1 = async_handler.create()
     async_cb1.reset()
-    cred_json.set_user('accelize_accelerator_test_04')
+    cred_json.set_user('test+floating')
 
     # Get floating license for drm_manager0 and check drm_manager1 fails
     conf_json.reset()
@@ -456,7 +456,7 @@ def test_session_autoclose(accelize_drm, conf_json, conf_json_second,
     activators = accelize_drm.pytest_fpga_activators[0]
     activators.reset_coin()
     activators.autotest()
-    cred_json.set_user('accelize_accelerator_test_02')
+    cred_json.set_user('test+metering')
     logfile1 = log_file_factory.create(2)
     conf_json['settings'].update(logfile1.json)
     conf_json.save()

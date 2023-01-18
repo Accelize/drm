@@ -24,7 +24,6 @@ def test_activation_and_license_status(accelize_drm, conf_json, cred_json, async
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
-    cred_json.set_user('accelize_accelerator_test_02')
 
     with accelize_drm.DrmManager(
             conf_json.path,
@@ -61,7 +60,6 @@ def test_session_status(accelize_drm, conf_json, cred_json, async_handler):
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-    cred_json.set_user('accelize_accelerator_test_02')
 
     with accelize_drm.DrmManager(
             conf_json.path,
@@ -98,7 +96,6 @@ def test_license_expiration(accelize_drm, conf_json, cred_json, async_handler):
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
-    cred_json.set_user('accelize_accelerator_test_02')
 
     with accelize_drm.DrmManager(
             conf_json.path,
@@ -142,7 +139,6 @@ def test_multiple_call(accelize_drm, conf_json, cred_json, async_handler):
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-    cred_json.set_user('accelize_accelerator_test_02')
 
     with accelize_drm.DrmManager(
             conf_json.path,
@@ -207,7 +203,6 @@ def test_security_stop(accelize_drm, conf_json, cred_json, async_handler):
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-    cred_json.set_user('accelize_accelerator_test_02')
 
     drm_manager0 = accelize_drm.DrmManager(
         conf_json.path,

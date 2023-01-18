@@ -57,7 +57,6 @@ def test_authentication_validity_after_deactivation(accelize_drm, conf_json, cre
     async_cb = async_handler.create()
     async_cb.reset()
     conf_json.reset()
-    cred_json.set_user('accelize_accelerator_test_02')
 
     with accelize_drm.DrmManager(
             conf_json.path,
@@ -97,7 +96,6 @@ def test_authentication_token_renewal(accelize_drm, conf_json, cred_json,
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    cred_json.set_user('accelize_accelerator_test_02')
 
     conf_json.reset()
     conf_json['licensing']['url'] = _request.url + request.function.__name__
@@ -139,7 +137,6 @@ def test_authentication_endurance(accelize_drm, conf_json, cred_json, async_hand
     driver = accelize_drm.pytest_fpga_driver[0]
     activators = accelize_drm.pytest_fpga_activators[0]
     async_cb = async_handler.create()
-    cred_json.set_user('accelize_accelerator_test_02')
 
     # Get test duration
     try:

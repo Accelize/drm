@@ -12,12 +12,12 @@ from re import search, IGNORECASE
 def test_entitlement_user_noentitlement_metering(accelize_drm, conf_json, cred_json, async_handler,
                 ws_admin, log_file_factory):
     """
-    Test the metering entitlement of user1
+    Test the metering entitlement of user+noentitlement
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    cred_json.set_user('accelize_accelerator_test_01')
+    cred_json.set_user('test+noentitlement')
     conf_json.reset()
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
@@ -50,12 +50,12 @@ def test_entitlement_user_noentitlement_metering(accelize_drm, conf_json, cred_j
 def test_entitlement_user_noentitlement_nodelock(accelize_drm, conf_json, cred_json, async_handler,
                 ws_admin, log_file_factory):
     """
-    Test the nodelock entitlement of user1
+    Test the nodelock entitlement of user+noentitlement
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    cred_json.set_user('accelize_accelerator_test_01')
+    cred_json.set_user('test+noentitlement')
     conf_json.reset()
     conf_json.addNodelock()
     logfile = log_file_factory.create(2)
@@ -93,12 +93,12 @@ def test_entitlement_user_noentitlement_nodelock(accelize_drm, conf_json, cred_j
 def test_entitlement_user_metering_metering(accelize_drm, conf_json, cred_json, async_handler,
                 ws_admin, log_file_factory):
     """
-    Test the metering entitlement of user2
+    Test the metering entitlement of user+metering
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    cred_json.set_user('accelize_accelerator_test_02')
+    cred_json.set_user('test+metering')
     conf_json.reset()
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
@@ -130,12 +130,12 @@ def test_entitlement_user_metering_metering(accelize_drm, conf_json, cred_json, 
 def test_entitlement_user_metering_nodelock(accelize_drm, conf_json, cred_json, async_handler,
                 ws_admin, log_file_factory):
     """
-    Test the nodelock entitlement of user2
+    Test the nodelock entitlement of user+metering
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    cred_json.set_user('accelize_accelerator_test_02')
+    cred_json.set_user('test+metering')
     conf_json.reset()
     conf_json.addNodelock()
     logfile = log_file_factory.create(2)
@@ -173,12 +173,12 @@ def test_entitlement_user_metering_nodelock(accelize_drm, conf_json, cred_json, 
 def test_entitlement_user_nodelock_metering(accelize_drm, conf_json, cred_json, async_handler,
                 ws_admin, log_file_factory):
     """
-    Test the metering entitlement of user3
+    Test the metering entitlement of user+nodelock
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    cred_json.set_user('accelize_accelerator_test_03')
+    cred_json.set_user('test+nodelock')
     conf_json.reset()
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
@@ -214,7 +214,7 @@ def test_entitlement_user_nodelock_nodelock(accelize_drm, conf_json, cred_json, 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    cred_json.set_user('accelize_accelerator_test_03')
+    cred_json.set_user('test+nodelock')
     conf_json.reset()
     conf_json.addNodelock()
     logfile = log_file_factory.create(2)
@@ -246,12 +246,12 @@ def test_entitlement_user_nodelock_nodelock(accelize_drm, conf_json, cred_json, 
 def test_entitlement_user_limited_metering(accelize_drm, conf_json, cred_json, async_handler,
                 ws_admin, log_file_factory):
     """
-    Test the metering entitlement of user+nodelock
+    Test the metering entitlement of user+limited
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    cred_json.set_user('accelize_accelerator_test_04')
+    cred_json.set_user('test+limited')
     conf_json.reset()
     logfile = log_file_factory.create(2)
     conf_json['settings'].update(logfile.json)
@@ -292,7 +292,7 @@ def test_entitlement_user_limited_nodelock(accelize_drm, conf_json, cred_json, a
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    cred_json.set_user('accelize_accelerator_test_04')
+    cred_json.set_user('test+limited')
     conf_json.reset()
     conf_json.addNodelock()
     logfile = log_file_factory.create(2)
@@ -330,12 +330,12 @@ def test_entitlement_user_limited_nodelock(accelize_drm, conf_json, cred_json, a
 def test_entitlement_user_floating_metering(accelize_drm, conf_json, cred_json, async_handler,
                 ws_admin, log_file_factory):
     """
-    Test the metering entitlement of user+limited
+    Test the metering entitlement of user+floating
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    cred_json.set_user('accelize_accelerator_test_04')
+    cred_json.set_user('test+floating')
     conf_json.reset()
     conf_json.addNodelock()
     logfile = log_file_factory.create(2)
@@ -373,12 +373,12 @@ def test_entitlement_user_floating_metering(accelize_drm, conf_json, cred_json, 
 def test_entitlement_user_floating_nodelock(accelize_drm, conf_json, cred_json, async_handler,
                 ws_admin, log_file_factory):
     """
-    Test the metering entitlement of user+limited
+    Test the metering entitlement of user+floating
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     async_cb.reset()
-    cred_json.set_user('accelize_accelerator_test_04')
+    cred_json.set_user('test+floating')
     conf_json.reset()
     conf_json.addNodelock()
     logfile = log_file_factory.create(2)

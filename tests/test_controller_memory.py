@@ -108,7 +108,6 @@ def test_empty_product_id(accelize_drm, conf_json, cred_json, async_handler, log
     driver = accelize_drm.pytest_fpga_driver[0]
     fpga_image_bkp = driver.fpga_image
     async_cb = async_handler.create()
-    cred_json.set_user('accelize_accelerator_test_02')
     logfile = log_file_factory.create(1)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
@@ -149,7 +148,6 @@ def test_malformed_product_id(accelize_drm, conf_json, cred_json, async_handler)
     driver = accelize_drm.pytest_fpga_driver[0]
     fpga_image_bkp = driver.fpga_image
     async_cb = async_handler.create()
-    cred_json.set_user('accelize_accelerator_test_02')
     bad_fpga_image = refdesign.get_image_id('bad_product_id')
     if bad_fpga_image is None:
         pytest.skip("No FPGA image found for 'bad_product_id'")
@@ -183,8 +181,6 @@ def test_2_drm_manager_concurrently(accelize_drm, conf_json, cred_json, async_ha
 
     async_cb1 = async_handler.create()
     async_cb2 = async_handler.create()
-
-    cred_json.set_user('accelize_accelerator_test_02')
 
     with accelize_drm.DrmManager(
             conf_json.path, cred_json.path,
