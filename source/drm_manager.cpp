@@ -1326,7 +1326,6 @@ protected:
     Json::Value getMeteringHeader() {
         Json::Value json_output;
         std::string drmVersion;
-        std::string dna;
         std::vector<std::string> vlnvFile;
         std::string mailboxReadOnly;
 

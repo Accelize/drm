@@ -256,7 +256,7 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json,
     conf_json.save()
 
     # Set initial context on the live server
-    health_period = 2
+    health_period = 3
     health_retry = 3
     health_retry_step = 3
     health_retry_sleep = 1
@@ -288,7 +288,7 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json,
     last_idx = -1
     for idx, start, end in first_list:
         delta = int((parser.parse(end) - parser.parse(start)).total_seconds())
-        assert health_retry <= delta <= health_retry + 1
+        assert health_period <= delta <= health_period + 1
         assert last_idx != idx
         last_idx = idx
     retry_list = get_context()['data_retry']
@@ -302,11 +302,9 @@ def test_health_retry_modification(accelize_drm, conf_json, cred_json,
         assert health_retry_sleep <= delta <= health_retry_sleep + 1
         if last_idx != idx:
             delta = int((parser.parse(ref_end) - parser.parse(ref_start)).total_seconds())
-            try:
-                assert ref_delta <= delta <= ref_delta + 1
-            except AssertionError:
+            if delta > ref_delta + 1:
                 ref_delta += health_retry_step
-                assert ref_delta <= delta <= ref_delta + 1
+            assert ref_delta <= delta <= ref_delta + 1
             ref_start = start
             last_idx = idx
         ref_end = end

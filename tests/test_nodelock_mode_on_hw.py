@@ -567,3 +567,79 @@ def test_parsing_of_nodelock_files(accelize_drm, conf_json, cred_json, async_han
             move(req_file_path_cpy, req_file_path)
     finally:
         driver.program_fpga()
+
+
+@pytest.mark.on_2_fpga
+@pytest.mark.minimum
+@pytest.mark.hwtst
+def test_nodelock_suits_one_board_only(accelize_drm, conf_json, cred_json,
+                                  async_handler, ws_admin, log_file_factory):
+    """
+    Test a nodelock license can work only on one board.
+    Using an existing nodelock license on another board returns an error.
+    """
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip('Nodelock to Metering license switch a actually supported on SoM target')
+
+    async_cb = async_handler.create()
+    cred_json.set_user('accelize_accelerator_test_03')        # User with a single nodelock license
+    logfile = log_file_factory.create(1, append=True)
+    conf_json['settings'].update(logfile.json)
+    conf_json.save()
+
+    # Set nodelock configuration
+    conf_json.addNodelock()
+    ws_admin.clean_user(conf_json, cred_json)
+
+    # Using nodelock license on a board
+    try:
+        driver = accelize_drm.pytest_fpga_driver[0]
+        with accelize_drm.DrmManager(
+                    conf_json.path,
+                    cred_json.path,
+                    driver.read_register_callback,
+                    driver.write_register_callback,
+                    async_cb.callback
+                ) as drm_manager:
+            assert drm_manager.get('license_type') == 'Node-Locked'
+            request_file_0 = drm_manager.get('nodelocked_request_file')
+            # Start application
+            drm_manager.activate()
+            assert drm_manager.get('drm_license_type') == 'Node-Locked'
+    finally:
+        # Reprogram FPGA
+        driver.program_fpga()
+
+    # Using the same nodelock license for another board
+    try:
+        driver = accelize_drm.pytest_fpga_driver[1]
+        conf_json['licensing']['url'] = "bad_http" # provide bad url to be sure no HTTP request is sent
+        conf_json.save()
+        with accelize_drm.DrmManager(
+                    conf_json.path,
+                    cred_json.path,
+                    driver.read_register_callback,
+                    driver.write_register_callback,
+                    async_cb.callback
+                ) as drm_manager:
+            assert drm_manager.get('license_type') == 'Node-Locked'
+            request_file_1 = drm_manager.get('nodelocked_request_file')
+            # Start application
+            with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
+                drm_manager.activate()
+            assert "DRM Controller is locked in Node-Locked licensing mode: " \
+                   "To use other modes you must reprogram the FPGA device" in str(excinfo.value)
+            err_code = async_handler.get_error_code(str(excinfo.value))
+            assert err_code == accelize_drm.exceptions.DRMCtlrError.error_code
+        async_cb.assert_Error(accelize_drm.exceptions.DRMCtlrError.error_code, 'DRM Controller is locked in Node-Locked licensing mode')
+        async_cb.reset()
+    finally:
+        # Reprogram FPGA
+        driver.program_fpga()
+
+    log_content = logfile.read()
+    assert search(r'Looking for local node-locked license file', log_content, IGNORECASE)
+    assert search(r'Installed node-locked license successfully', log_content, IGNORECASE)
+    logfile.remove()
+
+
