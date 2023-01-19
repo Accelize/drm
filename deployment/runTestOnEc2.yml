@@ -45,40 +45,30 @@ jobs:
       - script: |
           cat << EOF > $(Build.SourcesDirectory)/cred.json
           {
-            "client_id": "$(clientIdAccelizeAcceleratorTest2)",
-            "client_secret": "$(clientSecretAccelizeAcceleratorTest2)",
+            "client_id": "$(clientIdUserMetering)",
+            "client_secret": "$(clientSecretUserMetering)",
 
             "name__admin__":"Admin_JBL_Regression",
             "client_id__admin__":"$(clientIdAdmin)",
             "client_secret__admin__":"$(clientSecretAdmin)",
 
-            "client_id__accelize_accelerator_test_01__":
-              "$(clientIdAccelizeAcceleratorTest1)",
-            "client_secret__accelize_accelerator_test_01__":
-              "$(clientSecretAccelizeAcceleratorTest1)",
-            "email__accelize_accelerator_test_01__":
-              "$(mailAccelizeAcceleratorTest1)",
+            "client_id__user_noentitlement__": "$(clientIdUserNoEntitlement)",
+            "client_secret__user_noentitlement__": "$(clientSecretUserNoEntitlement)",
 
-            "client_id__accelize_accelerator_test_02__":
-              "$(clientIdAccelizeAcceleratorTest2)",
-            "client_secret__accelize_accelerator_test_02__":
-              "$(clientSecretAccelizeAcceleratorTest2)",
-            "email__accelize_accelerator_test_02__":
-              "$(mailAccelizeAcceleratorTest2)",
+            "client_id__user_metering__": "$(clientIdUserMetering)",
+            "client_secret__user_metering__": "$(clientSecretUserMetering)",
 
-            "client_id__accelize_accelerator_test_03__":
-              "$(clientIdAccelizeAcceleratorTest3)",
-            "client_secret__accelize_accelerator_test_03__":
-              "$(clientSecretAccelizeAcceleratorTest3)",
-            "email__accelize_accelerator_test_03__":
-              "$(mailAccelizeAcceleratorTest3)",
+            "client_id__user_nodelock__": "$(clientIdUserNodelock)",
+            "client_secret__user_nodelock__": "$(clientSecretUserNodelock)",
 
-            "client_id__accelize_accelerator_test_04__":
-              "$(clientIdAccelizeAcceleratorTest4)",
-            "client_secret__accelize_accelerator_test_04__":
-              "$(clientSecretAccelizeAcceleratorTest4)",
-            "email__accelize_accelerator_test_04__":
-              "$(mailAccelizeAcceleratorTest4)"
+            "client_id__user_limited__": "$(clientIdUserLimited)",
+            "client_secret__user_limited__": "$(clientSecretUserLimited)",
+
+            "client_id__user_floating__": "$(clientIdUserFloating)",
+            "client_secret__user_floating__": "$(clientSecretUserFloating)",
+
+            "client_id__user_hybrid__": "$(clientIdUserHybrid)",
+            "client_secret__user_hybrid__": "$(clientSecretUserHybrid)",
           }
           EOF
         displayName: Create Accelize credentials file
