@@ -52,23 +52,23 @@ jobs:
             "client_id__admin__":"$(clientIdAdmin)",
             "client_secret__admin__":"$(clientSecretAdmin)",
 
-            "client_id__user_noentitlement__": "$(clientIdUserNoEntitlement)",
-            "client_secret__user_noentitlement__": "$(clientSecretUserNoEntitlement)",
+            "client_id__test-noentitlement__": "$(clientIdUserNoEntitlement)",
+            "client_secret__test-noentitlement__": "$(clientSecretUserNoEntitlement)",
 
-            "client_id__user_metering__": "$(clientIdUserMetering)",
-            "client_secret__user_metering__": "$(clientSecretUserMetering)",
+            "client_id__test-metering__": "$(clientIdUserMetering)",
+            "client_secret__test-metering__": "$(clientSecretUserMetering)",
 
-            "client_id__user_nodelock__": "$(clientIdUserNodelock)",
-            "client_secret__user_nodelock__": "$(clientSecretUserNodelock)",
+            "client_id__test-nodelock__": "$(clientIdUserNodelock)",
+            "client_secret__test-nodelock__": "$(clientSecretUserNodelock)",
 
-            "client_id__user_limited__": "$(clientIdUserLimited)",
-            "client_secret__user_limited__": "$(clientSecretUserLimited)",
+            "client_id__test-limited__": "$(clientIdUserLimited)",
+            "client_secret__test-limited__": "$(clientSecretUserLimited)",
 
-            "client_id__user_floating__": "$(clientIdUserFloating)",
-            "client_secret__user_floating__": "$(clientSecretUserFloating)",
+            "client_id__test-floating__": "$(clientIdUserFloating)",
+            "client_secret__test-floating__": "$(clientSecretUserFloating)",
 
-            "client_id__user_hybrid__": "$(clientIdUserHybrid)",
-            "client_secret__user_hybrid__": "$(clientSecretUserHybrid)",
+            "client_id__test-hybrid__": "$(clientIdUserHybrid)",
+            "client_secret__test-hybrid__": "$(clientSecretUserHybrid)",
           }
           EOF
         displayName: Create Accelize credentials file

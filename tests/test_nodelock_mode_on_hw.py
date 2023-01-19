@@ -27,7 +27,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
     # nodelocked_request_file: Read-only, return string with the path to the node-locked license
     #                          request JSON file.
     async_cb.reset()
-    cred_json.set_user('test+nodelock')
+    cred_json.set_user('test-nodelock')
     conf_json.addNodelock()
     ws_admin.clean_user_db(conf_json, cred_json)
 
@@ -66,7 +66,7 @@ def test_nodelock_license_is_not_given_to_inactive_user(accelize_drm, conf_json,
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-    cred_json.set_user('test+noentitlement')
+    cred_json.set_user('test-noentitlement')
     conf_json.addNodelock()
     ws_admin.clean_user_db(conf_json, cred_json)
 
@@ -103,7 +103,7 @@ def test_nodelock_normal_case(accelize_drm, conf_json, cred_json, async_handler,
     activators.reset_coin()
     activators.autotest()
 
-    cred_json.set_user('test+nodelock')
+    cred_json.set_user('test-nodelock')
     conf_json.addNodelock()
     logfile = log_file_factory.create(1)
     conf_json['settings'].update(logfile.json)
@@ -152,7 +152,7 @@ def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, asy
     activators = accelize_drm.pytest_fpga_activators[0]
     activators.reset_coin()
 
-    cred_json.set_user('test+nodelock')
+    cred_json.set_user('test-nodelock')
     conf_json.addNodelock()
     activators.autotest()
     ws_admin.clean_user_db(conf_json, cred_json)
@@ -206,7 +206,7 @@ def test_nodelock_without_server_access(accelize_drm, conf_json, cred_json, asyn
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-    cred_json.set_user('test+nodelock')  # User with a single nodelock license
+    cred_json.set_user('test-nodelock')  # User with a single nodelock license
 
     # Switch to nodelock
     conf_json.reset()
@@ -263,7 +263,7 @@ def test_nodelock_without_malformed_license_file(accelize_drm, conf_json, cred_j
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-    cred_json.set_user('test+nodelock')  # User with a single nodelock license
+    cred_json.set_user('test-nodelock')  # User with a single nodelock license
 
     # Switch to nodelock
     conf_json.reset()
@@ -316,7 +316,7 @@ def test_nodelock_limits(accelize_drm, conf_json, conf_json_second, cred_json, a
     async_cb0 = async_handler.create()
     async_cb1 = async_handler.create()
 
-    cred_json.set_user('test+nodelock')
+    cred_json.set_user('test-nodelock')
     conf_json.addNodelock()
     ws_admin.clean_user_db(conf_json, cred_json)
 
@@ -375,7 +375,7 @@ def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, c
         pytest.skip('Nodelock to Metering license switch a actually supported on SoM target')
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
-    cred_json.set_user('test+nodelock')        # User with a single nodelock license
+    cred_json.set_user('test-nodelock')        # User with a single nodelock license
     logfile = log_file_factory.create(1, append=True)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
@@ -398,7 +398,7 @@ def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, c
             assert drm_manager.get('drm_license_type') == 'Node-Locked'
 
         # Set metering configuration
-        cred_json.set_user('test+metering')
+        cred_json.set_user('test-metering')
         conf_json.removeNodelock()
         with accelize_drm.DrmManager(
                     conf_json.path,
@@ -453,7 +453,7 @@ def test_nodelock_after_metering_mode(accelize_drm, conf_json, cred_json, async_
     driver = accelize_drm.pytest_fpga_driver[0]
     activators = accelize_drm.pytest_fpga_activators[0]
     async_cb = async_handler.create()
-    cred_json.set_user('test+metering')        # User with a single nodelock license
+    cred_json.set_user('test-metering')        # User with a single nodelock license
     logfile = log_file_factory.create(1)
     conf_json.reset()
     conf_json['settings'].update(logfile.json)
@@ -483,7 +483,7 @@ def test_nodelock_after_metering_mode(accelize_drm, conf_json, cred_json, async_
         assert session_id != drm_manager.get('session_id')
 
     # Switch to nodelock
-    cred_json.set_user('test+nodelock')
+    cred_json.set_user('test-nodelock')
     conf_json.addNodelock()
     ws_admin.clean_user_db(conf_json, cred_json)
     try:
@@ -521,7 +521,7 @@ def test_parsing_of_nodelock_files(accelize_drm, conf_json, cred_json, async_han
     driver = accelize_drm.pytest_fpga_driver[0]
     activators = accelize_drm.pytest_fpga_activators[0]
     async_cb = async_handler.create()
-    cred_json.set_user('test+nodelock')  # User with a single nodelock license
+    cred_json.set_user('test-nodelock')  # User with a single nodelock license
     conf_json.reset()
     conf_json.addNodelock()
     ws_admin.clean_user_db(conf_json, cred_json)
@@ -584,7 +584,7 @@ def test_nodelock_suits_one_board_only(accelize_drm, conf_json, cred_json,
         pytest.skip('Nodelock to Metering license switch a actually supported on SoM target')
 
     async_cb = async_handler.create()
-    cred_json.set_user('test+nodelock')        # User with a single nodelock license
+    cred_json.set_user('test-nodelock')        # User with a single nodelock license
     logfile = log_file_factory.create(1, append=True)
     conf_json['settings'].update(logfile.json)
     conf_json.save()

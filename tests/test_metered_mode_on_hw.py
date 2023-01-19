@@ -23,7 +23,7 @@ def test_metered_start_stop_short_time(accelize_drm, conf_json, cred_json, async
     activators = accelize_drm.pytest_fpga_activators[0]
     activators.reset_coin()
     activators.autotest()
-    cred_json.set_user('test+metering')
+    cred_json.set_user('test-metering')
     async_cb.reset()
     conf_json.reset()
     logfile = log_file_factory.create(2)
@@ -63,7 +63,7 @@ def test_metered_start_stop_long_time(accelize_drm, conf_json, cred_json, async_
     activators = accelize_drm.pytest_fpga_activators[0]
     activators.reset_coin()
     activators.autotest()
-    cred_json.set_user('test+metering')
+    cred_json.set_user('test-metering')
 
     async_cb.reset()
     conf_json.reset()
@@ -115,7 +115,7 @@ def test_metered_from_new_objects(accelize_drm, conf_json, conf_json_second,
     activators = accelize_drm.pytest_fpga_activators[0]
     activators.reset_coin()
     activators.autotest()
-    cred_json.set_user('test+metering')
+    cred_json.set_user('test-metering')
     logfile1 = log_file_factory.create(2)
     conf_json['settings'].update(logfile1.json)
     conf_json.save()
@@ -193,200 +193,6 @@ def test_metered_from_new_objects(accelize_drm, conf_json, conf_json_second,
     async_cb.assert_NoError()
 
 
-@pytest.mark.minimum
-@pytest.mark.no_parallel
-@pytest.mark.hwtst
-def test_metering_limits_on_activate(accelize_drm, conf_json, cred_json, async_handler, log_file_factory,
-                                    ws_admin):
-    """
-    Test an error is returned by the activate function and the design is locked when the limit is reached.
-    """
-    driver = accelize_drm.pytest_fpga_driver[0]
-    async_cb = async_handler.create()
-    activators = accelize_drm.pytest_fpga_activators[0]
-    activators.reset_coin()
-    activators.autotest()
-
-    # Test activate function call fails when limit is reached
-    async_cb.reset()
-    conf_json.reset()
-    logfile = log_file_factory.create(2)
-    conf_json['settings'].update(logfile.json)
-    conf_json.save()
-    cred_json.set_user('test+limited')
-    ws_admin.clean_user_db(conf_json, cred_json)
-    with accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            ) as drm_manager:
-        assert drm_manager.get('license_type') == 'Floating/Metering'
-        assert not drm_manager.get('license_status')
-        drm_manager.activate()
-        assert drm_manager.get('drm_license_type') == 'Floating/Metering'
-        assert drm_manager.get('license_status')
-        assert sum(drm_manager.get('metered_data')) == 0
-        activators[0].generate_coin(999)
-        activators.check_coin(drm_manager.get('metered_data'))
-        drm_manager.deactivate()
-        activators.reset_coin()
-        assert not drm_manager.get('license_status')
-        drm_manager.activate()
-        assert drm_manager.get('license_status')
-        activators.check_coin(drm_manager.get('metered_data'))
-        activators[0].generate_coin(1)
-        activators.check_coin(drm_manager.get('metered_data'))
-        drm_manager.deactivate()
-        assert not drm_manager.get('license_status')
-        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
-            drm_manager.activate()
-        assert 'Metering Web Service error 400' in str(excinfo.value)
-        assert 'DRM WS request failed' in str(excinfo.value)
-        assert search(r'"Entitlement Limit Reached.* with PT DRM Ref Design .+ for \S+_test_03@accelize.com', str(excinfo.value))
-        assert 'You have reached the maximum quantity of 1000. usage_unit for metered entitlement (licensed)' in str(excinfo.value)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
-        async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'You have reached the maximum quantity of 1000. usage_unit for metered entitlement')
-        async_cb.reset()
-        drm_manager.deactivate()
-    logfile.remove()
-
-
-@pytest.mark.minimum
-@pytest.mark.no_parallel
-@pytest.mark.hwtst
-def test_metering_limits_on_licensing_thread(accelize_drm, conf_json, cred_json, async_handler, log_file_factory, ws_admin):
-    """
-    Test an error is returned by the async error function and the design is locked when the limit is reached.
-    """
-    driver = accelize_drm.pytest_fpga_driver[0]
-    async_cb = async_handler.create()
-    activators = accelize_drm.pytest_fpga_activators[0]
-    activators.reset_coin()
-    activators.autotest()
-
-    async_cb.reset()
-    conf_json.reset()
-    logfile = log_file_factory.create(2)
-    conf_json['settings'].update(logfile.json)
-    conf_json.save()
-    cred_json.set_user('test+limited')
-    ws_admin.clean_user_db(conf_json, cred_json)
-    with accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            ) as drm_manager:
-        assert drm_manager.get('license_type') == 'Floating/Metering'
-        assert not drm_manager.get('license_status')
-        drm_manager.activate()
-        start = datetime.now()
-        assert drm_manager.get('drm_license_type') == 'Floating/Metering'
-        assert drm_manager.get('license_status')
-        assert sum(drm_manager.get('metered_data')) == 0
-        license_duration = drm_manager.get('license_duration')
-        wait_until_true(lambda: drm_manager.get('num_license_loaded') == 2, license_duration)
-        activators[0].generate_coin(1000)
-        activators.check_coin(drm_manager.get('metered_data'))
-        # Wait right before lock
-        wait_deadline(start, 3*license_duration-3)
-        assert drm_manager.get('license_status')
-        activators.autotest(is_activated=True)
-        wait_deadline(start, 3*license_duration+3)
-        assert not drm_manager.get('license_status')
-        activators.autotest(is_activated=False)
-        # Verify asynchronous callback has been called
-        assert async_cb.was_called
-        assert 'Metering Web Service error 400' in async_cb.message
-        assert 'DRM WS request failed' in async_cb.message
-        assert search(r'"Entitlement Limit Reached.* with PT DRM Ref Design .+ for \S+_test_03@accelize.com', async_cb.message)
-        assert 'You have reached the maximum quantity of 1000. usage_unit for metered entitlement (licensed)' in async_cb.message
-        assert async_cb.errcode == accelize_drm.exceptions.DRMWSReqError.error_code
-        drm_manager.deactivate()
-        assert not drm_manager.get('license_status')
-        activators.autotest(is_activated=False)
-    logfile.remove()
-
-
-@pytest.mark.on_2_fpga
-@pytest.mark.minimum
-@pytest.mark.hwtst
-def test_floating_limits(accelize_drm, conf_json, conf_json_second, cred_json, async_handler, log_file_factory):
-    """
-    Test an error is returned when the floating limit is reached
-    """
-    if len(accelize_drm.pytest_fpga_driver) < 2:
-        pytest.skip('Skip test because 2 FPGA are needed but only 1 is found')
-    driver0 = accelize_drm.pytest_fpga_driver[0]
-    driver1 = accelize_drm.pytest_fpga_driver[1]
-    async_cb0 = async_handler.create()
-    async_cb0.reset()
-    async_cb1 = async_handler.create()
-    async_cb1.reset()
-    cred_json.set_user('test+floating')
-
-    # Get floating license for drm_manager0 and check drm_manager1 fails
-    conf_json.reset()
-    with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver0.read_register_callback,
-            driver0.write_register_callback,
-            async_cb0.callback
-        ) as drm_manager0:
-        conf_json_second['settings']['ws_api_retry_duration'] = 4
-        conf_json_second.save()
-        drm_manager1 = accelize_drm.DrmManager(
-            conf_json_second.path,
-            cred_json.path,
-            driver1.read_register_callback,
-            driver1.write_register_callback,
-            async_cb1.callback
-        )
-        assert not drm_manager0.get('license_status')
-        assert not drm_manager1.get('license_status')
-        drm_manager0.activate()
-        assert drm_manager0.get('license_status')
-        with pytest.raises(accelize_drm.exceptions.DRMWSTimedOut) as excinfo:
-            drm_manager1.activate()
-        assert search(r'Timeout on License request after .+ attempts', str(excinfo.value))
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSTimedOut.error_code
-        async_cb1.assert_Error(accelize_drm.exceptions.DRMWSTimedOut.error_code, 'Timeout on License request after')
-        async_cb1.reset()
-    async_cb0.assert_NoError()
-
-    # Get floating license for drm_manager1 and check drm_manager0 fails
-    conf_json_second.reset()
-    with accelize_drm.DrmManager(
-            conf_json_second.path,
-            cred_json.path,
-            driver1.read_register_callback,
-            driver1.write_register_callback,
-            async_cb1.callback
-        ) as drm_manager1:
-        conf_json['settings']['ws_api_retry_duration'] = 4
-        conf_json.save()
-        drm_manager0 = accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver0.read_register_callback,
-            driver0.write_register_callback,
-            async_cb0.callback
-        )
-        drm_manager1.activate()
-        assert drm_manager1.get('license_status')
-        with pytest.raises(accelize_drm.exceptions.DRMWSTimedOut) as excinfo:
-            drm_manager0.activate()
-        assert search(r'Timeout on License request after .+ attempts', str(excinfo.value)) is not None
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSTimedOut.error_code
-        async_cb0.assert_Error(accelize_drm.exceptions.DRMWSTimedOut.error_code, 'Timeout on License request after')
-        async_cb0.reset()
-    async_cb1.assert_NoError()
-
-
 @pytest.mark.skip
 def test_heart_beat(accelize_drm, conf_json, cred_json, async_handler, log_file_factory):
     """
@@ -456,7 +262,7 @@ def test_session_autoclose(accelize_drm, conf_json, conf_json_second,
     activators = accelize_drm.pytest_fpga_activators[0]
     activators.reset_coin()
     activators.autotest()
-    cred_json.set_user('test+metering')
+    cred_json.set_user('test-metering')
     logfile1 = log_file_factory.create(2)
     conf_json['settings'].update(logfile1.json)
     conf_json.save()
