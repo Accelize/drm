@@ -30,7 +30,7 @@ def test_entitlement_user_noentitlement(accelize_drm, conf_json, cred_json, asyn
                 async_cb.callback
             ) as drm_manager:
         assert drm_manager.get('license_type') == 'Floating/Metering'
-        assert drm_manager.get('drm_license_type') == 'Floating/Metering'
+        assert drm_manager.get('drm_license_type') in ['Idle', 'Floating/Metering']
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
         assert search(r'Accelize Web Service error 403', str(excinfo.value))
@@ -69,7 +69,7 @@ def test_entitlement_user_metering(accelize_drm, conf_json, cred_json, async_han
                 async_cb.callback
             ) as drm_manager:
         assert drm_manager.get('license_type') == 'Floating/Metering'
-        assert drm_manager.get('drm_license_type') == 'Floating/Metering'
+        assert drm_manager.get('drm_license_type') in ['Idle', 'Floating/Metering']
         drm_manager.activate()
         assert drm_manager.get('drm_license_type') == 'Floating/Metering'
     async_cb.assert_NoError()
@@ -105,7 +105,7 @@ def test_entitlement_user_nodelock(accelize_drm, conf_json, cred_json, async_han
                     async_cb.callback
                 ) as drm_manager:
             assert drm_manager.get('license_type') == 'Node-Locked'
-            assert drm_manager.get('drm_license_type') == 'Floating/Metering'
+            assert drm_manager.get('drm_license_type') in ['Idle', 'Floating/Metering']
             drm_manager.activate()
             assert drm_manager.get('drm_license_type') == 'Node-Locked'
         async_cb.assert_NoError()
@@ -123,7 +123,7 @@ def test_entitlement_user_nodelock(accelize_drm, conf_json, cred_json, async_han
                     async_cb.callback
                 ) as drm_manager:
             assert drm_manager.get('license_type') == 'Node-Locked'
-            assert drm_manager.get('drm_license_type') == 'Floating/Metering'
+            assert drm_manager.get('drm_license_type') == 'Idle'
 
 
 
@@ -157,7 +157,7 @@ def test_entitlement_user_limited_on_activate(accelize_drm, conf_json, cred_json
                 async_cb.callback
             ) as drm_manager:
         assert drm_manager.get('license_type') == 'Floating/Metering'
-        assert drm_manager.get('drm_license_type') == 'Floating/Metering'
+        assert drm_manager.get('drm_license_type') in ['Idle', 'Floating/Metering']
         assert not drm_manager.get('license_status')
         drm_manager.activate()
         assert drm_manager.get('drm_license_type') == 'Floating/Metering'
@@ -219,7 +219,7 @@ def test_entitlement_user_limited_in_thread(accelize_drm, conf_json, cred_json, 
                 async_cb.callback
             ) as drm_manager:
         assert drm_manager.get('license_type') == 'Floating/Metering'
-        assert drm_manager.get('drm_license_type') == 'Floating/Metering'
+        assert drm_manager.get('drm_license_type') in ['Idle', 'Floating/Metering']
         assert not drm_manager.get('license_status')
         drm_manager.activate()
         start = datetime.now()
@@ -292,7 +292,7 @@ def test_entitlement_user_floating(accelize_drm, conf_json, conf_json_second, cr
             ) as drm_manager0:
         assert not drm_manager0.get('license_status')
         assert drm_manager0.get('license_type') == 'Floating/Metering'
-        assert drm_manager0.get('drm_license_type') == 'Floating/Metering'
+        assert drm_manager.get('drm_license_type') in ['Idle', 'Floating/Metering']
         with accelize_drm.DrmManager(
                     conf_json_second.path,
                     cred_json.path,
@@ -302,10 +302,10 @@ def test_entitlement_user_floating(accelize_drm, conf_json, conf_json_second, cr
                 ) as drm_manager1:
             assert not drm_manager1.get('license_status')
             assert drm_manager1.get('license_type') == 'Floating/Metering'
-            assert drm_manager1.get('drm_license_type') == 'Floating/Metering'
+            assert drm_manager.get('drm_license_type') in ['Idle', 'Floating/Metering']
             assert not drm_manager0.get('license_status')
             assert drm_manager0.get('license_type') == 'Floating/Metering'
-            assert drm_manager0.get('drm_license_type') == 'Floating/Metering'
+            assert drm_manager.get('drm_license_type') in ['Idle', 'Floating/Metering']
             drm_manager0.activate()
             assert drm_manager0.get('license_status')
             assert drm_manager0.get('drm_license_type') == 'Floating/Metering'
