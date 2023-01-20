@@ -109,7 +109,7 @@ def test_nodelock_license_file(accelize_drm, conf_json, cred_json, async_handler
                 data = loads(f.read())
             assert data.get('id')
             assert data.get('drm_config')
-            assert len(data['drm_config'].get('drm_session_id')) == 0002115B0F9F53DBF1735BC034BF
+            assert len(data['drm_config'].get('drm_session_id')) == 16
             assert data['drm_config'].get('health_period')
             assert data['drm_config'].get('license')
             assert data['drm_config']['license'].get(device_id)
