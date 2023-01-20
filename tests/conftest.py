@@ -78,8 +78,7 @@ def get_default_conf_json(licensing_server_url, drm_frequency):
             licensing_server_url.lower(), licensing_server_url)
     return {
         "licensing": {
-            "url": url,
-            "nodelocked": False
+            "url": url
         },
         "drm": {
             "frequency_mhz": drm_frequency
@@ -882,12 +881,12 @@ class ConfJson(_Json):
         self.save()
 
     def removeNodelock(self):
-        if self['licensing'].get('nodelocked'):
+        if self['licensing'].get('nodelocked', False):
             del self['licensing']['nodelocked']
-        assert not self['licensing'].get('nodelocked')
-        if self['licensing'].get('license_dir'):
+        assert not self['licensing'].get('nodelocked', False)
+        if self['licensing'].get('license_dir', ''):
             del self['licensing']['license_dir']
-        assert not self['licensing'].get('license_dir')
+        assert not self['licensing'].get('license_dir', '')
         self.save()
 
     def cleanNodelockDir(self):

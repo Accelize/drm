@@ -925,7 +925,7 @@ protected:
         if ( (uint32_t)index >= rwData.size() )
             Unreachable( "Index {} overflows the Mailbox memory; max index is {}. ", index, rwData.size()-1 ); //LCOV_EXCL_LINE
         if ( index + nb_elements > rwData.size() )
-            Unreachable( "Trying to read out of Mailbox memory space; size is {}", rwData.size() ); //LCOV_EXCL_LINE
+            Unreachable( "Trying to read out of Mailbox memory space; size is {}. ", rwData.size() ); //LCOV_EXCL_LINE
 
         auto first = rwData.cbegin() + index;
         auto last = rwData.cbegin() + index + nb_elements;
@@ -952,7 +952,7 @@ protected:
         if ( (uint32_t)index >= rwData.size() )
             Unreachable( "Index {} overflows the Mailbox memory; max index is {}. ", index, rwData.size()-1 ); //LCOV_EXCL_LINE
         if ( index + nb_elements > rwData.size() )
-            Unreachable( "Trying to read out of Mailbox memory space; size is {}", rwData.size() ); //LCOV_EXCL_LINE
+            Unreachable( "Trying to read out of Mailbox memory space; size is {}. ", rwData.size() ); //LCOV_EXCL_LINE
 
         auto first = rwData.cbegin() + index;
         auto last = rwData.cbegin() + index + nb_elements;
@@ -1231,8 +1231,9 @@ protected:
         // Run auto-test of register accesses
         runBistLevel2();
 
-        // Determine frequency detection method if metering/floating mode is active
-        if ( !isConfigInNodeLock() ) {
+//        // Determine frequency detection method if metering/floating mode is active
+//        if ( !isConfigInNodeLock() ) {
+        // Detect frequency
             determineFrequencyDetectionMethod();
             if ( mFreqDetectionMethod == 3 ) {
                 detectDrmFrequencyMethod3();
@@ -1241,7 +1242,7 @@ protected:
             } else {
                 Warning( "DRM frequency auto-detection is disabled: {:0.1f} will be used to compute license timers", mFrequencyCurr );
             }
-        }
+//        }
 
         // Save header information
         mHeaderJsonRequest = getMeteringHeader();
@@ -1355,7 +1356,8 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
 
         // Fulfill drm_config section
         drm_config["lgdn_version"] = fmt::format( "{:06X}", mDrmVersionNum );
-        if ( !isConfigInNodeLock() && !mIsHybrid ) {
+//        if ( !isConfigInNodeLock() && !mIsHybrid ) {
+        if ( !mIsHybrid ) {
             drm_config["drm_frequency_init"] = mFrequencyInit;
 // TODO: verify float is accepted by removing the int()
             drm_config["drm_frequency"] = int(mFrequencyCurr);
@@ -1714,6 +1716,9 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
             Debug( "Wrote license key of session ID {}", mSessionID );
         }
 
+        // Check DRM Controller has switched to the right license mode
+        checkDRMControllerLicenseType();
+
         // Load license timer
         if ( !isConfigInNodeLock() ) {
             if ( mLicenseDuration == 0 ) {
@@ -1735,9 +1740,6 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
 
         // Wait until license has been pushed to Activator's port
         waitActivationCodeTransmitted();
-
-        // Check DRM Controller has switched to the right license mode
-        checkDRMControllerLicenseType();
 
         // Wait until session is running if license is metering
         waitUntilSessionIsRunning();
@@ -2275,13 +2277,14 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         bool is_metered = isDrmCtrlInMetering();
         if ( is_nodelocked && is_metered )
             Unreachable( "DRM Controller cannot be in both Node-Locked and Metering/Floating license modes. " ); //LCOV_EXCL_LINE
-        if ( !isConfigInNodeLock() ) {
-            if ( !is_metered )
-                Unreachable( "DRM Controller failed to switch to Metering license mode" ); //LCOV_EXCL_LINE
+        if ( isConfigInNodeLock() && !is_nodelocked ) {
+            // Nodelock forced by conf file but received license is a metering license
+            Throw( DRM_BadUsage, "DRM Controller failed to switch to Node-Locked license mode. " );
+        }
+        if ( is_metered ) {
             Debug( "DRM Controller is in Metering license mode" );
-        } else {
-            if ( !is_nodelocked )
-                Unreachable( "DRM Controller failed to switch to Node-Locked license mode" ); //LCOV_EXCL_LINE
+        } else if ( is_nodelocked ) {
+            mLicenseType = eLicenseType::NODE_LOCKED;
             Debug( "DRM Controller is in Node-Locked license mode" );
         }
     }
@@ -2316,7 +2319,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         MTX_ACQUIRE( mMeteringAccessMutex );
 
         if ( !isReadyForNewLicense() )
-            Unreachable( "To start a new session the DRM Controller shall be ready to accept a new license" ); //LCOV_EXCL_LINE
+            Unreachable( "To start a new session the DRM Controller shall be ready to accept a new license. " ); //LCOV_EXCL_LINE
 
         mHealthCounter = 0;
         mLicenseCounter = 0;

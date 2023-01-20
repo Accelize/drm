@@ -110,7 +110,6 @@ def test_entitlement_user_nodelock(accelize_drm, conf_json, cred_json, async_han
             assert drm_manager.get('drm_license_type') == 'Node-Locked'
         async_cb.assert_NoError()
         log_content = logfile.read()
-        assert search(r'Installed node-locked license successfully', log_content, IGNORECASE)
         assert search(r'DRM Controller is in Node-Locked license mode', log_content, IGNORECASE)
         logfile.remove()
     finally:
@@ -125,6 +124,85 @@ def test_entitlement_user_nodelock(accelize_drm, conf_json, cred_json, async_han
                     async_cb.callback
                 ) as drm_manager:
             assert drm_manager.get('drm_license_type') == 'Idle'
+
+
+@pytest.mark.minimum
+@pytest.mark.hwtst
+@pytest.mark.no_parallel
+def test_entitlement_user_nodelock_when_forced(accelize_drm, conf_json, cred_json, async_handler,
+                ws_admin, log_file_factory):
+    """
+    Test the test-nodelock user's entitlement when forced to use nodelock
+    """
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    async_cb.reset()
+    cred_json.set_user('test-nodelock')
+    conf_json.reset()
+    conf_json.addNodelock()
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
+    conf_json.save()
+    ws_admin.clean_user_db(conf_json, cred_json)
+    try:
+        with accelize_drm.DrmManager(
+                    conf_json.path,
+                    cred_json.path,
+                    driver.read_register_callback,
+                    driver.write_register_callback,
+                    async_cb.callback
+                ) as drm_manager:
+            assert drm_manager.get('drm_license_type') in ['Idle', 'Floating/Metering']
+            drm_manager.activate()
+            assert drm_manager.get('license_type') == 'Node-Locked'
+            assert drm_manager.get('drm_license_type') == 'Node-Locked'
+        async_cb.assert_NoError()
+        log_content = logfile.read()
+        assert search(r'DRM Controller is in Node-Locked license mode', log_content, IGNORECASE)
+        logfile.remove()
+    finally:
+        driver.program_fpga()
+        cred_json.set_user()
+        conf_json.reset()
+        with accelize_drm.DrmManager(
+                    conf_json.path,
+                    cred_json.path,
+                    driver.read_register_callback,
+                    driver.write_register_callback,
+                    async_cb.callback
+                ) as drm_manager:
+            assert drm_manager.get('drm_license_type') == 'Idle'
+
+
+@pytest.mark.minimum
+def test_force_nodelock_to_inactive_user(accelize_drm, conf_json, cred_json,
+                                                        async_handler, ws_admin):
+    """Test a user who has not bought a valid nodelocked license cannot get a license"""
+
+    driver = accelize_drm.pytest_fpga_driver[0]
+    async_cb = async_handler.create()
+    cred_json.set_user('test-noentitlement')
+    conf_json.addNodelock()
+    ws_admin.clean_user_db(conf_json, cred_json)
+
+    # Start application
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+        assert drm_manager.get('license_type') == 'Node-Locked'
+        assert not drm_manager.get('license_status')
+        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+            drm_manager.activate()
+        assert 'Accelize Web Service error 403' in str(excinfo.value)
+        assert search(r'No valid entitlement available for this product', str(excinfo.value))
+        err_code = async_handler.get_error_code(str(excinfo.value))
+        assert err_code == accelize_drm.exceptions.DRMWSReqError.error_code
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Accelize Web Service error 403')
+    async_cb.reset()
 
 
 @pytest.mark.minimum
