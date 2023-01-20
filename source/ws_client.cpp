@@ -122,7 +122,7 @@ std::string CurlEasyPost::request( const std::string& url, const tHttpRequestTyp
     else if ( httpType == tHttpRequestType::PATCH )
         curl_easy_setopt( mCurl, CURLOPT_CUSTOMREQUEST, "PATCH");
     else
-        Unreachable( "Invalid HTTP type" );  //LCOV_EXCL_LINE
+        Unreachable( "Invalid HTTP type. " );  //LCOV_EXCL_LINE
 
     curl_easy_setopt( mCurl, CURLOPT_WRITEDATA, (void*)&resp_body );
     curl_easy_setopt( mCurl, CURLOPT_HEADERDATA, (void*)&resp_header );
@@ -160,7 +160,7 @@ std::string CurlEasyPost::request( const std::string& url, const tHttpRequestTyp
 double CurlEasyPost::getTotalTime() {
     double time_in_sec;
     if ( curl_easy_getinfo( mCurl, CURLINFO_TOTAL_TIME, &time_in_sec ) )
-        Unreachable( "Failed to get the CURLINFO_TOTAL_TIME information" ); //LCOV_EXCL_LINE
+        Unreachable( "Failed to get the CURLINFO_TOTAL_TIME information. " ); //LCOV_EXCL_LINE
     return time_in_sec;
 }
 

@@ -73,6 +73,7 @@ def test_entitlement_user_metering(accelize_drm, conf_json, cred_json, async_han
         assert drm_manager.get('drm_license_type') == 'Floating/Metering'
     async_cb.assert_NoError()
     log_content = logfile.read()
+    assert search(r'DRM Controller is in Metering license mode', log_content, IGNORECASE)
     assert search(r'DRM session .{16} started', log_content, IGNORECASE)
     logfile.remove()
 
@@ -90,7 +91,7 @@ def test_entitlement_user_nodelock(accelize_drm, conf_json, cred_json, async_han
     async_cb.reset()
     cred_json.set_user('test-nodelock')
     conf_json.reset()
-    #conf_json.addNodelock()
+#    conf_json.addNodelock()
     logfile = log_file_factory.create(1)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
@@ -110,10 +111,12 @@ def test_entitlement_user_nodelock(accelize_drm, conf_json, cred_json, async_han
         async_cb.assert_NoError()
         log_content = logfile.read()
         assert search(r'Installed node-locked license successfully', log_content, IGNORECASE)
+        assert search(r'DRM Controller is in Node-Locked license mode', log_content, IGNORECASE)
         logfile.remove()
     finally:
         driver.program_fpga()
         cred_json.set_user()
+        conf_json.reset()
         with accelize_drm.DrmManager(
                     conf_json.path,
                     cred_json.path,
@@ -122,7 +125,6 @@ def test_entitlement_user_nodelock(accelize_drm, conf_json, cred_json, async_han
                     async_cb.callback
                 ) as drm_manager:
             assert drm_manager.get('drm_license_type') == 'Idle'
-
 
 
 @pytest.mark.minimum
@@ -183,6 +185,7 @@ def test_entitlement_user_limited_on_activate(accelize_drm, conf_json, cred_json
         async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'You have reached the maximum quantity of 1000. usage_unit for metered entitlement')
         async_cb.reset()
     log_content = logfile.read()
+    assert search(r'DRM Controller is in Metering license mode', log_content, IGNORECASE)
     assert search(r'Entitlement Limit Reached', log_content, IGNORECASE)
     assert search(r'You have reached the maximum quantity of 1000', log_content, IGNORECASE)
     logfile.remove()
@@ -243,6 +246,7 @@ def test_entitlement_user_limited_in_thread(accelize_drm, conf_json, cred_json, 
     assert search(r'You have reached the maximum quantity of 1000. usage_unit for metered entitlement (licensed)', async_cb.message)
     assert async_cb.errcode == accelize_drm.exceptions.DRMWSReqError.error_code
     log_content = logfile.read()
+    assert search(r'DRM Controller is in Metering license mode', log_content, IGNORECASE)
     assert search(r'Entitlement Limit Reached', log_content, IGNORECASE)
     assert search(r'You have reached the maximum quantity of 1000', log_content, IGNORECASE)
     logfile.remove()
@@ -313,6 +317,7 @@ def test_entitlement_user_floating(accelize_drm, conf_json, conf_json_second, cr
             async_cb1.reset()
     async_cb0.assert_NoError()
     log_content = logfile0.read()
+    assert search(r'DRM Controller is in Metering license mode', log_content, IGNORECASE)
     assert search(r'Entitlement Limit Reached', log_content, IGNORECASE)
     assert search(r'You have reached the maximum quantity of 1000', log_content, IGNORECASE)
     log_content = logfile1.read()
@@ -355,6 +360,7 @@ def test_entitlement_user_floating(accelize_drm, conf_json, conf_json_second, cr
     assert search(r'Entitlement Limit Reached', log_content, IGNORECASE)
     assert search(r'You have reached the maximum quantity of 1000', log_content, IGNORECASE)
     log_content = logfile1.read()
+    assert search(r'DRM Controller is in Metering license mode', log_content, IGNORECASE)
     assert search(r'Entitlement Limit Reached', log_content, IGNORECASE)
     assert search(r'You have reached the maximum quantity of 1000', log_content, IGNORECASE)
     logfile0.remove()

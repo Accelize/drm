@@ -62,7 +62,7 @@ std::vector<std::string> listDir( const std::string& path ) {
     struct dirent *ent;
 
     if ( !isDir( path ) ) {
-        Unreachable( "{} is not a valid directory", path ); //LCOV_EXCL_LINE
+        Unreachable( "{} is not a valid directory. ", path ); //LCOV_EXCL_LINE
     }
     if ( (dir = opendir( path.c_str() )) != NULL ) {
         // print all the files and directories within directory
@@ -179,7 +179,7 @@ std::string typeToString( const Json::ValueType& type ) {
         case Json::booleanValue : sType = std::string( "Boolean" ); break;
         case Json::arrayValue   : sType = std::string( "Array" ); break;
         case Json::objectValue  : sType = std::string( "Object" ); break;
-        default: Unreachable( "Unsupported Jsoncpp ValueType" ); //LCOV_EXCL_LINE
+        default: Unreachable( "Unsupported Jsoncpp ValueType. " ); //LCOV_EXCL_LINE
     }
     return sType;
 }
