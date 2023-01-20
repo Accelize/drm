@@ -496,7 +496,7 @@ protected:
                 mNodeLockLicenseDirPath = JVgetRequired( conf_licensing, "license_dir", Json::stringValue ).asString();
                 mLicenseType = eLicenseType::NODE_LOCKED;
                 Debug( "Configuration file specifies a Node-locked license" );
-            } else {
+            } //else {
                 Debug( "Configuration file specifies a floating/metered license" );
                 // Get DRM frequency related parameters
                 Json::Value conf_drm = JVgetRequired( conf_json, "drm", Json::objectValue );
@@ -505,7 +505,7 @@ protected:
                 mBypassFrequencyDetection = JVgetOptional( conf_drm, "bypass_frequency_detection", Json::booleanValue,
                         mBypassFrequencyDetection ).asBool();
                 mIsHybrid = JVgetOptional( conf_drm, "drm_software", Json::booleanValue, false ).asBool();
-            }
+//            }
         } catch( const Exception &e ) {
             if ( e.getErrCode() != DRM_BadFormat )
                 throw;
@@ -1231,9 +1231,8 @@ protected:
         // Run auto-test of register accesses
         runBistLevel2();
 
-//        // Determine frequency detection method if metering/floating mode is active
-//        if ( !isConfigInNodeLock() ) {
-        // Detect frequency
+        // Determine frequency detection method if metering/floating mode is active
+        if ( !isConfigInNodeLock() ) {
             determineFrequencyDetectionMethod();
             if ( mFreqDetectionMethod == 3 ) {
                 detectDrmFrequencyMethod3();
@@ -1242,7 +1241,7 @@ protected:
             } else {
                 Warning( "DRM frequency auto-detection is disabled: {:0.1f} will be used to compute license timers", mFrequencyCurr );
             }
-//        }
+        }
 
         // Save header information
         mHeaderJsonRequest = getMeteringHeader();

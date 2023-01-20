@@ -221,11 +221,11 @@ def test_entitlement_user_limited_on_activate(accelize_drm, conf_json, cred_json
 
     # Test activate function call fails when limit is reached
     async_cb.reset()
+    cred_json.set_user('test-limited')
     conf_json.reset()
     logfile = log_file_factory.create(1)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
-    cred_json.set_user('test-limited')
     ws_admin.clean_user_db(conf_json, cred_json)
     with accelize_drm.DrmManager(
                 conf_json.path,
@@ -237,6 +237,7 @@ def test_entitlement_user_limited_on_activate(accelize_drm, conf_json, cred_json
         assert drm_manager.get('drm_license_type') in ['Idle', 'Floating/Metering']
         assert not drm_manager.get('license_status')
         drm_manager.activate()
+        print('entitlement_session_id 0 =', drm_manager.get('entitlement_session_id'))
         assert drm_manager.get('license_type') == 'Floating/Metering'
         assert drm_manager.get('drm_license_type') == 'Floating/Metering'
         assert drm_manager.get('license_status')
@@ -247,6 +248,7 @@ def test_entitlement_user_limited_on_activate(accelize_drm, conf_json, cred_json
         activators.reset_coin()
         assert not drm_manager.get('license_status')
         drm_manager.activate()
+        print('entitlement_session_id 1 =', drm_manager.get('entitlement_session_id'))
         assert drm_manager.get('license_status')
         activators.check_coin(drm_manager.get('metered_data'))
         activators[0].generate_coin(1)
@@ -255,6 +257,7 @@ def test_entitlement_user_limited_on_activate(accelize_drm, conf_json, cred_json
         assert not drm_manager.get('license_status')
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
+            print('entitlement_session_id 2 =', drm_manager.get('entitlement_session_id'))
         assert search(r'Accelize Web Service error 403', str(excinfo.value))
         assert search(r'"Entitlement Limit Reached.* with PT DRM Ref Design .+ for \S+_test_03@accelize.com', str(excinfo.value))
         assert search(r'You have reached the maximum quantity of 1000. usage_unit for metered entitlement (licensed)', str(excinfo.value))
