@@ -237,7 +237,6 @@ def test_entitlement_user_limited_on_activate(accelize_drm, conf_json, cred_json
         assert drm_manager.get('drm_license_type') in ['Idle', 'Floating/Metering']
         assert not drm_manager.get('license_status')
         drm_manager.activate()
-        print('entitlement_session_id 0 =', drm_manager.get('entitlement_session_id'))
         assert drm_manager.get('license_type') == 'Floating/Metering'
         assert drm_manager.get('drm_license_type') == 'Floating/Metering'
         assert drm_manager.get('license_status')
@@ -248,7 +247,6 @@ def test_entitlement_user_limited_on_activate(accelize_drm, conf_json, cred_json
         activators.reset_coin()
         assert not drm_manager.get('license_status')
         drm_manager.activate()
-        print('entitlement_session_id 1 =', drm_manager.get('entitlement_session_id'))
         assert drm_manager.get('license_status')
         activators.check_coin(drm_manager.get('metered_data'))
         activators[0].generate_coin(1)
@@ -257,18 +255,16 @@ def test_entitlement_user_limited_on_activate(accelize_drm, conf_json, cred_json
         assert not drm_manager.get('license_status')
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
-            print('entitlement_session_id 2 =', drm_manager.get('entitlement_session_id'))
-        assert search(r'Accelize Web Service error 403', str(excinfo.value))
-        assert search(r'"Entitlement Limit Reached.* with PT DRM Ref Design .+ for \S+_test_03@accelize.com', str(excinfo.value))
-        assert search(r'You have reached the maximum quantity of 1000. usage_unit for metered entitlement (licensed)', str(excinfo.value))
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
-        assert search(r'DRM WS request failed', async_cb.message)
-        async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'You have reached the maximum quantity of 1000. usage_unit for metered entitlement')
+        assert search(r'Accelize Web Service error 403', str(excinfo.value), IGNORECASE)
+        assert search(r'No valid entitlement available for this product', str(excinfo.value), IGNORECASE)
+        assert search(r'your existing entitlements have reached their quota or expiration date', str(excinfo.value), IGNORECASE)
+        assert async_cb.was_called
+        async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'your existing entitlements have reached their quota or expiration date')
         async_cb.reset()
     log_content = logfile.read()
-    assert search(r'DRM Controller is in Metering license mode', log_content, IGNORECASE)
-    assert search(r'Entitlement Limit Reached', log_content, IGNORECASE)
-    assert search(r'You have reached the maximum quantity of 1000', log_content, IGNORECASE)
+    assert search(r'Accelize Web Service error 403', log_content, IGNORECASE)
+    assert search(r'No valid entitlement available for this product', log_content, IGNORECASE)
+    assert search(r'your existing entitlements have reached their quota or expiration date', log_content, IGNORECASE)
     logfile.remove()
 
 
@@ -320,16 +316,16 @@ def test_entitlement_user_limited_in_thread(accelize_drm, conf_json, cred_json, 
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
     # Verify asynchronous callback has been called
+    assert search(r'Accelize Web Service error 403', str(excinfo.value), IGNORECASE)
+    assert search(r'No valid entitlement available for this product', str(excinfo.value), IGNORECASE)
+    assert search(r'your existing entitlements have reached their quota or expiration date', str(excinfo.value), IGNORECASE)
     assert async_cb.was_called
-    assert search(r'DRM WS request failed', async_cb.message)
-    assert search(r'Accelize Web Service error 403', async_cb.message)
-    assert search(r'"Entitlement Limit Reached.* with PT DRM Ref Design .+ for \S+_test_03@accelize.com', async_cb.message)
-    assert search(r'You have reached the maximum quantity of 1000. usage_unit for metered entitlement (licensed)', async_cb.message)
-    assert async_cb.errcode == accelize_drm.exceptions.DRMWSReqError.error_code
+    async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'your existing entitlements have reached their quota or expiration date')
+    async_cb.reset()
     log_content = logfile.read()
-    assert search(r'DRM Controller is in Metering license mode', log_content, IGNORECASE)
-    assert search(r'Entitlement Limit Reached', log_content, IGNORECASE)
-    assert search(r'You have reached the maximum quantity of 1000', log_content, IGNORECASE)
+    assert search(r'Accelize Web Service error 403', log_content, IGNORECASE)
+    assert search(r'No valid entitlement available for this product', log_content, IGNORECASE)
+    assert search(r'your existing entitlements have reached their quota or expiration date', log_content, IGNORECASE)
     logfile.remove()
 
 
