@@ -4,6 +4,8 @@ Test node-locked behavior of DRM Library.
 """
 import pytest
 from re import search, IGNORECASE
+from datetime import datetime
+from tests.conftest import wait_deadline, wait_until_true
 
 
 @pytest.mark.minimum
@@ -306,21 +308,28 @@ def test_entitlement_user_limited_in_thread(accelize_drm, conf_json, cred_json, 
         assert sum(drm_manager.get('metered_data')) == 0
         license_duration = drm_manager.get('license_duration')
         wait_until_true(lambda: drm_manager.get('num_license_loaded') == 2, license_duration)
-        activators[0].generate_coin(1000)
+        activators[0].generate_coin(999)
         activators.check_coin(drm_manager.get('metered_data'))
-        # Wait right before lock
-        wait_deadline(start, 3*license_duration-3)
+        # Wait right after 1st license timer
+        wait_deadline(start, license_duration+1)
+        wait_until_true(lambda: drm_manager.get('num_license_loaded') == 2, license_duration)
         assert drm_manager.get('license_status')
         activators.autotest(is_activated=True)
-        wait_deadline(start, 3*license_duration+3)
+        activators[0].generate_coin(1)
+        activators.check_coin(drm_manager.get('metered_data'))
+        # Wait right after 2nd license timer
+        wait_deadline(start, 2*license_duration+1)
+        assert drm_manager.get('license_status')
+        activators.autotest(is_activated=True)
+        # Wait right after 3rd license timer
+        wait_deadline(start, 3*license_duration+1)
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
     # Verify asynchronous callback has been called
-    assert search(r'Accelize Web Service error 403', str(excinfo.value), IGNORECASE)
-    assert search(r'No valid entitlement available for this product', str(excinfo.value), IGNORECASE)
-    assert search(r'your existing entitlements have reached their quota or expiration date', str(excinfo.value), IGNORECASE)
     assert async_cb.was_called
-    async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'your existing entitlements have reached their quota or expiration date')
+    assert search(r'Accelize Web Service error 403', async_cb.message, IGNORECASE)
+    assert search(r'No valid entitlement available for this product', async_cb.message, IGNORECASE)
+    assert search(r'your existing entitlements have reached their quota or expiration date', async_cb.message, IGNORECASE)
     async_cb.reset()
     log_content = logfile.read()
     assert search(r'Accelize Web Service error 403', log_content, IGNORECASE)
