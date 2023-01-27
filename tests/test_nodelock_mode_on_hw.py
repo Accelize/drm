@@ -92,8 +92,11 @@ def test_nodelock_license_file(accelize_drm, conf_json, cred_json, async_handler
                     driver.write_register_callback,
                     async_cb.callback
                 ) as drm_manager:
+            assert not drm_manager.get('license_status')
             drm_manager.activate()
+            assert drm_manager.get('license_status')
             drm_manager.deactivate()
+            assert not drm_manager.get('license_status')
             request_file = drm_manager.get('nodelocked_request_file')
             assert request_file
             assert isfile(request_file)
@@ -110,16 +113,16 @@ def test_nodelock_license_file(accelize_drm, conf_json, cred_json, async_handler
             assert data.get('id')
             assert data.get('drm_config')
             assert len(data['drm_config'].get('drm_session_id')) == 16
-            assert data['drm_config'].get('health_period')
+            assert data['drm_config'].get('health_period') == 0
             assert data['drm_config'].get('license')
             assert data['drm_config']['license'].get(device_id)
             assert search(r'[a-fA-F0-9]{16,}', data['drm_config']['license'][device_id].get('key'))
-            assert data['drm_config']['license'][device_id].get('timer')
+            assert not data['drm_config']['license'][device_id].get('timer')
 
             # Test nodelocked license file with bad format
             copy_license_file = license_file + '.copy'
-            move(license_file, copy_request_file)
-            with open(copy_request_file) as fr:
+            move(license_file, copy_license_file)
+            with open(copy_license_file) as fr:
                 req_json = fr.read()
             with open(license_file, 'w') as fw:
                 fw.write(req_json.replace(':', '='))
@@ -138,7 +141,7 @@ def test_nodelock_license_file(accelize_drm, conf_json, cred_json, async_handler
 @pytest.mark.minimum
 @pytest.mark.hwtst
 def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, async_handler,
-                                         ws_admin):
+                                         ws_admin, log_file_factory):
     """Test normal nodelock license usage"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
@@ -182,7 +185,7 @@ def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, asy
             assert drm_manager.get('drm_license_type') == 'Node-Locked'
             assert not drm_manager.get('license_status')
             drm_manager.activate()
-            assert not drm_manager.get('license_status')
+            assert drm_manager.get('license_status')
             assert drm_manager.get('license_type') == 'Node-Locked'
             assert drm_manager.get('drm_license_type') == 'Node-Locked'
             assert drm_manager.get('license_duration') == 0
@@ -225,7 +228,9 @@ def test_nodelock_with_malformed_license_file(accelize_drm, conf_json, cred_json
                     async_cb.callback
                 ) as drm_manager:
             # Run a first time to create license file
+            assert not drm_manager.get('license_status')
             drm_manager.activate()
+            assert drm_manager.get('license_status')
             license_file = glob(join(license_dir, '*.lic'))
             assert len(license_file) == 1
             license_file = license_file[0]
@@ -234,7 +239,6 @@ def test_nodelock_with_malformed_license_file(accelize_drm, conf_json, cred_json
                 license_json = f.read()
             with open(license_file, 'wt') as f:
                 f.write(license_json[:-1])
-
             # Run a second time after having corrupted the license file
             with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
                 drm_manager.activate()
@@ -264,7 +268,6 @@ def test_nodelock_limits(accelize_drm, conf_json, conf_json_second, cred_json, a
     cred_json.set_user('test-nodelock')
     conf_json.addNodelock()
     ws_admin.clean_user_db(conf_json, cred_json)
-
     try:
         # Create the first instance
         async_cb0.reset()
@@ -276,14 +279,14 @@ def test_nodelock_limits(accelize_drm, conf_json, conf_json_second, cred_json, a
                     async_cb0.callback
                 ) as drm_manager0:
             assert drm_manager0.get('license_type') == 'Node-Locked'
-
             # Consume the single token available
+            assert not drm_manager.get('license_status')
             drm_manager0.activate()
+            assert drm_manager.get('license_status')
             assert drm_manager0.get('drm_license_type') == 'Node-Locked'
             drm_manager0.deactivate()
             assert drm_manager0.get('drm_license_type') == 'Node-Locked'
         async_cb0.assert_NoError()
-
         # Create the second instance on the other FPGA
         with accelize_drm.DrmManager(
                     conf_json.path,
@@ -323,12 +326,9 @@ def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, c
     cred_json.set_user('test-nodelock')        # User with a single nodelock license
     logfile = log_file_factory.create(1, append=True)
     conf_json['settings'].update(logfile.json)
+    conf_json.addNodelock()     # Set nodelock configuration
     conf_json.save()
-
-    # Set nodelock configuration
-    conf_json.addNodelock()
     ws_admin.clean_user_db(conf_json, cred_json)
-
     try:
         with accelize_drm.DrmManager(
                     conf_json.path,
@@ -338,10 +338,10 @@ def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, c
                     async_cb.callback
                 ) as drm_manager:
             assert drm_manager.get('license_type') == 'Node-Locked'
-            # Start application
+            assert not drm_manager.get('license_status')
             drm_manager.activate()
             assert drm_manager.get('drm_license_type') == 'Node-Locked'
-
+            assert drm_manager.get('license_status')
         # Set metering configuration
         cred_json.set_user('test-metering')
         conf_json.removeNodelock()
@@ -352,8 +352,8 @@ def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, c
                     driver.write_register_callback,
                     async_cb.callback
                 ) as drm_manager:
+            assert not drm_manager.get('license_status')
             assert drm_manager.get('license_type') == 'Floating/Metering'
-            # Start application
             with pytest.raises(accelize_drm.exceptions.DRMBadUsage) as excinfo:
                 drm_manager.activate()
             assert "DRM Controller is locked in Node-Locked licensing mode: " \
@@ -374,7 +374,6 @@ def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, c
                 driver.write_register_callback,
                 async_cb.callback
             ) as drm_manager:
-        # Start application
         assert drm_manager.get('license_type') == 'Floating/Metering'
         assert not drm_manager.get('license_status')
         drm_manager.activate()
@@ -491,7 +490,9 @@ def test_nodelock_is_board_specific(accelize_drm, conf_json, cred_json,
                 ) as drm_manager:
             assert drm_manager.get('license_type') == 'Node-Locked'
             request_file_0 = drm_manager.get('nodelocked_request_file')
+            assert not drm_manager.get('license_status')
             drm_manager.activate()
+            assert drm_manager.get('license_status')
             assert drm_manager.get('drm_license_type') == 'Node-Locked'
     finally:
         # Reprogram FPGA

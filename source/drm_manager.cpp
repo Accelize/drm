@@ -1505,13 +1505,6 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         }
     }
 
-    bool isSessionRunning()const  {
-        bool sessionRunning( false );
-        checkDRMCtlrRet( getDrmController().readSessionRunningStatusRegister( sessionRunning ) );
-        Debug( "DRM session running state: {}", sessionRunning );
-        return sessionRunning;
-    }
-
     bool isDrmCtrlInNodelock()const  {
         bool isNodelocked( false );
         checkDRMCtlrRet( getDrmController().readLicenseNodeLockStatusRegister( isNodelocked ) );
@@ -1535,10 +1528,20 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         return readiness;
     }
 
+    bool isSessionRunning()const  {
+        bool sessionRunning( false );
+        if ( isDrmCtrlInNodelock() )
+            checkDRMCtlrRet( getDrmController().readActivationCodesTransmittedStatusRegister( sessionRunning );
+        else
+            checkDRMCtlrRet( getDrmController().readSessionRunningStatusRegister( sessionRunning ) );
+        Debug( "DRM session running state: {}", sessionRunning );
+        return sessionRunning;
+    }
+
     bool isLicenseActive() const {
-        bool isLicenseEmpty( false );
-        checkDRMCtlrRet( getDrmController().readLicenseTimerCountEmptyStatusRegister( isLicenseEmpty ) );
-        return !isLicenseEmpty;
+        bool isActive( false );
+        checkDRMCtlrRet( getDrmController().readActivationCodesTransmittedStatusRegister( isActive );
+        return isActive;
     }
 
     void requestTokenUntilValid( const TClock::time_point& deadline, int32_t short_retry_period_ms = -1, int32_t long_retry_period_ms = -1 ) {
