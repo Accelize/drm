@@ -530,4 +530,3 @@ def test_nodelock_is_board_specific(accelize_drm, conf_json, cred_json,
     assert search(r'Installed node-locked license successfully', log_content, IGNORECASE)
     logfile.remove()
 
-

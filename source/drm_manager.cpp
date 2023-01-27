@@ -1505,14 +1505,14 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         }
     }
 
-    bool isDrmCtrlInNodelock()const  {
+    bool isDrmCtrlInNodelock() const  {
         bool isNodelocked( false );
         checkDRMCtlrRet( getDrmController().readLicenseNodeLockStatusRegister( isNodelocked ) );
         Debug( "DRM Controller node-locked status: {}", isNodelocked );
         return isNodelocked;
     }
 
-    bool isDrmCtrlInMetering()const  {
+    bool isDrmCtrlInMetering() const  {
         bool isMetering( false );
         checkDRMCtlrRet( getDrmController().readLicenseMeteringStatusRegister( isMetering ) );
         Debug( "DRM Controller metering status: {}", isMetering );
@@ -1528,19 +1528,20 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         return readiness;
     }
 
-    bool isSessionRunning()const  {
+    bool isSessionRunning() const  {
         bool sessionRunning( false );
-        if ( isDrmCtrlInNodelock() )
-            checkDRMCtlrRet( getDrmController().readActivationCodesTransmittedStatusRegister( sessionRunning );
-        else
+        if ( isDrmCtrlInNodelock() ) {
+            checkDRMCtlrRet( getDrmController().readActivationCodesTransmittedStatusRegister( sessionRunning ) );
+        } else {
             checkDRMCtlrRet( getDrmController().readSessionRunningStatusRegister( sessionRunning ) );
+        }
         Debug( "DRM session running state: {}", sessionRunning );
         return sessionRunning;
     }
 
     bool isLicenseActive() const {
         bool isActive( false );
-        checkDRMCtlrRet( getDrmController().readActivationCodesTransmittedStatusRegister( isActive );
+        checkDRMCtlrRet( getDrmController().readActivationCodesTransmittedStatusRegister( isActive ) );
         return isActive;
     }
 
