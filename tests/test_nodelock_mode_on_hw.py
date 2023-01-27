@@ -76,7 +76,7 @@ def test_nodelock_request_file(accelize_drm, conf_json, cred_json, async_handler
 @pytest.mark.no_parallel
 @pytest.mark.hwtst
 def test_nodelock_license_file(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
-    """Test license file behaviors when in nodelock mode"""
+    """Test license file behaviors in nodelock mode"""
     driver = accelize_drm.pytest_fpga_driver[0]
     activators = accelize_drm.pytest_fpga_activators[0]
     async_cb = async_handler.create()
@@ -96,7 +96,6 @@ def test_nodelock_license_file(accelize_drm, conf_json, cred_json, async_handler
             drm_manager.activate()
             assert drm_manager.get('license_status')
             drm_manager.deactivate()
-            assert not drm_manager.get('license_status')
             request_file = drm_manager.get('nodelocked_request_file')
             assert request_file
             assert isfile(request_file)
@@ -142,16 +141,15 @@ def test_nodelock_license_file(accelize_drm, conf_json, cred_json, async_handler
 @pytest.mark.hwtst
 def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, async_handler,
                                          ws_admin, log_file_factory):
-    """Test normal nodelock license usage"""
+    """Test normal nodelock license usage and capability to reuse an already existing license file"""
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
     activators = accelize_drm.pytest_fpga_activators[0]
     activators.reset_coin()
-    #activators.autotest()
 
     cred_json.set_user('test-nodelock')
-    #conf_json.addNodelock()
+    conf_json.addNodelock()
     logfile = log_file_factory.create(1, append=True)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
@@ -173,6 +171,7 @@ def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, asy
             assert drm_manager.get('license_duration') == 0
         async_cb.assert_NoError()
         # Recrete a new object with a bad url to verify it will reuse the existing license file
+        conf_json.removeNodelock()
         conf_json['licensing']['url'] = "bad_url"
         conf_json.save()
         with accelize_drm.DrmManager(
@@ -183,7 +182,6 @@ def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, asy
                     async_cb.callback
                 ) as drm_manager:
             assert drm_manager.get('drm_license_type') == 'Node-Locked'
-            assert not drm_manager.get('license_status')
             drm_manager.activate()
             assert drm_manager.get('license_status')
             assert drm_manager.get('license_type') == 'Node-Locked'

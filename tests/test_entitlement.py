@@ -93,7 +93,7 @@ def test_entitlement_user_nodelock(accelize_drm, conf_json, cred_json, async_han
     async_cb.reset()
     cred_json.set_user('test-nodelock')
     conf_json.reset()
-#    conf_json.addNodelock()
+    conf_json.addNodelock()
     logfile = log_file_factory.create(1)
     conf_json['settings'].update(logfile.json)
     conf_json.save()

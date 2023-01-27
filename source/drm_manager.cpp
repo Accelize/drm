@@ -1355,8 +1355,8 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
 
         // Fulfill drm_config section
         drm_config["lgdn_version"] = fmt::format( "{:06X}", mDrmVersionNum );
-//        if ( !isConfigInNodeLock() && !mIsHybrid ) {
-        if ( !mIsHybrid ) {
+        if ( !isConfigInNodeLock() && !mIsHybrid ) {
+//        if ( !mIsHybrid ) {
             drm_config["drm_frequency_init"] = mFrequencyInit;
 // TODO: verify float is accepted by removing the int()
             drm_config["drm_frequency"] = int(mFrequencyCurr);
@@ -1396,7 +1396,6 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         std::vector<std::string> meteringFile;
 
         Debug( "Build starting license request #{} to create new session", mLicenseCounter );
-        json_output["request"] = "open";
         json_output["device_id"] = mDeviceID;
 
         // Request challenge and metering info for first request
@@ -1405,6 +1404,10 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         drm_config["saas_challenge"] = saasChallenge;
         drm_config["metering_file"]  = std::accumulate( meteringFile.begin(), meteringFile.end(), std::string("") );
 //TODO: verify where to add this        drm_config["license_type"] = (uint8_t)mLicenseType;
+
+        if (isConfigInNodeLock() ) {
+            json_output["node_locked_only"] = true;
+        }
 
         return json_output;
     }
@@ -1592,7 +1595,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
     }
 
     Json::Value getLicense( Json::Value& request_json, const uint32_t& timeout_ms,
-                            int32_t short_retry_period_ms = -1, int32_t long_retry_period_ms = -1 ) {
+                            int32_t short_retry_period_ms = -1, int32_t long_retry_period_ms = -1, bool open = false ) {
         TClock::time_point deadline;
         if ( timeout_ms == 0 ) {
             deadline = TClock::now() + std::chrono::milliseconds( getDrmWSClient().getRequestTimeoutMS() );
@@ -1601,11 +1604,11 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         } else {
             deadline = TClock::now() + std::chrono::milliseconds( timeout_ms );
         }
-        return getLicense( request_json, deadline, short_retry_period_ms, long_retry_period_ms );
+        return getLicense( request_json, deadline, short_retry_period_ms, long_retry_period_ms, open );
     }
 
     Json::Value getLicense( Json::Value& request_json, const TClock::time_point& deadline,
-                        int32_t short_retry_period_ms = -1, int32_t long_retry_period_ms = -1 ) {
+                        int32_t short_retry_period_ms = -1, int32_t long_retry_period_ms = -1, bool open = false ) {
         TClock::duration wait_duration;
         TClock::duration long_duration = std::chrono::milliseconds( long_retry_period_ms );
         TClock::duration short_duration = std::chrono::milliseconds( short_retry_period_ms );
@@ -1616,8 +1619,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         tHttpRequestType httpType;
         std::string request_type = request_json.isMember("is_health") ? "Health":"License";
 
-        if ( request_json.isMember("request") ) {
-            request_json.removeMember("request");
+        if ( open ) {
 // TODO: check where to add these            request_json["settings"] = buildSettingsNode();     // Add settings parameters
             suburl = fmt::format( "/customer/product/{}/entitlement_session", mProductID );
             httpType = tHttpRequestType::POST;
@@ -1731,15 +1733,15 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
             checkDRMCtlrRet( getDrmController().loadLicenseTimerInit( licenseTimer, mIsHybrid, timeout ) );
             Debug( "Wrote license timer #{} of session ID {} for a duration of {} seconds",
                     mLicenseCounter, mSessionID, mLicenseDuration );
-        }
 
-        // Update expiration time
-        if ( mExpirationTime.time_since_epoch().count() == 0 ) {
-            Debug( "Initialize expiration time");
-            mExpirationTime = TClock::now();
+            // Update expiration time
+            if ( mExpirationTime.time_since_epoch().count() == 0 ) {
+                Debug( "Initialize expiration time");
+                mExpirationTime = TClock::now();
+            }
+            mExpirationTime += std::chrono::seconds( mLicenseDuration );
+            Debug( "Update expiration time to {}", time_t_to_string( steady_clock_to_time_t( mExpirationTime ) ) );
         }
-        mExpirationTime += std::chrono::seconds( mLicenseDuration );
-        Debug( "Update expiration time to {}", time_t_to_string( steady_clock_to_time_t( mExpirationTime ) ) );
 
         // Wait until license has been pushed to Activator's port
         waitActivationCodeTransmitted();
@@ -1813,7 +1815,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
                 request_json["diagnostic"] = mDiagnostics;
                 Debug( "Parsed newly created node-locked License Request file: {}", request_json .toStyledString() );
                 /// - Send request to web service and receive the new license
-                license_json = getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
+                license_json = getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000, true );
                 /// - Save the license to file
                 saveJsonToFile( mNodeLockLicenseFilePath, license_json );
                 Debug( "Requested and saved new node-locked license file: {}", mNodeLockLicenseFilePath );
@@ -2103,7 +2105,8 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
                         Json::Value request_json = getMeteringRunning();
 
                         /// Attempt to get the next license from server
-                        Json::Value license_json = getLicense( request_json, mExpirationTime, mWSRetryPeriodShort*1000, mWSRetryPeriodLong*1000 );
+                        Json::Value license_json = getLicense( request_json, mExpirationTime,
+                                        mWSRetryPeriodShort*1000, mWSRetryPeriodLong*1000 );
 
                         /// New license has been received: now send it to the DRM Controller
                         setLicense( license_json );
@@ -2332,7 +2335,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         Json::Value request_json = getMeteringStart();
 
         // Send request and receive new license
-        Json::Value license_json = getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
+        Json::Value license_json = getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000, true );
         setLicense( license_json );
 
         MTX_RELEASE( mMeteringAccessMutex );
@@ -2499,7 +2502,7 @@ public:
             Debug( "Calling 'activate'" );
 
             // If a floating/metering session is still running, try to close it gracefully.
-            if ( isSessionRunning() ) {
+            if ( !isConfigInNodeLock() && isSessionRunning() ) {
                 Debug( "The floating/metering session is still pending: trying to close it gracefully." );
                 try {
                     stopSession();
