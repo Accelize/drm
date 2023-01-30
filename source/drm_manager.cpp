@@ -318,7 +318,7 @@ protected:
 
     // Operating mode
     bool mIsHybrid = false;
-    bool mIsPnR = false;
+    bool mIsPnC = false;
 
     // DRM Frequency parameters
     int32_t mFrequencyInit = 0;
@@ -334,6 +334,7 @@ protected:
     std::string mEntitlementID;
 
     // Web service communication
+    bool mIsOffline = false;
     Json::Value mHeaderJsonRequest;
 
     // Health/Asynchronous metering
@@ -419,7 +420,7 @@ protected:
         mFrequencyCurr = 0.0;
 
         mIsHybrid = false;
-        mIsPnR = false;
+        mIsPnC = false;
 
         mDebugMessageLevel = spdlog::level::trace;
 
@@ -591,7 +592,7 @@ protected:
     }
 
     void updateCtrlLogLevel( eCtrlLogVerbosity level_e, bool force = false ) {
-        if ( !mIsPnR ) {
+        if ( !mIsPnC ) {
             Warning( "This command has no effect on HW DRM Controller IP" );
             return;
         }
@@ -868,7 +869,7 @@ protected:
     Json::Value buildSettingsNode() {
         Json::Value settings;
         settings["drm_software"] = mIsHybrid;
-        settings["drm_pnr"] = mIsPnR;
+        settings["drm_pnc"] = mIsPnC;
         settings["frequency_detection_method"] = mFreqDetectionMethod;
         settings["bypass_frequency_detection"] = mBypassFrequencyDetection;
         settings["frequency_detection_threshold"] = mFrequencyDetectionThreshold;
@@ -1182,6 +1183,12 @@ protected:
         return mLicenseType == eLicenseType::NODE_LOCKED;
     }
 
+    bool isNodelockSupported() const  {
+        bool is_supported = ( mMailboxRoData["extra"]["fpga_family"].asString().find("random") != std::string::npos );
+        Debug( "Is nodelocked mode supported: {}", is_supported );
+        return is_supported;
+    }
+
     void initDrmInterface() {
 
         if ( mDrmController )
@@ -1231,8 +1238,26 @@ protected:
         // Run auto-test of register accesses
         runBistLevel2();
 
-        // Determine frequency detection method if metering/floating mode is active
-        if ( !isConfigInNodeLock() ) {
+        // Save header information
+        mHeaderJsonRequest = getMeteringHeader();
+
+        // Check if nodelock  is supported
+        if ( isConfigInNodeLock() ) {
+            if ( isNodelockSupported() ) {
+                Throw( DRM_BadUsage,
+                       "Node-locked license cannot be requested with DRM Controller implementing random device ID."
+                       "Please remove or set to false the 'nodelocked' field in the configuration file {}",
+                       mConfFilePath );
+            }
+            // Check license directory exists
+            if ( !isDir( mNodeLockLicenseDirPath ) )
+                Throw( DRM_BadArg,
+                       "License directory path '{}' specified in configuration file '{}' is not existing on file system",
+                       mNodeLockLicenseDirPath, mConfFilePath );
+            // Create license request file
+            createNodelockedLicenseRequestFile();
+        } else {
+            // Determine frequency detection method if metering/floating mode is active
             determineFrequencyDetectionMethod();
             if ( mFreqDetectionMethod == 3 ) {
                 detectDrmFrequencyMethod3();
@@ -1243,34 +1268,24 @@ protected:
             }
         }
 
-        // Save header information
-        mHeaderJsonRequest = getMeteringHeader();
-
         // Create curl management object
         mWsClient.reset( new DrmWSClient( mConfFilePath, mCredFilePath ) );
 
-        // If node-locked license is requested, create license request file
-        if ( isConfigInNodeLock() ) {
-
-            // Check license directory exists
-            if ( !isDir( mNodeLockLicenseDirPath ) )
-                Throw( DRM_BadArg,
-                       "License directory path '{}' specified in configuration file '{}' is not existing on file system",
-                       mNodeLockLicenseDirPath, mConfFilePath );
-            // Create license request file
-            createNodelockedLicenseRequestFile();
+        // Anticipate by requesting a token.
+        TClock::time_point deadline;
+        int32_t short_retry_period_ms = -1;
+        if ( mWSApiRetryDuration == 0 ) {
+            deadline = TClock::now() + std::chrono::milliseconds( getDrmWSClient().getRequestTimeoutMS() );
+            short_retry_period_ms = -1;
         } else {
-            // Anticipate by requesting a token.
-            TClock::time_point deadline;
-            int32_t short_retry_period_ms = -1;
-            if ( mWSApiRetryDuration == 0 ) {
-                deadline = TClock::now() + std::chrono::milliseconds( getDrmWSClient().getRequestTimeoutMS() );
-                short_retry_period_ms = -1;
-            } else {
-                deadline = TClock::now() + std::chrono::milliseconds( mWSApiRetryDuration * 1000 );
-                short_retry_period_ms = mWSRetryPeriodShort * 1000;
-            }
+            deadline = TClock::now() + std::chrono::milliseconds( mWSApiRetryDuration * 1000 );
+            short_retry_period_ms = mWSRetryPeriodShort * 1000;
+        }
+        try {
             requestTokenUntilValid( deadline, short_retry_period_ms );
+        } catch( const Exception &e ) {
+            Debug( "Failed to send request to Accelize Server." );
+            mIsOffline = true;
         }
     }
 
@@ -1385,6 +1400,11 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
 //            Debug( "HDK extra data: {}", mMailboxRoData["extra"].toStyledString() );
             drm_config["dualclk"] = mMailboxRoData["extra"]["dualclk"];
         }
+
+        // Create hash name based on design info for nodelocked files
+        std::string basname = getNodelockBaseName();
+        mNodeLockRequestFilePath = mNodeLockLicenseDirPath + PATH_SEP + basname + ".req";
+        mNodeLockLicenseFilePath = mNodeLockLicenseDirPath + PATH_SEP + basname + ".lic";
 
         return json_output;
     }
@@ -1709,6 +1729,13 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
             /// Extract license key and license timer from web service response
             licenseKey = JVgetRequired( dna_node, "key", Json::stringValue ).asString();
             licenseTimer = JVgetOptional( dna_node, "timer", Json::stringValue, "" ).asString();
+
+            mLicenseType = licenseTimer.empty()? eLicenseType::NODE_LOCKED : eLicenseType::METERED;
+
+            if ( isDrmCtrlInNodelock() && !isConfigInNodeLock() ) {
+                Throw( DRM_BadUsage, "DRM Controller is locked in Node-Locked licensing mode: "
+                                    "To use other modes you must reprogram the FPGA device. " );
+            }
         } catch( const Exception &e ) {
             Throw( DRM_WSRespError, "Malformed response from License Web Service: {}", e.what() );
         }
@@ -1720,9 +1747,6 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
             checkDRMCtlrRet( getDrmController().activate( licenseKey ) );
             Debug( "Wrote license key of session ID {}", mSessionID );
         }
-
-        // Check DRM Controller has switched to the right license mode
-        checkDRMControllerLicenseType();
 
         // Load license timer
         if ( !isConfigInNodeLock() ) {
@@ -1749,6 +1773,9 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         // Wait until session is running if license is metering
         waitUntilSessionIsRunning();
 
+        // Check DRM Controller has switched to the right license mode
+        checkDRMControllerLicenseType();
+
         Debug( "Provisioned license #{} for session {} on DRM controller", mLicenseCounter, mSessionID );
         mLicenseCounter ++;
     }
@@ -1763,10 +1790,6 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
     }
 
     void createNodelockedLicenseRequestFile() {
-        // Create hash name based on design info
-        std::string basname = getNodelockBaseName();
-        mNodeLockRequestFilePath = mNodeLockLicenseDirPath + PATH_SEP + basname + ".req";
-        mNodeLockLicenseFilePath = mNodeLockLicenseDirPath + PATH_SEP + basname + ".lic";
         // Check if license request file already exists
         if ( isFile( mNodeLockRequestFilePath ) ) {
             Debug( "A license request file is already existing in license directory: {}", mNodeLockLicenseDirPath );
@@ -1774,58 +1797,48 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         }
         // Build request for node-locked license
         Json::Value request_json = getMeteringStart();
-        Debug( "License request JSON:\n{}", request_json.toStyledString() );
+
+        // Add diagnostic info
+        getCstInfo();
+        getHostAndCardInfo();
+        request_json["diagnostic"] = mDiagnostics;
+        Debug( "Node-locked license request file content:\n{}", request_json.toStyledString() );
 
         // Save license request to file
         saveJsonToFile( mNodeLockRequestFilePath, request_json );
         Debug( "Node-locked license request file saved on: {}", mNodeLockRequestFilePath );
     }
 
-    void installNodelockedLicense() {
+    bool installNodelockedLicense() {
         Json::Value license_json;
-            std::ifstream ifs;
+        std::ifstream ifs;
 
         Debug( "Looking for local node-locked license file: {}", mNodeLockLicenseFilePath );
 
+        mSessionID = std::string("");
+        mEntitlementID = std::string("");
+        Debug( "Session ID cleared" );
+
         // Check if license file exists
-        if ( isFile( mNodeLockLicenseFilePath ) ) {
-            try {
-                // Try to load the local license file
-                license_json = parseJsonFile( mNodeLockLicenseFilePath );
-                Debug( "Parsed existing node-locked License file: {}", license_json .toStyledString() );
-            } catch( const Exception& e ) {
-                Throw( e.getErrCode(), "Invalid local license file {} because {}. "
-                     "If this machine is connected to the License server network, rename the file and retry. "
-                     "Otherwise request a new Node-Locked license from your supplier. ",
-                     mNodeLockLicenseFilePath, e.what() );
-            }
-        } else {
-            /// No license has been found locally, request one to License WS:
-            Debug( "Could not find nodelocked license file: {}", mNodeLockLicenseFilePath );
-            /// - Clear Session IS
-            mSessionID = std::string("");
-            mEntitlementID = std::string("");
-            Debug( "Cleared session ID: {}", mSessionID );
-            try {
-                /// - Read request file
-                Json::Value request_json = parseJsonFile( mNodeLockRequestFilePath );
-                /// - Add diagnostic info
-                getCstInfo();
-                getHostAndCardInfo();
-                request_json["diagnostic"] = mDiagnostics;
-                Debug( "Parsed newly created node-locked License Request file: {}", request_json .toStyledString() );
-                /// - Send request to web service and receive the new license
-                license_json = getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000, true );
-                /// - Save the license to file
-                saveJsonToFile( mNodeLockLicenseFilePath, license_json );
-                Debug( "Requested and saved new node-locked license file: {}", mNodeLockLicenseFilePath );
-            } catch( const Exception& e ) {
-                Throw( e.getErrCode(), "Failed to request license file: {}. ", e.what() );
-            }
+        if ( !isFile( mNodeLockLicenseFilePath ) ) {
+            Debug( "Could not find node-locked license file {}", mNodeLockLicenseFilePath );
+            return false;
+        }
+        try {
+            // Try to load the local license file
+            license_json = parseJsonFile( mNodeLockLicenseFilePath );
+            Debug( "Parsed existing node-locked License file {}: {}", mNodeLockLicenseFilePath,
+                        license_json.toStyledString() );
+        } catch( const Exception& e ) {
+            Throw( e.getErrCode(), "Invalid local license file {} because {}. "
+                 "If this machine has an Internet connection, delete this file and retry. "
+                 "Otherwise send the node-locked request file {} to your vendor to get the license file. ",
+                 mNodeLockLicenseFilePath, e.what(), mNodeLockRequestFilePath );
         }
         /// Install the license
         setLicense( license_json );
         Info( "Installed node-locked license successfully" );
+        return true;
     }
 
     void determineFrequencyDetectionMethod() {
@@ -2283,14 +2296,13 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         bool is_metered = isDrmCtrlInMetering();
         if ( is_nodelocked && is_metered )
             Unreachable( "DRM Controller cannot be in both Node-Locked and Metering/Floating license modes. " ); //LCOV_EXCL_LINE
-        if ( isConfigInNodeLock() && !is_nodelocked ) {
-            // Nodelock forced by conf file but received license is a metering license
-            Throw( DRM_BadUsage, "DRM Controller failed to switch to Node-Locked license mode. " );
-        }
-        if ( is_metered ) {
+        if ( !isConfigInNodeLock() ) {
+            if ( !is_metered )
+                Unreachable( "DRM Controller failed to switch to Metering license mode" ); //LCOV_EXCL_LINE
             Debug( "DRM Controller is in Metering license mode" );
-        } else if ( is_nodelocked ) {
-            mLicenseType = eLicenseType::NODE_LOCKED;
+        } else {
+            if ( !is_nodelocked )
+                Unreachable( "DRM Controller failed to switch to Node-Locked license mode" ); //LCOV_EXCL_LINE
             Debug( "DRM Controller is in Node-Locked license mode" );
         }
     }
@@ -2335,7 +2347,8 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         Json::Value request_json = getMeteringStart();
 
         // Send request and receive new license
-        Json::Value license_json = getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000, true );
+        Json::Value license_json = getLicense( request_json, mWSApiRetryDuration * 1000,
+                    mWSRetryPeriodShort * 1000, -1, true );
         setLicense( license_json );
 
         MTX_RELEASE( mMeteringAccessMutex );
@@ -2428,8 +2441,8 @@ public:
             if ( f_user_asynch_error )
                 f_asynch_error = f_user_asynch_error;
             // Determine DRM Ctrl TA existance by trying to initialize it
-            mIsPnR = pnc_initialize_drm_ctrl_ta();
-            if ( mIsPnR ) {
+            mIsPnC = pnc_initialize_drm_ctrl_ta();
+            if ( mIsPnC ) {
                 mIsHybrid = true;
                 //  Set Ctrl TA logging
                 updateCtrlLogLevel( sLogCtrlVerbosity, true );
@@ -2445,7 +2458,7 @@ public:
                 f_write_register = f_user_write_register;
             }
             if ( mIsHybrid ) {
-                if ( mIsPnR )
+                if ( mIsPnC )
                     Debug( "DRM Controller is a PnR Trusted Application" );
                 else
                     Debug( "DRM Controller is a Software Application" );
@@ -2502,7 +2515,7 @@ public:
             Debug( "Calling 'activate'" );
 
             // If a floating/metering session is still running, try to close it gracefully.
-            if ( !isConfigInNodeLock() && isSessionRunning() ) {
+            if ( isDrmCtrlInMetering() && isSessionRunning() ) {
                 Debug( "The floating/metering session is still pending: trying to close it gracefully." );
                 try {
                     stopSession();
@@ -2510,14 +2523,9 @@ public:
                     Debug( "Failed to stop gracefully the pending session" );
                 }
             }
-            if ( isConfigInNodeLock() ) {
-                // Install the node-locked license
-                installNodelockedLicense();
+            // Try to install a node-locked license if existing
+            if ( installNodelockedLicense() ) {
                 return;
-            }
-            if ( isDrmCtrlInNodelock() ) {
-                Throw( DRM_BadUsage, "DRM Controller is locked in Node-Locked licensing mode: "
-                                    "To use other modes you must reprogram the FPGA device. " );
             }
             // Start new session and the background threads
             mThreadExit = false;
