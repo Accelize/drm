@@ -2291,28 +2291,6 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         }
     }
 
-    void waitUntilDrmIsIdle() {
-        bool is_idle(false);
-        uint32_t mseconds( 0 );
-        TClock::duration timeSpan;
-        uint32_t sleep_period = mCtrlSleepInUS * 100;
-        TClock::time_point timeStart = TClock::now();
-        while( mseconds < mActivationTransmissionTimeoutMS ) {
-            is_idle = !isDrmCtrlInMetering() && !isDrmCtrlInMetering();
-            timeSpan = TClock::now() - timeStart;
-            mseconds = int( 1000 * double( timeSpan.count() ) * TClock::period::num / TClock::period::den );
-            if ( is_idle ) {
-                Debug( "DRM Controller is in Idle state (latency = {} ms)", mseconds );
-                break;
-            }
-            Debug2( "DRM Controller is not in Idle state yet (latency = {} ms)", mseconds );
-            usleep(sleep_period);
-        }
-        if ( !is_idle ) {
-            Throw( DRM_CtlrError, "DRM Controller could switch to Idle state after {} ms. ", mseconds ); //LCOV_EXCL_LINE
-        }
-    }
-
     void checkDRMControllerLicenseType() {
         bool is_nodelocked = isDrmCtrlInNodelock();
         bool is_metered = isDrmCtrlInMetering();
@@ -2400,15 +2378,11 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
             MTX_ACQUIRE( mMeteringAccessMutex );
             // Stop DRM Controller and get data
             Json::Value request_json = getMeteringStop();
-            if ( isDrmCtrlInMetering() ) {
-                // Send metering data to web service
-                getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
-            }
+            // Send metering data to web service
+            getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
             MTX_RELEASE( mMeteringAccessMutex );
             Debug( "Session ID {} stopped and last metering data uploaded", mSessionID );
         } catch( const Exception& e ) {}
-        // Wait until DRM is in Idle state
-        waitUntilDrmIsIdle();
         // Reset local variables
         mExpirationTime = TClock::time_point();
         Debug( "Reset expiration time" );
@@ -2583,7 +2557,7 @@ public:
         TRY
             Debug( "Calling 'deactivate'" );
 
-            if ( isConfigInNodeLock() ) {
+            if ( isDrmCtrlInNodelock() ) {
                 return;
             }
             if ( !isSessionRunning() ) {

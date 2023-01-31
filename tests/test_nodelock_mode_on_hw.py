@@ -574,8 +574,8 @@ def test_nodelock_unsupported(accelize_drm, conf_json, cred_json, async_handler,
                 driver.write_register_callback,
                 async_cb.callback
             )
-        assert 'Node-locked license cannot be requested with a DRM Controller' in str(excinfo.value)
-        assert 'Please remove or set to false the 'nodelocked' field in the configuration file' in str(excinfo.value)
+        assert "Node-locked license cannot be requested with a DRM Controller" in str(excinfo.value)
+        assert "Please remove or set to false the 'nodelocked' field in the configuration file" in str(excinfo.value)
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadFormat.error_code
         async_cb.assert_Error(accelize_drm.exceptions.DRMBadUsage.error_code, 'Node-locked license cannot be requested with a DRM Controller')
         async_cb.reset()
