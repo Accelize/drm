@@ -220,9 +220,11 @@ private:
     }
 
     void pnc_uninitialize_drm_ctrl_ta() const {
-        pnc_session_destroy( s_pnc_session );
-        s_pnc_session = nullptr;
-        Debug( "Provencore session closed. " );
+        if ( s_pnc_session != nullptr ) {
+            pnc_session_destroy( s_pnc_session );
+            s_pnc_session = nullptr;
+            Debug( "Provencore session closed. " );
+        }
     }
 
 
@@ -351,7 +353,6 @@ protected:
     TClock::time_point mExpirationTime;
 
     // Threads exit elements
-    bool mSecurityStop{false};
     std::mutex mThreadExitMtx;
     std::condition_variable mThreadExitCondVar;
     bool mThreadExit{false};
@@ -406,7 +407,6 @@ protected:
 
         Json::Value conf_json;
 
-        mSecurityStop = false;
         mIsLockedToDrm = false;
 
         mLicenseDuration = 0;
@@ -2388,7 +2388,6 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         Debug( "Reset expiration time" );
         // Clear security flag
         Debug( "Clearing stop security flag" );
-        mSecurityStop = false;
         // Clear Session ID
         Info( "DRM session {} stopped.", mSessionID );
         mSessionID = std::string("");
@@ -2508,13 +2507,7 @@ public:
         try {
             TRY
                 Debug( "Calling Impl destructor" );
-                if ( mSecurityStop && isSessionRunning() ) {
-                    Debug( "Security stop triggered: stopping current session" );
-                    stopSession();
-                } else {
-                    stopThread();
-                }
-
+                deactivate();
             CATCH_AND_THROW
         } catch(...) {}
         unlockDrmToInstance();
@@ -2546,10 +2539,10 @@ public:
                 // Start the background threads for metering license type
                 mThreadExit = false;
                 startLicenseContinuityThread();
+                mSecurityStop = true;
             } else {
                 Debug( "Not starting background thread which maintains licensing in Node-locked mode" );
             }
-            mSecurityStop = true;
         CATCH_AND_THROW
     }
 
@@ -2558,6 +2551,7 @@ public:
             Debug( "Calling 'deactivate'" );
 
             if ( isDrmCtrlInNodelock() ) {
+                Debug( "No session to close in node-locked mode" );
                 return;
             }
             if ( !isSessionRunning() ) {
