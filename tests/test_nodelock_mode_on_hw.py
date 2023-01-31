@@ -179,7 +179,7 @@ def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, asy
             assert drm_manager.get('drm_license_type') == 'Node-Locked'
             assert drm_manager.get('license_duration') == 0
         async_cb.assert_NoError()
-        # Recrete a new object with a bad url to verify it will reuse the existing license file
+        # Recrete a new DRM object with a bad url to verify the existing license file is reused
         conf_json.removeNodelock()
         conf_json['licensing']['url'] = "bad_url"
         conf_json.save()
@@ -537,3 +537,48 @@ def test_nodelock_is_board_specific(accelize_drm, conf_json, cred_json,
     assert search(r'Installed node-locked license successfully', log_content, IGNORECASE)
     logfile.remove()
 
+
+@pytest.mark.minimum
+@pytest.mark.hwtst
+def test_nodelock_unsupported(accelize_drm, conf_json, cred_json, async_handler,
+                             ws_admin, log_file_factory):
+    """Test nodelock license cannot be request on a random device ID controller"""
+    if accelize_drm.is_ctrl_sw:
+        pytest.skip("Test skipped on SoM target: no corrupted RO Mailbox bitstream available")
+
+    refdesign = accelize_drm.pytest_ref_designs
+    if refdesign is None:
+        pytest.skip("No FPGA image found")
+
+    driver = accelize_drm.pytest_fpga_driver[0]
+    fpga_image_bkp = driver.fpga_image
+    async_cb = async_handler.create()
+    if accelize_drm.pytest_fpga_driver_name == "awsf1":
+        fpga_image_name = '2activator_125'
+    elif accelize_drm.pytest_fpga_driver_name == "aws_xrt":
+        fpga_image_name = 'vitis_2activator_125'
+    else:
+        pytest.skip("No FPGA image found for '2activator_125'")
+    fpga_image = refdesign.get_image_id(fpga_image_name)
+
+    cred_json.set_user('test-nodelock')  # User with a single nodelock license
+    conf_json.reset()
+    conf_json.addNodelock()
+    try:
+        driver.program_fpga(fpga_image)
+        async_cb.reset()
+        with pytest.raises(accelize_drm.exceptions.DRMBadUsage) as excinfo:
+            drm_manager = accelize_drm.DrmManager(
+                conf_json.path, cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            )
+        assert 'Node-locked license cannot be requested with a DRM Controller' in str(excinfo.value)
+        assert 'Please remove or set to false the 'nodelocked' field in the configuration file' in str(excinfo.value)
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadFormat.error_code
+        async_cb.assert_Error(accelize_drm.exceptions.DRMBadUsage.error_code, 'Node-locked license cannot be requested with a DRM Controller')
+        async_cb.reset()
+    finally:
+        # Reprogram FPGA with original image
+        driver.program_fpga(fpga_image_bkp)

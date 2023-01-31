@@ -1184,9 +1184,9 @@ protected:
     }
 
     bool isNodelockSupported() const  {
-        bool is_supported = ( mMailboxRoData["extra"]["fpga_family"].asString().find("random") != std::string::npos );
-        Debug( "Is nodelocked mode supported: {}", is_supported );
-        return is_supported;
+        bool is_nl_supported = ( mMailboxRoData["extra"]["fpga_family"].asString().find("random") == std::string::npos );
+        Debug( "Is nodelocked licensing mode supported: {}", is_nl_supported );
+        return is_nl_supported;
     }
 
     void initDrmInterface() {
@@ -1241,11 +1241,14 @@ protected:
         // Save header information
         mHeaderJsonRequest = getMeteringHeader();
 
+        // Create curl management object
+        mWsClient.reset( new DrmWSClient( mConfFilePath, mCredFilePath ) );
+
         // Check if nodelock  is supported
         if ( isConfigInNodeLock() ) {
-            if ( isNodelockSupported() ) {
+            if ( !isNodelockSupported() ) {
                 Throw( DRM_BadUsage,
-                       "Node-locked license cannot be requested with DRM Controller implementing random device ID."
+                       "Node-locked license cannot be requested with a DRM Controller implementing random device ID generation."
                        "Please remove or set to false the 'nodelocked' field in the configuration file {}",
                        mConfFilePath );
             }
@@ -1267,9 +1270,6 @@ protected:
                 Warning( "DRM frequency auto-detection is disabled: {:0.1f} will be used to compute license timers", mFrequencyCurr );
             }
         }
-
-        // Create curl management object
-        mWsClient.reset( new DrmWSClient( mConfFilePath, mCredFilePath ) );
 
         // Anticipate by requesting a token.
         TClock::time_point deadline;
@@ -1307,6 +1307,9 @@ protected:
     }
 
     void checkSessionIDFromDRM( const Json::Value license_json )  {
+        if ( isDrmCtrlInNodelock() ) {
+            return;
+        }
         std::string drm_session_id = license_json["drm_config"]["drm_session_id"].asString();
         if ( mSessionID.empty() ) {
             mSessionID = drm_session_id;
@@ -1731,6 +1734,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
             licenseTimer = JVgetOptional( dna_node, "timer", Json::stringValue, "" ).asString();
 
             mLicenseType = licenseTimer.empty()? eLicenseType::NODE_LOCKED : eLicenseType::METERED;
+            Debug( "Received license is of type: {}", LicenseTypeStringMap.find( mLicenseType )->second );
 
             if ( isDrmCtrlInNodelock() && !isConfigInNodeLock() ) {
                 Throw( DRM_BadUsage, "DRM Controller is locked in Node-Locked licensing mode: "
@@ -1802,11 +1806,11 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         getCstInfo();
         getHostAndCardInfo();
         request_json["diagnostic"] = mDiagnostics;
-        Debug( "Node-locked license request file content:\n{}", request_json.toStyledString() );
+        Debug( "Node-locked request file content:\n{}", request_json.toStyledString() );
 
         // Save license request to file
         saveJsonToFile( mNodeLockRequestFilePath, request_json );
-        Debug( "Node-locked license request file saved on: {}", mNodeLockRequestFilePath );
+        Debug( "Node-locked request file saved on: {}", mNodeLockRequestFilePath );
     }
 
     bool installNodelockedLicense() {
@@ -2287,6 +2291,28 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         }
     }
 
+    void waitUntilDrmIsIdle() {
+        bool is_idle(false);
+        uint32_t mseconds( 0 );
+        TClock::duration timeSpan;
+        uint32_t sleep_period = mCtrlSleepInUS * 100;
+        TClock::time_point timeStart = TClock::now();
+        while( mseconds < mActivationTransmissionTimeoutMS ) {
+            is_idle = !isDrmCtrlInMetering() && !isDrmCtrlInMetering();
+            timeSpan = TClock::now() - timeStart;
+            mseconds = int( 1000 * double( timeSpan.count() ) * TClock::period::num / TClock::period::den );
+            if ( is_idle ) {
+                Debug( "DRM Controller is in Idle state (latency = {} ms)", mseconds );
+                break;
+            }
+            Debug2( "DRM Controller is not in Idle state yet (latency = {} ms)", mseconds );
+            usleep(sleep_period);
+        }
+        if ( !is_idle ) {
+            Throw( DRM_CtlrError, "DRM Controller could switch to Idle state after {} ms. ", mseconds ); //LCOV_EXCL_LINE
+        }
+    }
+
     void checkDRMControllerLicenseType() {
         bool is_nodelocked = isDrmCtrlInNodelock();
         bool is_metered = isDrmCtrlInMetering();
@@ -2305,7 +2331,6 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
 
     void waitUntilSessionIsRunning() {
         if ( !isDrmCtrlInMetering() ) {
-            Debug( "There is no session in Node-Locked licensing mode" );
             return;
         }
         uint32_t mseconds( 0 );
@@ -2369,20 +2394,22 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
     }
 
     void stopSession() {
-        Json::Value request_json;
-
         // Stop background thread
         stopThread();
-
         try {
             MTX_ACQUIRE( mMeteringAccessMutex );
-            // Get and send metering data to web service
-            request_json = getMeteringStop();
-            getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
+            // Stop DRM Controller and get data
+            Json::Value request_json = getMeteringStop();
+            if ( isDrmCtrlInMetering() ) {
+                // Send metering data to web service
+                getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
+            }
             MTX_RELEASE( mMeteringAccessMutex );
             Debug( "Session ID {} stopped and last metering data uploaded", mSessionID );
         } catch( const Exception& e ) {}
-
+        // Wait until DRM is in Idle state
+        waitUntilDrmIsIdle();
+        // Reset local variables
         mExpirationTime = TClock::time_point();
         Debug( "Reset expiration time" );
         // Clear security flag
@@ -2545,6 +2572,8 @@ public:
                 // Start the background threads for metering license type
                 mThreadExit = false;
                 startLicenseContinuityThread();
+            } else {
+                Debug( "Not starting background thread which maintains licensing in Node-locked mode" );
             }
             mSecurityStop = true;
         CATCH_AND_THROW
