@@ -14,7 +14,8 @@ import pytest
 
 @pytest.mark.no_parallel
 @pytest.mark.hwtst
-def test_nodelock_request_file(accelize_drm, conf_json, cred_json, async_handler, ws_admin):
+def test_nodelock_request_file(accelize_drm, conf_json, cred_json, async_handler,
+            ws_admin, log_file_factory):
     """Test request file behaviors when in nodelock mode"""
     driver = accelize_drm.pytest_fpga_driver[0]
     activators = accelize_drm.pytest_fpga_activators[0]
@@ -22,6 +23,9 @@ def test_nodelock_request_file(accelize_drm, conf_json, cred_json, async_handler
     cred_json.set_user('test-nodelock')  # User with a single nodelock license
     conf_json.reset()
     conf_json.addNodelock()
+    logfile = log_file_factory.create(1, append=True)
+    conf_json['settings'].update(logfile.json)
+    conf_json.save()
     ws_admin.clean_user_db(conf_json, cred_json)
     try:
         with accelize_drm.DrmManager(
@@ -39,6 +43,7 @@ def test_nodelock_request_file(accelize_drm, conf_json, cred_json, async_handler
             with open(request_file) as f:
                 data = loads(f.read())
             assert data.get('device_id')
+            assert data.get('diagnostic')
             assert data.get('drm_config')
             assert data['drm_config'].get('drm_type') == 1
             assert data['drm_config'].get('lgdn_version')
@@ -69,6 +74,10 @@ def test_nodelock_request_file(accelize_drm, conf_json, cred_json, async_handler
             assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
             async_cb.assert_Error(accelize_drm.exceptions.DRMBadFormat.error_code, 'Cannot parse JSON string')
             async_cb.reset()
+        log_content = logfile.read()
+        assert search(r'Path is not a valid file', log_content, IGNORECASE)
+        assert search(r'Cannot parse JSON string', log_content, IGNORECASE)
+        logfile.remove()
     finally:
         driver.program_fpga()
 
