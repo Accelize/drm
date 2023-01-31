@@ -110,7 +110,6 @@ std::string readFile( const std::string& file_path ) {
     file_content.reserve( fh.tellg() );
     fh.seekg( 0, std::ios::beg );
     file_content.assign( (std::istreambuf_iterator<char>(fh)), std::istreambuf_iterator<char>() );
-    Debug("Read file: {}", file_path);
     return file_content;
 }
 
@@ -199,7 +198,6 @@ void saveJsonToFile( const std::string& file_path,
     builder["indentation"] = indent;
     std::unique_ptr<Json::StreamWriter> writer( builder.newStreamWriter() );
     std::ofstream ofs( file_path );
-
     if ( !ofs.is_open() )
         Throw( DRM_ExternFail, "Unable to access file: {}", file_path );
     if ( writer->write( json_value, &ofs ) )
