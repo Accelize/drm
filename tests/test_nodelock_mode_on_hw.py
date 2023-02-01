@@ -360,12 +360,12 @@ def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, c
                     driver.write_register_callback,
                     async_cb.callback
                 ) as drm_manager:
-            assert not drm_manager.get('license_status')
             assert drm_manager.get('license_type') == 'Floating/Metering'
+            assert drm_manager.get('drm_license_type') == 'Node-Locked'
             with pytest.raises(accelize_drm.exceptions.DRMBadUsage) as excinfo:
                 drm_manager.activate()
-            assert "DRM Controller is locked in Node-Locked licensing mode: " \
-                   "To use other modes you must reprogram the FPGA device" in str(excinfo.value)
+            assert search(r'DRM Controller is locked in Node-Locked licensing mode:', str(excinfo.value), IGNORECASE)
+            assert search(r'You must reprogram the FPGA device to use other modes', str(excinfo.value), IGNORECASE)
             err_code = async_handler.get_error_code(str(excinfo.value))
             assert err_code == accelize_drm.exceptions.DRMBadUsage.error_code
         async_cb.assert_Error(accelize_drm.exceptions.DRMBadUsage.error_code, 'DRM Controller is locked in Node-Locked licensing mode')
@@ -391,8 +391,8 @@ def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, c
         drm_manager.deactivate()
         assert not drm_manager.get('license_status')
     log_content = logfile.read()
-    assert search(r'Looking for local node-locked license file', log_content, IGNORECASE)
-    assert search(r'Installed node-locked license successfully', log_content, IGNORECASE)
+    assert search(r'No node-locked license file .+ found', log_content, IGNORECASE)
+    assert search(r'Received license is of type: Floating/Metering', log_content, IGNORECASE)
     logfile.remove()
 
 
@@ -406,7 +406,7 @@ def test_nodelock_after_metering_mode(accelize_drm, conf_json, cred_json, async_
     activators = accelize_drm.pytest_fpga_activators[0]
     async_cb = async_handler.create()
     cred_json.set_user('test-metering')        # User with a single nodelock license
-    logfile = log_file_factory.create(1)
+    logfile = log_file_factory.create(1, append=True)
     conf_json.reset()
     conf_json['settings'].update(logfile.json)
     conf_json.save()
@@ -450,15 +450,64 @@ def test_nodelock_after_metering_mode(accelize_drm, conf_json, cred_json, async_
             assert session_id != drm_manager.get('session_id')
             assert not drm_manager.get('session_status')
             drm_manager.activate()
-            assert not drm_manager.get('session_status')
+            assert drm_manager.get('session_status')
             assert drm_manager.get('drm_license_type') == 'Node-Locked'
-            drm_manager.deactivate()
-            async_cb.assert_NoError()
-            log_content = logfile.read()
-            assert 'A floating/metering session is still pending: trying to close it gracefully before switching to nodelocked license' in log_content
-            logfile.remove()
+        async_cb.assert_NoError()
+        log_content = logfile.read()
+        assert search(r'Received license is of type: Floating/Metering', log_content, IGNORECASE)
+        assert search(r'Received license is of type: Node-Locked', log_content, IGNORECASE)
+        logfile.remove()
     finally:
         driver.program_fpga()
+
+
+@pytest.mark.no_parallel
+@pytest.mark.hwtst
+def test_close_pending_session(accelize_drm, conf_json, cred_json, async_handler,
+                            ws_admin, log_file_factory):
+    """Test a session not propoerly closed is close gracefully"""
+    driver = accelize_drm.pytest_fpga_driver[0]
+    activators = accelize_drm.pytest_fpga_activators[0]
+    async_cb = async_handler.create()
+    cred_json.set_user('test-metering')        # User with a single nodelock license
+    logfile = log_file_factory.create(1, append=True)
+    conf_json.reset()
+    conf_json['settings'].update(logfile.json)
+    conf_json.save()
+
+    drm_manager = accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            )
+    assert drm_manager.get('license_type') == 'Floating/Metering'
+    assert not drm_manager.get('license_status')
+    assert not drm_manager.get('session_status')
+    drm_manager.activate()
+    assert drm_manager.get('license_status')
+    assert drm_manager.get('drm_license_type') == 'Floating/Metering'
+    assert drm_manager.get('session_status')
+    session_id = drm_manager.get('session_id')
+    assert len(session_id) > 0
+
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager2:
+        drm_manager2.activate()
+        session_id2 = drm_manager.get('session_id')
+        assert len(session_id2) > 0
+        assert session_id2 != session_id
+        drm_manager2.deactivate()
+    async_cb.assert_NoError()
+    log_content = logfile.read()
+    assert search(r'The floating/metering session is still pending: trying to close it gracefully.', log_content, IGNORECASE)
+    logfile.remove()
 
 
 @pytest.mark.on_2_fpga

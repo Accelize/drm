@@ -1736,13 +1736,14 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
 
             mLicenseType = licenseTimer.empty()? eLicenseType::NODE_LOCKED : eLicenseType::METERED;
             Debug( "Received license is of type: {}", LicenseTypeStringMap.find( mLicenseType )->second );
-
-            if ( isDrmCtrlInNodelock() && !isConfigInNodeLock() ) {
-                Throw( DRM_BadUsage, "DRM Controller is locked in Node-Locked licensing mode: "
-                                     "To use other modes you must reprogram the FPGA device. " );
-            }
         } catch( const Exception &e ) {
             Throw( DRM_WSRespError, "Malformed response from License Web Service: {}", e.what() );
+        }
+
+        // Check license compatbility with current DRM Controller mode
+        if ( isDrmCtrlInNodelock() && !isConfigInNodeLock() ) {
+            Throw( DRM_BadUsage, "DRM Controller is locked in Node-Locked licensing mode: "
+                                 "You must reprogram the FPGA device to use other modes. " );
         }
 
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
@@ -2271,11 +2272,11 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
             Unreachable( "DRM Controller cannot be in both Node-Locked and Metering/Floating license modes. " ); //LCOV_EXCL_LINE
         if ( !isConfigInNodeLock() ) {
             if ( !is_metered )
-                Unreachable( "DRM Controller failed to switch to Metering license mode" ); //LCOV_EXCL_LINE
+                Unreachable( "DRM Controller failed to switch to Metering license mode. " ); //LCOV_EXCL_LINE
             Debug( "DRM Controller is in Metering license mode" );
         } else {
             if ( !is_nodelocked )
-                Unreachable( "DRM Controller failed to switch to Node-Locked license mode" ); //LCOV_EXCL_LINE
+                Unreachable( "DRM Controller failed to switch to Node-Locked license mode. " ); //LCOV_EXCL_LINE
             Debug( "DRM Controller is in Node-Locked license mode" );
         }
     }
@@ -2335,7 +2336,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
                      mNodeLockLicenseFilePath, e.what(), mNodeLockRequestFilePath );
             }
         } else {
-            Debug( "Could not find node-locked license file {}", mNodeLockLicenseFilePath );
+            Debug( "No node-locked license file {} found", mNodeLockLicenseFilePath );
 
             // Build start request message for new license
             Json::Value request_json = Json::nullValue;
@@ -2392,7 +2393,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
             // Clear security flag
             Debug( "Clearing stop security flag" );
         } else {
-            Debug( "No session to close in node-locked mode" );
+            Debug( "No DRM session to close in node-locked mode" );
         }
         // Clear Session ID
         Info( "DRM session {} stopped.", mSessionID );
