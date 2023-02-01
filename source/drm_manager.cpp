@@ -491,10 +491,11 @@ protected:
             // Licensing configuration
             Json::Value conf_licensing = JVgetRequired( conf_json, "licensing", Json::objectValue );
             // Get licensing mode
+            // If this is a node-locked license, get the license path
+            std::string config_dir = getHomeDir() + PATH_SEP + ".config";
+            mNodeLockLicenseDirPath = JVgetOptional( conf_licensing, "license_dir", Json::stringValue, config_dir ).asString();
             bool is_nodelocked = JVgetOptional( conf_licensing, "nodelocked", Json::booleanValue, false ).asBool();
             if ( is_nodelocked ) {
-                // If this is a node-locked license, get the license path
-                mNodeLockLicenseDirPath = JVgetRequired( conf_licensing, "license_dir", Json::stringValue ).asString();
                 mLicenseType = eLicenseType::NODE_LOCKED;
                 Debug( "Configuration file specifies a Node-locked license" );
             } //else {

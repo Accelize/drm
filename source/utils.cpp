@@ -14,9 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <unistd.h>
 #include <fstream>
 #include <ctime>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <pwd.h>
 #if defined(_WIN32)
 #include <direct.h>   // _mkdir
 #endif
@@ -31,6 +34,13 @@ namespace DRM {
 
 
 const std::string WHITESPACE = " \n\r\t\f\v";
+
+
+std::string getHomeDir() {
+    struct passwd *pw = getpwuid( getuid() );
+    const char *homedir = pw->pw_dir;
+    return std::string(homedir);
+}
 
 
 std::string getDirName( const std::string& full_path ) {

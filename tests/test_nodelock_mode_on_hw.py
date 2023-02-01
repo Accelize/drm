@@ -180,7 +180,7 @@ def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, asy
             assert drm_manager.get('license_duration') == 0
         async_cb.assert_NoError()
         # Recrete a new DRM object with a bad url to verify the existing license file is reused
-        conf_json.removeNodelock()
+        del conf_json['licensing']['nodelocked']
         conf_json['licensing']['url'] = "bad_url"
         conf_json.save()
         with accelize_drm.DrmManager(

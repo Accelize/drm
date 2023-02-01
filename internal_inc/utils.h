@@ -32,6 +32,7 @@ const char PATH_SEP =
 #endif
 
 // Path related functions
+std::string getHomeDir();
 std::string getDirName( const std::string& full_path );
 bool isDir( const std::string& dir_path );
 std::vector<std::string> listDir( const std::string& path );
