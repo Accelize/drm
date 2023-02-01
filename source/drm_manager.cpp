@@ -1739,7 +1739,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
 
             if ( isDrmCtrlInNodelock() && !isConfigInNodeLock() ) {
                 Throw( DRM_BadUsage, "DRM Controller is locked in Node-Locked licensing mode: "
-                                    "To use other modes you must reprogram the FPGA device. " );
+                                     "To use other modes you must reprogram the FPGA device. " );
             }
         } catch( const Exception &e ) {
             Throw( DRM_WSRespError, "Malformed response from License Web Service: {}", e.what() );
@@ -2344,7 +2344,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
                 // If a node-locked license is explicitly requested, use the node-locked request file
                 try {
                     request_json = parseJsonFile( mNodeLockRequestFilePath );
-                    Debug( "Parsed Node-locked License Request file {}: {}", mNodeLockRequestFilePath,
+                    Debug( "Parsed Node-locked request file {}: {}", mNodeLockRequestFilePath,
                            request_json.toStyledString() );
                 } catch( const Exception& e ) {
                     Throw( e.getErrCode(), "Failed to parse node-locked request file {}: {}. ",

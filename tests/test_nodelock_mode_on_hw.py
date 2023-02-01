@@ -200,10 +200,12 @@ def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, asy
         log_content = logfile.read()
         assert search(r'Node-locked request file content', log_content, IGNORECASE)
         assert search(r'Node-locked request file saved on:', log_content, IGNORECASE)
-        assert search(r'Parsed existing node-locked License file ', log_content, IGNORECASE)
         assert search(r'Session ID cleared', log_content, IGNORECASE)
-        assert len(findall(r'Installed node-locked license successfully', log_content, IGNORECASE)) == 2
+        assert search(r'Parsed node-locked request file', log_content, IGNORECASE)
+        assert search(r'Found and parsed existing node-locked License file', log_content, IGNORECASE)
+        assert search(r'Saved node-locked license file', log_content, IGNORECASE)
         assert search(r'Parsed existing node-locked License file', log_content, IGNORECASE)
+        assert len(findall(r'DRM session .+ started', log_content, IGNORECASE)) == 2
         logfile.remove()
     finally:
         driver.program_fpga()
