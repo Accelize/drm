@@ -2539,7 +2539,6 @@ public:
                 // Start the background threads for metering license type
                 mThreadExit = false;
                 startLicenseContinuityThread();
-                mSecurityStop = true;
             } else {
                 Debug( "Not starting background thread which maintains licensing in Node-locked mode" );
             }
