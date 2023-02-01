@@ -198,11 +198,10 @@ def test_nodelock_reuse_existing_license(accelize_drm, conf_json, cred_json, asy
             assert drm_manager.get('license_duration') == 0
         async_cb.assert_NoError()
         log_content = logfile.read()
-        assert search(r'Looking for local node-locked license file', log_content, IGNORECASE)
-        assert search(r'Could not find nodelocked license file', log_content, IGNORECASE)
-        assert search(r'Cleared session ID', log_content, IGNORECASE)
-        assert search(r'Parsed newly created node-locked License Request file', log_content, IGNORECASE)
-        assert search(r'Requested and saved new node-locked license file', log_content, IGNORECASE)
+        assert search(r'Node-locked request file content', log_content, IGNORECASE)
+        assert search(r'Node-locked request file saved on:', log_content, IGNORECASE)
+        assert search(r'Parsed existing node-locked License file ', log_content, IGNORECASE)
+        assert search(r'Session ID cleared', log_content, IGNORECASE)
         assert len(findall(r'Installed node-locked license successfully', log_content, IGNORECASE)) == 2
         assert search(r'Parsed existing node-locked License file', log_content, IGNORECASE)
         logfile.remove()

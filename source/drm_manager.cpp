@@ -80,12 +80,12 @@ limitations under the License.
     }
 
 
-#define MTX_ACQUIRE( mtx ) {                               \
+#define MTX_ACQUIRE( mtx ) {                              \
     Debug( "Waiting mutex {} from {}", #mtx, __func__ );  \
-    std::lock_guard<std::mutex> lock( mtx );               \
+    std::lock_guard<std::mutex> lock( mtx );              \
     Debug( "Acquired mutex {} from {}", #mtx, __func__ )
 
-#define MTX_RELEASE( mtx ) }                               \
+#define MTX_RELEASE( mtx ) }                              \
     Debug( "Released mutex {} from {}", #mtx, __func__ )
 
 
@@ -1814,34 +1814,6 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         Debug( "Node-locked request file saved on: {}", mNodeLockRequestFilePath );
     }
 
-    bool installNodelockedLicense() {
-        Json::Value license_json;
-        // Check if license file exists
-        if ( !isFile( mNodeLockLicenseFilePath ) ) {
-            Debug( "Could not find node-locked license file {}", mNodeLockLicenseFilePath );
-            return false;
-        }
-        try {
-            // Try to load the local license file
-            license_json = parseJsonFile( mNodeLockLicenseFilePath );
-            Debug( "Parsed existing node-locked License file {}: {}", mNodeLockLicenseFilePath,
-                        license_json.toStyledString() );
-        } catch( const Exception& e ) {
-            Throw( e.getErrCode(), "Invalid local license file {} because {}. "
-                 "If this machine has an Internet connection, delete this file and retry. "
-                 "Otherwise send the node-locked request file {} to your vendor to get the license file. ",
-                 mNodeLockLicenseFilePath, e.what(), mNodeLockRequestFilePath );
-        }
-        // Clear session ID
-        mSessionID = std::string("");
-        mEntitlementID = std::string("");
-        Debug( "Session ID cleared" );
-        // Install the license
-        setLicense( license_json );
-        Info( "Installed node-locked license successfully" );
-        return true;
-    }
-
     void determineFrequencyDetectionMethod() {
         uint32_t reg;
 
@@ -2334,36 +2306,64 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
     }
 
     void startSession() {
-        MTX_ACQUIRE( mMeteringAccessMutex );
-
-        if ( !isReadyForNewLicense() )
-            Unreachable( "To start a new session the DRM Controller shall be ready to accept a new license. " ); //LCOV_EXCL_LINE
-
         mHealthCounter = 0;
         mLicenseCounter = 0;
+        Json::Value license_json = Json::nullValue;
 
-        // Build start request message for new license
-        Json::Value request_json = Json::nullValue;
-        Debug( "Requesting new license #{}", mLicenseCounter );
-        if ( isConfigInNodeLock() ) {
-            // If a node-locked license is explicitly requested, use the node-locked request file
-            try {
-                request_json = parseJsonFile( mNodeLockRequestFilePath );
-                Debug( "Parsed Node-locked License Request file {}: {}", mNodeLockRequestFilePath, request_json.toStyledString() );
-            } catch( const Exception& e ) {
-                Throw( e.getErrCode(), "Failed to parse node-locked request file {}: {}. ", mNodeLockRequestFilePath, e.what() );
-            }
-        } else {
-            request_json = getMeteringStart();
+        // Clear session ID
+        mSessionID = std::string("");
+        mEntitlementID = std::string("");
+        Debug( "Session ID cleared" );
+
+        MTX_ACQUIRE( mMeteringAccessMutex );
+
+        if ( !isReadyForNewLicense() ) {
+            Unreachable( "To start a new session the DRM Controller shall be ready to accept a new license. " ); //LCOV_EXCL_LINE
         }
 
-        // Send request and receive new license
-        Json::Value license_json = getLicense( request_json, mWSApiRetryDuration * 1000,
-                    mWSRetryPeriodShort * 1000, -1, true );
+        // Check if a nodelocked license file exists
+        if ( isFile( mNodeLockLicenseFilePath ) ) {
+            try {
+                // Try to load the local license file
+                license_json = parseJsonFile( mNodeLockLicenseFilePath );
+                Debug( "Found and parsed existing node-locked License file {}: {}", mNodeLockLicenseFilePath,
+                            license_json.toStyledString() );
+            } catch( const Exception& e ) {
+                Throw( e.getErrCode(), "Invalid local license file {} because {}. "
+                     "If this machine has an Internet connection, delete this file and retry. "
+                     "Otherwise send the node-locked request file {} to your vendor to get the license file. ",
+                     mNodeLockLicenseFilePath, e.what(), mNodeLockRequestFilePath );
+            }
+        } else {
+            Debug( "Could not find node-locked license file {}", mNodeLockLicenseFilePath );
+
+            // Build start request message for new license
+            Json::Value request_json = Json::nullValue;
+            Debug( "Requesting new license #{}", mLicenseCounter );
+            if ( isConfigInNodeLock() ) {
+                // If a node-locked license is explicitly requested, use the node-locked request file
+                try {
+                    request_json = parseJsonFile( mNodeLockRequestFilePath );
+                    Debug( "Parsed Node-locked License Request file {}: {}", mNodeLockRequestFilePath,
+                           request_json.toStyledString() );
+                } catch( const Exception& e ) {
+                    Throw( e.getErrCode(), "Failed to parse node-locked request file {}: {}. ",
+                           mNodeLockRequestFilePath, e.what() );
+                }
+            } else {
+                request_json = getMeteringStart();
+            }
+
+            // Send request and receive new license
+            license_json = getLicense( request_json, mWSApiRetryDuration * 1000,
+                                       mWSRetryPeriodShort * 1000, -1, true );
+        }
+
+        // Load new license
         setLicense( license_json );
 
+        // If nodelocked license, save it on disk
         if ( isDrmCtrlInNodelock() ) {
-            // Save the license to file
             saveJsonToFile( mNodeLockLicenseFilePath, license_json );
             Debug( "Saved node-locked license file: {}", mNodeLockLicenseFilePath );
         }
@@ -2375,20 +2375,25 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
     void stopSession() {
         // Stop background thread
         stopThread();
-        try {
-            MTX_ACQUIRE( mMeteringAccessMutex );
-            // Stop DRM Controller and get data
-            Json::Value request_json = getMeteringStop();
-            // Send metering data to web service
-            getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
-            MTX_RELEASE( mMeteringAccessMutex );
-            Debug( "Session ID {} stopped and last metering data uploaded", mSessionID );
-        } catch( const Exception& e ) {}
-        // Reset local variables
-        mExpirationTime = TClock::time_point();
-        Debug( "Reset expiration time" );
-        // Clear security flag
-        Debug( "Clearing stop security flag" );
+        // Close session
+        if ( !isDrmCtrlInNodelock() ) {
+            try {
+                MTX_ACQUIRE( mMeteringAccessMutex );
+                // Stop DRM Controller and get data
+                Json::Value request_json = getMeteringStop();
+                // Send metering data to web service
+                getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
+                MTX_RELEASE( mMeteringAccessMutex );
+                Debug( "Session ID {} stopped and last metering data uploaded", mSessionID );
+            } catch( const Exception& e ) {}
+            // Reset local variables
+            mExpirationTime = TClock::time_point();
+            Debug( "Reset expiration time" );
+            // Clear security flag
+            Debug( "Clearing stop security flag" );
+        } else {
+            Debug( "No session to close in node-locked mode" );
+        }
         // Clear Session ID
         Info( "DRM session {} stopped.", mSessionID );
         mSessionID = std::string("");
@@ -2530,10 +2535,6 @@ public:
                     Debug( "Failed to stop gracefully the pending session" );
                 }
             }
-            // Try to install a node-locked license if existing
-            if ( installNodelockedLicense() ) {
-                return;
-            }
             // Start a new session
             startSession();
             if ( isDrmCtrlInMetering() ) {
@@ -2549,11 +2550,6 @@ public:
     void deactivate() {
         TRY
             Debug( "Calling 'deactivate'" );
-
-            if ( isDrmCtrlInNodelock() ) {
-                Debug( "No session to close in node-locked mode" );
-                return;
-            }
             if ( !isSessionRunning() ) {
                 Debug( "No session is currently running" );
                 return;
