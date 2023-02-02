@@ -241,6 +241,7 @@ protected:
     // Design constants
     const uint32_t HDK_COMPATIBILITY_LIMIT_MAJOR = 3;
     const uint32_t HDK_COMPATIBILITY_LIMIT_MINOR = 2;
+    const std::string BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
     const std::map<eLicenseType, std::string> LicenseTypeStringMap = {
             {eLicenseType::NONE       , "Idle"},
@@ -2313,47 +2314,41 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
 
     void backupSessionInfo() {
         int encodeLength = mEntitlementID.size();
+        std::cout << "backupSessionInfo mEntitlementID = " << mEntitlementID << std::endl;
         unsigned char *b32_s = new unsigned char[encodeLength + 1];
         strcpy((char*)b32_s, mEntitlementID.c_str());
-        const unsigned char alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-        Base32::Unmap32(b32_s, encodeLength, alphabet);
-        std::cout << "b32_s:" << std::endl;
-        for(int i=0; i<encodeLength; i++) {
-            printf("0x%02X, ", b32_s[i]);
-        }
-        std::cout << std::endl;
+        Base32::Unmap32(b32_s, encodeLength, (unsigned char*)BASE32_ALPHABET.c_str());
         int decodeLength = Base32::GetDecode32Length(encodeLength);
-        std::cout << "decodeLength=" << decodeLength << std::endl;
         unsigned char *b32_i = new unsigned char[decodeLength];
         Base32::Decode32(b32_s, encodeLength, b32_i);
-        std::cout << "b32_i=" << std::endl;
-        for(int i=0; i< decodeLength; i++) {
-            printf("0x%02X, ", b32_i[i]);
+        std::vector<uint32_t> b32_v;
+        for(int i=0; i< decodeLength>>2; i++) {
+            b32_v.push_back( *(uint32_t*)(b32_i + 4*i) );
         }
-        std::cout << std::endl;
-        std::cout << "b32_i (register)=" << std::endl;
-        for(int i=0; i< decodeLength>>4; i++) {
-            printf("%08X ", *(uint32_t*)(b32_i + 4*i));
-        }
-        std::cout << std::endl;
-
-        Base32::Map32(b32_i, decodeLength, alphabet);
-        std::cout << "b32_i after map=" << std::endl;
-        for(int i=0; i< decodeLength; i++) {
-            printf("%c", b32_i[i]);
-        }
-
+        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+        writeMailbox( eMailboxOffset::MB_ENTITLEMENT_ID0, b32_v );
+        Debug( "Backup entitlement ID {} into the DRM Controller memory", mEntitlementID );
         delete[] b32_i;
         delete[] b32_s;
-        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-//        writeMailbox( eMailboxOffset::MB_ENTITLEMENT_ID0, mEntitlementID );
-        Debug( "Backup entitlement ID {} into the DRM Controller memory", mEntitlementID );
     }
 
     void restoreSessionInfo() {
-/*        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        uint32_t drm_lock = readMailbox<uint32_t>( eMailboxOffset::MB_LOCK_DRM );
-        writeMailbox<uint32_t>( eMailboxOffset::MB_ENTITLEMENT_ID0, mEntitlementID );*/
+        std::vector<uint32_t> b32_v;
+        {
+            std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+            b32_v = readMailbox( eMailboxOffset::MB_ENTITLEMENT_ID0, 4 );
+        }
+        int decodeLength = b32_v.size() * sizeof(uint32_t);
+        std::cout << "restoreSessionInfo decodeLength=" << decodeLength << std::endl;
+        unsigned char *b32_i = (unsigned char*)b32_v.data();
+        int encodeLength = Base32::GetDecode32Length(encodeLength);
+        std::cout << "restoreSessionInfo encodeLength=" << decodeLength << std::endl;
+        unsigned char *b32_s = new unsigned char[encodeLength];
+        Base32::Encode32(b32_i, decodeLength, b32_s);
+        Base32::Map32(b32_s, encodeLength, (unsigned char*)BASE32_ALPHABET.c_str());
+        std::cout << "restoreSessionInfo b32_s = " << b32_s << std::endl;
+        mEntitlementID = std::string((char*)b32_s);
+        std::cout << "restoreSessionInfo mEntitlementID = " << mEntitlementID << std::endl;
         Debug( "Backup entitlement ID {} into the DRM Controller memory", mEntitlementID );
     }
 
