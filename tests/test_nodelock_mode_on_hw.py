@@ -461,7 +461,6 @@ def test_nodelock_after_metering_mode(accelize_drm, conf_json, cred_json, async_
         driver.program_fpga()
 
 
-@pytest.mark.no_parallel
 @pytest.mark.hwtst
 def test_close_pending_session(accelize_drm, conf_json, cred_json, async_handler,
                             ws_admin, log_file_factory):
@@ -475,35 +474,27 @@ def test_close_pending_session(accelize_drm, conf_json, cred_json, async_handler
     conf_json['settings'].update(logfile.json)
     conf_json.save()
 
-    drm_manager = accelize_drm.DrmManager(
+    with accelize_drm.DrmManager(
                 conf_json.path,
                 cred_json.path,
                 driver.read_register_callback,
                 driver.write_register_callback,
                 async_cb.callback
-            )
-    assert drm_manager.get('license_type') == 'Floating/Metering'
-    assert not drm_manager.get('license_status')
-    assert not drm_manager.get('session_status')
-    drm_manager.activate()
-    assert drm_manager.get('license_status')
-    assert drm_manager.get('drm_license_type') == 'Floating/Metering'
-    assert drm_manager.get('session_status')
-    session_id = drm_manager.get('session_id')
-    assert len(session_id) > 0
-
-    with accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        ) as drm_manager2:
-        drm_manager2.activate()
+            ) as drm_manager:
+        assert drm_manager.get('license_type') == 'Floating/Metering'
+        assert not drm_manager.get('license_status')
+        assert not drm_manager.get('session_status')
+        drm_manager.activate()
+        assert drm_manager.get('license_status')
+        assert drm_manager.get('drm_license_type') == 'Floating/Metering'
+        assert drm_manager.get('session_status')
+        session_id = drm_manager.get('session_id')
+        assert len(session_id) > 0
+        # Reopen
+        drm_manager.activate()
         session_id2 = drm_manager.get('session_id')
         assert len(session_id2) > 0
         assert session_id2 != session_id
-        drm_manager2.deactivate()
     async_cb.assert_NoError()
     log_content = logfile.read()
     assert search(r'The floating/metering session is still pending: trying to close it gracefully.', log_content, IGNORECASE)

@@ -767,6 +767,34 @@ int test_normal_usage( string param_file ) {
     return ret;
 }
 
+// Test unclosed session
+int test_unclosed_session() {
+    int ret = -1;
+    DrmManagerMaker* drm_maker = nullptr;
+    sDrm->create();
+    try {
+        sDrm->activate();
+        string session_id = sDrm->get_string(cpp::ParameterKey::session_id);
+        assert(sDrm->get_bool(cpp::ParameterKey::license_status));
+        while(1) {
+            if ( sDrm->get_uint(cpp::ParameterKey::num_license_loaded) == 2 )
+                break;
+        }
+        drm_maker->create();
+        drm_maker->activate();
+        string session_id2 = drm_maker->get_string(cpp::ParameterKey::session_id);
+        assert(session_id2 != session_id, "Session shall differ");
+        sDrm->deactivate();
+        drm_maker->deactivate();
+        drm_maker->destroy();
+        ret = 0;
+    } catch( const cpp::Exception& e ) {
+        ret = e.getErrCode();
+    }
+    sDrm->destroy();
+    return ret;
+}
+
 
 
 /////////////////////////////////
@@ -872,6 +900,9 @@ int main(int argc, char **argv) {
 
         if (test_name == "test_normal_usage")
             ret = test_normal_usage(param_file);
+
+        if (test_name == "test_unclosed_session")
+            ret = test_unclosed_session();
 
     } catch( const cpp::Exception& e) {
         cerr << "Unexpected error: " << e.what() << endl;

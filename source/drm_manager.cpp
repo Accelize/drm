@@ -233,7 +233,7 @@ protected:
     // Enum
     enum class eLogFileType: uint8_t {NONE=0, BASIC, ROTATING};
     enum class eLicenseType: uint8_t {METERED, NODE_LOCKED, NONE};
-    enum class eMailboxOffset: uint8_t {MB_LOCK_DRM=0, MB_CUSTOM_FIELD, MB_USER};
+    enum class eMailboxOffset: uint8_t {MB_LOCK_DRM=0, MB_ENTITLEMENT_ID, MB_CUSTOM_FIELD, MB_USER};
     enum class eHostDataVerbosity: uint8_t {FULL=0, PARTIAL, NONE};
     enum class eCtrlLogVerbosity: uint8_t {ERROR=0, WARN, INFO, DEBUG, TRACE1, TRACE2};
 
@@ -262,6 +262,7 @@ protected:
     // DNA & Product
     std::string mDeviceID;
     std::string mProductID;
+    uint32_t mLockID = 0;
 
     // HDK version
     uint32_t mDrmVersionNum = 0;
@@ -271,7 +272,6 @@ protected:
     std::unique_ptr<DrmWSClient> mWsClient;
     std::unique_ptr<DrmControllerLibrary::DrmControllerOperations> mDrmController;
     mutable std::recursive_mutex mDrmControllerMutex;
-    bool mIsLockedToDrm = false;
 
     // Logging parameters
     spdlog::level::level_enum sLogConsoleVerbosity = spdlog::level::err;
@@ -407,7 +407,7 @@ protected:
 
         Json::Value conf_json;
 
-        mIsLockedToDrm = false;
+        mLockID = rand();
 
         mLicenseDuration = 0;
         mLicenseCounter = 0;
@@ -1040,29 +1040,33 @@ protected:
         return ret;
     }
 
-    void lockDrmToInstance() {
-        return;
-/*        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        uint32_t isLocked = readMailbox<uint32_t>( eMailboxOffset::MB_LOCK_DRM );
-        if ( isLocked )
-            Throw( DRM_BadUsage, "Another instance of the DRM Manager is currently owning the HW. " );
-        writeMailbox<uint32_t>( eMailboxOffset::MB_LOCK_DRM, 1 );
-        mIsLockedToDrm = true;
-        Debug( "DRM Controller is now locked to this object instance" );
-*/
+    void acquireDrmLockInstance() {
+        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+        uint32_t drm_lock = readMailbox<uint32_t>( eMailboxOffset::MB_LOCK_DRM );
+        if ( drm_lock != 0 ) {
+            Throw( DRM_BadUsage, "Another instance is currently owning the DRM Controller. "
+                    "You might have anoth process running the DRM Controller. "
+                    "If not, a reset of the DRM Controller is required to recover. " );
+        }
+        writeMailbox<uint32_t>( eMailboxOffset::MB_LOCK_DRM, mLockID );
+        Debug( "DRM Controller is locked by this instance with ID {}", mLockID );
     }
 
-    void unlockDrmToInstance() {
-        return;
-/*        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        if ( !mIsLockedToDrm )
-            return;
-        uint32_t isLocked = readMailbox<uint32_t>( eMailboxOffset::MB_LOCK_DRM );
-        if ( isLocked ) {
-            writeMailbox<uint32_t>( eMailboxOffset::MB_LOCK_DRM, 0 );
-            Debug( "DRM Controller is now unlocked to this object instance" );
+    void checkDrmLockInstance() {
+        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+        uint32_t drm_lock = readMailbox<uint32_t>( eMailboxOffset::MB_LOCK_DRM );
+        if ( drm_lock != mLockID ) {
+            Throw( DRM_BadUsage, "Another instance is currently owning the DRM Controller. "
+                    "You might have anoth process running the DRM Controller. "
+                    "If not, a reset of the DRM Controller is required to recover. " );
         }
-*/
+    }
+
+    void releaseDrmLockInstance() {
+        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+        checkDrmLockInstance();
+        writeMailbox<uint32_t>( eMailboxOffset::MB_LOCK_DRM, 0 );
+        Debug( "DRM Controller is unlocked by this instance with ID {}", mLockID );
     }
 
     // Check compatibility of the DRM Version with Algodone version
@@ -1231,7 +1235,7 @@ protected:
         checkHdkCompatibility();
 
         // Try to lock the DRM controller to this instance, return an error is already locked.
-        lockDrmToInstance();
+        acquireDrmLockInstance();
 
         // Run auto-test level 1
         runBistLevel1();
@@ -1353,7 +1357,7 @@ protected:
         // Get information from DRM Controller
         getDesignInfo( drmVersion, mDeviceID, vlnvFile, mailboxReadOnly );
         mMailboxRoData = parseJsonString( mailboxReadOnly );
-
+mMailboxRoData["extra"]["fpga_family"] = "ultrascale";
 //TODO: UNCOMMENT THIS LINE AND REMOVE THE NEXT ONE       Json::Value product_id_json = mMailboxRoData["product_id"];
 //Json::Value product_id_json = "AGCJ6WVJBFYODDFUEG2AGWNWZM";
 Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
@@ -2306,6 +2310,40 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         }
     }
 
+    void backupSessionInfo() {
+        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+        const char* b32s = mEntitlementID.c_str();
+        unsigned char alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+        for(int i=0; i<16; i++) {
+            std::cout << "alphabet["  << i << "]=" << alphabet[i] << std::endl;
+        }
+        int encodeLength = 16;
+        unsigned char *d = new unsigned char[encodeLength];
+        Base32::Unmap32(d, encodeLength, alphabet);
+        for(int i=0; i<16; i++) {
+            std::cout << "d["  << i << "]=" << d[i] << std::endl;
+        }
+        int decodeLength = Base32::GetDecode32Length(16);
+        std::cout << "decodeLength=" << decodeLength << std::endl;
+        unsigned char *b32i = new unsigned char[decodeLength];
+        Base32::Decode32((unsigned char*)b32s, encodeLength, b32i);
+        std::cout << "b32s=" << b32s << std::endl;
+        for(int i=0; i< decodeLength>>4; i++) {
+            std::cout << "\tb32i=" << *(int32_t*)(b32i + 4*i) << std::endl;
+        }
+        delete[] d;
+        delete[] b32i;
+//        writeMailbox( eMailboxOffset::MB_ENTITLEMENT_ID, mEntitlementID );
+        Debug( "Backup entitlement ID {} into the DRM Controller memory", mEntitlementID );
+    }
+
+    void restoreSessionInfo() {
+/*        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+        uint32_t drm_lock = readMailbox<uint32_t>( eMailboxOffset::MB_LOCK_DRM );
+        writeMailbox<uint32_t>( eMailboxOffset::MB_ENTITLEMENT_ID, mEntitlementID );*/
+        Debug( "Backup entitlement ID {} into the DRM Controller memory", mEntitlementID );
+    }
+
     void startSession() {
         mHealthCounter = 0;
         mLicenseCounter = 0;
@@ -2378,15 +2416,13 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         stopThread();
         // Close session
         if ( !isDrmCtrlInNodelock() ) {
-            try {
-                MTX_ACQUIRE( mMeteringAccessMutex );
-                // Stop DRM Controller and get data
-                Json::Value request_json = getMeteringStop();
-                // Send metering data to web service
-                getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
-                MTX_RELEASE( mMeteringAccessMutex );
-                Debug( "Session ID {} stopped and last metering data uploaded", mSessionID );
-            } catch( const Exception& e ) {}
+            MTX_ACQUIRE( mMeteringAccessMutex );
+            // Stop DRM Controller and get data
+            Json::Value request_json = getMeteringStop();
+            // Send metering data to web service
+            getLicense( request_json, mWSApiRetryDuration * 1000, mWSRetryPeriodShort * 1000 );
+            MTX_RELEASE( mMeteringAccessMutex );
+            Debug( "Session ID {} stopped and last metering data uploaded", mSessionID );
             // Reset local variables
             mExpirationTime = TClock::time_point();
             Debug( "Reset expiration time" );
@@ -2517,8 +2553,8 @@ public:
                 deactivate();
             CATCH_AND_THROW
         } catch(...) {}
-        unlockDrmToInstance();
         pnc_uninitialize_drm_ctrl_ta();
+        releaseDrmLockInstance();
         Debug( "Exiting Impl destructor" );
         sLogger->flush();
     }
@@ -2527,9 +2563,12 @@ public:
         TRY
             Debug( "Calling 'activate'" );
 
+            checkDrmLockInstance();
+
             // If a floating/metering session is still running, try to close it gracefully.
             if ( isDrmCtrlInMetering() && isSessionRunning() ) {
                 Debug( "The floating/metering session is still pending: trying to close it gracefully." );
+                restoreSessionInfo();
                 try {
                     stopSession();
                 } catch( const Exception& e ) {
@@ -2551,6 +2590,9 @@ public:
     void deactivate() {
         TRY
             Debug( "Calling 'deactivate'" );
+
+            checkDrmLockInstance();
+
             if ( !isSessionRunning() ) {
                 Debug( "No session is currently running" );
                 return;
