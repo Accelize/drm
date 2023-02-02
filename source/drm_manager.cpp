@@ -2341,15 +2341,16 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
         int decodeLength = b32_v.size() * sizeof(uint32_t);
         std::cout << "restoreSessionInfo decodeLength=" << decodeLength << std::endl;
         unsigned char *b32_i = (unsigned char*)b32_v.data();
-        int encodeLength = Base32::GetDecode32Length(encodeLength);
-        std::cout << "restoreSessionInfo encodeLength=" << decodeLength << std::endl;
+        int encodeLength = Base32::GetEncode32Length(decodeLength);
+        std::cout << "restoreSessionInfo encodeLength=" << encodeLength << std::endl;
         unsigned char *b32_s = new unsigned char[encodeLength];
         Base32::Encode32(b32_i, decodeLength, b32_s);
         Base32::Map32(b32_s, encodeLength, (unsigned char*)BASE32_ALPHABET.c_str());
         std::cout << "restoreSessionInfo b32_s = " << b32_s << std::endl;
-        mEntitlementID = std::string((char*)b32_s);
+        mEntitlementID = std::string((char*)b32_s, 26);
         std::cout << "restoreSessionInfo mEntitlementID = " << mEntitlementID << std::endl;
         Debug( "Backup entitlement ID {} into the DRM Controller memory", mEntitlementID );
+        delete[] b32_s;
     }
 
     void startSession() {
