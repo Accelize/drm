@@ -514,7 +514,7 @@ bool Base32::Decode32(unsigned char* in, int inLen, unsigned char* out)
    return true;
 }
 
-bool Base32::Map32(unsigned char* inout32, int inout32Len, unsigned char* alpha32)
+bool Base32::Map32(unsigned char* inout32, int inout32Len, const unsigned char* alpha32)
 {
     if((inout32 == 0) || (inout32Len <= 0) || (alpha32 == 0)) return false;
     for(int i = 0; i < inout32Len; i++)
@@ -525,7 +525,7 @@ bool Base32::Map32(unsigned char* inout32, int inout32Len, unsigned char* alpha3
     return true;
 }
 
-static void ReverseMap(unsigned char* inAlpha32, unsigned char* outMap)
+static void ReverseMap(const unsigned char* inAlpha32, unsigned char* outMap)
 {
     memset(outMap, 0, sizeof(unsigned char) * 256);
     for(int i = 0; i < 32; i++)
@@ -534,7 +534,7 @@ static void ReverseMap(unsigned char* inAlpha32, unsigned char* outMap)
     }
 }
 
-bool Base32::Unmap32(unsigned char* inout32, int inout32Len, unsigned char* alpha32)
+bool Base32::Unmap32(unsigned char* inout32, int inout32Len, const unsigned char* alpha32)
 {
     if((inout32 == 0) || (inout32Len <= 0) || (alpha32 == 0)) return false;
     unsigned char rmap[256];

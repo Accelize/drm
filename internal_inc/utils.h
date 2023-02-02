@@ -81,8 +81,8 @@ struct Base32
     static int  GetDecode32Length(int bytes);
     static int  GetEncode32Length(int bytes);
 
-    static bool Map32(unsigned char* inout32, int inout32Len, unsigned char* alpha32);
-    static bool Unmap32(unsigned char* inout32, int inout32Len, unsigned char* alpha32);
+    static bool Map32(unsigned char* inout32, int inout32Len, const unsigned char* alpha32);
+    static bool Unmap32(unsigned char* inout32, int inout32Len, const unsigned char* alpha32);
 };
 
 

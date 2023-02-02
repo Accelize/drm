@@ -233,7 +233,8 @@ protected:
     // Enum
     enum class eLogFileType: uint8_t {NONE=0, BASIC, ROTATING};
     enum class eLicenseType: uint8_t {METERED, NODE_LOCKED, NONE};
-    enum class eMailboxOffset: uint8_t {MB_LOCK_DRM=0, MB_ENTITLEMENT_ID, MB_CUSTOM_FIELD, MB_USER};
+    enum class eMailboxOffset: uint8_t {MB_LOCK_DRM=0, MB_ENTITLEMENT_ID0, MB_ENTITLEMENT_ID1,
+                            MB_ENTITLEMENT_ID2, MB_ENTITLEMENT_ID3, MB_CUSTOM_FIELD, MB_USER};
     enum class eHostDataVerbosity: uint8_t {FULL=0, PARTIAL, NONE};
     enum class eCtrlLogVerbosity: uint8_t {ERROR=0, WARN, INFO, DEBUG, TRACE1, TRACE2};
 
@@ -2311,36 +2312,48 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
     }
 
     void backupSessionInfo() {
-        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        const char* b32s = mEntitlementID.c_str();
-        unsigned char alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-        for(int i=0; i<16; i++) {
-            std::cout << "alphabet["  << i << "]=" << alphabet[i] << std::endl;
+        int encodeLength = mEntitlementID.size();
+        unsigned char *b32_s = new unsigned char[encodeLength + 1];
+        strcpy((char*)b32_s, mEntitlementID.c_str());
+        const unsigned char alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+        Base32::Unmap32(b32_s, encodeLength, alphabet);
+        std::cout << "b32_s:" << std::endl;
+        for(int i=0; i<encodeLength; i++) {
+            printf("0x%02X, ", b32_s[i]);
         }
-        int encodeLength = 16;
-        unsigned char *d = new unsigned char[encodeLength];
-        Base32::Unmap32(d, encodeLength, alphabet);
-        for(int i=0; i<16; i++) {
-            std::cout << "d["  << i << "]=" << d[i] << std::endl;
-        }
-        int decodeLength = Base32::GetDecode32Length(16);
+        std::cout << std::endl;
+        int decodeLength = Base32::GetDecode32Length(encodeLength);
         std::cout << "decodeLength=" << decodeLength << std::endl;
-        unsigned char *b32i = new unsigned char[decodeLength];
-        Base32::Decode32((unsigned char*)b32s, encodeLength, b32i);
-        std::cout << "b32s=" << b32s << std::endl;
-        for(int i=0; i< decodeLength>>4; i++) {
-            std::cout << "\tb32i=" << *(int32_t*)(b32i + 4*i) << std::endl;
+        unsigned char *b32_i = new unsigned char[decodeLength];
+        Base32::Decode32(b32_s, encodeLength, b32_i);
+        std::cout << "b32_i=" << std::endl;
+        for(int i=0; i< decodeLength; i++) {
+            printf("0x%02X, ", b32_i[i]);
         }
-        delete[] d;
-        delete[] b32i;
-//        writeMailbox( eMailboxOffset::MB_ENTITLEMENT_ID, mEntitlementID );
+        std::cout << std::endl;
+        std::cout << "b32_i (register)=" << std::endl;
+        for(int i=0; i< decodeLength>>4; i++) {
+            printf("%08X ", *(uint32_t*)(b32_i + 4*i));
+        }
+        std::cout << std::endl;
+
+        Base32::Map32(b32_i, decodeLength, alphabet);
+        std::cout << "b32_i after map=" << std::endl;
+        for(int i=0; i< decodeLength; i++) {
+            printf("%c", b32_i[i]);
+        }
+
+        delete[] b32_i;
+        delete[] b32_s;
+        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+//        writeMailbox( eMailboxOffset::MB_ENTITLEMENT_ID0, mEntitlementID );
         Debug( "Backup entitlement ID {} into the DRM Controller memory", mEntitlementID );
     }
 
     void restoreSessionInfo() {
 /*        std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
         uint32_t drm_lock = readMailbox<uint32_t>( eMailboxOffset::MB_LOCK_DRM );
-        writeMailbox<uint32_t>( eMailboxOffset::MB_ENTITLEMENT_ID, mEntitlementID );*/
+        writeMailbox<uint32_t>( eMailboxOffset::MB_ENTITLEMENT_ID0, mEntitlementID );*/
         Debug( "Backup entitlement ID {} into the DRM Controller memory", mEntitlementID );
     }
 
@@ -2568,6 +2581,7 @@ public:
             // If a floating/metering session is still running, try to close it gracefully.
             if ( isDrmCtrlInMetering() && isSessionRunning() ) {
                 Debug( "The floating/metering session is still pending: trying to close it gracefully." );
+                backupSessionInfo();
                 restoreSessionInfo();
                 try {
                     stopSession();

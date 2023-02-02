@@ -6,6 +6,7 @@
 #include <sstream>
 #include <fstream>
 #include <unistd.h>
+#include <assert.h>
 
 /* JsonCPP Library */
 #include <json/json.h>
@@ -783,7 +784,7 @@ int test_unclosed_session() {
         drm_maker->create();
         drm_maker->activate();
         string session_id2 = drm_maker->get_string(cpp::ParameterKey::session_id);
-        assert(session_id2 != session_id, "Session shall differ");
+        assert(session_id2 != session_id);
         sDrm->deactivate();
         drm_maker->deactivate();
         drm_maker->destroy();
