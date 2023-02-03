@@ -2577,7 +2577,6 @@ public:
             // If a floating/metering session is still running, try to close it gracefully.
             if ( isDrmCtrlInMetering() && isSessionRunning() ) {
                 Debug( "The floating/metering session is still pending: trying to close it gracefully." );
-                backupSessionInfo();
                 restoreSessionInfo();
                 try {
                     stopSession();
@@ -2587,6 +2586,7 @@ public:
             }
             // Start a new session
             startSession();
+            backupSessionInfo();
             if ( isDrmCtrlInMetering() ) {
                 // Start the background threads for metering license type
                 mThreadExit = false;
