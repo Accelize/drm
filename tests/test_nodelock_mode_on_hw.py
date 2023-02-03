@@ -461,46 +461,6 @@ def test_nodelock_after_metering_mode(accelize_drm, conf_json, cred_json, async_
         driver.program_fpga()
 
 
-@pytest.mark.hwtst
-def test_close_pending_session(accelize_drm, conf_json, cred_json, async_handler,
-                            ws_admin, log_file_factory):
-    """Test a session not propoerly closed is close gracefully"""
-    driver = accelize_drm.pytest_fpga_driver[0]
-    activators = accelize_drm.pytest_fpga_activators[0]
-    async_cb = async_handler.create()
-    cred_json.set_user('test-metering')        # User with a single nodelock license
-    logfile = log_file_factory.create(1, append=True)
-    conf_json.reset()
-    conf_json['settings'].update(logfile.json)
-    conf_json.save()
-
-    with accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            ) as drm_manager:
-        assert drm_manager.get('license_type') == 'Floating/Metering'
-        assert not drm_manager.get('license_status')
-        assert not drm_manager.get('session_status')
-        drm_manager.activate()
-        assert drm_manager.get('license_status')
-        assert drm_manager.get('drm_license_type') == 'Floating/Metering'
-        assert drm_manager.get('session_status')
-        session_id = drm_manager.get('session_id')
-        assert len(session_id) > 0
-        # Reopen
-        drm_manager.activate()
-        session_id2 = drm_manager.get('session_id')
-        assert len(session_id2) > 0
-        assert session_id2 != session_id
-    async_cb.assert_NoError()
-    log_content = logfile.read()
-    assert search(r'The floating/metering session is still pending: trying to close it gracefully.', log_content, IGNORECASE)
-    logfile.remove()
-
-
 @pytest.mark.on_2_fpga
 @pytest.mark.minimum
 @pytest.mark.hwtst

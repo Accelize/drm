@@ -2313,44 +2313,39 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
     }
 
     void backupSessionInfo() {
-        int encodeLength = mEntitlementID.size();
-        std::cout << "backupSessionInfo mEntitlementID = " << mEntitlementID << std::endl;
-        unsigned char *b32_s = new unsigned char[encodeLength + 1];
-        strcpy((char*)b32_s, mEntitlementID.c_str());
-        Base32::Unmap32(b32_s, encodeLength, (unsigned char*)BASE32_ALPHABET.c_str());
-        int decodeLength = Base32::GetDecode32Length(encodeLength);
-        unsigned char *b32_i = new unsigned char[decodeLength];
-        Base32::Decode32(b32_s, encodeLength, b32_i);
-        std::vector<uint32_t> b32_v;
-        for(int i=0; i< decodeLength>>2; i++) {
-            b32_v.push_back( *(uint32_t*)(b32_i + 4*i) );
-        }
+        int encode_size = mEntitlementID.size();
+        // Make a copy of entitlement ID which will be modified by base32 decoding process
+        unsigned char *b32_str = new unsigned char[encode_size + 1];
+        strcpy((char*)b32_str, mEntitlementID.c_str());
+        // Convert alphanumeric to int value
+        Base32::Unmap32(b32_str, encode_size, (unsigned char*)BASE32_ALPHABET.c_str());
+        // Create buffer to receive decoded values
+        int decode_size = Base32::GetDecode32Length(encode_size);
+        std::vector<uint32_t> b32_vec(decode_size>>2);
+        unsigned char *b32_int = (unsigned char*)b32_vec.data();
+        // Perform decoding
+        Base32::Decode32(b32_str, encode_size, b32_int);
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        writeMailbox( eMailboxOffset::MB_ENTITLEMENT_ID0, b32_v );
+        writeMailbox( eMailboxOffset::MB_ENTITLEMENT_ID0, b32_vec );
         Debug( "Backup entitlement ID {} into the DRM Controller memory", mEntitlementID );
-        delete[] b32_i;
-        delete[] b32_s;
+        delete[] b32_str;
     }
 
     void restoreSessionInfo() {
-        std::vector<uint32_t> b32_v;
+        std::vector<uint32_t> b32_vec;
         {
             std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-            b32_v = readMailbox( eMailboxOffset::MB_ENTITLEMENT_ID0, 4 );
+            b32_vec = readMailbox( eMailboxOffset::MB_ENTITLEMENT_ID0, 4 );
         }
-        int decodeLength = b32_v.size() * sizeof(uint32_t);
-        std::cout << "restoreSessionInfo decodeLength=" << decodeLength << std::endl;
-        unsigned char *b32_i = (unsigned char*)b32_v.data();
-        int encodeLength = Base32::GetEncode32Length(decodeLength);
-        std::cout << "restoreSessionInfo encodeLength=" << encodeLength << std::endl;
-        unsigned char *b32_s = new unsigned char[encodeLength];
-        Base32::Encode32(b32_i, decodeLength, b32_s);
-        Base32::Map32(b32_s, encodeLength, (unsigned char*)BASE32_ALPHABET.c_str());
-        std::cout << "restoreSessionInfo b32_s = " << b32_s << std::endl;
-        mEntitlementID = std::string((char*)b32_s, 26);
-        std::cout << "restoreSessionInfo mEntitlementID = " << mEntitlementID << std::endl;
+        int decode_size = b32_vec.size() * sizeof(uint32_t);
+        unsigned char *b32_int = (unsigned char*)b32_vec.data();
+        int encode_size = Base32::GetEncode32Length(decode_size);
+        unsigned char *b32_str = new unsigned char[encode_size];
+        Base32::Encode32(b32_int, decode_size, b32_str);
+        Base32::Map32(b32_str, encode_size, (unsigned char*)BASE32_ALPHABET.c_str());
+        mEntitlementID = std::string((char*)b32_str, 26);
         Debug( "Backup entitlement ID {} into the DRM Controller memory", mEntitlementID );
-        delete[] b32_s;
+        delete[] b32_str;
     }
 
     void startSession() {
