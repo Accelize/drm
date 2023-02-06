@@ -225,7 +225,7 @@ def test_entitlement_user_limited_on_activate(accelize_drm, conf_json, cred_json
     async_cb.reset()
     cred_json.set_user('test-limited')
     conf_json.reset()
-    logfile = log_file_factory.create(1)
+    logfile = log_file_factory.create(1, append=True)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
     ws_admin.clean_user_db(conf_json, cred_json)
@@ -286,7 +286,7 @@ def test_entitlement_user_limited_in_thread(accelize_drm, conf_json, cred_json, 
 
     async_cb.reset()
     conf_json.reset()
-    logfile = log_file_factory.create(2)
+    logfile = log_file_factory.create(1)
     conf_json['settings'].update(logfile.json)
     conf_json.save()
     cred_json.set_user('test-limited')

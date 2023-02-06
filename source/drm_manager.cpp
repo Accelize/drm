@@ -1236,14 +1236,14 @@ protected:
         // Check compatibility of the DRM Version with Algodone version
         checkHdkCompatibility();
 
-        // Try to lock the DRM controller to this instance, return an error is already locked.
-        acquireDrmLockInstance();
-
         // Run auto-test level 1
         runBistLevel1();
 
         // Run auto-test of register accesses
         runBistLevel2();
+
+        // Try to lock the DRM controller to this instance, return an error is already locked.
+        acquireDrmLockInstance();
 
         // Save header information
         mHeaderJsonRequest = getMeteringHeader();
@@ -2552,10 +2552,8 @@ public:
 
     ~Impl() {
         try {
-            TRY
-                Debug( "Calling Impl destructor" );
-                deactivate();
-            CATCH_AND_THROW
+            Debug( "Calling Impl destructor" );
+            deactivate();
         } catch(...) {}
         pnc_uninitialize_drm_ctrl_ta();
         releaseDrmLockInstance();
