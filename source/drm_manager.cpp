@@ -491,7 +491,7 @@ protected:
                         mWSRetryPeriodLong, mWSRetryPeriodShort );
 
             // Licensing configuration
-            Json::Value conf_licensing = JVgetRequired( conf_json, "licensing", Json::objectValue );
+            Json::Value conf_licensing = conf_json["licensing"];
             // Get licensing mode
             // If this is a node-locked license, get the license path
             std::string config_dir = getHomeDir() + PATH_SEP + ".config";
@@ -503,7 +503,7 @@ protected:
             } //else {
                 Debug( "Configuration file specifies a floating/metered license" );
                 // Get DRM frequency related parameters
-                Json::Value conf_drm = JVgetRequired( conf_json, "drm", Json::objectValue );
+                Json::Value conf_drm = conf_json["drm"];
                 mFrequencyInit = JVgetRequired( conf_drm, "frequency_mhz", Json::intValue ).asUInt();
                 mFrequencyCurr = double(mFrequencyInit);
                 mBypassFrequencyDetection = JVgetOptional( conf_drm, "bypass_frequency_detection", Json::booleanValue,
@@ -1718,7 +1718,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
                 mEntitlementID = entitlement_id;
                 Debug( "Entitlement ID '{}' is updated to '{}'", mEntitlementID, entitlement_id );
             }
-            Json::Value drm_config_node = JVgetRequired( license_json, "drm_config", Json::objectValue );
+            Json::Value drm_config_node = license_json["drm_config"];
             mLicenseDuration = JVgetOptional( drm_config_node, "license_period_second", Json::uintValue, mLicenseDuration ).asUInt();
 
             /// Get health parameters
@@ -1733,8 +1733,7 @@ Json::Value product_id_json = "AGCRK2ODF57PBE7ZZANNWPAVHY";
             MTX_RELEASE( mHealthAccessMutex );
 
             /// Get license node
-            Json::Value license_node = JVgetRequired( drm_config_node, "license", Json::objectValue );
-            Json::Value dna_node = JVgetRequired( license_node, mDeviceID.c_str(), Json::objectValue );
+            Json::Value dna_node = drm_config_node["license"][mDeviceID];
 
             /// Extract license key and license timer from web service response
             licenseKey = JVgetRequired( dna_node, "key", Json::stringValue ).asString();
