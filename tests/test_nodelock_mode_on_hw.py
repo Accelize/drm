@@ -5,7 +5,7 @@ Test node-locked behavior of DRM Library.
 from re import search
 from json import loads
 from glob import glob
-from os.path import join, isfile
+from os.path import join, isfile, dirname
 from re import search, findall, IGNORECASE
 from shutil import copyfile, move
 
@@ -306,13 +306,11 @@ def test_nodelock_limits(accelize_drm, conf_json, conf_json_second, cred_json, a
             assert drm_manager1.get('license_type') == 'Node-Locked'
             with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
                 drm_manager1.activate()
-            assert 'Metering Web Service error 400' in str(excinfo.value)
-            assert 'DRM WS request failed' in str(excinfo.value)
-            assert search(r'"Entitlement Limit Reached.* with PT DRM Ref Design .+ for \S+_test_03@accelize.com', str(excinfo.value))
-            assert 'You have reached the maximum quantity of 1 nodes for Nodelocked entitlement' in str(excinfo.value)
+            assert 'Accelize Web Service error 403' in str(excinfo.value)
+            assert 'No valid entitlement available for this product' in str(excinfo.value)
             err_code = async_handler.get_error_code(str(excinfo.value))
             assert err_code == accelize_drm.exceptions.DRMWSReqError.error_code
-        async_cb1.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'You have reached the maximum quantity')
+        async_cb1.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'No valid entitlement available for this product')
         async_cb1.reset()
     finally:
         driver0.program_fpga()
@@ -497,6 +495,8 @@ def test_nodelock_is_board_specific(accelize_drm, conf_json, cred_json,
                 ) as drm_manager:
             assert drm_manager.get('license_type') == 'Node-Locked'
             request_file_0 = drm_manager.get('nodelocked_request_file')
+            license_file_0 = request_file_0[:-3] + 'lic'
+            device_id_0 = drm_manager.get('device_id')
             assert not drm_manager.get('license_status')
             drm_manager.activate()
             assert drm_manager.get('license_status')
@@ -519,7 +519,13 @@ def test_nodelock_is_board_specific(accelize_drm, conf_json, cred_json,
                 ) as drm_manager:
             assert drm_manager.get('license_type') == 'Node-Locked'
             request_file_1 = drm_manager.get('nodelocked_request_file')
-            assert request_file_0 == request_file_1
+            license_file_1 = request_file_1[:-3] + 'lic'
+            device_id_1 = drm_manager.get('device_id')
+            assert device_id_1 != device_id_0
+            assert dirname(request_file_0) == dirname(request_file_1)
+            copyfile(license_file_0, license_file_1)
+            with open(license_file_0, 'rt') as fr, open(license_file_1, 'wt') as fw:
+                fw.write(fr.read().replace(device_id_0, device_id_1))
             with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
                 drm_manager.activate()
             assert "DRM Controller is locked in Node-Locked licensing mode: " \

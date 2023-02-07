@@ -402,11 +402,9 @@ def test_entitlement_user_floating(accelize_drm, conf_json, conf_json_second, cr
     async_cb1.reset()
     log_content = logfile0.read()
     assert search(r'DRM Controller is in Metering license mode', log_content, IGNORECASE)
-    assert search(r'Entitlement Limit Reached', log_content, IGNORECASE)
-    assert search(r'You have reached the maximum quantity of 1000', log_content, IGNORECASE)
     log_content = logfile1.read()
-    assert search(r'Entitlement Limit Reached', log_content, IGNORECASE)
-    assert search(r'You have reached the maximum quantity of 1000', log_content, IGNORECASE)
+    assert search(r'No valid entitlement available for this product', log_content, IGNORECASE)
+    assert search(r'You can use this product by subscribing new entitlements', log_content, IGNORECASE)
 
     # Get floating license for drm_manager1 and check drm_manager0 fails
     with accelize_drm.DrmManager(
@@ -423,9 +421,9 @@ def test_entitlement_user_floating(accelize_drm, conf_json, conf_json_second, cr
                 async_cb0.callback
             ) as drm_manager0:
         assert not drm_manager0.get('license_status')
-        assert drm_manager0.get('drm_license_type') == 'Floating/Metering'
+        assert drm_manager0.get('drm_license_type') in ['Idle', 'Floating/Metering']
         assert not drm_manager1.get('license_status')
-        assert drm_manager1.get('drm_license_type') == 'Floating/Metering'
+        assert drm_manager1.get('drm_license_type') in ['Idle', 'Floating/Metering']
         drm_manager1.activate()
         assert drm_manager1.get('license_status')
         assert drm_manager1.get('license_type') == 'Floating/Metering'
@@ -438,11 +436,9 @@ def test_entitlement_user_floating(accelize_drm, conf_json, conf_json_second, cr
     async_cb0.reset()
     async_cb1.assert_NoError()
     log_content = logfile0.read()
-    assert search(r'Entitlement Limit Reached', log_content, IGNORECASE)
-    assert search(r'You have reached the maximum quantity of 1000', log_content, IGNORECASE)
+    assert search(r'No valid entitlement available for this product', log_content, IGNORECASE)
+    assert search(r'You can use this product by subscribing new entitlements', log_content, IGNORECASE)
     log_content = logfile1.read()
     assert search(r'DRM Controller is in Metering license mode', log_content, IGNORECASE)
-    assert search(r'Entitlement Limit Reached', log_content, IGNORECASE)
-    assert search(r'You have reached the maximum quantity of 1000', log_content, IGNORECASE)
     logfile0.remove()
     logfile1.remove()

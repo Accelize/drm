@@ -74,7 +74,8 @@ _PARAM_LIST = ('license_type',
                'controller_rom',
                'license_counter',
                'health_counter',
-               'entitlement_session_id'
+               'entitlement_session_id',
+               'device_id'
 )
 
 
@@ -1214,6 +1215,15 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         assert drm_manager.get('entitlement_session_id') == ''
         async_cb.assert_NoError()
         print("Test parameter 'entitlement_session_id': PASS")
+
+        # Test parameter: device_id
+        with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
+            drm_manager.set(accelize_drm="{}")
+        async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code," cannot be overwritten")
+        async_cb.reset()
+        assert len(drm_manager.get('device_id')) == 16
+        async_cb.assert_NoError()
+        print("Test parameter 'device_id': PASS")
 
 
 def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cred_json,
