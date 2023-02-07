@@ -47,6 +47,7 @@ def test_header_error_on_key(accelize_drm, conf_json, cred_json, async_handler,
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
         assert "DRM Controller Activation is in timeout" in str(excinfo.value)
         assert "License header check error" in str(excinfo.value)
+    logfile.remove()
 
 
 @pytest.mark.no_parallel
@@ -82,6 +83,7 @@ def test_header_error_on_key2(accelize_drm, conf_json, cred_json, async_handler,
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
         assert "DRM Controller Activation is in timeout" in str(excinfo.value)
         assert "License MAC check error" in str(excinfo.value)
+    logfile.remove()
 
 
 @pytest.mark.no_parallel
@@ -129,6 +131,7 @@ def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_
         assert async_cb.was_called
         assert async_cb.errcode == accelize_drm.exceptions.DRMCtlrError.error_code
         assert search(r"Session ID mismatch", async_cb.message)
+    logfile.remove()
 
 
 @pytest.mark.no_parallel
@@ -171,6 +174,7 @@ def test_header_error_on_licenseTimer2(accelize_drm, conf_json, cred_json, async
     assert async_cb.was_called
     assert async_cb.errcode == accelize_drm.exceptions.DRMCtlrError.error_code
     assert search(r"License (header|MAC) check error", async_cb.message)
+    logfile.remove()
 
 
 @pytest.mark.no_parallel
@@ -235,4 +239,4 @@ def test_replay_request(accelize_drm, conf_json, cred_json, async_handler,
         assert async_cb.was_called
         assert async_cb.errcode == accelize_drm.exceptions.DRMCtlrError.error_code
         assert search(r"Session ID mismatch", async_cb.message)
-
+    logfile.remove()

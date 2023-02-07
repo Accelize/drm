@@ -409,7 +409,7 @@ protected:
 
         Json::Value conf_json;
 
-        mLockID = rand();
+        mLockID = 0;
 
         mLicenseDuration = 0;
         mLicenseCounter = 0;
@@ -1050,6 +1050,7 @@ protected:
                     "You might have anoth process running the DRM Controller. "
                     "If not, a reset of the DRM Controller is required to recover. " );
         }
+        mLockID = rand();
         writeMailbox<uint32_t>( eMailboxOffset::MB_LOCK_DRM, mLockID );
         Debug( "DRM Controller is locked by this instance with ID {}", mLockID );
     }
@@ -1066,9 +1067,12 @@ protected:
 
     void releaseDrmLockInstance() {
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
-        checkDrmLockInstance();
-        writeMailbox<uint32_t>( eMailboxOffset::MB_LOCK_DRM, 0 );
-        Debug( "DRM Controller is unlocked by this instance with ID {}", mLockID );
+        if ( mLockID != 0 ) {
+            checkDrmLockInstance();
+            writeMailbox<uint32_t>( eMailboxOffset::MB_LOCK_DRM, 0 );
+            mLockID = 0;
+            Debug( "DRM Controller is unlocked by this instance with ID {}", mLockID );
+        }
     }
 
     // Check compatibility of the DRM Version with Algodone version
