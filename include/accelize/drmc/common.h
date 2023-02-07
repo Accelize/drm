@@ -31,20 +31,20 @@ limitations under the License.
     #endif /* __cplusplus */
 
 
-     #define ThrowSetLog( log_level, errcode, ... ) do {                                              \
-        Accelize::DRM::Exception except( errcode, fmt::format( __VA_ARGS__ ) );     \
+    #define ThrowSetLog( log_level, errcode, ... ) do {                                                                \
+        Accelize::DRM::Exception except( errcode, fmt::format( __VA_ARGS__ ) );                                        \
         SPDLOG_LOGGER_CALL( Accelize::DRM::sLogger, (spdlog::level::level_enum)log_level, fmt::format( __VA_ARGS__ )); \
-        throw except;                                                               \
+        throw except;                                                                                                  \
     } while(0)
 
 
-    #define Throw( errcode, ... ) do {                                              \
-        Accelize::DRM::Exception except( errcode, fmt::format( __VA_ARGS__ ) );     \
+    #define Throw( errcode, ... ) do {                                                                    \
+        Accelize::DRM::Exception except( errcode, fmt::format( __VA_ARGS__ ) );                           \
         if ( ( errcode == DRM_Exit ) || ( errcode == DRM_WSTimedOut ) || ( errcode == DRM_WSMayRetry ) )  \
-            Debug( __VA_ARGS__ );                                                   \
-        else                                                                        \
-            Error( __VA_ARGS__ );                                                   \
-        throw except;                                                               \
+            Debug( __VA_ARGS__ );                                                                         \
+        else                                                                                              \
+            Error( __VA_ARGS__ );                                                                         \
+        throw except;                                                                                     \
     } while(0)
 
 

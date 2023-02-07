@@ -342,7 +342,7 @@ def test_entitlement_user_limited_in_thread(accelize_drm, conf_json, cred_json, 
 @pytest.mark.minimum
 @pytest.mark.hwtst
 def test_entitlement_user_floating(accelize_drm, conf_json, conf_json_second, cred_json,
-                        async_handler, log_file_factory):
+                        async_handler, log_file_factory, ws_admin):
     """
     Test an error is returned when the floating limit is reached
     """
@@ -355,7 +355,6 @@ def test_entitlement_user_floating(accelize_drm, conf_json, conf_json_second, cr
     driver0 = accelize_drm.pytest_fpga_driver[0]
     async_cb0 = async_handler.create()
     async_cb0.reset()
-    conf_json.reset()
     logfile0 = log_file_factory.create(1)
     conf_json['settings'].update(logfile0.json)
     conf_json['settings']['ws_api_retry_duration'] = 4
@@ -370,6 +369,8 @@ def test_entitlement_user_floating(accelize_drm, conf_json, conf_json_second, cr
     conf_json_second['settings']['ws_api_retry_duration'] = 4
     conf_json_second.save()
 
+    ws_admin.clean_user_db(conf_json, cred_json)
+
     # Get floating license for drm_manager0 and check drm_manager1 fails
     with accelize_drm.DrmManager(
                 conf_json.path,
@@ -377,31 +378,28 @@ def test_entitlement_user_floating(accelize_drm, conf_json, conf_json_second, cr
                 driver0.read_register_callback,
                 driver0.write_register_callback,
                 async_cb0.callback
-            ) as drm_manager0:
+            ) as drm_manager0, accelize_drm.DrmManager(
+                conf_json_second.path,
+                cred_json.path,
+                driver1.read_register_callback,
+                driver1.write_register_callback,
+                async_cb1.callback
+            ) as drm_manager1:
         assert not drm_manager0.get('license_status')
-        assert drm_manager.get('drm_license_type') in ['Idle', 'Floating/Metering']
-        with accelize_drm.DrmManager(
-                    conf_json_second.path,
-                    cred_json.path,
-                    driver1.read_register_callback,
-                    driver1.write_register_callback,
-                    async_cb1.callback
-                ) as drm_manager1:
-            assert not drm_manager1.get('license_status')
-            assert drm_manager.get('drm_license_type') in ['Idle', 'Floating/Metering']
-            assert not drm_manager0.get('license_status')
-            assert drm_manager.get('drm_license_type') in ['Idle', 'Floating/Metering']
-            drm_manager0.activate()
-            assert drm_manager0.get('license_status')
-            assert drm_manager0.get('license_type') == 'Floating/Metering'
-            assert drm_manager0.get('drm_license_type') == 'Floating/Metering'
-            with pytest.raises(accelize_drm.exceptions.DRMWSTimedOut) as excinfo:
-                drm_manager1.activate()
-            assert search(r'Timeout on License request after .+ attempts', str(excinfo.value))
-            assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSTimedOut.error_code
-            async_cb1.assert_Error(accelize_drm.exceptions.DRMWSTimedOut.error_code, 'Timeout on License request after')
-            async_cb1.reset()
+        assert drm_manager0.get('drm_license_type') in ['Idle', 'Floating/Metering']
+        assert not drm_manager1.get('license_status')
+        assert drm_manager1.get('drm_license_type') in ['Idle', 'Floating/Metering']
+        drm_manager0.activate()
+        assert drm_manager0.get('license_status')
+        assert drm_manager0.get('license_type') == 'Floating/Metering'
+        assert drm_manager0.get('drm_license_type') == 'Floating/Metering'
+        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+            drm_manager1.activate()
+        assert search(r'No valid entitlement available for this product', str(excinfo.value))
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
     async_cb0.assert_NoError()
+    async_cb1.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'No valid entitlement available for this product')
+    async_cb1.reset()
     log_content = logfile0.read()
     assert search(r'DRM Controller is in Metering license mode', log_content, IGNORECASE)
     assert search(r'Entitlement Limit Reached', log_content, IGNORECASE)
@@ -417,30 +415,27 @@ def test_entitlement_user_floating(accelize_drm, conf_json, conf_json_second, cr
                 driver1.read_register_callback,
                 driver1.write_register_callback,
                 async_cb1.callback
-            ) as drm_manager1:
+            ) as drm_manager1, accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver0.read_register_callback,
+                driver0.write_register_callback,
+                async_cb0.callback
+            ) as drm_manager0:
+        assert not drm_manager0.get('license_status')
+        assert drm_manager0.get('drm_license_type') == 'Floating/Metering'
         assert not drm_manager1.get('license_status')
         assert drm_manager1.get('drm_license_type') == 'Floating/Metering'
-        with accelize_drm.DrmManager(
-                    conf_json.path,
-                    cred_json.path,
-                    driver0.read_register_callback,
-                    driver0.write_register_callback,
-                    async_cb0.callback
-                ) as drm_manager0:
-            assert not drm_manager0.get('license_status')
-            assert drm_manager0.get('drm_license_type') == 'Floating/Metering'
-            assert not drm_manager1.get('license_status')
-            assert drm_manager1.get('drm_license_type') == 'Floating/Metering'
-            drm_manager1.activate()
-            assert drm_manager1.get('license_status')
-            assert drm_manager1.get('license_type') == 'Floating/Metering'
-            assert drm_manager1.get('drm_license_type') == 'Floating/Metering'
-            with pytest.raises(accelize_drm.exceptions.DRMWSTimedOut) as excinfo:
-                drm_manager0.activate()
-            assert search(r'Timeout on License request after .+ attempts', str(excinfo.value))
-            assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSTimedOut.error_code
-            async_cb0.assert_Error(accelize_drm.exceptions.DRMWSTimedOut.error_code, 'Timeout on License request after')
-            async_cb0.reset()
+        drm_manager1.activate()
+        assert drm_manager1.get('license_status')
+        assert drm_manager1.get('license_type') == 'Floating/Metering'
+        assert drm_manager1.get('drm_license_type') == 'Floating/Metering'
+        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+            drm_manager0.activate()
+        assert search(r'No valid entitlement available for this product', str(excinfo.value))
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+    async_cb0.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'No valid entitlement available for this product')
+    async_cb0.reset()
     async_cb1.assert_NoError()
     log_content = logfile0.read()
     assert search(r'Entitlement Limit Reached', log_content, IGNORECASE)

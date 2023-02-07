@@ -61,16 +61,17 @@ def test_improve_coverage_wsclient_http_address_error(accelize_drm, conf_json, c
     conf_json['settings']['ws_request_timeout'] = 5
     conf_json.save()
 
-    with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
-        accelize_drm.DrmManager(
+    with accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
-        )
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
-    assert search(r'Error .+ on HTTP request, Timeout was reached: Connection timed out after', str(excinfo.value), IGNORECASE)
+        ) as drm_manager:
+        with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
+            drm_manager.activate()
+        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
+        assert search(r'Error .+ on HTTP request, Timeout was reached: Connection timed out after', str(excinfo.value), IGNORECASE)
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, HTTP_TIMEOUT_ERR_MSG)
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, (
             'Error .+ on HTTP request, Timeout was reached: Connection timed out after'))

@@ -6,7 +6,7 @@ import pytest
 from time import sleep
 from random import randint, choice
 from datetime import datetime, timedelta
-from re import search, findall
+from re import search, findall, IGNORECASE
 from os.path import realpath, isfile
 
 from tests.conftest import wait_deadline, wait_until_true
@@ -130,7 +130,7 @@ def test_only_1_object_is_allowed(accelize_drm, conf_json, conf_json_second,
         logfile2 = log_file_factory.create(1)
         conf_json_second['settings'].update(logfile2.json)
         conf_json_second.save()
-        with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
+        with pytest.raises(accelize_drm.exceptions.DRMBadUsage) as excinfo:
             drm_manager2 = accelize_drm.DrmManager(
                     conf_json_second.path,
                     cred_json.path,
@@ -142,7 +142,7 @@ def test_only_1_object_is_allowed(accelize_drm, conf_json, conf_json_second,
         assert search(r'You might have anoth process running the DRM Controller.', str(excinfo.value), IGNORECASE)
         assert search(r'If not, a reset of the DRM Controller is required to recover.', str(excinfo.value), IGNORECASE)
         err_code = async_handler.get_error_code(str(excinfo.value))
-        assert err_code == accelize_drm.exceptions.DRMCtlrError.error_code
+        assert err_code == accelize_drm.exceptions.DRMBadUsage.error_code
         async_cb.reset()
     log_content1 = logfile1.read()
     assert search(r'DRM Controller is locked by this instance with ID', log_content1, IGNORECASE)

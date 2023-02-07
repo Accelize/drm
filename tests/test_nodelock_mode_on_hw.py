@@ -288,9 +288,9 @@ def test_nodelock_limits(accelize_drm, conf_json, conf_json_second, cred_json, a
                 ) as drm_manager0:
             assert drm_manager0.get('license_type') == 'Node-Locked'
             # Consume the single token available
-            assert not drm_manager.get('license_status')
+            assert not drm_manager0.get('license_status')
             drm_manager0.activate()
-            assert drm_manager.get('license_status')
+            assert drm_manager0.get('license_status')
             assert drm_manager0.get('drm_license_type') == 'Node-Locked'
             drm_manager0.deactivate()
             assert drm_manager0.get('drm_license_type') == 'Node-Locked'
@@ -314,9 +314,8 @@ def test_nodelock_limits(accelize_drm, conf_json, conf_json_second, cred_json, a
             assert err_code == accelize_drm.exceptions.DRMWSReqError.error_code
         async_cb1.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'You have reached the maximum quantity')
         async_cb1.reset()
-
     finally:
-        driver.program_fpga()
+        driver0.program_fpga()
 
 
 @pytest.mark.no_parallel
