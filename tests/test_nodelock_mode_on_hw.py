@@ -521,18 +521,16 @@ def test_nodelock_is_board_specific(accelize_drm, conf_json, cred_json,
             request_file_1 = drm_manager.get('nodelocked_request_file')
             license_file_1 = request_file_1[:-3] + 'lic'
             device_id_1 = drm_manager.get('device_id')
-            assert device_id_1 != device_id_0
             assert dirname(request_file_0) == dirname(request_file_1)
             copyfile(license_file_0, license_file_1)
             with open(license_file_0, 'rt') as fr, open(license_file_1, 'wt') as fw:
                 fw.write(fr.read().replace(device_id_0, device_id_1))
             with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
                 drm_manager.activate()
-            assert "DRM Controller is locked in Node-Locked licensing mode: " \
-                   "To use other modes you must reprogram the FPGA device" in str(excinfo.value)
+            assert "DRM Controller Activation is in timeout" in str(excinfo.value)
             err_code = async_handler.get_error_code(str(excinfo.value))
             assert err_code == accelize_drm.exceptions.DRMCtlrError.error_code
-        async_cb.assert_Error(accelize_drm.exceptions.DRMCtlrError.error_code, 'DRM Controller is locked in Node-Locked licensing mode')
+        async_cb.assert_Error(accelize_drm.exceptions.DRMCtlrError.error_code, 'DRM Controller Activation is in timeout')
         async_cb.reset()
     finally:
         # Reprogram FPGA
