@@ -57,7 +57,7 @@ static int write_drm_register( uint32_t offset, uint32_t value, void* user_p ) {
 /* Callback function for DRM library in case of asynchronous error during operation */
 static void print_async_error( const char* errmsg, void* /*user_p*/ ) {
     cerr << "From async callback: " << errmsg << endl;
-    sAsyncErrorMessage = errmsg + string("\n");
+    sAsyncErrorMessage += errmsg + string("\n");
 }
 
 

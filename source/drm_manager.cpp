@@ -1057,6 +1057,9 @@ protected:
 
     void checkDrmLockInstance() {
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
+        if ( mLockID == 0 ) {
+            Throw( DRM_BadUsage, "Instance has not been instantiated properly." );
+        }
         uint32_t drm_lock = readMailbox<uint32_t>( eMailboxOffset::MB_LOCK_DRM );
         if ( drm_lock != mLockID ) {
             Throw( DRM_BadUsage, "Another instance is currently owning the DRM Controller. "
