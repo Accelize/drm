@@ -200,13 +200,18 @@ def test_2_drm_manager_concurrently(accelize_drm, conf_json, cred_json, async_ha
 
 
 @pytest.mark.hwtst
-def test_drm_manager_bist(accelize_drm, conf_json, cred_json, async_handler):
+def test_drm_manager_bist(accelize_drm, conf_json, cred_json, async_handler,
+                           log_file_factory):
     """Test register access BIST"""
     if accelize_drm.is_ctrl_sw:
         pytest.skip("Test involves callbacks modification: skipped on SoM target (no callback provided for SoM)")
 
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
+
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
+    conf_json.save()
 
     version_major = int(match(r'(\d+)\..+', accelize_drm.pytest_hdk_version).group(1))
 
@@ -248,3 +253,4 @@ def test_drm_manager_bist(accelize_drm, conf_json, cred_json, async_handler):
     assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
     async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, 'DRM Communication Self-Test 2 failed')
     async_cb.reset()
+    logfile.remove()

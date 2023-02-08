@@ -537,8 +537,9 @@ def test_nodelock_is_board_specific(accelize_drm, conf_json, cred_json,
         driver.program_fpga()
 
     log_content = logfile.read()
-    assert search(r'Looking for local node-locked license file', log_content, IGNORECASE)
-    assert search(r'Installed node-locked license successfully', log_content, IGNORECASE)
+    assert search(r'DRM Controller is in Node-Locked license mode', log_content, IGNORECASE)
+    assert search(r'Saved node-locked license file', log_content, IGNORECASE)
+    assert search(r'Found and parsed existing node-locked License file', log_content, IGNORECASE)
     logfile.remove()
 
 

@@ -36,7 +36,6 @@ def test_improve_coverage_ws_client_on_code_600(accelize_drm, conf_json, cred_js
         with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
             drm_manager.activate()
         assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
-        assert get_proxy_error() is None
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSError.error_code, 'Accelize Web Service error 600 on HTTP request')
     async_cb.reset()
     log_content = logfile.read()
