@@ -74,7 +74,7 @@ def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_jso
             )
         assert search(r'DRM frequency .* differs from .* configuration file',
             str(excinfo.value)) is not None
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadFrequency.error_code
+        assert accelize_drm.exceptions.DRMBadFrequency.error_code in async_handler.get_error_code(str(excinfo.value))
     else:
         with accelize_drm.DrmManager(
                 conf_json.path,
@@ -292,7 +292,7 @@ def test_drm_manager_frequency_detection_method_2_and_3_exception(accelize_drm, 
         )
     assert search(r'Frequency auto-detection .*? failed: frequency_detection_period parameter \([^)]+\) is too long',
                   str(excinfo.value)) is not None
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadFrequency.error_code
+    assert accelize_drm.exceptions.DRMBadFrequency.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_Error(accelize_drm.exceptions.DRMBadFrequency.error_code, 'Frequency auto-detection of drm_aclk failed')
     async_cb.reset()
 
@@ -348,6 +348,6 @@ def test_drm_manager_frequency_detection_bypass(accelize_drm, conf_json, cred_js
         )
     assert search(r'DRM frequency .* differs from .* configuration file',
             str(excinfo.value)) is not None
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadFrequency.error_code
+    assert accelize_drm.exceptions.DRMBadFrequency.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_NoError()
     print('Test bypass_frequency_detection=false: PASS')

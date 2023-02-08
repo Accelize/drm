@@ -1176,19 +1176,19 @@ class AsyncErrorHandler:
     Asynchronous error callback
     """
     def __init__(self):
-        self.message = None
-        self.errcode = None
+        self.message = ""
+        self.errcode = list()
         self.was_called = False
 
     def reset(self):
-        self.message = None
-        self.errcode = None
+        self.message = ""
+        self.errcode = list()
         self.was_called = False
 
     def callback(self, message):
         self.was_called = True
         if isinstance(message, bytes):
-            self.message = message.decode()
+            self.message += message.decode()
         else:
             self.message = message
         self.errcode = AsyncErrorHandlerList.get_error_code(self.message)
@@ -1198,16 +1198,16 @@ class AsyncErrorHandler:
             prepend_msg = ''
         else:
             prepend_msg = '%s: ' % extra_msg
-        assert self.message is None, '%sAsynchronous callback reports a message: %s' \
+        assert self.message, '%sAsynchronous callback reports a message: %s' \
                                      % (prepend_msg, self.message)
-        assert self.errcode is None, '%sAsynchronous callback returned error code: %d' \
+        assert len(self.errcode), '%sAsynchronous callback returned error code: %d' \
                                      % (prepend_msg, self.errcode)
         assert not self.was_called, '%sAsynchronous callback has been called' % prepend_msg
 
     def assert_Error(self, error_code=None, error_msg=None):
         assert self.was_called
         if error_code:
-            assert self.errcode == error_code
+            assert error_code in self.errcode
         if error_msg:
             assert search(error_msg, self.message, IGNORECASE)
 
@@ -1223,10 +1223,9 @@ class AsyncErrorHandlerList(list):
 
     @staticmethod
     def get_error_code(msg):
-        from re import search
-        m = search(r'\[errCode=(\d+)\]', msg)
-        assert m, "Could not find 'errCode' in exception message: %s" % msg
-        return int(m.group(1))
+        l = findall(r'\[errCode=(\d+)\]', msg)
+        assert l, "Could not find 'errCode' in exception message: %s" % msg
+        return map(int, l)
 
 
 @pytest.fixture

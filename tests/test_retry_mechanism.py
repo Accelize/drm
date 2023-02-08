@@ -291,7 +291,7 @@ def test_api_retry_on_lost_connection(accelize_drm, conf_json, cred_json, async_
         assert get_context() == context
         with pytest.raises(accelize_drm.exceptions.DRMWSTimedOut) as excinfo:
             drm_manager.activate()
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSTimedOut.error_code
+    assert accelize_drm.exceptions.DRMWSTimedOut.error_code in async_handler.get_error_code(str(excinfo.value))
     m = search(r'Timeout on License request after (\d+) attempts', str(excinfo.value))
     assert m is not None
     nb_attempts = int(m.group(1))

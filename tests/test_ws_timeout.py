@@ -38,7 +38,7 @@ def test_connection_timeout(accelize_drm, conf_json, cred_json, async_handler,
         )
     end = datetime.now()
     assert connection_timeout - 1 <= int((end - start).total_seconds()) <= connection_timeout
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
+    assert accelize_drm.exceptions.DRMWSMayRetry.error_code in async_handler.get_error_code(str(excinfo.value))
     m = search(r'Timeout was reached.+Connection timed out after (\d+) milliseconds', str(excinfo.value), IGNORECASE)
     assert m
     assert (connection_timeout*1000 - 50) < int(m.group(1)) < (connection_timeout*1000 + 50)

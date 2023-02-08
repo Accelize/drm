@@ -45,7 +45,7 @@ def test_env_var_DRMSAAS_URL(accelize_drm, conf_json, cred_json, async_handler):
             ) as drm_manager:
             pass
     assert "Accelize Web Service error 404 on HTTP request" in str(excinfo.value)
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+    assert accelize_drm.exceptions.DRMWSReqError.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Accelize Web Service error 404')
     async_cb.reset()
 
@@ -90,7 +90,7 @@ def test_env_var_DRMSAAS_CLIENT_ID(accelize_drm, conf_json, cred_json, async_han
             pass
     assert "Accelize Web Service error 401" in str(excinfo.value)
     assert "invalid_client" in str(excinfo.value)
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+    assert accelize_drm.exceptions.DRMWSReqError.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Accelize Web Service error 401')
     async_cb.reset()
 
@@ -135,6 +135,6 @@ def test_env_var_DRMSAAS_CLIENT_SECRET(accelize_drm, conf_json, cred_json, async
             pass
     assert "Accelize Web Service error 401" in str(excinfo.value)
     assert "invalid_client" in str(excinfo.value)
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+    assert accelize_drm.exceptions.DRMWSReqError.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Accelize Web Service error 401')
     async_cb.reset()

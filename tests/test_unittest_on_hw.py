@@ -252,6 +252,6 @@ def test_curl_host_resolve(accelize_drm, conf_json, cred_json, async_handler):
             drm_manager.activate()
         assert 'Failed to perform HTTP request ' in str(excinfo.value)
         assert search(r'peer certificate', str(excinfo.value), IGNORECASE)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMExternFail.error_code
+        assert accelize_drm.exceptions.DRMExternFail.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_Error(accelize_drm.exceptions.DRMExternFail.error_code, 'peer certificate')
     async_cb.reset()

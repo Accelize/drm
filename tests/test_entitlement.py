@@ -37,7 +37,7 @@ def test_entitlement_user_noentitlement(accelize_drm, conf_json, cred_json, asyn
         assert search(r'Accelize Web Service error 403', str(excinfo.value))
         assert search(r"No valid entitlement available for this product", str(excinfo.value))
         assert search(r"You can use this product by subscribing new entitlements", str(excinfo.value))
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+        assert accelize_drm.exceptions.DRMWSReqError.error_code in async_handler.get_error_code(str(excinfo.value))
         async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, "You can use this product by subscribing new entitlements")
         async_cb.reset()
     log_content = logfile.read()
@@ -396,7 +396,7 @@ def test_entitlement_user_floating(accelize_drm, conf_json, conf_json_second, cr
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager1.activate()
         assert search(r'No valid entitlement available for this product', str(excinfo.value))
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+        assert accelize_drm.exceptions.DRMWSReqError.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb0.assert_NoError()
     async_cb1.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'No valid entitlement available for this product')
     async_cb1.reset()
@@ -431,7 +431,7 @@ def test_entitlement_user_floating(accelize_drm, conf_json, conf_json_second, cr
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager0.activate()
         assert search(r'No valid entitlement available for this product', str(excinfo.value))
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+        assert accelize_drm.exceptions.DRMWSReqError.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb0.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'No valid entitlement available for this product')
     async_cb0.reset()
     async_cb1.assert_NoError()

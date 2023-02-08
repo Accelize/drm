@@ -250,7 +250,7 @@ def test_nodelock_with_malformed_license_file(accelize_drm, conf_json, cred_json
             # Run a second time after having corrupted the license file
             with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
                 drm_manager.activate()
-            assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadFormat.error_code
+            assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
             assert search(r'Invalid local license file', str(excinfo.value))
         async_cb.assert_Error(accelize_drm.exceptions.DRMBadFormat.error_code, 'Invalid local license file')
         async_cb.reset()
@@ -581,7 +581,7 @@ def test_nodelock_unsupported(accelize_drm, conf_json, cred_json, async_handler,
             )
         assert "Node-locked license cannot be requested with a DRM Controller" in str(excinfo.value)
         assert "Please remove or set to false the 'nodelocked' field in the configuration file" in str(excinfo.value)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadFormat.error_code
+        assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
         async_cb.assert_Error(accelize_drm.exceptions.DRMBadUsage.error_code, 'Node-locked license cannot be requested with a DRM Controller')
         async_cb.reset()
     finally:

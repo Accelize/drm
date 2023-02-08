@@ -349,7 +349,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
         )
     assert search(r'ws_retry_period_long .+ must be greater than ws_retry_period_short .+',
                   str(excinfo.value)) is not None
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+    assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_NoError()
 
     async_cb.reset()
@@ -553,7 +553,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
         with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
             drm_manager.get('derived_product')
         assert "Parameter 'derived_product' cannot be read" in str(excinfo.value)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+        assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, "Parameter 'derived_product' cannot be read")
     print("Test parameter 'derived_product': PASS")
 
@@ -712,7 +712,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
             drm_manager.set(license_duration=10)
         assert "Parameter 'license_duration' cannot be overwritten" in str(excinfo.value)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+        assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
         async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, "Parameter 'license_duration' cannot be overwritten")
         async_cb.reset()
         print("Test parameter 'drm_license_type', 'license_duration': PASS")
@@ -928,7 +928,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
             drm_manager.set(log_message_level=100)
         assert 'log_message_level (100) is out of range [0:6]' in str(excinfo.value)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+        assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
         async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, r"log_message_level \(100\) is out of range \[0:6\]")
         async_cb.reset()
         print("Test parameter 'log_message_level': PASS")
@@ -948,7 +948,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
             drm_manager.get('trigger_async_callback')
         assert "Parameter 'trigger_async_callback' cannot be read" in str(excinfo.value)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+        assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
         async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code,"Parameter 'trigger_async_callback' cannot be read")
         async_cb.reset()
         print("Test parameter 'trigger_async_callback': PASS")
@@ -1026,7 +1026,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
             drm_manager.set(host_data_verbosity=2)  # Test it cannot be written from code
         assert "Parameter 'host_data_verbosity' cannot be overwritten" in str(excinfo.value)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+        assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code,"Parameter 'host_data_verbosity' cannot be overwritten")
     async_cb.reset()
     print("Test parameter 'host_data_verbosity': PASS")
@@ -1251,7 +1251,7 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
             async_cb.callback
         )
     assert "Accelize Web Service error 404" in str(excinfo.value)
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+    assert accelize_drm.exceptions.DRMWSReqError.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code,"Accelize Web Service error 404")
     async_cb.reset()
     print('Test when authentication url in configuration file is wrong: PASS')
@@ -1273,7 +1273,7 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
         )
     assert "Accelize Web Service error 401" in str(excinfo.value)
     assert "invalid_client" in str(excinfo.value)
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+    assert accelize_drm.exceptions.DRMWSReqError.error_code in async_handler.get_error_code(str(excinfo.value)
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Accelize Web Service error 401')
     async_cb.reset()
     print('Test when client_id is wrong: PASS')
@@ -1295,7 +1295,7 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
         )
     assert "Accelize Web Service error 401" in str(excinfo.value)
     assert "invalid_client" in str(excinfo.value)
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+    assert accelize_drm.exceptions.DRMWSReqError.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Accelize Web Service error 401')
     async_cb.reset()
     print('Test when client_secret is wrong: PASS')

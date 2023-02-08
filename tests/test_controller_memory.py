@@ -125,7 +125,7 @@ def test_empty_product_id(accelize_drm, conf_json, cred_json, async_handler, log
                 driver.write_register_callback,
                 async_cb.callback
             )
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+        assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
         assert search(r'UDID and Product ID cannot be both missing', str(excinfo.value), IGNORECASE)
         assert search(r'Could not find Product ID information in DRM Controller Memory', logfile.read(), IGNORECASE)
         async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, 'UDID and Product ID cannot be both missing')
@@ -164,7 +164,7 @@ def test_malformed_product_id(accelize_drm, conf_json, cred_json, async_handler)
             )
         assert 'Failed to parse Read-Only Mailbox in DRM Controller:' in str(excinfo.value)
         assert search(r'Cannot parse JSON string ', str(excinfo.value))
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadFormat.error_code
+        assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
         async_cb.assert_Error(accelize_drm.exceptions.DRMBadFormat.error_code, 'Failed to parse Read-Only Mailbox in DRM Controller')
         async_cb.reset()
         print('Test Web Service when a misformatted product ID is provided: PASS')
@@ -234,7 +234,7 @@ def test_drm_manager_bist(accelize_drm, conf_json, cred_json, async_handler,
         )
     assert 'DRM Communication Self-Test 2 failed' in str(excinfo.value)
     assert 'Please verify' in str(excinfo.value)
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+    assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, 'DRM Communication Self-Test 2 failed')
     async_cb.reset()
 
@@ -250,7 +250,8 @@ def test_drm_manager_bist(accelize_drm, conf_json, cred_json, async_handler,
         )
     assert 'DRM Communication Self-Test 2 failed' in str(excinfo.value)
     assert 'Please verify' in str(excinfo.value)
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+    assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, 'DRM Communication Self-Test 2 failed')
     async_cb.reset()
     logfile.remove()
+

@@ -42,7 +42,7 @@ def test_authentication_bad_token(accelize_drm, conf_json, cred_json,
         ) as drm_manager:
         with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
             drm_manager.activate()
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSReqError.error_code
+        assert accelize_drm.exceptions.DRMWSReqError.error_code in async_handler.get_error_code(str(excinfo.value))
         assert drm_manager.get('token_string') == access_token
     log_content = logfile.read()
     assert search(r'Unauthorized', log_content)

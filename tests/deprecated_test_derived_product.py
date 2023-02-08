@@ -38,7 +38,7 @@ def test_invalid_derived_product_vendor(accelize_drm, conf_json, cred_json, asyn
         new_deriv_prod = 'a' + deriv_prod
         with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
             drm_manager.set(derived_product=new_deriv_prod)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+        assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
         assert "Invalid derived product information: vendor mismatch" in str(excinfo.value)
 
     # Same test but using config file
@@ -53,7 +53,7 @@ def test_invalid_derived_product_vendor(accelize_drm, conf_json, cred_json, asyn
             driver.write_register_callback,
             async_cb.callback
         )
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+    assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
     assert "Invalid derived product information: vendor mismatch" in str(excinfo.value)
 
 
@@ -77,7 +77,7 @@ def test_invalid_derived_product_library(accelize_drm, conf_json, cred_json, asy
         new_deriv_prod = '/'.join(deriv_prod_list)
         with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
             drm_manager.set(derived_product=new_deriv_prod)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+        assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
         assert "Invalid derived product information: library mismatch" in str(excinfo.value)
 
     # Same test but using config file
@@ -94,7 +94,7 @@ def test_invalid_derived_product_library(accelize_drm, conf_json, cred_json, asy
             driver.write_register_callback,
             async_cb.callback
         )
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+    assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
     assert "Invalid derived product information: library mismatch" in str(excinfo.value)
 
 
@@ -119,7 +119,7 @@ def test_invalid_derived_product_name(accelize_drm, conf_json, cred_json,
         new_deriv_prod = '/'.join(deriv_prod_list)
         with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
             drm_manager.set(derived_product=new_deriv_prod)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+        assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
         assert "Invalid derived product information: name mismatch" in str(excinfo.value)
 
     # Same test but using config file
@@ -136,7 +136,7 @@ def test_invalid_derived_product_name(accelize_drm, conf_json, cred_json,
             driver.write_register_callback,
             async_cb.callback
         )
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+    assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
     assert "Invalid derived product information: name mismatch" in str(excinfo.value)
 
 
@@ -233,7 +233,7 @@ def test_derived_product_during_running_session(accelize_drm, conf_json, cred_js
         # try to modify derived product
         with pytest.raises(accelize_drm.exceptions.DRMBadUsage) as excinfo:
             drm_manager.set(derived_product=new_deriv_prod)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadUsage.error_code
+        assert accelize_drm.exceptions.DRMBadUsage.error_code in async_handler.get_error_code(str(excinfo.value))
         assert "Derived product cannot be loaded if a session is still running" in str(excinfo.value)
         drm_manager.deactivate()
         # new derived product can now be loaded

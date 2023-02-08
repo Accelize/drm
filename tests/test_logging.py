@@ -556,7 +556,7 @@ def test_log_ctrl_verbosity_from_api_with_bad_value(accelize_drm, conf_json, cre
         with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
             drm_manager.set(log_ctrl_verbosity = 6)
         assert "Invalid log level for SW Controller" in str(excinfo.value)
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+        assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
         async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, "Invalid log level for SW Controller")
         async_cb.reset()
 
@@ -580,6 +580,6 @@ def test_log_ctrl_verbosity_from_config_with_bad_value(accelize_drm, conf_json, 
                     async_cb.callback
                 )
     assert "Invalid log level for SW Controller" in str(excinfo.value)
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+    assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, "Invalid log level for SW Controller")
     async_cb.reset()

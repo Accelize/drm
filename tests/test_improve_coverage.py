@@ -35,7 +35,7 @@ def test_improve_coverage_ws_client_on_code_600(accelize_drm, conf_json, cred_js
         ) as drm_manager:
         with pytest.raises(accelize_drm.exceptions.DRMWSError) as excinfo:
             drm_manager.activate()
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSError.error_code
+        assert accelize_drm.exceptions.DRMWSError.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSError.error_code, 'Accelize Web Service error 600 on HTTP request')
     async_cb.reset()
     log_content = logfile.read()
@@ -69,7 +69,7 @@ def test_improve_coverage_wsclient_http_address_error(accelize_drm, conf_json, c
         ) as drm_manager:
         with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
             drm_manager.activate()
-        assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMWSMayRetry.error_code
+        assert accelize_drm.exceptions.DRMWSMayRetry.error_code in async_handler.get_error_code(str(excinfo.value))
         assert search(r'Error .+ on HTTP request, Timeout was reached: Connection timed out after', str(excinfo.value), IGNORECASE)
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, HTTP_TIMEOUT_ERR_MSG)
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSMayRetry.error_code, (
@@ -135,7 +135,7 @@ def test_improve_coverage_readDrmAddress(accelize_drm, conf_json, cred_json, asy
             driver.write_register_callback,
             async_cb.callback
         )
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
+    assert accelize_drm.exceptions.DRMCtlrError.error_code in async_handler.get_error_code(str(excinfo.value))
     assert search(r'Error in read register callback, errcode = 123: failed to read address', logfile.read(), IGNORECASE)
     async_cb.assert_Error(accelize_drm.exceptions.DRMCtlrError.error_code, 'Unable to find DRM Controller registers')
     async_cb.reset()
@@ -168,7 +168,7 @@ def test_improve_coverage_writeDrmAddress(accelize_drm, conf_json, cred_json, as
             my_bad_write_register,
             async_cb.callback
         )
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMCtlrError.error_code
+    assert accelize_drm.exceptions.DRMCtlrError.error_code in async_handler.get_error_code(str(excinfo.value))
     assert search(r'Error in write register callback, errcode = 123: failed to write', logfile.read(), IGNORECASE)
     version_major = int(match(r'(\d+)\..+', accelize_drm.pytest_hdk_version).group(1))
     async_cb.assert_Error(accelize_drm.exceptions.DRMCtlrError.error_code, 'failed with error code 123')
@@ -215,7 +215,7 @@ def test_improve_coverage_runBistLevel2_bad_size(accelize_drm, conf_json, cred_j
             lambda x,y: my_bad_write_register(x,y, context),
             async_cb.callback
         )
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+    assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
     assert search(r'DRM Communication Self-Test 2 failed: bad size', logfile.read(), IGNORECASE)
     async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, 'DRM Communication Self-Test 2 failed')
     async_cb.reset()
@@ -267,7 +267,7 @@ def test_improve_coverage_runBistLevel2_bad_data(accelize_drm, conf_json, cred_j
             async_cb.callback
         )
     content = logfile.read()
-    assert async_handler.get_error_code(str(excinfo.value)) == accelize_drm.exceptions.DRMBadArg.error_code
+    assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
     assert len(findall(r'Mailbox\[\d+\]=0x[0-9A-F]{8} != 0x[0-9A-F]{8}', content, IGNORECASE)) == 1
     assert search(r'DRM Communication Self-Test 2 failed: random test failed.', content, IGNORECASE)
     async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, 'DRM Communication Self-Test 2 failed: random test failed')
