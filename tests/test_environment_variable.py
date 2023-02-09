@@ -38,21 +38,22 @@ def test_env_var_DRMSAAS_URL(accelize_drm, conf_json, cred_json, async_handler,
     assert 'DRMSAAS_URL' not in  environ.keys()
     cred_json.clear_cache()
 
-    with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
-        with accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-            ) as drm_manager:
-            pass
+    with accelize_drm.DrmManager(
+            conf_json.path,
+            cred_json.path,
+            driver.read_register_callback,
+            driver.write_register_callback,
+            async_cb.callback
+        ) as drm_manager:
+        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+            drm_manager.activate()
     assert "Accelize Web Service error 404 on HTTP request" in str(excinfo.value)
     assert accelize_drm.exceptions.DRMWSReqError.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Accelize Web Service error 404')
     async_cb.reset()
     log_content = logfile.read()
-    assert search(r'Starting background thread which checks health', log_content, MULTILINE)
+    assert search(r'Use environment variable DRMLIB_ENVVAR_URL', log_content, MULTILINE)
+    assert search(r'Accelize Web Service error 404 on HTTP request', log_content, MULTILINE)
     logfile.remove()
 
 
@@ -77,7 +78,6 @@ def test_env_var_DRMSAAS_CLIENT_ID(accelize_drm, conf_json, cred_json, async_han
             async_cb.callback
         ) as drm_manager:
         drm_manager.activate()
-        drm_manager.deactivate()
     async_cb.assert_NoError()
 
     # Check when DRMSAAS_CLIENT_ID is unset
