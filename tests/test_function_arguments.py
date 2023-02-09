@@ -148,7 +148,8 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
         )
     assert search(r'JSON file .* is empty', str(excinfo.value)) is not None
     assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
-    async_cb.assert_NoError()
+    assert async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, "JSON file .* is empty")
+    async_cb.reset()
     print('Test empty config file: PASS')
 
     # Test with an invalid configuration file
@@ -169,7 +170,8 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
         )
     assert search(r'Cannot parse ', str(excinfo.value)) is not None
     assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
-    async_cb.assert_NoError()
+    assert async_cb.assert_Error(accelize_drm.exceptions.DRMBadFormat.error_code, "Cannot parse ")
+    async_cb.reset()
     print('Test invalid config file: PASS')
 
     # Test when no licensing node is specified in configuration file
@@ -190,7 +192,7 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
         )
     assert "Missing parameter 'licensing' of type Object" in str(excinfo.value)
     assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
-    async_cb.assert_NoError()
+    assert async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, "Missing parameter 'licensing' of type Object")
     print('Test no licensing node in config file: PASS')
 
     # Test when licensing node is empty in configuration file

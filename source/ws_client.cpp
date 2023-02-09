@@ -203,8 +203,7 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
                         Json::uintValue, 0).asUInt();
 
     } catch( Exception &e ) {
-        Throw( e.getErrCode(), "Error with service configuration file '{}': {}. ",
-                conf_file_path, e.what() );
+        Throw( e.getErrCode(), "Error parsing configuration file '{}: {}. ", conf_file_path, e.what() );
     }
 
     // Temporarily change file log level to be sure not to capture the Client and Secret IDs
@@ -219,7 +218,7 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
         Json::Value client_secret_json = JVgetRequired( cred_json, "client_secret", Json::stringValue );
         mClientSecret = client_secret_json.asString();
     } catch( Exception &e ) {
-        Throw( e.getErrCode(), "Error with credential file '{}': {}. ", cred_file_path, e.what() );
+        Throw( e.getErrCode(), "Error parsing credential file '{}: {}. ", cred_file_path, e.what() );
     }
     // Restore original file log level
     if ( logFileLevel <= spdlog::level::debug )
