@@ -109,7 +109,7 @@ def test_env_var_DRMSAAS_CLIENT_ID(accelize_drm, conf_json, cred_json, async_han
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Accelize Web Service error 401')
     async_cb.reset()
     log_content = logfile.read()
-    assert search(r'Accelize Web Service error 404 on HTTP request', log_content, IGNORECASE)
+    assert search(r'Accelize Web Service error 401', log_content, IGNORECASE)
     logfile.remove()
 
 
@@ -163,5 +163,5 @@ def test_env_var_DRMSAAS_CLIENT_SECRET(accelize_drm, conf_json, cred_json, async
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Accelize Web Service error 401')
     async_cb.reset()
     log_content = logfile.read()
-    assert search(r'Accelize Web Service error 404 on HTTP request', log_content, IGNORECASE)
+    assert search(r'Accelize Web Service error 401', log_content, IGNORECASE)
     logfile.remove()

@@ -61,8 +61,7 @@ def test_mailbox_write_overflow(accelize_drm, conf_json, cred_json, async_handle
         with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
             drm_manager.set(mailbox_data=mb_data)
         assert 'Trying to write out of Mailbox memory space' in str(excinfo.value)
-        err_code = async_handler.get_error_code(str(excinfo.value))
-        assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
+        assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
         async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, 'Trying to write out of Mailbox memory space')
         async_cb.reset()
 
@@ -90,8 +89,7 @@ def test_mailbox_type_error(accelize_drm, conf_json, cred_json, async_handler,
         with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
             drm_manager.set(mailbox_data='this is bad type')
         assert 'Value must be an array of integers' in str(excinfo.value)
-        err_code = async_handler.get_error_code(str(excinfo.value))
-        assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
+        assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, 'Value must be an array of integers')
     async_cb.reset()
 

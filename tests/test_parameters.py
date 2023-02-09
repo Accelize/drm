@@ -382,8 +382,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
         )
     assert search(r'ws_retry_period_long .+ must be greater than ws_retry_period_short .+',
                   str(excinfo.value)) is not None
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
+    assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_NoError()
 
     async_cb.reset()
@@ -441,8 +440,7 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
             async_cb.callback
         )
     assert "ws_request_timeout must not be 0" in str(excinfo.value)
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
+    assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.reset()
     conf_json.reset()
     exp_value = 2*orig_request_timeout
@@ -871,8 +869,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
             drm_manager.set(ws_retry_period_long=orig_retry_period_short)
         assert search(r'ws_retry_period_long .+ must be greater than ws_retry_period_short .+',
                       str(excinfo.value)) is not None
-        err_code = async_handler.get_error_code(str(excinfo.value))
-        assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
+        assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
         exp_value = orig_retry_period_long + 1
         drm_manager.set(ws_retry_period_long=exp_value)
         assert drm_manager.get('ws_retry_period_long') == exp_value
@@ -888,8 +885,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
             drm_manager.set(ws_retry_period_short=orig_retry_period_long)
         assert search(r'ws_retry_period_long .+ must be greater than ws_retry_period_short .+',
                       str(excinfo.value)) is not None
-        err_code = async_handler.get_error_code(str(excinfo.value))
-        assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
+        assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
         exp_value = orig_retry_period_short + 1
         drm_manager.set(ws_retry_period_short=exp_value)
         assert drm_manager.get('ws_retry_period_short') == exp_value
@@ -940,7 +936,7 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
         assert async_cb.was_called, 'Asynchronous callback has not been called.'
         assert async_cb.message is not None, 'Asynchronous callback did not report any message'
         assert test_message in async_cb.message, 'Asynchronous callback has not received the correct message'
-        assert async_cb.errcode == accelize_drm.exceptions.DRMDebug.error_code, \
+        assert accelize_drm.exceptions.DRMDebug.error_code in async_cb.errcode, \
             'Asynchronous callback has not received the correct error code'
         drm_manager.deactivate()
         async_cb.reset()

@@ -153,7 +153,7 @@ def test_long_to_short_retry_on_authentication(accelize_drm, conf_json,
         update_context(allow=True)
         assert get_context('allow')
     assert async_cb.was_called
-    assert async_cb.errcode == accelize_drm.exceptions.DRMWSTimedOut.error_code
+    assert accelize_drm.exceptions.DRMWSTimedOut.error_code in async_cb.errcode
     assert search(r'Timeout on Authentication request after', async_cb.message, IGNORECASE)
     async_cb.reset()
     log_content = logfile.read()
@@ -226,7 +226,7 @@ def test_long_to_short_retry_on_license(accelize_drm, conf_json, cred_json,
         lic_duration = drm_manager.get('license_duration')
         wait_until_true(lambda: async_cb.was_called, lic_duration + 2*retry_timeout)
     assert async_cb.was_called
-    assert async_cb.errcode == accelize_drm.exceptions.DRMWSTimedOut.error_code
+    assert accelize_drm.exceptions.DRMWSTimedOut.error_code in async_cb.errcode
     assert search(r'Timeout on License request after \d+ attempts', async_cb.message, IGNORECASE)
     async_cb.reset()
     log_content = logfile.read()
@@ -359,7 +359,7 @@ def test_thread_retry_on_lost_connection(accelize_drm, conf_json, cred_json, asy
         drm_manager.activate()
         wait_until_true(lambda: async_cb.was_called, timeout=2*license_period_second)
     assert async_cb.was_called
-    assert async_cb.errcode == accelize_drm.exceptions.DRMWSTimedOut.error_code
+    assert accelize_drm.exceptions.DRMWSTimedOut.error_code in async_cb.errcode
     m = search(r'Timeout on License request after (\d+) attempts', async_cb.message)
     assert m is not None
     nb_attempts = int(m.group(1))

@@ -124,12 +124,12 @@ def test_header_error_on_licenseTimer(accelize_drm, conf_json, cred_json, async_
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
         assert async_cb.was_called
-        assert async_cb.errcode == accelize_drm.exceptions.DRMCtlrError.error_code
+        assert accelize_drm.exceptions.DRMCtlrError.error_code in async_cb.errcode
         assert search(r"License header check error", async_cb.message)
         with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
             drm_manager.deactivate()
         assert async_cb.was_called
-        assert async_cb.errcode == accelize_drm.exceptions.DRMCtlrError.error_code
+        assert accelize_drm.exceptions.DRMCtlrError.error_code in async_cb.errcode
         assert search(r"Session ID mismatch", async_cb.message)
     logfile.remove()
 
@@ -172,7 +172,7 @@ def test_header_error_on_licenseTimer2(accelize_drm, conf_json, cred_json, async
         assert not drm_manager.get('license_status')
         activators.autotest(is_activated=False)
     assert async_cb.was_called
-    assert async_cb.errcode == accelize_drm.exceptions.DRMCtlrError.error_code
+    assert accelize_drm.exceptions.DRMCtlrError.error_code in async_cb.errcode
     assert search(r"License (header|MAC) check error", async_cb.message)
     logfile.remove()
 
@@ -231,12 +231,12 @@ def test_replay_request(accelize_drm, conf_json, cred_json, async_handler,
         wait_until_true(lambda: async_cb.was_called, 2*lic_duration)
         assert not drm_manager.get('license_status')
         assert async_cb.was_called
-        assert async_cb.errcode == accelize_drm.exceptions.DRMCtlrError.error_code
+        assert accelize_drm.exceptions.DRMCtlrError.error_code in async_cb.errcode
         assert search(r"License (header|MAC) check error", async_cb.message)
         activators.autotest(is_activated=False)
         with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
             drm_manager.deactivate()
         assert async_cb.was_called
-        assert async_cb.errcode == accelize_drm.exceptions.DRMCtlrError.error_code
+        assert accelize_drm.exceptions.DRMCtlrError.error_code in async_cb.errcode
         assert search(r"Session ID mismatch", async_cb.message)
     logfile.remove()

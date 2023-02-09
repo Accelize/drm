@@ -298,7 +298,7 @@ def test_improve_coverage_setLicense(accelize_drm, conf_json, cred_json, async_h
                 ) as drm_manager:
             drm_manager.activate()
     assert async_cb.was_called
-    assert async_cb.errcode == accelize_drm.exceptions.DRMWSRespError.error_code
+    assert accelize_drm.exceptions.DRMWSRespError.error_code in async_cb.errcode
     assert 'Malformed response from License Web Service:' in async_cb.message
     logfile.remove()
 

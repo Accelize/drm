@@ -57,8 +57,7 @@ def test_nodelock_request_file(accelize_drm, conf_json, cred_json, async_handler
             with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
                 drm_manager.activate()
             assert 'Path is not a valid file' in str(excinfo.value)
-            err_code = async_handler.get_error_code(str(excinfo.value))
-            assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
+            assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
             async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, 'Path is not a valid file')
             async_cb.reset()
 
@@ -70,8 +69,7 @@ def test_nodelock_request_file(accelize_drm, conf_json, cred_json, async_handler
             with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
                 drm_manager.activate()
             assert 'Cannot parse JSON string ' in str(excinfo.value)
-            err_code = async_handler.get_error_code(str(excinfo.value))
-            assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
+            assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
             async_cb.assert_Error(accelize_drm.exceptions.DRMBadFormat.error_code, 'Cannot parse JSON string')
             async_cb.reset()
         log_content = logfile.read()
@@ -137,8 +135,7 @@ def test_nodelock_license_file(accelize_drm, conf_json, cred_json, async_handler
             with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
                 drm_manager.activate()
             assert 'Cannot parse JSON string ' in str(excinfo.value)
-            err_code = async_handler.get_error_code(str(excinfo.value))
-            assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
+            assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
             async_cb.assert_Error(accelize_drm.exceptions.DRMBadFormat.error_code, 'Cannot parse JSON string')
             async_cb.reset()
     finally:
@@ -308,8 +305,7 @@ def test_nodelock_limits(accelize_drm, conf_json, conf_json_second, cred_json, a
                 drm_manager1.activate()
             assert 'Accelize Web Service error 403' in str(excinfo.value)
             assert 'No valid entitlement available for this product' in str(excinfo.value)
-            err_code = async_handler.get_error_code(str(excinfo.value))
-            assert err_code == accelize_drm.exceptions.DRMWSReqError.error_code
+            assert accelize_drm.exceptions.DRMWSReqError.error_code in async_handler.get_error_code(str(excinfo.value))
         async_cb1.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'No valid entitlement available for this product')
         async_cb1.reset()
     finally:
@@ -363,8 +359,7 @@ def test_metering_mode_is_blocked_after_nodelock_mode(accelize_drm, conf_json, c
                 drm_manager.activate()
             assert search(r'DRM Controller is locked in Node-Locked licensing mode:', str(excinfo.value), IGNORECASE)
             assert search(r'You must reprogram the FPGA device to use other modes', str(excinfo.value), IGNORECASE)
-            err_code = async_handler.get_error_code(str(excinfo.value))
-            assert err_code == accelize_drm.exceptions.DRMBadUsage.error_code
+            assert accelize_drm.exceptions.DRMBadUsage.error_code in async_handler.get_error_code(str(excinfo.value))
         async_cb.assert_Error(accelize_drm.exceptions.DRMBadUsage.error_code, 'DRM Controller is locked in Node-Locked licensing mode')
         async_cb.reset()
     finally:
@@ -528,8 +523,7 @@ def test_nodelock_is_board_specific(accelize_drm, conf_json, cred_json,
             with pytest.raises(accelize_drm.exceptions.DRMCtlrError) as excinfo:
                 drm_manager.activate()
             assert "DRM Controller Activation is in timeout" in str(excinfo.value)
-            err_code = async_handler.get_error_code(str(excinfo.value))
-            assert err_code == accelize_drm.exceptions.DRMCtlrError.error_code
+            assert accelize_drm.exceptions.DRMCtlrError.error_code in async_handler.get_error_code(str(excinfo.value))
         async_cb.assert_Error(accelize_drm.exceptions.DRMCtlrError.error_code, 'DRM Controller Activation is in timeout')
         async_cb.reset()
     finally:

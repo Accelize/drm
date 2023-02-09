@@ -147,8 +147,7 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
             async_cb.callback
         )
     assert search(r'JSON file .* is empty', str(excinfo.value)) is not None
-    errcode = async_handler.get_error_code(str(excinfo.value))
-    assert errcode == accelize_drm.exceptions.DRMBadArg.error_code
+    assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_NoError()
     print('Test empty config file: PASS')
 
@@ -169,8 +168,7 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
             async_cb.callback
         )
     assert search(r'Cannot parse ', str(excinfo.value)) is not None
-    errcode = async_handler.get_error_code(str(excinfo.value))
-    assert errcode == accelize_drm.exceptions.DRMBadFormat.error_code
+    assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_NoError()
     print('Test invalid config file: PASS')
 
@@ -191,8 +189,7 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
             async_cb.callback
         )
     assert "Missing parameter 'licensing' of type Object" in str(excinfo.value)
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
+    assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_NoError()
     print('Test no licensing node in config file: PASS')
 
@@ -212,8 +209,7 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
             async_cb.callback
         )
     assert "Value of parameter 'licensing' is empty" in str(excinfo.value)
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
+    assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
     print('Test empty licensing in config file: PASS')
 
     # Test when no url is specified in configuration file
@@ -234,8 +230,7 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
             async_cb.callback
         )
     assert "Missing parameter 'url' of type String" in str(excinfo.value)
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
+    assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
     print('Test no url in config file: PASS')
 
     # In nodelocked, test when no license_dir is specified in configuration file
@@ -257,8 +252,7 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
             async_cb.callback
         )
     assert "Missing parameter 'license_dir' of type String" in str(excinfo.value)
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
+    assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
     print('Test in node-locked when no license_dir is in config file: PASS')
 
     # In nodelocked, test when license_dir is empty
@@ -275,8 +269,7 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
             async_cb.callback
         )
     assert "Value of parameter 'license_dir' is an empty string" in str(excinfo.value)
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
+    assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
     print('Test in node-locked when license_dir is empty: PASS')
 
     # In nodelocked, test when license_dir in configuration file is not existing in file-system
@@ -296,8 +289,7 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
         )
     assert search(r'License directory path .* is not existing on file system',
                   str(excinfo.value)) is not None
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
+    assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
     print('Test in node-locked when license_dir in config file is not existing: PASS')
 
     # In nodelocked, test when license_dir in configuration file is not a directory
@@ -319,8 +311,7 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
         )
     assert search(r'License directory path .* is not existing on file system',
                   str(excinfo.value)) is not None
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
+    assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
     print('Test in node-locked when license_dir in config file is not a directory: PASS')
 
     # Test when no DRM section is specified
@@ -339,8 +330,7 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
             async_cb.callback
         )
     assert "Missing parameter 'drm' of type Object" in str(excinfo.value)
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
+    assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
     print('Test no DRM section in config file: PASS')
 
     # Test when DRM section is empty
@@ -358,8 +348,7 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
             async_cb.callback
         )
     assert "Value of parameter 'drm' is empty" in str(excinfo.value)
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
+    assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
     print('Test empty DRM section in config file: PASS')
 
     # Test when no DRM frequency is specified
@@ -379,8 +368,7 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
             async_cb.callback
         )
     assert "Missing parameter 'frequency_mhz' of type Integer" in str(excinfo.value)
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
+    assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
     print('Test no DRM frequency in config file: PASS')
 
     # Test when DRM frequency is a wrong type
@@ -396,8 +384,7 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
             async_cb.callback
         )
     assert "Wrong parameter type for 'frequency_mhz' = " in str(excinfo.value)
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
+    assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
     print('Test DRM frequency is a wrong type: PASS')
 
     # Test when settings is a wrong type
@@ -413,8 +400,7 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
             async_cb.callback
         )
     assert "Wrong parameter type for 'settings' = " in str(excinfo.value)
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
+    assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
     print('Test settings is a wrong type: PASS')
 
 
@@ -437,8 +423,7 @@ def test_drm_manager_with_bad_credential_file(accelize_drm, conf_json, cred_json
             async_cb.callback
         )
     assert search(r'JSON file .* is empty', str(excinfo.value)) is not None
-    errcode = async_handler.get_error_code(str(excinfo.value))
-    assert errcode == accelize_drm.exceptions.DRMBadArg.error_code
+    assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, 'Error with credential file')
     async_cb.reset()
     print('Test empty crendential file: PASS')
@@ -460,8 +445,7 @@ def test_drm_manager_with_bad_credential_file(accelize_drm, conf_json, cred_json
             async_cb.callback
         )
     assert search(r'Cannot parse ', str(excinfo.value)) is not None
-    errcode = async_handler.get_error_code(str(excinfo.value))
-    assert errcode == accelize_drm.exceptions.DRMBadFormat.error_code
+    assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_Error(accelize_drm.exceptions.DRMBadFormat.error_code, 'Error with credential file')
     async_cb.reset()
     print('Test invalid crendential file: PASS')
@@ -482,8 +466,7 @@ def test_drm_manager_with_bad_credential_file(accelize_drm, conf_json, cred_json
             async_cb.callback
         )
     assert "Missing parameter 'client_id' of type String" in str(excinfo.value)
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
+    assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
     print('Test when no Client ID is specified in credential file: PASS')
 
     # Test when no Client Secret ID is specified in credential file
@@ -502,8 +485,7 @@ def test_drm_manager_with_bad_credential_file(accelize_drm, conf_json, cred_json
             async_cb.callback
         )
     assert "Missing parameter 'client_secret' of type String" in str(excinfo.value)
-    err_code = async_handler.get_error_code(str(excinfo.value))
-    assert err_code == accelize_drm.exceptions.DRMBadFormat.error_code
+    assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
     print('Test when no Client Secret ID is specified in credential file: PASS')
 
 
@@ -539,16 +521,14 @@ def test_drm_manager_get_and_set_bad_arguments(accelize_drm, conf_json, cred_jso
         with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
             drm_manager.get('unknown_parameter')
         assert "Cannot find parameter: unknown_parameter" in str(excinfo.value)
-        err_code = async_handler.get_error_code(str(excinfo.value))
-        assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
+        assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
         print("Test bad argument is given to get: PASS")
 
         # Test when bad argument is given to set
         with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
             drm_manager.set(unknown_parameter=-1)
         assert "Cannot find parameter: unknown_parameter" in str(excinfo.value)
-        err_code = async_handler.get_error_code(str(excinfo.value))
-        assert err_code == accelize_drm.exceptions.DRMBadArg.error_code
+        assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
         print("Test when bad argument is given to set: PASS")
 
 

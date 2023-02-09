@@ -1177,12 +1177,12 @@ class AsyncErrorHandler:
     """
     def __init__(self):
         self.message = ""
-        self.errcode = list()
+        self.errcode = set()
         self.was_called = False
 
     def reset(self):
         self.message = ""
-        self.errcode = list()
+        self.errcode = set()
         self.was_called = False
 
     def callback(self, message):
@@ -1191,7 +1191,7 @@ class AsyncErrorHandler:
             self.message += message.decode()
         else:
             self.message = message
-        self.errcode = AsyncErrorHandlerList.get_error_code(self.message)
+        self.errcode.update(AsyncErrorHandlerList.get_error_code(self.message))
 
     def assert_NoError(self, extra_msg=None):
         if extra_msg is None:

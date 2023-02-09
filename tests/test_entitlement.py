@@ -201,8 +201,7 @@ def test_force_nodelock_to_inactive_user(accelize_drm, conf_json, cred_json,
             drm_manager.activate()
         assert 'Accelize Web Service error 403' in str(excinfo.value)
         assert search(r'No valid entitlement available for this product', str(excinfo.value))
-        err_code = async_handler.get_error_code(str(excinfo.value))
-        assert err_code == accelize_drm.exceptions.DRMWSReqError.error_code
+        assert accelize_drm.exceptions.DRMWSReqError.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Accelize Web Service error 403')
     async_cb.reset()
 

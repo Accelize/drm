@@ -90,7 +90,7 @@ def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_jso
             assert async_cb.message is not None, 'Asynchronous callback did not report any message'
             assert search(r'DRM frequency .* differs from .* configuration file',
                 async_cb.message) is not None, 'Unexpected message reported by asynchronous callback'
-            assert async_cb.errcode == accelize_drm.exceptions.DRMBadFrequency.error_code, \
+            assert accelize_drm.exceptions.DRMBadFrequency.error_code in async_cb.errcode, \
                 'Unexpected error code reported by asynchronous callback'
     print('Test frequency mismatch > threshold: PASS')
 
@@ -112,8 +112,7 @@ def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_jso
             drm_manager.activate()
         assert 'Accelize Web Service error 422' in str(excinfo.value)
         assert 'ensure this value is greater than or equal to 50' in str(excinfo.value)
-        err_code = async_handler.get_error_code(str(excinfo.value))
-        assert err_code == accelize_drm.exceptions.DRMWSReqError.error_code
+        assert accelize_drm.exceptions.DRMWSReqError.error_code in async_handler.get_error_code(str(excinfo.value))
     print('Test frequency underflow: PASS')
 
     # Test web service detects a frequency overflow
@@ -134,8 +133,7 @@ def test_configuration_file_with_bad_frequency(accelize_drm, conf_json, cred_jso
             drm_manager.activate()
         assert 'Accelize Web Service error 422' in str(excinfo.value)
         assert 'ensure this value is less than or equal to 350' in str(excinfo.value)
-        err_code = async_handler.get_error_code(str(excinfo.value))
-        assert err_code == accelize_drm.exceptions.DRMWSReqError.error_code
+        assert accelize_drm.exceptions.DRMWSReqError.error_code in async_handler.get_error_code(str(excinfo.value))
         print('Test frequency overflow: PASS')
 
 

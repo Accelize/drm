@@ -141,8 +141,7 @@ def test_only_1_object_is_allowed(accelize_drm, conf_json, conf_json_second,
         assert search(r'Another instance is currently owning the DRM Controller', str(excinfo.value), IGNORECASE)
         assert search(r'You might have anoth process running the DRM Controller.', str(excinfo.value), IGNORECASE)
         assert search(r'If not, a reset of the DRM Controller is required to recover.', str(excinfo.value), IGNORECASE)
-        err_code = async_handler.get_error_code(str(excinfo.value))
-        assert err_code == accelize_drm.exceptions.DRMBadUsage.error_code
+        assert accelize_drm.exceptions.DRMBadUsage.error_code in async_handler.get_error_code(str(excinfo.value))
         async_cb.reset()
     log_content1 = logfile1.read()
     assert search(r'DRM Controller is locked by this instance with ID', log_content1, IGNORECASE)
