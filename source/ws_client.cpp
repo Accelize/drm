@@ -229,17 +229,17 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
     const char* url_var = std::getenv( DRMLIB_ENVVAR_URL );
     if ( url_var != NULL ) {
         url = std::string( url_var );
-        Debug( "Use environment variable DRMLIB_ENVVAR_URL: {}", url );
+        Debug( "Use environment variable {}: {}", DRMLIB_ENVVAR_URL, url );
     }
     const char* client_id_var = std::getenv( DRMLIB_ENVVAR_CLIENT_ID );
     if ( client_id_var != NULL ) {
         mClientId = std::string( client_id_var );
-        Debug( "Use environment variable DRMLIB_ENVVAR_CLIENT_ID: {}", mClientId );
+        Debug( "Use environment variable {}: {}", DRMLIB_ENVVAR_CLIENT_ID, mClientId );
     }
     const char* secret_id_var = std::getenv( DRMLIB_ENVVAR_CLIENT_SECRET );
     if ( secret_id_var != NULL ) {
         mClientSecret = std::string( secret_id_var );
-        Debug( "Use environment variable DRMLIB_ENVVAR_CLIENT_SECRET" );
+        Debug( "Use environment variable {}", DRMLIB_ENVVAR_CLIENT_SECRET );
     }
 
     // Init Curl lib
