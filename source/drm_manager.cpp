@@ -292,7 +292,7 @@ protected:
     // Function callbacks
     DrmManager::ReadRegisterCallback  f_read_register = nullptr;
     DrmManager::WriteRegisterCallback f_write_register = nullptr;
-    DrmManager::AsynchErrorCallback   f_asynch_error = nullptr;
+    DrmManager::AsynchErrorCallback   f_asynch_error = [](std::string msg) { std::cerr << "ERROR: " << msg << std::endl; };
 
     // Settings files
     std::string mConfFilePath;
@@ -426,9 +426,6 @@ protected:
             mIsPnC = false;
 
             mDebugMessageLevel = spdlog::level::trace;
-
-            // Define default asynchronous error callback
-            f_asynch_error = [](std::string msg) { std::cerr << "ERROR: " << msg << std::endl; };
 
             // Parse configuration file
             parse_configuration_file();
