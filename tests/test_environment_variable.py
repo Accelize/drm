@@ -6,7 +6,8 @@ import pytest
 from os import environ
 
 
-def test_env_var_DRMSAAS_URL(accelize_drm, conf_json, cred_json, async_handler):
+def test_env_var_DRMSAAS_URL(accelize_drm, conf_json, cred_json, async_handler,
+                        log_file_factory):
     """
     Test DRMSAAS_URL environment variable overwrite value in config file
     """
@@ -16,6 +17,8 @@ def test_env_var_DRMSAAS_URL(accelize_drm, conf_json, cred_json, async_handler):
     # Check when DRMSAAS_URL is set
     environ['DRMSAAS_URL'] = conf_json['licensing']['url']
     conf_json['licensing']['url'] = 'http://acme.com'
+    logfile = log_file_factory.create(1)
+    conf_json['settings'].update(logfile.json)
     conf_json.save()
     assert conf_json['licensing']['url'] != environ['DRMSAAS_URL']
 
@@ -48,6 +51,9 @@ def test_env_var_DRMSAAS_URL(accelize_drm, conf_json, cred_json, async_handler):
     assert accelize_drm.exceptions.DRMWSReqError.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Accelize Web Service error 404')
     async_cb.reset()
+    log_content = logfile.read()
+    assert search(r'Starting background thread which checks health', log_content, MULTILINE)
+    logfile.remove()
 
 
 def test_env_var_DRMSAAS_CLIENT_ID(accelize_drm, conf_json, cred_json, async_handler):
