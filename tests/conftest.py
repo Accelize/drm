@@ -1198,9 +1198,9 @@ class AsyncErrorHandler:
             prepend_msg = ''
         else:
             prepend_msg = '%s: ' % extra_msg
-        assert self.message, '%sAsynchronous callback reports a message: %s' \
+        assert not self.message, '%sAsynchronous callback reports a message: %s' \
                                      % (prepend_msg, self.message)
-        assert len(self.errcode), '%sAsynchronous callback returned error code: %d' \
+        assert len(self.errcode) == 0, '%sAsynchronous callback returned error code: %d' \
                                      % (prepend_msg, self.errcode)
         assert not self.was_called, '%sAsynchronous callback has been called' % prepend_msg
 
