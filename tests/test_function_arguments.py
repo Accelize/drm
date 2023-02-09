@@ -3,7 +3,7 @@
 Test DRM Library with bad arguments. Make sure errors are detected and reported as expected.
 """
 import pytest
-from re import search, MULTILINE
+from re import search, MULTILINE, IGNORECASE, DOTALL
 from flask import request
 
 
@@ -168,7 +168,7 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
             driver.write_register_callback,
             async_cb.callback
         )
-    assert search(r"Cannot parse JSON string .* Missing '\}' or object member name", str(excinfo.value), MULTILINE)
+    assert search(r"Cannot parse JSON string .* Missing '\}' or object member name", str(excinfo.value), DOTALL)
     assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_Error(accelize_drm.exceptions.DRMBadFormat.error_code, r"Cannot parse JSON string .* Missing '\}' or object member name")
     async_cb.reset()
