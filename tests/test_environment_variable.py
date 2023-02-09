@@ -94,14 +94,15 @@ def test_env_var_DRMSAAS_CLIENT_ID(accelize_drm, conf_json, cred_json, async_han
     assert 'DRMSAAS_CLIENT_ID' not in  environ.keys()
     cred_json.clear_cache()
 
-    with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
-        accelize_drm.DrmManager(
+    with accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
-        )
+        ) as drm_manager:
+        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+            drm_manager.activate()
     assert "Accelize Web Service error 401" in str(excinfo.value)
     assert "invalid_client" in str(excinfo.value)
     assert accelize_drm.exceptions.DRMWSReqError.error_code in async_handler.get_error_code(str(excinfo.value))
@@ -147,14 +148,15 @@ def test_env_var_DRMSAAS_CLIENT_SECRET(accelize_drm, conf_json, cred_json, async
     assert 'DRMSAAS_CLIENT_SECRET' not in  environ.keys()
     cred_json.clear_cache()
 
-    with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
-        accelize_drm.DrmManager(
+    with accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
             driver.read_register_callback,
             driver.write_register_callback,
             async_cb.callback
-        )
+        ) as drm_manager:
+        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+            drm_manager.activate()
     assert "Accelize Web Service error 401" in str(excinfo.value)
     assert "invalid_client" in str(excinfo.value)
     assert accelize_drm.exceptions.DRMWSReqError.error_code in async_handler.get_error_code(str(excinfo.value))
