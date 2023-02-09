@@ -201,7 +201,6 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
 
         mVerbosity = JVgetOptional( settings, "ws_verbosity",
                         Json::uintValue, 0).asUInt();
-
     } catch( Exception &e ) {
         Throw( e.getErrCode(), "Error parsing configuration file '{}: {}. ", conf_file_path, e.what() );
     }

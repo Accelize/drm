@@ -402,9 +402,14 @@ protected:
 
 
     Impl( const std::string& conf_file_path,
-          const std::string& cred_file_path )
+          const std::string& cred_file_path,
+          AsynchErrorCallback f_user_asynch_error )
     {
         TRY
+            // Use user error callback is defined, use default one otherwise
+            if ( f_user_asynch_error )
+                f_asynch_error = f_user_asynch_error;
+
             // Basic logging setup
             initLog();
 
@@ -656,87 +661,82 @@ protected:
     }
 
     void parse_configuration_file() {
-        try {
-            // Parse configuration file
-            Json::Value conf_json = parseJsonFile( mConfFilePath );
+        // Parse configuration file
+        Json::Value conf_json = parseJsonFile( mConfFilePath );
 
-            Json::Value param_lib = JVgetOptional( conf_json, "settings", Json::objectValue );
-            if ( param_lib != Json::nullValue ) {
-                // Console logging
-                sLogConsoleVerbosity = static_cast<spdlog::level::level_enum>( JVgetOptional(
-                        param_lib, "log_verbosity", Json::uintValue, (uint32_t)sLogConsoleVerbosity ).asUInt());
-                sLogConsoleFormat = JVgetOptional(
-                        param_lib, "log_format", Json::stringValue, sLogConsoleFormat ).asString();
+        Json::Value param_lib = JVgetOptional( conf_json, "settings", Json::objectValue );
+        if ( param_lib != Json::nullValue ) {
+            // Console logging
+            sLogConsoleVerbosity = static_cast<spdlog::level::level_enum>( JVgetOptional(
+                    param_lib, "log_verbosity", Json::uintValue, (uint32_t)sLogConsoleVerbosity ).asUInt());
+            sLogConsoleFormat = JVgetOptional(
+                    param_lib, "log_format", Json::stringValue, sLogConsoleFormat ).asString();
 
-                // File logging
-                sLogFileVerbosity = static_cast<spdlog::level::level_enum>( JVgetOptional(
-                        param_lib, "log_file_verbosity", Json::uintValue, (uint32_t)sLogFileVerbosity ).asUInt() );
-                sLogFileFormat = JVgetOptional(
-                        param_lib, "log_file_format", Json::stringValue, sLogFileFormat ).asString();
-                sLogFilePath = JVgetOptional(
-                        param_lib, "log_file_path", Json::stringValue, sLogFilePath ).asString();
-                sLogFileType = static_cast<eLogFileType>( JVgetOptional(
-                        param_lib, "log_file_type", Json::uintValue, (uint32_t)sLogFileType ).asUInt() );
-                sLogFileAppend = JVgetOptional(
-                        param_lib, "log_file_append", Json::booleanValue, sLogFileAppend ).asBool();
-                sLogFileRotatingSize = JVgetOptional( param_lib, "log_file_rotating_size",
-                        Json::uintValue, (uint32_t)sLogFileRotatingSize ).asUInt();
-                sLogFileRotatingNum = JVgetOptional( param_lib, "log_file_rotating_num",
-                        Json::uintValue, (uint32_t)sLogFileRotatingNum ).asUInt();
+            // File logging
+            sLogFileVerbosity = static_cast<spdlog::level::level_enum>( JVgetOptional(
+                    param_lib, "log_file_verbosity", Json::uintValue, (uint32_t)sLogFileVerbosity ).asUInt() );
+            sLogFileFormat = JVgetOptional(
+                    param_lib, "log_file_format", Json::stringValue, sLogFileFormat ).asString();
+            sLogFilePath = JVgetOptional(
+                    param_lib, "log_file_path", Json::stringValue, sLogFilePath ).asString();
+            sLogFileType = static_cast<eLogFileType>( JVgetOptional(
+                    param_lib, "log_file_type", Json::uintValue, (uint32_t)sLogFileType ).asUInt() );
+            sLogFileAppend = JVgetOptional(
+                    param_lib, "log_file_append", Json::booleanValue, sLogFileAppend ).asBool();
+            sLogFileRotatingSize = JVgetOptional( param_lib, "log_file_rotating_size",
+                    Json::uintValue, (uint32_t)sLogFileRotatingSize ).asUInt();
+            sLogFileRotatingNum = JVgetOptional( param_lib, "log_file_rotating_num",
+                    Json::uintValue, (uint32_t)sLogFileRotatingNum ).asUInt();
 
-                // Software Controller logging
-                sLogCtrlVerbosity = static_cast<eCtrlLogVerbosity>( JVgetOptional(
-                        param_lib, "log_ctrl_verbosity", Json::uintValue, (uint32_t)sLogCtrlVerbosity ).asUInt() );
+            // Software Controller logging
+            sLogCtrlVerbosity = static_cast<eCtrlLogVerbosity>( JVgetOptional(
+                    param_lib, "log_ctrl_verbosity", Json::uintValue, (uint32_t)sLogCtrlVerbosity ).asUInt() );
 
-                // Frequency detection
-                mFrequencyDetectionPeriod = JVgetOptional( param_lib, "frequency_detection_period",
-                        Json::uintValue, mFrequencyDetectionPeriod).asUInt();
-                mFrequencyDetectionThreshold = JVgetOptional( param_lib, "frequency_detection_threshold",
-                        Json::uintValue, mFrequencyDetectionThreshold).asDouble();
+            // Frequency detection
+            mFrequencyDetectionPeriod = JVgetOptional( param_lib, "frequency_detection_period",
+                    Json::uintValue, mFrequencyDetectionPeriod).asUInt();
+            mFrequencyDetectionThreshold = JVgetOptional( param_lib, "frequency_detection_threshold",
+                    Json::uintValue, mFrequencyDetectionThreshold).asDouble();
 
-                // Retry parameters
-                mWSRetryPeriodLong = JVgetOptional( param_lib, "ws_retry_period_long",
-                        Json::uintValue, mWSRetryPeriodLong).asUInt();
-                mWSRetryPeriodShort = JVgetOptional( param_lib, "ws_retry_period_short",
-                        Json::uintValue, mWSRetryPeriodShort).asUInt();
-                mWSApiRetryDuration = JVgetOptional( param_lib, "ws_api_retry_duration",
-                        Json::uintValue, mWSApiRetryDuration).asUInt();
+            // Retry parameters
+            mWSRetryPeriodLong = JVgetOptional( param_lib, "ws_retry_period_long",
+                    Json::uintValue, mWSRetryPeriodLong).asUInt();
+            mWSRetryPeriodShort = JVgetOptional( param_lib, "ws_retry_period_short",
+                    Json::uintValue, mWSRetryPeriodShort).asUInt();
+            mWSApiRetryDuration = JVgetOptional( param_lib, "ws_api_retry_duration",
+                    Json::uintValue, mWSApiRetryDuration).asUInt();
 
-                // Host and Card information
-                mHostDataVerbosity = static_cast<eHostDataVerbosity>( JVgetOptional(
-                        param_lib, "host_data_verbosity", Json::uintValue, (uint32_t)mHostDataVerbosity ).asUInt() );
-            }
-            mHealthPeriod = 0;
-            mHealthRetryTimeout = 0;
-            mHealthRetrySleep = 0;
-
-            if ( mWSRetryPeriodLong <= mWSRetryPeriodShort )
-                Throw( DRM_BadArg, "ws_retry_period_long ({} sec) must be greater than ws_retry_period_short ({} sec). ",
-                        mWSRetryPeriodLong, mWSRetryPeriodShort );
-
-            // Licensing configuration
-            Json::Value conf_licensing = conf_json["licensing"];
-            // Get licensing mode
-            // If this is a node-locked license, get the license path
-            std::string config_dir = getHomeDir() + PATH_SEP + ".config";
-            mNodeLockLicenseDirPath = JVgetOptional( conf_licensing, "license_dir", Json::stringValue, config_dir ).asString();
-            bool is_nodelocked = JVgetOptional( conf_licensing, "nodelocked", Json::booleanValue, false ).asBool();
-            if ( is_nodelocked ) {
-                mLicenseType = eLicenseType::NODE_LOCKED;
-                Debug( "Configuration file specifies a Node-locked license" );
-            } //else {
-                Debug( "Configuration file specifies a floating/metered license" );
-                // Get DRM frequency related parameters
-                Json::Value conf_drm = conf_json["drm"];
-                mFrequencyInit = JVgetRequired( conf_drm, "frequency_mhz", Json::intValue ).asUInt();
-                mFrequencyCurr = double(mFrequencyInit);
-                mBypassFrequencyDetection = JVgetOptional( conf_drm, "bypass_frequency_detection", Json::booleanValue,
-                        mBypassFrequencyDetection ).asBool();
-                mIsHybrid = JVgetOptional( conf_drm, "drm_software", Json::booleanValue, false ).asBool();
-//            }
-        } catch( const Exception &e ) {
-            Throw( e.getErrCode(), "Error parsing configuration file '{}: {}. ", mConfFilePath, e.what() );
+            // Host and Card information
+            mHostDataVerbosity = static_cast<eHostDataVerbosity>( JVgetOptional(
+                    param_lib, "host_data_verbosity", Json::uintValue, (uint32_t)mHostDataVerbosity ).asUInt() );
         }
+        mHealthPeriod = 0;
+        mHealthRetryTimeout = 0;
+        mHealthRetrySleep = 0;
+
+        if ( mWSRetryPeriodLong <= mWSRetryPeriodShort )
+            Throw( DRM_BadArg, "ws_retry_period_long ({} sec) must be greater than ws_retry_period_short ({} sec). ",
+                    mWSRetryPeriodLong, mWSRetryPeriodShort );
+
+        // Licensing configuration
+        Json::Value conf_licensing = conf_json["licensing"];
+        // Get licensing mode
+        // If this is a node-locked license, get the license path
+        std::string config_dir = getHomeDir() + PATH_SEP + ".config";
+        mNodeLockLicenseDirPath = JVgetOptional( conf_licensing, "license_dir", Json::stringValue, config_dir ).asString();
+        bool is_nodelocked = JVgetOptional( conf_licensing, "nodelocked", Json::booleanValue, false ).asBool();
+        if ( is_nodelocked ) {
+            mLicenseType = eLicenseType::NODE_LOCKED;
+            Debug( "Configuration file specifies a Node-locked license" );
+        }
+        Debug( "Configuration file specifies a floating/metered license" );
+        // Get DRM frequency related parameters
+        Json::Value conf_drm = conf_json["drm"];
+        mFrequencyInit = JVgetRequired( conf_drm, "frequency_mhz", Json::intValue ).asUInt();
+        mFrequencyCurr = double(mFrequencyInit);
+        mBypassFrequencyDetection = JVgetOptional( conf_drm, "bypass_frequency_detection", Json::booleanValue,
+                mBypassFrequencyDetection ).asBool();
+        mIsHybrid = JVgetOptional( conf_drm, "drm_software", Json::booleanValue, false ).asBool();
     }
 
     Json::Value detectBoards() {
@@ -2586,14 +2586,13 @@ public:
           ReadRegisterCallback f_user_read_register,
           WriteRegisterCallback f_user_write_register,
           AsynchErrorCallback f_user_asynch_error )
-        : Impl( conf_file_path, cred_file_path )
+        : Impl( conf_file_path, cred_file_path, f_user_asynch_error )
     {
         TRY
             Debug( "Calling Impl public constructor" );
             const char* ctrl_timeout = getenv( "DRM_CONTROLLER_TIMEOUT_IN_MICRO_SECONDS" );
             const char* ctrl_sleep = getenv( "DRM_CONTROLLER_SLEEP_IN_MICRO_SECONDS" );
-            if ( f_user_asynch_error )
-                f_asynch_error = f_user_asynch_error;
+
             // Determine DRM Ctrl TA existance by trying to initialize it
             mIsPnC = pnc_initialize_drm_ctrl_ta();
             if ( mIsPnC ) {
