@@ -4,6 +4,7 @@ Test environment variables behavior to set parameters of the DRM Library.
 """
 import pytest
 from os import environ
+from re import search, IGNORECASE
 
 
 def test_env_var_DRMSAAS_URL(accelize_drm, conf_json, cred_json, async_handler,
@@ -52,8 +53,8 @@ def test_env_var_DRMSAAS_URL(accelize_drm, conf_json, cred_json, async_handler,
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Accelize Web Service error 404')
     async_cb.reset()
     log_content = logfile.read()
-    assert search(r'Use environment variable DRMLIB_ENVVAR_URL', log_content, MULTILINE)
-    assert search(r'Accelize Web Service error 404 on HTTP request', log_content, MULTILINE)
+    assert search(r'Use environment variable DRMLIB_ENVVAR_URL', log_content, IGNORECASE)
+    assert search(r'Accelize Web Service error 404 on HTTP request', log_content, IGNORECASE)
     logfile.remove()
 
 
