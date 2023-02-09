@@ -1204,12 +1204,12 @@ class AsyncErrorHandler:
                                      % (prepend_msg, self.errcode)
         assert not self.was_called, '%sAsynchronous callback has been called' % prepend_msg
 
-    def assert_Error(self, error_code=None, error_msg=None):
+    def assert_Error(self, error_code=None, error_msg=None, re_flags=IGNORECASE):
         assert self.was_called
         if error_code:
             assert error_code in self.errcode
         if error_msg:
-            assert search(error_msg, self.message, IGNORECASE)
+            assert search(error_msg, self.message, re_flags)
 
 
 class AsyncErrorHandlerList(list):
