@@ -402,9 +402,9 @@ def test_drm_manager_with_bad_credential_file(accelize_drm, conf_json, cred_json
             driver.write_register_callback,
             async_cb.callback
         )
-    assert search(r'JSON file .* is empty', str(excinfo.value))
+    assert search(r'Error parsing credential file .* JSON string is empty', str(excinfo.value), DOTALL)
     assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
-    async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, 'Error with credential file')
+    async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, 'Error parsing credential file .* JSON string is empty', DOTALL)
     async_cb.reset()
     print('Test empty crendential file: PASS')
 
