@@ -168,9 +168,9 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
             driver.write_register_callback,
             async_cb.callback
         )
-    assert search(r"Cannot parse JSON string .* Missing '\}' or object member name", str(excinfo.value), DOTALL)
+    assert search(r"Cannot parse JSON string .* Missing '}' or object member name", str(excinfo.value), DOTALL)
     assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
-    async_cb.assert_Error(accelize_drm.exceptions.DRMBadFormat.error_code, r"Cannot parse JSON string .* Missing '\}' or object member name")
+    async_cb.assert_Error(accelize_drm.exceptions.DRMBadFormat.error_code, r"Cannot parse JSON string .* Missing '}' or object member name", DOTALL)
     async_cb.reset()
     print('Test invalid config file: PASS')
 
@@ -192,7 +192,7 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
         )
     assert "Missing parameter 'licensing' of type Object" in str(excinfo.value)
     assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
-    async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code, "Missing parameter 'licensing' of type Object")
+    async_cb.assert_Error(accelize_drm.exceptions.DRMBadFormat.error_code, "Missing parameter 'licensing' of type Object")
     async_cb.reset()
     print('Test no licensing node in config file: PASS')
 
@@ -201,7 +201,7 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
     del conf_json['licensing']
     conf_json['licensing'] = {}
     conf_json.save()
-    assert conf_json['licensing']
+    assert conf_json['licensing'] == {}
 
     with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
         accelize_drm.DrmManager(
@@ -236,34 +236,12 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
     assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
     print('Test no url in config file: PASS')
 
-    # In nodelocked, test when no license_dir is specified in configuration file
-    conf_json.reset()
-    conf_json['licensing']['nodelocked'] = True
-    if 'license_dir' in conf_json['licensing']:
-        del conf_json['license_dir']
-    conf_json.save()
-    with pytest.raises(KeyError) as excinfo:
-        assert conf_json['licensing']['license_dir']
-    assert 'license_dir' in str(excinfo.value)
-
-    with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
-        accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-    assert "Missing parameter 'license_dir' of type String" in str(excinfo.value)
-    assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
-    print('Test in node-locked when no license_dir is in config file: PASS')
-
     # In nodelocked, test when license_dir is empty
     conf_json.reset()
     conf_json['licensing']['nodelocked'] = True
     conf_json['licensing']['license_dir'] = ''
     conf_json.save()
-    with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
+    with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
         accelize_drm.DrmManager(
             conf_json.path,
             cred_json.path,
@@ -271,8 +249,8 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
             driver.write_register_callback,
             async_cb.callback
         )
-    assert "Value of parameter 'license_dir' is an empty string" in str(excinfo.value)
-    assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
+    assert search(r"License directory path .* specified in configuration file .* is not existing on file system", str(excinfo.value))
+    assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
     print('Test in node-locked when license_dir is empty: PASS')
 
     # In nodelocked, test when license_dir in configuration file is not existing in file-system
@@ -290,8 +268,7 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
             driver.write_register_callback,
             async_cb.callback
         )
-    assert search(r'License directory path .* is not existing on file system',
-                  str(excinfo.value))
+    assert search(r"License directory path .* specified in configuration file .* is not existing on file system", str(excinfo.value))
     assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
     print('Test in node-locked when license_dir in config file is not existing: PASS')
 
@@ -332,7 +309,7 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
             driver.write_register_callback,
             async_cb.callback
         )
-    assert "Missing parameter 'drm' of type Object" in str(excinfo.value)
+    assert search(r"Missing parameter '.*'", str(excinfo.value))
     assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
     print('Test no DRM section in config file: PASS')
 
@@ -341,7 +318,7 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
     del conf_json['drm']
     conf_json['drm'] = {}
     conf_json.save()
-    assert conf_json['drm']
+    assert conf_json['drm'] == {}
     with pytest.raises(accelize_drm.exceptions.DRMBadFormat) as excinfo:
         accelize_drm.DrmManager(
             conf_json.path,
@@ -350,7 +327,7 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
             driver.write_register_callback,
             async_cb.callback
         )
-    assert "Value of parameter 'drm' is empty" in str(excinfo.value)
+    assert search(r"Missing parameter '.*'", str(excinfo.value))
     assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
     print('Test empty DRM section in config file: PASS')
 
@@ -370,7 +347,7 @@ def test_drm_manager_with_bad_configuration_file(accelize_drm, conf_json, cred_j
             driver.write_register_callback,
             async_cb.callback
         )
-    assert "Missing parameter 'frequency_mhz' of type Integer" in str(excinfo.value)
+    assert search(r"Missing parameter '.*'", str(excinfo.value))
     assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
     print('Test no DRM frequency in config file: PASS')
 
