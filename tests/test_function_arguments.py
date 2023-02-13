@@ -424,9 +424,10 @@ def test_drm_manager_with_bad_credential_file(accelize_drm, conf_json, cred_json
             driver.write_register_callback,
             async_cb.callback
         )
-    assert search(r'Cannot parse ', str(excinfo.value))
+    assert search(r"Error parsing credential file .* Cannot parse JSON string because .* Missing '}'", str(excinfo.value), DOTALL)
     assert accelize_drm.exceptions.DRMBadFormat.error_code in async_handler.get_error_code(str(excinfo.value))
-    async_cb.assert_Error(accelize_drm.exceptions.DRMBadFormat.error_code, 'Error with credential file')
+    async_cb.assert_Error(accelize_drm.exceptions.DRMBadFormat.error_code,
+                r"Error parsing credential file .* Cannot parse JSON string because .* Missing '}'", DOTALL)
     async_cb.reset()
     print('Test invalid crendential file: PASS')
 

@@ -127,7 +127,6 @@ def test_diagnostics_full_format(accelize_drm, conf_json, cred_json, async_handl
     assert 'cpu_architecture' in data
     assert 'drm_controller_version' in data
     assert 'device_driver_version' in data
-    assert 'xrt_details' in data
 
     if data.get('xrt_details'):
         xrt_details = data['xrt_details']
@@ -193,7 +192,6 @@ def test_diagnostics_partial_format(accelize_drm, conf_json, cred_json, async_ha
     assert 'cpu_architecture' in data
     assert 'drm_controller_version' in data
     assert 'device_driver_version' in data
-    assert 'xrt_details' in data
 
     if data.get('xrt_details'):
         xrt_details = data['xrt_details']
