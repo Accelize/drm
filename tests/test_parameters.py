@@ -12,7 +12,7 @@ from random import choice
 from tests.conftest import wait_until_true
 
 
-MAILBOX_SIZE = 14
+MAILBOX_SIZE = 10
 
 LOG_FORMAT_SHORT = "[%^%=8l%$] %-6t, %v"
 LOG_FORMAT_LONG = "%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v"
@@ -348,11 +348,12 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
             async_cb.callback
         )
     assert search(r'ws_retry_period_long .+ must be greater than ws_retry_period_short .+',
-                  str(excinfo.value)) is not None
+                  str(excinfo.value))
     assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
-    async_cb.assert_NoError()
-
+    async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code,
+                    r"ws_retry_period_long .+ must be greater than ws_retry_period_short .+")
     async_cb.reset()
+
     conf_json.reset()
     exp_value = orig_retry_period_long + 1
     conf_json['settings']['ws_retry_period_long'] = exp_value
@@ -383,9 +384,10 @@ def test_parameter_key_modification_with_config_file(accelize_drm, conf_json, cr
     assert search(r'ws_retry_period_long .+ must be greater than ws_retry_period_short .+',
                   str(excinfo.value)) is not None
     assert accelize_drm.exceptions.DRMBadArg.error_code in async_handler.get_error_code(str(excinfo.value))
-    async_cb.assert_NoError()
-
+    async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code,
+                    r"ws_retry_period_long .+ must be greater than ws_retry_period_short .+")
     async_cb.reset()
+
     conf_json.reset()
     exp_value = orig_retry_period_short + 1
     conf_json['settings']['ws_retry_period_short'] = exp_value
@@ -1214,10 +1216,10 @@ def test_parameter_key_modification_with_get_set(accelize_drm, conf_json, cred_j
 
         # Test parameter: device_id
         with pytest.raises(accelize_drm.exceptions.DRMBadArg) as excinfo:
-            drm_manager.set(accelize_drm="{}")
+            drm_manager.set(device_id="{}")
         async_cb.assert_Error(accelize_drm.exceptions.DRMBadArg.error_code," cannot be overwritten")
         async_cb.reset()
-        assert len(drm_manager.get('device_id')) == 16
+        assert len(drm_manager.get('device_id')) == 32
         async_cb.assert_NoError()
         print("Test parameter 'device_id': PASS")
 
@@ -1239,15 +1241,16 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
     conf_json['settings']['ws_retry_period_short'] = 1
     conf_json.save()
     assert conf_json['licensing']['url'] == "http://acme.com"
-    with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
-        accelize_drm.DrmManager(
-            conf_json.path, cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-    assert "Accelize Web Service error 404" in str(excinfo.value)
-    assert accelize_drm.exceptions.DRMWSReqError.error_code in async_handler.get_error_code(str(excinfo.value))
+    with accelize_drm.DrmManager(
+                conf_json.path, cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+            drm_manager.activate()
+        assert "Accelize Web Service error 404" in str(excinfo.value)
+        assert accelize_drm.exceptions.DRMWSReqError.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code,"Accelize Web Service error 404")
     async_cb.reset()
     print('Test when authentication url in configuration file is wrong: PASS')
@@ -1260,16 +1263,17 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
     cred_json.client_id = orig_client_id.replace(orig_client_id[0], replaced_char)
     assert orig_client_id != cred_json.client_id
     cred_json.save()
-    with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
-        accelize_drm.DrmManager(
-            conf_json.path, cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-    assert "Accelize Web Service error 401" in str(excinfo.value)
-    assert "invalid_client" in str(excinfo.value)
-    assert accelize_drm.exceptions.DRMWSReqError.error_code in async_handler.get_error_code(str(excinfo.value)
+    with accelize_drm.DrmManager(
+                conf_json.path, cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+            drm_manager.activate()
+        assert "Accelize Web Service error 401" in str(excinfo.value)
+        assert "invalid_client" in str(excinfo.value)
+        assert accelize_drm.exceptions.DRMWSReqError.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Accelize Web Service error 401')
     async_cb.reset()
     print('Test when client_id is wrong: PASS')
@@ -1282,16 +1286,17 @@ def test_configuration_file_with_bad_authentication(accelize_drm, conf_json, cre
     cred_json.client_secret = orig_client_secret.replace(orig_client_secret[0], replaced_char)
     cred_json.save()
     assert orig_client_secret != cred_json.client_secret
-    with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
-        accelize_drm.DrmManager(
-            conf_json.path, cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-    assert "Accelize Web Service error 401" in str(excinfo.value)
-    assert "invalid_client" in str(excinfo.value)
-    assert accelize_drm.exceptions.DRMWSReqError.error_code in async_handler.get_error_code(str(excinfo.value))
+    with accelize_drm.DrmManager(
+                conf_json.path, cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+        with pytest.raises(accelize_drm.exceptions.DRMWSReqError) as excinfo:
+            drm_manager.activate()
+        assert "Accelize Web Service error 401" in str(excinfo.value)
+        assert "invalid_client" in str(excinfo.value)
+        assert accelize_drm.exceptions.DRMWSReqError.error_code in async_handler.get_error_code(str(excinfo.value))
     async_cb.assert_Error(accelize_drm.exceptions.DRMWSReqError.error_code, 'Accelize Web Service error 401')
     async_cb.reset()
     print('Test when client_secret is wrong: PASS')

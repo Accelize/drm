@@ -1162,8 +1162,8 @@ protected:
         if ( mLockID != 0 ) {
             checkDrmLockInstance();
             writeMailbox<uint32_t>( eMailboxOffset::MB_LOCK_DRM, 0 );
-            mLockID = 0;
             Debug( "DRM Controller is unlocked by this instance with ID {}", mLockID );
+            mLockID = 0;
         }
     }
 

@@ -27,16 +27,17 @@ def test_connection_timeout(accelize_drm, conf_json, cred_json, async_handler,
     conf_json['settings']['ws_request_timeout'] = request_timeout
     conf_json['licensing']['url'] = 'http://100.100.100.100'
     conf_json.save()
-    start = datetime.now()
-    with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
-        accelize_drm.DrmManager(
-            conf_json.path,
-            cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb.callback
-        )
-    end = datetime.now()
+    with accelize_drm.DrmManager(
+                conf_json.path,
+                cred_json.path,
+                driver.read_register_callback,
+                driver.write_register_callback,
+                async_cb.callback
+            ) as drm_manager:
+        with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
+            start = datetime.now()
+            drm_manager.activate()
+        end = datetime.now()
     assert connection_timeout - 1 <= int((end - start).total_seconds()) <= connection_timeout
     assert accelize_drm.exceptions.DRMWSMayRetry.error_code in async_handler.get_error_code(str(excinfo.value))
     m = search(r'Timeout was reached.+Connection timed out after (\d+) milliseconds', str(excinfo.value), IGNORECASE)
@@ -66,16 +67,17 @@ def test_request_timeout(accelize_drm, conf_json, cred_json, async_handler,
     context = {'sleep': request_timeout + 10}
     set_context(context)
     assert get_context() == context
-    start = datetime.now()
-    with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
-        accelize_drm.DrmManager(
-                conf_json.path,
-                cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb.callback
-        )
-    end = datetime.now()
+    with accelize_drm.DrmManager(
+                    conf_json.path,
+                    cred_json.path,
+                    driver.read_register_callback,
+                    driver.write_register_callback,
+                    async_cb.callback
+            ) as drm_manager:
+        with pytest.raises(accelize_drm.exceptions.DRMWSMayRetry) as excinfo:
+            start = datetime.now()
+            drm_manager.activate()
+        end = datetime.now()
     assert request_timeout - 1 <= int((end - start).total_seconds()) <= request_timeout
     m = search(r'Timeout was reached.+Operation timed out after (\d+) milliseconds', str(excinfo.value), IGNORECASE)
     assert m
