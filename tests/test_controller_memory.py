@@ -171,32 +171,6 @@ def test_malformed_product_id(accelize_drm, conf_json, cred_json, async_handler)
         driver.program_fpga(fpga_image_bkp)
 
 
-@pytest.mark.skip(reason='Two concurrent objects on the same board is not supported')
-def test_2_drm_manager_concurrently(accelize_drm, conf_json, cred_json, async_handler):
-    """Test errors when 2 DrmManager instances are used."""
-
-    driver = accelize_drm.pytest_fpga_driver[0]
-
-    async_cb1 = async_handler.create()
-    async_cb2 = async_handler.create()
-
-    with accelize_drm.DrmManager(
-            conf_json.path, cred_json.path,
-            driver.read_register_callback,
-            driver.write_register_callback,
-            async_cb1.callback
-        ) as drm_manager1:
-
-        with pytest.raises(accelize_drm.exceptions.DRMBadUsage) as excinfo:
-            drm_manager2 = accelize_drm.DrmManager(
-                conf_json.path, cred_json.path,
-                driver.read_register_callback,
-                driver.write_register_callback,
-                async_cb2.callback
-            )
-    assert 'Another instance of the DRM Manager is currently owning the HW' in str(excinfo.value)
-
-
 @pytest.mark.hwtst
 def test_drm_manager_bist(accelize_drm, conf_json, cred_json, async_handler,
                            log_file_factory):
