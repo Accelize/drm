@@ -278,6 +278,7 @@ protected:
     // Logging parameters
     spdlog::level::level_enum sLogConsoleVerbosity = spdlog::level::err;
     std::string sLogConsoleFormat = std::string("[%^%=8l%$] %-6t, %v");
+    spdlog::sink_ptr mLogFileSink = nullptr;
 
     spdlog::level::level_enum sLogFileVerbosity = spdlog::level::warn;
     std::string  sLogFilePath         = fmt::format( "accelize_drmlib_{}.log", getpid() );
@@ -548,15 +549,14 @@ protected:
     }
 
     void createFileLog( const std::string file_path, const eLogFileType type,
-            const spdlog::level::level_enum level, const std::string format,
-            const size_t rotating_size, const size_t rotating_num, const bool file_append ) {
-        spdlog::sink_ptr log_sink;
+                const spdlog::level::level_enum level, const std::string format,
+                const size_t rotating_size, const size_t rotating_num, const bool file_append ) {
         std::string version_list = fmt::format( "Installed versions:\n\t-drmlib: {}\n\t-libcurl: {}\n\t-jsoncpp: {}\n\t-spdlog: {}.{}.{}",
                 DRMLIB_VERSION, curl_version(), JSONCPP_VERSION_STRING,
                 SPDLOG_VER_MAJOR, SPDLOG_VER_MINOR, SPDLOG_VER_PATCH );
 
         if ( type == eLogFileType::NONE )
-            log_sink = std::make_shared<spdlog::sinks::null_sink_mt>();
+            mLogFileSink = std::make_shared<spdlog::sinks::null_sink_mt>();
         else {
             // Check if parent directory exists
             std::string parentDir = getDirName( file_path );
@@ -564,17 +564,17 @@ protected:
                 Throw( DRM_ExternFail, "Failed to create log file {}. ", file_path );
             }
             if ( type == eLogFileType::BASIC )
-                log_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(
+                mLogFileSink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(
                         file_path, !file_append);
             else // type == eLogFileType::ROTATING
-                log_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
+                mLogFileSink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
                         file_path, rotating_size*1024, rotating_num);
         }
-        log_sink->set_pattern( format );
-        log_sink->set_level( spdlog::level::info );
-        log_sink->log( spdlog::details::log_msg( "", spdlog::level::info, version_list ) );
-        log_sink->set_level( level );
-        sLogger->sinks().push_back( log_sink );
+        mLogFileSink->set_pattern( format );
+        mLogFileSink->set_level( spdlog::level::info );
+        mLogFileSink->log( spdlog::details::log_msg( "", spdlog::level::info, version_list ) );
+        mLogFileSink->set_level( level );
+        sLogger->sinks().push_back( mLogFileSink );
         if ( level < sLogger->level() )
             sLogger->set_level( level );
         if ( type != eLogFileType::NONE )
@@ -3173,20 +3173,26 @@ public:
                     case ParameterKey::log_file_verbosity: {
                         int32_t verbosityInt = (*it).asInt();
                         sLogFileVerbosity = static_cast<spdlog::level::level_enum>( verbosityInt );
-                        sLogger->sinks()[1]->set_level( sLogFileVerbosity );
-                        if ( sLogFileVerbosity < sLogger->level() )
-                            sLogger->set_level( sLogFileVerbosity );
-                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, (uint32_t)key_id,
-                               verbosityInt);
+                        if ( mLogFileSink == nullptr ) {
+                            Warning( "No log file has been defined" );
+                        } else {
+                            mLogFileSink->set_level( sLogFileVerbosity );
+                            if ( sLogFileVerbosity < sLogger->level() )
+                                sLogger->set_level( sLogFileVerbosity );
+                            Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, (uint32_t)key_id,
+                                   verbosityInt);
+                        }
                         break;
                     }
                     case ParameterKey::log_file_format: {
                         sLogFileFormat = (*it).asString();
-                        if ( sLogger->sinks().size() > 1 ) {
-                            sLogger->sinks()[1]->set_pattern( sLogFileFormat );
-                        }
-                        Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, (uint32_t)key_id,
+                        if ( mLogFileSink == nullptr ) {
+                            Warning( "No log file has been defined" );
+                        } else {
+                            mLogFileSink->set_pattern( sLogFileFormat );
+                            Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, (uint32_t)key_id,
                                sLogFileFormat );
+                        }
                         break;
                     }
                     case ParameterKey::frequency_detection_threshold: {
