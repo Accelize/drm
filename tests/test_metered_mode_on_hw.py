@@ -104,10 +104,10 @@ def test_metered_start_stop_long_time(accelize_drm, conf_json, cred_json, async_
 
 @pytest.mark.minimum
 @pytest.mark.hwtst
-def test_only_1_object_is_allowed(accelize_drm, conf_json, conf_json_second,
+def test_only_1_instance_is_allowed(accelize_drm, conf_json, conf_json_second,
                     cred_json, async_handler, log_file_factory):
     """
-    Test a 2nd object cannot be created if 1 already exists
+    Test a 2nd DRM_Manager object cannot be created if 1 already exists
     """
     driver = accelize_drm.pytest_fpga_driver[0]
     async_cb = async_handler.create()
@@ -124,7 +124,6 @@ def test_only_1_object_is_allowed(accelize_drm, conf_json, conf_json_second,
                 driver.write_register_callback,
                 async_cb.callback
             ) as drm_manager:
-        sleep(1)
         async_cb.assert_NoError()
         # Create a 2nd object
         logfile2 = log_file_factory.create(1)
@@ -139,10 +138,11 @@ def test_only_1_object_is_allowed(accelize_drm, conf_json, conf_json_second,
                     async_cb.callback
                 )
         assert search(r'Another instance is currently owning the DRM Controller', str(excinfo.value), IGNORECASE)
-        assert search(r'You might have anoth process running the DRM Controller.', str(excinfo.value), IGNORECASE)
+        assert search(r'You might have another process running the DRM Controller.', str(excinfo.value), IGNORECASE)
         assert search(r'If not, a reset of the DRM Controller is required to recover.', str(excinfo.value), IGNORECASE)
         assert accelize_drm.exceptions.DRMBadUsage.error_code in async_handler.get_error_code(str(excinfo.value))
         async_cb.reset()
+        drm_manager.get('device_id')
     log_content1 = logfile1.read()
     m = search(r'DRM Controller is locked by this instance with ID (\S+)', log_content1, IGNORECASE)
     assert int(m.group(1)) != 0
@@ -150,7 +150,7 @@ def test_only_1_object_is_allowed(accelize_drm, conf_json, conf_json_second,
     logfile1.remove()
     log_content2 = logfile2.read()
     assert search(r'Another instance is currently owning the DRM Controller', log_content2, IGNORECASE)
-    assert search(r'You might have anoth process running the DRM Controller.', log_content2, IGNORECASE)
+    assert search(r'You might have another process running the DRM Controller.', log_content2, IGNORECASE)
     assert search(r'If not, a reset of the DRM Controller is required to recover.', log_content2, IGNORECASE)
     logfile2.remove()
 

@@ -206,7 +206,8 @@ DrmWSClient::DrmWSClient( const std::string &conf_file_path, const std::string &
     }
 
     // Temporarily change file log level to be sure not to capture the Client and Secret IDs
-    auto logFileHandler = sLogger->sinks()[1];
+//    auto logFileHandler = sLogger->sinks()[1];
+    auto logFileHandler = sLogger;
     spdlog::level::level_enum logFileLevel = logFileHandler->level();
     if ( logFileLevel <= spdlog::level::debug )
         logFileHandler->set_level( spdlog::level::info );

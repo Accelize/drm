@@ -279,7 +279,7 @@ protected:
     spdlog::level::level_enum sLogConsoleVerbosity = spdlog::level::err;
     std::string sLogConsoleFormat = std::string("[%^%=8l%$] %-6t, %v");
     spdlog::sink_ptr mLogFileSink = nullptr;
-
+    spdlog::level::level_enum mDebugMessageLevel = spdlog::level::trace;
     spdlog::level::level_enum sLogFileVerbosity = spdlog::level::warn;
     std::string  sLogFilePath         = fmt::format( "accelize_drmlib_{}.log", getpid() );
     std::string  sLogFileFormat       = std::string("%Y-%m-%d %H:%M:%S.%e - %18s:%-4# [%=8l] %=6t, %v");
@@ -369,9 +369,6 @@ protected:
     Json::Value mSettings = Json::nullValue;
     Json::Value mMailboxRoData = Json::nullValue;
 
-    // Debug parameters
-    spdlog::level::level_enum mDebugMessageLevel;
-
     // User accessible parameters
     const std::map<ParameterKey, std::string> mParameterKeyMap = {
     #   define PARAMETERKEY_ITEM(id) {id, #id},
@@ -431,98 +428,9 @@ protected:
             mIsHybrid = false;
             mIsPnC = false;
 
-            mDebugMessageLevel = spdlog::level::trace;
-
             // Parse configuration file
             parse_configuration_file();
-/*
-            try {
-                // Parse configuration file
-                conf_json = parseJsonFile( conf_file_path );
 
-                Json::Value param_lib = JVgetOptional( conf_json, "settings", Json::objectValue );
-                if ( param_lib != Json::nullValue ) {
-                    // Console logging
-                    sLogConsoleVerbosity = static_cast<spdlog::level::level_enum>( JVgetOptional(
-                            param_lib, "log_verbosity", Json::uintValue, (uint32_t)sLogConsoleVerbosity ).asUInt());
-                    sLogConsoleFormat = JVgetOptional(
-                            param_lib, "log_format", Json::stringValue, sLogConsoleFormat ).asString();
-
-                    // File logging
-                    sLogFileVerbosity = static_cast<spdlog::level::level_enum>( JVgetOptional(
-                            param_lib, "log_file_verbosity", Json::uintValue, (uint32_t)sLogFileVerbosity ).asUInt() );
-                    sLogFileFormat = JVgetOptional(
-                            param_lib, "log_file_format", Json::stringValue, sLogFileFormat ).asString();
-                    sLogFilePath = JVgetOptional(
-                            param_lib, "log_file_path", Json::stringValue, sLogFilePath ).asString();
-                    sLogFileType = static_cast<eLogFileType>( JVgetOptional(
-                            param_lib, "log_file_type", Json::uintValue, (uint32_t)sLogFileType ).asUInt() );
-                    sLogFileAppend = JVgetOptional(
-                            param_lib, "log_file_append", Json::booleanValue, sLogFileAppend ).asBool();
-                    sLogFileRotatingSize = JVgetOptional( param_lib, "log_file_rotating_size",
-                            Json::uintValue, (uint32_t)sLogFileRotatingSize ).asUInt();
-                    sLogFileRotatingNum = JVgetOptional( param_lib, "log_file_rotating_num",
-                            Json::uintValue, (uint32_t)sLogFileRotatingNum ).asUInt();
-
-                    // Software Controller logging
-                    sLogCtrlVerbosity = static_cast<eCtrlLogVerbosity>( JVgetOptional(
-                            param_lib, "log_ctrl_verbosity", Json::uintValue, (uint32_t)sLogCtrlVerbosity ).asUInt() );
-
-                    // Frequency detection
-                    mFrequencyDetectionPeriod = JVgetOptional( param_lib, "frequency_detection_period",
-                            Json::uintValue, mFrequencyDetectionPeriod).asUInt();
-                    mFrequencyDetectionThreshold = JVgetOptional( param_lib, "frequency_detection_threshold",
-                            Json::uintValue, mFrequencyDetectionThreshold).asDouble();
-
-                    // Retry parameters
-                    mWSRetryPeriodLong = JVgetOptional( param_lib, "ws_retry_period_long",
-                            Json::uintValue, mWSRetryPeriodLong).asUInt();
-                    mWSRetryPeriodShort = JVgetOptional( param_lib, "ws_retry_period_short",
-                            Json::uintValue, mWSRetryPeriodShort).asUInt();
-                    mWSApiRetryDuration = JVgetOptional( param_lib, "ws_api_retry_duration",
-                            Json::uintValue, mWSApiRetryDuration).asUInt();
-
-                    // Host and Card information
-                    mHostDataVerbosity = static_cast<eHostDataVerbosity>( JVgetOptional(
-                            param_lib, "host_data_verbosity", Json::uintValue, (uint32_t)mHostDataVerbosity ).asUInt() );
-                }
-                mHealthPeriod = 0;
-                mHealthRetryTimeout = 0;
-                mHealthRetrySleep = 0;
-
-                // Customize logging configuration
-                updateLog();
-
-                if ( mWSRetryPeriodLong <= mWSRetryPeriodShort )
-                    Throw( DRM_BadArg, "ws_retry_period_long ({} sec) must be greater than ws_retry_period_short ({} sec). ",
-                            mWSRetryPeriodLong, mWSRetryPeriodShort );
-
-                // Licensing configuration
-                Json::Value conf_licensing = conf_json["licensing"];
-                // Get licensing mode
-                // If this is a node-locked license, get the license path
-                std::string config_dir = getHomeDir() + PATH_SEP + ".config";
-                mNodeLockLicenseDirPath = JVgetOptional( conf_licensing, "license_dir", Json::stringValue, config_dir ).asString();
-                bool is_nodelocked = JVgetOptional( conf_licensing, "nodelocked", Json::booleanValue, false ).asBool();
-                if ( is_nodelocked ) {
-                    mLicenseType = eLicenseType::NODE_LOCKED;
-                    Debug( "Configuration file specifies a Node-locked license" );
-                } //else {
-                    Debug( "Configuration file specifies a floating/metered license" );
-                    // Get DRM frequency related parameters
-                    Json::Value conf_drm = conf_json["drm"];
-                    mFrequencyInit = JVgetRequired( conf_drm, "frequency_mhz", Json::intValue ).asUInt();
-                    mFrequencyCurr = double(mFrequencyInit);
-                    mBypassFrequencyDetection = JVgetOptional( conf_drm, "bypass_frequency_detection", Json::booleanValue,
-                            mBypassFrequencyDetection ).asBool();
-                    mIsHybrid = JVgetOptional( conf_drm, "drm_software", Json::booleanValue, false ).asBool();
-    //            }
-            } catch( const Exception &e ) {
-                if ( e.getErrCode() != DRM_BadFormat )
-                    throw;
-                Throw( DRM_BadFormat, "Error in configuration file '{}: {}. ", conf_file_path, e.what() );
-            }
-*/
             // Customize logging configuration
             updateLog();
         CATCH_AND_THROW
@@ -530,17 +438,17 @@ protected:
 
     void initLog() {
         try {
-            std::vector<spdlog::sink_ptr> sinks;
+            //std::vector<spdlog::sink_ptr> sinks;
 
-            auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-            console_sink->set_level( sLogConsoleVerbosity );
-            console_sink->set_pattern( sLogConsoleFormat );
-            sinks.push_back( console_sink );
+            if ( !sLogger ) {
+                auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+                console_sink->set_level( sLogConsoleVerbosity );
+                console_sink->set_pattern( sLogConsoleFormat );
 
-            sLogger = std::make_shared<spdlog::logger>( "drmlib_logger", sinks.begin(), sinks.end() );
-            sLogger->set_level( sLogConsoleVerbosity );
-            spdlog::set_default_logger( sLogger );
-
+                sLogger = std::make_shared<spdlog::logger>( "drmlib_logger", console_sink );
+                sLogger->set_level( sLogConsoleVerbosity );
+                spdlog::set_default_logger( sLogger );
+            }
             //spdlog::flush_on(spdlog::level::trace); TO UNCOMMENT ONLY FOR DEBUG
         }
         catch( const spdlog::spdlog_ex& ex ) { //LCOV_EXCL_LINE
@@ -554,21 +462,21 @@ protected:
         std::string version_list = fmt::format( "Installed versions:\n\t-drmlib: {}\n\t-libcurl: {}\n\t-jsoncpp: {}\n\t-spdlog: {}.{}.{}",
                 DRMLIB_VERSION, curl_version(), JSONCPP_VERSION_STRING,
                 SPDLOG_VER_MAJOR, SPDLOG_VER_MINOR, SPDLOG_VER_PATCH );
-
-        if ( type == eLogFileType::NONE )
+        if ( type == eLogFileType::NONE ) {
             mLogFileSink = std::make_shared<spdlog::sinks::null_sink_mt>();
-        else {
+        } else {
             // Check if parent directory exists
             std::string parentDir = getDirName( file_path );
             if ( !makeDirs( parentDir ) ) {
                 Throw( DRM_ExternFail, "Failed to create log file {}. ", file_path );
             }
-            if ( type == eLogFileType::BASIC )
+            if ( type == eLogFileType::BASIC ) {
                 mLogFileSink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(
                         file_path, !file_append);
-            else // type == eLogFileType::ROTATING
+            } else { // type == eLogFileType::ROTATING
                 mLogFileSink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
                         file_path, rotating_size*1024, rotating_num);
+            }
         }
         mLogFileSink->set_pattern( format );
         mLogFileSink->set_level( spdlog::level::info );
@@ -1136,7 +1044,7 @@ protected:
         uint32_t drm_lock = readMailbox<uint32_t>( eMailboxOffset::MB_LOCK_DRM );
         if ( drm_lock != 0 ) {
             Throw( DRM_BadUsage, "Another instance is currently owning the DRM Controller. "
-                    "You might have anoth process running the DRM Controller. "
+                    "You might have another process running the DRM Controller. "
                     "If not, a reset of the DRM Controller is required to recover. " );
         }
         mLockID = rand();
@@ -1144,7 +1052,7 @@ protected:
         Debug( "DRM Controller is locked by this instance with ID {}", mLockID );
     }
 
-    void checkDrmLockInstance() {
+    void checkDrmLockInstance() const {
         std::lock_guard<std::recursive_mutex> lock( mDrmControllerMutex );
         if ( mLockID == 0 ) {
             Throw( DRM_BadUsage, "Instance has not been instantiated properly." );
@@ -1152,7 +1060,7 @@ protected:
         uint32_t drm_lock = readMailbox<uint32_t>( eMailboxOffset::MB_LOCK_DRM );
         if ( drm_lock != mLockID ) {
             Throw( DRM_BadUsage, "Another instance is currently owning the DRM Controller. "
-                    "You might have anoth process running the DRM Controller. "
+                    "You might have another process running the DRM Controller. "
                     "If not, a reset of the DRM Controller is required to recover. " );
         }
     }
@@ -3173,10 +3081,10 @@ public:
                     case ParameterKey::log_file_verbosity: {
                         int32_t verbosityInt = (*it).asInt();
                         sLogFileVerbosity = static_cast<spdlog::level::level_enum>( verbosityInt );
-                        if ( mLogFileSink == nullptr ) {
+                        if ( sLogger->sinks().size() == 0 ) {
                             Warning( "No log file has been defined" );
                         } else {
-                            mLogFileSink->set_level( sLogFileVerbosity );
+                            sLogger->sinks()[1]->set_level( sLogFileVerbosity );
                             if ( sLogFileVerbosity < sLogger->level() )
                                 sLogger->set_level( sLogFileVerbosity );
                             Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, (uint32_t)key_id,
@@ -3186,10 +3094,10 @@ public:
                     }
                     case ParameterKey::log_file_format: {
                         sLogFileFormat = (*it).asString();
-                        if ( mLogFileSink == nullptr ) {
+                        if ( sLogger->sinks().size() == 0 ) {
                             Warning( "No log file has been defined" );
                         } else {
-                            mLogFileSink->set_pattern( sLogFileFormat );
+                            sLogger->sinks()[1]->set_pattern( sLogFileFormat );
                             Debug( "Set parameter '{}' (ID={}) to value: {}", key_str, (uint32_t)key_id,
                                sLogFileFormat );
                         }
