@@ -146,7 +146,7 @@ def test_only_1_instance_is_allowed(accelize_drm, conf_json, conf_json_second,
     log_content1 = logfile1.read()
     m = search(r'DRM Controller is locked by this instance with ID (\S+)', log_content1, IGNORECASE)
     assert int(m.group(1)) != 0
-#TODO: remove when logging issue is fixed    assert search(r'DRM Controller is unlocked by this instance with ID %s' % m.group(1), log_content1, IGNORECASE)
+    assert search(r'DRM Controller is unlocked by this instance with ID %s' % m.group(1), log_content1, IGNORECASE)
     logfile1.remove()
     log_content2 = logfile2.read()
     assert search(r'Another instance is currently owning the DRM Controller', log_content2, IGNORECASE)

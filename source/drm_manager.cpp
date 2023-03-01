@@ -438,14 +438,12 @@ protected:
 
     void initLog() {
         try {
-            //std::vector<spdlog::sink_ptr> sinks;
-
             if ( !sLogger ) {
                 auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
                 console_sink->set_level( sLogConsoleVerbosity );
                 console_sink->set_pattern( sLogConsoleFormat );
-
                 sLogger = std::make_shared<spdlog::logger>( "drmlib_logger", console_sink );
+
                 sLogger->set_level( sLogConsoleVerbosity );
                 spdlog::set_default_logger( sLogger );
             }
